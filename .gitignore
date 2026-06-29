@@ -19,6 +19,8 @@ _meta/*
 !_meta/HANDOFF.md
 !_meta/plans/
 !_meta/plans/**
+!_meta/_archive/
+!_meta/_archive/**
 
 # --- Python (after the _meta negation so toolkit caches stay untracked) ---
 __pycache__/

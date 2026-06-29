@@ -36,13 +36,13 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
-| translation-deferred-adapters | #6 | draft |
 | test-qa-procedures | #22 | draft |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
 | Plan (archived path) | Issue(s) | Why archived |
 | -------------------- | -------- | ------------ |
+| `_meta/_archive/6-translation-deferred-adapters.md` | #6 | shipped via #18/#20/#21; #6 closed |
 
 ## The loop (how plans get produced)
 
