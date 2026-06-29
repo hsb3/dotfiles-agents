@@ -33,7 +33,7 @@ PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
 CONFIG = os.path.join(REPO, "primitives-core-translation-config.yaml")
 RESULTS = os.path.join(REPO, "primitives-core-translation-results.json")
 TARGETS = ("claude-code", "opencode", "claude-agents")
-IGNORE = shutil.ignore_patterns(".DS_Store")
+IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
 MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 OWNER = {"name": "Henry S. Burden III"}
 

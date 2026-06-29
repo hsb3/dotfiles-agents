@@ -408,7 +408,7 @@
       "skill-creator": {
         "capability": "render",
         "destination": "claude-agents/skills/skill-creator",
-        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
+        "sha256": "b2bfe91d69ca99994c0566baede889e7d2b9bb8791c6b6106c5d387392f717f6",
         "skipped": false
       },
       "subagent-creator": {
@@ -866,7 +866,7 @@
       "skill-creator": {
         "capability": "native",
         "destination": "claude-code/skills/skill-creator",
-        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
+        "sha256": "b2bfe91d69ca99994c0566baede889e7d2b9bb8791c6b6106c5d387392f717f6",
         "skipped": false
       },
       "subagent-creator": {
@@ -1294,7 +1294,7 @@
       "skill-creator": {
         "capability": "native",
         "destination": "opencode/skills/skill-creator",
-        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
+        "sha256": "b2bfe91d69ca99994c0566baede889e7d2b9bb8791c6b6106c5d387392f717f6",
         "skipped": false
       },
       "subagent-creator": {
