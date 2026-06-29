@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Roster <-> disk drift guard (issue #5).
+
+Verifies that primitives-core.yaml (the roster) and primitives-core/ on disk agree:
+  - every roster entry's `source` exists on disk
+  - every primitive on disk (skill dir, agent .md, hook handler .sh) has a roster entry
+  - basic schema: required fields present, type ∈ {skill,agent,mcp,hook}, shelf ∈ {core,toggle}
+
+Stdlib-only (a tailored line parser for the roster's controlled format — no pyyaml), so it runs
+in CI with zero install. Exit 0 = clean; exit 1 = drift (prints every problem).
+
+Usage: python3 scripts/check_roster.py   (run from the repo root)
+"""
+
+import os
+import re
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROSTER = os.path.join(REPO, "primitives-core.yaml")
+PC = os.path.join(REPO, "primitives-core")
+
+TYPES = {"skill", "agent", "mcp", "hook"}
+SHELVES = {"core", "toggle"}
+REQUIRED = ("id", "type", "source", "shelf", "origin", "targets", "plugins")
+
+
+def parse_roster(path):
+    """Parse the roster's `primitives:` list into dicts. Tailored to our emitter's format:
+    each entry starts with `  - id: <v>` and continues with `    <key>: <v>` lines."""
+    entries, cur = [], None
+    in_list = False
+    for raw in open(path, encoding="utf-8"):
+        line = raw.rstrip("\n")
+        if re.match(r"^primitives:\s*(\[\s*\])?\s*$", line):
+            in_list = True
+            continue
+        if not in_list:
+            continue
+        m = re.match(r"^  - (\w+):\s*(.*)$", line)
+        if m:
+            if cur is not None:
+                entries.append(cur)
+            cur = {}
+            cur[m.group(1)] = m.group(2).strip()
+            continue
+        m = re.match(r"^    (\w+):\s*(.*)$", line)
+        if m and cur is not None:
+            cur[m.group(1)] = m.group(2).strip()
+    if cur is not None:
+        entries.append(cur)
+    return entries
+
+
+def disk_primitives():
+    """Return the set of (type, source-relpath) present on disk."""
+    found = set()
+    sk = os.path.join(PC, "skills")
+    if os.path.isdir(sk):
+        for d in os.listdir(sk):
+            if os.path.isdir(os.path.join(sk, d)) and not d.startswith("."):
+                found.add(("skill", f"primitives-core/skills/{d}"))
+    ag = os.path.join(PC, "agents")
+    if os.path.isdir(ag):
+        for f in os.listdir(ag):
+            if f.endswith(".md"):
+                found.add(("agent", f"primitives-core/agents/{f}"))
+    hk = os.path.join(PC, "hooks")
+    for root, _dirs, files in os.walk(hk):
+        if os.path.basename(root) == "hooks-handlers":
+            for f in files:
+                if f.endswith(".sh"):
+                    rel = os.path.relpath(os.path.join(root, f), REPO)
+                    found.add(("hook", rel))
+    return found
+
+
+def main():
+    problems = []
+    entries = parse_roster(ROSTER)
+    if not entries:
+        problems.append("roster has 0 primitives (or failed to parse)")
+
+    rostered = set()
+    for e in entries:
+        eid = e.get("id", "<no-id>")
+        for k in REQUIRED:
+            if k not in e:
+                problems.append(f"[{eid}] missing required field: {k}")
+        t = e.get("type")
+        if t not in TYPES:
+            problems.append(f"[{eid}] bad type: {t!r}")
+        if e.get("shelf") not in SHELVES:
+            problems.append(f"[{eid}] bad shelf: {e.get('shelf')!r}")
+        src = e.get("source", "")
+        if src:
+            if not os.path.exists(os.path.join(REPO, src)):
+                problems.append(f"[{eid}] source not on disk: {src}")
+            rostered.add((t, src))
+
+    # disk -> roster (orphans on disk)
+    on_disk = disk_primitives()
+    for t, src in sorted(on_disk - rostered):
+        problems.append(f"on disk but NOT in roster: ({t}) {src}")
+
+    # roster -> disk for the three file-backed types (orphans in roster)
+    for t, src in sorted(
+        {
+            (e.get("type"), e.get("source"))
+            for e in entries
+            if e.get("type") in {"skill", "agent", "hook"}
+        }
+        - on_disk
+    ):
+        if src and os.path.exists(os.path.join(REPO, src)):
+            continue  # exists but maybe normalized differently; existence already checked above
+        problems.append(f"in roster but NOT on disk: ({t}) {src}")
+
+    n = len(entries)
+    counts = {}
+    for e in entries:
+        counts[e.get("type")] = counts.get(e.get("type"), 0) + 1
+    summary = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+
+    if problems:
+        print(f"✗ roster<->disk drift: {len(problems)} problem(s)")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
+    print(f"✓ roster<->disk clean — {n} primitives ({summary})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
