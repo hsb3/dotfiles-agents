@@ -1,0 +1,102 @@
+[
+  {
+    "kicker": "RA-PLATFORM - MORNING BRIEFING",
+    "notes": "Companion audio briefing alongside this deck in _meta/briefings/2026-06-13-morning-status/. Theme: boardroom. Order: recommendation -> horizon -> what shipped.",
+    "blocks": [
+      { "type": "heading", "level": 1, "text": "What to do today" },
+      { "type": "subtitle", "text": "2026-06-13 - prepared for Henry Burden - the recommendation first, the detail last" }
+    ]
+  },
+  {
+    "kicker": "RECOMMENDED TODAY",
+    "layout": "top",
+    "footer": "All three route around the first-client gate (epic #471)",
+    "blocks": [
+      { "type": "heading", "text": "Build the BPT loader; decide signing; everything else is parallel" },
+      { "type": "bullets", "items": [
+        "BUILD #128 BPT loader - highest leverage, pure engineering, makes the payment numbers honest (D1 is skipped on every real run today)",
+        "DECIDE #123 Developer ID signing - the long pole, has lead time, nothing else needs it",
+        "PARALLEL: #472 export, and closing the ESRD verification tail (#485) - both need no decision",
+        "30-second call: keep or discard the uncommitted Stop hook in .claude/settings.json"
+      ] }
+    ]
+  },
+  {
+    "kicker": "ON THE HORIZON",
+    "footer": "Gate status: gate:pilot empty - gate:client-1-install = 5 open",
+    "blocks": [
+      { "type": "heading", "text": "One gate stands between us and a first client" },
+      { "type": "columns", "columns": [
+        [
+          { "type": "heading", "level": 2, "text": "Install-week blockers" },
+          { "type": "bullets", "items": [
+            "#128 BPT loader (honest payment math)",
+            "#123 Developer ID signing (clean install)",
+            "#472 export (no CSV/PDF today)"
+          ] }
+        ],
+        [
+          { "type": "heading", "level": 2, "text": "Then: credibility" },
+          { "type": "bullets", "items": [
+            "Known-answer proof writeup (#473)",
+            "Methodology one-pager (#474)",
+            "Sandbox wired to a finding (#475)",
+            "Validation gate #238 - your call"
+          ] }
+        ]
+      ] }
+    ]
+  },
+  {
+    "kicker": "SINCE THE LAST BRIEFING",
+    "footer": "Live counts belong to the board; as-of 2026-06-13 morning",
+    "blocks": [
+      { "type": "heading", "text": "What shipped, at a glance" },
+      { "type": "columns", "columns": [
+        [ { "type": "stat", "value": "11", "label": "PRs merged 06-13" } ],
+        [ { "type": "stat", "value": "16/16", "label": "Recall held" } ],
+        [ { "type": "stat", "value": "0", "label": "pilot-gate items" } ]
+      ] },
+      { "type": "bullets", "items": [
+        "ESRD scoring graduated end-to-end and is gated on a one-cent error",
+        "Dev 'real scoring unavailable' banner root-caused and fixed",
+        "Carbon UX wave-3: skips surfaced, assurance on real data, fake recall gone"
+      ] }
+    ]
+  },
+  {
+    "kicker": "WHAT SHIPPED - 1",
+    "layout": "top",
+    "footer": "Proven locally; cloud-acceptance tail tracked on #485 / #446",
+    "blocks": [
+      { "type": "heading", "text": "ESRD scoring is graduated and wired through the platform" },
+      { "type": "bullets", "items": [
+        "4 PRs: data model, engine + sandbox, the pipeline recompute, member-trace labeling",
+        "ESRD_OK hard gate passes 13/13 - every delta 0.0, a +0.01 perturbation flips it to FAIL",
+        "Default non-ESRD cohort byte-identical; recall held 16/16",
+        "Reconciled not blindly ported: the superseded routing was confirmed to agree with the engine first"
+      ] }
+    ]
+  },
+  {
+    "kicker": "WHAT SHIPPED - 2",
+    "layout": "top",
+    "footer": "Honest gap: counts + banner not yet confirmed live (#485)",
+    "blocks": [
+      { "type": "heading", "text": "Dev refdata fix and the carbon UX wave" },
+      { "type": "bullets", "items": [
+        "#461 fixed: bootstrap now migrates + loads all three databases explicitly, fail-loud",
+        "Dev ops re-ran clean (both exit 0); no infra change needed",
+        "Carbon: per-check skips surfaced (#352), assurance wired to real data (#300)",
+        "The stale 12/12 recall number was fake - now live"
+      ] }
+    ]
+  },
+  {
+    "kicker": "THE LINE FOR TODAY",
+    "layout": "center",
+    "blocks": [
+      { "type": "callout", "variant": "accent", "size": "hero", "title": "The ask", "text": "Build the BPT loader and make the signing call. **The first client now comes down to three named items, and two of them can move today.**" }
+    ]
+  }
+]

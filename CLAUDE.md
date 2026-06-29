@@ -8,10 +8,12 @@ Source of truth for proven coding-agent **extenders** (skills, agents, MCP serve
 - **Primitives** (one source copy each): agent · skill · mcp · hook. No commands.
 - **Distribution targets** (generated, never hand-edited): plugins + raw primitives, under `targets/`.
 - **Two shelves:** `core` (always-on, raw) · `toggle` (plugin/marketplace) — a roster attribute in `primitives-core.yaml`.
+- **Externals are tracked, not vendored:** third-party extenders live in `externals.yaml` (upstream repo + ref); the build clones them. Distribution is private/self-only.
 
-## Layout (target — built out in Phase 1–2)
-- `primitives-core/{skills,agents,mcp,hooks}/` — the single source copies
+## Layout
+- `primitives-core/{skills,agents,mcp,hooks}/` — the single source copies (skills + agents populated in Phase 2a; hooks in 2b)
 - `primitives-core.yaml` (roster) · `primitives-core-translation-config.yaml` (adapters) · `primitives-core-translation-results.json` (lock)
+- `externals.yaml` — tracker for third-party extenders cloned at build (not stored here)
 - `targets/{claude-code,opencode,claude-agents}/` — generated bundles
 
 ## Conventions
