@@ -1,0 +1,212 @@
+# externals.yaml — EXTERNAL / VENDORED EXTENDER TRACKER
+#
+# External (third-party) extenders are NOT vendored into primitives-core/ (CANON decision 11).
+# This tracker records each one's upstream source repo + pinned ref. The build clones them into
+# targets/ at distribution time. Distribution is PRIVATE / self-only (this repo stays private),
+# so redistribution/licensing is a non-issue; pinning + clone-at-build solves drift.
+#
+# Entry schema:
+#   - id:       <kebab>
+#     kind:     plugin | skill
+#     upstream: <git url>      # null = TODO: research the source repo
+#     ref:      <tag|sha|branch>   # pin for reproducible clones; null until upstream known
+#     provides: <one line>     # what it gives us
+#     targets:  [claude-code, opencode, claude-agents]   # where it deploys
+#
+# STATUS: upstream URLs are unresearched (CANON open item). Entries are stubbed upstream/ref=null
+# so the inventory is complete and the gaps are explicit.
+
+version: 1
+
+externals:
+  # --- already-live vendored skill (was in the marketplace; now tracked, not stored) ---
+  - id: excalidraw-diagram-coleam00
+    kind: skill
+    upstream: null      # TODO: Cole Medin (github.com/coleam00) — confirm repo
+    ref: null
+    provides: "Excalidraw diagram JSON that makes visual arguments."
+    targets: [claude-code, opencode, claude-agents]
+
+  # --- external skills (staging) ---
+  - id: codex-imagegen
+    kind: skill
+    upstream: null
+    ref: null
+    provides: "OpenAI Codex image generation workflow."
+    targets: [claude-code, opencode, claude-agents]
+  - id: codex-spreadsheets
+    kind: skill
+    upstream: null
+    ref: null
+    provides: "OpenAI Codex spreadsheet automation."
+    targets: [claude-code, opencode, claude-agents]
+  - id: notion-knowledge-capture
+    kind: skill
+    upstream: null
+    ref: null
+    provides: "Notion-based knowledge capture."
+    targets: [claude-code, opencode, claude-agents]
+  - id: notion-meeting-intelligence
+    kind: skill
+    upstream: null
+    ref: null
+    provides: "Notion-based meeting prep/intelligence."
+    targets: [claude-code, opencode, claude-agents]
+  - id: notion-research-documentation
+    kind: skill
+    upstream: null
+    ref: null
+    provides: "Notion-based research synthesis/documentation."
+    targets: [claude-code, opencode, claude-agents]
+  - id: notion-spec-to-implementation
+    kind: skill
+    upstream: null
+    ref: null
+    provides: "Notion-based spec-to-tasks workflow."
+    targets: [claude-code, opencode, claude-agents]
+
+  # --- third-party marketplace plugins (trimmed snapshots; clone from upstream, do not vendor) ---
+  - id: agent-sdk-dev
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: claude-code-setup
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: claude-md-management
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: code-modernization
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: code-review
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: code-simplifier
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: commit-commands
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: explanatory-output-style
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: feature-dev
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: frontend-design
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: hookify
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: learning-output-style
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: math-olympiad
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: mcp-server-dev
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: mcp-tunnels
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: plugin-dev
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: pr-review-toolkit
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: project-artifact
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: pyright-lsp
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: ralph-loop
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: security-guidance
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: session-report
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: skill-creator
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
+  - id: typescript-lsp
+    kind: plugin
+    upstream: null
+    ref: null
+    provides: ""
+    targets: [claude-code]
