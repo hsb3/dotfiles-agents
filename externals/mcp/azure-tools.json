@@ -1,0 +1,8 @@
+{
+  "name": "azure-tools",
+  "description": "Azure MCP — Azure resource management and tooling (official @azure/mcp). Auth via `az login` session.",
+  "transport": "stdio",
+  "command": "npx",
+  "args": ["-y", "@azure/mcp@latest", "server", "start"],
+  "env": {}
+}

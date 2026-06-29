@@ -45,6 +45,12 @@
         "sha256": "a9062423f1bdbe1e6af604c58a325b823b117e381e769746ce915e1bbb8b1aa9",
         "skipped": false
       },
+      "claude_design": {
+        "capability": "render",
+        "destination": "claude-agents/mcp/claude_design.json",
+        "sha256": "ffb50d2e0d3a05426865e3b7cd78ec880b3cd9ccbef287b0cbfda9a9e5ba29df",
+        "skipped": false
+      },
       "cms-bigquery-etl-generator": {
         "capability": "render",
         "destination": "claude-agents/skills/cms-bigquery-etl-generator",
@@ -455,6 +461,12 @@
         "sha256": "4066a2195d0ceb28e5af1aebaa33f41875d1c61a52b751f1e9016177c1906b7e",
         "skipped": false
       },
+      "azure-tools": {
+        "capability": "render",
+        "destination": "claude-code/mcp/azure-tools.json",
+        "sha256": "9c0fb5181ca99f79d38004ffed53ad0d3e9875372d9e319eb8aec420a381cfb2",
+        "skipped": false
+      },
       "board-analyst": {
         "capability": "native",
         "destination": "claude-code/plugins/github-projects-board-management/agents/board-analyst.md",
@@ -483,6 +495,18 @@
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/agents/chat-ui-builder.md",
         "sha256": "8a91bf98041c33926a158106794d38a774303a2b02e7ca59a6fe8589c941fad0",
+        "skipped": false
+      },
+      "chrome-devtools": {
+        "capability": "render",
+        "destination": "claude-code/mcp/chrome-devtools.json",
+        "sha256": "3fbb48ec5921ed545ef7adee6652b9945b0beb8760f8b8e3fab766d297cc878d",
+        "skipped": false
+      },
+      "claude_design": {
+        "capability": "render",
+        "destination": "claude-code/mcp/claude_design.json",
+        "sha256": "3541310a6704e86c5712b53434e4093055dec5a030d584f2399cf609b115e53b",
         "skipped": false
       },
       "cms-bigquery-etl-generator": {
@@ -639,6 +663,12 @@
         "capability": "native",
         "destination": "claude-code/plugins/meta/skills/framework-selection",
         "sha256": "0be39cf8d1f315eb2fbb96850312b1a7a6a9d15d38e9bce3a17a1620572b3198",
+        "skipped": false
+      },
+      "github": {
+        "capability": "render",
+        "destination": "claude-code/mcp/github.json",
+        "sha256": "d3b0d539d8410fa1edf4975e8adfbbccb1a47cb41defdb8ea70d416c5b8cdab9",
         "skipped": false
       },
       "github-project-board": {
@@ -937,6 +967,12 @@
         "sha256": "07e4d59b8c23bcdf14bc5da48c47124609ffa383abc07091b354ba5a0436738d",
         "skipped": false
       },
+      "azure-tools": {
+        "capability": "render",
+        "destination": "opencode/mcp/azure-tools.json",
+        "sha256": "d14b64b47d781330eea37cd024324103b1e17df26ba3d48009bd76b53241acf4",
+        "skipped": false
+      },
       "board-analyst": {
         "capability": "transform",
         "destination": "opencode/agents/board-analyst.md",
@@ -965,6 +1001,18 @@
         "capability": "transform",
         "destination": "opencode/agents/chat-ui-builder.md",
         "sha256": "eb81f1b9864f991d9e20d59b330afe49a0eec652195c86404c338f35d18283e8",
+        "skipped": false
+      },
+      "chrome-devtools": {
+        "capability": "render",
+        "destination": "opencode/mcp/chrome-devtools.json",
+        "sha256": "2a4ce4accbeb433dad54ce9734c21f4f46481d12ec7ae6cd757ffb96ebdceda8",
+        "skipped": false
+      },
+      "claude_design": {
+        "capability": "render",
+        "destination": "opencode/mcp/claude_design.json",
+        "sha256": "6dbc1a3e4053a5fcc2c5b7a8432e6811fc74887a508f4d75561da9278cefaddd",
         "skipped": false
       },
       "cms-bigquery-etl-generator": {
@@ -1109,6 +1157,12 @@
         "capability": "native",
         "destination": "opencode/skills/framework-selection",
         "sha256": "0be39cf8d1f315eb2fbb96850312b1a7a6a9d15d38e9bce3a17a1620572b3198",
+        "skipped": false
+      },
+      "github": {
+        "capability": "render",
+        "destination": "opencode/mcp/github.json",
+        "sha256": "6234b95286a94cc081475440706dc6a430f2cade330e1255e757da809f5f5ff4",
         "skipped": false
       },
       "github-project-board": {

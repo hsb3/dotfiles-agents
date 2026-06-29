@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "azure-tools": {
+      "command": [
+        "npx",
+        "-y",
+        "@azure/mcp@latest",
+        "server",
+        "start"
+      ],
+      "enabled": true,
+      "type": "local"
+    }
+  }
+}

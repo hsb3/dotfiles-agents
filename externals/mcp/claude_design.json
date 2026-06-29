@@ -1,0 +1,7 @@
+{
+  "name": "claude_design",
+  "description": "Anthropic-hosted design MCP — remote connector (auth handled by the Anthropic client).",
+  "transport": "http",
+  "url": "https://api.anthropic.com/v1/design/mcp",
+  "headers": {}
+}
