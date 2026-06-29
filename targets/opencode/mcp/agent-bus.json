@@ -1,0 +1,12 @@
+{
+  "mcp": {
+    "agent-bus": {
+      "command": [
+        "agent-bus",
+        "serve"
+      ],
+      "enabled": true,
+      "type": "local"
+    }
+  }
+}

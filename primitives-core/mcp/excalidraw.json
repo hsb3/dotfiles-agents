@@ -1,0 +1,8 @@
+{
+  "name": "excalidraw",
+  "description": "Excalidraw wireframe/diagram composer — search a component kit, place components, compose wireframes.",
+  "transport": "stdio",
+  "command": "fufo-excalidraw-wire",
+  "args": ["serve"],
+  "env": {}
+}

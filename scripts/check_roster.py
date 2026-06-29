@@ -3,7 +3,7 @@
 
 Verifies that primitives-core.yaml (the roster) and primitives-core/ on disk agree:
   - every roster entry's `source` exists on disk
-  - every primitive on disk (skill dir, agent .md, hook handler .sh) has a roster entry
+  - every primitive on disk (skill dir, agent .md, hook handler .sh, mcp .json) has a roster entry
   - basic schema: required fields present, type ∈ {skill,agent,mcp,hook}, shelf ∈ {core,toggle}
 
 Stdlib-only (a tailored line parser for the roster's controlled format — no pyyaml), so it runs
@@ -72,6 +72,13 @@ def disk_primitives():
                 if f.endswith(".sh"):
                     rel = os.path.relpath(os.path.join(root, f), REPO)
                     found.add(("hook", rel))
+    mc = os.path.join(PC, "mcp")
+    if os.path.isdir(mc):
+        for f in os.listdir(mc):
+            if f.endswith(
+                ".json"
+            ):  # neutral connection specs (README.md is not a primitive)
+                found.add(("mcp", f"primitives-core/mcp/{f}"))
     return found
 
 
@@ -108,7 +115,7 @@ def main():
         {
             (e.get("type"), e.get("source"))
             for e in entries
-            if e.get("type") in {"skill", "agent", "hook"}
+            if e.get("type") in {"skill", "agent", "hook", "mcp"}
         }
         - on_disk
     ):
