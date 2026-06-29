@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "agent-bus": {
+      "args": [
+        "serve"
+      ],
+      "command": "agent-bus",
+      "env": {},
+      "type": "stdio"
+    }
+  }
+}

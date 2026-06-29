@@ -1,0 +1,12 @@
+{
+  "mcp": {
+    "audio": {
+      "command": [
+        "mcp-audio",
+        "serve"
+      ],
+      "enabled": true,
+      "type": "local"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "deck-builder",
+  "description": "Slide-deck builder — create decks/slides from themes + templates, patch/reorder, render preview, export PDF.",
+  "transport": "stdio",
+  "command": "mcp-deck-builder",
+  "args": ["serve"],
+  "env": {}
+}

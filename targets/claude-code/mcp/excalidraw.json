@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "excalidraw": {
+      "args": [
+        "serve"
+      ],
+      "command": "fufo-excalidraw-wire",
+      "env": {},
+      "type": "stdio"
+    }
+  }
+}

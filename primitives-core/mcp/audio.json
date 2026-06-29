@@ -1,0 +1,8 @@
+{
+  "name": "audio",
+  "description": "Audio narration generator — list voices/styles/templates, narrate segments, estimate duration, export audio.",
+  "transport": "stdio",
+  "command": "mcp-audio",
+  "args": ["serve"],
+  "env": {}
+}

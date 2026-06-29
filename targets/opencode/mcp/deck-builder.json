@@ -1,0 +1,12 @@
+{
+  "mcp": {
+    "deck-builder": {
+      "command": [
+        "mcp-deck-builder",
+        "serve"
+      ],
+      "enabled": true,
+      "type": "local"
+    }
+  }
+}

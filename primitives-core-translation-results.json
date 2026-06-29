@@ -431,6 +431,12 @@
       }
     },
     "claude-code": {
+      "agent-bus": {
+        "capability": "render",
+        "destination": "claude-code/mcp/agent-bus.json",
+        "sha256": "aeea940b4cf9e99feb52f5ed5449054eca8bf88997806c438e91d132b4e3570b",
+        "skipped": false
+      },
       "agent-dot-md-authoring": {
         "capability": "native",
         "destination": "claude-code/skills/agent-dot-md-authoring",
@@ -441,6 +447,12 @@
         "capability": "native",
         "destination": "claude-code/skills/api-server-design",
         "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
+        "skipped": false
+      },
+      "audio": {
+        "capability": "render",
+        "destination": "claude-code/mcp/audio.json",
+        "sha256": "4066a2195d0ceb28e5af1aebaa33f41875d1c61a52b751f1e9016177c1906b7e",
         "skipped": false
       },
       "board-analyst": {
@@ -507,6 +519,12 @@
         "capability": "native",
         "destination": "claude-code/skills/comms",
         "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
+        "skipped": false
+      },
+      "deck-builder": {
+        "capability": "render",
+        "destination": "claude-code/mcp/deck-builder.json",
+        "sha256": "a4d236dfa53c103db17c1c288efd71c8a8c930fee42730e30fe461a4f745fc1a",
         "skipped": false
       },
       "deep-agents-core": {
@@ -591,6 +609,12 @@
         "capability": "native",
         "destination": "claude-code/skills/dotfiles-expert",
         "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
+        "skipped": false
+      },
+      "excalidraw": {
+        "capability": "render",
+        "destination": "claude-code/mcp/excalidraw.json",
+        "sha256": "9da6f067f35792785c61ca62474fb85349eafb664c756bc00d3d6d7bde5ee1b6",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
@@ -889,6 +913,12 @@
       }
     },
     "opencode": {
+      "agent-bus": {
+        "capability": "render",
+        "destination": "opencode/mcp/agent-bus.json",
+        "sha256": "7fbe3e9fdc423f72260250fb54f9173f49e3241de109841b1e2af0feaff01663",
+        "skipped": false
+      },
       "agent-dot-md-authoring": {
         "capability": "native",
         "destination": "opencode/skills/agent-dot-md-authoring",
@@ -899,6 +929,12 @@
         "capability": "native",
         "destination": "opencode/skills/api-server-design",
         "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
+        "skipped": false
+      },
+      "audio": {
+        "capability": "render",
+        "destination": "opencode/mcp/audio.json",
+        "sha256": "07e4d59b8c23bcdf14bc5da48c47124609ffa383abc07091b354ba5a0436738d",
         "skipped": false
       },
       "board-analyst": {
@@ -965,6 +1001,12 @@
         "capability": "native",
         "destination": "opencode/skills/comms",
         "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
+        "skipped": false
+      },
+      "deck-builder": {
+        "capability": "render",
+        "destination": "opencode/mcp/deck-builder.json",
+        "sha256": "edf52ac00d45987a3d69d9866bc0f85469e3af71a60318bae57f7a5fb6174dc8",
         "skipped": false
       },
       "deep-agents-core": {
@@ -1037,6 +1079,12 @@
         "capability": "native",
         "destination": "opencode/skills/dotfiles-expert",
         "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
+        "skipped": false
+      },
+      "excalidraw": {
+        "capability": "render",
+        "destination": "opencode/mcp/excalidraw.json",
+        "sha256": "aa701fd9167a2865dbd04a1331cafaa5f373d5da527ebd141dc2417cd5799e73",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {

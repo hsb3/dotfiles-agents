@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "audio": {
+      "args": [
+        "serve"
+      ],
+      "command": "mcp-audio",
+      "env": {},
+      "type": "stdio"
+    }
+  }
+}

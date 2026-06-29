@@ -696,3 +696,40 @@ primitives:
     targets: [claude-code]
     plugins: [python-standards]
     summary: "Python-standards cleanup/summary at Stop."
+  # ── mcp: self-authored connection specs (local stdio → CC + opencode; CMA is remote-only) ──
+  - id: agent-bus
+    type: mcp
+    source: primitives-core/mcp/agent-bus.json
+    shelf: core
+    origin: internal
+    vendor: null
+    targets: [claude-code, opencode]
+    plugins: []
+    summary: "Multi-agent coordination bus — presence, channels, leases, tasks, KV, request/approval."
+  - id: excalidraw
+    type: mcp
+    source: primitives-core/mcp/excalidraw.json
+    shelf: core
+    origin: internal
+    vendor: null
+    targets: [claude-code, opencode]
+    plugins: []
+    summary: "Excalidraw wireframe/diagram composer — component kit search, place, compose."
+  - id: deck-builder
+    type: mcp
+    source: primitives-core/mcp/deck-builder.json
+    shelf: core
+    origin: internal
+    vendor: null
+    targets: [claude-code, opencode]
+    plugins: []
+    summary: "Slide-deck builder — decks/slides from themes + templates, preview, PDF export."
+  - id: audio
+    type: mcp
+    source: primitives-core/mcp/audio.json
+    shelf: core
+    origin: internal
+    vendor: null
+    targets: [claude-code, opencode]
+    plugins: []
+    summary: "Audio narration generator — voices/styles/templates, narrate, estimate, export."

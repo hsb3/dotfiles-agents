@@ -8,8 +8,10 @@ its capability cell; writes static bundles under targets/ + a content-hash lock
 
 Scope (technical-plan §2.1): skills native (copy) · agents transform (opencode frontmatter) ·
 Claude Code marketplace assembly · claude-agents (CMA) render — static POST /v1/agents and
-/v1/skills payloads under targets/claude-agents/ (#6). mcp-render stays DEFERRED (no mcp
-primitive exists yet) and is recorded as a skip; hooks ship to claude-code only.
+/v1/skills payloads under targets/claude-agents/ (#6) · mcp render — neutral connection specs
+(primitives-core/mcp/<name>.json) -> each target's mcp config fragment (CC mcpServers, opencode
+mcp, CMA mcp_servers[]; CMA is remote-only so local stdio servers record a skip). Hooks ship
+to claude-code only.
 
 Deterministic: stable ordering, no clocks/timestamps in output — so the --check drift guard never
 false-fails. Stdlib-only (tailored parsers, no pyyaml) so it runs in CI with zero install.
@@ -202,6 +204,58 @@ def skill_display_title(skill_dir):
     return os.path.basename(skill_dir.rstrip("/"))
 
 
+# ── mcp render: neutral connection spec -> each target's mcp config schema ───────────────
+def load_mcp_spec(src_path):
+    """Read a neutral mcp connection spec (primitives-core/mcp/<name>.json)."""
+    return json.load(open(src_path, encoding="utf-8"))
+
+
+def mcp_to_claude(spec):
+    """Neutral spec -> a Claude Code mcpServers fragment (merge into .mcp.json / ~/.claude.json)."""
+    if spec.get("transport") == "http":
+        entry = {"type": "http", "url": spec["url"]}
+        if spec.get("headers"):
+            entry["headers"] = spec["headers"]
+    else:
+        entry = {
+            "type": "stdio",
+            "command": spec["command"],
+            "args": spec.get("args", []),
+            "env": spec.get("env", {}),
+        }
+    return {"mcpServers": {spec["name"]: entry}}
+
+
+def mcp_to_opencode(spec):
+    """Neutral spec -> an opencode `mcp` fragment (type: local|remote; command is one array)."""
+    if spec.get("transport") == "http":
+        entry = {"type": "remote", "url": spec["url"], "enabled": True}
+        if spec.get("headers"):
+            entry["headers"] = spec["headers"]
+    else:
+        entry = {
+            "type": "local",
+            "command": [spec["command"], *spec.get("args", [])],
+            "enabled": True,
+        }
+        if spec.get("env"):
+            entry["environment"] = spec["env"]
+    return {"mcp": {spec["name"]: entry}}
+
+
+def mcp_to_cma(spec):
+    """Neutral spec -> a CMA mcp_servers[] entry. CMA is remote-only — callers gate on transport."""
+    return {"mcp_servers": [{"type": "url", "url": spec["url"], "name": spec["name"]}]}
+
+
+def write_json(path, payload):
+    """Deterministic JSON write (sorted keys, trailing newline) for a generated fragment."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(payload, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+
+
 # ── build ──────────────────────────────────────────────────────────────────────────────
 def build(out_root, roster, plugins_meta, caps, cma_model):
     """Render all targets under out_root. Returns the results dict."""
@@ -226,6 +280,12 @@ def build(out_root, roster, plugins_meta, caps, cma_model):
             continue
         t, pid, src = e["type"], e["id"], os.path.join(REPO, e["source"])
         cap = caps.get(t, {}).get("claude-code", "native")
+        if t == "mcp":
+            # mcp is config, not a folder/plugin member — emit a mergeable fragment (shelf-agnostic)
+            d = f"claude-code/mcp/{pid}.json"
+            write_json(os.path.join(out_root, d), mcp_to_claude(load_mcp_spec(src)))
+            rec("claude-code", pid, cap, d)
+            continue
         if e["shelf"] == "core":
             if t == "skill":
                 d = f"claude-code/skills/{pid}"
@@ -321,6 +381,10 @@ def build(out_root, roster, plugins_meta, caps, cma_model):
             os.makedirs(os.path.dirname(os.path.join(out_root, d)), exist_ok=True)
             open(os.path.join(out_root, d), "w").write(transform_agent_opencode(src))
             rec("opencode", pid, cap, d)
+        elif t == "mcp":
+            d = f"opencode/mcp/{pid}.json"
+            write_json(os.path.join(out_root, d), mcp_to_opencode(load_mcp_spec(src)))
+            rec("opencode", pid, cap, d)
         elif t == "hook":
             rec(
                 "opencode",
@@ -378,6 +442,21 @@ def build(out_root, roster, plugins_meta, caps, cma_model):
                 fh.write("\n")
             # fingerprint the folder (the upload set) — the sheet's sha is implied by its inputs.
             rec("claude-agents", pid, cap, folder)
+        elif t == "mcp":
+            # CMA mcp_servers[] are remote-only; a local stdio server has no CMA equivalent.
+            spec = load_mcp_spec(src)
+            if spec.get("transport") == "http":
+                d = f"claude-agents/mcp/{pid}.json"
+                write_json(os.path.join(out_root, d), mcp_to_cma(spec))
+                rec("claude-agents", pid, cap, d)
+            else:
+                rec(
+                    "claude-agents",
+                    pid,
+                    cap,
+                    skipped=True,
+                    reason="CMA mcp_servers are remote-only; this server is local stdio",
+                )
         else:
             rec(
                 "claude-agents",
