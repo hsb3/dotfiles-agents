@@ -6,22 +6,20 @@
 Fresh repo (created 2026-06-26): source of truth for proven coding-agent extenders. Built from scratch — NOT a rename of `hsb3-custom-plugins`, which stays live as the migration source. Siblings: `dotfiles` (tooling), `dotfiles-agents-workbench` (unproven; planned), `dotfiles-bootstrap` (planned). Decision record + build plan: `~/Documents/Claude/Projects/dotfiles-agents-cowork/planning/{CANON.md, repository-technical-plan.md}`.
 
 ## 1 · Current standing
-**Phases 0–2 COMPLETE (issues #1–5 closed); CI green. Phase 3 (translation service) next.** Phase 0: repo + governance + board #9. Phase 1 (#11): layout + translation control files + naming taxonomy. Phase 2: migrated the homegrown LIVE set → `primitives-core/` as single-source copies — **76 roster entries (53 skills + 18 agents + 5 hooks)**; `externals.yaml` tracks third-party (cloned at build); client-coupling genericized; hooks built shape-C; 16 commands dropped. **Drift guard live:** `scripts/check_roster.py` / `make check` / CI on every PR. **Promotion gate RATIFIED** (J1 = ≥2 real uses).
+**Phases 0–3 COMPLETE (issues #1–5, #7 closed); CI green. The repo's core works end-to-end.** Phases 0–2: governance + migrated the homegrown LIVE set → `primitives-core/` (**76 roster entries: 53 skills + 18 agents + 5 hooks**), `externals.yaml` tracker, client-coupling genericized, commands dropped. **Phase 3 (#17): translation service** — `scripts/translate.py` renders `primitives-core/` → static `targets/{claude-code,opencode,claude-agents}/` + content-hash lock; deterministic, config-driven, `--check` drift mode. **Two CI drift guards** (`make ci`: roster↔disk + targets) green on every PR. **Promotion gate RATIFIED** (J1 = ≥2 real uses).
 
 ## 2 · Last delivered
-- Roster↔disk drift guard + Makefile + CI — #16 (`ea9f099`, closes #5). First green gate.
-- Phase 2b hooks + command dispositions — #15 (`03552af`).
-- Phase 2c polish — #14 · cleanup — #13 · migration — #12. (manifest + bootstrap review + command dispositions in `planning/`.)
+- Phase 3 MVP translation service — #17 (`4e8a05b`, closes #7): targets/ (475 files) + results lock + plugins.yaml + Makefile (`build`/`build-check`/`ci`). Agent transform proven live in opencode 1.16.2.
+- #16 roster guard + CI · #15 hooks+commands · #14/#13/#12 Phase 2.
 
 ## 3 · Where to start building
-**Phase 3 — translation service (the cross-tool win; issues #6, #7):**
-- Build `scripts/` translate: roster + `primitives-core-translation-config.yaml` → static `targets/{claude-code,opencode,claude-agents}/` + `primitives-core-translation-results.json` lock; `--check` CI drift mode (extend the existing ci.yml). Reference shape: `ant-update-openapi.py`.
-- **MVP first** (technical-plan §2.1): skills (native copy) + agents (transform frontmatter) + CC marketplace assembly (`.claude-plugin/marketplace.json` + plugin dirs from roster membership). Defer mcp render + the CMA adapter; hooks ship CC-only.
-- Then #7: verify a skill AND an agent load in opencode from generated `targets/opencode/` with zero hand-config.
-- **Needs plugin-level metadata** (description/version per plugin) for marketplace assembly — not yet captured; pull from the frozen source's `plugins/<p>/.claude-plugin/plugin.json`.
-**Then:** Phase 4 workbench (#8, encode the ratified gate as `make promote-check`), Phase 5 bootstrap (#9).
-**Backlog (`planning/backlog.md`):** python-standards skill authoring, raptorxai-decks split, langchain-vs-official curation, frontend curation, externals upstream URLs, near-term enhancements.
+**Phase 3 is the plan's "consolidation + cross-tool" completion point; 4–5 are reproducibility polish.** Open work:
+- **#6 — deferred translation adapters:** mcp-render (no mcp primitives yet) + the claude-agents (CMA) adapter (`POST /v1/skills` + `/v1/agents`, ref CANON "Resolved — CMA contract"). Currently recorded as deferred skips.
+- **#8 — Phase 4 workbench:** create `dotfiles-agents-workbench` repo; move incubator items; encode the ratified gate (H1–H5) as `make promote-check`.
+- **#9 — Phase 5 bootstrap:** `dotfiles-bootstrap` MVP — clone → install → `extenders deploy` (place built targets/) → verify.
+**Backlog (`planning/backlog.md`):** python-standards skill authoring; raptorxai-decks split; langchain-vs-official + frontend curation; externals upstream URLs; near-term enhancements (api-server-design, comms styling, CMS trio).
 **Gate live (CANON 12):** promoting a PARKED item (`opencode-expert` strongest) needs ≥2 cited real uses + H1–H5.
+**Deploy targets (verified, opencode 1.16.2):** opencode agents → `.opencode/agent(s)/` or `~/.config/opencode/agent(s)/`; opencode skills auto-scanned from `~/.claude/skills/` + `~/.agents/skills/` (config loaded once — restart opencode to pick up new skills). CC marketplace: `claude plugin marketplace add <repo>` reads `targets/claude-code/.claude-plugin/marketplace.json`.
 - Sources: LIVE `~/Developer/FUNCTIONFORM/hsb3-custom-plugins` (frozen) + STAGING `_meta/desktop-cleanup/` (gitignored).
 
 ## 4 · Conventions & gotchas
