@@ -435,7 +435,7 @@
       "comms": {
         "capability": "native",
         "destination": "claude-code/skills/comms",
-        "sha256": "19acbe44542d99a11d3e9b397b82ec0b30ced818811e4cb26c77235942616c42",
+        "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
         "skipped": false
       },
       "deep-agents-core": {
@@ -507,7 +507,7 @@
       "dlt-pipelines": {
         "capability": "native",
         "destination": "claude-code/skills/dlt-pipelines",
-        "sha256": "54735ce74bfacd98ef3138bf47907179560658890740d00c42877179efa824bc",
+        "sha256": "5449214c8d0295d82582e7c457a89b4fff4363a25ede229b0f5dc82efa679031",
         "skipped": false
       },
       "documentation-accuracy-reviewer": {
@@ -609,7 +609,7 @@
       "langgraph-sse-client": {
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/langgraph-sse-client",
-        "sha256": "6ab8e6ae9eab7e1578ef8734af5d51bc6d6e3b9b953ca922499aacade938d922",
+        "sha256": "f1c2d2fd7a99660b44e13c2b5e78343cdfe0b2989e634fb9bf54725a4ca2b8cd",
         "skipped": false
       },
       "langsmith-dataset": {
@@ -645,7 +645,7 @@
       "nanobanana": {
         "capability": "native",
         "destination": "claude-code/plugins/media-gen/skills/nanobanana",
-        "sha256": "5ef71d4ffe12dc49590a6cca69af90f4a9a4b9c152333b599c55dd0e6908c051",
+        "sha256": "5171df70e2d07fa8fff9b74d4ee15ce418b8315cda43dd551cb4d75167c9c663",
         "skipped": false
       },
       "notion-api": {
@@ -657,7 +657,7 @@
       "obsidian-api-basics": {
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-api-basics",
-        "sha256": "989b931e91595a8182771728fc4e3422874ae6e46fbd91bf4ead019c2e3f62d1",
+        "sha256": "a7b33c80d77ff0037017a09de60adb3f598b7814009adec5fc81f1e59ebbf6ab",
         "skipped": false
       },
       "obsidian-best-practices": {
@@ -669,13 +669,13 @@
       "obsidian-chat-ui": {
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-chat-ui",
-        "sha256": "0894bed287630034ffe4ac811272a037e6866c32640d21b90873eafce59c9632",
+        "sha256": "3feb31894fbeb6aa32f5a82bfc49b1888eec7093f9f3557c52a7bb82a66f2507",
         "skipped": false
       },
       "obsidian-cli": {
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-cli",
-        "sha256": "e4b802266157fe9eeec88595b4b58485ea6c4d72cd52340698c15f4eaf70e93a",
+        "sha256": "095fd7715f3c2a652b0e56f0c324df7a830f1c8ebff173d61e76d17120394133",
         "skipped": false
       },
       "obsidian-dom-helpers": {
@@ -687,7 +687,7 @@
       "obsidian-mcp-server": {
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-mcp-server",
-        "sha256": "b3472c7b2492b8b5ec9643b96a294c9569c340430ba25ec4c55cc2803783fea2",
+        "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
         "skipped": false
       },
       "openspec-apply-change": {
@@ -723,7 +723,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "claude-code/skills/planning-desk",
-        "sha256": "a06c8f90cc8acd049617b4d016eea1e19cb40fbe51bf914887c9a305917adf17",
+        "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -735,7 +735,7 @@
       "pptx-henry": {
         "capability": "native",
         "destination": "claude-code/skills/pptx-henry",
-        "sha256": "fb9cc394bbb2cd4f39e26035199d60ecf9307321ea054db55ed37cc4a6cfe613",
+        "sha256": "aa67d1721c2160ec062dfd06fc0d1687da95df04e67129b6977e344100b37ca9",
         "skipped": false
       },
       "python-standards.PostToolUse.post-tool-use": {
@@ -789,19 +789,19 @@
       "shadcn": {
         "capability": "native",
         "destination": "claude-code/plugins/frontend-extras/skills/shadcn",
-        "sha256": "1a3695f2abe6d3e218c59a05f7d9d08ede7be9daff4036c27e9065bc7dcbd926",
+        "sha256": "7ccd352394a29b935350b44c4f7ef7eadf2f3debd6a0d6461c0f29731f88b9a3",
         "skipped": false
       },
       "skill-creator": {
         "capability": "native",
         "destination": "claude-code/skills/skill-creator",
-        "sha256": "b66d611c55160af3bf5204dbf5808522baad41e8711ce573bdcf2f2f59976fa1",
+        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
         "skipped": false
       },
       "subagent-creator": {
         "capability": "native",
         "destination": "claude-code/skills/subagent-creator",
-        "sha256": "01718ef30c7eb9b669d01d073dffd3ecab9e934071b739bcc9c38c11dd3e613b",
+        "sha256": "f3477945a2b61820acf13faaf733ea15d344f25ffd86faa0308c5a4fe38f5f0a",
         "skipped": false
       },
       "test-coverage-reviewer": {
@@ -893,7 +893,7 @@
       "comms": {
         "capability": "native",
         "destination": "opencode/skills/comms",
-        "sha256": "19acbe44542d99a11d3e9b397b82ec0b30ced818811e4cb26c77235942616c42",
+        "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
         "skipped": false
       },
       "deep-agents-core": {
@@ -953,7 +953,7 @@
       "dlt-pipelines": {
         "capability": "native",
         "destination": "opencode/skills/dlt-pipelines",
-        "sha256": "54735ce74bfacd98ef3138bf47907179560658890740d00c42877179efa824bc",
+        "sha256": "5449214c8d0295d82582e7c457a89b4fff4363a25ede229b0f5dc82efa679031",
         "skipped": false
       },
       "documentation-accuracy-reviewer": {
@@ -1055,7 +1055,7 @@
       "langgraph-sse-client": {
         "capability": "native",
         "destination": "opencode/skills/langgraph-sse-client",
-        "sha256": "6ab8e6ae9eab7e1578ef8734af5d51bc6d6e3b9b953ca922499aacade938d922",
+        "sha256": "f1c2d2fd7a99660b44e13c2b5e78343cdfe0b2989e634fb9bf54725a4ca2b8cd",
         "skipped": false
       },
       "langsmith-dataset": {
@@ -1091,7 +1091,7 @@
       "nanobanana": {
         "capability": "native",
         "destination": "opencode/skills/nanobanana",
-        "sha256": "5ef71d4ffe12dc49590a6cca69af90f4a9a4b9c152333b599c55dd0e6908c051",
+        "sha256": "5171df70e2d07fa8fff9b74d4ee15ce418b8315cda43dd551cb4d75167c9c663",
         "skipped": false
       },
       "notion-api": {
@@ -1103,7 +1103,7 @@
       "obsidian-api-basics": {
         "capability": "native",
         "destination": "opencode/skills/obsidian-api-basics",
-        "sha256": "989b931e91595a8182771728fc4e3422874ae6e46fbd91bf4ead019c2e3f62d1",
+        "sha256": "a7b33c80d77ff0037017a09de60adb3f598b7814009adec5fc81f1e59ebbf6ab",
         "skipped": false
       },
       "obsidian-best-practices": {
@@ -1115,13 +1115,13 @@
       "obsidian-chat-ui": {
         "capability": "native",
         "destination": "opencode/skills/obsidian-chat-ui",
-        "sha256": "0894bed287630034ffe4ac811272a037e6866c32640d21b90873eafce59c9632",
+        "sha256": "3feb31894fbeb6aa32f5a82bfc49b1888eec7093f9f3557c52a7bb82a66f2507",
         "skipped": false
       },
       "obsidian-cli": {
         "capability": "native",
         "destination": "opencode/skills/obsidian-cli",
-        "sha256": "e4b802266157fe9eeec88595b4b58485ea6c4d72cd52340698c15f4eaf70e93a",
+        "sha256": "095fd7715f3c2a652b0e56f0c324df7a830f1c8ebff173d61e76d17120394133",
         "skipped": false
       },
       "obsidian-dom-helpers": {
@@ -1133,7 +1133,7 @@
       "obsidian-mcp-server": {
         "capability": "native",
         "destination": "opencode/skills/obsidian-mcp-server",
-        "sha256": "b3472c7b2492b8b5ec9643b96a294c9569c340430ba25ec4c55cc2803783fea2",
+        "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
         "skipped": false
       },
       "openspec-apply-change": {
@@ -1169,7 +1169,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "opencode/skills/planning-desk",
-        "sha256": "a06c8f90cc8acd049617b4d016eea1e19cb40fbe51bf914887c9a305917adf17",
+        "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -1181,7 +1181,7 @@
       "pptx-henry": {
         "capability": "native",
         "destination": "opencode/skills/pptx-henry",
-        "sha256": "fb9cc394bbb2cd4f39e26035199d60ecf9307321ea054db55ed37cc4a6cfe613",
+        "sha256": "aa67d1721c2160ec062dfd06fc0d1687da95df04e67129b6977e344100b37ca9",
         "skipped": false
       },
       "python-test-writer": {
@@ -1217,19 +1217,19 @@
       "shadcn": {
         "capability": "native",
         "destination": "opencode/skills/shadcn",
-        "sha256": "1a3695f2abe6d3e218c59a05f7d9d08ede7be9daff4036c27e9065bc7dcbd926",
+        "sha256": "7ccd352394a29b935350b44c4f7ef7eadf2f3debd6a0d6461c0f29731f88b9a3",
         "skipped": false
       },
       "skill-creator": {
         "capability": "native",
         "destination": "opencode/skills/skill-creator",
-        "sha256": "b66d611c55160af3bf5204dbf5808522baad41e8711ce573bdcf2f2f59976fa1",
+        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
         "skipped": false
       },
       "subagent-creator": {
         "capability": "native",
         "destination": "opencode/skills/subagent-creator",
-        "sha256": "01718ef30c7eb9b669d01d073dffd3ecab9e934071b739bcc9c38c11dd3e613b",
+        "sha256": "f3477945a2b61820acf13faaf733ea15d344f25ffd86faa0308c5a4fe38f5f0a",
         "skipped": false
       },
       "test-coverage-reviewer": {

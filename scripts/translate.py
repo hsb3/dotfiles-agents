@@ -118,18 +118,22 @@ def copy_into(src, dst):
 
 
 def sha256_path(path):
-    """Content fingerprint: a file's bytes, or a dir's sorted (relpath+bytes)."""
+    """Content fingerprint: a file's bytes, or a dir's files hashed in globally-sorted relpath
+    order (NOT os.walk order — that varies by filesystem and would break the cross-platform lock)."""
     h = hashlib.sha256()
     if os.path.isfile(path):
         h.update(open(path, "rb").read())
         return h.hexdigest()
+    items = []
     for root, _d, files in os.walk(path):
-        for f in sorted(files):
+        for f in files:
             if f == ".DS_Store":
                 continue
             fp = os.path.join(root, f)
-            h.update(os.path.relpath(fp, path).encode())
-            h.update(open(fp, "rb").read())
+            items.append((os.path.relpath(fp, path).replace(os.sep, "/"), fp))
+    for rel, fp in sorted(items):
+        h.update(rel.encode())
+        h.update(open(fp, "rb").read())
     return h.hexdigest()
 
 
