@@ -1,0 +1,41 @@
+# primitives-core.yaml — THE ROSTER
+#
+# Authoritative manifest of every primitive in this repo. Manifest-over-filename-sort:
+# the translation service and the roster<->disk drift guard both read this file, not a
+# directory listing. Nothing is migrated yet (Phase 1 = scaffold); `primitives:` is empty
+# and gets populated in Phase 2 as content lands in primitives-core/.
+#
+# Governed by docs/CHARTER.md and planning/repository-technical-plan.md (§2.1, §4, §5).
+#
+# ─── ENTRY SCHEMA ──────────────────────────────────────────────────────────────────────
+# Each list item under `primitives:` is one primitive:
+#
+#   - id:        <kebab>            # unique; matches the source path stem, per manifests/naming.md
+#     type:      skill|agent|mcp|hook
+#     source:    primitives-core/…  # repo-relative path to the canonical source copy
+#     shelf:     core|toggle        # core = always-on raw distribution; toggle = bundled into a plugin
+#     origin:    internal|external  # internal = ours; external = third-party (vendored)
+#     vendor:    <name|null>        # provenance for external/forked primitives; null for original internal
+#     targets:   [claude-code, opencode, claude-agents]   # which targets this primitive ships to
+#     plugins:   [<plugin-id>, …]   # owning plugin(s) for toggle-shelf primitives; [] for pure core
+#     summary:   <one line>         # what it does
+#
+# Capability per (type × target) is NOT set here — it is derived from
+# primitives-core-translation-config.yaml. The roster says *what ships where*; the config
+# says *how* each type renders into each target.
+#
+# Example (illustrative — not an active entry):
+#   - id: handoff
+#     type: skill
+#     source: primitives-core/skills/handoff
+#     shelf: core
+#     origin: internal
+#     vendor: null
+#     targets: [claude-code, opencode]
+#     plugins: []
+#     summary: "Maintain the project session-handoff file so a new session can pick up cold."
+# ────────────────────────────────────────────────────────────────────────────────────────
+
+version: 1
+
+primitives: []
