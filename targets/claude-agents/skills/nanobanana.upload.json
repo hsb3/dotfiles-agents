@@ -1,0 +1,13 @@
+{
+  "display_title": "nanobanana",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "README.md",
+    "SKILL.md",
+    "agents/openai.yaml",
+    "references/config.md",
+    "references/models-and-api.md",
+    "scripts/nanobanana.py",
+    "tests/test_nanobanana.py"
+  ]
+}

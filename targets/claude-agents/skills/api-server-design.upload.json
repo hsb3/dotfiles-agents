@@ -1,0 +1,8 @@
+{
+  "display_title": "api-server-design",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "resources/api_layers.html"
+  ]
+}

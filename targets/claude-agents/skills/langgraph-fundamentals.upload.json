@@ -1,0 +1,7 @@
+{
+  "display_title": "langgraph-fundamentals",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

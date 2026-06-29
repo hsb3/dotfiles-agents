@@ -1,0 +1,7 @@
+{
+  "display_title": "board-triage",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

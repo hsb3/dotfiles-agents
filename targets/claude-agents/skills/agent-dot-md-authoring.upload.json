@@ -1,0 +1,9 @@
+{
+  "display_title": "agent-dot-md-authoring",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/deer-flow-patterns.md",
+    "references/skeleton-template.md"
+  ]
+}

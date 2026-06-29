@@ -1,0 +1,10 @@
+{
+  "display_title": "subagent-creator",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "assets/templates/code-reviewer-template.md",
+    "assets/templates/data-engineer-template.md",
+    "scripts/validate-agent.sh"
+  ]
+}

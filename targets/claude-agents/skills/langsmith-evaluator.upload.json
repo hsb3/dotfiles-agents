@@ -1,0 +1,7 @@
+{
+  "display_title": "langsmith-evaluator",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

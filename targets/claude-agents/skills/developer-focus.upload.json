@@ -1,0 +1,8 @@
+{
+  "display_title": "developer-focus",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/checklists.md"
+  ]
+}

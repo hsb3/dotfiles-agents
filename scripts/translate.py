@@ -6,9 +6,10 @@ config (primitives-core-translation-config.yaml); renders each primitive into ea
 its capability cell; writes static bundles under targets/ + a content-hash lock
 (primitives-core-translation-results.json).
 
-MVP scope (technical-plan §2.1): skills native (copy) · agents transform (opencode frontmatter) ·
-Claude Code marketplace assembly. mcp-render + the claude-agents (CMA) adapter are DEFERRED and
-recorded as skips; hooks ship to claude-code only (unsupported elsewhere).
+Scope (technical-plan §2.1): skills native (copy) · agents transform (opencode frontmatter) ·
+Claude Code marketplace assembly · claude-agents (CMA) render — static POST /v1/agents and
+/v1/skills payloads under targets/claude-agents/ (#6). mcp-render stays DEFERRED (no mcp
+primitive exists yet) and is recorded as a skip; hooks ship to claude-code only.
 
 Deterministic: stable ordering, no clocks/timestamps in output — so the --check drift guard never
 false-fails. Stdlib-only (tailored parsers, no pyyaml) so it runs in CI with zero install.
@@ -108,6 +109,23 @@ def parse_capabilities(path):
     return caps
 
 
+def parse_cma_options(path):
+    """Top-level `cma:` block -> options dict (e.g. default_model). Defaults applied by caller."""
+    opts, in_cma = {}, False
+    for raw in open(path, encoding="utf-8"):
+        line = raw.rstrip("\n")
+        if re.match(r"^cma:\s*$", line):
+            in_cma = True
+            continue
+        if in_cma:
+            m = re.match(r"^  (\w+):\s*(.*?)\s*$", line)
+            if m:
+                opts[m.group(1)] = m.group(2)
+            elif line and not line.startswith((" ", "#")):
+                break  # next top-level key
+    return opts
+
+
 # ── helpers ────────────────────────────────────────────────────────────────────────────
 def copy_into(src, dst):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -159,8 +177,33 @@ def transform_agent_opencode(src_path):
     return "---\n" + "\n".join(out) + "\n---\n" + body
 
 
+def agent_system(src_path):
+    """CC agent .md -> the `system` string for a CMA payload: the body with frontmatter stripped
+    (leading/trailing whitespace trimmed). Frontmatter carries name/model/color; the persona that
+    drives behavior is the body."""
+    text = open(src_path, encoding="utf-8").read()
+    m = re.match(r"^---\n.*?\n---\n?(.*)$", text, re.S)
+    return (m.group(1) if m else text).strip()
+
+
+def skill_display_title(skill_dir):
+    """Extract the `name:` from a skill's SKILL.md frontmatter (CMA derives name/description from
+    the uploaded SKILL.md; we surface the name as display_title on the build-sheet). Falls back to
+    the folder name if absent."""
+    skill_md = os.path.join(skill_dir, "SKILL.md")
+    if os.path.isfile(skill_md):
+        text = open(skill_md, encoding="utf-8").read()
+        m = re.match(r"^---\n(.*?)\n---", text, re.S)
+        if m:
+            for ln in m.group(1).split("\n"):
+                km = re.match(r"^name:\s*(.+?)\s*$", ln)
+                if km:
+                    return km.group(1).strip().strip("'\"")
+    return os.path.basename(skill_dir.rstrip("/"))
+
+
 # ── build ──────────────────────────────────────────────────────────────────────────────
-def build(out_root, roster, plugins_meta, caps):
+def build(out_root, roster, plugins_meta, caps, cma_model):
     """Render all targets under out_root. Returns the results dict."""
     results = {t: {} for t in TARGETS}
     for t in TARGETS:
@@ -287,19 +330,62 @@ def build(out_root, roster, plugins_meta, caps):
                 reason="opencode hooks unsupported (CC-only)",
             )
 
-    # ---- claude-agents: DEFERRED (record skips, build nothing) ----
+    # ---- claude-agents (CMA): static API payloads — agents POST /v1/agents, skills POST /v1/skills ----
+    # Deterministic, committed, drift-guarded artifacts; deploy (the actual POST) is dotfiles-bootstrap's
+    # concern. Contract: CANON.md "Resolved — managed-agents (CMA) contract".
     for e in sorted(roster, key=lambda x: x["id"]):
         if "claude-agents" not in e["targets"]:
             continue
-        t, pid = e["type"], e["id"]
+        t, pid, src = e["type"], e["id"], os.path.join(REPO, e["source"])
         cap = caps.get(t, {}).get("claude-agents", "render")
-        rec(
-            "claude-agents",
-            pid,
-            cap,
-            skipped=True,
-            reason="claude-agents (CMA) adapter deferred (post-MVP)",
-        )
+        if t == "agent":
+            # BetaManagedAgentsCreateAgentParams: name+model required; system from the body.
+            payload = {
+                "name": pid,
+                "model": cma_model,
+                "system": agent_system(src),
+                "tools": [],
+                "skills": [],
+                "metadata": {},
+            }
+            d = f"claude-agents/agents/{pid}.json"
+            os.makedirs(os.path.dirname(os.path.join(out_root, d)), exist_ok=True)
+            with open(os.path.join(out_root, d), "w") as fh:
+                json.dump(payload, fh, indent=2, sort_keys=True)
+                fh.write("\n")
+            rec("claude-agents", pid, cap, d)
+        elif t == "skill":
+            # POST /v1/skills multipart: the skill folder uploads as-is (SKILL.md at root); a
+            # sidecar .upload.json describes the multipart (file list + display_title).
+            folder = f"claude-agents/skills/{pid}"
+            copy_into(src, os.path.join(out_root, folder))
+            files = sorted(
+                os.path.relpath(
+                    os.path.join(dp, f), os.path.join(out_root, folder)
+                ).replace(os.sep, "/")
+                for dp, _d, fs in os.walk(os.path.join(out_root, folder))
+                for f in fs
+                if f != ".DS_Store"
+            )
+            sheet = {
+                "endpoint": "POST /v1/skills",
+                "display_title": skill_display_title(src),
+                "files": files,
+            }
+            d = f"claude-agents/skills/{pid}.upload.json"
+            with open(os.path.join(out_root, d), "w") as fh:
+                json.dump(sheet, fh, indent=2, sort_keys=True)
+                fh.write("\n")
+            # fingerprint the folder (the upload set) — the sheet's sha is implied by its inputs.
+            rec("claude-agents", pid, cap, folder)
+        else:
+            rec(
+                "claude-agents",
+                pid,
+                caps.get(t, {}).get("claude-agents", "unsupported"),
+                skipped=True,
+                reason="no CMA equivalent for this primitive type",
+            )
 
     return results
 
@@ -316,8 +402,19 @@ def write_results(path, results):
         fh.write("\n")
 
 
+CMA_DEFAULT_MODEL = (
+    "claude-sonnet-4-5"  # fallback if the config omits cma.default_model
+)
+
+
 def load_inputs():
-    return parse_roster(ROSTER), parse_plugins(PLUGINS_YAML), parse_capabilities(CONFIG)
+    cma = parse_cma_options(CONFIG)
+    return (
+        parse_roster(ROSTER),
+        parse_plugins(PLUGINS_YAML),
+        parse_capabilities(CONFIG),
+        cma.get("default_model", CMA_DEFAULT_MODEL),
+    )
 
 
 def summarize(results):
@@ -356,12 +453,12 @@ def diff_trees(a, b):
 
 def main():
     check = "--check" in sys.argv
-    roster, plugins_meta, caps = load_inputs()
+    roster, plugins_meta, caps, cma_model = load_inputs()
 
     if check:
         tmp = tempfile.mkdtemp(prefix="translate-check-")
         try:
-            results = build(tmp, roster, plugins_meta, caps)
+            results = build(tmp, roster, plugins_meta, caps, cma_model)
             # compare only the generated per-target subdirs (targets/README.md is curated)
             problems = []
             for t in TARGETS:
@@ -387,7 +484,7 @@ def main():
     tgt = os.path.join(REPO, "targets")
     for t in TARGETS:
         shutil.rmtree(os.path.join(tgt, t), ignore_errors=True)
-    results = build(tgt, roster, plugins_meta, caps)
+    results = build(tgt, roster, plugins_meta, caps, cma_model)
     write_results(RESULTS, results)
     print(f"✓ built targets/ — {summarize(results)}")
     return 0

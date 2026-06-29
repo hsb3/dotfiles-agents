@@ -1,0 +1,8 @@
+{
+  "display_title": "obsidian-dom-helpers",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "examples/safe-dom-patterns.ts"
+  ]
+}

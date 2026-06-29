@@ -1,0 +1,14 @@
+{
+  "display_title": "dlt-pipelines",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "assets/config.toml.template",
+    "assets/secrets.toml.template",
+    "references/dlt_cli_reference.md",
+    "references/dlt_comprehensive_guide.md",
+    "references/dlt_production_patterns.md",
+    "scripts/csv_pipeline_template.py",
+    "scripts/production_helpers.py"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "display_title": "shadcn",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "agents/openai.yml",
+    "assets/shadcn-small.png",
+    "assets/shadcn.png",
+    "cli.md",
+    "customization.md",
+    "evals/evals.json",
+    "mcp.md",
+    "rules/base-vs-radix.md",
+    "rules/composition.md",
+    "rules/forms.md",
+    "rules/icons.md",
+    "rules/styling.md"
+  ]
+}

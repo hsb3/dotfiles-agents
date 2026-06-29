@@ -1,0 +1,7 @@
+{
+  "display_title": "cms-json-data-dictionary",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

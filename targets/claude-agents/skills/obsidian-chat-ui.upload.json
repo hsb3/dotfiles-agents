@@ -1,0 +1,11 @@
+{
+  "display_title": "obsidian-chat-ui",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "examples/complete-chat-view.ts",
+    "examples/streaming-handler.ts",
+    "references/itemview-api.md",
+    "references/workspace-integration.md"
+  ]
+}

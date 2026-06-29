@@ -1,0 +1,7 @@
+{
+  "display_title": "setup-project-dashboard",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

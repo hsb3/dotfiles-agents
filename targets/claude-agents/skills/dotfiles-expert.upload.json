@@ -1,0 +1,12 @@
+{
+  "display_title": "dotfiles-expert",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/ai-tooling.md",
+    "references/claude-code.md",
+    "references/repo-and-stow.md",
+    "references/shell.md",
+    "references/supply-chain.md"
+  ]
+}

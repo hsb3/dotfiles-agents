@@ -1,0 +1,7 @@
+{
+  "display_title": "openspec-archive-change",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

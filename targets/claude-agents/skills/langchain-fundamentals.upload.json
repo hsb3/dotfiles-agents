@@ -1,0 +1,7 @@
+{
+  "display_title": "langchain-fundamentals",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}
