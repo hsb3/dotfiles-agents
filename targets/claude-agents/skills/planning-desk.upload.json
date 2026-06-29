@@ -1,0 +1,25 @@
+{
+  "display_title": "planning-desk",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "assets/ISSUE_TEMPLATE/bug.md",
+    "assets/ISSUE_TEMPLATE/epic.md",
+    "assets/ISSUE_TEMPLATE/feature.md",
+    "assets/_config.template.md",
+    "assets/plans-README.md",
+    "references/issue-body.md",
+    "references/loop.md",
+    "references/plan.md",
+    "references/toolkit.md",
+    "scripts/_utils/.gitignore",
+    "scripts/_utils/_repo.py",
+    "scripts/_utils/conformance.py",
+    "scripts/_utils/coverage.py",
+    "scripts/_utils/deps-suggest.py",
+    "scripts/_utils/evidence-audit.py",
+    "scripts/_utils/reconcile.py",
+    "scripts/_utils/sequence.py",
+    "scripts/_utils/sync-bodies.py"
+  ]
+}

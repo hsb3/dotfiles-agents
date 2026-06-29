@@ -5,358 +5,429 @@
     "claude-agents": {
       "agent-dot-md-authoring": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/agent-dot-md-authoring",
+        "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
+        "skipped": false
       },
       "api-server-design": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/api-server-design",
+        "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
+        "skipped": false
       },
       "board-analyst": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/board-analyst.json",
+        "sha256": "13ca6d67423286bc6fb82fac2b279d8fb70558b83a38c764b5afaaf00e5c77ef",
+        "skipped": false
       },
       "board-reporting": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/board-reporting",
+        "sha256": "4128dd47797bb08fe48b8b383bc4ded4cf2ad8a77453bef6711fbc2c7fea1b07",
+        "skipped": false
       },
       "board-triage": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/board-triage",
+        "sha256": "c77863bc4dbef491fad6fb0a14e4e8e8b301f9e046f01d05cb95b2196101fa0f",
+        "skipped": false
       },
       "carbon-builder": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/carbon-builder",
+        "sha256": "ac85880acd3316ae435fbd999ccd7bf4da04536573034f8153ed02f9c16c1d15",
+        "skipped": false
       },
       "chat-ui-builder": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/chat-ui-builder.json",
+        "sha256": "a9062423f1bdbe1e6af604c58a325b823b117e381e769746ce915e1bbb8b1aa9",
+        "skipped": false
       },
       "cms-bigquery-etl-generator": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/cms-bigquery-etl-generator",
+        "sha256": "0ecb1b6d54d29710d126ec8c2e5f625c1f0c62d692b2f0500ae42c769e370241",
+        "skipped": false
       },
       "cms-data-engineer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/cms-data-engineer.json",
+        "sha256": "bbad7f834bab879c02da5cd81ef94f47a908203af6787d9192fd3840c003566f",
+        "skipped": false
       },
       "cms-json-data-dictionary": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/cms-json-data-dictionary",
+        "sha256": "e0bdcded79fa8b1e8adea0a361eb8ab07057532e3c8ff54bd44ef17108ffb249",
+        "skipped": false
       },
       "cms-pdf-to-markdown": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/cms-pdf-to-markdown",
+        "sha256": "05068f0a052571ce88bdc43a59999b5cbac041ebd75b61e6b388a7bf59f48a5f",
+        "skipped": false
       },
       "code-quality-reviewer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/code-quality-reviewer.json",
+        "sha256": "ad0f55994bda7a7f8c3f310cd5de57be3e07a0d50850e699e7dff90949123ed1",
+        "skipped": false
       },
       "comms": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/comms",
+        "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
+        "skipped": false
       },
       "deep-agents-core": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/deep-agents-core",
+        "sha256": "8cbf6f61f42b2482472f53a99e23607f16017e1e16ca037409c6c8fcfcbcc395",
+        "skipped": false
       },
       "deep-agents-memory": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/deep-agents-memory",
+        "sha256": "b7b0facdff17b6f3ad77019e30a697175389e06ec7260780f49d5b3a1d28ad2a",
+        "skipped": false
       },
       "deep-agents-orchestration": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/deep-agents-orchestration",
+        "sha256": "1570f8d88e1233edc3306d28224604172b016aedba0ced2efa2dd8e38e28ae62",
+        "skipped": false
       },
       "deep-research-documenter": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/deep-research-documenter.json",
+        "sha256": "37f23ce05e4166a7aaf24f1a1ce8f07a0c0bb3bd8b4d85aa788fc83013762dd3",
+        "skipped": false
       },
       "deno-ui-builder": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/deno-ui-builder.json",
+        "sha256": "c438bf4846e893afe214397c505b3f77cc25238a2ec7184b04d51efd23592d97",
+        "skipped": false
       },
       "deno-ui-prototyper": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/deno-ui-prototyper.json",
+        "sha256": "fa3601db91d866d1dbfc59f1dd4fc9a313581b311a7265614cd7401a7e71bca4",
+        "skipped": false
       },
       "devcontainer-setup": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/devcontainer-setup",
+        "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
+        "skipped": false
       },
       "developer-focus": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/developer-focus",
+        "sha256": "4a695b70511142078747039ff24e36b19b4dd634c5370dc57d71ad973624ac86",
+        "skipped": false
       },
       "diagrams": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/diagrams",
+        "sha256": "9eec8a72479d040aa568f23737f6a94b64d9c5e9f18d8af1e9b88eb8716d04bd",
+        "skipped": false
       },
       "dlt-pipelines": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/dlt-pipelines",
+        "sha256": "5449214c8d0295d82582e7c457a89b4fff4363a25ede229b0f5dc82efa679031",
+        "skipped": false
       },
       "documentation-accuracy-reviewer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/documentation-accuracy-reviewer.json",
+        "sha256": "654669b4acc57c7fe1ad0aeff1b2bb56e581f3daf460503e624e152c6209ce86",
+        "skipped": false
       },
       "dotfiles-expert": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/dotfiles-expert",
+        "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
+        "skipped": false
       },
       "fastapi-best-practices-reviewer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/fastapi-best-practices-reviewer.json",
+        "sha256": "7119484f2a13c075a13c7a50848e1a807a04c249758fd409f1284618c36a8d7b",
+        "skipped": false
       },
       "fastapi-improvement-implementer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/fastapi-improvement-implementer.json",
+        "sha256": "8ec47a55b2470471221357b957bf83c17a096460140409094e5f923fe5a0813a",
+        "skipped": false
       },
       "find-skills": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/find-skills",
+        "sha256": "d31e234f0c90694a670222cdd1dafa853e051d7066beda389f1097c22dadd461",
+        "skipped": false
       },
       "framework-selection": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/framework-selection",
+        "sha256": "0be39cf8d1f315eb2fbb96850312b1a7a6a9d15d38e9bce3a17a1620572b3198",
+        "skipped": false
       },
       "github-project-board": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/github-project-board",
+        "sha256": "5669bf8a340afb5e7b2ae82cbb046d19b7589ae94e7a95071b6402b1b761fdea",
+        "skipped": false
       },
       "handoff": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/handoff",
+        "sha256": "47ab2d40b642602fd873584da89b22d71ed41b8061e0f5f3592462e5d903aae5",
+        "skipped": false
       },
       "healthcare-analytics-architect": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/healthcare-analytics-architect.json",
+        "sha256": "0ca1977a318c289aaee9614a99c6010d56d25afaed088299edc593ace7c9adbc",
+        "skipped": false
       },
       "langchain-dependencies": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langchain-dependencies",
+        "sha256": "bab5411cdfbdeaa42544c45791d9d3fc18d4cc193f4a3c5e2f6bd567422bffaf",
+        "skipped": false
       },
       "langchain-fundamentals": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langchain-fundamentals",
+        "sha256": "ede1b3210a135e2c7eb5ddb51e0aaf3b78fde07cfd9fbe6efaeb4d6c5db60bd2",
+        "skipped": false
       },
       "langchain-middleware": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langchain-middleware",
+        "sha256": "96f0798a575f61b6677b07cb3b8cf0c5afd6e29d4d5e2e793c8ac07198d82560",
+        "skipped": false
       },
       "langchain-rag": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langchain-rag",
+        "sha256": "545c661f6ed9b54cfe078a438052b2742d6122fc022f69db67d1a01aca4c726c",
+        "skipped": false
       },
       "langgraph-fundamentals": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langgraph-fundamentals",
+        "sha256": "d754005c69632037ca79c4daa8177b03e5a0f17f40cde3b0f532b33a8df88ded",
+        "skipped": false
       },
       "langgraph-human-in-the-loop": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langgraph-human-in-the-loop",
+        "sha256": "0e81f1ef881b4c82bdcb5bece6309558f9e53681022f8347f869abc403b48637",
+        "skipped": false
       },
       "langgraph-persistence": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langgraph-persistence",
+        "sha256": "fc617bfab9d06826cba1097def5c7775f4522a1dabdd1a0111472f9929b1b914",
+        "skipped": false
       },
       "langgraph-sse-client": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langgraph-sse-client",
+        "sha256": "f1c2d2fd7a99660b44e13c2b5e78343cdfe0b2989e634fb9bf54725a4ca2b8cd",
+        "skipped": false
       },
       "langsmith-dataset": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langsmith-dataset",
+        "sha256": "797513d010d62cba1752b48820d6fc864f36af0de81c13a3cf2f796565705799",
+        "skipped": false
       },
       "langsmith-evaluator": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langsmith-evaluator",
+        "sha256": "2077e66bc2f3f01fd01280f0fde159c2402079736090fa738b72b335f1ed43fb",
+        "skipped": false
       },
       "langsmith-trace": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/langsmith-trace",
+        "sha256": "41ee72564136590a405282ee58a5139a5be4aaa79c363dc3319337f7b9786321",
+        "skipped": false
       },
       "mcp-integrator": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/mcp-integrator.json",
+        "sha256": "01ae493625a23f508d05a36950835b002d565e10de64e5a29bbdfc075e09c813",
+        "skipped": false
       },
       "mermaid-diagram-specialist": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/mermaid-diagram-specialist.json",
+        "sha256": "5f501bb2c5a4b6b4648e5763486d3b1dda28c617c3558ceee1067cb8c4acefde",
+        "skipped": false
       },
       "nanobanana": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/nanobanana",
+        "sha256": "5171df70e2d07fa8fff9b74d4ee15ce418b8315cda43dd551cb4d75167c9c663",
+        "skipped": false
       },
       "notion-api": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/notion-api",
+        "sha256": "d116ea8e138c18e7e572e4652638ed78da8fc250b707b13ab4ddbafca4777ea2",
+        "skipped": false
       },
       "obsidian-api-basics": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/obsidian-api-basics",
+        "sha256": "a7b33c80d77ff0037017a09de60adb3f598b7814009adec5fc81f1e59ebbf6ab",
+        "skipped": false
       },
       "obsidian-best-practices": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/obsidian-best-practices",
+        "sha256": "fa1633b818da508445b9c622a840c4d79c6a70e412c33df2eb3bcb8e2f4aed6b",
+        "skipped": false
       },
       "obsidian-chat-ui": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/obsidian-chat-ui",
+        "sha256": "3feb31894fbeb6aa32f5a82bfc49b1888eec7093f9f3557c52a7bb82a66f2507",
+        "skipped": false
       },
       "obsidian-cli": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/obsidian-cli",
+        "sha256": "095fd7715f3c2a652b0e56f0c324df7a830f1c8ebff173d61e76d17120394133",
+        "skipped": false
       },
       "obsidian-dom-helpers": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/obsidian-dom-helpers",
+        "sha256": "fc00c36d315306bcc059fd633333d41e346e8a4156866372c48befe03898032b",
+        "skipped": false
       },
       "obsidian-mcp-server": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/obsidian-mcp-server",
+        "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
+        "skipped": false
       },
       "openspec-apply-change": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/openspec-apply-change",
+        "sha256": "6702222c740d74a6eba13455a92fd7e21c53f95907e06bca86125846ec4f542c",
+        "skipped": false
       },
       "openspec-archive-change": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/openspec-archive-change",
+        "sha256": "2e78fac386917ae7e7dcc51cf78d8097ec9dfbfeffccc90c2b788cc5ffafe203",
+        "skipped": false
       },
       "openspec-explore": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/openspec-explore",
+        "sha256": "adf4b097e7e44e017a667bc92a00b3ae608632e911dcd4825fede8fd3caa3f7b",
+        "skipped": false
       },
       "openspec-propose": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/openspec-propose",
+        "sha256": "f98694c3af75e8b0c89131998d13ef974cd49c4bc6fe439bb9360ecadc3257ea",
+        "skipped": false
       },
       "performance-reviewer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/performance-reviewer.json",
+        "sha256": "c9079b9278ecadde629bc054f98d8d957885e3661f931476bf66b5cd51db5b36",
+        "skipped": false
       },
       "planning-desk": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/planning-desk",
+        "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
+        "skipped": false
       },
       "plugin-scaffolder": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/plugin-scaffolder.json",
+        "sha256": "f8b159811aaf502bc37c066156e5e157b46704371158b023816414047616662f",
+        "skipped": false
       },
       "pptx-henry": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/pptx-henry",
+        "sha256": "aa67d1721c2160ec062dfd06fc0d1687da95df04e67129b6977e344100b37ca9",
+        "skipped": false
       },
       "python-test-writer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/python-test-writer.json",
+        "sha256": "1a80c82cffbbb795366eba4a8bc2a029da37df8337c43321de87e9a1977133b6",
+        "skipped": false
       },
       "react-doctor": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/react-doctor",
+        "sha256": "c71e879664dfd3a66d34cee0de7ec917b9f058b946522c0fb4d2cc7390ff300d",
+        "skipped": false
       },
       "readme-value-and-proof": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/readme-value-and-proof",
+        "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
+        "skipped": false
       },
       "security-code-reviewer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/security-code-reviewer.json",
+        "sha256": "1b482b77f5221494a25bf2d47dbafa1c5fc524bf45d47d7cf756d4a01a1c145b",
+        "skipped": false
       },
       "setup-project-dashboard": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/setup-project-dashboard",
+        "sha256": "22be4d9a4a9efc7b0352c1da1ffc2e6a93e394975c41140054407e0bd140abd2",
+        "skipped": false
       },
       "shadcn": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/shadcn",
+        "sha256": "7ccd352394a29b935350b44c4f7ef7eadf2f3debd6a0d6461c0f29731f88b9a3",
+        "skipped": false
       },
       "skill-creator": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/skill-creator",
+        "sha256": "b2bfe91d69ca99994c0566baede889e7d2b9bb8791c6b6106c5d387392f717f6",
+        "skipped": false
       },
       "subagent-creator": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/subagent-creator",
+        "sha256": "f3477945a2b61820acf13faaf733ea15d344f25ffd86faa0308c5a4fe38f5f0a",
+        "skipped": false
       },
       "test-coverage-reviewer": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/agents/test-coverage-reviewer.json",
+        "sha256": "fac6100d20c519f2d3f4342f47f3842fa33a270e54be6e90de20ba20b93b8d78",
+        "skipped": false
       },
       "update-project-dashboard": {
         "capability": "render",
-        "reason": "claude-agents (CMA) adapter deferred (post-MVP)",
-        "skipped": true
+        "destination": "claude-agents/skills/update-project-dashboard",
+        "sha256": "aec55de1e5600a41bb83d82b808913e55468cb27bb8617e3f8ddc01f763856b4",
+        "skipped": false
       }
     },
     "claude-code": {
@@ -795,7 +866,7 @@
       "skill-creator": {
         "capability": "native",
         "destination": "claude-code/skills/skill-creator",
-        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
+        "sha256": "b2bfe91d69ca99994c0566baede889e7d2b9bb8791c6b6106c5d387392f717f6",
         "skipped": false
       },
       "subagent-creator": {
@@ -1223,7 +1294,7 @@
       "skill-creator": {
         "capability": "native",
         "destination": "opencode/skills/skill-creator",
-        "sha256": "7e1b3178e91b8a0b65c61f00ce074f33d50a274a60653241ee99247f995037f8",
+        "sha256": "b2bfe91d69ca99994c0566baede889e7d2b9bb8791c6b6106c5d387392f717f6",
         "skipped": false
       },
       "subagent-creator": {

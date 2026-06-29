@@ -1,0 +1,11 @@
+{
+  "display_title": "notion-api",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/blocks.md",
+    "references/endpoints.md",
+    "references/filters-sorts.md",
+    "references/property-types.md"
+  ]
+}

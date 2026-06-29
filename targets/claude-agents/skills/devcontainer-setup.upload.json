@@ -1,0 +1,14 @@
+{
+  "display_title": "devcontainer-setup",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/dockerfile-best-practices.md",
+    "references/features-vs-dockerfile.md",
+    "resources/.zshrc",
+    "resources/Dockerfile",
+    "resources/devcontainer.json",
+    "resources/install.sh",
+    "resources/post_install.py"
+  ]
+}

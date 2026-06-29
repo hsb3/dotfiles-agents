@@ -1,0 +1,17 @@
+{
+  "display_title": "comms",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "examples/advisor-board-readout/playbook.md",
+    "examples/advisor-board-readout/sample.deck.js",
+    "examples/client-product-overview/playbook.md",
+    "examples/end-of-day-wrapup/playbook.md",
+    "examples/morning-briefing/playbook.md",
+    "examples/morning-briefing/sample.slides.json",
+    "examples/weekly-planning/playbook.md",
+    "examples/weekly-planning/sample.slides.json",
+    "examples/weekly-planning/sample.sources.md",
+    "references/comm-package-standard.md"
+  ]
+}

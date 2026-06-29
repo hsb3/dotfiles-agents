@@ -13,10 +13,19 @@
 # The roster (primitives-core.yaml) says what ships where; this file says how. The translation
 # service (scripts/, Phase 3) reads both and writes targets/ + the results lock.
 #
-# MVP order (technical-plan §2.1): skills(native) + agents(transform) + CC marketplace assembly
-# first. mcp render and the claude-agents (CMA) adapter are deferred; hooks ship CC-only.
+# Build order (technical-plan §2.1): skills(native) + agents(transform) + CC marketplace assembly
+# shipped first (MVP, #17); the claude-agents (CMA) adapter renders static payloads (#6). mcp
+# render stays deferred until a first mcp primitive exists; hooks ship CC-only.
 
 version: 1
+
+# ─── CMA (Claude managed agents) RENDER OPTIONS ──────────────────────────────────────────
+# The CMA adapter emits static, drift-guarded API payloads under targets/claude-agents/ — it
+# does NOT POST (deploy is dotfiles-bootstrap's concern, consistent with the CC/opencode targets).
+# default_model fills the required `model` field of every BetaManagedAgentsCreateAgentParams
+# payload; tune it here once rather than pinning a version per agent (CANON Q2 → option a).
+cma:
+  default_model: claude-sonnet-4-5
 
 # ─── TARGETS ─────────────────────────────────────────────────────────────────────────────
 targets:
@@ -32,7 +41,7 @@ targets:
     kind: api-payloads
     output: targets/claude-agents      # CMA build-sheet / payloads per agent
     priority: 3
-    status: deferred                   # adapter built after the CC+opencode MVP
+    status: active                     # CMA adapter renders static payloads (#6)
 
 # ─── CAPABILITY MATRIX (type × target) ───────────────────────────────────────────────────
 # Mirrors technical-plan §2. `adapter` names the routine in scripts/ that implements the cell.

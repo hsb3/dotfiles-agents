@@ -1,0 +1,7 @@
+{
+  "display_title": "cms-pdf-to-markdown",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

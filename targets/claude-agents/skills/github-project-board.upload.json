@@ -1,0 +1,7 @@
+{
+  "display_title": "github-project-board",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

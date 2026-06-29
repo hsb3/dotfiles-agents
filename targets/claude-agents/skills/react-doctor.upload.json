@@ -1,0 +1,8 @@
+{
+  "display_title": "react-doctor",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "AGENTS.md",
+    "SKILL.md"
+  ]
+}

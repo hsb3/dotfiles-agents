@@ -1,0 +1,7 @@
+{
+  "display_title": "langsmith-dataset",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md"
+  ]
+}

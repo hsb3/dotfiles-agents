@@ -1,0 +1,11 @@
+{
+  "display_title": "langgraph-sse-client",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "examples/chat-integration.ts",
+    "examples/complete-sse-client.ts",
+    "references/langgraph-api.md",
+    "references/sse-format.md"
+  ]
+}

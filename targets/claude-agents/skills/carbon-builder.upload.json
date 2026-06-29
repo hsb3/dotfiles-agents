@@ -1,0 +1,17 @@
+{
+  "display_title": "carbon-builder",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/accessibility-rules.md",
+    "references/charts.md",
+    "references/common-pitfalls.md",
+    "references/components.md",
+    "references/framework-setup.md",
+    "references/grid-system.md",
+    "references/implementation-guardrails.md",
+    "references/llms.txt",
+    "references/tokens.md",
+    "references/verification.md"
+  ]
+}

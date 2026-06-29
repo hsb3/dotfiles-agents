@@ -1,0 +1,60 @@
+# DLT Configuration Template
+# This file contains NON-SENSITIVE configuration settings
+# Safe to commit to version control
+
+# Extract stage configuration
+[extract]
+# Number of parallel resources during extraction
+max_parallel_items = 20
+# Chunk size for buffering before writing to disk
+chunk_size = 50000
+
+# Normalize stage configuration
+[normalize]
+# Number of parallel worker processes for normalization
+# Recommended: (CPU cores - 1)
+workers = 3
+
+# Load stage configuration
+[load]
+# Number of parallel worker threads for loading
+# Can be increased if database can handle more connections
+workers = 20
+
+# Data writer configuration (applies to extract and normalize)
+[data_writer]
+# Maximum items per file before rotation (enables parallelism)
+file_max_items = 100000
+# Maximum bytes per file before rotation (10MB)
+file_max_bytes = 10485760
+# In-memory buffer size before flushing to disk
+buffer_max_items = 10000
+
+# Normalize data writer specific settings
+[normalize.data_writer]
+file_max_items = 100000
+file_max_bytes = 10485760
+
+# Source-specific configuration (non-sensitive)
+[sources.my_source.config]
+# Example: CSV directory path
+csv_directory = "./data"
+# Example: File pattern to match
+file_pattern = "*.csv"
+# Example: Processing options
+batch_size = 1000
+
+# Destination configuration (non-sensitive)
+[destination.postgres]
+# Schema name for staging
+schema = "staging"
+
+# Logging configuration
+[runtime]
+log_level = "INFO"
+log_format = "JSON"  # Use JSON for production log aggregation
+
+# Performance optimization flags
+[runtime.dlthub_telemetry]
+# Disable telemetry in production
+enabled = false

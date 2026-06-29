@@ -1,0 +1,14 @@
+{
+  "display_title": "pptx-henry",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "assets/theme-tokens.js",
+    "evals/evals.json",
+    "references/color-palettes.md",
+    "references/narrative.md",
+    "references/typography.md",
+    "scripts/build-theme-sampler.js",
+    "scripts/render-pptx.sh"
+  ]
+}
