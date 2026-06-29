@@ -12,9 +12,9 @@
 version: 1
 
 primitives:
-  - id: agent-guide-authoring
+  - id: agent-dot-md-authoring
     type: skill
-    source: primitives-core/skills/agent-guide-authoring
+    source: primitives-core/skills/agent-dot-md-authoring
     shelf: core
     origin: internal
     vendor: null
