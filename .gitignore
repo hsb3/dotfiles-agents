@@ -17,3 +17,5 @@
 _meta/*
 !_meta/README.md
 !_meta/HANDOFF.md
+!_meta/plans/
+!_meta/plans/**
