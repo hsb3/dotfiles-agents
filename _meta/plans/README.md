@@ -34,9 +34,11 @@ disk before trusting the table. It exits non-zero on any drift.
 
 ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 
+_None active. Small follow-ups #24 (loadability smoke) and #25 (file-handle chore) are tracked as
+issues without a deep plan folder._
+
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
-| _(none active; small follow-ups #24/#25 tracked as issues, no deep plan)_ | -- | -- |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
