@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "azure-tools": {
+      "args": [
+        "-y",
+        "@azure/mcp@latest",
+        "server",
+        "start"
+      ],
+      "command": "npx",
+      "env": {},
+      "type": "stdio"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "chrome-devtools",
+  "description": "Chrome DevTools MCP — drive and inspect a Chrome instance (isolated profile).",
+  "transport": "stdio",
+  "command": "npx",
+  "args": ["-y", "chrome-devtools-mcp@latest", "--isolated"],
+  "env": {}
+}

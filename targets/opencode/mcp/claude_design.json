@@ -1,0 +1,9 @@
+{
+  "mcp": {
+    "claude_design": {
+      "enabled": true,
+      "type": "remote",
+      "url": "https://api.anthropic.com/v1/design/mcp"
+    }
+  }
+}

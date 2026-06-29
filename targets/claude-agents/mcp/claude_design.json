@@ -1,0 +1,9 @@
+{
+  "mcp_servers": [
+    {
+      "name": "claude_design",
+      "type": "url",
+      "url": "https://api.anthropic.com/v1/design/mcp"
+    }
+  ]
+}

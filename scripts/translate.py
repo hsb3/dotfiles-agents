@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Translation service (Phase 3, issue #6).
 
-Reads the roster (primitives-core.yaml), plugin metadata (plugins.yaml), and the capability
-config (primitives-core-translation-config.yaml); renders each primitive into each target per
-its capability cell; writes static bundles under targets/ + a content-hash lock
-(primitives-core-translation-results.json).
+Reads the roster (primitives-core.yaml), plugin metadata (plugins.yaml), the capability config
+(primitives-core-translation-config.yaml), and the externals tracker (externals.yaml); renders
+each primitive into each target per its capability cell; writes static bundles under targets/ +
+a content-hash lock (primitives-core-translation-results.json).
 
 Scope (technical-plan §2.1): skills native (copy) · agents transform (opencode frontmatter) ·
 Claude Code marketplace assembly · claude-agents (CMA) render — static POST /v1/agents and
 /v1/skills payloads under targets/claude-agents/ (#6) · mcp render — neutral connection specs
-(primitives-core/mcp/<name>.json) -> each target's mcp config fragment (CC mcpServers, opencode
-mcp, CMA mcp_servers[]; CMA is remote-only so local stdio servers record a skip). Hooks ship
-to claude-code only.
+(primitives-core/mcp/<name>.json for self-authored + externals.yaml kind:mcp / externals/mcp/
+for third-party) -> each target's mcp config fragment (CC mcpServers, opencode mcp, CMA
+mcp_servers[]; CMA is remote-only so local stdio servers record a skip). Hooks ship to
+claude-code only.
 
 Deterministic: stable ordering, no clocks/timestamps in output — so the --check drift guard never
 false-fails. Stdlib-only (tailored parsers, no pyyaml) so it runs in CI with zero install.
@@ -32,6 +33,7 @@ import tempfile
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
+EXTERNALS = os.path.join(REPO, "externals.yaml")
 CONFIG = os.path.join(REPO, "primitives-core-translation-config.yaml")
 RESULTS = os.path.join(REPO, "primitives-core-translation-results.json")
 TARGETS = ("claude-code", "opencode", "claude-agents")
@@ -72,6 +74,33 @@ def parse_roster(path):
     for e in entries:
         e["targets"] = _list(e.get("targets", ""))
         e["plugins"] = _list(e.get("plugins", ""))
+    return entries
+
+
+def parse_externals(path):
+    """Parse externals.yaml's `externals:` list into dicts (flat fields; targets via _list).
+    Only kind: mcp entries are rendered today; skill/plugin entries are clone-at-build (pending)."""
+    entries, cur, in_list = [], None, False
+    for raw in open(path, encoding="utf-8"):
+        line = raw.rstrip("\n")
+        if re.match(r"^externals:\s*$", line):
+            in_list = True
+            continue
+        if not in_list:
+            continue
+        m = re.match(r"^  - (\w+):\s*(.*)$", line)
+        if m:
+            if cur:
+                entries.append(cur)
+            cur = {m.group(1): m.group(2).strip()}
+            continue
+        m = re.match(r"^    (\w+):\s*(.*)$", line)
+        if m and cur is not None:
+            cur[m.group(1)] = m.group(2).strip()
+    if cur:
+        entries.append(cur)
+    for e in entries:
+        e["targets"] = _list(e.get("targets", ""))
     return entries
 
 
@@ -257,7 +286,7 @@ def write_json(path, payload):
 
 
 # ── build ──────────────────────────────────────────────────────────────────────────────
-def build(out_root, roster, plugins_meta, caps, cma_model):
+def build(out_root, roster, plugins_meta, caps, cma_model, externals):
     """Render all targets under out_root. Returns the results dict."""
     results = {t: {} for t in TARGETS}
     for t in TARGETS:
@@ -466,6 +495,37 @@ def build(out_root, roster, plugins_meta, caps, cma_model):
                 reason="no CMA equivalent for this primitive type",
             )
 
+    # ---- externals: third-party mcp connection specs (externals.yaml kind: mcp) ----
+    # skill/plugin externals are clone-at-build (not implemented yet); only mcp renders today.
+    for ext in sorted(externals, key=lambda x: x["id"]):
+        if ext.get("kind") != "mcp":
+            continue
+        pid = ext["id"]
+        spec = load_mcp_spec(os.path.join(REPO, ext["spec"]))
+        spec.setdefault("name", pid)
+        tgs = ext.get("targets", [])
+        if "claude-code" in tgs:
+            d = f"claude-code/mcp/{pid}.json"
+            write_json(os.path.join(out_root, d), mcp_to_claude(spec))
+            rec("claude-code", pid, "render", d)
+        if "opencode" in tgs:
+            d = f"opencode/mcp/{pid}.json"
+            write_json(os.path.join(out_root, d), mcp_to_opencode(spec))
+            rec("opencode", pid, "render", d)
+        if "claude-agents" in tgs:
+            if spec.get("transport") == "http":
+                d = f"claude-agents/mcp/{pid}.json"
+                write_json(os.path.join(out_root, d), mcp_to_cma(spec))
+                rec("claude-agents", pid, "render", d)
+            else:
+                rec(
+                    "claude-agents",
+                    pid,
+                    "render",
+                    skipped=True,
+                    reason="CMA mcp_servers are remote-only; this server is local stdio",
+                )
+
     return results
 
 
@@ -493,6 +553,7 @@ def load_inputs():
         parse_plugins(PLUGINS_YAML),
         parse_capabilities(CONFIG),
         cma.get("default_model", CMA_DEFAULT_MODEL),
+        parse_externals(EXTERNALS),
     )
 
 
@@ -532,12 +593,12 @@ def diff_trees(a, b):
 
 def main():
     check = "--check" in sys.argv
-    roster, plugins_meta, caps, cma_model = load_inputs()
+    roster, plugins_meta, caps, cma_model, externals = load_inputs()
 
     if check:
         tmp = tempfile.mkdtemp(prefix="translate-check-")
         try:
-            results = build(tmp, roster, plugins_meta, caps, cma_model)
+            results = build(tmp, roster, plugins_meta, caps, cma_model, externals)
             # compare only the generated per-target subdirs (targets/README.md is curated)
             problems = []
             for t in TARGETS:
@@ -563,7 +624,7 @@ def main():
     tgt = os.path.join(REPO, "targets")
     for t in TARGETS:
         shutil.rmtree(os.path.join(tgt, t), ignore_errors=True)
-    results = build(tgt, roster, plugins_meta, caps, cma_model)
+    results = build(tgt, roster, plugins_meta, caps, cma_model, externals)
     write_results(RESULTS, results)
     print(f"✓ built targets/ — {summarize(results)}")
     return 0

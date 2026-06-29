@@ -7,18 +7,53 @@
 #
 # Entry schema:
 #   - id:       <kebab>
-#     kind:     plugin | skill
-#     upstream: <git url>      # null = TODO: research the source repo
+#     kind:     plugin | skill | mcp
+#     upstream: <git url | docker image | npm:pkg | url>   # provenance; null = TODO: research
 #     ref:      <tag|sha|branch>   # pin for reproducible clones; null until upstream known
 #     provides: <one line>     # what it gives us
 #     targets:  [claude-code, opencode, claude-agents]   # where it deploys
+#     spec:     externals/mcp/<id>.json   # kind: mcp ONLY — the neutral connection spec to render
 #
-# STATUS: upstream URLs are unresearched (CANON open item). Entries are stubbed upstream/ref=null
-# so the inventory is complete and the gaps are explicit.
+# kind: mcp — a third-party MCP server is a CONNECTION SPEC (config), not a cloned bundle (CANON 16).
+# The spec (same neutral schema as primitives-core/mcp/, see that README) lives at `spec:` and the
+# build renders it to each target's mcp config; secrets are ${VAR} placeholders (Keychain at deploy).
+#
+# STATUS: skill/plugin upstream URLs are unresearched (CANON open item) — those are NOT cloned yet.
+# Only kind: mcp entries render today.
 
 version: 1
 
 externals:
+  # --- third-party mcp servers (curated; connection specs, not clones — render today) ---
+  - id: github
+    kind: mcp
+    upstream: ghcr.io/github/github-mcp-server
+    ref: latest
+    provides: "GitHub MCP — issues, PRs, repos, actions across all toolsets."
+    targets: [claude-code, opencode]
+    spec: externals/mcp/github.json
+  - id: azure-tools
+    kind: mcp
+    upstream: npm:@azure/mcp
+    ref: latest
+    provides: "Azure MCP — Azure resource management and tooling."
+    targets: [claude-code, opencode]
+    spec: externals/mcp/azure-tools.json
+  - id: chrome-devtools
+    kind: mcp
+    upstream: npm:chrome-devtools-mcp
+    ref: latest
+    provides: "Chrome DevTools MCP — drive and inspect a Chrome instance."
+    targets: [claude-code, opencode]
+    spec: externals/mcp/chrome-devtools.json
+  - id: claude_design
+    kind: mcp
+    upstream: https://api.anthropic.com/v1/design/mcp
+    ref: null
+    provides: "Anthropic-hosted design MCP — remote connector (renders to CMA too)."
+    targets: [claude-code, opencode, claude-agents]
+    spec: externals/mcp/claude_design.json
+
   # --- already-live vendored skill (was in the marketplace; now tracked, not stored) ---
   - id: excalidraw-diagram-coleam00
     kind: skill
