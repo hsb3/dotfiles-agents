@@ -1,4 +1,4 @@
-> **Tracking:** #<n>, origin: Henry ("this repo needs some test/qa procedures"), 2026-06-29. Add a correctness layer on top of the existing drift guards so render/transform bugs are caught, not just inconsistencies.
+> **Origin:** Henry ("this repo needs some test/qa procedures"), 2026-06-29. Add a correctness layer on top of the existing drift guards so render/transform bugs are caught, not just inconsistencies.
 
 ## Problem
 
@@ -31,7 +31,7 @@ Full build detail, file scope, and landing order: `_meta/plans/test-qa-procedure
 - Targets drift guard: does NOT fire -- no `primitives-core/`/roster/config edits; tests only READ `targets/`.
 - `actionlint`/`yamllint`: FIRES -- editing `.github/workflows/ci.yml` to add the lane.
 - Naming taxonomy: does NOT fire -- adds only `scripts/` + `tests/`, no primitive/plugin.
-- Owner decisions to confirm before build: framework (`unittest` vs pytest-via-uv), whether D is in scope now (recommend defer). See the plan's Open questions.
+- Owner decisions RESOLVED (2026-06-29): framework = stdlib `unittest` (zero-install); separate `make test` + `make validate`, both in `make ci`; validation as a `scripts/` guard, unit tests in `tests/`; **defer D** to a follow-up; no new gate label. See the plan's "Owner decisions (RESOLVED)".
 
 ## Out of scope
 

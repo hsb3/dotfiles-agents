@@ -37,7 +37,7 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
 | translation-deferred-adapters | #6 | draft |
-| test-qa-procedures | staged (unpublished) | draft |
+| test-qa-procedures | #22 | draft |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 

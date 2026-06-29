@@ -13,9 +13,9 @@ Date: 2026-06-29
 
 ## Tracking
 
-No issue yet (origin: Henry, "this repo needs some test/qa procedures -- please plan those out",
-2026-06-29). Staged with `issue-body.md` for publication. Suggested labels: `type:harden`,
-`area:cli`. Not an epic (single coherent capability), though D could spin into a follow-up.
+Issue #22 (origin: Henry, "this repo needs some test/qa procedures -- please plan those out",
+2026-06-29). Labels: `type:harden`, `area:cli`. Not an epic (single coherent capability), though
+D spins into a follow-up issue.
 
 **Contract impact:** none on a runtime API/DB. Touches the build's *source-of-truth surface* only
 by adding gates that read it. The CMA payload shape (D) cites the pinned contract in
@@ -112,15 +112,21 @@ The correctness checks the byte-diff guard cannot give, over the OUTPUT:
   current `targets/` and fails on a fixture carrying a literal token; CMA `name`+`model` asserted
   across all `agents/*.json`.
 
-### D -- loadability smoke tests (DEFERRED -- environment-dependent, opt-in)
-Validate bundles against the ACTUAL tools where feasible, behind a `make smoke` that is NOT in the
-required CI lane (it needs tools/network):
+### D -- loadability smoke tests (DEFERRED to a follow-up -- opt-in, not in required CI)
+Validate bundles against the ACTUAL tools, behind a `make smoke` that is NOT in the required CI
+lane (it needs the tools installed). The tool CLIs DO expose non-interactive load/inspect commands
+(verified 2026-06-29 via `--help`), so this is concrete, not best-effort:
 - **CMA:** validate `agents/*.json` against `BetaManagedAgentsCreateAgentParams` from the pinned
   OpenAPI spec (schema-level, no network) -- cite `CANON.md` CMA contract.
-- **opencode / CC:** if the tool is installed, a config-parse / marketplace-schema smoke; **skip
-  (not fail)** when absent, logging what was skipped (no silent caps).
-- **Acceptance:** `make smoke` runs available checks and clearly skips the rest; never fails purely
-  because a tool is missing. **Recommend deferring D to a follow-up issue** (Q4).
+- **opencode** (point its config/dirs at the generated bundle, then): `opencode debug config`
+  (resolved config parses), `opencode debug skill` (skills load), `opencode agent list` /
+  `opencode debug agent <name>` (agents load), `opencode mcp list` (mcp servers load).
+- **Claude Code:** `claude --mcp-config targets/claude-code/mcp/<name>.json` (mcp fragment loads);
+  `claude --plugin-dir targets/claude-code/plugins/<p>` + `claude plugin details <name>` (a
+  generated plugin loads + its component inventory resolves).
+- **skip (not fail)** when a tool is absent, logging what was skipped (no silent caps).
+- **Acceptance:** `make smoke` runs the available checks and clearly skips the rest; never fails
+  purely because a tool is missing. **Deferred to a follow-up issue** (Q4 resolved: defer).
 
 ## Gate & contract hygiene
 
@@ -147,26 +153,22 @@ A establishes the harness first; B and C then build in parallel on disjoint file
 and `.github/workflows/ci.yml` are the only SHARED files -- one owner makes the `test`+`validate`
 wiring edits as the integration step, not parallel writers. D lands separately (or as a follow-up).
 
-## Open questions / owner decisions
+## Owner decisions (RESOLVED 2026-06-29)
 
-1. **Test framework.** Stdlib **`unittest`** (recommended -- preserves the zero-install CI;
-   `python3 -m unittest`) vs **pytest via `uv`** (nicer DX, parametrization, but adds an install
-   step to a suite that is deliberately install-free). *Default: `unittest`.*
-2. **Gate shape.** Separate `make test` (unit/correctness) + `make validate` (source/artifact
-   schema), BOTH folded into `make ci`; vs one combined target. *Default: separate, both in `ci`.*
-3. **Validation as guard-script vs test.** Source/artifact VALIDATION as a `scripts/*.py` guard
-   (matches `check_roster`'s house style, usable standalone, gates CI) while pure-logic UNIT tests
-   live in `tests/`. *Default: split as described (B is a script; A and C are tests).*
-4. **Scope D now or defer?** D (loadability) is environment-dependent and lower ROI than A-C.
-   *Default: defer D to a follow-up issue; ship A-C.*
-5. **New `gate:` label / required check?** Add a `gate:tested` label and/or a separate required
-   check, or let the existing CI aggregate absorb the new lanes. *Default: no new gate; the `make
-   ci` aggregate runs them.*
+1. **Test framework: `unittest`** (stdlib) -- preserves the zero-install CI (`python3 -m
+   unittest`); pytest-via-uv rejected to avoid an install step in an install-free suite.
+2. **Gate shape: separate `make test` + `make validate`, both folded into `make ci`.**
+3. **Validation as guard-script, unit tests as tests:** B is `scripts/validate_primitives.py`
+   (matches `check_roster`'s house style); A and C live in `tests/`.
+4. **Defer D to a follow-up issue;** ship A-C now.
+5. **No new `gate:` label;** the existing `make ci` aggregate absorbs the new lanes.
 
 ## Notes / flagged assumptions
 
 - The "consistency vs correctness" framing is the load-bearing diagnosis -- verified against
   `Makefile:21`, `check_roster.py:55-100`, and `translate.py:594` (`--check` diffs committed vs
   rebuild). No guess.
-- Whether `opencode`/`claude` expose a non-interactive config-validate command (D) is UNVERIFIED;
-  treat D's tool-level checks as best-effort and skip-on-absent until confirmed.
+- D feasibility CONFIRMED 2026-06-29: both tools expose non-interactive load/inspect commands
+  (`opencode debug config|skill|agent`, `opencode {agent,mcp} list`; `claude --mcp-config`,
+  `claude --plugin-dir` + `claude plugin details`). D's tool checks skip-on-absent, not best-effort
+  guesses. No remaining unverified assumptions.
