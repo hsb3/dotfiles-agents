@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Frontend helpers - shadcn/ui component patterns and React diagnostics",
+  "name": "frontend-extras",
+  "version": "0.0.1"
+}

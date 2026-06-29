@@ -1,0 +1,112 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dotfiles-agents",
+  "owner": {
+    "name": "Henry S. Burden III"
+  },
+  "metadata": {
+    "version": "0.1.0",
+    "description": "Proven coding-agent extenders, generated from primitives-core."
+  },
+  "plugins": [
+    {
+      "name": "deep-agents",
+      "source": "./plugins/deep-agents",
+      "description": "Deep agents patterns - core architecture, memory, and multi-agent orchestration",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "dev-focus",
+      "source": "./plugins/dev-focus",
+      "description": "Makes Claude Code aggressively focused \u2014 pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "frontend-extras",
+      "source": "./plugins/frontend-extras",
+      "description": "Frontend helpers - shadcn/ui component patterns and React diagnostics",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "github-projects-board-management",
+      "source": "./plugins/github-projects-board-management",
+      "description": "Operate a GitHub Project (v2) as a single-source-of-truth board: set up the field/view model, run the weekly export->analyze->apply triage loop, sequence with native dependencies, and report status. Auth stays local; every change is a reviewable diff.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "langchain-stack",
+      "source": "./plugins/langchain-stack",
+      "description": "LangChain, LangGraph, and LangSmith fundamentals - building, persisting, evaluating, and tracing LLM agent applications",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "media-gen",
+      "source": "./plugins/media-gen",
+      "description": "Image generation skills - Nano Banana / Gemini image workflows",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "meta",
+      "source": "./plugins/meta",
+      "description": "Meta skills for AI engineering - selecting the right agent framework",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "obsidian-plugin-dev",
+      "source": "./plugins/obsidian-plugin-dev",
+      "description": "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features",
+      "version": "0.1.0",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "openspec",
+      "source": "./plugins/openspec",
+      "description": "OpenSpec change workflow - propose, apply, archive, and explore spec-driven changes",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "project-dashboard",
+      "source": "./plugins/project-dashboard",
+      "description": "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern.",
+      "version": "0.0.1",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    },
+    {
+      "name": "python-standards",
+      "source": "./plugins/python-standards",
+      "description": "Enforces modern Python standards: uv for packages, ty for type checking, ruff for linting/formatting. Auto-detects Python projects, auto-formats on save, validates before session end.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Henry S. Burden III"
+      }
+    }
+  ]
+}

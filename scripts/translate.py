@@ -1,0 +1,393 @@
+#!/usr/bin/env python3
+"""Translation service (Phase 3, issue #6).
+
+Reads the roster (primitives-core.yaml), plugin metadata (plugins.yaml), and the capability
+config (primitives-core-translation-config.yaml); renders each primitive into each target per
+its capability cell; writes static bundles under targets/ + a content-hash lock
+(primitives-core-translation-results.json).
+
+MVP scope (technical-plan §2.1): skills native (copy) · agents transform (opencode frontmatter) ·
+Claude Code marketplace assembly. mcp-render + the claude-agents (CMA) adapter are DEFERRED and
+recorded as skips; hooks ship to claude-code only (unsupported elsewhere).
+
+Deterministic: stable ordering, no clocks/timestamps in output — so the --check drift guard never
+false-fails. Stdlib-only (tailored parsers, no pyyaml) so it runs in CI with zero install.
+
+Usage:
+  python3 scripts/translate.py            # build targets/ + results lock in place
+  python3 scripts/translate.py --check    # build to a temp dir, diff vs committed; exit 1 on drift
+"""
+
+import hashlib
+import json
+import os
+import re
+import shutil
+import sys
+import tempfile
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROSTER = os.path.join(REPO, "primitives-core.yaml")
+PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
+CONFIG = os.path.join(REPO, "primitives-core-translation-config.yaml")
+RESULTS = os.path.join(REPO, "primitives-core-translation-results.json")
+TARGETS = ("claude-code", "opencode", "claude-agents")
+IGNORE = shutil.ignore_patterns(".DS_Store")
+MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
+OWNER = {"name": "Henry S. Burden III"}
+
+
+# ── parsing ────────────────────────────────────────────────────────────────────────────
+def _list(v):
+    v = v.strip()
+    if v.startswith("[") and v.endswith("]"):
+        inner = v[1:-1].strip()
+        return [x.strip() for x in inner.split(",")] if inner else []
+    return [v] if v else []
+
+
+def parse_roster(path):
+    entries, cur, in_list = [], None, False
+    for raw in open(path, encoding="utf-8"):
+        line = raw.rstrip("\n")
+        if re.match(r"^primitives:\s*(\[\s*\])?\s*$", line):
+            in_list = True
+            continue
+        if not in_list:
+            continue
+        m = re.match(r"^  - (\w+):\s*(.*)$", line)
+        if m:
+            if cur:
+                entries.append(cur)
+            cur = {m.group(1): m.group(2).strip()}
+            continue
+        m = re.match(r"^    (\w+):\s*(.*)$", line)
+        if m and cur is not None:
+            cur[m.group(1)] = m.group(2).strip()
+    if cur:
+        entries.append(cur)
+    for e in entries:
+        e["targets"] = _list(e.get("targets", ""))
+        e["plugins"] = _list(e.get("plugins", ""))
+    return entries
+
+
+def parse_plugins(path):
+    meta, cur = {}, None
+    for raw in open(path, encoding="utf-8"):
+        line = raw.rstrip("\n")
+        m = re.match(r"^  - id:\s*(.*)$", line)
+        if m:
+            cur = m.group(1).strip()
+            meta[cur] = {}
+            continue
+        m = re.match(r'^    (\w+):\s*"?(.*?)"?\s*$', line)
+        if m and cur:
+            meta[cur][m.group(1)] = m.group(2)
+    return meta
+
+
+def parse_capabilities(path):
+    """capabilities[type][target] = capability string (native/transform/render/unsupported)."""
+    caps, cur_type, in_caps = {}, None, False
+    for raw in open(path, encoding="utf-8"):
+        line = raw.rstrip("\n")
+        if re.match(r"^capabilities:\s*$", line):
+            in_caps = True
+            continue
+        if not in_caps:
+            continue
+        m = re.match(r"^  (\w+):\s*$", line)
+        if m:
+            cur_type = m.group(1)
+            caps[cur_type] = {}
+            continue
+        m = re.match(r"^    ([\w-]+):\s*\{[^}]*capability:\s*(\w+)", line)
+        if m and cur_type:
+            caps[cur_type][m.group(1)] = m.group(2)
+    return caps
+
+
+# ── helpers ────────────────────────────────────────────────────────────────────────────
+def copy_into(src, dst):
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.isdir(src):
+        shutil.copytree(src, dst, ignore=IGNORE, dirs_exist_ok=True)
+    else:
+        shutil.copy2(src, dst)
+
+
+def sha256_path(path):
+    """Content fingerprint: a file's bytes, or a dir's sorted (relpath+bytes)."""
+    h = hashlib.sha256()
+    if os.path.isfile(path):
+        h.update(open(path, "rb").read())
+        return h.hexdigest()
+    for root, _d, files in os.walk(path):
+        for f in sorted(files):
+            if f == ".DS_Store":
+                continue
+            fp = os.path.join(root, f)
+            h.update(os.path.relpath(fp, path).encode())
+            h.update(open(fp, "rb").read())
+    return h.hexdigest()
+
+
+def transform_agent_opencode(src_path):
+    """CC agent .md -> opencode agent .md: keep description (verbatim), drop name/model/color,
+    add `mode: subagent`. Description is preserved byte-for-byte (it carries literal \\n /
+    <example> blocks that re-serialization would corrupt)."""
+    text = open(src_path, encoding="utf-8").read()
+    m = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.S)
+    if not m:
+        return "---\nmode: subagent\n---\n" + text
+    fm, body = m.group(1).split("\n"), m.group(2)
+    out, skipping = [], False
+    for ln in fm:
+        key = re.match(r"^([\w-]+):", ln)
+        if key:
+            skipping = key.group(1) in {"name", "model", "color"}
+            if not skipping:
+                out.append(ln)
+        elif not skipping:
+            out.append(ln)
+    out.append("mode: subagent")
+    return "---\n" + "\n".join(out) + "\n---\n" + body
+
+
+# ── build ──────────────────────────────────────────────────────────────────────────────
+def build(out_root, roster, plugins_meta, caps):
+    """Render all targets under out_root. Returns the results dict."""
+    results = {t: {} for t in TARGETS}
+    for t in TARGETS:
+        os.makedirs(os.path.join(out_root, t), exist_ok=True)
+        open(os.path.join(out_root, t, ".gitkeep"), "w").close()
+
+    def rec(target, pid, capability, dest=None, skipped=False, reason=None):
+        r = {"capability": capability, "skipped": skipped}
+        if dest:
+            r["destination"] = dest
+            r["sha256"] = sha256_path(os.path.join(out_root, dest))
+        if reason:
+            r["reason"] = reason
+        results[target][pid] = r
+
+    # ---- claude-code: core raw (skills/agents) + toggle plugin bundles + marketplace ----
+    cc = os.path.join(out_root, "claude-code")
+    for e in sorted(roster, key=lambda x: x["id"]):
+        if "claude-code" not in e["targets"]:
+            continue
+        t, pid, src = e["type"], e["id"], os.path.join(REPO, e["source"])
+        cap = caps.get(t, {}).get("claude-code", "native")
+        if e["shelf"] == "core":
+            if t == "skill":
+                d = f"claude-code/skills/{pid}"
+            elif t == "agent":
+                d = f"claude-code/agents/{pid}.md"
+            else:
+                continue
+            copy_into(src, os.path.join(out_root, d))
+            rec("claude-code", pid, cap, d)
+        # toggle members are placed during plugin assembly below
+
+    # plugin assembly (toggle primitives -> plugins/<p>/)
+    market_plugins = []
+    plugin_ids = sorted({p for e in roster for p in e["plugins"]})
+    for p in plugin_ids:
+        members = [
+            e for e in roster if p in e["plugins"] and "claude-code" in e["targets"]
+        ]
+        if not members:
+            continue
+        proot = os.path.join(cc, "plugins", p)
+        # .claude-plugin/plugin.json
+        meta = plugins_meta.get(p, {})
+        pj = {
+            "name": p,
+            "description": meta.get("description", ""),
+            "version": meta.get("version", "0.0.1"),
+            "author": OWNER,
+        }
+        os.makedirs(os.path.join(proot, ".claude-plugin"), exist_ok=True)
+        with open(os.path.join(proot, ".claude-plugin", "plugin.json"), "w") as fh:
+            json.dump(pj, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        hooks_done = False
+        for e in sorted(members, key=lambda x: x["id"]):
+            t, pid, src = e["type"], e["id"], os.path.join(REPO, e["source"])
+            if t == "skill":
+                d = f"claude-code/plugins/{p}/skills/{pid}"
+                copy_into(src, os.path.join(out_root, d))
+                rec("claude-code", pid, caps["skill"]["claude-code"], d)
+            elif t == "agent":
+                d = f"claude-code/plugins/{p}/agents/{pid}.md"
+                copy_into(src, os.path.join(out_root, d))
+                rec("claude-code", pid, caps["agent"]["claude-code"], d)
+            elif t == "hook":
+                # the whole per-plugin hook fragment (hooks/ + hooks-handlers/) — copy once
+                if not hooks_done:
+                    frag = os.path.join(REPO, "primitives-core", "hooks", p)
+                    for sub in ("hooks", "hooks-handlers"):
+                        s = os.path.join(frag, sub)
+                        if os.path.isdir(s):
+                            copy_into(s, os.path.join(proot, sub))
+                    hooks_done = True
+                d = f"claude-code/plugins/{p}/hooks-handlers/{pid}.sh"
+                rec("claude-code", pid, caps["hook"]["claude-code"], d)
+        market_plugins.append(
+            {
+                "name": p,
+                "source": f"./plugins/{p}",
+                "description": meta.get("description", ""),
+                "version": meta.get("version", "0.0.1"),
+                "author": OWNER,
+            }
+        )
+
+    market = {
+        "$schema": MARKETPLACE_SCHEMA,
+        "name": "dotfiles-agents",
+        "owner": OWNER,
+        "metadata": {
+            "version": "0.1.0",
+            "description": "Proven coding-agent extenders, generated from primitives-core.",
+        },
+        "plugins": sorted(market_plugins, key=lambda x: x["name"]),
+    }
+    os.makedirs(os.path.join(cc, ".claude-plugin"), exist_ok=True)
+    with open(os.path.join(cc, ".claude-plugin", "marketplace.json"), "w") as fh:
+        json.dump(market, fh, indent=2)
+        fh.write("\n")
+
+    # ---- opencode: all skills raw + all agents transformed (hooks unsupported) ----
+    for e in sorted(roster, key=lambda x: x["id"]):
+        if "opencode" not in e["targets"]:
+            continue
+        t, pid, src = e["type"], e["id"], os.path.join(REPO, e["source"])
+        cap = caps.get(t, {}).get("opencode", "unsupported")
+        if t == "skill":
+            d = f"opencode/skills/{pid}"
+            copy_into(src, os.path.join(out_root, d))
+            rec("opencode", pid, cap, d)
+        elif t == "agent":
+            d = f"opencode/agents/{pid}.md"
+            os.makedirs(os.path.dirname(os.path.join(out_root, d)), exist_ok=True)
+            open(os.path.join(out_root, d), "w").write(transform_agent_opencode(src))
+            rec("opencode", pid, cap, d)
+        elif t == "hook":
+            rec(
+                "opencode",
+                pid,
+                cap,
+                skipped=True,
+                reason="opencode hooks unsupported (CC-only)",
+            )
+
+    # ---- claude-agents: DEFERRED (record skips, build nothing) ----
+    for e in sorted(roster, key=lambda x: x["id"]):
+        if "claude-agents" not in e["targets"]:
+            continue
+        t, pid = e["type"], e["id"]
+        cap = caps.get(t, {}).get("claude-agents", "render")
+        rec(
+            "claude-agents",
+            pid,
+            cap,
+            skipped=True,
+            reason="claude-agents (CMA) adapter deferred (post-MVP)",
+        )
+
+    return results
+
+
+def write_results(path, results):
+    payload = {
+        "_note": "GENERATED by scripts/translate.py — do not hand-edit. CI regenerates and fails on drift.",
+        "version": 1,
+        "generated": True,
+        "results": results,
+    }
+    with open(path, "w") as fh:
+        json.dump(payload, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+
+
+def load_inputs():
+    return parse_roster(ROSTER), parse_plugins(PLUGINS_YAML), parse_capabilities(CONFIG)
+
+
+def summarize(results):
+    parts = []
+    for t in TARGETS:
+        built = sum(1 for r in results[t].values() if not r["skipped"])
+        skipped = sum(1 for r in results[t].values() if r["skipped"])
+        parts.append(f"{t}: {built} built, {skipped} skipped")
+    return " · ".join(parts)
+
+
+def diff_trees(a, b):
+    """Return list of path-level differences between dirs a and b."""
+    diffs = []
+
+    def files(root):
+        out = {}
+        for dp, _d, fs in os.walk(root):
+            for f in fs:
+                if f == ".DS_Store":
+                    continue
+                fp = os.path.join(dp, f)
+                out[os.path.relpath(fp, root)] = fp
+        return out
+
+    fa, fb = files(a), files(b)
+    for rel in sorted(set(fa) - set(fb)):
+        diffs.append(f"only in generated: {rel}")
+    for rel in sorted(set(fb) - set(fa)):
+        diffs.append(f"only in committed: {rel}")
+    for rel in sorted(set(fa) & set(fb)):
+        if open(fa[rel], "rb").read() != open(fb[rel], "rb").read():
+            diffs.append(f"differs: {rel}")
+    return diffs
+
+
+def main():
+    check = "--check" in sys.argv
+    roster, plugins_meta, caps = load_inputs()
+
+    if check:
+        tmp = tempfile.mkdtemp(prefix="translate-check-")
+        try:
+            results = build(tmp, roster, plugins_meta, caps)
+            # compare only the generated per-target subdirs (targets/README.md is curated)
+            problems = []
+            for t in TARGETS:
+                problems += diff_trees(
+                    os.path.join(tmp, t), os.path.join(REPO, "targets", t)
+                )
+            committed = json.load(open(RESULTS)) if os.path.exists(RESULTS) else {}
+            if committed.get("results") != results:
+                problems.append("primitives-core-translation-results.json is stale")
+            if problems:
+                print(
+                    f"✗ targets/ drift: {len(problems)} problem(s) — run `make build`"
+                )
+                for p in problems[:50]:
+                    print(f"  - {p}")
+                return 1
+            print(f"✓ targets/ in sync — {summarize(results)}")
+            return 0
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    # in-place build (clean stale, then build recreates dirs + .gitkeep)
+    tgt = os.path.join(REPO, "targets")
+    for t in TARGETS:
+        shutil.rmtree(os.path.join(tgt, t), ignore_errors=True)
+    results = build(tgt, roster, plugins_meta, caps)
+    write_results(RESULTS, results)
+    print(f"✓ built targets/ — {summarize(results)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

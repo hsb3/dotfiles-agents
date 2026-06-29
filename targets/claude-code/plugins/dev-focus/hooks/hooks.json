@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/dev-focus.SessionStart.session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Maintain awareness of whether we're drifting from the original task into unrelated work. If you notice scope creep happening (working on 2-3+ unrelated things, or this new request pulls us in a different direction), gently ask: 'I notice we're shifting to [X] - want to finish [original task] first, or pivot?' Keep it light - only nudge when drift is clear, not on every broad request."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before ending this session, validate: (1) Did work stay focused on the original task without drifting into unrelated changes? (2) Are there loose ends or incomplete items to surface? (3) Are all created/modified files properly named and placed? If any check fails, surface the issue to the user before stopping. Do NOT create separate documentation files — just communicate directly."
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/dev-focus.Stop.stop-summary.sh",
+            "timeout": 120000
+          }
+        ]
+      }
+    ]
+  }
+}

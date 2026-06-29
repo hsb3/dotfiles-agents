@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "OpenSpec change workflow - propose, apply, archive, and explore spec-driven changes",
+  "name": "openspec",
+  "version": "0.0.1"
+}

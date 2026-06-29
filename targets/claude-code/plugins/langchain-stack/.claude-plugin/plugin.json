@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "LangChain, LangGraph, and LangSmith fundamentals - building, persisting, evaluating, and tracing LLM agent applications",
+  "name": "langchain-stack",
+  "version": "0.0.1"
+}
