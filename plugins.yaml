@@ -1,0 +1,46 @@
+# plugins.yaml — PLUGIN BUNDLE METADATA
+#
+# Metadata for each plugin bundle (name/description/version). The roster
+# (primitives-core.yaml) defines MEMBERSHIP (which primitives ship in each plugin via the
+# `plugins:` field); this file carries the plugin-level metadata the marketplace needs.
+# Sourced once from the frozen hsb3-custom-plugins plugin.json files (2026-06-29).
+
+version: 1
+
+owner:
+  name: "Henry S. Burden III"
+
+plugins:
+  - id: deep-agents
+    version: "0.0.1"
+    description: "Deep agents patterns - core architecture, memory, and multi-agent orchestration"
+  - id: dev-focus
+    version: "1.0.0"
+    description: "Makes Claude Code aggressively focused — pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track."
+  - id: frontend-extras
+    version: "0.0.1"
+    description: "Frontend helpers - shadcn/ui component patterns and React diagnostics"
+  - id: github-projects-board-management
+    version: "0.1.0"
+    description: "Operate a GitHub Project (v2) as a single-source-of-truth board: set up the field/view model, run the weekly export->analyze->apply triage loop, sequence with native dependencies, and report status. Auth stays local; every change is a reviewable diff."
+  - id: langchain-stack
+    version: "0.0.1"
+    description: "LangChain, LangGraph, and LangSmith fundamentals - building, persisting, evaluating, and tracing LLM agent applications"
+  - id: media-gen
+    version: "0.0.1"
+    description: "Image generation skills - Nano Banana / Gemini image workflows"
+  - id: meta
+    version: "0.0.1"
+    description: "Meta skills for AI engineering - selecting the right agent framework"
+  - id: obsidian-plugin-dev
+    version: "0.1.0"
+    description: "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features"
+  - id: openspec
+    version: "0.0.1"
+    description: "OpenSpec change workflow - propose, apply, archive, and explore spec-driven changes"
+  - id: project-dashboard
+    version: "0.0.1"
+    description: "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern."
+  - id: python-standards
+    version: "1.0.0"
+    description: "Enforces modern Python standards: uv for packages, ty for type checking, ruff for linting/formatting. Auto-detects Python projects, auto-formats on save, validates before session end."
