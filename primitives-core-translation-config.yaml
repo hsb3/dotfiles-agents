@@ -1,0 +1,62 @@
+# primitives-core-translation-config.yaml — THE TRANSLATION CONFIG
+#
+# One place to tune how each primitive TYPE renders into each distribution TARGET.
+# This file encodes the capability matrix (technical-plan §2): every (type × target) cell is
+# exactly one of:
+#
+#   native       — drop in unchanged (copy the source verbatim)
+#   transform    — mechanical field map into the target's own frontmatter/shape
+#   render       — emit the target's own schema (API payload / config fragment)
+#   unsupported  — no equivalent on this target; the service SKIPS and RECORDS it in
+#                  primitives-core-translation-results.json. Never faked, never a broken bundle.
+#
+# The roster (primitives-core.yaml) says what ships where; this file says how. The translation
+# service (scripts/, Phase 3) reads both and writes targets/ + the results lock.
+#
+# MVP order (technical-plan §2.1): skills(native) + agents(transform) + CC marketplace assembly
+# first. mcp render and the claude-agents (CMA) adapter are deferred; hooks ship CC-only.
+
+version: 1
+
+# ─── TARGETS ─────────────────────────────────────────────────────────────────────────────
+targets:
+  claude-code:
+    kind: filesystem-marketplace
+    output: targets/claude-code        # .claude-plugin/marketplace.json + plugins/<plugin>/…
+    priority: 1
+  opencode:
+    kind: filesystem-dirs
+    output: targets/opencode           # skills/ + agents/ + opencode.json (mcp fragment)
+    priority: 2
+  claude-agents:
+    kind: api-payloads
+    output: targets/claude-agents      # CMA build-sheet / payloads per agent
+    priority: 3
+    status: deferred                   # adapter built after the CC+opencode MVP
+
+# ─── CAPABILITY MATRIX (type × target) ───────────────────────────────────────────────────
+# Mirrors technical-plan §2. `adapter` names the routine in scripts/ that implements the cell.
+capabilities:
+  skill:
+    claude-code:   { capability: native,      adapter: copy_skill_folder }
+    opencode:      { capability: native,      adapter: copy_skill_folder }    # ~/.agents/skills/ (also reads ~/.claude/skills/)
+    claude-agents: { capability: render,      adapter: cma_skill_upload }     # POST /v1/skills multipart files[]; SKILL.md at root; name/desc extracted
+
+  agent:
+    claude-code:   { capability: native,      adapter: copy_agent_md }        # ~/.claude/agents/<name>.md
+    opencode:      { capability: transform,   adapter: opencode_agent_frontmatter }  # mode/permission/temperature; does NOT read .claude/agents/
+    claude-agents: { capability: render,      adapter: cma_agent_create }     # POST /v1/agents (BetaManagedAgentsCreateAgentParams)
+
+  mcp:
+    claude-code:   { capability: render,      adapter: mcp_to_claude }        # .mcp.json / settings mcpServers
+    opencode:      { capability: render,      adapter: mcp_to_opencode }      # opencode.json "mcp" (type: local|remote)
+    claude-agents: { capability: render,      adapter: mcp_to_cma }           # remote-only, via agent mcp_servers[] (≤20)
+
+  hook:
+    claude-code:   { capability: native,      adapter: copy_hook_dir }        # settings.json events + handler scripts
+    opencode:      { capability: unsupported, reason: "opencode uses a JS plugin API; no mechanical map. CC-only by decision." }
+    claude-agents: { capability: unsupported, reason: "no local hook execution on managed agents." }
+
+# ─── FIELD MAPS (filled out as adapters are built in Phase 3) ────────────────────────────
+# Per-adapter frontmatter/field translations live here, e.g. agent CC→opencode frontmatter.
+field_maps: {}
