@@ -6,24 +6,23 @@
 Fresh repo (created 2026-06-26): source of truth for proven coding-agent extenders. Built from scratch — NOT a rename of `hsb3-custom-plugins`, which stays live as the migration source. Siblings: `dotfiles` (tooling), `dotfiles-agents-workbench` (unproven; planned), `dotfiles-bootstrap` (planned). Decision record + build plan: `~/Documents/Claude/Projects/dotfiles-agents-cowork/planning/{CANON.md, repository-technical-plan.md}`.
 
 ## 1 · Current standing
-**Phases 0–1 done; Phase 2 ~80% (2a migration + cleanup + polish all merged); 2b remaining.** Phase 0: repo + governance + board #9. Phase 1 (#11): layout + translation control files + naming taxonomy. Phase 2a (#12): migrated homegrown LIVE set → `primitives-core/` + roster + `externals.yaml`. Cleanup (#13): genericized client coupling, nano-banana-2→externals. Polish (#14): renamed `agent-dot-md-authoring`, finished machine-path sweep. **Roster now 71 entries / 53 skills + 18 agents.** **Promotion gate RATIFIED 2026-06-29** (J1 = ≥2 real uses). **Next: Phase 2b** (hooks + commands).
+**Phases 0–2 COMPLETE (issues #1–5 closed); CI green. Phase 3 (translation service) next.** Phase 0: repo + governance + board #9. Phase 1 (#11): layout + translation control files + naming taxonomy. Phase 2: migrated the homegrown LIVE set → `primitives-core/` as single-source copies — **76 roster entries (53 skills + 18 agents + 5 hooks)**; `externals.yaml` tracks third-party (cloned at build); client-coupling genericized; hooks built shape-C; 16 commands dropped. **Drift guard live:** `scripts/check_roster.py` / `make check` / CI on every PR. **Promotion gate RATIFIED** (J1 = ≥2 real uses).
 
 ## 2 · Last delivered
-- Phase 2c polish — #14 (`5568a16`): rename + machine-path sweep.
-- Phase 2 cleanup — #13 (`9bf5de5`): genericize client coupling; nano-banana-2 → externals.
-- Phase 2a migration — #12 (`39e208a`): 54 skills + 18 agents + roster + externals. Migration manifest + bootstrap review in `planning/`.
-- Phase 1 (#11) / Phase 0 (`7a7cec3`).
+- Roster↔disk drift guard + Makefile + CI — #16 (`ea9f099`, closes #5). First green gate.
+- Phase 2b hooks + command dispositions — #15 (`03552af`).
+- Phase 2c polish — #14 · cleanup — #13 · migration — #12. (manifest + bootstrap review + command dispositions in `planning/`.)
 
 ## 3 · Where to start building
-**Phase 2b (next):**
-- **Hooks** — 5 handlers (dev-focus×2 stdlib; python-standards×3 need jq/ruff) PLUS inline prompt-type hooks in the plugins' `hooks.json`. **Open design fork:** canonical hook shape (per-plugin folder preserving `hooks.json` verbatim, vs per-(plugin×event) primitive renamed `<plugin>.<Event>.<slug>.sh`) before representing in `primitives-core/hooks/` + the translation-config hook adapter.
-- **Commands (#4)** — fold/retire the 16 per migration-manifest §6.
-- **#5** — hook naming + roster↔disk lint drift-guard.
-- Plugin-level metadata (description/version) for marketplace assembly (Phase 3).
-**Gate is live (CANON 12):** promoting a PARKED item (`opencode-expert` strongest, `langgraph-designer`, `raptorxai-decks`, `webapp-designer`) now needs ≥2 cited real uses from Henry + the H1–H5 checks.
-- Direction backlog: `planning/backlog.md` (curation threads, near-term needs, future extenders).
+**Phase 3 — translation service (the cross-tool win; issues #6, #7):**
+- Build `scripts/` translate: roster + `primitives-core-translation-config.yaml` → static `targets/{claude-code,opencode,claude-agents}/` + `primitives-core-translation-results.json` lock; `--check` CI drift mode (extend the existing ci.yml). Reference shape: `ant-update-openapi.py`.
+- **MVP first** (technical-plan §2.1): skills (native copy) + agents (transform frontmatter) + CC marketplace assembly (`.claude-plugin/marketplace.json` + plugin dirs from roster membership). Defer mcp render + the CMA adapter; hooks ship CC-only.
+- Then #7: verify a skill AND an agent load in opencode from generated `targets/opencode/` with zero hand-config.
+- **Needs plugin-level metadata** (description/version per plugin) for marketplace assembly — not yet captured; pull from the frozen source's `plugins/<p>/.claude-plugin/plugin.json`.
+**Then:** Phase 4 workbench (#8, encode the ratified gate as `make promote-check`), Phase 5 bootstrap (#9).
+**Backlog (`planning/backlog.md`):** python-standards skill authoring, raptorxai-decks split, langchain-vs-official curation, frontend curation, externals upstream URLs, near-term enhancements.
+**Gate live (CANON 12):** promoting a PARKED item (`opencode-expert` strongest) needs ≥2 cited real uses + H1–H5.
 - Sources: LIVE `~/Developer/FUNCTIONFORM/hsb3-custom-plugins` (frozen) + STAGING `_meta/desktop-cleanup/` (gitignored).
-- `externals.yaml` upstream URLs mostly stubbed `null` — research TODO.
 
 ## 4 · Conventions & gotchas
 - `bgIsolation:none` in `.claude/settings.json` — this repo isn't parallel-mutated; background agents share the main tree.
