@@ -300,15 +300,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
     summary: "INVOKE THIS SKILL when working with LangSmith tracing OR querying traces."
-  - id: nano-banana-2
-    type: skill
-    source: primitives-core/skills/nano-banana-2
-    shelf: toggle
-    origin: internal
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [media-gen]
-    summary: "Generate images with Google Nano Banana 2 (Gemini-family flash-tier text-to-image) on RunComfy — bundled with the model's documented prompting patterns so th…"
   - id: nanobanana
     type: skill
     source: primitives-core/skills/nanobanana

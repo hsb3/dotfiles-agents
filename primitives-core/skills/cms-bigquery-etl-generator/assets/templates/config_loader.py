@@ -178,7 +178,7 @@ def load_config() -> Dict[str, Any]:
     Example:
         >>> config = load_config()
         >>> config['bigquery']['project_id']
-        'raptorgpt-nextjs'  # From root
+        'acme-nextjs'  # From root
         >>> config['bigquery']['table_id']
         'aco_county_assigned_beneficiaries'  # From dataset
         >>> config['data_source']['data_directory']

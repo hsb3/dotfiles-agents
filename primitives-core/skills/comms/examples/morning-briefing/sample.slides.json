@@ -1,6 +1,6 @@
 [
   {
-    "kicker": "RA-PLATFORM - MORNING BRIEFING",
+    "kicker": "ACME-PLATFORM - MORNING BRIEFING",
     "notes": "Companion audio briefing alongside this deck in _meta/briefings/2026-06-13-morning-status/. Theme: boardroom. Order: recommendation -> horizon -> what shipped.",
     "blocks": [
       { "type": "heading", "level": 1, "text": "What to do today" },

@@ -28,6 +28,12 @@ externals:
     targets: [claude-code, opencode, claude-agents]
 
   # --- external skills (staging) ---
+  - id: nano-banana-2
+    kind: skill
+    upstream: https://github.com/agentspace-so/runcomfy-skills
+    ref: null      # pin a tag/sha once selected
+    provides: "Google Nano Banana 2 image gen via the RunComfy hosted Model API (CLI wrapper)."
+    targets: [claude-code, opencode, claude-agents]
   - id: codex-imagegen
     kind: skill
     upstream: null

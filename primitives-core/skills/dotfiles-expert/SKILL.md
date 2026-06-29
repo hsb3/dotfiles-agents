@@ -5,7 +5,7 @@ description: Expert knowledge of Henry's personal dotfiles at ~/dotfiles — the
 
 # Dotfiles Expert
 
-Henry's machine is configured almost entirely from one git repo: **`~/dotfiles`** (GitHub `hsb3/dotfiles`). This skill makes you fluent in its structure so you navigate to the right authoritative file instead of guessing paths, aliases, or commands.
+Henry's machine is configured almost entirely from one git repo: **`~/dotfiles`** (GitHub `<owner>/dotfiles`). This skill makes you fluent in its structure so you navigate to the right authoritative file instead of guessing paths, aliases, or commands.
 
 **Core principle: pointers over memory.** The repo is heavily self-documented. `~/dotfiles/CLAUDE.md` (~25 KB, hot-loaded into every session in that repo) is the master overview. Do NOT restate it from memory — go read the source file for the detail you need. This skill captures the *map and the non-obvious gotchas*; the references hold the exhaustive enumerations.
 

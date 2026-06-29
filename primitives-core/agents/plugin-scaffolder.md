@@ -253,7 +253,7 @@ Provide a comprehensive summary:
 - **Features**: [List enabled features]
 
 ### Files Created
-Created <count> files in `/Users/henry/Developer/FUNCTIONFORM/obsidian-plugin-dev/<plugin-id>/`:
+Created <count> files in `<dev-root>/obsidian-plugin-dev/<plugin-id>/`:
 
 - manifest.json - Plugin metadata
 - package.json - Dependencies and scripts
@@ -287,7 +287,7 @@ Created <count> files in `/Users/henry/Developer/FUNCTIONFORM/obsidian-plugin-de
 - `npm run build` - Production build
 
 ### Project Location
-/Users/henry/Developer/FUNCTIONFORM/obsidian-plugin-dev/<plugin-id>/
+<dev-root>/obsidian-plugin-dev/<plugin-id>/
 ```
 
 ## Quality Standards

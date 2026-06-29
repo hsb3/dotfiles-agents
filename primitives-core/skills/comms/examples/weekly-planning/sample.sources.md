@@ -1,7 +1,7 @@
 # Sources — 2026-06-12 Friday briefing & week plan
 
 _Hybrid artifact: morning briefing fused with the week's plan + an executive-brief audio.
-The **live board is the source of truth** (github.com/hsb3/ra-platform); counts below are
+The **live board is the source of truth** (github.com/<owner>/acme-platform); counts below are
 as-of 2026-06-12 afternoon._
 
 ## Provenance per claim
@@ -18,9 +18,9 @@ as-of 2026-06-12 afternoon._
     Cockpit webapp — complete 14 · Stage 8 6 · Model/data/modeling completeness 8 ·
     Platform foundations 9 · Ops & observability 6 · Expert agent 8.
   - Stage 9 members: #389 #388 #285 #352 #343 #334 #300 #299 #282 #123.
-- **ra-labs feeders (slides 2, 6; audio).** Filed this session:
-  ra-labs#93 (CMS-HCC ESRD model) + ra-labs#94 (PY2025 county ratebook), cross-linked into
-  ra-platform #388/#389 via comments. Gap verified 2026-06-12: ra-labs `platform/loaders/
+- **acme-labs feeders (slides 2, 6; audio).** Filed this session:
+  acme-labs#93 (CMS-HCC ESRD model) + acme-labs#94 (PY2025 county ratebook), cross-linked into
+  acme-platform #388/#389 via comments. Gap verified 2026-06-12: acme-labs `platform/loaders/
   parse.py:193` excludes ESRD/RxHCC columns; `cache/` holds only `2026-ma-rate-book.zip`.
 - **Branch prune 82 local + 27 remote = 109 (slide 3; audio).** Done this session:
   52 worktree-agent + 24 gone-upstream + 2 merged + 4 design = 82 local; 4 design + 2 merged +

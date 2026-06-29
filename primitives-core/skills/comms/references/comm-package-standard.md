@@ -34,7 +34,7 @@ Resolve these once at the start of each run so the skill works in any repo:
 
 | Param | How to resolve |
 | --- | --- |
-| `<owner>/<repo>` | `gh repo view --json nameWithOwner -q .nameWithOwner` (fallback: parse `git remote get-url origin`). Henry has two GitHub accounts (`hsb3` personal, `mhi-raptorxai` work) - never assume the slug; a wrong one silently breaks #ref links on export. |
+| `<owner>/<repo>` | `gh repo view --json nameWithOwner -q .nameWithOwner` (fallback: parse `git remote get-url origin`). Henry has two GitHub accounts (`hsb3` personal, `mhi-acme` work) - never assume the slug; a wrong one silently breaks #ref links on export. |
 | Handoff file | First that exists of `_meta/HANDOFF.md`, `HANDOFF.md`, `.claude/HANDOFF.md`. The cold-start source for current standing + the delivery story. |
 | Gate scheme | The repo's `gate:<x>` labels if it uses them; otherwise the handoff's "what's next" / readiness section. |
 | Last of this kind | Newest existing `_meta/briefings/<YYYY-MM-DD>-<slug>/` for the same comm type - mirror its layout and use its date as the "since" boundary. |

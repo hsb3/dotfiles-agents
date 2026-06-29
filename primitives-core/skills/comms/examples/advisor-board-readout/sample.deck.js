@@ -1,8 +1,8 @@
 "use strict";
 
-// Advisor-board overview deck: what ra-platform is + the add-on module /
+// Advisor-board overview deck: what acme-platform is + the add-on module /
 // services expansion opportunity. Theme: actuarial-signal (semantic tokens).
-// Sources: docs/charter.md (2026-06-09), ra-labs docs/PRODUCT.md (2026-06-10).
+// Sources: docs/charter.md (2026-06-09), acme-labs docs/PRODUCT.md (2026-06-10).
 
 const pptxgen = require("pptxgenjs");
 const { THEMES } = require("/Users/henry/.claude/skills/pptx-henry/assets/theme-tokens.js");
@@ -16,7 +16,7 @@ const MX = 0.65; // side margin
 const CW = W - 2 * MX; // content width
 const FOOTER_Y = 7.05;
 
-const SRC = "Sources: ra-platform charter (2026-06-09) - ra-labs product thesis (2026-06-10)";
+const SRC = "Sources: acme-platform charter (2026-06-09) - acme-labs product thesis (2026-06-10)";
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE";
@@ -480,5 +480,5 @@ function bullets(s, items, x, y, w, h, opts = {}) {
   footer(s, "Contact: Henry S. Burden III");
 }
 
-pres.writeFile({ fileName: "/Users/henry/Developer/ra-platform/_meta/briefings/2026-06-12-advisor-board-overview/ra-platform-advisor-overview.pptx" })
+pres.writeFile({ fileName: "/Users/henry/Developer/acme-platform/_meta/briefings/2026-06-12-advisor-board-overview/acme-platform-advisor-overview.pptx" })
   .then(() => console.log("written"));

@@ -25,7 +25,7 @@ Each is a short rules doc. Know what each covers so you route correctly:
 | File | Governs |
 |---|---|
 | `terminal.md` | the dangerous `-i` aliases + the full supply-chain hardening posture & overrides (the canonical statement) |
-| `communication.md` | name (Henry Burden, GH `hsb3` personal / `mhi-raptorxai` work), no hyperbole, no LICENSE/CONTRIBUTING unless asked |
+| `communication.md` | name (Henry Burden, GH `hsb3` personal / `mhi-acme` work), no hyperbole, no LICENSE/CONTRIBUTING unless asked |
 | `agents.md` | orchestrate via subagents; no timelines — deliverables / criteria / parallelism |
 | `documentation.md` | the 3-pass (comprehensive → accurate → concise) doc procedure + agent-type discipline |
 | `memory-hygiene.md` | hot-path vs cold-path; offload cold content to `reference_*.md` memory files |
@@ -69,7 +69,7 @@ Project `CLAUDE.md` is hot-loaded. Memory files under the auto-memory dir / `.cl
 
 ## Skills ecosystem (the 2-tier model)
 
-Full detail: `.docs/reference/skills-inventory.md`. Single source of truth = the **`hsb3-custom-plugins`** git repo (`~/Developer/FUNCTIONFORM/hsb3-custom-plugins/`) — two shelves:
+Full detail: `.docs/reference/skills-inventory.md`. Single source of truth = the **`hsb3-custom-plugins`** git repo (`<dev-root>/hsb3-custom-plugins/`) — two shelves:
 
 - `skills/` — standalone **core** skills, always-on. Distributed by **symlink into `~/.claude/skills/`** (this is exactly how `dotfiles-expert` itself is installed). Personal skills in `~/.claude/skills/` are always on; there's no per-skill toggle.
 - `plugins/<plugin>/skills/` — **toggleable** skills grouped as plugins. Distributed via the marketplace + `enabledPlugins` (all `false` globally = deny-by-default; flip `true` per-project in `<repo>/.claude/settings.json`). Plugin granularity, not per-skill.
