@@ -1,5 +1,5 @@
 ---
-name: agent-guide-authoring
+name: agent-dot-md-authoring
 description: >-
   Write a new CLAUDE.md (or AGENTS.md) from scratch, or audit and improve an
   existing one, so it actually helps a coding agent navigate the codebase. Use

@@ -5,7 +5,7 @@
 // Sources: docs/charter.md (2026-06-09), acme-labs docs/PRODUCT.md (2026-06-10).
 
 const pptxgen = require("pptxgenjs");
-const { THEMES } = require("/Users/henry/.claude/skills/pptx-henry/assets/theme-tokens.js");
+const { THEMES } = require("~/.claude/skills/pptx-henry/assets/theme-tokens.js");
 
 const C = THEMES["actuarial-signal"];
 const FONT = "Avenir Next";
@@ -480,5 +480,5 @@ function bullets(s, items, x, y, w, h, opts = {}) {
   footer(s, "Contact: Henry S. Burden III");
 }
 
-pres.writeFile({ fileName: "/Users/henry/Developer/acme-platform/_meta/briefings/2026-06-12-advisor-board-overview/acme-platform-advisor-overview.pptx" })
+pres.writeFile({ fileName: "<dev-root>/acme-platform/_meta/briefings/2026-06-12-advisor-board-overview/acme-platform-advisor-overview.pptx" })
   .then(() => console.log("written"));
