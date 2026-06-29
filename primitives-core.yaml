@@ -651,3 +651,48 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Use this agent when you need to review testing implementation and coverage."
+  - id: dev-focus.SessionStart.session-start
+    type: hook
+    source: primitives-core/hooks/dev-focus/hooks-handlers/dev-focus.SessionStart.session-start.sh
+    shelf: toggle
+    origin: internal
+    vendor: null
+    targets: [claude-code]
+    plugins: [dev-focus]
+    summary: "Inject dev-focus principles at session start and capture the session id for the summary hook."
+  - id: dev-focus.Stop.stop-summary
+    type: hook
+    source: primitives-core/hooks/dev-focus/hooks-handlers/dev-focus.Stop.stop-summary.sh
+    shelf: toggle
+    origin: internal
+    vendor: null
+    targets: [claude-code]
+    plugins: [dev-focus]
+    summary: "Generate a focused session summary at Stop."
+  - id: python-standards.SessionStart.session-start
+    type: hook
+    source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.SessionStart.session-start.sh
+    shelf: toggle
+    origin: internal
+    vendor: null
+    targets: [claude-code]
+    plugins: [python-standards]
+    summary: "Inject Python standards guidance at session start."
+  - id: python-standards.PostToolUse.post-tool-use
+    type: hook
+    source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.PostToolUse.post-tool-use.sh
+    shelf: toggle
+    origin: internal
+    vendor: null
+    targets: [claude-code]
+    plugins: [python-standards]
+    summary: "Auto-format Python with ruff after Write/Edit (matcher: Write|Edit)."
+  - id: python-standards.Stop.stop
+    type: hook
+    source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.Stop.stop.sh
+    shelf: toggle
+    origin: internal
+    vendor: null
+    targets: [claude-code]
+    plugins: [python-standards]
+    summary: "Python-standards cleanup/summary at Stop."
