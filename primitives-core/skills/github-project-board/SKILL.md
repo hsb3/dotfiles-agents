@@ -283,7 +283,7 @@ scripts/board-export.py -o hsb3 -n 8 --out board-snapshot.json
 # 3. local side previews, then applies
 scripts/board-apply.py -o hsb3 -n 8 --changeset changeset.tsv                 # dry-run diff
 scripts/board-apply.py -o hsb3 -n 8 --changeset changeset.tsv --apply         # write
-scripts/board-apply.py -o hsb3 -n 8 --changeset edges.tsv --repo hsb3/ra-platform --apply
+scripts/board-apply.py -o hsb3 -n 8 --changeset edges.tsv --repo <owner>/acme-platform --apply
 ```
 
 **Why issue-number keys, not item-ids:** item-ids change if an item is removed and re-added;

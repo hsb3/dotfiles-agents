@@ -296,7 +296,7 @@ with Diagram("Hybrid Cloud", show=False):
     cloud_app >> Edge(style="dashed") >> connect >> legacy
 ```
 
-## Healthcare Data Architecture (RaptorXAI-style)
+## Healthcare Data Architecture (Acme-style)
 
 ```python
 from diagrams import Diagram, Cluster, Edge

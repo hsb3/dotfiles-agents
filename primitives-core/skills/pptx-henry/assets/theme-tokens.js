@@ -150,7 +150,7 @@ const THEMES = {
     informational: "315F7D",
     shadow: "243447",
   },
-  // The next three are ported from mcp-deck (functionform-headcase/packages/mcp-deck),
+  // The next three are ported from mcp-deck (your-project/packages/mcp-deck),
   // Henry's curated HTML deck themes. Core values are taken verbatim from deck.css;
   // data-series ramps and soft/caution tones are derived to fill the token contract.
   "boardroom": {

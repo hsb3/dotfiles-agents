@@ -1,6 +1,6 @@
 [
   {
-    "kicker": "RA-PLATFORM - FRIDAY BRIEFING & WEEK PLAN",
+    "kicker": "ACME-PLATFORM - FRIDAY BRIEFING & WEEK PLAN",
     "notes": "Hybrid artifact: morning briefing fused with the week's plan. Companion executive-brief audio in the same folder. Theme: boardroom.",
     "blocks": [
       { "type": "heading", "level": 1, "text": "Where we stand, and the week to the demo" },
@@ -9,14 +9,14 @@
   },
   {
     "kicker": "Executive summary",
-    "footer": "Board is the live source of truth: github.com/hsb3/ra-platform",
+    "footer": "Board is the live source of truth: github.com/<owner>/acme-platform",
     "blocks": [
       { "type": "heading", "text": "Executive summary" },
-      { "type": "subtitle", "text": "The desktop installable is real and in hand. This session turned a 61-issue pile into a dated plan: six milestones, a Stage 9 demo due Monday, and the data-acquisition feeders that gate real math now tracked upstream in ra-labs. The week's single job is to converge the demo." },
+      { "type": "subtitle", "text": "The desktop installable is real and in hand. This session turned a 61-issue pile into a dated plan: six milestones, a Stage 9 demo due Monday, and the data-acquisition feeders that gate real math now tracked upstream in acme-labs. The week's single job is to converge the demo." },
       { "type": "bullets", "items": [
         "Build state is unchanged from this morning: the .app ships the real cockpit, boots embedded Postgres on a real install, proven offline - what's left is owner-gated (signing, #360), not engineering",
         "The board was restructured today: 53 unmilestoned issues binned into 6 themed milestones; Stage 9 - Desktop demo carries the 10-issue critical path with a 2026-06-15 due date",
-        "The real-math gate is now traceable end-to-end: two ra-labs feeders filed (ESRD model #93, PY2025 ratebook #94) -> platform #388 -> #389 -> the #285 demo",
+        "The real-math gate is now traceable end-to-end: two acme-labs feeders filed (ESRD model #93, PY2025 ratebook #94) -> platform #388 -> #389 -> the #285 demo",
         "Hygiene done: 82 stale local + 27 remote branches removed; the open Dependabot moderate alert is mapped to #282 and pulled into the demo milestone"
       ] }
     ]
@@ -29,7 +29,7 @@
       { "type": "columns", "columns": [
         [ { "type": "stat", "value": "6", "label": "themed milestones", "sub": "53 issues binned, 0 left" } ],
         [ { "type": "stat", "value": "10", "label": "Stage 9 demo issues", "sub": "due Mon 2026-06-15" } ],
-        [ { "type": "stat", "value": "2", "label": "ra-labs feeders filed", "sub": "#93 ESRD, #94 ratebook" } ],
+        [ { "type": "stat", "value": "2", "label": "acme-labs feeders filed", "sub": "#93 ESRD, #94 ratebook" } ],
         [ { "type": "stat", "value": "109", "label": "branches pruned", "sub": "82 local + 27 remote" } ]
       ] }
     ]
@@ -89,11 +89,11 @@
   },
   {
     "kicker": "STAGE 9 - THE DEMO CRITICAL PATH",
-    "footer": "Gating chain: ra-labs #93 / #94 -> #388 -> #389 -> #285 demo",
+    "footer": "Gating chain: acme-labs #93 / #94 -> #388 -> #389 -> #285 demo",
     "blocks": [
       { "type": "heading", "text": "The demo's chain runs from CMS data, through the engine, to the surface" },
       { "type": "bullets", "items": [
-        "Acquisition (ra-labs, owner-external lead time): #93 CMS-HCC ESRD model + #94 PY2025 county ratebook - then graduate from platform/loaders into packages/cms-loaders",
+        "Acquisition (acme-labs, owner-external lead time): #93 CMS-HCC ESRD model + #94 PY2025 county ratebook - then graduate from platform/loaders into packages/cms-loaders",
         "Cloud math: #388 - load ESRD + verify all model variants (gate:audit-math)",
         "Desktop math [BLOCKING]: #389 - ship + load all HCC models incl ESRD + refdata on install; replace the silent no-op with a visible 'not loaded' guard",
         "Demo surface: #285 PY2025 financial-validation (PPR+MOR partial-set), #352 per-check skips, #300 real-data wiring, #343 mock 404s, #334 short ids"
@@ -179,7 +179,7 @@
       { "type": "heading", "text": "What could slip the demo or bite right after" },
       { "type": "bullets", "items": [
         "Lead-time items can't be compressed: Developer ID signing and CMS ESRD-model acquisition both start with you and gate downstream work",
-        "Demo dollar math needs the real PY2025 ratebook (ra-labs #94) - the cache currently holds only the 2026 book; verify PY2025 coverage before relying on D-family numbers",
+        "Demo dollar math needs the real PY2025 ratebook (acme-labs #94) - the cache currently holds only the 2026 book; verify PY2025 coverage before relying on D-family numbers",
         "The silent no-op is the trap: a blank install currently PASSes a run with zero recompute - #389's visible guard must land or the demo can mislead",
         "Dependabot moderate (glib, #282) is open on main - low risk, but clear it inside the demo milestone",
         "Real PHI stays out until #360 (sidecar token) lands - synthetic corpus only for the rehearsal"
@@ -188,7 +188,7 @@
   },
   {
     "kicker": "THE WEEK IN ONE SENTENCE",
-    "footer": "Stage 9 milestone due 2026-06-15 - github.com/hsb3/ra-platform",
+    "footer": "Stage 9 milestone due 2026-06-15 - github.com/<owner>/acme-platform",
     "blocks": [
       { "type": "heading", "text": "Converge Monday's demo on real PY2025 math - everything else this week either feeds that chain or waits behind your decisions" },
       { "type": "subtitle", "text": "Owner-gated long poles (signing, ESRD acquisition, refdata model) start now; the engineering tail and demo rehearsal run in parallel; the depth backlog is sequenced and waits its turn." }
