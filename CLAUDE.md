@@ -19,4 +19,4 @@ Source of truth for proven coding-agent **extenders** (skills, agents, MCP serve
 ## Conventions
 - Naming taxonomy in `manifests/naming.md`. Hooks: `<plugin>.<Event>.<slug>.sh`, stdlib-only handlers.
 - Generated artifacts are never hand-edited; a CI drift guard regenerates and fails on diff.
-- Decision record: `~/Documents/Claude/Projects/dotfiles-agents-cowork/planning/CANON.md`.
+- Decision record: `~/Documents/Claude/Projects/dotfiles-agents-cowork/_structure/CANON.md`.

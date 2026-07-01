@@ -44,7 +44,7 @@ A load-bearing claim cites `path:line` OR one of these:
 
 - `docs/CHARTER.md` (precedence page) · `CLAUDE.md` (agent digest) · `AGENTS.md`
 - `manifests/naming.md` (naming taxonomy) · `primitives-core.yaml` (the roster) · `externals.yaml`
-- Governance (outside the repo): `~/Documents/Claude/Projects/dotfiles-agents-cowork/planning/{CANON.md, repository-technical-plan.md, promotion-qualification-gate.md}`
+- Governance (outside the repo): `~/Documents/Claude/Projects/dotfiles-agents-cowork/_structure/{CANON.md, repository-technical-plan.md}`; promotion gate at `dotfiles-agents-workbench/docs/promotion-gate.md`
 
 ## Conventions / gotchas
 

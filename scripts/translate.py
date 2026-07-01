@@ -286,6 +286,49 @@ def write_json(path, payload):
 
 
 # ── build ──────────────────────────────────────────────────────────────────────────────
+def render_marketplace(built_plugins, source_prefix):
+    """Marketplace catalog for the built plugins, with `source` under source_prefix.
+
+    Two catalogs are emitted from the same data: the in-target one (prefix `./plugins/`,
+    beside the plugin folders — used by a local-path add of `targets/claude-code`) and the
+    repo-root one (prefix `./targets/claude-code/plugins/` — used by the `owner/repo`
+    shorthand, which only reads `.claude-plugin/marketplace.json` at the repo root)."""
+    plugins = sorted(
+        (
+            {
+                "name": p["name"],
+                "source": f"{source_prefix}{p['name']}",
+                "description": p["description"],
+                "version": p["version"],
+                "author": OWNER,
+            }
+            for p in built_plugins
+        ),
+        key=lambda x: x["name"],
+    )
+    return {
+        "$schema": MARKETPLACE_SCHEMA,
+        "name": "dotfiles-agents",
+        "owner": OWNER,
+        "metadata": {
+            "version": "0.1.0",
+            "description": "Proven coding-agent extenders, generated from primitives-core.",
+        },
+        "plugins": plugins,
+    }
+
+
+def write_root_marketplace(dest_root, built_plugins):
+    """Emit the repo-root `.claude-plugin/marketplace.json` (sources into targets/)."""
+    market = render_marketplace(built_plugins, "./targets/claude-code/plugins/")
+    d = os.path.join(dest_root, ".claude-plugin")
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "marketplace.json"), "w") as fh:
+        json.dump(market, fh, indent=2)
+        fh.write("\n")
+    return market
+
+
 def build(out_root, roster, plugins_meta, caps, cma_model, externals):
     """Render all targets under out_root. Returns the results dict."""
     results = {t: {} for t in TARGETS}
@@ -326,8 +369,8 @@ def build(out_root, roster, plugins_meta, caps, cma_model, externals):
             rec("claude-code", pid, cap, d)
         # toggle members are placed during plugin assembly below
 
-    # plugin assembly (toggle primitives -> plugins/<p>/)
-    market_plugins = []
+    # plugin assembly (plugin members -> plugins/<p>/)
+    built_plugins = []
     plugin_ids = sorted({p for e in roster for p in e["plugins"]})
     for p in plugin_ids:
         members = [
@@ -370,26 +413,16 @@ def build(out_root, roster, plugins_meta, caps, cma_model, externals):
                     hooks_done = True
                 d = f"claude-code/plugins/{p}/hooks-handlers/{pid}.sh"
                 rec("claude-code", pid, caps["hook"]["claude-code"], d)
-        market_plugins.append(
+        built_plugins.append(
             {
                 "name": p,
-                "source": f"./plugins/{p}",
                 "description": meta.get("description", ""),
                 "version": meta.get("version", "0.0.1"),
-                "author": OWNER,
             }
         )
 
-    market = {
-        "$schema": MARKETPLACE_SCHEMA,
-        "name": "dotfiles-agents",
-        "owner": OWNER,
-        "metadata": {
-            "version": "0.1.0",
-            "description": "Proven coding-agent extenders, generated from primitives-core.",
-        },
-        "plugins": sorted(market_plugins, key=lambda x: x["name"]),
-    }
+    # in-target catalog (beside the plugin folders; local-path add of targets/claude-code)
+    market = render_marketplace(built_plugins, "./plugins/")
     os.makedirs(os.path.join(cc, ".claude-plugin"), exist_ok=True)
     with open(os.path.join(cc, ".claude-plugin", "marketplace.json"), "w") as fh:
         json.dump(market, fh, indent=2)
@@ -526,7 +559,7 @@ def build(out_root, roster, plugins_meta, caps, cma_model, externals):
                     reason="CMA mcp_servers are remote-only; this server is local stdio",
                 )
 
-    return results
+    return results, built_plugins
 
 
 def write_results(path, results):
@@ -598,13 +631,23 @@ def main():
     if check:
         tmp = tempfile.mkdtemp(prefix="translate-check-")
         try:
-            results = build(tmp, roster, plugins_meta, caps, cma_model, externals)
+            results, built = build(
+                tmp, roster, plugins_meta, caps, cma_model, externals
+            )
             # compare only the generated per-target subdirs (targets/README.md is curated)
             problems = []
             for t in TARGETS:
                 problems += diff_trees(
                     os.path.join(tmp, t), os.path.join(REPO, "targets", t)
                 )
+            # the repo-root marketplace catalog (owner/repo shorthand add) is generated too
+            root_mp = os.path.join(REPO, ".claude-plugin", "marketplace.json")
+            gen_root = render_marketplace(built, "./targets/claude-code/plugins/")
+            committed_root = (
+                json.load(open(root_mp)) if os.path.exists(root_mp) else None
+            )
+            if committed_root != gen_root:
+                problems.append(".claude-plugin/marketplace.json (repo root) is stale")
             committed = json.load(open(RESULTS)) if os.path.exists(RESULTS) else {}
             if committed.get("results") != results:
                 problems.append("primitives-core-translation-results.json is stale")
@@ -624,8 +667,9 @@ def main():
     tgt = os.path.join(REPO, "targets")
     for t in TARGETS:
         shutil.rmtree(os.path.join(tgt, t), ignore_errors=True)
-    results = build(tgt, roster, plugins_meta, caps, cma_model, externals)
+    results, built = build(tgt, roster, plugins_meta, caps, cma_model, externals)
     write_results(RESULTS, results)
+    write_root_marketplace(REPO, built)
     print(f"✓ built targets/ — {summarize(results)}")
     return 0
 

@@ -62,7 +62,17 @@ scripts/translate.py                           the build (stdlib-only, determini
 targets/{claude-code,opencode,claude-agents}/  generated bundles — never hand-edited
 ```
 
+## Install as a Claude Code marketplace
+
+```console
+$ claude plugin marketplace add hsb3/dotfiles-agents
+$ claude plugin install project-workflow@dotfiles-agents
+```
+
+The `owner/repo` shorthand reads the generated repo-root `.claude-plugin/marketplace.json` (sources point into `targets/`). `project-workflow` bundles the project-management workflow — board, planning, handoff, and project docs. Core skills/agents also deploy raw cross-tool (Claude Code + opencode) via the distribution CLI in `dotfiles`.
+
 - **Canonical page** (wins over everything): [`docs/CHARTER.md`](docs/CHARTER.md)
 - **Agent guide:** [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md)
+- **Process SOPs:** [`docs/sops/`](docs/sops/)
 
 Private. Deployed by the distribution CLI in `dotfiles`; not stowed.

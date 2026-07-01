@@ -445,7 +445,7 @@
       },
       "agent-dot-md-authoring": {
         "capability": "native",
-        "destination": "claude-code/skills/agent-dot-md-authoring",
+        "destination": "claude-code/plugins/project-workflow/skills/agent-dot-md-authoring",
         "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
         "skipped": false
       },
@@ -469,19 +469,19 @@
       },
       "board-analyst": {
         "capability": "native",
-        "destination": "claude-code/plugins/github-projects-board-management/agents/board-analyst.md",
+        "destination": "claude-code/plugins/project-workflow/agents/board-analyst.md",
         "sha256": "2577bc9866c862bcd7763503fc4729f8821a341651049117e2854560e27e242b",
         "skipped": false
       },
       "board-reporting": {
         "capability": "native",
-        "destination": "claude-code/plugins/github-projects-board-management/skills/board-reporting",
+        "destination": "claude-code/plugins/project-workflow/skills/board-reporting",
         "sha256": "4128dd47797bb08fe48b8b383bc4ded4cf2ad8a77453bef6711fbc2c7fea1b07",
         "skipped": false
       },
       "board-triage": {
         "capability": "native",
-        "destination": "claude-code/plugins/github-projects-board-management/skills/board-triage",
+        "destination": "claude-code/plugins/project-workflow/skills/board-triage",
         "sha256": "c77863bc4dbef491fad6fb0a14e4e8e8b301f9e046f01d05cb95b2196101fa0f",
         "skipped": false
       },
@@ -541,7 +541,7 @@
       },
       "comms": {
         "capability": "native",
-        "destination": "claude-code/skills/comms",
+        "destination": "claude-code/plugins/project-workflow/skills/comms",
         "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
         "skipped": false
       },
@@ -613,7 +613,7 @@
       },
       "diagrams": {
         "capability": "native",
-        "destination": "claude-code/skills/diagrams",
+        "destination": "claude-code/plugins/project-workflow/skills/diagrams",
         "sha256": "9eec8a72479d040aa568f23737f6a94b64d9c5e9f18d8af1e9b88eb8716d04bd",
         "skipped": false
       },
@@ -673,13 +673,13 @@
       },
       "github-project-board": {
         "capability": "native",
-        "destination": "claude-code/plugins/github-projects-board-management/skills/github-project-board",
+        "destination": "claude-code/plugins/project-workflow/skills/github-project-board",
         "sha256": "5669bf8a340afb5e7b2ae82cbb046d19b7589ae94e7a95071b6402b1b761fdea",
         "skipped": false
       },
       "handoff": {
         "capability": "native",
-        "destination": "claude-code/skills/handoff",
+        "destination": "claude-code/plugins/project-workflow/skills/handoff",
         "sha256": "47ab2d40b642602fd873584da89b22d71ed41b8061e0f5f3592462e5d903aae5",
         "skipped": false
       },
@@ -847,7 +847,7 @@
       },
       "planning-desk": {
         "capability": "native",
-        "destination": "claude-code/skills/planning-desk",
+        "destination": "claude-code/plugins/project-workflow/skills/planning-desk",
         "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
         "skipped": false
       },
@@ -895,7 +895,7 @@
       },
       "readme-value-and-proof": {
         "capability": "native",
-        "destination": "claude-code/skills/readme-value-and-proof",
+        "destination": "claude-code/plugins/project-workflow/skills/readme-value-and-proof",
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
         "skipped": false
       },

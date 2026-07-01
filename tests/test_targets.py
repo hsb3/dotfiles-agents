@@ -97,6 +97,20 @@ class MarketplaceShape(unittest.TestCase):
             self.assertIn("name", d)
             self.assertIn("version", d)
 
+    def test_root_marketplace_for_shorthand_add(self):
+        # a repo-root .claude-plugin/marketplace.json makes the `owner/repo` shorthand add
+        # work (that add only reads the repo root); its sources point into targets/.
+        root = _load(os.path.join(T.REPO, ".claude-plugin", "marketplace.json"))
+        for key in ("name", "owner", "plugins"):
+            self.assertIn(key, root)
+        self.assertTrue(root["plugins"])
+        for p in root["plugins"]:
+            self.assertTrue(
+                p["source"].startswith("./targets/claude-code/plugins/"), p["source"]
+            )
+            pj = os.path.join(T.REPO, p["source"], ".claude-plugin", "plugin.json")
+            self.assertTrue(os.path.isfile(pj), p["source"])
+
 
 class Determinism(unittest.TestCase):
     def test_build_twice_is_byte_identical(self):

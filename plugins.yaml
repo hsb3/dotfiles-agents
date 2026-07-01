@@ -20,9 +20,6 @@ plugins:
   - id: frontend-extras
     version: "0.0.1"
     description: "Frontend helpers - shadcn/ui component patterns and React diagnostics"
-  - id: github-projects-board-management
-    version: "0.1.0"
-    description: "Operate a GitHub Project (v2) as a single-source-of-truth board: set up the field/view model, run the weekly export->analyze->apply triage loop, sequence with native dependencies, and report status. Auth stays local; every change is a reviewable diff."
   - id: langchain-stack
     version: "0.0.1"
     description: "LangChain, LangGraph, and LangSmith fundamentals - building, persisting, evaluating, and tracing LLM agent applications"
@@ -41,6 +38,9 @@ plugins:
   - id: project-dashboard
     version: "0.0.1"
     description: "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern."
+  - id: project-workflow
+    version: "0.1.0"
+    description: "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs — CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/."
   - id: python-standards
     version: "1.0.0"
     description: "Enforces modern Python standards: uv for packages, ty for type checking, ruff for linting/formatting. Auto-detects Python projects, auto-formats on save, validates before session end."

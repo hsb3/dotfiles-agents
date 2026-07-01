@@ -6,4 +6,4 @@ Gitignored by default; durable items tracked via gitignore negation (this file, 
 - `research/`, `briefings/` — as needed.
 
 Project decision record lives outside the repo at
-`~/Documents/Claude/Projects/dotfiles-agents-cowork/planning/` (`CANON.md`).
+`~/Documents/Claude/Projects/dotfiles-agents-cowork/_structure/` (`CANON.md`).

@@ -19,7 +19,7 @@ primitives:
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: []
+    plugins: [project-workflow]
     summary: "Write a new CLAUDE.md (or AGENTS.md) from scratch, or audit and improve an existing one, so it actually helps a coding agent navigate the codebase."
   - id: api-server-design
     type: skill
@@ -33,20 +33,20 @@ primitives:
   - id: board-reporting
     type: skill
     source: primitives-core/skills/board-reporting
-    shelf: toggle
+    shelf: core
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: [github-projects-board-management]
+    plugins: [project-workflow]
     summary: "This skill should be used when the user asks for a \"board status\", \"project status update\", \"standup from the board\", \"weekly board digest\", \"what changed on…"
   - id: board-triage
     type: skill
     source: primitives-core/skills/board-triage
-    shelf: toggle
+    shelf: core
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: [github-projects-board-management]
+    plugins: [project-workflow]
     summary: "This skill should be used when the user asks to \"run board triage\", \"triage the backlog\", \"prioritize the issues\", \"rank the unranked issues\", \"fill in Impac…"
   - id: carbon-builder
     type: skill
@@ -91,7 +91,7 @@ primitives:
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: []
+    plugins: [project-workflow]
     summary: "Produce Henry's recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout,…"
   - id: deep-agents-core
     type: skill
@@ -145,7 +145,7 @@ primitives:
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: []
+    plugins: [project-workflow]
     summary: "Create technical architecture diagrams using Python's diagrams library (mingrammer/diagrams)."
   - id: dlt-pipelines
     type: skill
@@ -186,11 +186,11 @@ primitives:
   - id: github-project-board
     type: skill
     source: primitives-core/skills/github-project-board
-    shelf: toggle
+    shelf: core
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: [github-projects-board-management]
+    plugins: [project-workflow]
     summary: "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma…"
   - id: handoff
     type: skill
@@ -199,7 +199,7 @@ primitives:
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: []
+    plugins: [project-workflow]
     summary: "Maintain the project's session-handoff file so a brand-new session can pick up work cold."
   - id: langchain-dependencies
     type: skill
@@ -415,7 +415,7 @@ primitives:
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: []
+    plugins: [project-workflow]
     summary: "Stand up and run a source-grounded planning desk under _meta/plans/ — the workflow for authoring conformant GitHub issue bodies, writing deep build plans, an…"
   - id: pptx-henry
     type: skill
@@ -442,7 +442,7 @@ primitives:
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: []
+    plugins: [project-workflow]
     summary: "Turn a README into a user-centric pitch backed by real visual proof."
   - id: setup-project-dashboard
     type: skill
@@ -492,11 +492,11 @@ primitives:
   - id: board-analyst
     type: agent
     source: primitives-core/agents/board-analyst.md
-    shelf: toggle
+    shelf: core
     origin: internal
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: [github-projects-board-management]
+    plugins: [project-workflow]
     summary: "Use this agent to turn a GitHub Project (v2) snapshot into a reviewed CHANGESET — the judgment half of the export -> analyze -> apply loop."
   - id: chat-ui-builder
     type: agent
