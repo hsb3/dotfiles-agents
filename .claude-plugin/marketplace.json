@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "deep-agents",
-      "source": "./plugins/deep-agents",
+      "source": "./targets/claude-code/plugins/deep-agents",
       "description": "Deep agents patterns - core architecture, memory, and multi-agent orchestration",
       "version": "0.0.1",
       "author": {
@@ -20,7 +20,7 @@
     },
     {
       "name": "dev-focus",
-      "source": "./plugins/dev-focus",
+      "source": "./targets/claude-code/plugins/dev-focus",
       "description": "Makes Claude Code aggressively focused \u2014 pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track.",
       "version": "1.0.0",
       "author": {
@@ -29,7 +29,7 @@
     },
     {
       "name": "frontend-extras",
-      "source": "./plugins/frontend-extras",
+      "source": "./targets/claude-code/plugins/frontend-extras",
       "description": "Frontend helpers - shadcn/ui component patterns and React diagnostics",
       "version": "0.0.1",
       "author": {
@@ -38,7 +38,7 @@
     },
     {
       "name": "langchain-stack",
-      "source": "./plugins/langchain-stack",
+      "source": "./targets/claude-code/plugins/langchain-stack",
       "description": "LangChain, LangGraph, and LangSmith fundamentals - building, persisting, evaluating, and tracing LLM agent applications",
       "version": "0.0.1",
       "author": {
@@ -47,7 +47,7 @@
     },
     {
       "name": "media-gen",
-      "source": "./plugins/media-gen",
+      "source": "./targets/claude-code/plugins/media-gen",
       "description": "Image generation skills - Nano Banana / Gemini image workflows",
       "version": "0.0.1",
       "author": {
@@ -56,7 +56,7 @@
     },
     {
       "name": "meta",
-      "source": "./plugins/meta",
+      "source": "./targets/claude-code/plugins/meta",
       "description": "Meta skills for AI engineering - selecting the right agent framework",
       "version": "0.0.1",
       "author": {
@@ -65,7 +65,7 @@
     },
     {
       "name": "obsidian-plugin-dev",
-      "source": "./plugins/obsidian-plugin-dev",
+      "source": "./targets/claude-code/plugins/obsidian-plugin-dev",
       "description": "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features",
       "version": "0.1.0",
       "author": {
@@ -74,7 +74,7 @@
     },
     {
       "name": "openspec",
-      "source": "./plugins/openspec",
+      "source": "./targets/claude-code/plugins/openspec",
       "description": "OpenSpec change workflow - propose, apply, archive, and explore spec-driven changes",
       "version": "0.0.1",
       "author": {
@@ -83,7 +83,7 @@
     },
     {
       "name": "project-dashboard",
-      "source": "./plugins/project-dashboard",
+      "source": "./targets/claude-code/plugins/project-dashboard",
       "description": "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern.",
       "version": "0.0.1",
       "author": {
@@ -92,7 +92,7 @@
     },
     {
       "name": "project-workflow",
-      "source": "./plugins/project-workflow",
+      "source": "./targets/claude-code/plugins/project-workflow",
       "description": "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs \u2014 CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/.",
       "version": "0.1.0",
       "author": {
@@ -101,7 +101,7 @@
     },
     {
       "name": "python-standards",
-      "source": "./plugins/python-standards",
+      "source": "./targets/claude-code/plugins/python-standards",
       "description": "Enforces modern Python standards: uv for packages, ty for type checking, ruff for linting/formatting. Auto-detects Python projects, auto-formats on save, validates before session end.",
       "version": "1.0.0",
       "author": {

@@ -47,4 +47,8 @@ A translation service renders each primitive into static per-target bundles unde
 ## Source of decisions
 
 The full decision record and build plan live in the governance workspace at
-`~/Documents/Claude/Projects/dotfiles-agents-cowork/planning/` (`CANON.md` + `repository-technical-plan.md`) — kept out of this repo deliberately. This charter is the repo-local summary; CANON is the upstream record.
+`~/Documents/Claude/Projects/dotfiles-agents-cowork/_structure/` (`CANON.md` + `repository-technical-plan.md`) — kept out of this repo deliberately. This charter is the repo-local summary; CANON is the upstream record.
+
+## Process SOPs
+
+Harness-agnostic standard operating procedures for running a software project (milestones & board, issues & plans, session continuity) live in [`docs/sops/`](./sops/) — the *process* layer that this repo's extenders (`github-project-board`, `planning-desk`, `handoff`) deliver.

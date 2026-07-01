@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Operate a GitHub Project (v2) as a single-source-of-truth board: set up the field/view model, run the weekly export->analyze->apply triage loop, sequence with native dependencies, and report status. Auth stays local; every change is a reviewable diff.",
-  "name": "github-projects-board-management",
-  "version": "0.1.0"
-}
