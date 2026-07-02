@@ -127,13 +127,10 @@ reads a snapshot, applies the rubric, writes the changeset TSV plus per-issue ra
 and a skipped list. Hard boundary: it **never applies changes to the board**; applying is
 a deliberate human/script step.
 
-> **Known gap (v0.1.0):** the board skills reference three helper scripts
-> (`board-export.py`, `board-fields.py`, `board-apply.py`) "at the plugin root
-> `scripts/`", but the built plugin does not yet bundle them — they still live in the
-> frozen `hsb3-custom-plugins` repo
-> (`plugins/github-projects-board-management/scripts/`). Until they're migrated into
-> `primitives-core/` and the build, point sessions at that path or let the skill
-> reconstruct the equivalent `gh` calls.
+The three helper scripts behind the loop (`board-export.py`, `board-fields.py`,
+`board-apply.py`) ship in the `github-project-board` skill's `scripts/` directory —
+`$CLAUDE_PLUGIN_ROOT/skills/github-project-board/scripts/` in an installed plugin. They
+are stdlib + `gh` only; no install step.
 
 ### Planning
 
@@ -184,7 +181,7 @@ never round up, numbers live in systems and the deck points to them.
 
 | Component | Needs |
 |---|---|
-| board skills + agent | `gh` CLI authed with project scope (`gh auth refresh -s project`); see Known gap above for the helper scripts |
+| board skills + agent | `gh` CLI authed with project scope (`gh auth refresh -s project`); helper scripts bundled (stdlib-only) |
 | planning-desk | `gh` authed; GitHub-backed repo; run from the main working tree (not a worktree) |
 | diagrams | Python `diagrams` package + Graphviz |
 | readme-value-and-proof | runnable app; Playwright/headless Chromium |

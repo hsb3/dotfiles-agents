@@ -18,19 +18,19 @@
       "board-analyst": {
         "capability": "render",
         "destination": "claude-agents/agents/board-analyst.json",
-        "sha256": "13ca6d67423286bc6fb82fac2b279d8fb70558b83a38c764b5afaaf00e5c77ef",
+        "sha256": "bba6166db58caed8db8a6af0823d1a40ec9dbdf6803cb4cbccff82376599ba01",
         "skipped": false
       },
       "board-reporting": {
         "capability": "render",
         "destination": "claude-agents/skills/board-reporting",
-        "sha256": "4128dd47797bb08fe48b8b383bc4ded4cf2ad8a77453bef6711fbc2c7fea1b07",
+        "sha256": "40a2e3e585db6e39fa4c7ef490c195029319250081cf863879d66adc84f294cd",
         "skipped": false
       },
       "board-triage": {
         "capability": "render",
         "destination": "claude-agents/skills/board-triage",
-        "sha256": "c77863bc4dbef491fad6fb0a14e4e8e8b301f9e046f01d05cb95b2196101fa0f",
+        "sha256": "25343309b09179b5d0c18ad47d7f1a02d0596cc67b5795ebacb9ff317dea66e6",
         "skipped": false
       },
       "carbon-builder": {
@@ -186,7 +186,7 @@
       "github-project-board": {
         "capability": "render",
         "destination": "claude-agents/skills/github-project-board",
-        "sha256": "5669bf8a340afb5e7b2ae82cbb046d19b7589ae94e7a95071b6402b1b761fdea",
+        "sha256": "5dfd497571ed6d40680e2fb3bbb3d951e708003261d0e6e807f426147e020c3a",
         "skipped": false
       },
       "handoff": {
@@ -500,19 +500,19 @@
       "board-analyst": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/agents/board-analyst.md",
-        "sha256": "2577bc9866c862bcd7763503fc4729f8821a341651049117e2854560e27e242b",
+        "sha256": "59c3c9a2172b527ad16d7b84c2b648cccf477884403d2d056d82e00e96704984",
         "skipped": false
       },
       "board-reporting": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/board-reporting",
-        "sha256": "4128dd47797bb08fe48b8b383bc4ded4cf2ad8a77453bef6711fbc2c7fea1b07",
+        "sha256": "40a2e3e585db6e39fa4c7ef490c195029319250081cf863879d66adc84f294cd",
         "skipped": false
       },
       "board-triage": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/board-triage",
-        "sha256": "c77863bc4dbef491fad6fb0a14e4e8e8b301f9e046f01d05cb95b2196101fa0f",
+        "sha256": "25343309b09179b5d0c18ad47d7f1a02d0596cc67b5795ebacb9ff317dea66e6",
         "skipped": false
       },
       "carbon-builder": {
@@ -704,7 +704,7 @@
       "github-project-board": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/github-project-board",
-        "sha256": "5669bf8a340afb5e7b2ae82cbb046d19b7589ae94e7a95071b6402b1b761fdea",
+        "sha256": "5dfd497571ed6d40680e2fb3bbb3d951e708003261d0e6e807f426147e020c3a",
         "skipped": false
       },
       "handoff": {
@@ -1036,19 +1036,19 @@
       "board-analyst": {
         "capability": "transform",
         "destination": "opencode/agents/board-analyst.md",
-        "sha256": "9ee12246def2d86d8740a44e7de7627f111f8d905aebf2746e4d9efd2b98b8fc",
+        "sha256": "6d3da3727d05fb756bf6477a8c99ac4f4f7c38450c3dc93a9c6f87b470bf8cb1",
         "skipped": false
       },
       "board-reporting": {
         "capability": "native",
         "destination": "opencode/skills/board-reporting",
-        "sha256": "4128dd47797bb08fe48b8b383bc4ded4cf2ad8a77453bef6711fbc2c7fea1b07",
+        "sha256": "40a2e3e585db6e39fa4c7ef490c195029319250081cf863879d66adc84f294cd",
         "skipped": false
       },
       "board-triage": {
         "capability": "native",
         "destination": "opencode/skills/board-triage",
-        "sha256": "c77863bc4dbef491fad6fb0a14e4e8e8b301f9e046f01d05cb95b2196101fa0f",
+        "sha256": "25343309b09179b5d0c18ad47d7f1a02d0596cc67b5795ebacb9ff317dea66e6",
         "skipped": false
       },
       "carbon-builder": {
@@ -1228,7 +1228,7 @@
       "github-project-board": {
         "capability": "native",
         "destination": "opencode/skills/github-project-board",
-        "sha256": "5669bf8a340afb5e7b2ae82cbb046d19b7589ae94e7a95071b6402b1b761fdea",
+        "sha256": "5dfd497571ed6d40680e2fb3bbb3d951e708003261d0e6e807f426147e020c3a",
         "skipped": false
       },
       "handoff": {

@@ -21,8 +21,9 @@ consumes the same snapshot the triage loop produces — one read, many uses.
 
 ## Procedure
 
-1. **Snapshot.** `scripts/board-export.py -o <owner> -n <number> --out board-snapshot.json`
-   (scripts live at the plugin root `scripts/`). For a delta digest, keep the prior snapshot and diff.
+1. **Snapshot.** `python3 "${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts/board-export.py"
+   -o <owner> -n <number> --out board-snapshot.json` (the toolkit ships with the sibling
+   `github-project-board` skill). For a delta digest, keep the prior snapshot and diff.
 2. **Rollups.** From the snapshot compute:
    - counts by **Status**, **Priority**, **Workstream** (the shape of the backlog);
    - **In Progress** + **Blocked** lists (what's active / stuck, with the blocker for each);
