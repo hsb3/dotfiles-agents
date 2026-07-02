@@ -40,7 +40,7 @@ with design detail on the cowork desk (`analyses/project-workflow-v2-design.md`)
 
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
-| docs-planning-standard | #40 | draft - decisions 1-5 open, 6 resolved (issue bodies exempt from frontmatter) |
+| docs-planning-standard | #40 | ready to build - all owner decisions resolved 2026-07-02 |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
