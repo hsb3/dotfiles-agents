@@ -1,0 +1,38 @@
+> **Tracking:** #41, found 2026-07-02 while writing `docs/plugins/project-workflow.md` (the plugin user guide). The board skills instruct running three helper scripts that the built plugin does not ship.
+
+### What's wrong
+
+The three board helper scripts — `board-export.py`, `board-fields.py`, `board-apply.py` — are load-bearing for four project-workflow primitives, all of which reference them as if they ship with the plugin:
+
+- `primitives-core/skills/github-project-board/SKILL.md:256` — "the three scripts live at the plugin root `scripts/`; run them from the plugin directory" (usage examples at :281-286).
+- `primitives-core/skills/board-triage/SKILL.md:29-32` — "Run the toolkit (scripts live at the plugin root `scripts/`)"; apply step at :51-52.
+- `primitives-core/skills/board-reporting/SKILL.md:24-25` — snapshot step, "(scripts live at the plugin root `scripts/`)".
+- `primitives-core/agents/board-analyst.md:46-47` — "Use `Bash` only to run `board-export.py`/`board-fields.py` (reads)".
+
+But the scripts exist nowhere in this repo — not in any `primitives-core/skills/*/scripts/` dir (`primitives-core/skills/github-project-board/` contains only `SKILL.md`) and not in the built plugin (`targets/claude-code/plugins/project-workflow/` contains only `.claude-plugin/`, `agents/`, `skills/`; there is no plugin-root `scripts/`). The only surviving copies are in the frozen pre-migration repo: `hsb3-custom-plugins/plugins/github-projects-board-management/scripts/`.
+
+Expected: a fresh install of the plugin can run the export -> analyze -> apply loop the skills describe. Observed: every quoted `scripts/board-*.py` invocation fails with file-not-found; a session must fall back to reconstructing the `gh`/GraphQL calls by hand.
+
+Precedent that the fix is mechanically easy: skill-level script dirs already ship whole — `primitives-core/skills/planning-desk/scripts/` and `primitives-core/skills/repo-compliance-audit/scripts/` are bundled by the build's `copytree` (`scripts/translate.py:164`). There is no plugin-root asset mechanism in the build today.
+
+### Repro
+
+1. Install the plugin: `claude plugin marketplace add hsb3/dotfiles-agents && claude plugin install project-workflow@dotfiles-agents`.
+2. Ask for a board snapshot per `board-triage` step 1: `scripts/board-export.py -o <owner> -n <number> --out board-snapshot.json` from the plugin directory.
+3. File not found — `ls ~/.claude/plugins/cache/dotfiles-agents/project-workflow/0.1.0/` shows no `scripts/` dir.
+
+### Acceptance criteria
+
+- [ ] `board-export.py`, `board-fields.py`, `board-apply.py` exist under `primitives-core/` (home per the open decision below) and appear in the built plugin after `make build`.
+- [ ] Every script reference in the four primitives above points at the shipped location; `rg "plugin root .scripts/" primitives-core/` returns zero hits.
+- [ ] From a fresh plugin install, `python3 <shipped-path>/board-export.py --help` exits 0 (scripts stay stdlib + `gh` only, per the toolkit contract).
+- [ ] `make ci` green (targets drift guard regenerated, roster guard unchanged or updated per the decision).
+- [ ] The "Known gap (v0.1.0)" callout in `docs/plugins/project-workflow.md` is removed or rewritten in the same PR.
+
+### Dependencies & gates
+
+- Open owner decision - where the scripts live:
+  - **(A) recommended:** `primitives-core/skills/github-project-board/scripts/` (the skill that owns the loop); board-triage / board-reporting / board-analyst reference it via the plugin cache path or `$CLAUDE_PLUGIN_ROOT/skills/github-project-board/scripts/`. Zero build changes; also travels in raw (non-plugin) skill deploys to opencode.
+  - **(B):** teach `scripts/translate.py` a plugin-level `scripts/` assembly step to match the current skill wording. More build machinery; does not help raw deploys.
+- Gates that fire: **targets drift guard** (`make build-check`; any `primitives-core/` edit) and the **CI aggregate** (`make ci`). Roster drift guard fires only if option B adds a new primitive/attribute. Naming taxonomy: advisory only (no new primitive under option A). yamllint/actionlint do NOT fire (no YAML/workflow edits under option A).
+- Source of the scripts to migrate: `hsb3-custom-plugins/plugins/github-projects-board-management/scripts/` (frozen repo; copy, do not link).

@@ -2,6 +2,9 @@
   "display_title": "github-project-board",
   "endpoint": "POST /v1/skills",
   "files": [
-    "SKILL.md"
+    "SKILL.md",
+    "scripts/board-apply.py",
+    "scripts/board-export.py",
+    "scripts/board-fields.py"
   ]
 }

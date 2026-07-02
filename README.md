@@ -69,7 +69,7 @@ $ claude plugin marketplace add hsb3/dotfiles-agents
 $ claude plugin install project-workflow@dotfiles-agents
 ```
 
-The `owner/repo` shorthand reads the generated repo-root `.claude-plugin/marketplace.json` (sources point into `targets/`). `project-workflow` bundles the project-management workflow — board, planning, handoff, and project docs. Core skills/agents also deploy raw cross-tool (Claude Code + opencode) via the distribution CLI in `dotfiles`.
+The `owner/repo` shorthand reads the generated repo-root `.claude-plugin/marketplace.json` (sources point into `targets/`). `project-workflow` bundles the project-management workflow — board, planning, handoff, and project docs ([user guide](docs/plugins/project-workflow.md)). Core skills/agents also deploy raw cross-tool (Claude Code + opencode) via the distribution CLI in `dotfiles`.
 
 - **Canonical page** (wins over everything): [`docs/CHARTER.md`](docs/CHARTER.md)
 - **Agent guide:** [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md)

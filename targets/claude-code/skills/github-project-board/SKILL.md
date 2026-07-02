@@ -252,8 +252,10 @@ Progress`; Item closed → `Done`; PR merged → `Done`; Auto-add `is:issue is:o
 When the analyst can't read the board compactly (e.g. a chat/agent harness where listing
 items returns full issue bodies and overflows the context), **split the work across the seam
 where auth lives.** The local side (human or repo agent, with `gh`) does the I/O; the analyst
-does the judgment over a clean snapshot; every change lands as a reviewable diff. (In this plugin
-the three scripts live at the plugin root `scripts/`; run them from the plugin directory.)
+does the judgment over a clean snapshot; every change lands as a reviewable diff. (The three
+scripts ship in this skill's `scripts/` dir — in an installed Claude Code plugin that is
+`${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts/`; outside the harness, resolve
+`scripts/` relative to wherever this skill is installed.)
 
 Three artifacts, three contracts:
 
@@ -277,13 +279,14 @@ To see the valid field names + option values a changeset may use, run
 `scripts/board-fields.py -o <owner> -n <number>` (the enum reference; details in §6).
 
 ```bash
+S="${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts"   # this skill's scripts dir
 # 1. local side exports (GITHUB_TOKEN is unset inside the scripts to dodge the shadowing gotcha)
-scripts/board-export.py -o hsb3 -n 8 --out board-snapshot.json
+python3 "$S/board-export.py" -o hsb3 -n 8 --out board-snapshot.json
 # 2. analyst reads board-snapshot.json, writes changeset.tsv (issue / field / value)
 # 3. local side previews, then applies
-scripts/board-apply.py -o hsb3 -n 8 --changeset changeset.tsv                 # dry-run diff
-scripts/board-apply.py -o hsb3 -n 8 --changeset changeset.tsv --apply         # write
-scripts/board-apply.py -o hsb3 -n 8 --changeset edges.tsv --repo <owner>/acme-platform --apply
+python3 "$S/board-apply.py" -o hsb3 -n 8 --changeset changeset.tsv            # dry-run diff
+python3 "$S/board-apply.py" -o hsb3 -n 8 --changeset changeset.tsv --apply    # write
+python3 "$S/board-apply.py" -o hsb3 -n 8 --changeset edges.tsv --repo <owner>/acme-platform --apply
 ```
 
 **Why issue-number keys, not item-ids:** item-ids change if an item is removed and re-added;

@@ -26,10 +26,11 @@ thin because items lack `Priority`. The board is the source of truth; this keeps
 
 ## Procedure
 
-1. **Snapshot.** Run the toolkit (scripts live at the plugin root `scripts/`):
+1. **Snapshot.** Run the toolkit (it ships with the sibling `github-project-board` skill):
    ```bash
-   scripts/board-fields.py -o <owner> -n <number>            # confirm valid option values
-   scripts/board-export.py -o <owner> -n <number> --out board-snapshot.json
+   S="${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts"
+   python3 "$S/board-fields.py" -o <owner> -n <number>            # confirm valid option values
+   python3 "$S/board-export.py" -o <owner> -n <number> --out board-snapshot.json
    ```
 2. **Find the work.** From the snapshot, list items where `fields.Priority` is null (untriaged),
    plus anything whose ranking looks stale (e.g. a `P0` no longer on a dated path, or a `Blocked`
@@ -48,8 +49,8 @@ thin because items lack `Priority`. The board is the source of truth; this keeps
    Keyed on issue number; single-select values are option NAMES (see `board-fields.py`).
 5. **Preview, then apply.**
    ```bash
-   scripts/board-apply.py -o <owner> -n <number> --changeset changeset.tsv            # dry-run
-   scripts/board-apply.py -o <owner> -n <number> --changeset changeset.tsv --apply
+   python3 "$S/board-apply.py" -o <owner> -n <number> --changeset changeset.tsv            # dry-run
+   python3 "$S/board-apply.py" -o <owner> -n <number> --changeset changeset.tsv --apply
    ```
    Apply is idempotent and writes only cells that differ — re-runs are free.
 6. **Promote.** Move ready `P0/P1` items to Status `Up Next` and assign the current `Iteration`
