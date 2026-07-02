@@ -50,7 +50,8 @@ phrased.
 - **Honest framing only.** Describe what is actually proven; call out gaps explicitly; never
   blanket accuracy or certification claims; never round up. External comms guard this hardest.
 - **Numbers live in systems; the deck points** to the board / registry, as-of the date.
-- **Pitch to the audience.** Self-comms are blunt and may name issue/PR ids. External comms
+- **Pitch to the audience.** Self-comms are blunt and may name issue/PR ids — plain-English
+  label first, id second; no bare ids or unexplained shorthand (HB 2026-07-02). External comms
   (board, client) drop internal jargon and unexplained ids, carry a confidential footer, and
   commit to no roadmap dates.
 

@@ -66,9 +66,12 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 - **Numbers live in systems; the deck points.** Footer says counts belong to the board /
   registry, as-of the date. No headline metric committed as a bare value without an as-of.
 - **Phrases, not sentences** on slides; detail goes to the audio or skippable slides.
-- **Pitch to the audience.** Self-comms are blunt and imperative and may name issue/PR ids.
-  External comms (board, client) drop internal jargon and unexplained issue numbers, carry a
-  confidential footer, and commit to no roadmap dates.
+- **Pitch to the audience.** Self-comms are blunt and imperative and may name issue/PR ids —
+  but **plain-English label first, id second** ("the scaffold-warning fix (da#38)", never a
+  bare "da#38"): Henry shouldn't need ids or internal shorthand memorized to read his own
+  deck (HB feedback 2026-07-02). External comms (board, client) drop internal jargon and
+  unexplained issue numbers entirely, carry a confidential footer, and commit to no roadmap
+  dates.
 
 ## Shared pipeline
 

@@ -84,7 +84,7 @@
       "comms": {
         "capability": "render",
         "destination": "claude-agents/skills/comms",
-        "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
+        "sha256": "f5ce0d1c41436ca53f36a8478e110aec5635b77dddcf06b8c34b4860634dbfb4",
         "skipped": false
       },
       "deep-agents-core": {
@@ -572,7 +572,7 @@
       "comms": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/comms",
-        "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
+        "sha256": "f5ce0d1c41436ca53f36a8478e110aec5635b77dddcf06b8c34b4860634dbfb4",
         "skipped": false
       },
       "deck-builder": {
@@ -1108,7 +1108,7 @@
       "comms": {
         "capability": "native",
         "destination": "opencode/skills/comms",
-        "sha256": "085a4ce42230fe6d47fc795bb4b42bb92bf118b5f0232d5751047d18ca744667",
+        "sha256": "f5ce0d1c41436ca53f36a8478e110aec5635b77dddcf06b8c34b4860634dbfb4",
         "skipped": false
       },
       "deck-builder": {
