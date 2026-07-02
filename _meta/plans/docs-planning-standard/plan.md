@@ -1,10 +1,10 @@
 ---
 title: "Build plan — docs/ planning-doc minimums (DOCS-xx) + apply + plugin refresh"
 type: spec
-status: draft
+status: active
 created: 2026-07-02
 purpose: Source-grounded build plan for #40 — exact files, row design, scaffold mechanics, landing order, and the open owner decisions.
-notes: Intaken 2026-07-02 from the cowork desk (deliverables/docs-planning-standard/). Filed as #40. The issue BODY's copy of record is the live issue + the cowork desk copy. Open question 6 RESOLVED 2026-07-02 — owner ruling, issue bodies are exempt from frontmatter requirements.
+notes: Intaken 2026-07-02 from the cowork desk (deliverables/docs-planning-standard/). Filed as #40. The issue BODY's copy of record is the live issue + the cowork desk copy. ALL owner decisions resolved 2026-07-02 (1-5 approved as recommended via the desk decision sheet; 6 ruled earlier -> #45). Ready to build.
 ---
 
 # docs/ planning-doc minimums — DOCS-xx standard rows, scaffold assets, apply, plugin refresh
@@ -15,7 +15,7 @@ scaffold to produce them, bring dotfiles-agents itself to conformance, and bump/
 project-workflow plugin so the standards skills reach installed machines. Everything is
 additive: no new primitives, no new audit check types, no renames._
 
-Status: draft
+Status: ready to build (all owner decisions resolved 2026-07-02)
 Date: 2026-07-02
 
 ## Tracking
@@ -147,7 +147,10 @@ Land as **one PR** (A+B+C+D) plus the E follow-through — the conformance-pass 
 (both repos in one gated wave) applies. If #27's rename PR is in flight simultaneously, land
 this first (small, additive) and let #27 carry the mechanical `pw-` path moves.
 
-## Open questions / owner decisions
+## Open questions / owner decisions — ALL RESOLVED 2026-07-02
+
+_Owner ruling via the desk decision sheet (recorded on #40): decisions 1-5 approved as
+recommended below; decision 6 ruled separately and filed as #45._
 
 1. **Is `docs/CHARTER.md` universally required (DOCS-02)?** Variance is additive-only — no
    waivers — so a required row must hold for every conforming repo, and ra-platform doesn't
