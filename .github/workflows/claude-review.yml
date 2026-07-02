@@ -8,6 +8,12 @@ on:
     paths-ignore:
       - "_meta/**"
 
+# A new push supersedes the in-flight review of the same PR — cancel it instead of
+# paying for two reviews (Gate-2 pilot finding, adopted from the pilot repo's workflow).
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     runs-on: ubuntu-latest

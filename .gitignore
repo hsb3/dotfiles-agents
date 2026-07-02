@@ -20,6 +20,20 @@ _meta/*
 !_meta/mise-en-place.yml
 !_meta/plans/
 !_meta/plans/**
+# scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
+# content stays local (operations/ especially — secrets are never tracked)
+!_meta/archive/
+_meta/archive/*
+!_meta/archive/.gitkeep
+!_meta/briefings/
+_meta/briefings/*
+!_meta/briefings/.gitkeep
+!_meta/operations/
+_meta/operations/*
+!_meta/operations/.gitkeep
+!_meta/research/
+_meta/research/*
+!_meta/research/.gitkeep
 !_meta/_archive/
 !_meta/_archive/**
 _meta/_archive/**/.DS_Store

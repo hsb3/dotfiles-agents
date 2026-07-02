@@ -135,6 +135,10 @@ class PlanReadOnly(unittest.TestCase):
             actions = parse_actions(r.stdout)
             creates = {i for i, v in actions.items() if v[0] == "CREATE"}
             self.assertEqual(creates, set(), "conformant repo must plan zero creations")
+            # the fixture carries a frontmatter-less issue-body.md — the scaffold's
+            # duplicated plans_scope must honor the same exemption the audit does (#45)
+            for i in range(1, 7):
+                self.assertEqual(actions[f"PLANS-0{i}"][0], "OK", f"PLANS-0{i}")
 
 
 # ── TC-002 + TC-003: apply creates exactly the plan; repeat is a no-op ────────────────
@@ -497,6 +501,175 @@ class MemoryStub(unittest.TestCase):
             rows = parse_rows(run_audit(repo).stdout)
             for rid in ("MEM-01", "MEM-02", "MEM-03", "MEM-04"):
                 self.assertEqual(rows[rid][0], "PASS", rid)
+
+
+# ── #38: gitignore-swallow warning ────────────────────────────────────────────────────
+
+
+class GitignoreSwallowWarning(unittest.TestCase):
+    """A planned creation the target repo's own gitignore swallows gets a per-path
+    warning in plan and apply output; behavior and exit codes are unchanged."""
+
+    def test_ignored_planned_file_warns_plan_and_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            _write(os.path.join(repo, ".gitignore"), ".mcp.json\n")
+            before = tree_state(repo)
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(tree_state(repo), before, "--plan modified the repo")
+            self.assertIn("ignored by the target repo's .gitignore", r.stdout)
+            self.assertIn("! .mcp.json", r.stdout)
+            r2 = run_scaffold(repo, "--apply")
+            self.assertEqual(r2.returncode, 0, r2.stderr)
+            self.assertIn("! .mcp.json", r2.stdout)
+            # informational only: additive behavior unchanged, file still created
+            self.assertIn(".mcp.json", parse_created(r2.stdout))
+            self.assertTrue(os.path.isfile(os.path.join(repo, ".mcp.json")))
+
+    def test_no_warning_when_nothing_swallowed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertNotIn("ignored by the target repo's .gitignore", r.stdout)
+
+
+# ── #44: duplicate-reviewer probe + template asset guards ─────────────────────────────
+
+
+class DuplicateReviewerProbe(unittest.TestCase):
+    """An existing claude-code-action PR-review workflow under another name makes
+    GH-08 MANUAL instead of planning a duplicate reviewer."""
+
+    EQUIVALENT = (
+        "name: PR Review with Progress Tracking\n"
+        "on:\n"
+        "  pull_request:\n"
+        "    types: [opened, synchronize]\n"
+        "jobs:\n"
+        "  review:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    steps:\n"
+        "      - uses: anthropics/claude-code-action@v1\n"
+    )
+    TAG_WORKFLOW = (
+        "name: Claude\n"
+        "on:\n"
+        "  issue_comment:\n"
+        "    types: [created]\n"
+        "  pull_request_review_comment:\n"
+        "    types: [created]\n"
+        "jobs:\n"
+        "  claude:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    steps:\n"
+        "      - uses: anthropics/claude-code-action@v1\n"
+    )
+
+    def test_equivalent_review_workflow_is_manual_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            _write(
+                os.path.join(repo, ".github", "workflows", "pr-review.yml"),
+                self.EQUIVALENT,
+            )
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            actions = parse_actions(r.stdout)
+            self.assertEqual(actions["GH-08"][0], "MANUAL")
+            self.assertIn("pr-review.yml", actions["GH-08"][1])
+            self.assertNotIn(
+                ".github/workflows/claude-review.yml", parse_created(r.stdout)
+            )
+            r2 = run_scaffold(repo, "--apply")
+            self.assertEqual(r2.returncode, 0, r2.stderr)
+            self.assertFalse(
+                os.path.isfile(
+                    os.path.join(repo, ".github", "workflows", "claude-review.yml")
+                ),
+                "apply must not create a duplicate reviewer",
+            )
+
+    def test_tag_workflow_is_not_a_review_equivalent(self):
+        # claude.yml-style triggers (pull_request_review_comment:, no pull_request:)
+        # must not suppress the GH-08 creation
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            _write(
+                os.path.join(repo, ".github", "workflows", "tag-claude.yml"),
+                self.TAG_WORKFLOW,
+            )
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(parse_actions(r.stdout)["GH-08"][0], "CREATE")
+
+
+class TemplateAssets(unittest.TestCase):
+    """Template defects from the Gate-2 pilot: issue forms ship label-less; the
+    review workflow cancels stale in-progress runs."""
+
+    ASSETS = os.path.join(
+        PLUGIN_ROOT, "skills", "repo-meta-structure", "assets", "github"
+    )
+
+    def test_issue_templates_carry_no_labels(self):
+        for name in ("bug.yml", "feature.yml", "epic.yml"):
+            path = os.path.join(self.ASSETS, "ISSUE_TEMPLATE", name)
+            with open(path, encoding="utf-8") as fh:
+                for line in fh:
+                    self.assertFalse(
+                        line.startswith("labels:"),
+                        f"{name} hardcodes labels — templates are label-less by design",
+                    )
+
+    def test_claude_review_cancels_stale_runs(self):
+        path = os.path.join(self.ASSETS, "workflows", "claude-review.yml")
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertIn("concurrency:", text)
+        self.assertIn("cancel-in-progress: true", text)
+
+
+# ── #34: committed scaffold survives a fresh clone ────────────────────────────────────
+
+
+class CloneSurvivability(unittest.TestCase):
+    def test_fresh_clone_audit_has_no_meta_regaps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            r = run_scaffold(repo, "--apply")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.email=t@t",
+                    "-c",
+                    "user.name=t",
+                    "commit",
+                    "-qm",
+                    "scaffold",
+                ],
+                cwd=repo,
+                check=True,
+            )
+            clone = os.path.realpath(os.path.join(tmp, "clone"))
+            subprocess.run(
+                ["git", "clone", "-q", repo, clone], check=True, capture_output=True
+            )
+            for d in ("archive", "briefings", "operations", "research"):
+                self.assertTrue(
+                    os.path.isdir(os.path.join(clone, "_meta", d)),
+                    f"_meta/{d}/ lost on clone — .gitkeep not tracked",
+                )
+            rows = parse_rows(run_audit(clone).stdout)
+            gaps = {i for i, v in rows.items() if v[0] != "PASS"}
+            self.assertEqual(
+                gaps,
+                {"ROOT-01", "ROOT-02", "ROOT-03"},
+                "fresh clone must re-gap only the authored-content rows",
+            )
 
 
 # ── unit: plan internals ──────────────────────────────────────────────────────────────

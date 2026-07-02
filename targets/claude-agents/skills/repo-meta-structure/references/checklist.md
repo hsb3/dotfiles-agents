@@ -97,6 +97,10 @@ ignore behavior, not a byte-match against the template.
 | IGNORE-10 | gitignore | `gitignore-ignores: .claude/worktrees/probe/file` | Ignored (harness worktrees never tracked) |
 | IGNORE-11 | gitignore | `gitignore-tracks: .claude/settings.json` | Not ignored (tracked project policy) |
 | IGNORE-12 | gitignore | `gitignore-tracks: .claude/memory/MEMORY.md` | Not ignored (tracked memory travels with the repo) |
+| IGNORE-13 | gitignore | `gitignore-tracks: _meta/archive/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/archive/` content stays ignored) |
+| IGNORE-14 | gitignore | `gitignore-tracks: _meta/briefings/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/briefings/` content stays ignored) |
+| IGNORE-15 | gitignore | `gitignore-tracks: _meta/operations/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; `IGNORE-01` still holds — `_meta/operations/` content is never tracked) |
+| IGNORE-16 | gitignore | `gitignore-tracks: _meta/research/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/research/` content stays ignored) |
 
 ## AVOID list
 
@@ -109,10 +113,13 @@ ignore behavior, not a byte-match against the template.
 ## `_meta/plans/` planning docs
 
 Scope: every `*.md` under `_meta/plans/` (recursive, including `inbox/`), **excluding**
-`README.md` (the desk index) and files whose name starts with `_` (desk config such as
-`_config.md`) and anything under `_utils/`. Field semantics and the `type` vocabulary —
-including the two intake extensions — are defined in [`planning-docs.md`](planning-docs.md).
-Gaps are reported at field granularity (file + missing field).
+`README.md` (the desk index), files whose name starts with `_` (desk config such as
+`_config.md`), anything under `_utils/`, and `issue-body.md` files. Staged `issue-body.md`
+files are exempt from the frontmatter schema: a staged issue body is the raw publishable
+GitHub body, kept byte-identical to the live issue (owner ruling 2026-07-02). Field
+semantics and the `type` vocabulary — including the two intake extensions — are defined in
+[`planning-docs.md`](planning-docs.md). Gaps are reported at field granularity (file +
+missing field).
 
 | ID | Area | Check | Pass condition |
 |---|---|---|---|
