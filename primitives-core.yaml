@@ -440,6 +440,16 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
     summary: "This skill should be used when the user asks to \"add MCP server\", \"Model Context Protocol\", \"expose vault tools\", \"Streamable HTTP\", \"MCP tools\", or mentions…"
+  - id: opencode-expertise
+    type: skill
+    source: primitives-core/skills/opencode-expertise
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code, opencode, claude-agents]
+    plugins: []
+    summary: "Expert knowledge of opencode — every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code → opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing the opencode distribution target in dotfiles-agents, or answering how any opencode surface works."
   - id: openspec-apply-change
     type: skill
     source: primitives-core/skills/openspec-apply-change

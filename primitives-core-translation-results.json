@@ -339,6 +339,12 @@
         "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
         "skipped": false
       },
+      "opencode-expertise": {
+        "capability": "render",
+        "destination": "claude-agents/skills/opencode-expertise",
+        "sha256": "e7196d2d9f85883fbc9f532e56e65cba02575206a25630d09ae44641b4d44888",
+        "skipped": false
+      },
       "openspec-apply-change": {
         "capability": "render",
         "destination": "claude-agents/skills/openspec-apply-change",
@@ -849,6 +855,12 @@
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-mcp-server",
         "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
+        "skipped": false
+      },
+      "opencode-expertise": {
+        "capability": "native",
+        "destination": "claude-code/skills/opencode-expertise",
+        "sha256": "e7196d2d9f85883fbc9f532e56e65cba02575206a25630d09ae44641b4d44888",
         "skipped": false
       },
       "openspec-apply-change": {
@@ -1367,6 +1379,12 @@
         "capability": "native",
         "destination": "opencode/skills/obsidian-mcp-server",
         "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
+        "skipped": false
+      },
+      "opencode-expertise": {
+        "capability": "native",
+        "destination": "opencode/skills/opencode-expertise",
+        "sha256": "e7196d2d9f85883fbc9f532e56e65cba02575206a25630d09ae44641b4d44888",
         "skipped": false
       },
       "openspec-apply-change": {

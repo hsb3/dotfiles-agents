@@ -1,0 +1,11 @@
+{
+  "display_title": "opencode-expertise",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/cc-to-opencode-mapping.md",
+    "references/configuration.md",
+    "references/distribution.md",
+    "references/extension-surfaces.md"
+  ]
+}
