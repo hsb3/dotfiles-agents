@@ -22,6 +22,7 @@ jobs:
       pull-requests: write
       issues: read
       id-token: write
+      actions: read # so the github_ci MCP server can read CI status on the PR
 
     steps:
       - name: Checkout repository
