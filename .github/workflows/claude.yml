@@ -23,9 +23,9 @@ jobs:
     env:
       HAS_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write # so @claude can push branches with its changes
+      pull-requests: write # so @claude can open PRs from those branches
+      issues: write # so @claude can maintain its tracking comment
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
