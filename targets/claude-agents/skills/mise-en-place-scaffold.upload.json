@@ -1,0 +1,9 @@
+{
+  "display_title": "mise-en-place-scaffold",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/manifest.md",
+    "scripts/scaffold.py"
+  ]
+}

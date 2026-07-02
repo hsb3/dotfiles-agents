@@ -20,7 +20,7 @@ is that rapid planning material never dirties the worktree — not secrecy of ev
 | `research/` | Live investigations; findings graduate to `docs/` or issues |
 | `HANDOFF.md` | Cold-start bridge — tracked via negation, secret-free |
 | `README.md` | States this taxonomy — tracked via negation |
-| `mise-en-place.yml` | Per-repo variance manifest — tracked via negation (format owned by the mise-en-place scaffold skill) |
+| `mise-en-place.yml` | Per-repo variance manifest — tracked via negation (format owned by the mise-en-place scaffold skill: `skills/mise-en-place-scaffold/references/manifest.md`) |
 
 ## `.claude/`
 

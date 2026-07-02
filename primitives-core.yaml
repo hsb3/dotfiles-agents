@@ -350,6 +350,16 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
     summary: "The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism; carries the approved v1 defaults and the MEM-xx structure checklist the compliance audit consumes."
+  - id: mise-en-place-scaffold
+    type: skill
+    source: primitives-core/skills/mise-en-place-scaffold
+    shelf: core
+    origin: authored
+    disposition: untriaged
+    vendor: null
+    targets: [claude-code, opencode, claude-agents]
+    plugins: [project-workflow]
+    summary: "Fill-only mise-en-place scaffold — plans (--plan, default) and creates (--apply) the repo meta-structure the compliance audit flags, from the standards' assets, honoring _meta/mise-en-place.yml variance (--init-manifest writes the template); additive-only, never overwrites, conflicts reported with diffs."
   - id: nanobanana
     type: skill
     source: primitives-core/skills/nanobanana
