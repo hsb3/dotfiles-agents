@@ -21,6 +21,8 @@ _meta/*
 !_meta/plans/**
 !_meta/_archive/
 !_meta/_archive/**
+_meta/_archive/**/.DS_Store
+_meta/_archive/.DS_Store
 
 # --- Python (after the _meta negation so toolkit caches stay untracked) ---
 __pycache__/
