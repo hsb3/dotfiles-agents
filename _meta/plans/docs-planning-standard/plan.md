@@ -4,7 +4,7 @@ type: spec
 status: draft
 created: 2026-07-02
 purpose: Source-grounded build plan for #40 — exact files, row design, scaffold mechanics, landing order, and the open owner decisions.
-notes: Intaken 2026-07-02 from the cowork desk (deliverables/docs-planning-standard/). Filed as #40. The issue BODY's copy of record is the live issue + the cowork desk copy — not staged here, pending resolution of the sync-bodies-vs-PLANS-frontmatter clash (Open question 6).
+notes: Intaken 2026-07-02 from the cowork desk (deliverables/docs-planning-standard/). Filed as #40. The issue BODY's copy of record is the live issue + the cowork desk copy. Open question 6 RESOLVED 2026-07-02 — owner ruling, issue bodies are exempt from frontmatter requirements.
 ---
 
 # docs/ planning-doc minimums — DOCS-xx standard rows, scaffold assets, apply, plugin refresh
@@ -170,7 +170,8 @@ this first (small, additive) and let #27 carry the mechanical `pw-` path moves.
    `sync-bodies.py` diffs a staged `<slug>/issue-body.md` RAW against the live GitHub body
    (`_meta/plans/_utils/sync-bodies.py:67` — no frontmatter stripping), while PLANS-01..06
    require frontmatter on every `*.md` under `_meta/plans/` — a staged body cannot satisfy
-   both. This folder therefore stages no `issue-body.md` (the live issue is the body's
-   record; the cowork desk holds the drafting copy). **Recommend:** exempt `issue-body.md`
-   from one of the two (frontmatter-strip in `sync-bodies.py` is the smaller change); file
-   as its own small standards issue alongside #34/#35.
+   both. **RESOLVED 2026-07-02 (owner ruling): issue bodies are exempt from the frontmatter
+   requirements** — a staged `issue-body.md` carries the raw publishable body; the exemption
+   is implemented on the audit side (exclude `issue-body.md` from the PLANS scope at
+   `repo-compliance-audit/scripts/audit.py:327`, plus the scope prose in the checklist and
+   `planning-docs.md`); `sync-bodies.py` stays raw. Implementation tracked as #45.
