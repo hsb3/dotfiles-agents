@@ -1,3 +1,12 @@
+---
+title: Build run — DEVTOOLS engineering-specs (11 approved work orders)
+type: plan
+status: complete
+created: 2026-07-02
+purpose: Foreman-run crew build executing the 11 approved DEVTOOLS eng-specs from the vault against this repo (track A) and dotfiles-agents-workbench (track B), landing direct to main with foreman-run gates.
+notes: All 11 specs landed 2026-07-02 (dotfiles-agents fea9736..1c87a33; workbench 7993666..1cfa18c); final gates green (`make ci` 158 tests, 84 primitives; promote-check 7/15 expected). Henry-gated residue lives in the vault close-out (Q-04 ratification, brownfield table approval, TC sign-offs, Gate-2 pilot).
+---
+
 # Build run — DEVTOOLS engineering-specs (11 approved work orders)
 
 _Status: **complete** — all 11 specs landed 2026-07-02 (dotfiles-agents fea9736..1c87a33; workbench 7993666..1cfa18c); final gates green (`make ci` 158 tests, 84 primitives; promote-check 7/15 expected). Henry-gated residue in the vault close-out (Q-04 ratification, brownfield table approval, TC sign-offs, Gate-2 pilot). Started 2026-07-02. Foreman-run crew build executing the 11 approved eng-specs from the vault (`hsb-2026/02_Projects/02_DEVTOOLS/1_Engineering/engineering-specs/`) against this repo (track A) and `dotfiles-agents-workbench` (track B). Landing mode per Henry: **direct to main**, `make ci` (A) / `promote-check` + residue greps (B) locally before every push. Builders edit files only; the foreman runs gates and commits one commit per spec._

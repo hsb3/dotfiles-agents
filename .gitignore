@@ -17,6 +17,7 @@
 _meta/*
 !_meta/README.md
 !_meta/HANDOFF.md
+!_meta/mise-en-place.yml
 !_meta/plans/
 !_meta/plans/**
 !_meta/_archive/

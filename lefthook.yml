@@ -1,0 +1,16 @@
+# lefthook.yml — git hooks manager; pre-commit mirrors the cheap `make ci`
+# lanes so violations surface before push. Run `lefthook install` to activate.
+#
+# Deliberately runs only check/validate/names — the fast, pure-Python gates.
+# build-check and test (158-test suite) are skipped here for commit speed;
+# CI (`make ci`) remains the aggregate gate that runs all five lanes.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: check
+      run: make check  # roster <-> disk drift guard
+    - name: validate
+      run: make validate  # primitive content validation
+    - name: names
+      run: make names  # naming taxonomy lint
