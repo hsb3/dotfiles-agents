@@ -121,6 +121,28 @@ class Entry(unittest.TestCase):
         )
         self.assertEqual(problems, [])
 
+    def test_xml_tag_in_description_flagged(self):
+        problems = []
+        V.validate_entry(
+            self._skill(
+                '---\nname: t\ndescription: spin up a "<project>-x" desk\n---\nbody'
+            ),
+            problems,
+        )
+        self.assertTrue(
+            any("XML tag" in p and "<project>" in p for p in problems),
+            f"expected an XML-tag blocker, got: {problems}",
+        )
+
+    def test_angle_bracket_in_body_not_flagged(self):
+        # Only the description field is checked; body angle brackets are fine.
+        problems = []
+        V.validate_entry(
+            self._skill("---\nname: t\ndescription: d\n---\nName it <project>-x/."),
+            problems,
+        )
+        self.assertEqual(problems, [])
+
     def test_bad_origin_target_summary(self):
         e = self._skill("---\nname: t\ndescription: d\n---\nbody")
         e.update(origin="bogus", targets=["claude-code", "not-a-target"], summary="  ")

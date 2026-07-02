@@ -32,18 +32,33 @@ VALID_ORIGIN = {"authored", "sourced"}
 VALID_TRANSPORT = {"stdio", "http"}
 SECRET_HINT = re.compile(r"(token|secret|key|password|passwd|pat|credential)", re.I)
 PLACEHOLDER = re.compile(r"^\$\{[^}]+\}$")
+# XML/angle-bracket tag in a SKILL.md description — Claude Cowork refuses to load such skills
+# ("SKILL.md description cannot contain XML tags"). Skill-specific: agent descriptions may use
+# `<example>` blocks, so this is checked only for skills. First char letter/`/` skips `< 5`.
+XML_TAG = re.compile(r"</?[A-Za-z][^>]*>")
+
+
+def frontmatter_block(text):
+    """Return the raw frontmatter body of a `---` block, or None."""
+    m = re.match(r"^---\n(.*?)\n---", text, re.S)
+    return m.group(1) if m else None
 
 
 def frontmatter_keys(text):
     """Return the set of top-level frontmatter keys in a `---` block (best-effort, stdlib)."""
-    m = re.match(r"^---\n(.*?)\n---", text, re.S)
-    if not m:
+    fm = frontmatter_block(text)
+    if fm is None:
         return set()
-    return {
-        km.group(1)
-        for ln in m.group(1).split("\n")
-        if (km := re.match(r"^([\w-]+):", ln))
-    }
+    return {km.group(1) for ln in fm.split("\n") if (km := re.match(r"^([\w-]+):", ln))}
+
+
+def frontmatter_field(text, key):
+    """Full value of a top-level frontmatter field, incl. indented folded/continued lines."""
+    fm = frontmatter_block(text)
+    if fm is None:
+        return ""
+    m = re.search(rf"^{key}:(.*?)(?=^\S|\Z)", fm, re.S | re.M)
+    return m.group(1) if m else ""
 
 
 def check_secret_values(mapping, label, problems):
@@ -104,10 +119,19 @@ def validate_entry(e, problems):
         if not os.path.isfile(skill_md):
             problems.append(f"[{eid}] skill missing SKILL.md at root")
         else:
-            keys = frontmatter_keys(open(skill_md, encoding="utf-8").read())
+            text = open(skill_md, encoding="utf-8").read()
+            keys = frontmatter_keys(text)
             for need in ("name", "description"):
                 if need not in keys:
                     problems.append(f"[{eid}] SKILL.md frontmatter missing `{need}`")
+            tags = XML_TAG.findall(frontmatter_field(text, "description"))
+            if tags:
+                found = ", ".join(sorted(set(tags)))
+                problems.append(
+                    f"[{eid}] SKILL.md description contains XML tag(s) {found} — "
+                    f"Claude Cowork refuses to load skills whose description has "
+                    f"angle-bracket tags (use a bracket-free placeholder)"
+                )
     elif t == "agent":
         if os.path.isfile(full):
             keys = frontmatter_keys(open(full, encoding="utf-8").read())
