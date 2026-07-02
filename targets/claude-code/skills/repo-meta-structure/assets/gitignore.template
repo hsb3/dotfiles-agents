@@ -15,6 +15,21 @@ _meta/*
 !_meta/README.md
 !_meta/HANDOFF.md
 !_meta/mise-en-place.yml
+# scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
+# content stays local (operations/ especially — secrets are never tracked).
+# Each dir needs the triplet: re-include the dir, ignore its content, keep the keep.
+!_meta/archive/
+_meta/archive/*
+!_meta/archive/.gitkeep
+!_meta/briefings/
+_meta/briefings/*
+!_meta/briefings/.gitkeep
+!_meta/operations/
+_meta/operations/*
+!_meta/operations/.gitkeep
+!_meta/research/
+_meta/research/*
+!_meta/research/.gitkeep
 
 # .claude — track memory/, rules/, skills/, settings.json; ignore machine-local
 .claude/settings.local.json

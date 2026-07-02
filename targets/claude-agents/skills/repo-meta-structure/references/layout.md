@@ -38,7 +38,11 @@ must carry anything a headless run depends on.
 
 ## `.github/`
 
-- `ISSUE_TEMPLATE/` — `config.yml`, `bug.yml`, `feature.yml`, `epic.yml`
+- `ISSUE_TEMPLATE/` — `config.yml`, `bug.yml`, `feature.yml`, `epic.yml`. The issue forms
+  ship **label-less by design**: a hardcoded label name assumes a taxonomy the target repo
+  may not have (and the scaffold neither creates nor verifies labels). Labels are declared
+  per-repo in `_meta/mise-en-place.yml` (`gh_issue_labels`), provisioned by the
+  github-project-board skill, and applied at issue creation.
 - `workflows/` — `ci.yml`, `claude-review.yml` (Claude reviews PRs), `claude.yml` (tag
   Claude in issues/comments); `release.yml` only if the repo publishes releases. These ship
   as **templates** (see [`../assets/github/workflows/`](../assets/github/workflows/));
@@ -72,6 +76,12 @@ The load-bearing parts:
   wholly-ignored directory, so the `/*` form is required for the negations
   (`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`)
   to take effect. `_meta/plans/inbox/` is tracked through `!_meta/plans/` with no extra line.
+- **The scaffolded `_meta/` dirs survive clone via tracked `.gitkeep`s** — each of
+  `archive/`, `briefings/`, `operations/`, `research/` gets a negation triplet
+  (`!_meta/<dir>/` + `_meta/<dir>/*` + `!_meta/<dir>/.gitkeep`): the `.gitkeep` is tracked
+  so a fresh clone keeps the directory, while everything else in the dir stays ignored —
+  `operations/` content (secrets) is never tracked (checklist rows `IGNORE-13..16`,
+  `IGNORE-01`).
 - **`.env*` with `!.env*.example`** — secrets ignored, example files tracked.
 - **The `.claude` narrow-ignore stanza** — ignore `settings.local.json`, `worktrees/`,
   `*.lock`, `**/.DS_Store`; everything else in `.claude/` (memory, rules, skills,

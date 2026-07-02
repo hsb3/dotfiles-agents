@@ -55,6 +55,11 @@ Do not re-derive, filter, or re-score rows yourself — the script is the instru
 - `VAR-xx` rows are the repo's own declared variance from `_meta/mise-en-place.yml`
   (`required_folders` / `required_files`) — manifest knobs are checked, not just excused.
   A missing manifest is not a gap; defaults apply.
+- **Presence-pass ≠ clone-survivability.** `path-exists` rows check the working tree, so
+  a file the repo's own `.gitignore` swallows still passes locally but is lost on a fresh
+  clone (the repo looks conformant here and regresses there). The `IGNORE-xx` rows guard
+  the standard's tracked paths; for anything else, the scaffold's gitignore-swallow
+  warning is the signal — a clean local audit is not proof a clone would pass.
 
 ## Error paths (no partial table)
 

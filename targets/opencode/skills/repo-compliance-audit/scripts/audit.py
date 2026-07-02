@@ -315,8 +315,11 @@ def check_gitignore(repo, arg, want_ignored):
 
 
 def plans_scope(repo):
-    """Every *.md under _meta/plans/ (recursive), excluding README.md and any
-    path component starting with `_` (desk config such as `_config.md`, `_utils/`)."""
+    """Every *.md under _meta/plans/ (recursive), excluding README.md, any path
+    component starting with `_` (desk config such as `_config.md`, `_utils/`), and
+    `issue-body.md` (a staged body is the raw publishable GitHub issue body, kept
+    byte-identical to the live issue — exempt from the frontmatter schema per the
+    owner ruling 2026-07-02)."""
     root = os.path.join(repo, "_meta", "plans")
     docs = []
     if not os.path.isdir(root):
@@ -324,7 +327,11 @@ def plans_scope(repo):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if not d.startswith(("_", ".")))
         for fn in sorted(filenames):
-            if not fn.endswith(".md") or fn == "README.md" or fn.startswith("_"):
+            if (
+                not fn.endswith(".md")
+                or fn in ("README.md", "issue-body.md")
+                or fn.startswith("_")
+            ):
                 continue
             docs.append(os.path.join(dirpath, fn))
     return docs

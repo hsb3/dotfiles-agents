@@ -9,7 +9,9 @@ and the intake location/types for communication packages.
 
 Every planning doc in `_meta/plans/` (recursive, including `inbox/`) carries this
 frontmatter. Out of scope: `README.md` (the desk index), files starting with `_` (desk
-config), and `_utils/` (scripts).
+config), `_utils/` (scripts), and `issue-body.md` files. Staged `issue-body.md` files are
+exempt from the frontmatter schema: a staged issue body is the raw publishable GitHub
+body, kept byte-identical to the live issue (owner ruling 2026-07-02).
 
 ```yaml
 ---

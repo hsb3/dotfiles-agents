@@ -124,9 +124,10 @@ class ScaffoldError(Exception):
 META_README_STUB = """# `_meta/` — the local working desk
 
 Gitignored by default (`_meta/*`); durable items tracked via negation
-(`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`).
-The purpose of the ignore is that rapid working material never dirties the worktree —
-not secrecy of everything in it.
+(`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`,
+plus the `archive/briefings/operations/research` `.gitkeep`s so the dirs survive a
+fresh clone). The purpose of the ignore is that rapid working material never dirties
+the worktree — not secrecy of everything in it.
 
 | Entry | Purpose |
 |---|---|
@@ -438,8 +439,11 @@ def working_tree_dirty(repo):
 
 
 def plans_scope(repo):
-    """Every *.md under _meta/plans/ (recursive), excluding README.md and any
-    path component starting with `_` (desk config such as `_config.md`, `_utils/`)."""
+    """Every *.md under _meta/plans/ (recursive), excluding README.md, any path
+    component starting with `_` (desk config such as `_config.md`, `_utils/`), and
+    `issue-body.md` (a staged body is the raw publishable GitHub issue body, kept
+    byte-identical to the live issue — exempt from the frontmatter schema per the
+    owner ruling 2026-07-02)."""
     root = os.path.join(repo, "_meta", "plans")
     docs = []
     if not os.path.isdir(root):
@@ -447,7 +451,11 @@ def plans_scope(repo):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if not d.startswith(("_", ".")))
         for fn in sorted(filenames):
-            if not fn.endswith(".md") or fn == "README.md" or fn.startswith("_"):
+            if (
+                not fn.endswith(".md")
+                or fn in ("README.md", "issue-body.md")
+                or fn.startswith("_")
+            ):
                 continue
             docs.append(os.path.join(dirpath, fn))
     return docs
@@ -524,6 +532,37 @@ def is_script_invocation(cmd):
 
 # ── planning ────────────────────────────────────────────────────────────────────────────
 
+CLAUDE_REVIEW_ARG = ".github/workflows/claude-review.yml"
+# `pull_request:` / `pull_request_target:` only — must NOT match the tag workflow's
+# `pull_request_review:` / `pull_request_review_comment:` triggers (claude.yml is a
+# claude-code-action workflow too, but not a review-on-push).
+PR_TRIGGER_RE = re.compile(r"^\s*pull_request(_target)?\s*:", re.M)
+
+
+def existing_review_workflows(repo):
+    """Workflow files that already run claude-code-action on pull_request — a
+    claude-review.yml equivalent under another name. Creating the standard file
+    alongside one doubles the AI reviews and token spend per push (Gate-2 pilot
+    finding), so GH-08 reports MANUAL instead of planning a duplicate."""
+    wf_dir = os.path.join(repo, ".github", "workflows")
+    if not os.path.isdir(wf_dir):
+        return []
+    hits = []
+    for fn in sorted(os.listdir(wf_dir)):
+        if not fn.endswith((".yml", ".yaml")):
+            continue
+        path = os.path.join(wf_dir, fn)
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if "claude-code-action" in text and PR_TRIGGER_RE.search(text):
+            hits.append(".github/workflows/" + fn)
+    return hits
+
 
 def template_source(plugin_root, arg):
     """Asset path for a template-backed file row, or None. The scaffold carries no
@@ -565,6 +604,7 @@ class PlanContext:
         self.dirs = []  # relpaths ending in "/", ordered, deduped
         self.files = []  # (relpath, payload bytes), ordered, deduped
         self.conflicts = {}  # relpath -> unified diff text
+        self.swallowed = []  # planned files the target repo's gitignore ignores
 
     def add_dir(self, rel):
         if rel not in self.dirs:
@@ -608,6 +648,17 @@ def classify_path_exists(repo, plugin_root, arg, ctx):
             )
         tpl = read_bytes(tpl_src)
         if not os.path.isfile(full):
+            if arg == CLAUDE_REVIEW_ARG:
+                equivalents = existing_review_workflows(repo)
+                if equivalents:
+                    return (
+                        MANUAL,
+                        f"missing file: {arg} — but an equivalent claude-code-action "
+                        f"PR-review workflow already exists "
+                        f"({', '.join(equivalents)}); creating the standard file "
+                        f"would double the reviews per push. Rename or align it by "
+                        f"hand; not scaffolded",
+                    )
             ctx.add_file(arg, tpl)
             return CREATE, f"copy standard template → {arg}"
         if read_bytes(full) == tpl:
@@ -761,6 +812,12 @@ def compute_plan(repo, plugin_root, manifest):
         actions[idx].update(action=action, detail=detail)
 
     ctx.finalize_gitkeeps()
+    # Gitignore-swallow probe: a planned creation the TARGET repo's own ignore rules
+    # swallow is still created (additive-only, and presence-on-disk is the audit's
+    # pass condition) but is invisible to `git status` and lost on a fresh clone —
+    # warn per path so the owner adds a negation or fixes the rule. Probed against
+    # the current rules: a .gitignore planned by this same run is not on disk yet.
+    ctx.swallowed = [rel for rel, _ in ctx.files if check_ignore(repo, rel) == 0]
     return actions, ctx
 
 
@@ -859,6 +916,17 @@ def render(repo, mode, actions, ctx, manifest, created=None, skipped=None):
             lines.append("  (none)")
         for p in skipped:
             lines.append(f"  skipped (already exists — untouched): {p}")
+
+    if ctx.swallowed:
+        verb = "will be created" if mode == "plan" else "created"
+        lines += [
+            "",
+            f"warning: {len(ctx.swallowed)} planned path(s) are ignored by the "
+            f"target repo's .gitignore — {verb} on disk, but invisible to "
+            f"`git status` and lost on a fresh clone:",
+        ]
+        for p in ctx.swallowed:
+            lines.append(f"  ! {p} — add a gitignore negation or fix the ignore rule")
 
     if ctx.conflicts:
         lines += ["", f"Conflict diffs ({len(ctx.conflicts)} file(s)):"]

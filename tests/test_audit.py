@@ -115,9 +115,7 @@ def make_conformant_repo(root):
         ".mcp.json",
     ):
         _write(os.path.join(root, f), "fixture\n")
-    shutil.copyfile(
-        GITIGNORE_TEMPLATE, os.path.join(root, ".gitignore")
-    )
+    shutil.copyfile(GITIGNORE_TEMPLATE, os.path.join(root, ".gitignore"))
     _write(
         os.path.join(root, ".claude", "settings.json"),
         json.dumps(SCRIPT_HOOK_SETTINGS, indent=2),
@@ -134,6 +132,12 @@ def make_conformant_repo(root):
     _write(os.path.join(root, "_meta", "plans", "inbox", "intake.md"), PLAN_FRONTMATTER)
     _write(os.path.join(root, "_meta", "plans", "README.md"), "desk index, no fm\n")
     _write(os.path.join(root, "_meta", "plans", "_config.md"), "desk config, no fm\n")
+    # staged issue bodies are exempt from the frontmatter schema (owner ruling
+    # 2026-07-02, #45): a raw publishable body must not gap PLANS-01..06
+    _write(
+        os.path.join(root, "_meta", "plans", "fixture-slug", "issue-body.md"),
+        "## Problem\n\nraw publishable issue body — no frontmatter\n",
+    )
     return root
 
 
@@ -443,7 +447,19 @@ class GapClasses(unittest.TestCase):
             )
 
         self._run_variant(
-            mutate, {"IGNORE-02", "IGNORE-03", "IGNORE-04", "IGNORE-05", "IGNORE-06"}
+            mutate,
+            {
+                "IGNORE-02",
+                "IGNORE-03",
+                "IGNORE-04",
+                "IGNORE-05",
+                "IGNORE-06",
+                # blanket `_meta/` also swallows the scaffolded dirs' .gitkeeps (#34)
+                "IGNORE-13",
+                "IGNORE-14",
+                "IGNORE-15",
+                "IGNORE-16",
+            },
         )
 
     def test_plans_doc_missing_purpose(self):
@@ -456,6 +472,26 @@ class GapClasses(unittest.TestCase):
         rows = self._run_variant(mutate, {"PLANS-05"})
         self.assertIn("fixture-plan.md", rows["PLANS-05"][1])
         self.assertIn("purpose", rows["PLANS-05"][1])
+
+    def test_issue_body_exempt_plan_still_gaps(self):
+        # owner ruling 2026-07-02 (#45): a staged issue-body.md carries the raw
+        # publishable body — exempt from PLANS-01..06. The exemption is
+        # filename-scoped: a frontmatter-less plan.md in the same slug dir gaps.
+        def mutate(repo):
+            _write(
+                os.path.join(repo, "_meta", "plans", "slug", "issue-body.md"),
+                "## Problem\n\nraw body, no frontmatter\n",
+            )
+            _write(
+                os.path.join(repo, "_meta", "plans", "slug", "plan.md"),
+                "# plan without frontmatter\n",
+            )
+
+        expected = {f"PLANS-0{i}" for i in range(1, 7)}
+        rows = self._run_variant(mutate, expected)
+        for rid in sorted(expected):
+            self.assertIn("plan.md", rows[rid][1])
+            self.assertNotIn("issue-body.md", rows[rid][1])
 
     def test_inline_hook_flagged(self):
         def mutate(repo):
