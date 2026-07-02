@@ -17,6 +17,7 @@ Usage:
 Auth: shells out to `gh` with GITHUB_TOKEN UNSET (avoids the repo-scope shadowing gotcha).
 Needs `gh auth refresh -s project`.
 """
+
 from __future__ import annotations
 import argparse, json, os, subprocess, sys
 
@@ -36,8 +37,12 @@ def graphql(query: str, **fvars: str) -> dict:
     return json.loads(gh(*args))
 
 
-PROJECT_ID_Q = "query($o:String!,$n:Int!){ %SCOPE%(login:$o){ projectV2(number:$n){ id title } } }"
+PROJECT_ID_Q = (
+    "query($o:String!,$n:Int!){ %SCOPE%(login:$o){ projectV2(number:$n){ id title } } }"
+)
 
+# fields(first:50) is an unpaginated practical limit — a board with more fields would
+# silently truncate.
 FIELDS_Q = """
 query($id:ID!){ node(id:$id){ ... on ProjectV2 { fields(first:50){ nodes{
   __typename
@@ -54,17 +59,28 @@ query($id:ID!){ node(id:$id){ ... on ProjectV2 { fields(first:50){ nodes{
 def collect(owner: str, number: int, owner_type: str) -> dict:
     scope = "user" if owner_type == "user" else "organization"
     pj = graphql(PROJECT_ID_Q.replace("%SCOPE%", scope), o=owner, n=str(number))
-    proj = (pj["data"].get(scope) or {}).get("projectV2")
+    proj = (pj.get("data", {}).get(scope) or {}).get("projectV2")
     if not proj:
         sys.exit(f"project {owner}#{number} not found (check --owner-type)")
     pid = proj["id"]
 
-    out = {"project": {"owner": owner, "number": number, "id": pid, "title": proj.get("title")},
-           "fields": []}
+    out = {
+        "project": {
+            "owner": owner,
+            "number": number,
+            "id": pid,
+            "title": proj.get("title"),
+        },
+        "fields": [],
+    }
     for f in graphql(FIELDS_Q, id=pid)["data"]["node"]["fields"]["nodes"]:
         if not f:
             continue
-        entry = {"name": f.get("name"), "id": f.get("id"), "dataType": f.get("dataType")}
+        entry = {
+            "name": f.get("name"),
+            "id": f.get("id"),
+            "dataType": f.get("dataType"),
+        }
         if "options" in f:
             entry["options"] = f["options"]  # [{id,name}]
         cfg = f.get("configuration")
@@ -77,7 +93,9 @@ def collect(owner: str, number: int, owner_type: str) -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Dump GitHub Project v2 fields + allowed values (enum reference).")
+    ap = argparse.ArgumentParser(
+        description="Dump GitHub Project v2 fields + allowed values (enum reference)."
+    )
     ap.add_argument("-o", "--owner", required=True)
     ap.add_argument("-n", "--number", type=int, required=True)
     ap.add_argument("--owner-type", choices=["user", "org"], default="user")
@@ -98,9 +116,13 @@ def main() -> None:
                 print(f"      {o['name']:<16} id={o['id']}")
         if f.get("iterations"):
             for it in f["iterations"]:
-                print(f"      {it['title']:<16} id={it['id']}  start={it.get('startDate','')}")
-    print(f"\n{len(data['fields'])} fields. "
-          "Single-select/iteration values above are the only valid changeset values for those fields.")
+                print(
+                    f"      {it['title']:<16} id={it['id']}  start={it.get('startDate', '')}"
+                )
+    print(
+        f"\n{len(data['fields'])} fields. "
+        "Single-select/iteration values above are the only valid changeset values for those fields."
+    )
 
 
 if __name__ == "__main__":

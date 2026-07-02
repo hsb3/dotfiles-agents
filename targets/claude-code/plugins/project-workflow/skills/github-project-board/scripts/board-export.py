@@ -17,6 +17,7 @@ Usage:
 Auth: shells out to `gh` with GITHUB_TOKEN UNSET (a repo-scoped GITHUB_TOKEN shadows
 the project-scoped keyring login -> INSUFFICIENT_SCOPES). Needs `gh auth refresh -s project`.
 """
+
 from __future__ import annotations
 import argparse, json, os, subprocess, sys
 
@@ -40,6 +41,8 @@ PROJECT_ID_Q = """
 query($o:String!,$n:Int!){ %SCOPE%(login:$o){ projectV2(number:$n){ id title } } }
 """
 
+# fields(first:50) and fieldValues(first:30) are unpaginated practical limits — a board
+# with more fields, or an item with more field values, would silently truncate.
 FIELDS_Q = """
 query($id:ID!){ node(id:$id){ ... on ProjectV2 { fields(first:50){ nodes{
   __typename
@@ -51,8 +54,8 @@ query($id:ID!){ node(id:$id){ ... on ProjectV2 { fields(first:50){ nodes{
 """
 
 ITEMS_Q = """
-query($id:ID!){ node(id:$id){ ... on ProjectV2 {
-  items(first:100, after:%CUR%){
+query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV2 {
+  items(first:100, after:$after){
     pageInfo{ hasNextPage endCursor }
     nodes{
       id
@@ -99,7 +102,9 @@ def field_value(node: dict):
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Compact GitHub Project v2 snapshot (no bodies).")
+    ap = argparse.ArgumentParser(
+        description="Compact GitHub Project v2 snapshot (no bodies)."
+    )
     ap.add_argument("-o", "--owner", required=True, help="user or org login")
     ap.add_argument("-n", "--number", type=int, required=True, help="project number")
     ap.add_argument("--owner-type", choices=["user", "org"], default="user")
@@ -107,7 +112,9 @@ def main() -> None:
     args = ap.parse_args()
 
     scope = "user" if args.owner_type == "user" else "organization"
-    pj = graphql(PROJECT_ID_Q.replace("%SCOPE%", scope), o=args.owner, n=str(args.number))
+    pj = graphql(
+        PROJECT_ID_Q.replace("%SCOPE%", scope), o=args.owner, n=str(args.number)
+    )
     proj = (pj.get("data", {}).get(scope) or {}).get("projectV2")
     if not proj:
         sys.exit(f"project {args.owner}#{args.number} not found (check --owner-type)")
@@ -117,21 +124,27 @@ def main() -> None:
     for f in graphql(FIELDS_Q, id=pid)["data"]["node"]["fields"]["nodes"]:
         if not f:
             continue
-        entry = {"name": f.get("name"), "id": f.get("id"), "dataType": f.get("dataType")}
+        entry = {
+            "name": f.get("name"),
+            "id": f.get("id"),
+            "dataType": f.get("dataType"),
+        }
         if "options" in f:
             entry["options"] = f["options"]
         if "configuration" in f and f["configuration"]:
-            entry["iterations"] = (f["configuration"].get("iterations") or []) + \
-                                  (f["configuration"].get("completedIterations") or [])
+            entry["iterations"] = (f["configuration"].get("iterations") or []) + (
+                f["configuration"].get("completedIterations") or []
+            )
         fields.append(entry)
 
     # Every operating field becomes a column on every item (null when unset) so the
     # snapshot is a complete grid — blanks are visible for triage/diffing.
     op_fields = [f["name"] for f in fields if f.get("dataType") in OPERATING]
 
-    items, cur = [], "null"
+    items, cursor = [], None
     while True:
-        page = graphql(ITEMS_Q.replace("%CUR%", cur), id=pid)["data"]["node"]["items"]
+        after = {"after": cursor} if cursor else {}
+        page = graphql(ITEMS_Q, id=pid, **after)["data"]["node"]["items"]
         for it in page["nodes"]:
             c = it.get("content") or {}
             if c.get("number") is None:  # skip draft issues
@@ -141,24 +154,33 @@ def main() -> None:
                 fld = (fv.get("field") or {}).get("name")
                 if fld in vals:
                     vals[fld] = field_value(fv)
-            items.append({
-                "number": c["number"],
-                "item_id": it["id"],
-                "title": c.get("title"),
-                "state": c.get("state"),
-                "repo": (c.get("repository") or {}).get("nameWithOwner"),
-                "labels": [l["name"] for l in (c.get("labels", {}) or {}).get("nodes", [])],
-                "milestone": (c.get("milestone") or {}).get("title"),
-                "parent": (c.get("parent") or {}).get("number"),
-                "fields": vals,
-            })
+            items.append(
+                {
+                    "number": c["number"],
+                    "item_id": it["id"],
+                    "title": c.get("title"),
+                    "state": c.get("state"),
+                    "repo": (c.get("repository") or {}).get("nameWithOwner"),
+                    "labels": [
+                        l["name"] for l in (c.get("labels", {}) or {}).get("nodes", [])
+                    ],
+                    "milestone": (c.get("milestone") or {}).get("title"),
+                    "parent": (c.get("parent") or {}).get("number"),
+                    "fields": vals,
+                }
+            )
         if not page["pageInfo"]["hasNextPage"]:
             break
-        cur = '"%s"' % page["pageInfo"]["endCursor"]
+        cursor = page["pageInfo"]["endCursor"]
 
     out = {
-        "project": {"owner": args.owner, "owner_type": args.owner_type,
-                    "number": args.number, "id": pid, "title": proj.get("title")},
+        "project": {
+            "owner": args.owner,
+            "owner_type": args.owner_type,
+            "number": args.number,
+            "id": pid,
+            "title": proj.get("title"),
+        },
         "fields": fields,
         "items": items,
     }
@@ -166,7 +188,10 @@ def main() -> None:
     if args.out:
         with open(args.out, "w") as fh:
             fh.write(text + "\n")
-        print(f"wrote {args.out}: {len(items)} items, {len(fields)} fields", file=sys.stderr)
+        print(
+            f"wrote {args.out}: {len(items)} items, {len(fields)} fields",
+            file=sys.stderr,
+        )
     else:
         print(text)
 
