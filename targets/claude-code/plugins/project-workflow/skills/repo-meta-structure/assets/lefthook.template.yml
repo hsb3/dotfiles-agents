@@ -1,0 +1,19 @@
+# lefthook.yml — git hooks manager. The protocol: local hooks MIRROR CI so
+# violations surface before push, but stay cheap enough not to slow commits.
+# Activate per clone with `lefthook install` (config is tracked; .git/hooks is not).
+#
+# Default: run the repo's aggregate gate before push. `make ci` is the standard's
+# canonical gate target (interface-over-tool — see the repo-meta-structure standard,
+# ROOT-04); if this repo's cheap/full gate split differs, replace the job below with
+# the CHEAP lanes pre-commit and keep the full gate in CI, e.g.:
+#
+# pre-commit:
+#   parallel: true
+#   jobs:
+#     - name: lint
+#       run: make lint
+#
+pre-push:
+  jobs:
+    - name: ci
+      run: make ci

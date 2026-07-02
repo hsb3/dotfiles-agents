@@ -288,7 +288,7 @@
       "mise-en-place-scaffold": {
         "capability": "render",
         "destination": "claude-agents/skills/mise-en-place-scaffold",
-        "sha256": "8dd7f4c9a6510455e1c96c5f6e57b84a7b029a0ca87214ab4f6c3988b5d7432a",
+        "sha256": "6b6283f5a71c39633bf538d959665622306e2a0854c495152c5fac54d120c665",
         "skipped": false
       },
       "nanobanana": {
@@ -414,7 +414,7 @@
       "repo-meta-structure": {
         "capability": "render",
         "destination": "claude-agents/skills/repo-meta-structure",
-        "sha256": "cfbafbda0dc7be8f75de696ccffb24f9c339c1b16d84768e7b207bfabba7219d",
+        "sha256": "f739605886501d4a38be9c73e2999bc2acf77f216fce5fdcdfdc5617e8faa271",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -800,7 +800,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/mise-en-place-scaffold",
-        "sha256": "8dd7f4c9a6510455e1c96c5f6e57b84a7b029a0ca87214ab4f6c3988b5d7432a",
+        "sha256": "6b6283f5a71c39633bf538d959665622306e2a0854c495152c5fac54d120c665",
         "skipped": false
       },
       "nanobanana": {
@@ -944,7 +944,7 @@
       "repo-meta-structure": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/repo-meta-structure",
-        "sha256": "cfbafbda0dc7be8f75de696ccffb24f9c339c1b16d84768e7b207bfabba7219d",
+        "sha256": "f739605886501d4a38be9c73e2999bc2acf77f216fce5fdcdfdc5617e8faa271",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -1318,7 +1318,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "opencode/skills/mise-en-place-scaffold",
-        "sha256": "8dd7f4c9a6510455e1c96c5f6e57b84a7b029a0ca87214ab4f6c3988b5d7432a",
+        "sha256": "6b6283f5a71c39633bf538d959665622306e2a0854c495152c5fac54d120c665",
         "skipped": false
       },
       "nanobanana": {
@@ -1444,7 +1444,7 @@
       "repo-meta-structure": {
         "capability": "native",
         "destination": "opencode/skills/repo-meta-structure",
-        "sha256": "cfbafbda0dc7be8f75de696ccffb24f9c339c1b16d84768e7b207bfabba7219d",
+        "sha256": "f739605886501d4a38be9c73e2999bc2acf77f216fce5fdcdfdc5617e8faa271",
         "skipped": false
       },
       "security-code-reviewer": {

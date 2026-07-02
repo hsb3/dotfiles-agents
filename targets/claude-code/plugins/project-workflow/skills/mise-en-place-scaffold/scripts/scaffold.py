@@ -169,17 +169,6 @@ help: ## List targets
 \t@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\\n", $$1, $$2}'
 """
 
-LEFTHOOK_STUB = """# lefthook.yml — git hooks manager; pre-commit hooks should mirror CI so
-# violations surface before push. Scaffolded stub: add this repo's hooks, then
-# run `lefthook install`.
-#
-# pre-commit:
-#   parallel: true
-#   jobs:
-#     - name: ci
-#       run: make ci
-"""
-
 MCP_JSON_STUB = '{\n  "mcpServers": {}\n}\n'
 
 SETTINGS_JSON_STUB = "{}\n"
@@ -208,7 +197,6 @@ STUB_FILES = {
         repo=os.path.basename(repo)
     ),
     "Makefile": lambda repo: MAKEFILE_STUB,
-    "lefthook.yml": lambda repo: LEFTHOOK_STUB,
     ".mcp.json": lambda repo: MCP_JSON_STUB,
 }
 
@@ -543,6 +531,8 @@ def template_source(plugin_root, arg):
     (structure-preserving copy)."""
     if arg == ".gitignore":
         return os.path.join(plugin_root, ASSETS_RELPATH, "gitignore.template")
+    if arg == "lefthook.yml":
+        return os.path.join(plugin_root, ASSETS_RELPATH, "lefthook.template.yml")
     if arg.startswith(".github/"):
         return os.path.join(
             plugin_root, ASSETS_RELPATH, "github", arg[len(".github/") :]

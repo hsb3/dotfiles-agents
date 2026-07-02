@@ -47,7 +47,8 @@ must carry anything a headless run depends on.
 
 ## Root
 
-- `README.md` (value-and-proof style), `CLAUDE.md`, `AGENTS.md`, `Makefile`, `lefthook.yml`,
+- `README.md` (value-and-proof style), `CLAUDE.md`, `AGENTS.md`, `Makefile`, `lefthook.yml`
+  (template: [`../assets/lefthook.template.yml`](../assets/lefthook.template.yml) — pre-push `make ci` by default; hooks mirror CI),
   `.gitignore`, `.mcp.json`
 - `docs/`, `scripts/`, `tests/`
 - `CHANGELOG.md` only if the repo publishes releases

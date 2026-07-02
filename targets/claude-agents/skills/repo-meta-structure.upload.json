@@ -13,6 +13,7 @@
     "assets/github/workflows/claude-review.yml",
     "assets/github/workflows/claude.yml",
     "assets/gitignore.template",
+    "assets/lefthook.template.yml",
     "references/checklist.md",
     "references/layout.md",
     "references/planning-docs.md"

@@ -512,6 +512,11 @@ class PlanInternals(unittest.TestCase):
                 os.path.join("assets", "github", "workflows", "ci.yml")
             )
         )
+        self.assertTrue(
+            S.template_source(PLUGIN_ROOT, "lefthook.yml").endswith(
+                "lefthook.template.yml"
+            )
+        )
         self.assertIsNone(S.template_source(PLUGIN_ROOT, "Makefile"))
         # every GH checklist row resolves to a real shipped asset
         for row in S.load_checklists(PLUGIN_ROOT):
