@@ -14,7 +14,7 @@ See [`../docs/CHARTER.md`](../docs/CHARTER.md) for the model and
 | `skills/<name>/` | **skill** | `SKILL.md` (+ `references/`, `scripts/`, `assets/`) | Native on every target. `SKILL.md` at the folder root. |
 | `agents/<name>.md` | **agent** | one `.md` with neutral frontmatter | Transformed per target (CC native, opencode reframes frontmatter, CMA renders to API). |
 | `mcp/<name>.json` | **mcp** | one neutral server spec per service | Always rendered to each target's own config schema. |
-| `hooks/<name>/` | **hook** | handler `<plugin>.<Event>.<slug>.sh` + `hook.toml` | Claude-Code-only; handlers are **stdlib-only** (no pip/npm deps). |
+| `hooks/<name>/` | **hook** | handlers `hooks-handlers/<plugin>.<Event>.<slug>.sh` + config `hooks/hooks.json` | Claude-Code-only; handlers are **stdlib-only** (no pip/npm deps). |
 
 ## Roster entry schema
 
