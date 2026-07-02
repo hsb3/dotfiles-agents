@@ -41,6 +41,8 @@ with design detail on the cowork desk (`analyses/project-workflow-v2-design.md`)
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
 | docs-planning-standard | #40 | ready to build - all owner decisions resolved 2026-07-02 |
+| frontend-extenders-curation | #48 | staged body only (no deep plan yet); filed 2026-07-02 from Henry's notes |
+| extender-ideas-backlog-seed | #49 | staged body only (no deep plan yet); filed 2026-07-02 from Henry's notes |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
