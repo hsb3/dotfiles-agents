@@ -340,6 +340,16 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
     summary: "INVOKE THIS SKILL when working with LangSmith tracing OR querying traces."
+  - id: memory-taxonomy
+    type: skill
+    source: primitives-core/skills/memory-taxonomy
+    shelf: core
+    origin: authored
+    disposition: untriaged
+    vendor: null
+    targets: [claude-code, opencode, claude-agents]
+    plugins: [project-workflow]
+    summary: "The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism; carries the approved v1 defaults and the MEM-xx structure checklist the compliance audit consumes."
   - id: nanobanana
     type: skill
     source: primitives-core/skills/nanobanana

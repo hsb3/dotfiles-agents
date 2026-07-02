@@ -273,6 +273,12 @@
         "sha256": "01ae493625a23f508d05a36950835b002d565e10de64e5a29bbdfc075e09c813",
         "skipped": false
       },
+      "memory-taxonomy": {
+        "capability": "render",
+        "destination": "claude-agents/skills/memory-taxonomy",
+        "sha256": "be2d0a9dcfed177f1527c88f944523a9457a758d81617275a0d962183a43cd63",
+        "skipped": false
+      },
       "mermaid-diagram-specialist": {
         "capability": "render",
         "destination": "claude-agents/agents/mermaid-diagram-specialist.json",
@@ -765,6 +771,12 @@
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/agents/mcp-integrator.md",
         "sha256": "84a541876582ab14b65617ba2c3b0712a398f2d483aac564ec5bbbaf6cc05e60",
+        "skipped": false
+      },
+      "memory-taxonomy": {
+        "capability": "native",
+        "destination": "claude-code/plugins/project-workflow/skills/memory-taxonomy",
+        "sha256": "be2d0a9dcfed177f1527c88f944523a9457a758d81617275a0d962183a43cd63",
         "skipped": false
       },
       "mermaid-diagram-specialist": {
@@ -1265,6 +1277,12 @@
         "capability": "transform",
         "destination": "opencode/agents/mcp-integrator.md",
         "sha256": "7999168b09cc5f0461908bc52abb4a900166ed51f40c33a300d273b2a8486092",
+        "skipped": false
+      },
+      "memory-taxonomy": {
+        "capability": "native",
+        "destination": "opencode/skills/memory-taxonomy",
+        "sha256": "be2d0a9dcfed177f1527c88f944523a9457a758d81617275a0d962183a43cd63",
         "skipped": false
       },
       "mermaid-diagram-specialist": {

@@ -1,0 +1,10 @@
+{
+  "display_title": "memory-taxonomy",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "references/checklist.md",
+    "references/taxonomy.md",
+    "references/tooling.md"
+  ]
+}
