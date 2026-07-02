@@ -88,7 +88,10 @@ def graphql(query: str, *raw: str, **fvars: str) -> dict:
     for k, v in fvars.items():
         args += ["-f", f"{k}={v}"]
     args += list(raw)  # e.g. "-F", "n=3"
-    return json.loads(gh(*args)[1])
+    out = json.loads(gh(*args)[1])
+    if "data" not in out:  # error-only response (rate limit, transient failure)
+        sys.exit(f"graphql: no data in response: {out.get('errors') or out}")
+    return out
 
 
 def load_snapshot(owner: str, number: int, owner_type: str):

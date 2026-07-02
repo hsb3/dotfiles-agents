@@ -34,7 +34,10 @@ def graphql(query: str, **fvars: str) -> dict:
     args = ["api", "graphql", "-f", "query=" + query]
     for k, v in fvars.items():
         args += ["-f", f"{k}={v}"]
-    return json.loads(gh(*args))
+    out = json.loads(gh(*args))
+    if "data" not in out:  # error-only response (rate limit, transient failure)
+        sys.exit(f"graphql: no data in response: {out.get('errors') or out}")
+    return out
 
 
 PROJECT_ID_Q = (

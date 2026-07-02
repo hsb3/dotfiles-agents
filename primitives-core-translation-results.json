@@ -186,7 +186,7 @@
       "github-project-board": {
         "capability": "render",
         "destination": "claude-agents/skills/github-project-board",
-        "sha256": "745b824bbc84bdc6811982ed9e499c73c300ac5c5c4bbec4b3d06278a0a141ad",
+        "sha256": "67719f3b79ae71eb10b6e5e544c386c7d9e9748a66355d4637917df5f04afa5f",
         "skipped": false
       },
       "handoff": {
@@ -704,7 +704,7 @@
       "github-project-board": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/github-project-board",
-        "sha256": "745b824bbc84bdc6811982ed9e499c73c300ac5c5c4bbec4b3d06278a0a141ad",
+        "sha256": "67719f3b79ae71eb10b6e5e544c386c7d9e9748a66355d4637917df5f04afa5f",
         "skipped": false
       },
       "handoff": {
@@ -1228,7 +1228,7 @@
       "github-project-board": {
         "capability": "native",
         "destination": "opencode/skills/github-project-board",
-        "sha256": "745b824bbc84bdc6811982ed9e499c73c300ac5c5c4bbec4b3d06278a0a141ad",
+        "sha256": "67719f3b79ae71eb10b6e5e544c386c7d9e9748a66355d4637917df5f04afa5f",
         "skipped": false
       },
       "handoff": {
