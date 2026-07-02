@@ -9,6 +9,6 @@ repo: "dotfiles-agents"
 default_branch: main # dev for mhi-raptorxai repos
 gh_issue_labels: []  # [{name, color, description}] — consumed by github-project-board
 gh_milestones: []    # [{title, description}] — consumed by github-project-board
-board_title: ""
+board_title: "Agent Extenders" # hsb3 project 9 — ONE board shared by both repos
 required_folders: [] # repo-specific additions beyond the standard
 required_files: []
