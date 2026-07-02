@@ -1,0 +1,8 @@
+{
+  "display_title": "repo-compliance-audit",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "scripts/audit.py"
+  ]
+}

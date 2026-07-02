@@ -399,6 +399,12 @@
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
         "skipped": false
       },
+      "repo-compliance-audit": {
+        "capability": "render",
+        "destination": "claude-agents/skills/repo-compliance-audit",
+        "sha256": "f01c8437b935b20524fa8ceece34b0f602c04140fbca8289d0bff6d1f064e6f6",
+        "skipped": false
+      },
       "repo-meta-structure": {
         "capability": "render",
         "destination": "claude-agents/skills/repo-meta-structure",
@@ -917,6 +923,12 @@
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
         "skipped": false
       },
+      "repo-compliance-audit": {
+        "capability": "native",
+        "destination": "claude-code/plugins/project-workflow/skills/repo-compliance-audit",
+        "sha256": "f01c8437b935b20524fa8ceece34b0f602c04140fbca8289d0bff6d1f064e6f6",
+        "skipped": false
+      },
       "repo-meta-structure": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/repo-meta-structure",
@@ -1403,6 +1415,12 @@
         "capability": "native",
         "destination": "opencode/skills/readme-value-and-proof",
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
+        "skipped": false
+      },
+      "repo-compliance-audit": {
+        "capability": "native",
+        "destination": "opencode/skills/repo-compliance-audit",
+        "sha256": "f01c8437b935b20524fa8ceece34b0f602c04140fbca8289d0bff6d1f064e6f6",
         "skipped": false
       },
       "repo-meta-structure": {

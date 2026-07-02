@@ -510,6 +510,16 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
     summary: "Turn a README into a user-centric pitch backed by real visual proof."
+  - id: repo-compliance-audit
+    type: skill
+    source: primitives-core/skills/repo-compliance-audit
+    shelf: core
+    origin: authored
+    disposition: untriaged
+    vendor: null
+    targets: [claude-code, opencode, claude-agents]
+    plugins: [project-workflow]
+    summary: "Read-only repo compliance audit — one command prints a pass/gap table (ID | Area | Verdict | Detail) against the repo-meta-structure and memory-taxonomy checklists plus HOOK-01, honoring _meta/mise-en-place.yml variance; reports, never writes or polices."
   - id: repo-meta-structure
     type: skill
     source: primitives-core/skills/repo-meta-structure
