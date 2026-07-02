@@ -7,6 +7,7 @@
     "agents/openai.yaml",
     "references/config.md",
     "references/models-and-api.md",
+    "references/prompting.md",
     "scripts/nanobanana.py",
     "tests/test_nanobanana.py"
   ]

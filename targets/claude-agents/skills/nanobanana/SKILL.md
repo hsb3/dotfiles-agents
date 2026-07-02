@@ -11,11 +11,12 @@ A single Python entrypoint for Gemini-native Nano Banana image generation and ed
 
 1. Open [references/config.md](./references/config.md) to choose environment variables and override order.
 2. Open [references/models-and-api.md](./references/models-and-api.md) to pick the right Nano Banana tier and check model-specific constraints.
-3. Prefer `gemini-3.1-flash-image-preview` (`nanobanana-2`) unless you need either the fastest low-cost default (`nanobanana`) or the highest-fidelity reasoning model (`nanobanana-pro`).
-4. Run `scripts/nanobanana.py generate` for one request or `scripts/nanobanana.py batch` for repeated variants.
-5. Add `--dry-run` first when the main risk is the payload shape, endpoint, or model-specific option support.
-6. Pass `--base-url` or `GEMINI_BASE_URL` when you need a custom Gemini-compatible gateway.
-7. Add `--save-response <path>` on `generate` when you need the raw JSON body for debugging.
+3. Open [references/prompting.md](./references/prompting.md) for subject-first grammar, quoted in-image text, style anchoring, and verified sample prompts.
+4. Prefer `gemini-3.1-flash-image-preview` (`nanobanana-2`) unless you need either the fastest low-cost default (`nanobanana`) or the highest-fidelity reasoning model (`nanobanana-pro`).
+5. Run `scripts/nanobanana.py generate` for one request or `scripts/nanobanana.py batch` for repeated variants.
+6. Add `--dry-run` first when the main risk is the payload shape, endpoint, or model-specific option support.
+7. Pass `--base-url` or `GEMINI_BASE_URL` when you need a custom Gemini-compatible gateway.
+8. Add `--save-response <path>` on `generate` when you need the raw JSON body for debugging.
 
 ## Commands
 
@@ -92,3 +93,4 @@ python .\skills\nanobanana\scripts\nanobanana.py generate `
 - Script: [scripts/nanobanana.py](./scripts/nanobanana.py)
 - Config reference: [references/config.md](./references/config.md)
 - Models and API reference: [references/models-and-api.md](./references/models-and-api.md)
+- Prompting reference: [references/prompting.md](./references/prompting.md)

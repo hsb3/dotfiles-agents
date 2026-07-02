@@ -369,7 +369,7 @@ primitives:
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [media-gen]
-    summary: "Gemini-native Nano Banana image generation and editing across Nano Banana, Nano Banana 2, and Nano Banana Pro."
+    summary: "Gemini-native Nano Banana image generation and editing across Nano Banana, Nano Banana 2, and Nano Banana Pro. Prompting guidance (references/prompting.md) folded from the retired nano-banana-2 RunComfy wrapper (dedup 2026-07-02; see workbench docs/promotions-log.md)."
   - id: notion-api
     type: skill
     source: primitives-core/skills/notion-api

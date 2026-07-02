@@ -294,7 +294,7 @@
       "nanobanana": {
         "capability": "render",
         "destination": "claude-agents/skills/nanobanana",
-        "sha256": "5171df70e2d07fa8fff9b74d4ee15ce418b8315cda43dd551cb4d75167c9c663",
+        "sha256": "6fc50710d519b581f7ed5eff43a1a482e3b96b8dfb008281530f96b03239c25e",
         "skipped": false
       },
       "notion-api": {
@@ -812,7 +812,7 @@
       "nanobanana": {
         "capability": "native",
         "destination": "claude-code/plugins/media-gen/skills/nanobanana",
-        "sha256": "5171df70e2d07fa8fff9b74d4ee15ce418b8315cda43dd551cb4d75167c9c663",
+        "sha256": "6fc50710d519b581f7ed5eff43a1a482e3b96b8dfb008281530f96b03239c25e",
         "skipped": false
       },
       "notion-api": {
@@ -1336,7 +1336,7 @@
       "nanobanana": {
         "capability": "native",
         "destination": "opencode/skills/nanobanana",
-        "sha256": "5171df70e2d07fa8fff9b74d4ee15ce418b8315cda43dd551cb4d75167c9c663",
+        "sha256": "6fc50710d519b581f7ed5eff43a1a482e3b96b8dfb008281530f96b03239c25e",
         "skipped": false
       },
       "notion-api": {
