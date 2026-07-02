@@ -18,38 +18,33 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
-    # Pick the auth path by which secret is set (the OAuth step no-ops/succeeds on
-    # an empty token, so the API-key fallback can't rely on outcome alone).
-    env:
-      HAS_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     permissions:
-      contents: write # so @claude can push branches with its changes
-      pull-requests: write # so @claude can open PRs from those branches
-      issues: write # so @claude can maintain its tracking comment
+      contents: read
+      pull-requests: read
+      issues: read
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # Auth fallback: prefer the subscription OAuth token; if it's missing or
-      # fails to start (e.g. usage limit exhausted), fall back to the API key.
-      - name: Run Claude Code (subscription token)
-        id: claude_oauth
-        if: ${{ env.HAS_OAUTH == 'true' }}
-        continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.158
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
 
-      - name: Run Claude Code (API key fallback)
-        if: ${{ env.HAS_OAUTH != 'true' || steps.claude_oauth.outcome == 'failure' }}
-        uses: anthropics/claude-code-action@v1.0.158
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          additional_permissions: |
-            actions: read
+          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
+          # prompt: 'Update the pull request description to include a summary of changes.'
+
+          # Optional: Add claude_args to customize behavior and configuration
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://code.claude.com/docs/en/cli-reference for available options
+          # claude_args: '--allowed-tools Bash(gh pr *)'
+
