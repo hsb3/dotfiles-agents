@@ -103,7 +103,7 @@ class Entry(unittest.TestCase):
             "type": "skill",
             "source": d,
             "shelf": "core",
-            "origin": "internal",
+            "origin": "authored",
             "targets": ["claude-code"],
             "plugins": [],
             "summary": "ok",
@@ -129,6 +129,25 @@ class Entry(unittest.TestCase):
         self.assertTrue(any("origin" in p for p in problems))
         self.assertTrue(any("unknown target" in p for p in problems))
         self.assertTrue(any("summary" in p for p in problems))
+
+    def test_origin_enum_is_authored_sourced(self):
+        self.assertEqual(V.VALID_ORIGIN, {"authored", "sourced"})
+
+    def test_old_vocabulary_internal_rejected(self):
+        e = self._skill("---\nname: t\ndescription: d\n---\nbody")
+        e.update(origin="internal")
+        problems = []
+        V.validate_entry(e, problems)
+        self.assertTrue(
+            any("origin" in p and "authored" in p and "sourced" in p for p in problems)
+        )
+
+    def test_sourced_origin_accepted(self):
+        e = self._skill("---\nname: t\ndescription: d\n---\nbody")
+        e.update(origin="sourced")
+        problems = []
+        V.validate_entry(e, problems)
+        self.assertEqual(problems, [])
 
 
 class RealTree(unittest.TestCase):

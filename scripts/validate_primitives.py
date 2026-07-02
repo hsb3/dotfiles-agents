@@ -10,7 +10,7 @@ What it checks:
   - agent : the .md has frontmatter with `name` + `description`
   - mcp   : the spec JSON has `name` and `transport` in {stdio, http}; stdio => `command`,
             http => `url`; any secret-named env/header value is a ${VAR} placeholder, not a literal
-  - roster: `origin` in {internal, external}, `targets` subset of the real targets, `summary` set
+  - roster: `origin` in {authored, sourced}, `targets` subset of the real targets, `summary` set
   - externals mcp specs (externals.yaml kind: mcp) get the same mcp-spec checks
 
 Stdlib-only (reuses translate.py's parsers), so `make ci` stays zero-install. Exit 0 = clean;
@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import translate as T  # reuse the roster/externals parsers + REPO root
 
 VALID_TARGETS = {"claude-code", "opencode", "claude-agents"}
-VALID_ORIGIN = {"internal", "external"}
+VALID_ORIGIN = {"authored", "sourced"}
 VALID_TRANSPORT = {"stdio", "http"}
 SECRET_HINT = re.compile(r"(token|secret|key|password|passwd|pat|credential)", re.I)
 PLACEHOLDER = re.compile(r"^\$\{[^}]+\}$")

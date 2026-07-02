@@ -4,7 +4,10 @@
 Verifies that primitives-core.yaml (the roster) and primitives-core/ on disk agree:
   - every roster entry's `source` exists on disk
   - every primitive on disk (skill dir, agent .md, hook handler .sh, mcp .json) has a roster entry
-  - basic schema: required fields present, type ∈ {skill,agent,mcp,hook}, shelf ∈ {core,toggle}
+  - basic schema: required fields present, type ∈ {skill,agent,mcp,hook}, shelf ∈ {core,toggle},
+    origin ∈ {authored,sourced}, disposition ∈ {qualified,grandfathered-pending-use,demoted,untriaged}
+  - `requires` (optional) is a list ⊆ {hooks,local-mcp,hosted-mcp}
+  - provenance: every `origin: sourced` entry carries non-null `upstream` and `ref`
 
 Stdlib-only (a tailored line parser for the roster's controlled format — no pyyaml), so it runs
 in CI with zero install. Exit 0 = clean; exit 1 = drift (prints every problem).
@@ -22,12 +25,34 @@ PC = os.path.join(REPO, "primitives-core")
 
 TYPES = {"skill", "agent", "mcp", "hook"}
 SHELVES = {"core", "toggle"}
-REQUIRED = ("id", "type", "source", "shelf", "origin", "targets", "plugins")
+ORIGINS = {"authored", "sourced"}
+DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged"}
+CAPABILITIES = {"hooks", "local-mcp", "hosted-mcp"}
+REQUIRED = (
+    "id",
+    "type",
+    "source",
+    "shelf",
+    "origin",
+    "disposition",
+    "targets",
+    "plugins",
+)
+
+
+def _list(v):
+    """Parse a `[a, b]`-style inline list value into a Python list (mirrors translate._list)."""
+    v = v.strip()
+    if v.startswith("[") and v.endswith("]"):
+        inner = v[1:-1].strip()
+        return [x.strip() for x in inner.split(",")] if inner else []
+    return [v] if v else []
 
 
 def parse_roster(path):
     """Parse the roster's `primitives:` list into dicts. Tailored to our emitter's format:
-    each entry starts with `  - id: <v>` and continues with `    <key>: <v>` lines."""
+    each entry starts with `  - id: <v>` and continues with `    <key>: <v>` lines.
+    Duplicate keys within one entry: last wins (documented, not guarded)."""
     entries, cur = [], None
     in_list = False
     for raw in open(path, encoding="utf-8"):
@@ -82,6 +107,40 @@ def disk_primitives():
     return found
 
 
+def check_entry_schema(e, problems):
+    """Schema checks for one parsed roster entry (required fields, enums, provenance rule)."""
+    eid = e.get("id", "<no-id>")
+    for k in REQUIRED:
+        if k not in e:
+            problems.append(f"[{eid}] missing required field: {k}")
+    t = e.get("type")
+    if t not in TYPES:
+        problems.append(f"[{eid}] bad type: {t!r}")
+    if e.get("shelf") not in SHELVES:
+        problems.append(f"[{eid}] bad shelf: {e.get('shelf')!r}")
+    if "origin" in e and e.get("origin") not in ORIGINS:
+        problems.append(
+            f"[{eid}] bad origin: {e.get('origin')!r} (must be one of {sorted(ORIGINS)})"
+        )
+    if "disposition" in e and e.get("disposition") not in DISPOSITIONS:
+        problems.append(
+            f"[{eid}] bad disposition: {e.get('disposition')!r} "
+            f"(must be one of {sorted(DISPOSITIONS)})"
+        )
+    if "requires" in e:
+        unknown = set(_list(e["requires"])) - CAPABILITIES
+        if unknown:
+            problems.append(
+                f"[{eid}] unknown requires capability: {sorted(unknown)} "
+                f"(must be a subset of {sorted(CAPABILITIES)})"
+            )
+    if e.get("origin") == "sourced":
+        for k in ("upstream", "ref"):
+            v = e.get(k, "").strip()
+            if not v or v == "null":
+                problems.append(f"[{eid}] origin: sourced requires non-null `{k}`")
+
+
 def main():
     problems = []
     entries = parse_roster(ROSTER)
@@ -91,14 +150,8 @@ def main():
     rostered = set()
     for e in entries:
         eid = e.get("id", "<no-id>")
-        for k in REQUIRED:
-            if k not in e:
-                problems.append(f"[{eid}] missing required field: {k}")
+        check_entry_schema(e, problems)
         t = e.get("type")
-        if t not in TYPES:
-            problems.append(f"[{eid}] bad type: {t!r}")
-        if e.get("shelf") not in SHELVES:
-            problems.append(f"[{eid}] bad shelf: {e.get('shelf')!r}")
         src = e.get("source", "")
         if src:
             if not os.path.exists(os.path.join(REPO, src)):

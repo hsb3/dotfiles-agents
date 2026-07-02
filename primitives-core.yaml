@@ -6,8 +6,15 @@
 # command-folding land in Phase 2b; externals are tracked separately in externals.yaml.
 #
 # Entry schema (see primitives-core/README.md):
-#   id · type · source · shelf{core|toggle} · origin{internal|external} · vendor · targets[] · plugins[] · summary
-# Capability per (type x target) is derived from primitives-core-translation-config.yaml, not here.
+#   id · type · source · shelf{core|toggle} · origin{authored|sourced} ·
+#   disposition{qualified|grandfathered-pending-use|demoted|untriaged} · vendor · targets[] ·
+#   plugins[] · summary · requires[]{hooks|local-mcp|hosted-mcp} (optional; absent = no needs)
+# origin is provenance (authored here vs sourced from upstream) and is immutable per entry;
+# origin: sourced entries must carry non-null `upstream:` and `ref:` fields.
+# The untriaged disposition is a migration placeholder ("pre-seeded, not yet dispositioned",
+# Q-13); real disposition values are written by the promotion/re-qualification workflow.
+# Capability per (type x target) is derived from primitives-core-translation-config.yaml, not
+# here — except per-primitive runtime capability needs, which `requires:` records on the entry.
 
 version: 1
 
@@ -16,7 +23,8 @@ primitives:
     type: skill
     source: primitives-core/skills/agent-dot-md-authoring
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -25,7 +33,8 @@ primitives:
     type: skill
     source: primitives-core/skills/api-server-design
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -34,7 +43,8 @@ primitives:
     type: skill
     source: primitives-core/skills/board-reporting
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -43,7 +53,8 @@ primitives:
     type: skill
     source: primitives-core/skills/board-triage
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -52,7 +63,8 @@ primitives:
     type: skill
     source: primitives-core/skills/carbon-builder
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -61,7 +73,8 @@ primitives:
     type: skill
     source: primitives-core/skills/cms-bigquery-etl-generator
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -70,7 +83,8 @@ primitives:
     type: skill
     source: primitives-core/skills/cms-json-data-dictionary
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -79,7 +93,8 @@ primitives:
     type: skill
     source: primitives-core/skills/cms-pdf-to-markdown
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -88,7 +103,9 @@ primitives:
     type: skill
     source: primitives-core/skills/comms
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
+    requires: [local-mcp]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -97,7 +114,8 @@ primitives:
     type: skill
     source: primitives-core/skills/deep-agents-core
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [deep-agents]
@@ -106,7 +124,8 @@ primitives:
     type: skill
     source: primitives-core/skills/deep-agents-memory
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [deep-agents]
@@ -115,7 +134,8 @@ primitives:
     type: skill
     source: primitives-core/skills/deep-agents-orchestration
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [deep-agents]
@@ -124,7 +144,8 @@ primitives:
     type: skill
     source: primitives-core/skills/devcontainer-setup
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -133,7 +154,8 @@ primitives:
     type: skill
     source: primitives-core/skills/developer-focus
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [dev-focus]
@@ -142,7 +164,8 @@ primitives:
     type: skill
     source: primitives-core/skills/diagrams
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -151,7 +174,8 @@ primitives:
     type: skill
     source: primitives-core/skills/dlt-pipelines
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -160,7 +184,8 @@ primitives:
     type: skill
     source: primitives-core/skills/dotfiles-expert
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -169,7 +194,8 @@ primitives:
     type: skill
     source: primitives-core/skills/find-skills
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -178,7 +204,8 @@ primitives:
     type: skill
     source: primitives-core/skills/framework-selection
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [meta]
@@ -187,7 +214,8 @@ primitives:
     type: skill
     source: primitives-core/skills/github-project-board
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -196,7 +224,8 @@ primitives:
     type: skill
     source: primitives-core/skills/handoff
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -205,7 +234,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langchain-dependencies
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -214,7 +244,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langchain-fundamentals
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -223,7 +254,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langchain-middleware
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -232,7 +264,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langchain-rag
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -241,7 +274,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langgraph-fundamentals
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -250,7 +284,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langgraph-human-in-the-loop
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -259,7 +294,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langgraph-persistence
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -268,7 +304,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langgraph-sse-client
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -277,7 +314,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langsmith-dataset
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -286,7 +324,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langsmith-evaluator
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -295,7 +334,8 @@ primitives:
     type: skill
     source: primitives-core/skills/langsmith-trace
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [langchain-stack]
@@ -304,7 +344,8 @@ primitives:
     type: skill
     source: primitives-core/skills/nanobanana
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [media-gen]
@@ -313,7 +354,8 @@ primitives:
     type: skill
     source: primitives-core/skills/notion-api
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -322,7 +364,8 @@ primitives:
     type: skill
     source: primitives-core/skills/obsidian-api-basics
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -331,7 +374,8 @@ primitives:
     type: skill
     source: primitives-core/skills/obsidian-best-practices
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -340,7 +384,8 @@ primitives:
     type: skill
     source: primitives-core/skills/obsidian-chat-ui
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -349,7 +394,8 @@ primitives:
     type: skill
     source: primitives-core/skills/obsidian-cli
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -358,7 +404,8 @@ primitives:
     type: skill
     source: primitives-core/skills/obsidian-dom-helpers
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -367,7 +414,8 @@ primitives:
     type: skill
     source: primitives-core/skills/obsidian-mcp-server
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -376,7 +424,8 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-apply-change
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
@@ -385,7 +434,8 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-archive-change
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
@@ -394,7 +444,8 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-explore
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
@@ -403,7 +454,8 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-propose
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
@@ -412,7 +464,8 @@ primitives:
     type: skill
     source: primitives-core/skills/planning-desk
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -421,7 +474,8 @@ primitives:
     type: skill
     source: primitives-core/skills/pptx-henry
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -430,7 +484,8 @@ primitives:
     type: skill
     source: primitives-core/skills/react-doctor
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [frontend-extras]
@@ -439,7 +494,8 @@ primitives:
     type: skill
     source: primitives-core/skills/readme-value-and-proof
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -448,7 +504,8 @@ primitives:
     type: skill
     source: primitives-core/skills/setup-project-dashboard
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-dashboard]
@@ -457,7 +514,8 @@ primitives:
     type: skill
     source: primitives-core/skills/shadcn
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [frontend-extras]
@@ -466,7 +524,8 @@ primitives:
     type: skill
     source: primitives-core/skills/skill-creator
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -475,7 +534,8 @@ primitives:
     type: skill
     source: primitives-core/skills/subagent-creator
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -484,7 +544,8 @@ primitives:
     type: skill
     source: primitives-core/skills/update-project-dashboard
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-dashboard]
@@ -493,7 +554,8 @@ primitives:
     type: agent
     source: primitives-core/agents/board-analyst.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -502,7 +564,8 @@ primitives:
     type: agent
     source: primitives-core/agents/chat-ui-builder.md
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -511,7 +574,8 @@ primitives:
     type: agent
     source: primitives-core/agents/cms-data-engineer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -520,7 +584,8 @@ primitives:
     type: agent
     source: primitives-core/agents/code-quality-reviewer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -529,7 +594,8 @@ primitives:
     type: agent
     source: primitives-core/agents/deep-research-documenter.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -538,7 +604,8 @@ primitives:
     type: agent
     source: primitives-core/agents/deno-ui-builder.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -547,7 +614,8 @@ primitives:
     type: agent
     source: primitives-core/agents/deno-ui-prototyper.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -556,7 +624,8 @@ primitives:
     type: agent
     source: primitives-core/agents/documentation-accuracy-reviewer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -565,7 +634,8 @@ primitives:
     type: agent
     source: primitives-core/agents/fastapi-best-practices-reviewer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -574,7 +644,8 @@ primitives:
     type: agent
     source: primitives-core/agents/fastapi-improvement-implementer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -583,7 +654,8 @@ primitives:
     type: agent
     source: primitives-core/agents/healthcare-analytics-architect.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -592,7 +664,8 @@ primitives:
     type: agent
     source: primitives-core/agents/mcp-integrator.md
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -601,7 +674,8 @@ primitives:
     type: agent
     source: primitives-core/agents/mermaid-diagram-specialist.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -610,7 +684,8 @@ primitives:
     type: agent
     source: primitives-core/agents/performance-reviewer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -619,7 +694,8 @@ primitives:
     type: agent
     source: primitives-core/agents/plugin-scaffolder.md
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -628,7 +704,8 @@ primitives:
     type: agent
     source: primitives-core/agents/python-test-writer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -637,7 +714,8 @@ primitives:
     type: agent
     source: primitives-core/agents/security-code-reviewer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -646,7 +724,8 @@ primitives:
     type: agent
     source: primitives-core/agents/test-coverage-reviewer.md
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -655,7 +734,8 @@ primitives:
     type: hook
     source: primitives-core/hooks/dev-focus/hooks-handlers/dev-focus.SessionStart.session-start.sh
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code]
     plugins: [dev-focus]
@@ -664,7 +744,8 @@ primitives:
     type: hook
     source: primitives-core/hooks/dev-focus/hooks-handlers/dev-focus.Stop.stop-summary.sh
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code]
     plugins: [dev-focus]
@@ -673,7 +754,8 @@ primitives:
     type: hook
     source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.SessionStart.session-start.sh
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code]
     plugins: [python-standards]
@@ -682,7 +764,8 @@ primitives:
     type: hook
     source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.PostToolUse.post-tool-use.sh
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code]
     plugins: [python-standards]
@@ -691,7 +774,8 @@ primitives:
     type: hook
     source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.Stop.stop.sh
     shelf: toggle
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code]
     plugins: [python-standards]
@@ -701,7 +785,8 @@ primitives:
     type: mcp
     source: primitives-core/mcp/agent-bus.json
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode]
     plugins: []
@@ -710,7 +795,8 @@ primitives:
     type: mcp
     source: primitives-core/mcp/excalidraw.json
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode]
     plugins: []
@@ -719,7 +805,8 @@ primitives:
     type: mcp
     source: primitives-core/mcp/deck-builder.json
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode]
     plugins: []
@@ -728,7 +815,8 @@ primitives:
     type: mcp
     source: primitives-core/mcp/audio.json
     shelf: core
-    origin: internal
+    origin: authored
+    disposition: untriaged
     vendor: null
     targets: [claude-code, opencode]
     plugins: []
