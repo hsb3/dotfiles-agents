@@ -1,0 +1,20 @@
+{
+  "display_title": "repo-meta-structure",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "assets/github/ISSUE_TEMPLATE/bug.yml",
+    "assets/github/ISSUE_TEMPLATE/config.yml",
+    "assets/github/ISSUE_TEMPLATE/epic.yml",
+    "assets/github/ISSUE_TEMPLATE/feature.yml",
+    "assets/github/PULL_REQUEST_TEMPLATE.md",
+    "assets/github/dependabot.yml",
+    "assets/github/workflows/ci.yml",
+    "assets/github/workflows/claude-review.yml",
+    "assets/github/workflows/claude.yml",
+    "assets/gitignore.template",
+    "references/checklist.md",
+    "references/layout.md",
+    "references/planning-docs.md"
+  ]
+}

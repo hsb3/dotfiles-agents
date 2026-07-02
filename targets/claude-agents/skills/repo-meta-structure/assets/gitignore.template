@@ -1,0 +1,32 @@
+# secrets
+.env*
+!.env*.example
+secrets
+
+# skills.sh cli
+skills-lock.json
+.agents
+
+# _meta dir — ignored by default, durable items tracked via negation.
+# MUST be `_meta/*` (not `_meta/`): git cannot negate paths inside a
+# wholly-ignored directory, so the negations only work with the /* form.
+_meta/*
+!_meta/plans/
+!_meta/README.md
+!_meta/HANDOFF.md
+!_meta/mise-en-place.yml
+
+# .claude — track memory/, rules/, skills/, settings.json; ignore machine-local
+.claude/settings.local.json
+.claude/worktrees/
+.claude/*.lock
+.claude/**/.DS_Store
+
+# node
+node_modules
+dist
+build
+
+# logging
+logs
+*.log

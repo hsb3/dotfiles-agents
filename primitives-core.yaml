@@ -500,6 +500,16 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
     summary: "Turn a README into a user-centric pitch backed by real visual proof."
+  - id: repo-meta-structure
+    type: skill
+    source: primitives-core/skills/repo-meta-structure
+    shelf: core
+    origin: authored
+    disposition: untriaged
+    vendor: null
+    targets: [claude-code, opencode, claude-agents]
+    plugins: [project-workflow]
+    summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."
   - id: setup-project-dashboard
     type: skill
     source: primitives-core/skills/setup-project-dashboard

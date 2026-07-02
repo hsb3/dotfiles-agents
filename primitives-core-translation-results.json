@@ -393,6 +393,12 @@
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
         "skipped": false
       },
+      "repo-meta-structure": {
+        "capability": "render",
+        "destination": "claude-agents/skills/repo-meta-structure",
+        "sha256": "9e8b367c327ec2e9fcfdc609c1044b2f9a7609ecaa1c5d17f1e93479e80a2fa5",
+        "skipped": false
+      },
       "security-code-reviewer": {
         "capability": "render",
         "destination": "claude-agents/agents/security-code-reviewer.json",
@@ -899,6 +905,12 @@
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
         "skipped": false
       },
+      "repo-meta-structure": {
+        "capability": "native",
+        "destination": "claude-code/plugins/project-workflow/skills/repo-meta-structure",
+        "sha256": "9e8b367c327ec2e9fcfdc609c1044b2f9a7609ecaa1c5d17f1e93479e80a2fa5",
+        "skipped": false
+      },
       "security-code-reviewer": {
         "capability": "native",
         "destination": "claude-code/agents/security-code-reviewer.md",
@@ -1373,6 +1385,12 @@
         "capability": "native",
         "destination": "opencode/skills/readme-value-and-proof",
         "sha256": "eb7d23c75d07029cbb63bb7e1a0845f3a10c701d11ec24c9f12a3a2bd7256e14",
+        "skipped": false
+      },
+      "repo-meta-structure": {
+        "capability": "native",
+        "destination": "opencode/skills/repo-meta-structure",
+        "sha256": "9e8b367c327ec2e9fcfdc609c1044b2f9a7609ecaa1c5d17f1e93479e80a2fa5",
         "skipped": false
       },
       "security-code-reviewer": {
