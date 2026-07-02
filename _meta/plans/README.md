@@ -34,11 +34,14 @@ disk before trusting the table. It exits non-zero on any drift.
 
 ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 
-_None active. Small follow-ups #24 (loadability smoke) and #25 (file-handle chore) are tracked as
-issues without a deep plan folder._
+_Small follow-ups #24 (loadability smoke), #25 (file-handle chore), and #41 (bundle the board
+helper scripts; staged body at `board-scripts-bundling/issue-body.md`) are tracked as issues
+without a deep plan folder. #27 (project-workflow v2) carries its contract in the issue body,
+with design detail on the cowork desk (`analyses/project-workflow-v2-design.md`)._
 
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
+| docs-planning-standard | #40 | draft - open owner decisions 1-6 in plan.md |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
