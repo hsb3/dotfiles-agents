@@ -198,9 +198,13 @@ def sha256_path(path):
 
 
 def transform_agent_opencode(src_path):
-    """CC agent .md -> opencode agent .md: keep description (verbatim), drop name/model/color,
-    add `mode: subagent`. Description is preserved byte-for-byte (it carries literal \\n /
-    <example> blocks that re-serialization would corrupt)."""
+    """CC agent .md -> opencode agent .md: keep description (verbatim), drop
+    name/model/color/tools, add `mode: subagent`. Description is preserved byte-for-byte (it
+    carries literal \\n / <example> blocks that re-serialization would corrupt). `tools` is
+    dropped because the CC allowlist doesn't translate: opencode expects a per-tool boolean
+    map that toggles against defaults, so a converted list would load but not narrow — found
+    by `make smoke` (opencode 1.17 rejects the CC string form at load). Cross-vendor tool
+    mapping is the baseline-format follow-up issue."""
     text = read_text(src_path)
     m = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.S)
     if not m:
@@ -210,7 +214,7 @@ def transform_agent_opencode(src_path):
     for ln in fm:
         key = re.match(r"^([\w-]+):", ln)
         if key:
-            skipping = key.group(1) in {"name", "model", "color"}
+            skipping = key.group(1) in {"name", "model", "color", "tools"}
             if not skipping:
                 out.append(ln)
         elif not skipping:

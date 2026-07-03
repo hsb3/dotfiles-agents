@@ -32,7 +32,6 @@ description: >-
   Read-only analysis over the snapshot -> board-analyst.
   </commentary>
   </example>
-tools: ["Read", "Grep", "Glob", "Bash", "Write"]
 mode: subagent
 ---
 

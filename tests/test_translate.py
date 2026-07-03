@@ -8,6 +8,7 @@ Stdlib-only (unittest), so `make test` runs in CI with zero install. Run: python
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -122,6 +123,7 @@ class AgentTransforms(unittest.TestCase):
         "description: >-\n"
         "  Line one.\n"
         "  Line two with <example> literal.\n"
+        'tools: ["Read", "Grep", "Glob"]\n'
         "---\n"
         "You are a board analyst.\n\nDo the thing.\n"
     )
@@ -131,12 +133,18 @@ class AgentTransforms(unittest.TestCase):
         self.path = os.path.join(self.tmp, "board-analyst.md")
         _write(self.path, self.AGENT)
 
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
     def test_opencode_drops_fields_and_adds_mode(self):
         out = T.transform_agent_opencode(self.path)
         self.assertIn("mode: subagent", out)
         self.assertNotIn("name: board-analyst", out)
         self.assertNotIn("model: sonnet", out)
         self.assertNotIn("color: blue", out)
+        # CC tools allowlist doesn't translate (opencode wants a boolean map that
+        # toggles against defaults) — dropped so the agent loads; found by make smoke.
+        self.assertNotIn("tools:", out)
 
     def test_opencode_preserves_description_verbatim(self):
         out = T.transform_agent_opencode(self.path)

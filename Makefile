@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check validate names build build-check test ci
+.PHONY: help check validate names build build-check test smoke ci
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -21,5 +21,8 @@ build-check: ## Verify committed targets/ matches source (CI drift guard)
 
 test: ## Unit tests for the render/transform/parse logic + generated artifacts
 	@python3 -m unittest discover -s tests -t . -q
+
+smoke: ## Loadability smoke: drive installed opencode/claude against targets/ (opt-in, NOT in ci)
+	@python3 scripts/smoke.py
 
 ci: check validate names build-check test ## All gates: roster + content + naming + targets + tests
