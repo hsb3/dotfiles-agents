@@ -22,9 +22,6 @@ _meta/*
 !_meta/plans/**
 # scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
 # content stays local (operations/ especially — secrets are never tracked)
-!_meta/archive/
-_meta/archive/*
-!_meta/archive/.gitkeep
 !_meta/briefings/
 _meta/briefings/*
 !_meta/briefings/.gitkeep

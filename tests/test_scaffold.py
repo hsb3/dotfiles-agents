@@ -658,7 +658,7 @@ class CloneSurvivability(unittest.TestCase):
             subprocess.run(
                 ["git", "clone", "-q", repo, clone], check=True, capture_output=True
             )
-            for d in ("archive", "briefings", "operations", "research"):
+            for d in ("_archive", "briefings", "operations", "research"):
                 self.assertTrue(
                     os.path.isdir(os.path.join(clone, "_meta", d)),
                     f"_meta/{d}/ lost on clone — .gitkeep not tracked",

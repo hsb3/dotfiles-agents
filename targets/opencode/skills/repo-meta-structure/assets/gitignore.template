@@ -18,9 +18,9 @@ _meta/*
 # scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
 # content stays local (operations/ especially — secrets are never tracked).
 # Each dir needs the triplet: re-include the dir, ignore its content, keep the keep.
-!_meta/archive/
-_meta/archive/*
-!_meta/archive/.gitkeep
+!_meta/_archive/
+_meta/_archive/*
+!_meta/_archive/.gitkeep
 !_meta/briefings/
 _meta/briefings/*
 !_meta/briefings/.gitkeep
