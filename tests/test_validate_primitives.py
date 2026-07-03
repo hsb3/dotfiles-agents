@@ -135,7 +135,7 @@ class Entry(unittest.TestCase):
         )
 
     def test_xml_tag_in_block_scalar_description_flagged(self):
-        # Multiline block-scalar description — pins frontmatter_field's folded-line capture.
+        # Multiline block-scalar description — pins frontmatter_field's block-scalar capture.
         problems = []
         V.validate_entry(
             self._skill(
