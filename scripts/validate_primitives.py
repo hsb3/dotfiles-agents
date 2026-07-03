@@ -34,8 +34,9 @@ SECRET_HINT = re.compile(r"(token|secret|key|password|passwd|pat|credential)", r
 PLACEHOLDER = re.compile(r"^\$\{[^}]+\}$")
 # XML/angle-bracket tag in a SKILL.md description — Claude Cowork refuses to load such skills
 # ("SKILL.md description cannot contain XML tags"). Skill-specific: agent descriptions may use
-# `<example>` blocks, so this is checked only for skills. First char letter/`/` skips `< 5`.
-XML_TAG = re.compile(r"</?[A-Za-z][^>]*>")
+# `<example>` blocks, so this is checked only for skills. Requires a letter (or `/`) right
+# after `<` so bare comparisons like `< 5` aren't matched; `[^>\n]*` keeps a tag on one line.
+XML_TAG = re.compile(r"</?[A-Za-z][^>\n]*>")
 
 
 def frontmatter_block(text):
@@ -57,7 +58,7 @@ def frontmatter_field(text, key):
     fm = frontmatter_block(text)
     if fm is None:
         return ""
-    m = re.search(rf"^{key}:(.*?)(?=^\S|\Z)", fm, re.S | re.M)
+    m = re.search(rf"^{re.escape(key)}:(.*?)(?=^\S|\Z)", fm, re.S | re.M)
     return m.group(1) if m else ""
 
 
