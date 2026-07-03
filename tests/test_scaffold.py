@@ -751,7 +751,8 @@ class DocsRows(unittest.TestCase):
     def test_apply_writes_template_content(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = make_empty_repo(tmp)
-            run_scaffold(repo, "--apply")
+            r = run_scaffold(repo, "--apply")
+            self.assertEqual(r.returncode, 0, r.stderr)
             with open(os.path.join(repo, "docs", "README.md"), encoding="utf-8") as fh:
                 self.assertIn("The boundary with `_meta/` is load-bearing", fh.read())
             with open(

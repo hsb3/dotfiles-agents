@@ -420,7 +420,7 @@
       "repo-meta-structure": {
         "capability": "render",
         "destination": "claude-agents/skills/repo-meta-structure",
-        "sha256": "ed3049a72598ca1b45574a0ff862520777a2782711a24b7ccf99b197d71cbc4c",
+        "sha256": "26424f3f78e8ed8493e8d4f9c5c29e10e355791c17e54c74762b98a7918794b0",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -956,7 +956,7 @@
       "repo-meta-structure": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/repo-meta-structure",
-        "sha256": "ed3049a72598ca1b45574a0ff862520777a2782711a24b7ccf99b197d71cbc4c",
+        "sha256": "26424f3f78e8ed8493e8d4f9c5c29e10e355791c17e54c74762b98a7918794b0",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -1462,7 +1462,7 @@
       "repo-meta-structure": {
         "capability": "native",
         "destination": "opencode/skills/repo-meta-structure",
-        "sha256": "ed3049a72598ca1b45574a0ff862520777a2782711a24b7ccf99b197d71cbc4c",
+        "sha256": "26424f3f78e8ed8493e8d4f9c5c29e10e355791c17e54c74762b98a7918794b0",
         "skipped": false
       },
       "security-code-reviewer": {

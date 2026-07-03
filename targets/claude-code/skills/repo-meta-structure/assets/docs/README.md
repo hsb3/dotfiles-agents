@@ -18,6 +18,6 @@ governed. The boundary with `_meta/` is load-bearing:
 
 | Path | What |
 |---|---|
-| [`CHARTER.md`](CHARTER.md) | The canonical page — if anything anywhere disagrees with it, the charter wins |
+| [`CHARTER.md`](CHARTER.md) | The canonical page — if anything anywhere disagrees with it, the charter wins. _Authored, never scaffolded — this link is dead until you write it (the audit's DOCS-02 row keeps flagging it)._ |
 | [`decisions/`](decisions/) | ADRs: append-only decision records, indexed in [`decisions/README.md`](decisions/README.md) |
 <!-- Add rows for this repo's other docs (reference material, sops/, images/, …) -->
