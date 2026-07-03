@@ -20,6 +20,6 @@ build-check: ## Verify committed targets/ matches source (CI drift guard)
 	@python3 scripts/translate.py --check
 
 test: ## Unit tests for the render/transform/parse logic + generated artifacts
-	@python3 -W ignore::ResourceWarning -m unittest discover -s tests -t . -q
+	@python3 -m unittest discover -s tests -t . -q
 
 ci: check validate names build-check test ## All gates: roster + content + naming + targets + tests

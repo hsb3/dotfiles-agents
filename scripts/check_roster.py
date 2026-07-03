@@ -55,7 +55,9 @@ def parse_roster(path):
     Duplicate keys within one entry: last wins (documented, not guarded)."""
     entries, cur = [], None
     in_list = False
-    for raw in open(path, encoding="utf-8"):
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    for raw in text.splitlines(True):
         line = raw.rstrip("\n")
         if re.match(r"^primitives:\s*(\[\s*\])?\s*$", line):
             in_list = True

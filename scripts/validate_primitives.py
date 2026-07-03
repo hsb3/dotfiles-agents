@@ -82,7 +82,8 @@ def validate_mcp_spec(spec_path, label, problems):
         problems.append(f"[{label}] mcp spec not found: {spec_path}")
         return
     try:
-        spec = json.load(open(full, encoding="utf-8"))
+        with open(full, encoding="utf-8") as fh:
+            spec = json.load(fh)
     except (json.JSONDecodeError, OSError) as e:
         problems.append(f"[{label}] mcp spec is not valid JSON: {e}")
         return
@@ -120,7 +121,8 @@ def validate_entry(e, problems):
         if not os.path.isfile(skill_md):
             problems.append(f"[{eid}] skill missing SKILL.md at root")
         else:
-            text = open(skill_md, encoding="utf-8").read()
+            with open(skill_md, encoding="utf-8") as fh:
+                text = fh.read()
             keys = frontmatter_keys(text)
             for need in ("name", "description"):
                 if need not in keys:
@@ -135,7 +137,8 @@ def validate_entry(e, problems):
                 )
     elif t == "agent":
         if os.path.isfile(full):
-            keys = frontmatter_keys(open(full, encoding="utf-8").read())
+            with open(full, encoding="utf-8") as fh:
+                keys = frontmatter_keys(fh.read())
             for need in ("name", "description"):
                 if need not in keys:
                     problems.append(f"[{eid}] agent frontmatter missing `{need}`")
