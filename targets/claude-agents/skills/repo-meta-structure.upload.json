@@ -3,6 +3,9 @@
   "endpoint": "POST /v1/skills",
   "files": [
     "SKILL.md",
+    "assets/docs/README.md",
+    "assets/docs/decisions/0000-template.md",
+    "assets/docs/decisions/README.md",
     "assets/github/ISSUE_TEMPLATE/bug.yml",
     "assets/github/ISSUE_TEMPLATE/config.yml",
     "assets/github/ISSUE_TEMPLATE/epic.yml",

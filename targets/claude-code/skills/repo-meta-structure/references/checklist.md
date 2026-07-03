@@ -44,7 +44,7 @@ else. Adding or changing a check means editing this file, not the audit.
 | CLAUDE-04 | `.claude/` | `path-exists: .claude/rules/` | Directory exists |
 | CLAUDE-05 | `.claude/` | `path-exists: .claude/skills/` | Directory exists |
 | CLAUDE-06 | `.claude/` | `path-exists: .claude/settings.json` | File exists (tracked project policy; must carry anything a headless run depends on) |
-| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per the skills-over-commands decision *(migration debt)* |
+| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per the skills-over-commands decision (ADR: `dotfiles-agents/docs/decisions/0001-skills-over-commands.md`) *(migration debt)* |
 
 ## `.github/` template set
 
@@ -77,6 +77,22 @@ so they are layout guidance, not checklist rows.)
 | ROOT-08 | Root | `path-exists: docs/` | Directory exists |
 | ROOT-09 | Root | `path-exists: scripts/` | Directory exists |
 | ROOT-10 | Root | `path-exists: tests/` | Directory exists |
+
+## docs/ minimum planning docs
+
+The floor inside `docs/`: an orientation page, the canonical precedence page, and an ADR
+directory with its convention + template. Deeper taxonomy (design workspaces, operations,
+api, images, sops) is per-repo shape — layout guidance in [`layout.md`](layout.md), not rows.
+`docs/CHARTER.md` is authored content (the repo's canonical page with an explicit precedence
+rule) — the scaffold never creates it; the other four rows are template-backed.
+
+| ID | Area | Check | Pass condition |
+|---|---|---|---|
+| DOCS-01 | `docs/` | `path-exists: docs/README.md` | Orientation page: what docs/ holds, the docs-vs-`_meta/` boundary |
+| DOCS-02 | `docs/` | `path-exists: docs/CHARTER.md` | Canonical page with an explicit precedence rule (authored, never scaffolded) |
+| DOCS-03 | `docs/` | `path-exists: docs/decisions/` | ADR directory exists |
+| DOCS-04 | `docs/` | `path-exists: docs/decisions/README.md` | ADR convention (append-only, supersede-vs-correct) + index |
+| DOCS-05 | `docs/` | `path-exists: docs/decisions/0000-template.md` | ADR template exists |
 
 ## `.gitignore` semantics
 
@@ -137,6 +153,7 @@ missing field).
   checklist). Layout presence here is only `CLAUDE-03` / `IGNORE-12`.
 - **`HOOK-xx` (hook packaging)** — hooks as script + config directories, never inline in
   `.claude/settings.json`: the interim `HOOK-01` check (`no-inline-hooks`) is sourced by the
-  audit directly from the hooks-as-script-plus-config decision; the full family arrives with
-  the deferred hook-composition standard.
+  audit directly from the hooks-as-script-plus-config decision (ADR:
+  `dotfiles-agents/docs/decisions/0002-hooks-as-script-plus-config.md`); the full family
+  arrives with the deferred hook-composition standard.
 - **Naming-grammar conformance** — arrives with the naming-taxonomy standard.
