@@ -1,36 +1,36 @@
 ---
-description: Use this agent when the user wants to integrate Model Context Protocol (MCP) servers into Obsidian plugins to expose vault operations to AI agents. Examples: <example>Context: User is developing an Obsidian plugin and wants to make vault operations accessible to AI agents
-user: "I want to add MCP server support to my plugin so AI agents can search and modify notes"
-assistant: "I'll use the mcp-integrator agent to set up a Streamable HTTP MCP server with vault operation tools."
-<commentary>
-The user explicitly requests MCP server integration to expose vault operations. This is a perfect match for this agent's core purpose.
-</commentary>
-</example>
-<example>
-Context: User mentions they want AI agents to interact with their vault
-user: "How can I expose vault tools via Model Context Protocol?"
-assistant: "That's exactly what MCP integration enables. I'll use the mcp-integrator agent to set up the server infrastructure."
-<commentary>
-The user is asking about exposing vault tools via MCP, which is this agent's specialty. Even though phrased as a question, the intent is clear.
-</commentary>
-</example>
-<example>
-Context: User is working on plugin development and mentions MCP
-user: "I need to integrate MCP into my Obsidian plugin"
-assistant: "I'll use the mcp-integrator agent to add Model Context Protocol server capabilities to your plugin."
-<commentary>
-Direct request for MCP integration into an Obsidian plugin - this is the primary use case for this agent.
-</commentary>
-</example>
-<example>
-Context: Developer wants to enable external AI tool access to vault
-user: "Can you add a way for external AI agents to access vault operations through my plugin?"
-assistant: "That's achievable with MCP server integration. I'll use the mcp-integrator agent to set this up."
-<commentary>
-While not explicitly mentioning MCP, the user describes exactly what MCP provides - external AI agent access to vault operations. This agent should trigger proactively.
-</commentary>
-</example>
-tools: ["Write", "Read", "Bash", "AskUserQuestion"]
+description: >-
+  Use this agent when the user wants to integrate Model Context Protocol (MCP) servers into Obsidian plugins to expose vault operations to AI agents. Examples: <example>Context: User is developing an Obsidian plugin and wants to make vault operations accessible to AI agents
+  user: "I want to add MCP server support to my plugin so AI agents can search and modify notes"
+  assistant: "I'll use the mcp-integrator agent to set up a Streamable HTTP MCP server with vault operation tools."
+  <commentary>
+  The user explicitly requests MCP server integration to expose vault operations. This is a perfect match for this agent's core purpose.
+  </commentary>
+  </example>
+  <example>
+  Context: User mentions they want AI agents to interact with their vault
+  user: "How can I expose vault tools via Model Context Protocol?"
+  assistant: "That's exactly what MCP integration enables. I'll use the mcp-integrator agent to set up the server infrastructure."
+  <commentary>
+  The user is asking about exposing vault tools via MCP, which is this agent's specialty. Even though phrased as a question, the intent is clear.
+  </commentary>
+  </example>
+  <example>
+  Context: User is working on plugin development and mentions MCP
+  user: "I need to integrate MCP into my Obsidian plugin"
+  assistant: "I'll use the mcp-integrator agent to add Model Context Protocol server capabilities to your plugin."
+  <commentary>
+  Direct request for MCP integration into an Obsidian plugin - this is the primary use case for this agent.
+  </commentary>
+  </example>
+  <example>
+  Context: Developer wants to enable external AI tool access to vault
+  user: "Can you add a way for external AI agents to access vault operations through my plugin?"
+  assistant: "That's achievable with MCP server integration. I'll use the mcp-integrator agent to set this up."
+  <commentary>
+  While not explicitly mentioning MCP, the user describes exactly what MCP provides - external AI agent access to vault operations. This agent should trigger proactively.
+  </commentary>
+  </example>
 mode: subagent
 ---
 

@@ -14,7 +14,6 @@ description: |
 
   Trigger phrases: "process CMS dataset", "convert PDF to markdown", "create data dictionary",
   "generate BigQuery ETL", "load to BigQuery", "CMS data pipeline"
-tools: Read, Grep, Glob, Bash, Edit, Write
 permissionMode: acceptEdits
 mode: subagent
 ---

@@ -1,35 +1,36 @@
 ---
 name: chat-ui-builder
-description: Use this agent when the user wants to add chat or copilot interfaces to their Obsidian plugin. This includes building ItemView-based chat sidebars, implementing message streaming, creating context bars, or adding conversational UI components. Examples: <example>Context: User is developing an Obsidian plugin and wants to add AI chat functionality
-user: "I need to add a chat sidebar to my plugin with streaming support"
-assistant: "I'll help you create a chat interface for your Obsidian plugin."
-<commentary>
-The user explicitly mentions chat sidebar and streaming, which are core features this agent handles. The agent should trigger to build a complete ItemView-based chat interface with streaming capabilities.
-</commentary>
-assistant: "I'll use the chat-ui-builder agent to create a streaming chat sidebar interface for your plugin."
-</example><example>Context: User has a basic plugin and mentions wanting copilot functionality
-user: "How can I build a copilot interface like the native Obsidian chat?"
-assistant: "Let me help you implement a copilot-style interface."
-<commentary>
-The user is asking about copilot interfaces, which are chat-based UIs. This agent specializes in creating ItemView chat panels with proper DOM manipulation and streaming support.
-</commentary>
-assistant: "I'll use the chat-ui-builder agent to build a copilot-style chat interface using ItemView patterns."
-</example><example>Context: User invokes the create command and selects chat view option
-user: "/obsidian:create"
-assistant: "What would you like to create? [plugin scaffold / chat view / mcp integration]"
-user: "chat view"
-<commentary>
-The user explicitly selected chat view creation through the command interface. This is a direct request for the chat-ui-builder agent to generate the necessary components.
-</commentary>
-assistant: "I'll use the chat-ui-builder agent to generate your chat view components."
-</example><example>Context: User is implementing a plugin and mentions needing message display
-user: "I want to add a panel that shows AI messages with tool call indicators"
-assistant: "That sounds like a chat interface component."
-<commentary>
-The user describes key chat interface features (message display, tool call indicators). While not explicitly saying "chat", these are clear signals that a chat UI component is needed.
-</commentary>
-assistant: "I'll use the chat-ui-builder agent to create a message panel with tool call support."
-</example>
+description: >-
+  Use this agent when the user wants to add chat or copilot interfaces to their Obsidian plugin. This includes building ItemView-based chat sidebars, implementing message streaming, creating context bars, or adding conversational UI components. Examples: <example>Context: User is developing an Obsidian plugin and wants to add AI chat functionality
+  user: "I need to add a chat sidebar to my plugin with streaming support"
+  assistant: "I'll help you create a chat interface for your Obsidian plugin."
+  <commentary>
+  The user explicitly mentions chat sidebar and streaming, which are core features this agent handles. The agent should trigger to build a complete ItemView-based chat interface with streaming capabilities.
+  </commentary>
+  assistant: "I'll use the chat-ui-builder agent to create a streaming chat sidebar interface for your plugin."
+  </example><example>Context: User has a basic plugin and mentions wanting copilot functionality
+  user: "How can I build a copilot interface like the native Obsidian chat?"
+  assistant: "Let me help you implement a copilot-style interface."
+  <commentary>
+  The user is asking about copilot interfaces, which are chat-based UIs. This agent specializes in creating ItemView chat panels with proper DOM manipulation and streaming support.
+  </commentary>
+  assistant: "I'll use the chat-ui-builder agent to build a copilot-style chat interface using ItemView patterns."
+  </example><example>Context: User invokes the create command and selects chat view option
+  user: "/obsidian:create"
+  assistant: "What would you like to create? [plugin scaffold / chat view / mcp integration]"
+  user: "chat view"
+  <commentary>
+  The user explicitly selected chat view creation through the command interface. This is a direct request for the chat-ui-builder agent to generate the necessary components.
+  </commentary>
+  assistant: "I'll use the chat-ui-builder agent to generate your chat view components."
+  </example><example>Context: User is implementing a plugin and mentions needing message display
+  user: "I want to add a panel that shows AI messages with tool call indicators"
+  assistant: "That sounds like a chat interface component."
+  <commentary>
+  The user describes key chat interface features (message display, tool call indicators). While not explicitly saying "chat", these are clear signals that a chat UI component is needed.
+  </commentary>
+  assistant: "I'll use the chat-ui-builder agent to create a message panel with tool call support."
+  </example>
 model: inherit
 color: green
 tools: ["Write", "Read"]
