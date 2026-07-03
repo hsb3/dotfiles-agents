@@ -207,6 +207,7 @@ AUTHORED_FILES = {
     "README.md": "authored content — owner: the readme-value-and-proof skill",
     "CLAUDE.md": "authored content — owner: the agent-dot-md-authoring skill",
     "AGENTS.md": "authored content — owner: the agent-dot-md-authoring skill",
+    "docs/CHARTER.md": "authored content — the repo's canonical precedence page; never scaffolded",
 }
 
 MANIFEST_TEMPLATE = """\
@@ -576,6 +577,13 @@ def template_source(plugin_root, arg):
         return os.path.join(
             plugin_root, ASSETS_RELPATH, "github", arg[len(".github/") :]
         )
+    if arg in AUTHORED_FILES:
+        return None  # authored content never has a template (planner intercepts too)
+    if arg.startswith("docs/") and not arg.endswith("/"):
+        # structure-preserving, mirroring the .github/ branch (file rows only — the
+        # ROOT-08 `docs/` directory row is mkdir'd, not templated); docs/CHARTER.md
+        # never reaches here (AUTHORED_FILES intercepts it first)
+        return os.path.join(plugin_root, ASSETS_RELPATH, "docs", arg[len("docs/") :])
     return None
 
 

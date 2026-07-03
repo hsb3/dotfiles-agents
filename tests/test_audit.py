@@ -138,6 +138,14 @@ def make_conformant_repo(root):
         os.path.join(root, "_meta", "plans", "fixture-slug", "issue-body.md"),
         "## Problem\n\nraw publishable issue body — no frontmatter\n",
     )
+    # docs/ minimums (DOCS-01..05, #40)
+    for f in (
+        "docs/README.md",
+        "docs/CHARTER.md",
+        "docs/decisions/README.md",
+        "docs/decisions/0000-template.md",
+    ):
+        _write(os.path.join(root, f), "fixture\n")
     return root
 
 
@@ -215,7 +223,7 @@ class ChecklistParsing(unittest.TestCase):
         prefixes = {i.rsplit("-", 1)[0] for i in ids}
         self.assertEqual(
             prefixes,
-            {"META", "CLAUDE", "GH", "ROOT", "IGNORE", "AVOID", "PLANS", "MEM"},
+            {"META", "CLAUDE", "GH", "ROOT", "IGNORE", "AVOID", "PLANS", "MEM", "DOCS"},
         )
         types = {r["type"] for r in rows}
         self.assertTrue(types <= set(A.DISPATCH), f"unknown check types: {types}")

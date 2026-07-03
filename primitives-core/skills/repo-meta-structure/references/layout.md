@@ -62,6 +62,23 @@ must carry anything a headless run depends on.
 Makefile-vs-justfile-vs-mise.toml weighing is an open decision. If it lands differently, this
 line and the single `ROOT-04` checklist row change — nothing else.
 
+## `docs/`
+
+The floor (checklist rows `DOCS-01..05`):
+
+| Path | What |
+|---|---|
+| `README.md` | Orientation: what `docs/` holds, the docs-vs-`_meta/` boundary (durable, audience-facing vs local working desk). Templated skeleton — the repo fills the index. |
+| `CHARTER.md` | The **one canonical page with a stated precedence rule** ("if anything disagrees with this page, this page wins"). Authored content — the scaffold never creates it. |
+| `decisions/` | ADRs: `NNNN-kebab-title.md`, zero-padded sequential, append-only (supersede or correct-with-dated-erratum, never rewrite). |
+| `decisions/README.md` | The convention + the index of decisions. |
+| `decisions/0000-template.md` | The ADR template (Status · Context · Decision · Consequences · Affects). |
+
+Deeper taxonomy — design workspaces, `operations/`, `api/`, `images/`, `sops/` — is
+**per-repo shape**, guidance only, never rows. Two boundaries hold: secrets never live in
+`docs/` (they live in untracked `_meta/operations/`), and fast-moving working notes belong
+in `_meta/`, not `docs/`.
+
 ## AVOID list
 
 - `TODO.md`, `NOTE.md`, `NOTES.md` or similar at root — this material belongs in `_meta/`.

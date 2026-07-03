@@ -262,7 +262,7 @@ class EmptyRepoPath(unittest.TestCase):
             self.assertEqual(audit.returncode, 0, audit.stderr)
             rows = parse_rows(audit.stdout)
             gaps = {i for i, v in rows.items() if v[0] != "PASS"}
-            self.assertEqual(gaps, {"ROOT-01", "ROOT-02", "ROOT-03"})
+            self.assertEqual(gaps, {"ROOT-01", "ROOT-02", "ROOT-03", "DOCS-02"})
             self.assertEqual(rows["VAR-01"][0], "PASS")
             self.assertEqual(rows["VAR-02"][0], "PASS")
 
@@ -667,7 +667,7 @@ class CloneSurvivability(unittest.TestCase):
             gaps = {i for i, v in rows.items() if v[0] != "PASS"}
             self.assertEqual(
                 gaps,
-                {"ROOT-01", "ROOT-02", "ROOT-03"},
+                {"ROOT-01", "ROOT-02", "ROOT-03", "DOCS-02"},
                 "fresh clone must re-gap only the authored-content rows",
             )
 
@@ -702,7 +702,8 @@ class PlanInternals(unittest.TestCase):
             repo = make_empty_repo(tmp)
             planned = parse_created(run_scaffold(repo, "--plan").stdout)
             self.assertIn("_meta/plans/.gitkeep", planned)
-            self.assertIn("docs/.gitkeep", planned)
+            # docs/ receives a planned file (README.md, #40) so it needs no keep-file
+            self.assertNotIn("docs/.gitkeep", planned)
             # dirs that receive a planned file need no keep-file
             self.assertNotIn(".claude/memory/.gitkeep", planned)
 
@@ -727,6 +728,61 @@ class PlanInternals(unittest.TestCase):
             r = run_scaffold(repo, "--plan", plugin_root=tmp)
             self.assertEqual(r.returncode, 2)
             self.assertIn("checklist file missing", r.stderr)
+
+
+class DocsRows(unittest.TestCase):
+    """DOCS-01..05 (#40): templated docs files, CHARTER authored, broken-install path."""
+
+    def test_plan_creates_docs_templates_and_flags_charter_manual(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            out = run_scaffold(repo, "--plan").stdout
+            planned = parse_created(out)
+            for f in (
+                "docs/README.md",
+                "docs/decisions/README.md",
+                "docs/decisions/0000-template.md",
+            ):
+                self.assertIn(f, planned, f"{f} not planned")
+            self.assertNotIn("docs/CHARTER.md", planned)
+            charter_row = [ln for ln in out.splitlines() if "DOCS-02" in ln]
+            self.assertTrue(charter_row and "MANUAL" in charter_row[0], charter_row)
+
+    def test_apply_writes_template_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            run_scaffold(repo, "--apply")
+            with open(os.path.join(repo, "docs", "README.md"), encoding="utf-8") as fh:
+                self.assertIn("The boundary with `_meta/` is load-bearing", fh.read())
+            with open(
+                os.path.join(repo, "docs", "decisions", "0000-template.md"),
+                encoding="utf-8",
+            ) as fh:
+                self.assertIn("## Consequences", fh.read())
+            self.assertFalse(
+                os.path.exists(os.path.join(repo, "docs", "CHARTER.md")),
+                "CHARTER must never be scaffolded",
+            )
+
+    def test_missing_docs_asset_is_broken_install(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # clone the plugin root minus one docs asset
+            broken = os.path.join(tmp, "plugin")
+            shutil.copytree(PLUGIN_ROOT, broken)
+            os.remove(
+                os.path.join(
+                    broken,
+                    "skills",
+                    "repo-meta-structure",
+                    "assets",
+                    "docs",
+                    "README.md",
+                )
+            )
+            repo = make_empty_repo(tmp)
+            r = run_scaffold(repo, "--plan", plugin_root=broken)
+            self.assertEqual(r.returncode, 2)
+            self.assertIn("standard template asset missing", r.stderr)
 
 
 if __name__ == "__main__":
