@@ -125,13 +125,13 @@ META_README_STUB = """# `_meta/` — the local working desk
 
 Gitignored by default (`_meta/*`); durable items tracked via negation
 (`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`,
-plus the `archive/briefings/operations/research` `.gitkeep`s so the dirs survive a
+plus the `_archive/briefings/operations/research` `.gitkeep`s so the dirs survive a
 fresh clone). The purpose of the ignore is that rapid working material never dirties
 the worktree — not secrecy of everything in it.
 
 | Entry | Purpose |
 |---|---|
-| `archive/` | Superseded working material — moved, never deleted |
+| `_archive/` | Superseded working material — moved, never deleted |
 | `briefings/` | Dated readouts (`yyyy-mm-dd-subject/`) |
 | `plans/` | The code planning desk — issue bodies and build plans, tracked via negation; `plans/inbox/` receives communication-package intake |
 | `operations/` | Live URLs, credentials, runbooks with secrets — never tracked, never in `docs/` |

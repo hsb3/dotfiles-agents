@@ -3,7 +3,7 @@ name: repo-meta-structure
 description: >-
   The canonical repo meta-structure standard — consult it whenever a question is about
   "what is the standard for X" in a repo's layout: the `_meta/` directory taxonomy
-  (archive/briefings/plans/operations/research + HANDOFF.md + README.md), the `.claude/`
+  (_archive/briefings/plans/operations/research + HANDOFF.md + README.md), the `.claude/`
   layout (what's tracked vs machine-local, commands/ as migration debt), the `.github/`
   template set, required root files, the gitignore conventions (the `_meta/*` negation
   pattern, `.env*` handling, the `.claude` stanza), the `_meta/plans/` planning-doc

@@ -79,7 +79,7 @@ def make_conformant_repo(root):
     """A fixture repo satisfying every checklist row (TC-001 baseline)."""
     subprocess.run(["git", "init", "-q", root], check=True, capture_output=True)
     for d in (
-        "_meta/archive",
+        "_meta/_archive",
         "_meta/briefings",
         "_meta/plans/inbox",
         "_meta/operations",
@@ -202,7 +202,7 @@ class ChecklistParsing(unittest.TestCase):
     TABLE = (
         "| ID | Area | Check | Pass condition |\n"
         "|---|---|---|---|\n"
-        "| META-01 | `_meta/` | `path-exists: _meta/archive/` | Directory exists |\n"
+        "| META-01 | `_meta/` | `path-exists: _meta/_archive/` | Directory exists |\n"
         "| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent *(migration debt)* |\n"
         "prose line, not a row\n"
         "| bad | row | without backtick check | x |\n"
@@ -212,7 +212,7 @@ class ChecklistParsing(unittest.TestCase):
         rows = A.parse_checklist(self.TABLE)
         self.assertEqual([r["id"] for r in rows], ["META-01", "CLAUDE-07"])
         self.assertEqual(rows[0]["type"], "path-exists")
-        self.assertEqual(rows[0]["arg"], "_meta/archive/")
+        self.assertEqual(rows[0]["arg"], "_meta/_archive/")
         self.assertFalse(rows[0]["debt"])
         self.assertTrue(rows[1]["debt"])
 

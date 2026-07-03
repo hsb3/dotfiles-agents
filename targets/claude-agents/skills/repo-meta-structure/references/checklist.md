@@ -26,7 +26,7 @@ else. Adding or changing a check means editing this file, not the audit.
 
 | ID | Area | Check | Pass condition |
 |---|---|---|---|
-| META-01 | `_meta/` | `path-exists: _meta/archive/` | Directory exists |
+| META-01 | `_meta/` | `path-exists: _meta/_archive/` | Directory exists |
 | META-02 | `_meta/` | `path-exists: _meta/briefings/` | Directory exists |
 | META-03 | `_meta/` | `path-exists: _meta/plans/` | Directory exists |
 | META-04 | `_meta/` | `path-exists: _meta/operations/` | Directory exists |
@@ -113,7 +113,7 @@ ignore behavior, not a byte-match against the template.
 | IGNORE-10 | gitignore | `gitignore-ignores: .claude/worktrees/probe/file` | Ignored (harness worktrees never tracked) |
 | IGNORE-11 | gitignore | `gitignore-tracks: .claude/settings.json` | Not ignored (tracked project policy) |
 | IGNORE-12 | gitignore | `gitignore-tracks: .claude/memory/MEMORY.md` | Not ignored (tracked memory travels with the repo) |
-| IGNORE-13 | gitignore | `gitignore-tracks: _meta/archive/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/archive/` content stays ignored) |
+| IGNORE-13 | gitignore | `gitignore-tracks: _meta/_archive/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/_archive/` content stays ignored) |
 | IGNORE-14 | gitignore | `gitignore-tracks: _meta/briefings/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/briefings/` content stays ignored) |
 | IGNORE-15 | gitignore | `gitignore-tracks: _meta/operations/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; `IGNORE-01` still holds — `_meta/operations/` content is never tracked) |
 | IGNORE-16 | gitignore | `gitignore-tracks: _meta/research/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/research/` content stays ignored) |

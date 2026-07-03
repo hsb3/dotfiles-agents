@@ -13,7 +13,7 @@ is that rapid planning material never dirties the worktree — not secrecy of ev
 
 | Entry | Purpose |
 |---|---|
-| `archive/` | Superseded working material — moved, never deleted |
+| `_archive/` | Superseded working material — moved, never deleted |
 | `briefings/` | Dated readouts (`yyyy-mm-dd-subject/`) |
 | `plans/` | The **code planning desk** — issue bodies and build plans authored by coding agents (the `planning-desk` skill's workspace). Tracked via negation. Also holds `inbox/` for communication-package intake — see [`planning-docs.md`](planning-docs.md) |
 | `operations/` | Live URLs, credentials, runbooks with secrets — never tracked, never in `docs/` |
@@ -94,7 +94,7 @@ The load-bearing parts:
   (`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`)
   to take effect. `_meta/plans/inbox/` is tracked through `!_meta/plans/` with no extra line.
 - **The scaffolded `_meta/` dirs survive clone via tracked `.gitkeep`s** — each of
-  `archive/`, `briefings/`, `operations/`, `research/` gets a negation triplet
+  `_archive/`, `briefings/`, `operations/`, `research/` gets a negation triplet
   (`!_meta/<dir>/` + `_meta/<dir>/*` + `!_meta/<dir>/.gitkeep`): the `.gitkeep` is tracked
   so a fresh clone keeps the directory, while everything else in the dir stays ignored —
   `operations/` content (secrets) is never tracked (checklist rows `IGNORE-13..16`,
