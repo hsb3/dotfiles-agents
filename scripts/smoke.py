@@ -108,7 +108,8 @@ def sandbox_env(home):
 
 def merged_mcp(frag_dir, top_key):
     """Merge every fragment's {top_key: {...}} objects; return (config, [server names]).
-    Raises ValueError naming the offending fragment on invalid JSON."""
+    Raises ValueError naming the offending fragment on invalid JSON or a duplicate server
+    name (a duplicate would be silently clobbered — that's a build regression)."""
     merged, names = {}, []
     for f in sorted(os.listdir(frag_dir)):
         if not f.endswith(".json"):
@@ -119,9 +120,17 @@ def merged_mcp(frag_dir, top_key):
             except json.JSONDecodeError as e:
                 raise ValueError(f"mcp fragment {f} is invalid JSON: {e}") from e
         for name, spec in frag.get(top_key, {}).items():
+            if name in merged:
+                raise ValueError(f"mcp fragment {f} redefines server `{name}`")
             merged[name] = spec
             names.append(name)
     return {top_key: merged}, names
+
+
+def present(name, out):
+    """True when `name` appears in tool output as its own token — a bare substring test
+    would count a slug that is merely a prefix of a longer listed name."""
+    return re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", out) is not None
 
 
 # ── CMA (stdlib, always runs) ───────────────────────────────────────────────────────────
@@ -208,7 +217,7 @@ def smoke_opencode():
 
         # 2 — every generated agent loads
         _, out = run(["opencode", "agent", "list"], env)
-        missing = [a for a in agents if a not in out]
+        missing = [a for a in agents if not present(a, out)]
         if tool_errored(out) or missing:
             fail(f"opencode agent list: missing/errored {missing or ''}\n{out[:300]}")
         else:
@@ -221,7 +230,7 @@ def smoke_opencode():
         #     asserted deterministically — we require a clean run + ≥1 generated skill,
         #     and LOG the observed coverage so the cap is never silent.
         _, out = run(["opencode", "debug", "skill"], env)
-        found = [s for s in skills if s in out]
+        found = [s for s in skills if present(s, out)]
         if tool_errored(out):
             fail(f"opencode debug skill reported errors:\n{out[:300]}")
         elif not found:
@@ -235,7 +244,7 @@ def smoke_opencode():
         # 4 — every mcp server is LISTED (a server whose command isn't installed shows
         #     as failed — environmental, not a bundle defect)
         _, out = run(["opencode", "mcp", "list"], env)
-        missing = [s for s in servers if s not in out]
+        missing = [s for s in servers if not present(s, out)]
         if missing:
             fail(f"opencode mcp list: not listed: {missing}\n{out[:300]}")
         else:
@@ -250,8 +259,9 @@ def smoke_claude():
         return
     src = os.path.join(TARGETS, "claude-code")
     with tempfile.TemporaryDirectory() as home:
+        # sandbox_env builds a fresh dict, so a live session's CLAUDECODE (and every
+        # other session var) is already not inherited — no explicit unset needed.
         env = sandbox_env(home)
-        env["CLAUDECODE"] = ""  # don't inherit a live session
 
         # 1 — all mcp fragments merge into a project .mcp.json and list (unapproved
         #     project servers show as pending without network / health checks)
@@ -265,7 +275,7 @@ def smoke_claude():
         with open(os.path.join(proj, ".mcp.json"), "w") as fh:
             json.dump(config, fh)
         code, out = run(["claude", "mcp", "list"], env, cwd=proj)
-        missing = [s for s in servers if s not in out]
+        missing = [s for s in servers if not present(s, out)]
         if code != 0 or missing:
             fail(f"claude mcp list: exit {code}, missing {missing}\n{out[:300]}")
         else:
@@ -273,6 +283,9 @@ def smoke_claude():
 
         # 2 — every generated plugin loads via --plugin-dir
         plugins_dir = os.path.join(src, "plugins")
+        if not os.path.isdir(plugins_dir):
+            skip("targets/claude-code/plugins/ absent — no plugin checks")
+            return
         for p in sorted(os.listdir(plugins_dir)):
             pdir = os.path.join(plugins_dir, p)
             if not os.path.isfile(os.path.join(pdir, ".claude-plugin", "plugin.json")):
@@ -280,7 +293,7 @@ def smoke_claude():
             code, out = run(
                 ["claude", "--plugin-dir", pdir, "plugin", "details", p], env
             )
-            if code != 0 or p not in out:
+            if code != 0 or not present(p, out):
                 fail(f"claude plugin details {p}: exit {code}\n{out[:300]}")
             else:
                 ok(f"claude plugin details {p}: loads with component inventory")

@@ -8,6 +8,7 @@ Stdlib-only (unittest), so `make test` runs in CI with zero install. Run: python
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -131,6 +132,9 @@ class AgentTransforms(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self.path = os.path.join(self.tmp, "board-analyst.md")
         _write(self.path, self.AGENT)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_opencode_drops_fields_and_adds_mode(self):
         out = T.transform_agent_opencode(self.path)

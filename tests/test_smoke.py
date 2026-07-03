@@ -55,6 +55,19 @@ class ToolErrored(unittest.TestCase):
         self.assertFalse(S.tool_errored(out))
 
 
+class Present(unittest.TestCase):
+    def test_exact_token_found(self):
+        self.assertTrue(S.present("handoff", "listed: handoff (skill)"))
+
+    def test_prefix_of_longer_name_not_found(self):
+        # `code` must not count as present when only `code-quality-reviewer` is listed
+        self.assertFalse(S.present("code", "code-quality-reviewer (subagent)"))
+        self.assertFalse(S.present("board", "board-analyst (subagent)"))
+
+    def test_found_inside_json_dump(self):
+        self.assertTrue(S.present("handoff", '"name": "handoff",'))
+
+
 class MergedMcp(unittest.TestCase):
     def test_merges_fragments_and_names(self):
         with tempfile.TemporaryDirectory() as d:
@@ -64,6 +77,16 @@ class MergedMcp(unittest.TestCase):
             config, names = S.merged_mcp(d, "mcp")
             self.assertEqual(sorted(config["mcp"]), ["alpha", "beta"])
             self.assertEqual(sorted(names), ["alpha", "beta"])
+
+    def test_duplicate_server_name_raises(self):
+        # A duplicate would be silently clobbered — a build regression, not a merge.
+        with tempfile.TemporaryDirectory() as d:
+            for fname in ("a.json", "b.json"):
+                with open(os.path.join(d, fname), "w") as fh:
+                    json.dump({"mcp": {"dup": {"type": "local"}}}, fh)
+            with self.assertRaises(ValueError) as ctx:
+                S.merged_mcp(d, "mcp")
+            self.assertIn("dup", str(ctx.exception))
 
     def test_invalid_fragment_raises_with_filename(self):
         # AC (#24): a deliberately corrupted mcp fragment must fail the smoke — the
