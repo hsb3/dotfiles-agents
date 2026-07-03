@@ -36,13 +36,12 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 
 _Small follow-ups #24 (loadability smoke) and #25 (file-handle chore) are tracked as issues
 without a deep plan folder. #27 (project-workflow v2) carries its contract in the issue body,
-with design detail on the cowork desk (`analyses/project-workflow-v2-design.md`)._
+with design detail on the cowork desk (`analyses/project-workflow-v2-design.md`). #48
+(frontend-extenders-curation) and #49 (extender-ideas-backlog-seed) have staged bodies on the
+desk but no deep plan yet - their folders hold `issue-body.md` only._
 
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
-| docs-planning-standard | #40 | ready to build - all owner decisions resolved 2026-07-02 |
-| frontend-extenders-curation | #48 | staged body only (no deep plan yet); filed 2026-07-02 from Henry's notes |
-| extender-ideas-backlog-seed | #49 | staged body only (no deep plan yet); filed 2026-07-02 from Henry's notes |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
@@ -51,6 +50,7 @@ ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`)
 | `_meta/_archive/6-translation-deferred-adapters.md` | #6 | shipped via #18/#20/#21; #6 closed |
 | `_meta/_archive/22-test-qa-procedures.md` | #22 | A-C shipped via #23; D spun out to #24; #22 closed |
 | `_meta/_archive/41-board-scripts-bundling.md` | #41 | shipped via PR #43 (staged body archived; no deep plan) |
+| `_meta/_archive/40-docs-planning-standard.md` | #40 | shipped via PR #62 (DOCS-01..05 rows, scaffold assets, apply, plugin 0.2.0); #40 closed |
 
 ## The loop (how plans get produced)
 
