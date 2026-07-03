@@ -172,7 +172,9 @@ def parse_bundle_ids(path):
     ids = []
     if not os.path.isfile(path):
         return ids
-    for raw in open(path, encoding="utf-8"):
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    for raw in text.splitlines(True):
         m = re.match(r"^  - id:\s*(\S+)\s*$", raw)
         if m:
             ids.append(m.group(1))

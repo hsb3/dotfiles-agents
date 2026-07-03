@@ -42,6 +42,17 @@ MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 OWNER = {"name": "Henry S. Burden III"}
 
 
+# ── io helpers (#25: reads go through these so no file handle leaks) ───────────────────
+def read_text(path):
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def read_bytes(path):
+    with open(path, "rb") as fh:
+        return fh.read()
+
+
 # ── parsing ────────────────────────────────────────────────────────────────────────────
 def _list(v):
     v = v.strip()
@@ -53,7 +64,7 @@ def _list(v):
 
 def parse_roster(path):
     entries, cur, in_list = [], None, False
-    for raw in open(path, encoding="utf-8"):
+    for raw in read_text(path).splitlines(True):
         line = raw.rstrip("\n")
         if re.match(r"^primitives:\s*(\[\s*\])?\s*$", line):
             in_list = True
@@ -81,7 +92,7 @@ def parse_externals(path):
     """Parse externals.yaml's `externals:` list into dicts (flat fields; targets via _list).
     Only kind: mcp entries are rendered today; skill/plugin entries are clone-at-build (pending)."""
     entries, cur, in_list = [], None, False
-    for raw in open(path, encoding="utf-8"):
+    for raw in read_text(path).splitlines(True):
         line = raw.rstrip("\n")
         if re.match(r"^externals:\s*$", line):
             in_list = True
@@ -106,7 +117,7 @@ def parse_externals(path):
 
 def parse_plugins(path):
     meta, cur = {}, None
-    for raw in open(path, encoding="utf-8"):
+    for raw in read_text(path).splitlines(True):
         line = raw.rstrip("\n")
         m = re.match(r"^  - id:\s*(.*)$", line)
         if m:
@@ -122,7 +133,7 @@ def parse_plugins(path):
 def parse_capabilities(path):
     """capabilities[type][target] = capability string (native/transform/render/unsupported)."""
     caps, cur_type, in_caps = {}, None, False
-    for raw in open(path, encoding="utf-8"):
+    for raw in read_text(path).splitlines(True):
         line = raw.rstrip("\n")
         if re.match(r"^capabilities:\s*$", line):
             in_caps = True
@@ -143,7 +154,7 @@ def parse_capabilities(path):
 def parse_cma_options(path):
     """Top-level `cma:` block -> options dict (e.g. default_model). Defaults applied by caller."""
     opts, in_cma = {}, False
-    for raw in open(path, encoding="utf-8"):
+    for raw in read_text(path).splitlines(True):
         line = raw.rstrip("\n")
         if re.match(r"^cma:\s*$", line):
             in_cma = True
@@ -171,7 +182,7 @@ def sha256_path(path):
     order (NOT os.walk order — that varies by filesystem and would break the cross-platform lock)."""
     h = hashlib.sha256()
     if os.path.isfile(path):
-        h.update(open(path, "rb").read())
+        h.update(read_bytes(path))
         return h.hexdigest()
     items = []
     for root, _d, files in os.walk(path):
@@ -182,7 +193,7 @@ def sha256_path(path):
             items.append((os.path.relpath(fp, path).replace(os.sep, "/"), fp))
     for rel, fp in sorted(items):
         h.update(rel.encode())
-        h.update(open(fp, "rb").read())
+        h.update(read_bytes(fp))
     return h.hexdigest()
 
 
@@ -190,7 +201,7 @@ def transform_agent_opencode(src_path):
     """CC agent .md -> opencode agent .md: keep description (verbatim), drop name/model/color,
     add `mode: subagent`. Description is preserved byte-for-byte (it carries literal \\n /
     <example> blocks that re-serialization would corrupt)."""
-    text = open(src_path, encoding="utf-8").read()
+    text = read_text(src_path)
     m = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.S)
     if not m:
         return "---\nmode: subagent\n---\n" + text
@@ -212,7 +223,7 @@ def agent_system(src_path):
     """CC agent .md -> the `system` string for a CMA payload: the body with frontmatter stripped
     (leading/trailing whitespace trimmed). Frontmatter carries name/model/color; the persona that
     drives behavior is the body."""
-    text = open(src_path, encoding="utf-8").read()
+    text = read_text(src_path)
     m = re.match(r"^---\n.*?\n---\n?(.*)$", text, re.S)
     return (m.group(1) if m else text).strip()
 
@@ -223,7 +234,7 @@ def skill_display_title(skill_dir):
     the folder name if absent."""
     skill_md = os.path.join(skill_dir, "SKILL.md")
     if os.path.isfile(skill_md):
-        text = open(skill_md, encoding="utf-8").read()
+        text = read_text(skill_md)
         m = re.match(r"^---\n(.*?)\n---", text, re.S)
         if m:
             for ln in m.group(1).split("\n"):
@@ -236,7 +247,7 @@ def skill_display_title(skill_dir):
 # ── mcp render: neutral connection spec -> each target's mcp config schema ───────────────
 def load_mcp_spec(src_path):
     """Read a neutral mcp connection spec (primitives-core/mcp/<name>.json)."""
-    return json.load(open(src_path, encoding="utf-8"))
+    return json.loads(read_text(src_path))
 
 
 def mcp_to_claude(spec):
@@ -441,7 +452,8 @@ def build(out_root, roster, plugins_meta, caps, cma_model, externals):
         elif t == "agent":
             d = f"opencode/agents/{pid}.md"
             os.makedirs(os.path.dirname(os.path.join(out_root, d)), exist_ok=True)
-            open(os.path.join(out_root, d), "w").write(transform_agent_opencode(src))
+            with open(os.path.join(out_root, d), "w") as fh:
+                fh.write(transform_agent_opencode(src))
             rec("opencode", pid, cap, d)
         elif t == "mcp":
             d = f"opencode/mcp/{pid}.json"
@@ -619,7 +631,7 @@ def diff_trees(a, b):
     for rel in sorted(set(fb) - set(fa)):
         diffs.append(f"only in committed: {rel}")
     for rel in sorted(set(fa) & set(fb)):
-        if open(fa[rel], "rb").read() != open(fb[rel], "rb").read():
+        if read_bytes(fa[rel]) != read_bytes(fb[rel]):
             diffs.append(f"differs: {rel}")
     return diffs
 
@@ -644,11 +656,13 @@ def main():
             root_mp = os.path.join(REPO, ".claude-plugin", "marketplace.json")
             gen_root = render_marketplace(built, "./targets/claude-code/plugins/")
             committed_root = (
-                json.load(open(root_mp)) if os.path.exists(root_mp) else None
+                json.loads(read_text(root_mp)) if os.path.exists(root_mp) else None
             )
             if committed_root != gen_root:
                 problems.append(".claude-plugin/marketplace.json (repo root) is stale")
-            committed = json.load(open(RESULTS)) if os.path.exists(RESULTS) else {}
+            committed = (
+                json.loads(read_text(RESULTS)) if os.path.exists(RESULTS) else {}
+            )
             if committed.get("results") != results:
                 problems.append("primitives-core-translation-results.json is stale")
             if problems:

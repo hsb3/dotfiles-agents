@@ -81,7 +81,8 @@ class Constants(unittest.TestCase):
 
     def test_events_pinned_to_naming_md(self):
         """manifests/naming.md is canonical — every event must appear there verbatim."""
-        text = open(NAMING_MD, encoding="utf-8").read()
+        with open(NAMING_MD, encoding="utf-8") as fh:
+            text = fh.read()
         for ev in N.EVENTS:
             self.assertIn(f"`{ev}`", text, f"{ev} missing from manifests/naming.md")
 
