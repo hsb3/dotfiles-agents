@@ -786,5 +786,71 @@ class DocsRows(unittest.TestCase):
             self.assertIn("standard template asset missing", r.stderr)
 
 
+# ── #67: workflow-template follow-up notes (ci target + secrets) ──────────────────────
+
+
+class WorkflowFollowupNotes(unittest.TestCase):
+    """Planning GH-07 against a repo whose Makefile lacks a `ci:` target emits a
+    visible note (the template runs `make ci` and would land a red check); planning
+    the claude workflows notes the required repo secret. Informational only —
+    actions and additive behavior are unchanged."""
+
+    def test_warns_when_makefile_lacks_ci_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            _write(os.path.join(repo, "Makefile"), "help:\n\t@echo hi\n")
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("no `ci` Makefile target", r.stdout)
+            self.assertIn("follow-up(s) the scaffold cannot do", r.stdout)
+            actions = parse_actions(r.stdout)
+            self.assertEqual(
+                actions["GH-07"][0], "CREATE", "note must not block CREATE"
+            )
+
+    def test_warns_when_makefile_missing_entirely(self):
+        # The Makefile stub deliberately ships without a no-op ci: target, so the
+        # note fires for an empty repo too.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("no `ci` Makefile target", r.stdout)
+
+    def test_no_ci_note_when_target_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            _write(os.path.join(repo, "Makefile"), "ci: check\ncheck:\n\t@true\n")
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertNotIn("no `ci` Makefile target", r.stdout)
+
+    def test_no_ci_note_when_ci_yml_already_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            _write(
+                os.path.join(repo, ".github", "workflows", "ci.yml"),
+                "name: ci\non: [push]\n",
+            )
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertNotIn("no `ci` Makefile target", r.stdout)
+
+    def test_secrets_note_on_both_claude_workflows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            r = run_scaffold(repo, "--plan")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(r.stdout.count("repo secret before it can run"), 2)
+
+    def test_apply_prints_notes_and_stays_additive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_empty_repo(tmp)
+            r = run_scaffold(repo, "--apply")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("no `ci` Makefile target", r.stdout)
+            self.assertIn(".github/workflows/ci.yml", parse_created(r.stdout))
+
+
 if __name__ == "__main__":
     unittest.main()

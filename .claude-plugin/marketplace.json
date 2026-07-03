@@ -94,7 +94,7 @@
       "name": "project-workflow",
       "source": "./targets/claude-code/plugins/project-workflow",
       "description": "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs \u2014 CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/.",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "author": {
         "name": "Henry S. Burden III"
       }

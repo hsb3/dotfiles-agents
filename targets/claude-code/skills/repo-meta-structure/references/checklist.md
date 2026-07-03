@@ -117,6 +117,7 @@ ignore behavior, not a byte-match against the template.
 | IGNORE-14 | gitignore | `gitignore-tracks: _meta/briefings/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/briefings/` content stays ignored) |
 | IGNORE-15 | gitignore | `gitignore-tracks: _meta/operations/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; `IGNORE-01` still holds — `_meta/operations/` content is never tracked) |
 | IGNORE-16 | gitignore | `gitignore-tracks: _meta/research/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/research/` content stays ignored) |
+| IGNORE-17 | gitignore | `gitignore-ignores: _meta/plans/_utils/__pycache__/probe.pyc` | Ignored (desk-toolkit bytecode never tracked — the `_meta/plans/` negation would otherwise re-include it) |
 
 ## AVOID list
 
