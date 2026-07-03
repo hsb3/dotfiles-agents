@@ -15,7 +15,7 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 ## 2 · In flight / next up
 
 - **Gate-2 pilot on raptorgpt-agents** (`~/Developer/RAPTOR/WEB_APPS/raptor_gpt/raptorgpt-agents`): audit → manifest → scaffold → re-audit, driving the four project-workflow standards skills (repo-meta-structure, memory-taxonomy, repo-compliance-audit, mise-en-place-scaffold).
-- **Disposition sweep (Q-13/T-20):** roster entries are `disposition: untriaged` pending classification to `qualified | grandfathered-pending-use | demoted`.
+- **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use.
 - **#36 — clone-at-build externals** *(the last unbuilt capability):* `externals.yaml` tracks ~30 third-party skills/plugins with `upstream: null`; only `kind: mcp` renders today. Research each upstream, pin a ref, then implement the clone-into-`targets/` step in `translate.py` (CANON 11).
 - **#24 — loadability smoke** (`make smoke`, opt-in, NOT required CI): drive the real tools against generated bundles (`opencode debug …`; `claude --mcp-config`/`--plugin-dir` + `plugin details`; CMA payloads vs pinned OpenAPI); skip-on-absent.
 - **#25 — chore:** close file handles in `translate.py`, then drop `-W ignore::ResourceWarning` from `make test`.
