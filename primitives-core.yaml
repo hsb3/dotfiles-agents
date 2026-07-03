@@ -608,7 +608,7 @@ primitives:
     shelf: core
     origin: sourced
     disposition: grandfathered-pending-use
-    vendor: anthropic
+    vendor: anthropics
     upstream: https://github.com/anthropics/skills
     ref: 9d2f1ae187231d8199c64b5b762e1bdf2244733d
     targets: [claude-code, opencode, claude-agents]
