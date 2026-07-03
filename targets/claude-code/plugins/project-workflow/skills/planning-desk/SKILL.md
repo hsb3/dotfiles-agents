@@ -83,13 +83,17 @@ specifics by writing `_config.md`. Do it in this order.
    `reconcile.py` parses — keep them). These scripts are dependency-free stdlib + `gh`; no install.
 
 2. **Wire the `.gitignore` negation** so the desk is tracked but the rest of `_meta/` isn't. If
-   `_meta/` is ignored, add negations beneath it:
+   `_meta/` is ignored, add negations beneath it — the ignore line MUST be the `_meta/*` form
+   (git cannot negate paths inside a wholly-ignored `_meta/` directory), and the trailing
+   `__pycache__` line is required or the negation re-includes the toolkit's bytecode and a
+   `git add -A` commits `.pyc` files:
    ```gitignore
-   _meta/
+   _meta/*
    !_meta/plans/
    !_meta/plans/**
+   _meta/plans/_utils/__pycache__/
    ```
-   If `_meta/` isn't ignored at all, the user may want it local — ask whether to ignore `_meta/`
+   If `_meta/` isn't ignored at all, the user may want it local — ask whether to ignore `_meta/*`
    with the plans desk negated, or track all of `_meta/`. Confirm with `git check-ignore -v
    _meta/plans/README.md` (should print nothing once negated).
 

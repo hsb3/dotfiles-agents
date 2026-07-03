@@ -288,7 +288,7 @@
       "mise-en-place-scaffold": {
         "capability": "render",
         "destination": "claude-agents/skills/mise-en-place-scaffold",
-        "sha256": "40762210687211f83efe1084cb0d2148bd86a1c955046513c6adc240107d6984",
+        "sha256": "c7e6b2fc9d682d7f42aaa8af2cb7bfa25f7015c3afeac0ac990761fe2741a44a",
         "skipped": false
       },
       "nanobanana": {
@@ -378,7 +378,7 @@
       "planning-desk": {
         "capability": "render",
         "destination": "claude-agents/skills/planning-desk",
-        "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
+        "sha256": "20369ec06aef15864ce687e46502ae0cb3596703712bbe3c2c7129ea4d3b9182",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -420,7 +420,7 @@
       "repo-meta-structure": {
         "capability": "render",
         "destination": "claude-agents/skills/repo-meta-structure",
-        "sha256": "feea6f479d88baa622ecc38fbe96d4d94626656190f00cfd586f427ce2928d09",
+        "sha256": "ef91fd7e07d459d9a2f6923164998c75676d250b607bb52d76cbf61a10042af8",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -806,7 +806,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/mise-en-place-scaffold",
-        "sha256": "40762210687211f83efe1084cb0d2148bd86a1c955046513c6adc240107d6984",
+        "sha256": "c7e6b2fc9d682d7f42aaa8af2cb7bfa25f7015c3afeac0ac990761fe2741a44a",
         "skipped": false
       },
       "nanobanana": {
@@ -896,7 +896,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/planning-desk",
-        "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
+        "sha256": "20369ec06aef15864ce687e46502ae0cb3596703712bbe3c2c7129ea4d3b9182",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -956,7 +956,7 @@
       "repo-meta-structure": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/repo-meta-structure",
-        "sha256": "feea6f479d88baa622ecc38fbe96d4d94626656190f00cfd586f427ce2928d09",
+        "sha256": "ef91fd7e07d459d9a2f6923164998c75676d250b607bb52d76cbf61a10042af8",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -1330,7 +1330,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "opencode/skills/mise-en-place-scaffold",
-        "sha256": "40762210687211f83efe1084cb0d2148bd86a1c955046513c6adc240107d6984",
+        "sha256": "c7e6b2fc9d682d7f42aaa8af2cb7bfa25f7015c3afeac0ac990761fe2741a44a",
         "skipped": false
       },
       "nanobanana": {
@@ -1420,7 +1420,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "opencode/skills/planning-desk",
-        "sha256": "437cacd2d7415149e2fd5aac9ee0266ea934da00e04b36da898f50a58ca0a020",
+        "sha256": "20369ec06aef15864ce687e46502ae0cb3596703712bbe3c2c7129ea4d3b9182",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -1462,7 +1462,7 @@
       "repo-meta-structure": {
         "capability": "native",
         "destination": "opencode/skills/repo-meta-structure",
-        "sha256": "feea6f479d88baa622ecc38fbe96d4d94626656190f00cfd586f427ce2928d09",
+        "sha256": "ef91fd7e07d459d9a2f6923164998c75676d250b607bb52d76cbf61a10042af8",
         "skipped": false
       },
       "security-code-reviewer": {

@@ -539,6 +539,27 @@ CLAUDE_REVIEW_ARG = ".github/workflows/claude-review.yml"
 # claude-code-action workflow too, but not a review-on-push).
 PR_TRIGGER_RE = re.compile(r"^\s*pull_request(_target)?\s*:", re.M)
 
+CI_WORKFLOW_ARG = ".github/workflows/ci.yml"
+# Workflows that cannot run until the repo carries an Anthropic credential secret.
+SECRET_WORKFLOW_ARGS = (CLAUDE_REVIEW_ARG, ".github/workflows/claude.yml")
+# A `ci:` rule at column 0 — the aggregate gate the standard ci.yml template invokes.
+CI_TARGET_RE = re.compile(r"^ci\s*:", re.M)
+
+
+def makefile_has_ci_target(repo):
+    """True when the target repo's Makefile defines a `ci:` target. The standard
+    ci.yml template runs `make ci`; a repo without the target gets a red check on its
+    first push (fleet-dashboard test-bed finding, #67). The Makefile stub deliberately
+    ships without a no-op `ci:` — a green gate that runs nothing would be worse."""
+    path = os.path.join(repo, "Makefile")
+    if not os.path.isfile(path):
+        return False
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return bool(CI_TARGET_RE.search(fh.read()))
+    except (OSError, UnicodeDecodeError):
+        return False
+
 
 def existing_review_workflows(repo):
     """Workflow files that already run claude-code-action on pull_request — a
@@ -613,6 +634,7 @@ class PlanContext:
         self.files = []  # (relpath, payload bytes), ordered, deduped
         self.conflicts = {}  # relpath -> unified diff text
         self.swallowed = []  # planned files the target repo's gitignore ignores
+        self.notes = []  # follow-ups the scaffold cannot do (secrets, missing targets)
 
     def add_dir(self, rel):
         if rel not in self.dirs:
@@ -668,7 +690,21 @@ def classify_path_exists(repo, plugin_root, arg, ctx):
                         f"hand; not scaffolded",
                     )
             ctx.add_file(arg, tpl)
-            return CREATE, f"copy standard template → {arg}"
+            detail = f"copy standard template → {arg}"
+            if arg == CI_WORKFLOW_ARG and not makefile_has_ci_target(repo):
+                ctx.notes.append(
+                    f"{arg}: the template runs `make ci`, but the repo's Makefile "
+                    f"has no `ci` target — the workflow fails on its first run. Add "
+                    f"the aggregate target and adapt the setup steps to the repo's "
+                    f"toolchain (the template assumes Python)"
+                )
+                detail += " — no `ci` Makefile target (see note below)"
+            elif arg in SECRET_WORKFLOW_ARGS:
+                ctx.notes.append(
+                    f"{arg}: needs the ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN "
+                    f"repo secret before it can run"
+                )
+            return CREATE, detail
         if read_bytes(full) == tpl:
             return OK, f"matches standard template: {arg}"
         if arg not in ctx.conflicts:
@@ -935,6 +971,14 @@ def render(repo, mode, actions, ctx, manifest, created=None, skipped=None):
         ]
         for p in ctx.swallowed:
             lines.append(f"  ! {p} — add a gitignore negation or fix the ignore rule")
+
+    if ctx.notes:
+        lines += [
+            "",
+            f"note: {len(ctx.notes)} follow-up(s) the scaffold cannot do for you:",
+        ]
+        for p in ctx.notes:
+            lines.append(f"  ! {p}")
 
     if ctx.conflicts:
         lines += ["", f"Conflict diffs ({len(ctx.conflicts)} file(s)):"]
