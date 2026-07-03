@@ -1,13 +1,19 @@
 ---
 title: "Batch decision sheet — open owner decisions across the 9 plans (2026-07-03)"
 type: reference
-status: active
+status: ruled 2026-07-03
 created: 2026-07-03
 purpose: "One sitting's worth of rulings: every open owner decision from the 2026-07-03 plan wave, with recommended defaults, ordered by what each ruling unblocks"
-notes: "Rule by exception: 'defaults everywhere except ...' is a complete answer. Full rationale lives in each plan's Open questions section; this sheet is the ballot, not the argument."
+notes: "RULED: owner accepted the defaults for all 51 decisions (2026-07-03, in-session). The three ASK items follow their default paths until amended. This archived sheet is the ruling record the build waves cite."
 ---
 
 # Batch decision sheet — 2026-07-03 plan wave
+
+> **Ruling (2026-07-03):** Henry accepted the recommended defaults for **all 51
+> decisions** below. Every "Recommended default" cell is now the ruled outcome; the
+> three ASK items proceed on their default paths (37.6 toolkit reading, 33.4 hsb-2026
+> vault, 49.3 ask-marker) until Henry supplies the missing information. Build waves
+> cite this record; a changed ruling supersedes here with a dated callout.
 
 _51 open decisions across 9 plans. Every one has a recommended default; approving the
 defaults wholesale is a valid ruling and unblocks #39, #32, #27, #36, #37, #48, #49 and
