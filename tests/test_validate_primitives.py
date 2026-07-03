@@ -134,6 +134,20 @@ class Entry(unittest.TestCase):
             f"expected an XML-tag blocker, got: {problems}",
         )
 
+    def test_xml_tag_in_block_scalar_description_flagged(self):
+        # Multiline block-scalar description — pins frontmatter_field's folded-line capture.
+        problems = []
+        V.validate_entry(
+            self._skill(
+                "---\nname: t\ndescription: |\n  spin up a <project>-x desk\n---\nbody"
+            ),
+            problems,
+        )
+        self.assertTrue(
+            any("XML tag" in p and "<project>" in p for p in problems),
+            f"expected an XML-tag blocker on a block-scalar description, got: {problems}",
+        )
+
     def test_angle_bracket_in_body_not_flagged(self):
         # Only the description field is checked; body angle brackets are fine.
         problems = []
