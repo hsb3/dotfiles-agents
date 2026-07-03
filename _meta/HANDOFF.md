@@ -14,11 +14,21 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 
 ## 2 · In flight / next up
 
-- **Gate-2 pilot on raptorgpt-agents** (`~/Developer/RAPTOR/WEB_APPS/raptor_gpt/raptorgpt-agents`): audit → manifest → scaffold → re-audit, driving the four project-workflow standards skills (repo-meta-structure, memory-taxonomy, repo-compliance-audit, mise-en-place-scaffold).
-- **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use.
-- **#36 — clone-at-build externals** *(the last unbuilt capability):* `externals.yaml` tracks ~30 third-party skills/plugins with `upstream: null`; only `kind: mcp` renders today. Research each upstream, pin a ref, then implement the clone-into-`targets/` step in `translate.py` (CANON 11).
-- **#24 — loadability smoke** (`make smoke`, opt-in, NOT required CI): drive the real tools against generated bundles (`opencode debug …`; `claude --mcp-config`/`--plugin-dir` + `plugin details`; CMA payloads vs pinned OpenAPI); skip-on-absent.
-- **#25 — chore:** close file handles in `translate.py`, then drop `-W ignore::ResourceWarning` from `make test`.
+- **The backlog is fully planned AND ruled (2026-07-03):** every open issue (#27 #32 #33
+  #36 #37 #39 #48 #49 #59) has a source-grounded `_meta/plans/<slug>/plan.md`, and the
+  owner accepted the recommended defaults for all 51 open decisions — ruling record:
+  `_meta/_archive/decision-sheet-2026-07-03.md`. Build waves start with **#39** (add the
+  `record:` roster field) and **#32** (16-command disposition, `skills` CLI retirement,
+  archive hsb3-custom-plugins — the only P1). #27 (pw- rename wave, plugin 0.3.0) next;
+  coordinate version bumps with #32.
+- **Gate-2 pilot (#33) is in close-out, not execution:** the pilot ran 2026-07-02
+  (rgpt#541, 36/22 to 56/3); the 2026-07-03 round-2 mechanical pass sits UNCOMMITTED on
+  raptorgpt-agents `dev` (now at `~/Developer/raptorgpt-agents` — flat; the old nested
+  path is dead) awaiting Henry's review. Then: re-audit evidence, gap-justification
+  ledger, TC-013/TC-010 addenda in the `hsb-2026` Obsidian vault, Henry's sign-off ticks.
+- **fleet-dashboard is the plugin test bed** (owner decision 2026-07-03) — exercise
+  project-workflow skills there first; it already produced #67/#72 (both fixed, 0.2.2).
+- **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use. #37's ra-platform adoption is use-citation #1 for `planning-desk`.
 - **Promoting a parked item** (CANON 12) needs ≥2 cited real uses + H1–H5; `opencode-expert` is the strongest candidate.
 
 ## 3 · Conventions & gotchas
