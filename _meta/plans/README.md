@@ -34,14 +34,17 @@ disk before trusting the table. It exits non-zero on any drift.
 
 ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 
-_Small follow-ups #24 (loadability smoke) and #25 (file-handle chore) are tracked as issues
-without a deep plan folder. #27 (project-workflow v2) carries its contract in the issue body,
-with design detail on the cowork desk (`analyses/project-workflow-v2-design.md`). #48
-(frontend-extenders-curation) and #49 (extender-ideas-backlog-seed) have staged bodies on the
-desk but no deep plan yet - their folders hold `issue-body.md` only._
-
 | Plan | Issue(s) | Status |
 | ---- | -------- | ------ |
+| project-workflow-v2 | #27 | drafted 2026-07-03; design of record on the cowork desk; owner decisions 1-6 open |
+| retire-hsb3-custom-plugins | #32 | drafted 2026-07-03; symlink half already shipped, residual = 16-command disposition + CLI retirement; decisions 1-6 open |
+| raptorgpt-pilot | #33 | drafted 2026-07-03; pilot ran 2026-07-02 (rgpt#541), residual = round-2 close-out + vault sign-off; decisions 1-6 open |
+| externals-clone-at-build | #36 | drafted 2026-07-03; 36 entries, 31 null upstreams; decisions 1-7 open |
+| ra-platform-commands-skill | #37 | drafted 2026-07-03; skill half shipped as planning-desk, residual = adoption + retirement; decisions 1-6 open |
+| roster-provenance-field | #39 | drafted 2026-07-03; decide-first (field vs ratify summary); decisions 1-5 open |
+| frontend-extenders-curation | #48 | plan drafted 2026-07-03 beside the staged body; decisions 1-6 open |
+| extender-ideas-backlog-seed | #49 | plan drafted 2026-07-03 beside the staged body; T-23 unrun, home decision open |
+| agnostic-base-format | #59 | drafted 2026-07-03; survey -> spec -> incremental migration; decisions 1-5 open |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
