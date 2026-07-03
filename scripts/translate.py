@@ -42,7 +42,7 @@ MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 OWNER = {"name": "Henry S. Burden III"}
 
 
-# ── io helpers (#25: reads go through these so no file handle leaks) ───────────────────
+# ── io helpers (all reads route through these so no handle leaks) ─────────────────────
 def read_text(path):
     with open(path, encoding="utf-8") as fh:
         return fh.read()
