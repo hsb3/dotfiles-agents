@@ -1,3 +1,6 @@
+# OS / editor
+.DS_Store
+
 # secrets
 .env*
 !.env*.example
@@ -30,9 +33,12 @@ _meta/operations/*
 !_meta/research/
 _meta/research/*
 !_meta/research/.gitkeep
-# desk-toolkit bytecode: the plans negation re-includes everything under the desk,
-# so without this a `git add -A` commits _utils/ .pyc files (last match wins).
+# desk-toolkit bytecode + Finder litter: the plans negation re-includes everything
+# under the desk, so without these a `git add -A` commits _utils/ .pyc files and
+# .DS_Store past the global rule (last match wins).
 _meta/plans/_utils/__pycache__/
+_meta/plans/**/.DS_Store
+_meta/plans/.DS_Store
 
 # .claude — track memory/, rules/, skills/, settings.json; ignore machine-local
 .claude/settings.local.json

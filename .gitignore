@@ -20,6 +20,9 @@ _meta/*
 !_meta/mise-en-place.yml
 !_meta/plans/
 !_meta/plans/**
+# the plans negation re-includes Finder litter past the global .DS_Store rule
+_meta/plans/**/.DS_Store
+_meta/plans/.DS_Store
 # scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
 # content stays local (operations/ especially — secrets are never tracked)
 !_meta/briefings/
