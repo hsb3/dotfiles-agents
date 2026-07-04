@@ -45,7 +45,6 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | frontend-extenders-curation | #48 | plan drafted 2026-07-03 beside the staged body; decisions 1-6 open |
 | extender-ideas-backlog-seed | #49 | plan drafted 2026-07-03 beside the staged body; T-23 unrun, home decision open |
 | agnostic-base-format | #59 | drafted 2026-07-03; survey -> spec -> incremental migration; decisions 1-5 open |
-| portability-conformance-wave | #79 (+ workbench#32) | drafted 2026-07-04; body live; defaults stated in issue; build in flight |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
@@ -55,6 +54,7 @@ ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`)
 | `_meta/_archive/22-test-qa-procedures.md` | #22 | A-C shipped via #23; D spun out to #24; #22 closed |
 | `_meta/_archive/41-board-scripts-bundling.md` | #41 | shipped via PR #43 (staged body archived; no deep plan) |
 | `_meta/_archive/40-docs-planning-standard.md` | #40 | shipped via PR #62 (DOCS-01..05 rows, scaffold assets, apply, plugin 0.2.0); #40 closed |
+| `_meta/_archive/79-portability-conformance-wave.md` | #79 (+ workbench#32) | shipped via PR #80 (dependency contract, mirror checks, in-place fixes, demotions) + wb#33 (gate amendments ratified); both closed 2026-07-04 |
 
 ## The loop (how plans get produced)
 

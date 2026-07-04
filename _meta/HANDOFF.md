@@ -30,19 +30,16 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   project-workflow skills there first; it already produced #67/#72 (both fixed, 0.2.2).
 - **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use. #37's ra-platform adoption is use-citation #1 for `planning-desk`.
 - **Promoting a parked item** (CANON 12) needs ≥2 cited real uses + H1–H5; `opencode-expert` is the strongest candidate.
-- **Portability conformance wave (#79 + wb#32, 2026-07-04) — BUILT, awaiting Henry:** a
-  fresh-machine session (second MacBook) exposed machine-tied assumptions across the
-  primitives. PR **da#80** (requires: `cli:`/`env:` grammar, mcp `install:` block,
-  validate_primitives portability mirror, in-place fixes, demotion of the 4 mcp specs +
-  dev-focus hooks, dev-focus plugin 2.0.0 skill-only, project-workflow 0.2.4) and PR
-  **wb#33** (gate amendments H5-broadened/H6/H4-split + incubator receipt + demotion
-  records) are both open and **CI-green**. Henry's court: merge both together, and ratify
-  the gate amendments (vault decision — they're marked pending in `promotion-gate.md`).
-  Side effects to know: `comms`' deck-builder toolchain is dead until that mcp re-promotes
-  (pptx-henry path still works); workbench `claude-exchange` + `strategy-desk` flipped to
-  blockers under the amended checks (true positives, REGISTRY has the detail); dev-focus
-  re-promotion needs a prompt-file rendering answer in the translation service. On close:
-  archive the plan per the `_meta/_archive/` convention.
+- **Portability conformance wave (#79 + wb#32) — SHIPPED 2026-07-04.** da#80 + wb#33 both
+  squash-merged; #79 + wb#32 closed; gate amendments **ratified** (H5-broadened/H6/H4-split,
+  `promotion-gate.md`); plan archived at `_meta/_archive/79-portability-conformance-wave.md`.
+  Machine-agnostic enforcement is now live in `make ci` (see gotcha below). Residual carried
+  to the workbench backlog: `comms`' deck-builder toolchain is dead until that mcp
+  re-promotes with an `install:` block (pptx-henry path still works); the 4 demoted mcp specs
+  + dev-focus hooks incubate in the workbench (dev-focus re-promotion needs a prompt-file
+  rendering answer in the translation service); workbench `claude-exchange` + `strategy-desk`
+  flipped to blockers under the amended checks (true positives — REGISTRY has detail). One
+  owner TODO left: record the gate-ratification decision in the vault registry.
 
 ## 3 · Conventions & gotchas
 
