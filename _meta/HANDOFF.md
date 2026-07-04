@@ -30,13 +30,19 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   project-workflow skills there first; it already produced #67/#72 (both fixed, 0.2.2).
 - **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use. #37's ra-platform adoption is use-citation #1 for `planning-desk`.
 - **Promoting a parked item** (CANON 12) needs ≥2 cited real uses + H1–H5; `opencode-expert` is the strongest candidate.
-- **Portability conformance wave (#79 + wb#32, 2026-07-04):** a fresh-machine session (second
-  MacBook) exposed machine-tied assumptions across the primitives. In flight: PR da#80
-  (requires: `cli:`/`env:` grammar, mcp `install:` block, validate_primitives portability
-  mirror, in-place fixes, demotion of the 4 mcp specs + dev-focus hooks) and PR wb#33 (gate
-  amendments H5-broadened/H6/H4-split — pending Henry's ratification — plus incubator receipt
-  + demotion records). Merge da#80 and wb#33 together; the gate-amendment ratification is
-  Henry's vault decision.
+- **Portability conformance wave (#79 + wb#32, 2026-07-04) — BUILT, awaiting Henry:** a
+  fresh-machine session (second MacBook) exposed machine-tied assumptions across the
+  primitives. PR **da#80** (requires: `cli:`/`env:` grammar, mcp `install:` block,
+  validate_primitives portability mirror, in-place fixes, demotion of the 4 mcp specs +
+  dev-focus hooks, dev-focus plugin 2.0.0 skill-only, project-workflow 0.2.4) and PR
+  **wb#33** (gate amendments H5-broadened/H6/H4-split + incubator receipt + demotion
+  records) are both open and **CI-green**. Henry's court: merge both together, and ratify
+  the gate amendments (vault decision — they're marked pending in `promotion-gate.md`).
+  Side effects to know: `comms`' deck-builder toolchain is dead until that mcp re-promotes
+  (pptx-henry path still works); workbench `claude-exchange` + `strategy-desk` flipped to
+  blockers under the amended checks (true positives, REGISTRY has the detail); dev-focus
+  re-promotion needs a prompt-file rendering answer in the translation service. On close:
+  archive the plan per the `_meta/_archive/` convention.
 
 ## 3 · Conventions & gotchas
 
@@ -60,4 +66,10 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 
 ## 4 · Incident log
 
-(none)
+- **2026-07-04 — `gh issue edit` cross-repo clobber (recovered).** While filing the wave
+  issues, `gh issue edit 32 --body-file <workbench-body>` ran from the dotfiles-agents cwd
+  and overwrote **da#32**'s body (retire-hsb3-custom-plugins) instead of workbench#32.
+  Restored within minutes from GitHub's edit history (GraphQL `userContentEdits` — the
+  `diff` field holds full body snapshots). Lesson: **always pass `-R <owner>/<repo>` to
+  `gh issue edit`/`view` when the target repo isn't the cwd** — issue numbers collide
+  across sibling repos, and da/wb numbering is close enough to bite again.
