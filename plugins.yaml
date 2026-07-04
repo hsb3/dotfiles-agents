@@ -15,8 +15,8 @@ plugins:
     version: "0.0.1"
     description: "Deep agents patterns - core architecture, memory, and multi-agent orchestration"
   - id: dev-focus
-    version: "1.0.0"
-    description: "Makes Claude Code aggressively focused — pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track."
+    version: "2.0.0"
+    description: "Makes Claude Code aggressively focused — pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track. Skill-only since 2.0.0: the SessionStart/Stop hooks were demoted for rework (#79)."
   - id: frontend-extras
     version: "0.0.1"
     description: "Frontend helpers - shadcn/ui component patterns and React diagnostics"
@@ -30,16 +30,16 @@ plugins:
     version: "0.0.1"
     description: "Meta skills for AI engineering - selecting the right agent framework"
   - id: obsidian-plugin-dev
-    version: "0.1.0"
+    version: "0.1.1"
     description: "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features"
   - id: openspec
     version: "0.0.1"
     description: "OpenSpec change workflow - propose, apply, archive, and explore spec-driven changes"
   - id: project-dashboard
-    version: "0.0.1"
+    version: "0.0.2"
     description: "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern."
   - id: project-workflow
-    version: "0.2.3"
+    version: "0.2.4"
     description: "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs — CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/."
   - id: python-standards
     version: "1.0.0"

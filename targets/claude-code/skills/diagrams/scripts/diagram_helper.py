@@ -8,7 +8,6 @@ Diagrams skill helper script.
 import subprocess
 import sys
 import shutil
-from pathlib import Path
 
 
 def check_graphviz():
@@ -19,7 +18,10 @@ def check_graphviz():
         print(f"✓ Graphviz installed: {version}")
         return True
     else:
-        print("✗ Graphviz not found. Install with: apt-get install graphviz")
+        print(
+            "✗ Graphviz not found. Install with: brew install graphviz (macOS) "
+            "or apt-get install graphviz (Debian/Ubuntu)"
+        )
         return False
 
 
@@ -27,6 +29,7 @@ def check_diagrams():
     """Check if diagrams library is installed."""
     try:
         import diagrams
+
         print(f"✓ diagrams library installed: {diagrams.__version__}")
         return True
     except ImportError:
@@ -48,13 +51,10 @@ def validate_environment():
 
 
 def generate_boilerplate(
-    name: str,
-    provider: str = "aws",
-    direction: str = "TB",
-    output_format: str = "png"
+    name: str, provider: str = "aws", direction: str = "TB", output_format: str = "png"
 ) -> str:
     """Generate boilerplate diagram code."""
-    
+
     provider_imports = {
         "aws": """from diagrams.aws.compute import EC2, Lambda
 from diagrams.aws.database import RDS, DynamoDB
@@ -79,12 +79,12 @@ from diagrams.onprem.database import PostgreSQL, MySQL, Redis
 from diagrams.onprem.network import Nginx, HAProxy
 from diagrams.onprem.queue import Kafka, RabbitMQ
 from diagrams.onprem.monitoring import Prometheus, Grafana
-from diagrams.onprem.client import Users"""
+from diagrams.onprem.client import Users""",
     }
-    
+
     imports = provider_imports.get(provider, provider_imports["aws"])
     filename = name.lower().replace(" ", "_")
-    
+
     return f'''"""
 Diagram: {name}
 Generated boilerplate - customize as needed
@@ -124,32 +124,34 @@ def main():
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python diagram_helper.py validate")
-        print("  python diagram_helper.py boilerplate <name> [provider] [direction] [format]")
+        print(
+            "  python diagram_helper.py boilerplate <name> [provider] [direction] [format]"
+        )
         print()
         print("Providers: aws, azure, gcp, k8s, onprem")
         print("Directions: TB (top-bottom), LR (left-right), BT, RL")
         print("Formats: png, svg, pdf, jpg")
         sys.exit(1)
-    
+
     command = sys.argv[1]
-    
+
     if command == "validate":
         success = validate_environment()
         sys.exit(0 if success else 1)
-    
+
     elif command == "boilerplate":
         if len(sys.argv) < 3:
             print("Error: Name required for boilerplate")
             sys.exit(1)
-        
+
         name = sys.argv[2]
         provider = sys.argv[3] if len(sys.argv) > 3 else "aws"
         direction = sys.argv[4] if len(sys.argv) > 4 else "TB"
         fmt = sys.argv[5] if len(sys.argv) > 5 else "png"
-        
+
         code = generate_boilerplate(name, provider, direction, fmt)
         print(code)
-    
+
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

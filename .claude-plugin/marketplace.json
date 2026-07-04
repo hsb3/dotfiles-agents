@@ -21,8 +21,8 @@
     {
       "name": "dev-focus",
       "source": "./targets/claude-code/plugins/dev-focus",
-      "description": "Makes Claude Code aggressively focused \u2014 pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track.",
-      "version": "1.0.0",
+      "description": "Makes Claude Code aggressively focused \u2014 pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track. Skill-only since 2.0.0: the SessionStart/Stop hooks were demoted for rework (#79).",
+      "version": "2.0.0",
       "author": {
         "name": "Henry S. Burden III"
       }
@@ -67,7 +67,7 @@
       "name": "obsidian-plugin-dev",
       "source": "./targets/claude-code/plugins/obsidian-plugin-dev",
       "description": "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "Henry S. Burden III"
       }
@@ -85,7 +85,7 @@
       "name": "project-dashboard",
       "source": "./targets/claude-code/plugins/project-dashboard",
       "description": "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern.",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "author": {
         "name": "Henry S. Burden III"
       }
@@ -94,7 +94,7 @@
       "name": "project-workflow",
       "source": "./targets/claude-code/plugins/project-workflow",
       "description": "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs \u2014 CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/.",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "author": {
         "name": "Henry S. Burden III"
       }

@@ -4,5 +4,5 @@
   },
   "description": "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features",
   "name": "obsidian-plugin-dev",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

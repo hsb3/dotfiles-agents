@@ -12,6 +12,10 @@ What it checks:
             http => `url`; any secret-named env/header value is a ${VAR} placeholder, not a literal
   - roster: `origin` in {authored, sourced}, `targets` subset of the real targets, `summary` set
   - externals mcp specs (externals.yaml kind: mcp) get the same mcp-spec checks
+  - portability (issue #79, mirrors the workbench gate): no machine-tied content (hard-banned
+    paths; ~/dotfiles / /Applications/ / machine-local tools only with a covering `requires:`
+    declaration); rostered stdio mcp specs carry `install` provenance; hook configs are
+    handler references only, inline prose capped at 20 words
 
 Stdlib-only (reuses translate.py's parsers), so `make ci` stays zero-install. Exit 0 = clean;
 exit 1 = problems (prints every one). `--json` emits the findings as JSON.
@@ -37,6 +41,49 @@ PLACEHOLDER = re.compile(r"^\$\{[^}]+\}$")
 # `<example>` blocks, so this is checked only for skills. Requires a letter (or `/`) right
 # after `<` so bare comparisons like `< 5` aren't matched; `[^>\n]*` keeps a tag on one line.
 XML_TAG = re.compile(r"</?[A-Za-z][^>\n]*>")
+
+# ── Portability checks (issue #79; mirror of the workbench gate H5-broadened/H6, wb#32) ──
+TEXT_EXT = (".md", ".json", ".sh", ".py", ".js", ".ts", ".yaml", ".yml", ".toml")
+# Hard bans — always a defect, no declaration excuses them.
+HARD_MACHINE = (
+    (re.compile(r"/Users/[A-Za-z]"), "machine-absolute path /Users/..."),
+    (re.compile(r"hsb-2026"), "personal vault name hsb-2026"),
+    (
+        re.compile(r"--break-system-packages"),
+        "non-portable pip flag --break-system-packages",
+    ),
+    (
+        re.compile(r"(?:~|\$HOME)/(?:Documents|Desktop)/"),
+        "personal home-layout path (~/Documents, ~/Desktop)",
+    ),
+)
+# Declared-or-flagged — legal only with a covering `requires:` entry on the roster row.
+DOTFILES_PATH = re.compile(r"(?:~|\$HOME)/(?:dotfiles|Developer)\b")
+APP_PATH = re.compile(r"/Applications/")
+# Machine-local tools (custom ~/.local/bin scripts + custom MCP binaries). Distinctive names
+# only — ambiguous words (secret, skills, speak) are omitted; precision over recall.
+LOCAL_TOOLS = (
+    "agy",
+    "capture-console-errors",
+    "cc-hooks",
+    "cc-project-memory",
+    "check-tool-updates",
+    "da-prune-sessions",
+    "dcode",
+    "fetch-docs",
+    "fufo-excalidraw-wire",
+    "mcp-audio",
+    "mcp-deck-builder",
+    "mcp-secrets-sync",
+    "migrate-claude-memory",
+    "models-dev",
+    "project-activity",
+    "speak_gemini",
+)
+LOCAL_TOOL_RX = {
+    t: re.compile(rf"(?<![\w./-]){re.escape(t)}(?![\w-])") for t in LOCAL_TOOLS
+}
+HOOK_PROSE_MAX_WORDS = 20
 
 
 def frontmatter_block(text):
@@ -76,7 +123,7 @@ def check_secret_values(mapping, label, problems):
             )
 
 
-def validate_mcp_spec(spec_path, label, problems):
+def validate_mcp_spec(spec_path, label, problems, require_install=True):
     full = os.path.join(T.REPO, spec_path)
     if not os.path.isfile(full):
         problems.append(f"[{label}] mcp spec not found: {spec_path}")
@@ -96,10 +143,112 @@ def validate_mcp_spec(spec_path, label, problems):
         )
     if transport == "stdio" and not spec.get("command"):
         problems.append(f"[{label}] stdio mcp spec missing `command`")
+    # A bare PATH command assumes the binary exists; rostered stdio specs must say where it
+    # comes from (issue #79). Externals are exempt — their provenance lives in externals.yaml.
+    if transport == "stdio" and require_install:
+        inst = spec.get("install")
+        if (
+            not isinstance(inst, dict)
+            or not inst.get("upstream")
+            or not inst.get("command")
+        ):
+            problems.append(
+                f"[{label}] stdio mcp spec missing `install` provenance "
+                f"({{upstream, command}} — where the binary comes from and how to install it)"
+            )
     if transport == "http" and not spec.get("url"):
         problems.append(f"[{label}] http mcp spec missing `url`")
     check_secret_values(spec.get("env"), label, problems)
     check_secret_values(spec.get("headers"), label, problems)
+
+
+def _iter_source_files(full):
+    """Yield the text files of a primitive's source (a file, or a walked directory)."""
+    if os.path.isfile(full):
+        if full.endswith(TEXT_EXT):
+            yield full
+        return
+    for root, _dirs, files in os.walk(full):
+        for f in sorted(files):
+            if f.endswith(TEXT_EXT):
+                yield os.path.join(root, f)
+
+
+def check_portability(e, problems):
+    """Machine-tied content is banned outright or must be declared in `requires:` (issue #79)."""
+    eid, src = e.get("id", "<no-id>"), e.get("source", "")
+    reqs = set(T._list(e.get("requires", "")))
+    has_cli = any(r.startswith("cli:") for r in reqs)
+    for fp in _iter_source_files(os.path.join(T.REPO, src)):
+        rel = os.path.relpath(fp, T.REPO)
+        try:
+            with open(fp, encoding="utf-8", errors="ignore") as fh:
+                body = fh.read()
+        except OSError:
+            continue
+        for rx, why in HARD_MACHINE:
+            if rx.search(body):
+                problems.append(f"[{eid}] {why} in {rel}")
+        if DOTFILES_PATH.search(body) and "env:dotfiles" not in reqs:
+            problems.append(
+                f"[{eid}] ~/dotfiles or ~/Developer path in {rel} without "
+                f"`requires: [env:dotfiles]` on the roster entry"
+            )
+        if APP_PATH.search(body) and not has_cli:
+            problems.append(
+                f"[{eid}] /Applications/ path in {rel} but the roster entry declares "
+                f"no `cli:` dependency for the app"
+            )
+        for tool, rx in LOCAL_TOOL_RX.items():
+            if (
+                rx.search(body)
+                and f"cli:{tool}" not in reqs
+                and "env:dotfiles" not in reqs
+            ):
+                problems.append(
+                    f"[{eid}] references machine-local tool `{tool}` in {rel} — declare "
+                    f"`requires: [cli:{tool}]` (or env:dotfiles) on the roster entry"
+                )
+
+
+def _walk_hook_config(node, label, problems):
+    if isinstance(node, dict):
+        if node.get("type") == "command":
+            cmd = node.get("command", "")
+            if "hooks-handlers/" not in cmd:
+                problems.append(
+                    f"[{label}] inline command is not a hooks-handlers/ reference: {cmd[:70]!r}"
+                )
+        if node.get("type") == "prompt":
+            words = len(node.get("prompt", "").split())
+            if words > HOOK_PROSE_MAX_WORDS:
+                problems.append(
+                    f"[{label}] inline prompt is {words} words (max {HOOK_PROSE_MAX_WORDS} — "
+                    f"move the prose to a file beside the handlers)"
+                )
+        for v in node.values():
+            _walk_hook_config(v, label, problems)
+    elif isinstance(node, list):
+        for v in node:
+            _walk_hook_config(v, label, problems)
+
+
+def check_hook_configs(problems):
+    """Hook configs are config + handler references only — no inline scripts or prose (issue #79)."""
+    hooks_root = os.path.join(T.REPO, "primitives-core", "hooks")
+    if not os.path.isdir(hooks_root):
+        return
+    for plugin in sorted(os.listdir(hooks_root)):
+        cfg = os.path.join(hooks_root, plugin, "hooks", "hooks.json")
+        if not os.path.isfile(cfg):
+            continue
+        try:
+            with open(cfg, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (json.JSONDecodeError, OSError) as e:
+            problems.append(f"[hooks:{plugin}] hooks.json unreadable: {e}")
+            continue
+        _walk_hook_config(data, f"hooks:{plugin}", problems)
 
 
 def validate_entry(e, problems):
@@ -152,11 +301,16 @@ def main():
     roster = T.parse_roster(T.ROSTER)
     for e in roster:
         validate_entry(e, problems)
-    # externals kind: mcp specs
+        check_portability(e, problems)
+    check_hook_configs(problems)
+    # externals kind: mcp specs (install provenance lives in externals.yaml, not the spec)
     for ext in T.parse_externals(T.EXTERNALS):
         if ext.get("kind") == "mcp":
             validate_mcp_spec(
-                ext.get("spec", ""), f"external:{ext.get('id')}", problems
+                ext.get("spec", ""),
+                f"external:{ext.get('id')}",
+                problems,
+                require_install=False,
             )
 
     if as_json:

@@ -1,8 +1,0 @@
-{
-  "name": "agent-bus",
-  "description": "Multi-agent coordination bus — presence, channels, leases, tasks, KV, request/approval.",
-  "transport": "stdio",
-  "command": "agent-bus",
-  "args": ["serve"],
-  "env": {}
-}

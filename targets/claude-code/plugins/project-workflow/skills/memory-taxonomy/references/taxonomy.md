@@ -3,8 +3,8 @@
 The standard that tells every session where knowledge lands and how it moves. Three axes,
 one birth rule, one promotion mechanism, three stated defaults. Design rationale —
 loading-tier mechanics, alternatives considered, risks — lives only in the memory-standard
-technical design (hsb-2026 vault,
-`02_Projects/02_DEVTOOLS/1_Engineering/technical-designs/memory-standard.md`); this file
+technical design (in the owner's engineering vault,
+`technical-designs/memory-standard.md`); this file
 is the standard itself.
 
 Requirements traceability (2026-06-22): **visible/portable** → "Visible and portable by

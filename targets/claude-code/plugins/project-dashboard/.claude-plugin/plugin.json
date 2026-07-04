@@ -4,5 +4,5 @@
   },
   "description": "Set up and run a project's status dashboard - scaffold a _project-dashboard/ folder, then refresh it (numbers, narrative, deck, audio brief) by following that project's own AGENTS.md playbook. Works across any project that follows the pattern.",
   "name": "project-dashboard",
-  "version": "0.0.1"
+  "version": "0.0.2"
 }

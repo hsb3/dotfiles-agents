@@ -11,15 +11,15 @@ This file is the **spine**: the shared toolchains, parameters, voice baseline, p
 gotchas live here once. Each per-type playbook (`examples/<type>/playbook.md`) states only what
 differs and links back here.
 
-This is **NOT** the fleet/portfolio dashboard (that lives at `~/Developer/fleet-dashboard` and
-is roster-driven). Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
+This is **NOT** the fleet/portfolio dashboard (a separate, roster-driven repo of its own).
+Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 ## Two toolchains
 
 | | deck-builder (MCP) | pptx-henry (skill) |
 | --- | --- | --- |
 | Source | `slides.json` (block types: heading / subtitle / bullets / columns / stat) | `deck.js` (pptxgenjs) + `package.json` |
-| Theme | `boardroom` (deck-builder theme arg) | semantic tokens from `~/.claude/skills/pptx-henry/assets/theme-tokens.js` (e.g. `actuarial-signal`) |
+| Theme | `boardroom` (deck-builder theme arg) | semantic tokens from the pptx-henry skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
 | Output | `.pdf` + `.mp3` | `.pptx` + `.pdf` |
 | Strengths | fast, structured, validated, linkifies bare #refs, audio companion | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
 | Use for | internal, frequent, decision-first (morning, EOD, weekly) | external, high-stakes (advisor board, client overview) |
@@ -34,7 +34,7 @@ Resolve these once at the start of each run so the skill works in any repo:
 
 | Param | How to resolve |
 | --- | --- |
-| `<owner>/<repo>` | `gh repo view --json nameWithOwner -q .nameWithOwner` (fallback: parse `git remote get-url origin`). Henry has two GitHub accounts (`hsb3` personal, `mhi-acme` work) - never assume the slug; a wrong one silently breaks #ref links on export. |
+| `<owner>/<repo>` | `gh repo view --json nameWithOwner -q .nameWithOwner` (fallback: parse `git remote get-url origin`). The owner may have multiple GitHub accounts - never assume the slug; a wrong one silently breaks #ref links on export. |
 | Handoff file | First that exists of `_meta/HANDOFF.md`, `HANDOFF.md`, `.claude/HANDOFF.md`. The cold-start source for current standing + the delivery story. |
 | Gate scheme | The repo's `gate:<x>` labels if it uses them; otherwise the handoff's "what's next" / readiness section. |
 | Last of this kind | Newest existing `_meta/briefings/<YYYY-MM-DD>-<slug>/` for the same comm type - mirror its layout and use its date as the "since" boundary. |
