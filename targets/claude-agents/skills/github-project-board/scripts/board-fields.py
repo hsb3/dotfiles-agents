@@ -19,7 +19,11 @@ Needs `gh auth refresh -s project`.
 """
 
 from __future__ import annotations
-import argparse, json, os, subprocess, sys
+import argparse
+import json
+import os
+import subprocess
+import sys
 
 
 def gh(*args: str) -> str:
@@ -30,10 +34,11 @@ def gh(*args: str) -> str:
     return r.stdout
 
 
-def graphql(query: str, **fvars: str) -> dict:
+def graphql(query: str, *raw: str, **fvars: str) -> dict:
     args = ["api", "graphql", "-f", "query=" + query]
     for k, v in fvars.items():
         args += ["-f", f"{k}={v}"]
+    args += list(raw)  # caller passes "-F", "n=9" for Int! vars
     out = json.loads(gh(*args))
     if "data" not in out:  # error-only response (rate limit, transient failure)
         sys.exit(f"graphql: no data in response: {out.get('errors') or out}")
@@ -52,7 +57,7 @@ query($id:ID!){ node(id:$id){ ... on ProjectV2 { fields(first:50){ nodes{
   ... on ProjectV2FieldCommon { id name dataType }
   ... on ProjectV2SingleSelectField { id name options { id name } }
   ... on ProjectV2IterationField { id name configuration {
-      duration startDate
+      duration
       iterations { id title startDate }
       completedIterations { id title startDate } } }
 }}}}}
@@ -61,7 +66,7 @@ query($id:ID!){ node(id:$id){ ... on ProjectV2 { fields(first:50){ nodes{
 
 def collect(owner: str, number: int, owner_type: str) -> dict:
     scope = "user" if owner_type == "user" else "organization"
-    pj = graphql(PROJECT_ID_Q.replace("%SCOPE%", scope), o=owner, n=str(number))
+    pj = graphql(PROJECT_ID_Q.replace("%SCOPE%", scope), "-F", f"n={number}", o=owner)
     proj = (pj.get("data", {}).get(scope) or {}).get("projectV2")
     if not proj:
         sys.exit(f"project {owner}#{number} not found (check --owner-type)")

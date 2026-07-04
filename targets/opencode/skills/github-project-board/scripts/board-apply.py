@@ -33,7 +33,12 @@ Exit code is non-zero if any change failed.
 """
 
 from __future__ import annotations
-import argparse, csv, json, os, subprocess, sys
+import argparse
+import csv
+import json
+import os
+import subprocess
+import sys
 
 # Field dataTypes that updateProjectV2ItemFieldValue can write. Built-ins like
 # Labels / Milestone / Assignees are issue-native, not settable via the project API.
@@ -87,7 +92,7 @@ def graphql(query: str, *raw: str, **fvars: str) -> dict:
     args = ["api", "graphql", "-f", "query=" + query]
     for k, v in fvars.items():
         args += ["-f", f"{k}={v}"]
-    args += list(raw)  # e.g. "-F", "n=3"
+    args += list(raw)  # caller passes "-F", "n=9" for Int! vars
     out = json.loads(gh(*args)[1])
     if "data" not in out:  # error-only response (rate limit, transient failure)
         sys.exit(f"graphql: no data in response: {out.get('errors') or out}")
@@ -99,8 +104,9 @@ def load_snapshot(owner: str, number: int, owner_type: str):
     pj = graphql(
         "query($o:String!,$n:Int!){ %s(login:$o){ projectV2(number:$n){ id } } }"
         % scope,
+        "-F",
+        f"n={number}",
         o=owner,
-        n=str(number),
     )
     proj = (pj.get("data", {}).get(scope) or {}).get("projectV2")
     if not proj:

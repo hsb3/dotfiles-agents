@@ -19,7 +19,11 @@ the project-scoped keyring login -> INSUFFICIENT_SCOPES). Needs `gh auth refresh
 """
 
 from __future__ import annotations
-import argparse, json, os, subprocess, sys
+import argparse
+import json
+import os
+import subprocess
+import sys
 
 
 def gh(*args: str) -> str:
@@ -30,10 +34,11 @@ def gh(*args: str) -> str:
     return r.stdout
 
 
-def graphql(query: str, **fvars: str) -> dict:
+def graphql(query: str, *raw: str, **fvars: str) -> dict:
     args = ["api", "graphql", "-f", "query=" + query]
     for k, v in fvars.items():
         args += ["-f", f"{k}={v}"]
+    args += list(raw)  # caller passes "-F", "n=9" for Int! vars
     out = json.loads(gh(*args))
     if "data" not in out:  # error-only response (rate limit, transient failure)
         sys.exit(f"graphql: no data in response: {out.get('errors') or out}")
@@ -116,7 +121,7 @@ def main() -> None:
 
     scope = "user" if args.owner_type == "user" else "organization"
     pj = graphql(
-        PROJECT_ID_Q.replace("%SCOPE%", scope), o=args.owner, n=str(args.number)
+        PROJECT_ID_Q.replace("%SCOPE%", scope), "-F", f"n={args.number}", o=args.owner
     )
     proj = (pj.get("data", {}).get(scope) or {}).get("projectV2")
     if not proj:
