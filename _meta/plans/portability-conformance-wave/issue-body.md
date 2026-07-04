@@ -25,7 +25,7 @@ Why the guards missed it: the workbench gate's H5 scans only the literal `/Users
 
 - [ ] `make ci` green, including the new validator checks and their unit tests.
 - [ ] `validate_primitives.py` fails on test fixtures containing: a machine-local path, an undeclared registry tool, a stdio MCP spec without `install:`, and a hook config with a 21+ word inline prompt (each proven by a test).
-- [ ] `rg -n '/Users/|/Applications/|hsb-2026|--break-system-packages|apt-get install' primitives-core/` returns zero hits (excluding test fixtures, which live under `tests/`).
+- [ ] `rg -n '/Users/[A-Za-z]|hsb-2026|--break-system-packages' primitives-core/` returns zero hits (the hard-ban set; test fixtures live under `tests/`). `/Applications/` and `apt-get` are declared-or-flagged rather than hard-banned — calibration against the tree showed both have legitimate uses (platform-guarded probes in pptx-henry; Dockerfile context in devcontainer-setup; the Debian option in per-platform install lines) — the scan instead requires a covering `requires:` declaration.
 - [ ] The roster has no entry for `agent-bus`, `audio`, `deck-builder`, `excalidraw`, `dev-focus.SessionStart.session-start`, or `dev-focus.Stop.stop-summary`; `make build-check` passes (targets contain no fragments for them).
 - [ ] Workbench `incubator/` contains the 5 demoted items (4 MCP + dev-focus hooks) with `REGISTRY.md` rows, and `docs/promotions-log.md` carries one demotion record per item citing this issue.
 - [ ] Every remaining roster entry whose content references a registry tool carries a covering `requires:` entry (the scan proves it — zero findings).
