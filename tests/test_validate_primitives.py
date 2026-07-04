@@ -64,9 +64,38 @@ class McpSpec(unittest.TestCase):
     def test_valid_stdio(self):
         problems = []
         V.validate_mcp_spec(
+            self._spec(
+                {
+                    "name": "x",
+                    "transport": "stdio",
+                    "command": "x",
+                    "install": {
+                        "upstream": "https://github.com/o/r",
+                        "command": "uv tool install x",
+                    },
+                }
+            ),
+            "x",
+            problems,
+        )
+        self.assertEqual(problems, [])
+
+    def test_stdio_without_install_flagged(self):
+        problems = []
+        V.validate_mcp_spec(
             self._spec({"name": "x", "transport": "stdio", "command": "x"}),
             "x",
             problems,
+        )
+        self.assertTrue(any("install" in p for p in problems))
+
+    def test_stdio_external_exempt_from_install(self):
+        problems = []
+        V.validate_mcp_spec(
+            self._spec({"name": "x", "transport": "stdio", "command": "npx"}),
+            "x",
+            problems,
+            require_install=False,
         )
         self.assertEqual(problems, [])
 
@@ -183,6 +212,126 @@ class Entry(unittest.TestCase):
         e.update(origin="sourced")
         problems = []
         V.validate_entry(e, problems)
+        self.assertEqual(problems, [])
+
+
+class Portability(unittest.TestCase):
+    """Machine-tied content is banned or must be declared in requires (issue #79)."""
+
+    def _entry(self, body, requires=""):
+        d = tempfile.mkdtemp()
+        _write(os.path.join(d, "SKILL.md"), body)
+        return {"id": "fixture", "source": d, "requires": requires}
+
+    def test_machine_absolute_path_flagged(self):
+        problems = []
+        V.check_portability(self._entry("read /Users/someone/notes.md"), problems)
+        self.assertTrue(any("machine-absolute" in p for p in problems))
+
+    def test_vault_name_flagged(self):
+        problems = []
+        V.check_portability(self._entry("see the hsb-2026 vault"), problems)
+        self.assertTrue(any("vault" in p for p in problems))
+
+    def test_break_system_packages_flagged(self):
+        problems = []
+        V.check_portability(
+            self._entry("pip install x --break-system-packages"), problems
+        )
+        self.assertTrue(any("break-system-packages" in p for p in problems))
+
+    def test_home_layout_path_flagged(self):
+        problems = []
+        V.check_portability(self._entry("saved at ~/Documents/foo.md"), problems)
+        self.assertTrue(any("home-layout" in p for p in problems))
+
+    def test_dotfiles_path_needs_declaration(self):
+        problems = []
+        V.check_portability(self._entry("config in ~/dotfiles/zsh"), problems)
+        self.assertTrue(any("env:dotfiles" in p for p in problems))
+
+    def test_dotfiles_path_with_declaration_clean(self):
+        problems = []
+        V.check_portability(
+            self._entry("config in ~/dotfiles/zsh", requires="[env:dotfiles]"),
+            problems,
+        )
+        self.assertEqual(problems, [])
+
+    def test_applications_path_needs_cli_declaration(self):
+        problems = []
+        V.check_portability(self._entry("run /Applications/Foo.app"), problems)
+        self.assertTrue(any("/Applications/" in p for p in problems))
+
+    def test_applications_path_with_cli_declaration_clean(self):
+        problems = []
+        V.check_portability(
+            self._entry("run /Applications/Foo.app", requires="[cli:foo]"), problems
+        )
+        self.assertEqual(problems, [])
+
+    def test_local_tool_needs_declaration(self):
+        problems = []
+        V.check_portability(self._entry("run cc-project-memory init"), problems)
+        self.assertTrue(any("cc-project-memory" in p for p in problems))
+
+    def test_local_tool_with_declaration_clean(self):
+        problems = []
+        V.check_portability(
+            self._entry(
+                "run cc-project-memory init", requires="[cli:cc-project-memory]"
+            ),
+            problems,
+        )
+        self.assertEqual(problems, [])
+
+    def test_clean_content_clean(self):
+        problems = []
+        V.check_portability(self._entry("nothing machine-tied here"), problems)
+        self.assertEqual(problems, [])
+
+
+class HookConfigHygiene(unittest.TestCase):
+    """Hook configs are handler references + short prose only (issue #79)."""
+
+    def test_long_inline_prompt_flagged(self):
+        problems = []
+        prompt = " ".join(["word"] * 21)
+        V._walk_hook_config(
+            {"hooks": {"Stop": [{"hooks": [{"type": "prompt", "prompt": prompt}]}]}},
+            "hooks:t",
+            problems,
+        )
+        self.assertTrue(any("21 words" in p for p in problems))
+
+    def test_short_inline_prompt_ok(self):
+        problems = []
+        V._walk_hook_config(
+            {"type": "prompt", "prompt": "stay focused on the task"},
+            "hooks:t",
+            problems,
+        )
+        self.assertEqual(problems, [])
+
+    def test_inline_command_flagged(self):
+        problems = []
+        V._walk_hook_config(
+            {"type": "command", "command": "echo hi | tee /tmp/x"},
+            "hooks:t",
+            problems,
+        )
+        self.assertTrue(any("inline command" in p for p in problems))
+
+    def test_handler_reference_ok(self):
+        problems = []
+        V._walk_hook_config(
+            {
+                "type": "command",
+                "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks-handlers/p.Stop.x.sh",
+            },
+            "hooks:t",
+            problems,
+        )
         self.assertEqual(problems, [])
 
 

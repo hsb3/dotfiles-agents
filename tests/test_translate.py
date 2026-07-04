@@ -195,12 +195,14 @@ class Sha256Path(unittest.TestCase):
 class Parsers(unittest.TestCase):
     """Round-trip the REAL repo files -- these break if a parser regresses against live data."""
 
-    def test_roster_has_mcp_primitives(self):
+    def test_roster_parses_with_requires_declarations(self):
+        # No mcp primitive is rostered since #79 demoted the unprovenanced specs; the
+        # parser round-trip is pinned on entries carrying the cli:/env: requires grammar.
         roster = T.parse_roster(T.ROSTER)
         by_id = {e["id"]: e for e in roster}
-        self.assertIn("agent-bus", by_id)
-        self.assertEqual(by_id["agent-bus"]["type"], "mcp")
-        self.assertEqual(by_id["agent-bus"]["targets"], ["claude-code", "opencode"])
+        self.assertNotIn("agent-bus", by_id)  # demoted (#79)
+        self.assertEqual(by_id["diagrams"]["requires"], "[cli:graphviz]")
+        self.assertEqual(by_id["dotfiles-expert"]["requires"], "[env:dotfiles]")
 
     def test_externals_has_kind_mcp(self):
         ext = {e["id"]: e for e in T.parse_externals(T.EXTERNALS)}

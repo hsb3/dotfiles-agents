@@ -33,7 +33,7 @@ Every entry in [`../primitives-core.yaml`](../primitives-core.yaml) carries thes
 | `targets` | subset of `claude-code`, `opencode`, `claude-agents` | |
 | `plugins` | list of plugin ids | |
 | `summary` | non-empty string | |
-| `requires` | optional list, subset of `hooks`, `local-mcp`, `hosted-mcp` | per-primitive runtime capability needs that the type × target matrix can't express. Absent = no special requirements. Recorded, not yet consumed (capability subsetting is deferred). |
+| `requires` | optional list: capability words `hooks`, `local-mcp`, `hosted-mcp` plus dependency declarations `cli:<kebab>` and `env:<kebab>` | per-primitive runtime needs the type × target matrix can't express. `cli:<name>` = a binary/app that must be installed (e.g. `cli:graphviz`); `env:<name>` = machine state the content assumes (e.g. `env:dotfiles`). `validate_primitives.py` forces a declaration when content references a machine-local tool, `~/dotfiles`, or `/Applications/` (issue #79). Absent = no special requirements. Capability subsetting is deferred; deploy tooling consumes the `cli:`/`env:` declarations. |
 | `upstream` + `ref` | non-null, required when `origin: sourced` | upstream repo + pinned ref for clone-at-build (G4, deferred — no sourced entries exist yet). |
 
 Duplicate keys within one entry: the tailored line parser keeps the last one (documented, not

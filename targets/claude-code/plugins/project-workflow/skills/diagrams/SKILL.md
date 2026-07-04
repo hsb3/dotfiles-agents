@@ -18,9 +18,11 @@ This skill accumulates knowledge in `memory/MEMORY.md`. Each diagram session:
 ## Prerequisites
 
 ```bash
-pip install diagrams --break-system-packages
-# Graphviz is required for rendering
-apt-get install -y graphviz
+# In a project venv (preferred): uv add diagrams   — or: pip install diagrams
+uv pip install diagrams
+# Graphviz is required for rendering — install per platform:
+brew install graphviz          # macOS
+# apt-get install -y graphviz  # Debian/Ubuntu
 ```
 
 ## Workflow
@@ -518,7 +520,7 @@ with Diagram("Custom", show=False):
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| `graphviz not found` | Graphviz not installed | `apt-get install graphviz` |
+| `graphviz not found` | Graphviz not installed | `brew install graphviz` (macOS) / `apt-get install graphviz` (Debian) |
 | File not created | Exception in code | Check for import/syntax errors |
 | Image opens unexpectedly | `show=True` (default) | Set `show=False` |
 | Nodes too close | Default spacing | Add `nodesep`/`ranksep` to graph_attr |

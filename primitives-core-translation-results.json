@@ -84,7 +84,7 @@
       "comms": {
         "capability": "render",
         "destination": "claude-agents/skills/comms",
-        "sha256": "f5ce0d1c41436ca53f36a8478e110aec5635b77dddcf06b8c34b4860634dbfb4",
+        "sha256": "63c476019196a087a4c43ac8d36bf30e369eca81440bc9bfc18071d217764f42",
         "skipped": false
       },
       "deep-agents-core": {
@@ -138,7 +138,7 @@
       "diagrams": {
         "capability": "render",
         "destination": "claude-agents/skills/diagrams",
-        "sha256": "9eec8a72479d040aa568f23737f6a94b64d9c5e9f18d8af1e9b88eb8716d04bd",
+        "sha256": "bfe77f0a34a4d722bfe567f28b5cc1dd3e4013fdd78528281c0a75774adb5526",
         "skipped": false
       },
       "dlt-pipelines": {
@@ -186,7 +186,7 @@
       "github-project-board": {
         "capability": "render",
         "destination": "claude-agents/skills/github-project-board",
-        "sha256": "67719f3b79ae71eb10b6e5e544c386c7d9e9748a66355d4637917df5f04afa5f",
+        "sha256": "42c3f78f1905f3b0f5305943c6c9c711bad0253213a25bb3559d854b5c217204",
         "skipped": false
       },
       "handoff": {
@@ -276,7 +276,7 @@
       "memory-taxonomy": {
         "capability": "render",
         "destination": "claude-agents/skills/memory-taxonomy",
-        "sha256": "be2d0a9dcfed177f1527c88f944523a9457a758d81617275a0d962183a43cd63",
+        "sha256": "4314ac687037b7ef6396ba8d9daac4c985b23ba53deb6faf8259df767ef3b577",
         "skipped": false
       },
       "mermaid-diagram-specialist": {
@@ -324,7 +324,7 @@
       "obsidian-cli": {
         "capability": "render",
         "destination": "claude-agents/skills/obsidian-cli",
-        "sha256": "095fd7715f3c2a652b0e56f0c324df7a830f1c8ebff173d61e76d17120394133",
+        "sha256": "d9f380d90984248e171a0163cc817e8d548247cb384b263d59e3a431e7c6f7b6",
         "skipped": false
       },
       "obsidian-dom-helpers": {
@@ -390,7 +390,7 @@
       "pptx-henry": {
         "capability": "render",
         "destination": "claude-agents/skills/pptx-henry",
-        "sha256": "aa67d1721c2160ec062dfd06fc0d1687da95df04e67129b6977e344100b37ca9",
+        "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
         "skipped": false
       },
       "python-test-writer": {
@@ -467,12 +467,6 @@
       }
     },
     "claude-code": {
-      "agent-bus": {
-        "capability": "render",
-        "destination": "claude-code/mcp/agent-bus.json",
-        "sha256": "aeea940b4cf9e99feb52f5ed5449054eca8bf88997806c438e91d132b4e3570b",
-        "skipped": false
-      },
       "agent-dot-md-authoring": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/agent-dot-md-authoring",
@@ -483,12 +477,6 @@
         "capability": "native",
         "destination": "claude-code/skills/api-server-design",
         "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
-        "skipped": false
-      },
-      "audio": {
-        "capability": "render",
-        "destination": "claude-code/mcp/audio.json",
-        "sha256": "4066a2195d0ceb28e5af1aebaa33f41875d1c61a52b751f1e9016177c1906b7e",
         "skipped": false
       },
       "azure-tools": {
@@ -572,13 +560,7 @@
       "comms": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/comms",
-        "sha256": "f5ce0d1c41436ca53f36a8478e110aec5635b77dddcf06b8c34b4860634dbfb4",
-        "skipped": false
-      },
-      "deck-builder": {
-        "capability": "render",
-        "destination": "claude-code/mcp/deck-builder.json",
-        "sha256": "a4d236dfa53c103db17c1c288efd71c8a8c930fee42730e30fe461a4f745fc1a",
+        "sha256": "63c476019196a087a4c43ac8d36bf30e369eca81440bc9bfc18071d217764f42",
         "skipped": false
       },
       "deep-agents-core": {
@@ -617,18 +599,6 @@
         "sha256": "1eedae6918f58b41a9895afe823b590c6d6217d3e6b07698636f546bc4d695f4",
         "skipped": false
       },
-      "dev-focus.SessionStart.session-start": {
-        "capability": "native",
-        "destination": "claude-code/plugins/dev-focus/hooks-handlers/dev-focus.SessionStart.session-start.sh",
-        "sha256": "8f700efc1bb10309573ce64b05a3502d67185696191429b13730c5cd5e7bb5c2",
-        "skipped": false
-      },
-      "dev-focus.Stop.stop-summary": {
-        "capability": "native",
-        "destination": "claude-code/plugins/dev-focus/hooks-handlers/dev-focus.Stop.stop-summary.sh",
-        "sha256": "9a4cd7a15dcd1fa6abcc4b5c7d6115ce46a4564d533c49ec873d2f28151902c9",
-        "skipped": false
-      },
       "devcontainer-setup": {
         "capability": "native",
         "destination": "claude-code/skills/devcontainer-setup",
@@ -644,7 +614,7 @@
       "diagrams": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/diagrams",
-        "sha256": "9eec8a72479d040aa568f23737f6a94b64d9c5e9f18d8af1e9b88eb8716d04bd",
+        "sha256": "bfe77f0a34a4d722bfe567f28b5cc1dd3e4013fdd78528281c0a75774adb5526",
         "skipped": false
       },
       "dlt-pipelines": {
@@ -663,12 +633,6 @@
         "capability": "native",
         "destination": "claude-code/skills/dotfiles-expert",
         "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
-        "skipped": false
-      },
-      "excalidraw": {
-        "capability": "render",
-        "destination": "claude-code/mcp/excalidraw.json",
-        "sha256": "9da6f067f35792785c61ca62474fb85349eafb664c756bc00d3d6d7bde5ee1b6",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
@@ -704,7 +668,7 @@
       "github-project-board": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/github-project-board",
-        "sha256": "67719f3b79ae71eb10b6e5e544c386c7d9e9748a66355d4637917df5f04afa5f",
+        "sha256": "42c3f78f1905f3b0f5305943c6c9c711bad0253213a25bb3559d854b5c217204",
         "skipped": false
       },
       "handoff": {
@@ -794,7 +758,7 @@
       "memory-taxonomy": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/memory-taxonomy",
-        "sha256": "be2d0a9dcfed177f1527c88f944523a9457a758d81617275a0d962183a43cd63",
+        "sha256": "4314ac687037b7ef6396ba8d9daac4c985b23ba53deb6faf8259df767ef3b577",
         "skipped": false
       },
       "mermaid-diagram-specialist": {
@@ -842,7 +806,7 @@
       "obsidian-cli": {
         "capability": "native",
         "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-cli",
-        "sha256": "095fd7715f3c2a652b0e56f0c324df7a830f1c8ebff173d61e76d17120394133",
+        "sha256": "d9f380d90984248e171a0163cc817e8d548247cb384b263d59e3a431e7c6f7b6",
         "skipped": false
       },
       "obsidian-dom-helpers": {
@@ -908,7 +872,7 @@
       "pptx-henry": {
         "capability": "native",
         "destination": "claude-code/skills/pptx-henry",
-        "sha256": "aa67d1721c2160ec062dfd06fc0d1687da95df04e67129b6977e344100b37ca9",
+        "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
         "skipped": false
       },
       "python-standards.PostToolUse.post-tool-use": {
@@ -1003,12 +967,6 @@
       }
     },
     "opencode": {
-      "agent-bus": {
-        "capability": "render",
-        "destination": "opencode/mcp/agent-bus.json",
-        "sha256": "7fbe3e9fdc423f72260250fb54f9173f49e3241de109841b1e2af0feaff01663",
-        "skipped": false
-      },
       "agent-dot-md-authoring": {
         "capability": "native",
         "destination": "opencode/skills/agent-dot-md-authoring",
@@ -1019,12 +977,6 @@
         "capability": "native",
         "destination": "opencode/skills/api-server-design",
         "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
-        "skipped": false
-      },
-      "audio": {
-        "capability": "render",
-        "destination": "opencode/mcp/audio.json",
-        "sha256": "07e4d59b8c23bcdf14bc5da48c47124609ffa383abc07091b354ba5a0436738d",
         "skipped": false
       },
       "azure-tools": {
@@ -1108,13 +1060,7 @@
       "comms": {
         "capability": "native",
         "destination": "opencode/skills/comms",
-        "sha256": "f5ce0d1c41436ca53f36a8478e110aec5635b77dddcf06b8c34b4860634dbfb4",
-        "skipped": false
-      },
-      "deck-builder": {
-        "capability": "render",
-        "destination": "opencode/mcp/deck-builder.json",
-        "sha256": "edf52ac00d45987a3d69d9866bc0f85469e3af71a60318bae57f7a5fb6174dc8",
+        "sha256": "63c476019196a087a4c43ac8d36bf30e369eca81440bc9bfc18071d217764f42",
         "skipped": false
       },
       "deep-agents-core": {
@@ -1168,7 +1114,7 @@
       "diagrams": {
         "capability": "native",
         "destination": "opencode/skills/diagrams",
-        "sha256": "9eec8a72479d040aa568f23737f6a94b64d9c5e9f18d8af1e9b88eb8716d04bd",
+        "sha256": "bfe77f0a34a4d722bfe567f28b5cc1dd3e4013fdd78528281c0a75774adb5526",
         "skipped": false
       },
       "dlt-pipelines": {
@@ -1187,12 +1133,6 @@
         "capability": "native",
         "destination": "opencode/skills/dotfiles-expert",
         "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
-        "skipped": false
-      },
-      "excalidraw": {
-        "capability": "render",
-        "destination": "opencode/mcp/excalidraw.json",
-        "sha256": "aa701fd9167a2865dbd04a1331cafaa5f373d5da527ebd141dc2417cd5799e73",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
@@ -1228,7 +1168,7 @@
       "github-project-board": {
         "capability": "native",
         "destination": "opencode/skills/github-project-board",
-        "sha256": "67719f3b79ae71eb10b6e5e544c386c7d9e9748a66355d4637917df5f04afa5f",
+        "sha256": "42c3f78f1905f3b0f5305943c6c9c711bad0253213a25bb3559d854b5c217204",
         "skipped": false
       },
       "handoff": {
@@ -1318,7 +1258,7 @@
       "memory-taxonomy": {
         "capability": "native",
         "destination": "opencode/skills/memory-taxonomy",
-        "sha256": "be2d0a9dcfed177f1527c88f944523a9457a758d81617275a0d962183a43cd63",
+        "sha256": "4314ac687037b7ef6396ba8d9daac4c985b23ba53deb6faf8259df767ef3b577",
         "skipped": false
       },
       "mermaid-diagram-specialist": {
@@ -1366,7 +1306,7 @@
       "obsidian-cli": {
         "capability": "native",
         "destination": "opencode/skills/obsidian-cli",
-        "sha256": "095fd7715f3c2a652b0e56f0c324df7a830f1c8ebff173d61e76d17120394133",
+        "sha256": "d9f380d90984248e171a0163cc817e8d548247cb384b263d59e3a431e7c6f7b6",
         "skipped": false
       },
       "obsidian-dom-helpers": {
@@ -1432,7 +1372,7 @@
       "pptx-henry": {
         "capability": "native",
         "destination": "opencode/skills/pptx-henry",
-        "sha256": "aa67d1721c2160ec062dfd06fc0d1687da95df04e67129b6977e344100b37ca9",
+        "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
         "skipped": false
       },
       "python-test-writer": {

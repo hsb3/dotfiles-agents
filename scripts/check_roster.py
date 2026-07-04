@@ -6,7 +6,9 @@ Verifies that primitives-core.yaml (the roster) and primitives-core/ on disk agr
   - every primitive on disk (skill dir, agent .md, hook handler .sh, mcp .json) has a roster entry
   - basic schema: required fields present, type ∈ {skill,agent,mcp,hook}, shelf ∈ {core,toggle},
     origin ∈ {authored,sourced}, disposition ∈ {qualified,grandfathered-pending-use,demoted,untriaged}
-  - `requires` (optional) is a list ⊆ {hooks,local-mcp,hosted-mcp}
+  - `requires` (optional) is a list of {hooks,local-mcp,hosted-mcp} capability words plus
+    dependency declarations `cli:<kebab>` (a binary/app that must be installed) and
+    `env:<kebab>` (machine state, e.g. env:dotfiles) — issue #79
   - provenance: every `origin: sourced` entry carries non-null `upstream` and `ref`
 
 Stdlib-only (a tailored line parser for the roster's controlled format — no pyyaml), so it runs
@@ -28,6 +30,9 @@ SHELVES = {"core", "toggle"}
 ORIGINS = {"authored", "sourced"}
 DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged"}
 CAPABILITIES = {"hooks", "local-mcp", "hosted-mcp"}
+# Dependency declarations (issue #79): cli:<kebab> = a binary/app the primitive invokes;
+# env:<kebab> = machine state it assumes (e.g. env:dotfiles). Deploy tooling reads these.
+REQUIRES_DEP = re.compile(r"^(cli|env):[a-z0-9][a-z0-9_-]*$")
 REQUIRED = (
     "id",
     "type",
@@ -130,11 +135,15 @@ def check_entry_schema(e, problems):
             f"(must be one of {sorted(DISPOSITIONS)})"
         )
     if "requires" in e:
-        unknown = set(_list(e["requires"])) - CAPABILITIES
+        unknown = {
+            r
+            for r in _list(e["requires"])
+            if r not in CAPABILITIES and not REQUIRES_DEP.match(r)
+        }
         if unknown:
             problems.append(
-                f"[{eid}] unknown requires capability: {sorted(unknown)} "
-                f"(must be a subset of {sorted(CAPABILITIES)})"
+                f"[{eid}] unknown requires entry: {sorted(unknown)} "
+                f"(must be one of {sorted(CAPABILITIES)} or cli:<kebab> / env:<kebab>)"
             )
     if e.get("origin") == "sourced":
         for k in ("upstream", "ref"):

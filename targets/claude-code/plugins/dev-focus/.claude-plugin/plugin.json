@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Makes Claude Code aggressively focused \u2014 pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track.",
+  "description": "Makes Claude Code aggressively focused \u2014 pushes back on scope creep, decomposes broad tasks before starting, maintains organized files, and validates work stayed on track. Skill-only since 2.0.0: the SessionStart/Stop hooks were demoted for rework (#79).",
   "name": "dev-focus",
-  "version": "1.0.0"
+  "version": "2.0.0"
 }

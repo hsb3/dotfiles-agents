@@ -9,6 +9,14 @@ Create presentation files using the standard PPTX production workflow plus the
 rules in this skill. Where this skill and the base skill disagree on colors or
 fonts, this skill wins.
 
+## Prerequisites
+
+The render/QA script needs, per platform:
+
+- `pdftoppm` (poppler) — macOS: `brew install poppler`; Debian/Ubuntu: `apt-get install poppler-utils`
+- LibreOffice (`soffice`) or Microsoft PowerPoint (macOS) for PDF conversion —
+  `scripts/render-pptx.sh` probes for whichever is present and says what is missing.
+
 ## Workflow
 
 1. Read the base PPTX skill if present — check `~/.claude/skills/pptx/SKILL.md`,

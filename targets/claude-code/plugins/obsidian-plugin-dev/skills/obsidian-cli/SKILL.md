@@ -17,9 +17,18 @@ The Obsidian CLI allows you to:
 - Search content and manage file structure
 - Integrate Obsidian with scripts and external tools
 
-**CLI Access:** `/Applications/Obsidian.app/Contents/MacOS/Obsidian <command>`
+**Prerequisite:** the Obsidian desktop app must be installed (download from
+obsidian.md). The CLI is the app binary itself — resolve it per platform:
 
-For convenience, create a shell alias:
+| Platform | Binary |
+| --- | --- |
+| macOS | `/Applications/Obsidian.app/Contents/MacOS/Obsidian` |
+| Linux | `obsidian` on PATH (or the AppImage/flatpak binary) |
+| Windows | `%LOCALAPPDATA%\Obsidian\Obsidian.exe` |
+
+**CLI Access:** `<obsidian-binary> <command>` — examples below use an `obsidian` alias.
+
+For convenience, create a shell alias (adjust the path per the table above):
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
 alias obsidian="/Applications/Obsidian.app/Contents/MacOS/Obsidian"

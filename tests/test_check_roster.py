@@ -110,6 +110,23 @@ class EntrySchema(unittest.TestCase):
             _problems(_entry(requires="[hooks, local-mcp, hosted-mcp]")), []
         )
 
+    def test_dependency_declarations_clean(self):
+        # cli:<kebab> / env:<kebab> dependency grammar (issue #79)
+        self.assertEqual(
+            _problems(
+                _entry(requires="[cli:graphviz, cli:speak_gemini, env:dotfiles]")
+            ),
+            [],
+        )
+
+    def test_malformed_dependency_declaration_rejected(self):
+        problems = _problems(_entry(requires="[cli:Not-Kebab]"))
+        self.assertTrue(any("[fixture]" in p and "cli:" in p for p in problems))
+
+    def test_unknown_dependency_kind_rejected(self):
+        problems = _problems(_entry(requires="[bin:graphviz]"))
+        self.assertTrue(any("[fixture]" in p for p in problems))
+
     def test_sourced_without_upstream_and_ref_fails(self):
         problems = _problems(_entry(origin="sourced"))
         self.assertTrue(any("upstream" in p for p in problems))
@@ -155,7 +172,10 @@ class ParseRoster(unittest.TestCase):
         entries = C.parse_roster(C.ROSTER)
         self.assertTrue(entries)
         ids = {e.get("id") for e in entries}
-        self.assertIn("agent-bus", ids)  # an mcp primitive
+        # one of each rostered type (mcp is empty since #79 demoted the unprovenanced specs)
+        self.assertIn("comms", ids)  # a skill
+        self.assertIn("board-analyst", ids)  # an agent
+        self.assertIn("python-standards.Stop.stop", ids)  # a hook handler
 
     def test_required_fields_present_on_every_entry(self):
         for e in C.parse_roster(C.ROSTER):
@@ -165,10 +185,20 @@ class ParseRoster(unittest.TestCase):
 
 class DiskPrimitives(unittest.TestCase):
     def test_scans_mcp_specs(self):
-        found = C.disk_primitives()
-        types = {t for t, _src in found}
-        self.assertIn("mcp", types)  # the mcp/*.json scan
-        self.assertIn(("mcp", "primitives-core/mcp/agent-bus.json"), found)
+        # No mcp primitive is rostered since #79; prove the mcp/*.json scan path on a fixture.
+        import tempfile
+
+        d = tempfile.mkdtemp()
+        os.makedirs(os.path.join(d, "mcp"))
+        with open(os.path.join(d, "mcp", "x.json"), "w", encoding="utf-8") as fh:
+            fh.write("{}")
+        old_pc, old_repo = C.PC, C.REPO
+        C.PC, C.REPO = d, os.path.dirname(d)
+        try:
+            found = C.disk_primitives()
+        finally:
+            C.PC, C.REPO = old_pc, old_repo
+        self.assertIn("mcp", {t for t, _src in found})
 
 
 class CleanTree(unittest.TestCase):

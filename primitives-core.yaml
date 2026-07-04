@@ -8,7 +8,9 @@
 # Entry schema (see primitives-core/README.md):
 #   id · type · source · shelf{core|toggle} · origin{authored|sourced} ·
 #   disposition{qualified|grandfathered-pending-use|demoted|untriaged} · vendor · targets[] ·
-#   plugins[] · summary · requires[]{hooks|local-mcp|hosted-mcp} (optional; absent = no needs)
+#   plugins[] · summary · requires[] (optional; absent = no needs) — capability words
+#   {hooks|local-mcp|hosted-mcp} plus dependency declarations cli:<kebab> (a binary/app that
+#   must be installed) and env:<kebab> (machine state, e.g. env:dotfiles) — issue #79
 # origin is provenance (authored here vs sourced from upstream) and is immutable per entry;
 # origin: sourced entries must carry non-null `upstream:` and `ref:` fields.
 # The untriaged disposition is a migration placeholder ("pre-seeded, not yet dispositioned",
@@ -174,6 +176,7 @@ primitives:
     shelf: core
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:graphviz]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -194,6 +197,7 @@ primitives:
     shelf: core
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [env:dotfiles]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -376,6 +380,7 @@ primitives:
     shelf: core
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -386,6 +391,7 @@ primitives:
     shelf: core
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:cc-project-memory]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -446,6 +452,7 @@ primitives:
     shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:obsidian]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [obsidian-plugin-dev]
@@ -536,6 +543,7 @@ primitives:
     shelf: core
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:soffice, cli:pdftoppm]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: []
@@ -556,6 +564,7 @@ primitives:
     shelf: core
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:capture-console-errors]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
@@ -586,6 +595,7 @@ primitives:
     shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:speak_gemini]
     vendor: null
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-dashboard]
@@ -814,26 +824,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Use this agent when you need to review testing implementation and coverage."
-  - id: dev-focus.SessionStart.session-start
-    type: hook
-    source: primitives-core/hooks/dev-focus/hooks-handlers/dev-focus.SessionStart.session-start.sh
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code]
-    plugins: [dev-focus]
-    summary: "Inject dev-focus principles at session start and capture the session id for the summary hook."
-  - id: dev-focus.Stop.stop-summary
-    type: hook
-    source: primitives-core/hooks/dev-focus/hooks-handlers/dev-focus.Stop.stop-summary.sh
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code]
-    plugins: [dev-focus]
-    summary: "Generate a focused session summary at Stop."
   - id: python-standards.SessionStart.session-start
     type: hook
     source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.SessionStart.session-start.sh
@@ -864,44 +854,6 @@ primitives:
     targets: [claude-code]
     plugins: [python-standards]
     summary: "Python-standards cleanup/summary at Stop."
-  # ── mcp: self-authored connection specs (local stdio → CC + opencode; CMA is remote-only) ──
-  - id: agent-bus
-    type: mcp
-    source: primitives-core/mcp/agent-bus.json
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode]
-    plugins: []
-    summary: "Multi-agent coordination bus — presence, channels, leases, tasks, KV, request/approval."
-  - id: excalidraw
-    type: mcp
-    source: primitives-core/mcp/excalidraw.json
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode]
-    plugins: []
-    summary: "Excalidraw wireframe/diagram composer — component kit search, place, compose."
-  - id: deck-builder
-    type: mcp
-    source: primitives-core/mcp/deck-builder.json
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode]
-    plugins: []
-    summary: "Slide-deck builder — decks/slides from themes + templates, preview, PDF export."
-  - id: audio
-    type: mcp
-    source: primitives-core/mcp/audio.json
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode]
-    plugins: []
-    summary: "Audio narration generator — voices/styles/templates, narrate, estimate, export."
+  # ── mcp: self-authored connection specs (local stdio → CC + opencode; CMA is remote-only).
+  # Empty since #79 demoted the 4 unprovenanced specs to the workbench; a new spec must carry
+  # an `install:` block (validate_primitives.py) and declare its binary via requires cli:<name>. ──

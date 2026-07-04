@@ -11,7 +11,7 @@ Source of truth for proven coding-agent **extenders** (skills, agents, MCP serve
 - **Externals are tracked, not vendored:** third-party extenders live in `externals.yaml` (upstream repo + ref); the build clones them. Distribution is private/self-only.
 
 ## Layout
-- `primitives-core/{skills,agents,mcp,hooks}/` — the single source copies (all four populated; mcp = neutral connection specs, see `primitives-core/mcp/README.md`)
+- `primitives-core/{skills,agents,mcp,hooks}/` — the single source copies (mcp = neutral connection specs, currently empty — #79 demoted the unprovenanced specs; new ones need an `install:` block, see `primitives-core/mcp/README.md`)
 - `primitives-core.yaml` (roster) · `primitives-core-translation-config.yaml` (adapters) · `primitives-core-translation-results.json` (lock)
 - `externals.yaml` — tracker for third-party extenders cloned at build (not stored here)
 - `targets/{claude-code,opencode,claude-agents}/` — generated bundles
