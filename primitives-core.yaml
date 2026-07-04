@@ -830,6 +830,7 @@ primitives:
     shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:ty, cli:ruff]
     vendor: null
     targets: [claude-code]
     plugins: [python-standards]
@@ -840,6 +841,7 @@ primitives:
     shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:ty, cli:ruff]
     vendor: null
     targets: [claude-code]
     plugins: [python-standards]
@@ -850,6 +852,7 @@ primitives:
     shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
+    requires: [cli:ty, cli:ruff]
     vendor: null
     targets: [claude-code]
     plugins: [python-standards]
