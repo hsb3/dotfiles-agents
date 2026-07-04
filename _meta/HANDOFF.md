@@ -30,12 +30,25 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   project-workflow skills there first; it already produced #67/#72 (both fixed, 0.2.2).
 - **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use. #37's ra-platform adoption is use-citation #1 for `planning-desk`.
 - **Promoting a parked item** (CANON 12) needs ≥2 cited real uses + H1–H5; `opencode-expert` is the strongest candidate.
+- **Portability conformance wave (#79 + wb#32, 2026-07-04):** a fresh-machine session (second
+  MacBook) exposed machine-tied assumptions across the primitives. In flight: PR da#80
+  (requires: `cli:`/`env:` grammar, mcp `install:` block, validate_primitives portability
+  mirror, in-place fixes, demotion of the 4 mcp specs + dev-focus hooks) and PR wb#33 (gate
+  amendments H5-broadened/H6/H4-split — pending Henry's ratification — plus incubator receipt
+  + demotion records). Merge da#80 and wb#33 together; the gate-amendment ratification is
+  Henry's vault decision.
 
 ## 3 · Conventions & gotchas
 
 - **Never hand-edit generated `targets/` or the results lock** — they're drift-guarded. Edit `primitives-core/` then `make build`.
 - **Tests are stdlib `unittest` only** — keep `make ci` zero-install (no pytest/uv in the required lane). **Fixtures live under `tests/` temp dirs, never `primitives-core/`** — `check_roster.py` flags on-disk orphans. Drift guards prove *consistency*; the tests + `validate_primitives.py` prove *correctness*.
 - **SKILL.md `description` must not contain XML/angle-bracket tags** — Claude Cowork refuses to load such skills. Skill-specific: agent `.md` descriptions may use `<example>`. Enforced by `validate_primitives.py`.
+- **Primitives must be machine-agnostic (#79, enforced in `make ci`):** no `/Users/...`, personal
+  vault names, `~/Documents|Desktop` paths, or `--break-system-packages`; `~/dotfiles`,
+  `/Applications/`, and machine-local tools (cc-project-memory, speak_gemini, …) are legal only
+  with a covering roster `requires:` (`cli:<name>` / `env:dotfiles`); stdio mcp specs need an
+  `install: {upstream, command}` block; hook configs are handler references only, inline prose
+  ≤ 20 words. The workbench gate mirrors these (H5/H6/H4, wb#32).
 - **Naming grammar is shared with the workbench:** `tests/test_check_naming.py` imports the sibling `../dotfiles-agents-workbench/scripts/promote_check.py` constants and asserts no drift — but it **silently skips when the sibling checkout is absent**. Keep the two repos side-by-side to run it; don't rename the grammar constants on either side.
 - **Board scripts are authoritative HERE** (`primitives-core/skills/github-project-board/scripts/`) — deliberately diverged from frozen hsb3-custom-plugins; never re-copy from the frozen repo.
 - **Archived plans:** `_meta/_archive/<issue>-<slug>.md` (tracked via gitignore negation). On close, `git mv` the `plan.md` there and move its README row ACTIVE→ARCHIVED so `reconcile.py` stays clean. Run `_meta/plans/_utils/` scripts from the **main tree** (they read live `gh` + disk); ACTIVE README rows use the **bare slug**, not a markdown link.
