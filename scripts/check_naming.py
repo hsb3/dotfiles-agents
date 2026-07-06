@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Naming-taxonomy lint (grammar source of truth: manifests/naming.md).
+"""Naming-taxonomy lint (grammar source of truth: docs/naming.md).
 
 Enforces, over every roster entry (primitives-core.yaml) and every plugins.yaml bundle id:
   - skill / agent / mcp / plugin ids: kebab-case  (^[a-z0-9]+(-[a-z0-9]+)*$)
@@ -16,7 +16,7 @@ There is no suppression mechanism by design — a violation is fixed by a record
 a corrected roster entry, never an exception.
 
 Stdlib-only (reuses check_roster.parse_roster), so it runs in CI with zero install.
-Exit 0 = clean; exit 1 = violations (one line per problem, grammar: manifests/naming.md).
+Exit 0 = clean; exit 1 = violations (one line per problem, grammar: docs/naming.md).
 
 Usage: python3 scripts/check_naming.py   (run from the repo root)
 """
@@ -34,7 +34,7 @@ HOOKS_DIR = os.path.join(REPO, "primitives-core", "hooks")
 
 KEBAB = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
-# Harness event list — pinned to manifests/naming.md (canonical). The workbench keeps its
+# Harness event list — pinned to docs/naming.md (canonical). The workbench keeps its
 # own copy (dotfiles-agents-workbench/scripts/promote_check.py EVENTS); tests guard drift.
 EVENTS = (
     "SessionStart",
@@ -60,7 +60,7 @@ CLIENT_TOKENS = (
 
 HOOK_ID = re.compile(r"^(?P<plugin>[^.]+)\.(?P<event>[^.]+)\.(?P<slug>[^.]+)$")
 
-# Per-kind pattern hints for messages (manifests/naming.md "Patterns" table).
+# Per-kind pattern hints for messages (docs/naming.md "Patterns" table).
 PATTERNS = {
     "skill": "<domain>-<capability>",
     "agent": "<domain>-<role>[-<verb>]",
@@ -207,7 +207,7 @@ def main():
     if problems:
         print(
             f"✗ naming-taxonomy violations: {len(problems)} problem(s) "
-            f"— grammar: manifests/naming.md"
+            f"— grammar: docs/naming.md"
         )
         for p in problems:
             print(f"  - {p}")
@@ -218,7 +218,7 @@ def main():
     summary = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
     print(
         f"✓ naming clean — {len(entries)} roster ids ({summary}) "
-        f"+ {len(bundle_ids)} plugin ids (grammar: manifests/naming.md)"
+        f"+ {len(bundle_ids)} plugin ids (grammar: docs/naming.md)"
     )
     return 0
 

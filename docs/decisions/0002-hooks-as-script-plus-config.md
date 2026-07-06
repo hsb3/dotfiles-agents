@@ -8,7 +8,7 @@ _A hook is a directory (config + event-named script), never a raw command string
   2026-07-03 per #40)
 - **Raised by:** the dotfiles hook-packaging convention (hook dirs with `config.json` + a
   script — never inline bash in `.claude/settings.json`); encoded in the workbench gate H4
-  and the naming grammar `<plugin>.<Event>.<slug>.sh` (`manifests/naming.md`)
+  and the naming grammar `<plugin>.<Event>.<slug>.sh` (`docs/naming.md`)
 
 ## Context
 
@@ -36,4 +36,4 @@ Hooks are packaged as **script + config**: an event-named script file
 
 `primitives-core/hooks/` packaging · repo-meta-structure `references/checklist.md` HOOK-01
 (the check that cites this ADR) · workbench `scripts/promote_check.py` H2/H4 ·
-`manifests/naming.md` hook grammar.
+`docs/naming.md` hook grammar.

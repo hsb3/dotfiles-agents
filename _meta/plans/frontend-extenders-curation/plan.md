@@ -156,7 +156,7 @@ filing gets owner approval first (`_config.md` convention); staging on the desk 
 | CI aggregate (make ci) | no PR, no fire | report-only: this issue lands a plan document under _meta/plans/, no code surface |
 | Roster drift guard (make check) | no | no primitive added, removed, or renamed by this issue |
 | Targets drift guard (make build-check) | no | no primitives-core/, primitives-core.yaml, or plugins.yaml edit |
-| Naming taxonomy | no | no new primitive or plugin named here; core-set NAMES proposed in C must pre-check manifests/naming.md before follow-ons file |
+| Naming taxonomy | no | no new primitive or plugin named here; core-set NAMES proposed in C must pre-check docs/naming.md before follow-ons file |
 | yamllint / actionlint | no | no YAML or workflow edits |
 
 Follow-on execution issues are a different story and must each carry their own gate rows:

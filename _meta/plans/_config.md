@@ -32,7 +32,7 @@ NOT fire.
 | CI aggregate (required) | `make ci` (roster + content + naming + targets + tests) on every PR + push to main | always |
 | Roster drift guard | `make check` (`scripts/check_roster.py`) | a primitive added / removed / renamed in `primitives-core/` |
 | Targets drift guard | `make build-check`; fix with `make build` | any edit to `primitives-core/`, `primitives-core.yaml`, `plugins.yaml`, or the translation config |
-| Naming taxonomy | `make names` (`scripts/check_naming.py`, in `make ci`); prefix families stay a manual check against `manifests/naming.md` | naming a new primitive or plugin |
+| Naming taxonomy | `make names` (`scripts/check_naming.py`, in `make ci`); prefix families stay a manual check against `docs/naming.md` | naming a new primitive or plugin |
 | YAML / workflow lint | `yamllint`; `actionlint` (manual; wired into neither `make ci` nor a pre-commit hook) | editing `*.yaml`/`*.yml`; `.github/workflows/` |
 | Canonical-doc amendment | manual review (no auto-check): amend the doc in the SAME PR as the surface change | a change alters behavior a spine doc describes: `CLAUDE.md`, `AGENTS.md`, `docs/CHARTER.md`, `docs/plugins/*`, `docs/sops/*` — a plan states whether this fires |
 
@@ -44,7 +44,7 @@ NOT fire.
 A load-bearing claim cites `path:line` OR one of these:
 
 - `docs/CHARTER.md` (precedence page) · `CLAUDE.md` (agent digest) · `AGENTS.md`
-- `manifests/naming.md` (naming taxonomy) · `primitives-core.yaml` (the roster) · `externals.yaml`
+- `docs/naming.md` (naming taxonomy) · `primitives-core.yaml` (the roster) · `externals.yaml`
 - Governance (outside the repo): `~/Documents/Claude/Projects/dotfiles-agents-cowork/_structure/{CANON.md, repository-technical-plan.md}`; promotion gate at `dotfiles-agents-workbench/docs/promotion-gate.md`
 
 ## Conventions / gotchas
@@ -53,6 +53,6 @@ A load-bearing claim cites `path:line` OR one of these:
 - Outward-facing GitHub edits get owner approval before publishing; staging on the desk is free.
 - Run the `_utils/` scripts from the main working tree (they read live `gh` state + disk).
 - **Commands are dropped** (CANON 3) — encode reusable procedures as skills, not commands.
-- **Hooks are stdlib-only** and named `<plugin>.<Event>.<slug>.sh` (`manifests/naming.md`).
+- **Hooks are stdlib-only** and named `<plugin>.<Event>.<slug>.sh` (`docs/naming.md`).
 - **Externals are tracked, not vendored** — third-party extenders go in `externals.yaml`.
 - Trunk-based: branch `<type>/<short-name>`, squash-merge PRs, commit prefixes `feat|fix|docs|refactor|chore(scope):`, commits end with the `Claude-Session:` footer.

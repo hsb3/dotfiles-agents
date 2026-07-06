@@ -20,8 +20,8 @@ The **single consultable source** for where agent memory lives and how it moves.
 consumers read this identical content: a human/agent session (you, now), the
 repo-compliance-audit skill (checks structure against `references/checklist.md`), and
 Henry at curation time. The system *design* behind it — storage mechanics, loading
-semantics, settings precedence — is the memory-standard technical design (in the owner's
-engineering vault, `technical-designs/memory-standard.md`); this
+semantics, settings precedence — is the memory-standard technical design (in this repo at
+`docs/design/memory-standard.md`); this
 content is the standard a session applies, and it links to that design rather than
 restating it.
 

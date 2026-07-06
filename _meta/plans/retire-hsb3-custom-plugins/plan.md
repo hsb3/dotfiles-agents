@@ -218,7 +218,7 @@ SKILL.md content after `make build`.
 | CI aggregate (make ci) | yes | always; B/C edit primitives-core/ |
 | Targets drift guard (make build-check) | yes | any primitives-core/ edit (A folds, B, C) regenerates targets/; never hand-edit targets/ |
 | Roster drift guard (make check) | conditional | fires only if decision 1 adds the python-project-standards skill; drop-all path leaves the roster untouched |
-| Naming taxonomy (manifests/naming.md) | conditional | only the new skill name under decision 1 |
+| Naming taxonomy (docs/naming.md) | conditional | only the new skill name under decision 1 |
 | yamllint / actionlint | conditional | only if G edits externals.yaml; no workflow files touched anywhere in A-G |
 
 Contract notes: plugin membership changes (B adds a skill to python-standards; C edits a
