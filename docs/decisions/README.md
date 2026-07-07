@@ -9,6 +9,9 @@ Status: active
 
 - One file per decision: **`NNNN-kebab-title.md`** (zero-padded, sequential). Start from
   [`0000-template.md`](0000-template.md).
+- Every ADR opens with the common doc-frontmatter core (`title` · `type: decision` · `status` ·
+  `created`; see [`docs/governance-map.md`](../governance-map.md)) — the `status:` field holds the
+  ADR lifecycle value below.
 - **Append-only.** Never renumber or delete an ADR. Two distinct mechanisms, by what changed:
   - **Supersession** — the *decision* changed: write a new ADR, set the old one's status to
     `Superseded-by-NNNN`, leave its text for provenance.

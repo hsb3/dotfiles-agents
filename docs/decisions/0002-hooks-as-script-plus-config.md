@@ -1,11 +1,19 @@
+---
+title: "Hooks as script + config, never inline"
+type: decision
+status: Accepted
+created: 2026-06-28
+updated: 2026-07-03
+summary: A hook is a directory (config + event-named script), never inline bash in settings.json.
+---
+
 # 0002 · Hooks as script + config, never inline
 
 _A hook is a directory (config + event-named script), never a raw command string in
 `settings.json`._
 
-- **Status:** Accepted
-- **Date:** 2026-06-28 (working convention since the Phase-2 migration; ADR backfilled
-  2026-07-03 per #40)
+- **Provenance:** working convention since the Phase-2 migration (2026-06-28); ADR
+  backfilled 2026-07-03 per #40
 - **Raised by:** the dotfiles hook-packaging convention (hook dirs with `config.json` + a
   script — never inline bash in `.claude/settings.json`); encoded in the workbench gate H4
   and the naming grammar `<plugin>.<Event>.<slug>.sh` (`docs/naming.md`)

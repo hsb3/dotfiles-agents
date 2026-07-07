@@ -4,7 +4,7 @@ type: spec
 status: draft
 created: 2026-07-03
 purpose: Plan for the Gate-2 canonical pilot, re-pointed 2026-07-05 to hsb3/fleet-dashboard. The raptorgpt-agents run (below) is retained as the COMPLETE prior pilot; the fleet-dashboard scope up top is the new canonical proof (baseline TBD until the audit runs).
-notes: Decision update 2026-07-05 (see callout) supersedes the 2026-07-02 vault GO on raptorgpt-agents. rgpt# = mhi-raptorxai/raptorgpt-agents (prior pilot). The vault is the hsb-2026 Obsidian vault (see Tracking) and still records the raptorgpt GO — update it there too.
+notes: Decision update 2026-07-05 (see callout) supersedes the 2026-07-02 vault GO on raptorgpt-agents. rgpt# = mhi-raptorxai/raptorgpt-agents (prior pilot). The hsb-2026 vault's decision registry was marked superseded accordingly on 2026-07-07.
 ---
 
 # Gate-2 pilot: audit -> manifest -> scaffold -> re-audit on fleet-dashboard
@@ -14,7 +14,7 @@ notes: Decision update 2026-07-05 (see callout) supersedes the 2026-07-02 vault 
 > canonical proof for a personal-tooling project than a work repo. The raptorgpt-agents run
 > (merged PR rgpt#541, defects da#38/da#44 fixed) is kept as a **completed prior pilot**; its vault
 > sign-off (TC-013/TC-010) no longer gates Gate 2. This supersedes the 2026-07-02 GO decision
-> recorded in the hsb-2026 vault `DECISIONS.md` — reflect the supersession there too.
+> recorded in the hsb-2026 vault `DECISIONS.md` (supersession reflected there 2026-07-07).
 
 ## New canonical pilot — hsb3/fleet-dashboard (scope)
 

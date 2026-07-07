@@ -1,11 +1,19 @@
+---
+title: "Externals are tracked-and-cloned, never vendored"
+type: decision
+status: Accepted
+created: 2026-06-28
+updated: 2026-07-03
+summary: Third-party extenders are references (upstream + pinned ref) cloned at build; never copied into primitives-core.
+---
+
 # 0003 · Externals are tracked-and-cloned, never vendored
 
 _Third-party extenders are references (upstream + pinned ref) cloned at build time —
 `primitives-core/` holds homegrown source only._
 
-- **Status:** Accepted
-- **Date:** 2026-06-28 (ratified in CANON 11; extended by CANON 16 for mcp, 2026-06-29;
-  ADR backfilled 2026-07-03 per #40)
+- **Provenance:** ratified in CANON 11 (2026-06-28); extended by CANON 16 for mcp
+  (2026-06-29); ADR backfilled 2026-07-03 per #40
 - **Raised by:** strategy-desk CANON decision 11; vault decision
   `third-party-extenders-clone-from-source`
 

@@ -1,10 +1,18 @@
+---
+title: "Rules stay Claude-Code-only; auto-memory translates lossily to opencode"
+type: decision
+status: Accepted
+created: 2026-07-02
+updated: 2026-07-05
+summary: Rules are gated out of opencode bundles by default; auto-memory ships lossily (files + AGENTS.md reference).
+---
+
 # 0004 · Rules stay Claude-Code-only; auto-memory translates lossily to opencode
 
 _Rules and auto-memory fail differently when translated to opencode, so they get per-primitive
 policies, not one blanket rule._
 
-- **Status:** Accepted
-- **Date:** 2026-07-02 (migrated from the strategy vault to a repo ADR 2026-07-05)
+- **Provenance:** decided 2026-07-02; migrated from the strategy vault to a repo ADR 2026-07-05
 - **Raised by:** Q-03 (opencode has no path-scoped rules and no lazy-pull memory); evidence in the
   workbench `opencode-expertise` skill's CC→OC mapping
 

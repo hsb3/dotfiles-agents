@@ -86,6 +86,9 @@ agent crossing desks meets the same shapes.
 - **Strategy Desk** decisions live in `_structure/decisions/`; **repo-scoped** decisions that bind
   code also get a dotfiles `docs/decisions/` ADR cited from code. **CANON** summarizes the full set
   and is the precedence page.
+- ADRs carry the common doc-frontmatter core (below) like any other durable doc — their `status:`
+  field holds the ADR lifecycle value (`Proposed | Accepted | Rejected | Superseded-by-NNNN`), not
+  the generic doc statuses.
 
 **Common doc frontmatter (core).** Every durable doc on either desk opens with YAML frontmatter:
 - **Required:** `title` · `type` · `status` (`draft | active | superseded by <path>`) · `created` (YYYY-MM-DD).

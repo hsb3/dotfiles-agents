@@ -1,10 +1,19 @@
+---
+title: "Frontend stack for agent-built UI: Vite + React + shadcn/ui + Tailwind"
+type: decision
+status: Proposed
+created: 2026-07-01
+updated: 2026-07-05
+summary: If a UI surface enters scope, pin Vite + React + shadcn/ui + Tailwind via a constraint doc; binds only then.
+---
+
 # 0005 · Frontend stack for agent-built UI: Vite + React + shadcn/ui + Tailwind
 
 _If a UI surface ever enters scope, build it on the stack coding agents are most fluent in, pinned by
-a constraint doc. Proposed — binds only when a deliverable actually has a UI._
+a constraint doc. Proposed — a ballot: binds only when a deliverable actually has a UI (see the open
+question below)._
 
-- **Status:** Proposed (ballot — the recommendation + the open question below)
-- **Date:** 2026-07-01 (migrated from the strategy vault to a repo ADR 2026-07-05)
+- **Provenance:** decided 2026-07-01; migrated from the strategy vault to a repo ADR 2026-07-05
 - **Raised by:** the frontend-stack shortlist research (strategy desk `analyses/frontend-stack-shortlist.md`)
 
 ## Context
