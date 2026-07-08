@@ -1,8 +1,8 @@
-"""Tests for scripts/check_naming.py -- the naming-taxonomy lint (manifests/naming.md).
+"""Tests for scripts/check_naming.py -- the naming-taxonomy lint (docs/naming.md).
 
 Per-kind pass/fail fixtures (skill/agent/mcp kebab; the hook <plugin>.<Event>.<slug>
 grammar; client-token + vendor-in-name rules; hooks.json layout; plugins.yaml bundle ids),
-the event-list pin against manifests/naming.md, a cross-repo drift guard against the
+the event-list pin against docs/naming.md, a cross-repo drift guard against the
 workbench's promote_check.py constants (skipped when the sibling repo is absent), and a
 clean-tree smoke of main(). Stdlib-only.
 """
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import check_naming as N  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-NAMING_MD = os.path.join(REPO, "manifests", "naming.md")
+NAMING_MD = os.path.join(REPO, "docs", "naming.md")
 WORKBENCH_PROMOTE_CHECK = os.path.join(
     os.path.dirname(REPO), "dotfiles-agents-workbench", "scripts", "promote_check.py"
 )
@@ -80,11 +80,11 @@ class Constants(unittest.TestCase):
         self.assertEqual(N.EVENTS, CANONICAL_EVENTS)
 
     def test_events_pinned_to_naming_md(self):
-        """manifests/naming.md is canonical — every event must appear there verbatim."""
+        """docs/naming.md is canonical — every event must appear there verbatim."""
         with open(NAMING_MD, encoding="utf-8") as fh:
             text = fh.read()
         for ev in N.EVENTS:
-            self.assertIn(f"`{ev}`", text, f"{ev} missing from manifests/naming.md")
+            self.assertIn(f"`{ev}`", text, f"{ev} missing from docs/naming.md")
 
     def test_client_tokens_match_the_ratified_list(self):
         self.assertEqual(
@@ -104,7 +104,7 @@ class Constants(unittest.TestCase):
         "sibling dotfiles-agents-workbench checkout not present",
     )
     def test_no_grammar_drift_against_workbench_promote_check(self):
-        """Both repos carry their own constant table pinned to manifests/naming.md —
+        """Both repos carry their own constant table pinned to docs/naming.md —
         when the sibling checkout is present, assert they haven't drifted apart."""
         spec = importlib.util.spec_from_file_location(
             "workbench_promote_check", WORKBENCH_PROMOTE_CHECK

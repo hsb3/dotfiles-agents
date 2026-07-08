@@ -5,7 +5,7 @@ The **single canonical source copy** of every primitive. Edit primitives **here*
 ([`../scripts/`](../scripts/), built in Phase 3); `targets/` is its output.
 
 See [`../docs/CHARTER.md`](../docs/CHARTER.md) for the model and
-[`../manifests/naming.md`](../manifests/naming.md) for the naming taxonomy every primitive must follow.
+[`../docs/naming.md`](../docs/naming.md) for the naming taxonomy every primitive must follow.
 
 ## The four primitive types
 
@@ -45,4 +45,4 @@ guarded).
   does not keep its own copy. The translation service materializes plugin bundles at build time.
 - **Every primitive is registered** in [`../primitives-core.yaml`](../primitives-core.yaml). A
   drift test (Phase 3) fails if anything on disk is unregistered, or any roster entry is missing on disk.
-- **Naming is lint-enforced** against [`../manifests/naming.md`](../manifests/naming.md).
+- **Naming is lint-enforced** against [`../docs/naming.md`](../docs/naming.md).

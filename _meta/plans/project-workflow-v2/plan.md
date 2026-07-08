@@ -60,7 +60,7 @@ Date: 2026-07-03
   (ops vs output) is arguably missing.
 - No naming convention across members, unlike `langchain-*` / `obsidian-*` /
   `deep-agents-*`; the taxonomy pattern is `<domain>-<capability>` for skills and
-  `<domain>-<role>[-<verb>]` for agents (`manifests/naming.md:13-14`).
+  `<domain>-<role>[-<verb>]` for agents (`docs/naming.md:13-14`).
 - **A naming lint now exists and runs in CI**: `make names` = `scripts/check_naming.py`
   (Makefile:13-14), part of `make ci` (Makefile:28), which is all CI runs
   (`.github/workflows/ci.yml:20`). It enforces kebab-case, no client tokens, no vendor in
@@ -190,7 +190,7 @@ family split explicitly (the current text already lists the output deliverables,
 a framing edit, not a rescue); bump `version:` 0.2.1 to 0.3.0 (roster-membership change:
 10 renames + 1 addition; rule per #40 decision 4, precedent per #64's patch-only bump).
 If owner decision 4 approves, add the one-line membership-bump rule to
-`manifests/naming.md` in the same commit.
+`docs/naming.md` in the same commit.
 Acceptance:
 - `plugins.yaml` description mentions both families; version reads `0.3.0`.
 - Regenerated `plugin.json` + both marketplace catalogs carry 0.3.0 (root catalog currently
@@ -234,7 +234,7 @@ Acceptance:
 | CI aggregate (make ci, required) | yes | always; it is the only CI step per .github/workflows/ci.yml line 20 |
 | Roster drift guard (make check) | yes | 10 primitives renamed and 1 added in primitives-core/ plus primitives-core.yaml |
 | Targets drift guard (make build-check) | yes | primitives-core/, the roster, plugins.yaml, and translate.py all change; regenerate with make build and commit |
-| Naming lint (make names) | yes | every renamed or new id is linted for kebab-case, client tokens, vendor-in-id; NOTE: pw- prefix-family conformance is NOT machine-checked, confirm manually against manifests/naming.md lines 13-14 |
+| Naming lint (make names) | yes | every renamed or new id is linted for kebab-case, client tokens, vendor-in-id; NOTE: pw- prefix-family conformance is NOT machine-checked, confirm manually against docs/naming.md lines 13-14 |
 | Content validation (make validate) | yes | new and moved SKILL.md frontmatter, XML-tag description guard on pw-workflow |
 | Loadability smoke (make smoke) | yes, deliberately | opt-in and not in ci per Makefile line 25, but run once: renames are the loading-breakage class it tests |
 | yamllint | local-hook lane only | primitives-core.yaml and plugins.yaml are edited, so it applies where configured; CI itself runs only make ci |
@@ -280,7 +280,7 @@ work to the same plugin, so it gets the same review"). If any other in-flight PR
    counts as proven.
 4. **Codify the version rule** ("any roster-membership change bumps the plugin minor
    version") — today it lives only in the archived #40 plan (decision 4) and #64's commit
-   message. **Recommend: yes, one line in `manifests/naming.md`** in this PR; this is the
+   message. **Recommend: yes, one line in `docs/naming.md`** in this PR; this is the
    rule's second application and the naming manifest is where id/version conventions
    already live.
 5. **Out-of-repo references to old skill names.** The global dotfiles instructions invoke

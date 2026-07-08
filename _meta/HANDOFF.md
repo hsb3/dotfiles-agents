@@ -21,13 +21,15 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   `record:` roster field) and **#32** (16-command disposition, `skills` CLI retirement,
   archive hsb3-custom-plugins — the only P1). #27 (pw- rename wave, plugin 0.3.0) next;
   coordinate version bumps with #32.
-- **Gate-2 pilot (#33) is in close-out, not execution:** the pilot ran 2026-07-02
-  (rgpt#541, 36/22 to 56/3); the 2026-07-03 round-2 mechanical pass is COMMITTED in
-  raptorgpt-agents (d4ab1851; repo at `~/Developer/raptorgpt-agents` — flat, the old
-  nested path is dead). Remaining: re-audit evidence, gap-justification ledger,
-  TC-013/TC-010 addenda in the `hsb-2026` Obsidian vault, Henry's sign-off ticks.
-- **fleet-dashboard is the plugin test bed** (owner decision 2026-07-03) — exercise
-  project-workflow skills there first; it already produced #67/#72 (both fixed, 0.2.2).
+- **Gate-2 pilot (#33) re-pointed to `hsb3/fleet-dashboard` 2026-07-05 (supersedes raptorgpt).**
+  The canonical Gate-2 proof now runs the standard on fleet-dashboard (already the plugin test bed,
+  below): baseline audit -> `mise-en-place.yml` -> scaffold apply -> re-audit — **baseline TBD until
+  it runs.** The raptorgpt-agents run is kept as a **COMPLETE prior pilot** (rgpt#541, 36/22 to 56/3;
+  round-2 committed d4ab1851; defects da#38/da#44 fixed); its `hsb-2026` vault sign-off
+  (TC-013/TC-010) **no longer gates Gate 2.** The vault `DECISIONS.md` still records the old raptorgpt
+  GO — reflect the supersession there.
+- **fleet-dashboard is the plugin test bed** (owner decision 2026-07-03) and now the Gate-2 pilot —
+  exercise project-workflow skills there first; it already produced #67/#72 (both fixed, 0.2.2).
 - **J1 upgrades (post-Q-13):** the 2026-07-03 sweep (#31) dispositioned all 84 entries `grandfathered-pending-use` (17 flipped to `origin: sourced` with pinned refs); items now upgrade to `qualified` on ≥2 cited real uses (re-qualification record in the workbench promotions log) or demote on failure-in-use. #37's ra-platform adoption is use-citation #1 for `planning-desk`.
 - **Promoting a parked item** (CANON 12) needs ≥2 cited real uses + H1–H5; `opencode-expert` is the strongest candidate.
 - **Portability conformance wave (#79 + wb#32) — SHIPPED 2026-07-04.** da#80 + wb#33 both

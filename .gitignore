@@ -23,11 +23,13 @@ _meta/*
 # the plans negation re-includes Finder litter past the global .DS_Store rule
 _meta/plans/**/.DS_Store
 _meta/plans/.DS_Store
-# scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
-# content stays local (operations/ especially — secrets are never tracked)
+# briefings + _archive are TRACKED (comm packages + archived plans must survive a clone;
+# 2026-07-05 — briefings flipped from gitkeep-only to fully tracked)
 !_meta/briefings/
-_meta/briefings/*
-!_meta/briefings/.gitkeep
+!_meta/briefings/**
+_meta/briefings/**/.DS_Store
+_meta/briefings/.DS_Store
+# operations/ + research/: track only the .gitkeep (operations/ holds secrets — never tracked)
 !_meta/operations/
 _meta/operations/*
 !_meta/operations/.gitkeep
@@ -42,3 +44,4 @@ _meta/_archive/.DS_Store
 # --- Python (after the _meta negation so toolkit caches stay untracked) ---
 __pycache__/
 *.pyc
+.ruff_cache/

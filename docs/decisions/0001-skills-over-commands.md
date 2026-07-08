@@ -1,9 +1,17 @@
+---
+title: "Skills over commands"
+type: decision
+status: Accepted
+created: 2026-06-28
+updated: 2026-07-03
+summary: Command intent folds into skills or retires; the roster carries no command type.
+---
+
 # 0001 · Skills over commands
 
 _Commands never migrate as commands: their intent folds into skills, or they retire._
 
-- **Status:** Accepted
-- **Date:** 2026-06-28 (ratified in CANON; ADR backfilled 2026-07-03 per #40)
+- **Provenance:** ratified in CANON 2026-06-28; ADR backfilled 2026-07-03 per #40
 - **Raised by:** strategy-desk CANON decision 3 ("Commands dropped"); vault decision
   `skills-over-commands` (2026-07-02)
 

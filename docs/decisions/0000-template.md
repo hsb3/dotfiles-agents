@@ -1,9 +1,16 @@
+---
+title: "<decision title>"
+type: decision
+status: Proposed # Proposed | Accepted | Rejected | Superseded-by-NNNN
+created: YYYY-MM-DD
+summary: <one line — what this decision settles>
+---
+
 # NNNN · <decision title>
 
 _One-line italic purpose: what this decision settles._
 
-- **Status:** Proposed | Accepted | Rejected | Superseded-by-NNNN
-- **Date:** YYYY-MM-DD
+- **Provenance:** <where/when decided; backfill or migration notes if any>
 - **Raised by:** <plan / doc / issue link>
 
 ## Context

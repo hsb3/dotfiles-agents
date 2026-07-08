@@ -276,7 +276,7 @@
       "memory-taxonomy": {
         "capability": "render",
         "destination": "claude-agents/skills/memory-taxonomy",
-        "sha256": "4314ac687037b7ef6396ba8d9daac4c985b23ba53deb6faf8259df767ef3b577",
+        "sha256": "1226eaf54ba2eef349309c4ea943774a5da8afca2221f5e4635657a10468320a",
         "skipped": false
       },
       "mermaid-diagram-specialist": {
@@ -758,7 +758,7 @@
       "memory-taxonomy": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/memory-taxonomy",
-        "sha256": "4314ac687037b7ef6396ba8d9daac4c985b23ba53deb6faf8259df767ef3b577",
+        "sha256": "1226eaf54ba2eef349309c4ea943774a5da8afca2221f5e4635657a10468320a",
         "skipped": false
       },
       "mermaid-diagram-specialist": {
@@ -1258,7 +1258,7 @@
       "memory-taxonomy": {
         "capability": "native",
         "destination": "opencode/skills/memory-taxonomy",
-        "sha256": "4314ac687037b7ef6396ba8d9daac4c985b23ba53deb6faf8259df767ef3b577",
+        "sha256": "1226eaf54ba2eef349309c4ea943774a5da8afca2221f5e4635657a10468320a",
         "skipped": false
       },
       "mermaid-diagram-specialist": {

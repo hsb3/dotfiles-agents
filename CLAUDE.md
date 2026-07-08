@@ -17,6 +17,8 @@ Source of truth for proven coding-agent **extenders** (skills, agents, MCP serve
 - `targets/{claude-code,opencode,claude-agents}/` — generated bundles
 
 ## Conventions
-- Naming taxonomy in `manifests/naming.md`. Hooks: `<plugin>.<Event>.<slug>.sh`, stdlib-only handlers.
+- Naming taxonomy in `docs/naming.md`. Hooks: `<plugin>.<Event>.<slug>.sh`, stdlib-only handlers.
 - Generated artifacts are never hand-edited; a CI drift guard regenerates and fails on diff.
 - Decision record: `~/Documents/Claude/Projects/dotfiles-agents-cowork/_structure/CANON.md`.
+- Where any doc belongs (decisions vs execution vs state vs brainstorm): [`docs/governance-map.md`](docs/governance-map.md). The Obsidian vault is brainstorm/journal ONLY.
+- **Strategy Desk vs Engineering Desk:** the Strategy Desk (cowork) holds everything an engineer does NOT need to do the work (decisions, design, cross-repo strategy); the Engineering Desk (this repo's `_meta/plans/` → `_meta/issues/`) holds what they do (issue bodies, build plans, board). One authoritative copy per work item — Strategy links to the issue, never keeps a parallel copy. Shared across both desks: ADR format + a common doc-frontmatter core (title/type/status/created) — see governance-map.

@@ -38,7 +38,7 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | ---- | -------- | ------ |
 | project-workflow-v2 | #27 | drafted 2026-07-03; design of record on the cowork desk; owner decisions 1-6 open |
 | retire-hsb3-custom-plugins | #32 | drafted 2026-07-03; symlink half already shipped, residual = 16-command disposition + CLI retirement; decisions 1-6 open |
-| raptorgpt-pilot | #33 | drafted 2026-07-03; pilot ran 2026-07-02 (rgpt#541), residual = round-2 close-out + vault sign-off; decisions 1-6 open |
+| fleet-dashboard-pilot | #33 | re-pointed 2026-07-05 to hsb3/fleet-dashboard (supersedes raptorgpt pilot rgpt#541, kept as prior); baseline TBD until the audit runs |
 | externals-clone-at-build | #36 | drafted 2026-07-03; 36 entries, 31 null upstreams; decisions 1-7 open |
 | ra-platform-commands-skill | #37 | drafted 2026-07-03; skill half shipped as planning-desk, residual = adoption + retirement; decisions 1-6 open |
 | roster-provenance-field | #39 | drafted 2026-07-03; decide-first (field vs ratify summary); decisions 1-5 open |

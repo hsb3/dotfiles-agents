@@ -224,7 +224,7 @@ No timelines.
    satisfied by citing the existing entry + A's parity audit. Alternative: new skill — fires the
    roster guard + naming lane and needs a dedup rationale against planning-desk.
 2. **Skill id vs the naming lane ("kebab id passing the names lane").** `planning-desk` does not
-   cleanly match `manifests/naming.md`'s `<domain>-<capability>` grammar, but #27's deliverable A
+   cleanly match `docs/naming.md`'s `<domain>-<capability>` grammar, but #27's deliverable A
    already renames it to `pw-plan` across the roster. **Recommend: leave the id untouched here;
    #27 owns the rename.** If #27 lands before D, ra-platform's rewritten CLAUDE.md should reference
    the `pw-plan` invocation instead — check at D time.

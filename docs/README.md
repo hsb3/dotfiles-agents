@@ -19,7 +19,10 @@ governed. The boundary with `_meta/` is load-bearing:
 | Path | What |
 |---|---|
 | [`CHARTER.md`](CHARTER.md) | The canonical page — if anything anywhere disagrees with it, the charter wins |
+| [`naming.md`](naming.md) | The naming taxonomy every primitive and plugin must follow (lint-enforced) |
+| [`governance-map.md`](governance-map.md) | Where every project doc belongs — one canonical home per artifact type; the vault is brainstorm-only |
 | [`decisions/`](decisions/) | ADRs: append-only decision records, indexed in [`decisions/README.md`](decisions/README.md) |
+| [`design/`](design/) | Technical-design records (the rationale behind shipped systems — memory standard, translation service) |
 | [`sops/`](sops/) | Standard operating procedures: issues + plans, milestones + board, session continuity |
 | [`plugins/`](plugins/) | End-user guides for distributed plugins (project-workflow) |
 | [`images/`](images/) | Architecture + `make ci` proof diagrams (embedded by the root README) |

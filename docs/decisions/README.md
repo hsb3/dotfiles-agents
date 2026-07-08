@@ -9,6 +9,9 @@ Status: active
 
 - One file per decision: **`NNNN-kebab-title.md`** (zero-padded, sequential). Start from
   [`0000-template.md`](0000-template.md).
+- Every ADR opens with the common doc-frontmatter core (`title` · `type: decision` · `status` ·
+  `created`; see [`docs/governance-map.md`](../governance-map.md)) — the `status:` field holds the
+  ADR lifecycle value below.
 - **Append-only.** Never renumber or delete an ADR. Two distinct mechanisms, by what changed:
   - **Supersession** — the *decision* changed: write a new ADR, set the old one's status to
     `Superseded-by-NNNN`, leave its text for provenance.
@@ -29,3 +32,5 @@ Status: active
 | [0001](0001-skills-over-commands.md) | Skills over commands: command intent folds into skills or retires | Accepted | CANON 3; backfill #40 |
 | [0002](0002-hooks-as-script-plus-config.md) | Hooks as script + config, never inline in settings.json | Accepted | dotfiles convention + gate H4; backfill #40 |
 | [0003](0003-externals-tracked-not-vendored.md) | Externals tracked-and-cloned (upstream + pinned ref), never vendored | Accepted | CANON 11/16; backfill #40 |
+| [0004](0004-rules-and-memory-translation-policy.md) | Rules CC-only; auto-memory translates lossily to opencode | Accepted | Q-03; vault migration 2026-07-05 |
+| [0005](0005-frontend-stack.md) | Frontend stack (Vite+React+shadcn) for agent-built UI | Proposed | Q-07 gate; vault migration 2026-07-05 |

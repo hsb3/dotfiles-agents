@@ -1,24 +1,47 @@
 ---
-title: "Build plan — Gate-2 pilot close-out: re-audit proof, gap justification, findings routing, vault sign-off (#33)"
+title: "Build plan — Gate-2 pilot on hsb3/fleet-dashboard (#33), superseding the raptorgpt-agents pilot"
 type: spec
 status: draft
 created: 2026-07-03
-purpose: Source-grounded plan for the RESIDUAL of #33 — what remains after the 2026-07-02 pilot execution (PR rgpt#541 merged) and the 2026-07-03 mechanical fix pass, through Gate-2 sign-off; plus the brownfield follow-on scope, clearly separated.
-notes: Issue #33's body is partly stale (nested checkout path, "likely dev" guess) — this plan works from the verified 2026-07-03 state. The vault is the hsb-2026 Obsidian vault (located; see Tracking). rgpt# = mhi-raptorxai/raptorgpt-agents.
+purpose: Plan for the Gate-2 canonical pilot, re-pointed 2026-07-05 to hsb3/fleet-dashboard. The raptorgpt-agents run (below) is retained as the COMPLETE prior pilot; the fleet-dashboard scope up top is the new canonical proof (baseline TBD until the audit runs).
+notes: Decision update 2026-07-05 (see callout) supersedes the 2026-07-02 vault GO on raptorgpt-agents. rgpt# = mhi-raptorxai/raptorgpt-agents (prior pilot). The hsb-2026 vault's decision registry was marked superseded accordingly on 2026-07-07.
 ---
 
-# Gate-2 pilot: audit → manifest → scaffold → re-audit on raptorgpt-agents
+# Gate-2 pilot: audit -> manifest -> scaffold -> re-audit on fleet-dashboard
 
-_Most of this pilot already happened. The full sequence ran 2026-07-02 (baseline 36 pass / 22 gap,
+> **Decision update (2026-07-05) — supersession.** The canonical Gate-2 pilot moved from
+> `mhi-raptorxai/raptorgpt-agents` to **`hsb3/fleet-dashboard`**: a personal repo is a cleaner
+> canonical proof for a personal-tooling project than a work repo. The raptorgpt-agents run
+> (merged PR rgpt#541, defects da#38/da#44 fixed) is kept as a **completed prior pilot**; its vault
+> sign-off (TC-013/TC-010) no longer gates Gate 2. This supersedes the 2026-07-02 GO decision
+> recorded in the hsb-2026 vault `DECISIONS.md` (supersession reflected there 2026-07-07).
+
+## New canonical pilot — hsb3/fleet-dashboard (scope)
+
+Run the standard end-to-end on `hsb3/fleet-dashboard`, exactly as the prior pilot did on raptorgpt:
+
+- **Baseline audit** (`repo-compliance-audit`) on fleet-dashboard; capture the pass/gap count.
+- **`_meta/mise-en-place.yml`** written (`owner: hsb3`, `default_branch` verified from origin/HEAD).
+- **Scaffold** `--plan` reviewed, then `--apply` (additive-only proof); owner reviews the diff.
+- **Re-audit**; gap count materially down, every remaining GAP justified (content-authoring or declared variance).
+- **Findings routed** as their own issues/PRs here (the da#38/da#44 precedent).
+
+_Baseline numbers, the gap-justification ledger, and the detailed residual for fleet-dashboard get
+filled once the audit runs — they cannot be pre-stated without executing the pilot. Fill this section
+from the live audit output, then drive to sign-off._
+
+## Prior pilot (raptorgpt-agents) — COMPLETE, retained for reference
+
+_This pilot ran to green and is kept as the routing precedent; it no longer gates Gate 2._
+
+_The full sequence ran 2026-07-02 (baseline 36 pass / 22 gap,
 scaffold apply, re-audit 56 pass / 3 gap, additive-only + idempotence proven live) and landed as
 merged PR rgpt#541; both pilot-found defects were filed and fixed (da#38, da#44); the manifest exists
 and is verified. The standard then moved under the pilot: plugin 0.2.1 added the DOCS-02..05,
-PLANS-01..06, IGNORE-13..16 rows and blessed `_meta/_archive/` (#35, PR #64), so today's re-baseline
-reads 51 pass / 17 gap, and a foreman session is applying the mechanical fixes right now. **This plan
-covers only the residual:** the post-fix re-audit proof, a justification for every remaining GAP,
-routing of any new pilot findings, recording TC-013/TC-010 observations in the vault and getting
-Henry's sign-off ticks (the stated Gate-2 proof), and — as separated FOLLOW-ON scope — enumerating
-the brownfield backfill the pilot exposed (89 open issues, no planning desk, no decision records)._
+PLANS-01..06, IGNORE-13..16 rows and blessed `_meta/_archive/` (#35, PR #64), so a later re-baseline
+read 51 pass / 17 gap, and a foreman session applied the mechanical fixes. The residual below (re-audit
+proof, GAP justification, TC-013/TC-010 vault sign-off, brownfield backfill of 89 open issues) is the
+prior pilot's own close-out — retained as history, no longer required for Gate 2._
 
 Status: draft
 Date: 2026-07-03
