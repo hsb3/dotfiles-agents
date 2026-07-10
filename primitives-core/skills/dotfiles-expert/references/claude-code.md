@@ -1,20 +1,22 @@
 # Claude Code customizations (the `claude-code` stow package)
 
-`claude-code/.claude/` → `~/.claude/`. Manages global Claude Code config. Authoritative sources: `claude-code/.claude/CLAUDE.md`, `instructions/*.md`, `rules/*.md`, `hooks/README.md`, `settings.json`, and `.docs/claude-code-settings-reference.md`.
+`claude-code/.claude/` → `~/.claude/`. Manages global Claude Code config. Authoritative sources: `claude-code/.claude/CLAUDE.md`, `instructions/*.md`, `rules/*.md`, `settings.json` (+ `settings.json.example` seed), and `_docs/reference/claude-code/{claude-code-settings-reference.md,claude-memory-reference.md}`.
 
 ## Layout
 
 ```
 claude-code/.claude/
-├── CLAUDE.md              # global memory — just @imports the instructions files
+├── CLAUDE.md              # global memory — @imports the instructions files + the memory index
 ├── instructions/         # always-loaded working conventions (hot-path)
 ├── rules/                # path-scoped rules (loaded when matching files are open)
-├── hooks/                # hook inventory (script + config.json per hook)
-├── agents/               # subagent defs (e.g. deep-research-documenter.md)
-├── settings.json         # the live global config (permissions, hooks, plugins, env)
+├── memory/               # curated GLOBAL auto-memory (MEMORY.md index + topic files); tracked
+├── settings.json         # the live global config (permissions, plugins, statusLine, env) — machine-local
+├── settings.json.example # the tracked seed install.sh copies to the live file
 ├── statusline/           # statusline.py + profiles; statusline-command.sh entrypoint
 └── statusline-command.sh # what settings.json statusLine invokes
 ```
+
+There is **no `hooks/` dir** in this package anymore (see below), and no `agents/` dir. The live `settings.json` is machine-local (the harness rewrites it at runtime); the repo tracks `settings.json.example` as the seed and `install.sh` copies it in if missing.
 
 `CLAUDE.md` is just `@import` lines pulling in the instructions files — that's how they become always-on context.
 
@@ -33,31 +35,32 @@ Each is a short rules doc. Know what each covers so you route correctly:
 | `models-media.md` / `models-oss-media.md` | TTS/STT/image-gen model tables — present in the dir but NOT `@import`ed, so not always-loaded |
 | `tools.md` | the installed CLI tool catalog (rg, fd, bat, eza, gh, az, gcloud, railway, uv, bun, …) |
 
+(Plus `session-continuity.md` — pickup/handoff protocol. `CLAUDE.md` also `@import`s the global `memory/MEMORY.md` index.)
+
 ## rules/ — path-scoped (loaded when matching files are open)
 
-`diagrams.md` (mermaid: no parens/special chars in node labels), `makefile.md`, `mise.md`, `python.md`, `react.md`, `readme.md`, `shell.md`. Only the `paths` frontmatter field is supported.
+`diagrams.md`, `makefile.md`, `mise.md`, `python.md`, `react.md`, `readme.md`, `shell.md`, `project-protocol.md`, `worktrees-and-foreman.md`. Only the `paths` frontmatter field is supported.
 
-## Hooks — global vs opt-in
+## Hooks — dotfiles ships NONE (2026-07-07 migration)
 
-Inventory lives in `hooks/<name>/` (each has `hook.sh` + `config.json`; the `config.json` is the copy-paste snippet). `hooks/README.md` is the index.
+**Dotfiles no longer distributes any Claude Code hooks.** Every hook that lived in `claude-code/.claude/hooks/` (`post_write_format`, `post_lint`, `curate_memories`, `notify_memory_write`, `inject_context`, `session_end`, `speak_summary`, `web_setup`, `multiplexer_task_completion_ping`, `notify_on_stop`, …) was migrated to the **`dotfiles-agents-workbench`** incubator to be judged against its promotion gate. Ones that prove out get redistributed as **plugins** from the `dotfiles-agents` marketplace, NOT re-added here. Consequently `settings.json.example` wires **no** hooks.
 
-**What actually runs globally = whatever is wired in `~/.claude/settings.json`** (ground truth — the README's "Global" column has drifted). The live `settings.json` PostToolUse wiring runs: `post_write_format` (ruff format on Write/Edit), an inline shell-lint (zsh -n / shellcheck), `curate_memories` (on Bash — prompts memory review after `gh pr create`), and an inline memory-update notification.
+**The one exception** is a dotfiles-repo-local project hook: `pre_stow_check` (PreToolUse) — it blocks `stow` calls missing `--ignore='.DS_Store'`. It lives at the **repo-root** `.claude/hooks/pre_stow_check/` (tracked; NOT the stowed `claude-code` package) and is wired machine-locally in the repo-root `.claude/settings.local.json`, so it fires only when working in the dotfiles repo.
 
-**Opt-in per project** via the **`cc-hooks`** CLI (a bin script):
+**`cc-hooks`** (the bin CLI) still exists and still merges a hook's `~/.claude/hooks/<name>/config.json` into a project's `.claude/settings.local.json` (or committed `settings.json` with `--shared`) — but dotfiles now puts **nothing** in `~/.claude/hooks/`, so it operates only on whatever hooks a user places there.
 
-```bash
-cc-hooks list                                    # all hooks + events + enabled-here state
-cc-hooks enable speak_summary notify_on_stop     # merge into ./.claude/settings.local.json
-cc-hooks disable session_end
-cc-hooks status
-cc-hooks enable speak_summary --shared           # write to committed settings.json instead
-```
+## Skills & plugins — the marketplace model
 
-It merges a hook's `~/.claude/hooks/<name>/config.json` into the project file (idempotent, deduped). Takes effect on the next Claude Code launch in that project. Opt-in hooks include: `speak_summary` (spoken Haiku bullet summary on Stop via speak_gemini, falls back to `say`), `notify_on_stop`, `inject_context` (UserPromptSubmit git status), `session_end` (SessionEnd metrics + project `tmp/` cleanup), `web_setup` (SessionStart dep install in remote envs), `multiplexer_task_completion_ping` / `cmux_task_completion_ping` (notify a manager agent in multi-agent workflows).
+Skills and plugins are distributed through Claude Code's native **plugin marketplace**, wired in `settings.json.example`:
+
+- `enabledPlugins` — the plugins turned on globally, e.g. `project-workflow@dotfiles-agents`, `media-gen@dotfiles-agents`, `cowork-plugin-management@knowledge-work-plugins` (and `azure@azure-skills: false`, off by default).
+- `extraKnownMarketplaces` — the marketplaces they resolve from: `dotfiles-agents` (`github: hsb3/dotfiles-agents`), `azure-skills`, `temporal-marketplace`, `claude-plugins-official`.
+
+Manage with native commands: `claude plugin install|enable|disable <plugin>` and `claude plugin marketplace update`. The old **`skills` bin CLI was retired** (2026-07-09) — don't reach for it. (This `dotfiles-expert` skill itself is authored in the `dotfiles-agents` repo under `primitives-core/skills/` and compiled to the marketplace, not symlinked from a personal `skills/` shelf.)
 
 ## settings.json — notable keys
 
-`.docs/claude-code-settings-reference.md` documents every key. Highlights from the live file: `cleanupPeriodDays: 1800`, telemetry off, `permissions.ask` gates `rm -rf`, `git push --force`, `git reset --hard`, `git add -f`, and TODO.md edits; `enabledPlugins` lists ~20 plugins **all `false`** (deny-by-default — see skills section); `extraKnownMarketplaces` (azure-skills, temporal); `alwaysThinkingEnabled`, `effortLevel: xhigh`, `teammateMode: tmux`, `preferredNotifChannel: iterm2_with_bell`.
+`_docs/reference/claude-code/claude-code-settings-reference.md` documents every key; edit deliberate defaults in `settings.json.example` (the live `settings.json` is machine-local and harness-rewritten). Highlights: telemetry off, `permissions.ask` gates destructive commands (`rm -rf`, `git push --force`, `git reset --hard`, `git add -f`); `enabledPlugins` + `extraKnownMarketplaces` (above); statusline via `statusLine` → `statusline-command.sh`. **No `hooks` block.**
 
 ## statusline
 
@@ -65,13 +68,11 @@ Single `statusline/statusline.py` with three selectable profiles (`signal`/`bala
 
 ## Memory conventions
 
-Project `CLAUDE.md` is hot-loaded. Memory files under the auto-memory dir / `.claude/memories/` are NOT hot-loaded — only `MEMORY.md` indexes are; individual `reference_*.md` files load on demand. Cold-path / operational content belongs in a memory file with a one-line `MEMORY.md` pointer, not in `CLAUDE.md`. The `migrate-claude-memory` bin script moves a project's memory after you relocate/rename its folder (Claude keys memory by the folder's absolute path → slug).
+Two layers, both loaded at session start (full protocol in `instructions/memory-hygiene.md`; deeper detail in `_docs/reference/claude-code/claude-memory-reference.md`):
 
-## Skills ecosystem (the 2-tier model)
+- **Global / user** — `claude-code/.claude/memory/` (stows to `~/.claude/memory/`, **tracked** in dotfiles). A curated `MEMORY.md` index `@import`ed every session (hard-capped ~40 lines); topic files are NOT auto-pulled (a session reads one explicitly). Grown by *promoting* generalizable facts up from project memory — never an auto-write sink.
+- **Project** — each repo's own tracked `.claude/memory/` (the active `autoMemoryDirectory`); auto-accumulated during work there and travels via git. There is intentionally **no** global `autoMemoryDirectory` override.
 
-Full detail: `.docs/reference/skills-inventory.md`. Single source of truth = the **`hsb3-custom-plugins`** git repo (`<dev-root>/hsb3-custom-plugins/`) — two shelves:
+Only `MEMORY.md` indexes are hot-loaded; individual topic files load on demand. Cold-path/operational content belongs in a memory file with a one-line `MEMORY.md` pointer, not in `CLAUDE.md`.
 
-- `skills/` — standalone **core** skills, always-on. Distributed by **symlink into `~/.claude/skills/`** (this is exactly how `dotfiles-expert` itself is installed). Personal skills in `~/.claude/skills/` are always on; there's no per-skill toggle.
-- `plugins/<plugin>/skills/` — **toggleable** skills grouped as plugins. Distributed via the marketplace + `enabledPlugins` (all `false` globally = deny-by-default; flip `true` per-project in `<repo>/.claude/settings.json`). Plugin granularity, not per-skill.
-
-Drive it with the **`skills`** bin CLI: `skills audit | list | core add|rm <name> | push | enable <plugin> [-p|-l] | sync <name> <codex|copilot|gemini> | doctor`. Other AI tools (Codex/Copilot/Gemini) are separate skill ecosystems — out of scope for the CC 2-tier system.
+Supporting bin scripts: **`cc-project-memory`** opts a repo into a tracked, transferable `.claude/memory/` (`init [--portable] [--migrate]`, `status`, `path`, `list`); **`cc-migrate-memory`** moves a project's memory after you relocate/rename its folder (Claude keys memory by the folder's absolute path → slug; dry-run default).

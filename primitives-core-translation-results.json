@@ -156,7 +156,7 @@
       "dotfiles-expert": {
         "capability": "render",
         "destination": "claude-agents/skills/dotfiles-expert",
-        "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
+        "sha256": "1ff55c4eebfda8f5a9dd886030f0f8e6230af1da01cee44bc354af6e13e9e4a9",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
@@ -632,7 +632,13 @@
       "dotfiles-expert": {
         "capability": "native",
         "destination": "claude-code/skills/dotfiles-expert",
-        "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
+        "sha256": "1ff55c4eebfda8f5a9dd886030f0f8e6230af1da01cee44bc354af6e13e9e4a9",
+        "skipped": false
+      },
+      "fable-foreman": {
+        "capability": "native",
+        "destination": "claude-code/skills/fable-foreman",
+        "sha256": "90234bd7591beb8f40110fd5a37303305fe63e0bf023eb09a28bdc102b384a21",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
@@ -1132,7 +1138,7 @@
       "dotfiles-expert": {
         "capability": "native",
         "destination": "opencode/skills/dotfiles-expert",
-        "sha256": "59e9dceaf4b00ed8869e378224fda9096cdf596fa5d67fb11204f6eff630b6ac",
+        "sha256": "1ff55c4eebfda8f5a9dd886030f0f8e6230af1da01cee44bc354af6e13e9e4a9",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
