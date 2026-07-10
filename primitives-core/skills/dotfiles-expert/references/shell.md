@@ -30,13 +30,13 @@ Other behavior-changing aliases: `cat` → `bat --paging=never` (syntax-highligh
 | bat | `cat`/`catp` |
 | tmux | `mux`=`tmuxinator` |
 | Reminders | `reminders`=`check-reminders list`, `reminders-run`=`check-reminders` |
-| AI | `ask-aider`, `lg` (langrepl: sources `~/.langrepl/.env`), `dcode`, `da-hooks` |
+| AI | `ask-aider`=`aider --chat-mode ask --message` |
 
 ## Shell-function entry points (defined as functions, not aliases)
 
 `ccstatus` (in `aliases.zsh`) — Claude Code statusline control: `ccstatus` (status), `ccstatus signal|balanced|dashboard` (profile), `ccstatus theme auto|dark|light`.
 
-`agent` (in `ai.zsh`) — opens **dcode** in a tmux split (chat pane left, exec pane right); creates a session if not already in tmux. Runs `source ~/.deepagents/load_env.sh && dcode`.
+`agent [dir]` (in `functions.zsh`) — launches or attaches to a tmux session named `agent-<basename>` running an agent CLI in `dir` (default `$PWD`). Picks **`claude`** if present, else falls back to **`opencode`** (errors if neither is on PATH). Layout: the agent CLI on the left, a 30%-wide shell pane on the right (`tmux split-window -h -p 30`). Attaches (or `switch-client` if already in tmux); re-running reuses the existing session.
 
 From `functions.zsh`:
 
@@ -53,20 +53,13 @@ From `functions.zsh`:
 | `theme dark\|newspaper\|focus` | switch iTerm2 profile + retint tmux status bar |
 | `rmproject <path>` | `rm -rf` + reminder to clear IDE caches |
 | `dsh <container>` | shell into a running Docker container |
-
-## Two aliases that load AI-agent env
-
-```sh
-alias dcode='source ~/.deepagents/load_env.sh && DEEPAGENTS_CODE_DEBUG=1 DEEPAGENTS_CODE_DEBUG_FILE=~/.deepagents/dcode-debug.log command dcode'
-alias da-hooks='${DOTFILES:-$HOME/dotfiles}/deepagents_customizations/hooks_cli'
-```
-
-`dcode` loads API keys + debug env then runs the real `dcode` (`command` bypasses the alias). The comment notes deepagents-cli was removed 2026-06-06; the interactive agent is now dcode. `da-hooks` points straight at the (non-stowed) hooks CLI in `deepagents_customizations/`.
+| `agent [dir]` | tmux session with `claude` (or `opencode`) + a 30% shell pane |
 
 ## PATH & environment (`path.zsh`)
 
 - `export DOTFILES="$HOME/dotfiles"` (first — used by `check-reminders` and other scripts).
 - PATH prepends: `/opt/homebrew/{bin,sbin}`, `~/.local/bin`, `~/bin`; conditionally openjdk, VS Code CLI, gcloud, `~/.opencode/bin`.
+- API keys: `.zshrc` sources `~/.env` (backstop) then `eval "$(secret export)"` from the macOS Keychain — the Keychain wins (see `references/ai-tooling.md`).
 - **`NODE_OPTIONS="--max-old-space-size=4096"`** — caps V8 heap at 4 GB per process to stop runaway Claude Code / OpenCode / MCP sessions from exhausting RAM and crashing macOS (added after a 100 GB OOM crash from concurrent `claude --resume` sessions).
 - `MAILCHECK=0`.
 - Python/Node version strategy: **mise** for runtime versions (shims added in `.zshenv` so they work in non-interactive shells), **uv** for project venvs. pyenv/NVM removed.
