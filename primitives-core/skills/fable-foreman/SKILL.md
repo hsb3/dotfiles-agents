@@ -143,8 +143,10 @@ agents; use it only under the user's multi-agent opt-in rules.
 Every delegated prompt — worker or lead — is written for an agent with zero chat context: repo
 path, exact objective, in/out of scope with file ownership, the evidence format to return, the
 verification commands to run, and stop conditions ("if the code doesn't match this brief, or a
-command fails after a reasonable retry, stop and report — don't improvise"). Ambiguity in a brief
-is Fable silently delegating a decision it was supposed to make.
+command fails after a reasonable retry, stop and report — don't improvise"). For test and
+validation passes, require the report to classify each failure as real, flaky, or environmental —
+that judgment call is cheap at the point of observation and expensive to reconstruct later.
+Ambiguity in a brief is Fable silently delegating a decision it was supposed to make.
 
 ## Proof of completion, not reports of completion
 
