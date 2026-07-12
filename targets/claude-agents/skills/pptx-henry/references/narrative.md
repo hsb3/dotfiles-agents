@@ -51,6 +51,31 @@ render target.
 - **Data story:** title → big stat → chart → action-title (implication) →
   takeaway.
 
+## Explanatory Register (Henry's confirmed preference)
+
+Validated 2026-07-10 on the HeadCase north-star reset briefing: a terse
+29-slide cut was rejected as "too terse/cryptic"; its explanatory 30-slide
+rebuild was rated "excellent". The scannability rules above govern tables,
+cards, and bullet fragments — they do NOT mean the deck reads like shorthand.
+For a comprehensive or decision briefing:
+
+- **More slides beats denser slides.** When Henry asks for comprehensive,
+  expand the slide count rather than compressing the prose.
+- **Every content slide opens with a lede**: 1-3 full sentences under the
+  title saying what the slide means and why it matters, BEFORE any table,
+  chart, or card grid. The title carries the claim; the lede carries the
+  context.
+- **Spell out references.** An issue/ticket number always gets its title
+  inline ("#167 — agent team builds CMS analytic data marts"), never a bare
+  number the reader must look up.
+- **Define jargon in place** on first use (internal codenames, acronyms,
+  project shorthand). Do not assume the reader carries context between slides.
+- **Callouts, ledes, and takeaway lines are complete sentences**; fragments
+  stay inside tables and stat cards where structure explains them.
+- **Orientation up front pays**: an early slide mapping where the underlying
+  artifacts live (and how the material was produced) earns trust for
+  everything after it.
+
 ## Composition Pitfalls
 
 - **Don't stack a narrow callout above a left-pinned bullet list** — the pair
@@ -64,3 +89,10 @@ render target.
   body content above it.
 - **Fix overflow by trimming or splitting first**; shrink type only as a last
   resort, and never below ~70% of the intended size.
+- **Guard against the two-line-title collision.** If the lede/body sits at a
+  fixed Y below the title box, a title that wraps to two lines lands on top of
+  it — a systemic defect that hit 11 of 30 slides on first render (2026-07-10).
+  On LAYOUT_WIDE at 26pt bold Avenir Next across a ~12in text box, keep titles
+  to **~66 characters or fewer** to guarantee a single line (wrapping was
+  observed from ~70 characters up). Either budget titles to that length during
+  content writing, or anchor the lede to the title's rendered height.
