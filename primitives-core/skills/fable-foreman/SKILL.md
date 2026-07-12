@@ -72,10 +72,9 @@ re-slice.
 
 Fan out read-only Explore / general-purpose agents on cheaper models for anything where the value
 is the conclusion, not the traversal. Default scouts to `haiku` — a read-only pass against a
-written convention or a bounded question rarely needs more, and at 1/2 sonnet rates the scan
-phase becomes nearly free; reserve `sonnet` scouts for questions needing real synthesis. Ask for
-concise evidence: files, line refs, commands run, uncertainties, stop conditions hit. This is the
-`efficient-fable` pattern — that skill's delegation and handoff-packet guidance applies verbatim.
+written convention or a bounded question rarely needs more, and at a fraction of sonnet rates the
+scan phase becomes nearly free; reserve `sonnet` scouts for questions needing real synthesis. Ask
+for concise evidence: files, line refs, commands run, uncertainties, stop conditions hit.
 
 ### C. Flat fan-out
 
@@ -144,8 +143,10 @@ agents; use it only under the user's multi-agent opt-in rules.
 Every delegated prompt — worker or lead — is written for an agent with zero chat context: repo
 path, exact objective, in/out of scope with file ownership, the evidence format to return, the
 verification commands to run, and stop conditions ("if the code doesn't match this brief, or a
-command fails after a reasonable retry, stop and report — don't improvise"). Ambiguity in a brief
-is Fable silently delegating a decision it was supposed to make.
+command fails after a reasonable retry, stop and report — don't improvise"). For test and
+validation passes, require the report to classify each failure as real, flaky, or environmental —
+that judgment call is cheap at the point of observation and expensive to reconstruct later.
+Ambiguity in a brief is Fable silently delegating a decision it was supposed to make.
 
 ## Proof of completion, not reports of completion
 

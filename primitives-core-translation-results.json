@@ -536,7 +536,7 @@
       "fable-foreman": {
         "capability": "native",
         "destination": "claude-code/skills/fable-foreman",
-        "sha256": "90234bd7591beb8f40110fd5a37303305fe63e0bf023eb09a28bdc102b384a21",
+        "sha256": "e1abc7719467de79c0f07129aa5165f838d2ee876c32f9d4eea57307d574079a",
         "skipped": false
       },
       "fastapi-best-practices-reviewer": {
