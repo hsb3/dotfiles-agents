@@ -10,7 +10,7 @@ inline elsewhere — link here.
   is a sourcing catalog, not a backlog). Formalizes what `dotfiles-agents#84` asked for; the bench
   form is the `#84` owner amendment (2026-07-11).
 - **Status:** the entry-form core fields and the milestone-set vocabulary are grounded in shipped
-  practice below. Items marked **Proposed** are recommended defaults awaiting owner ratification.
+  practice below; the unranked-wishlist rule was ratified by owner ruling 2026-07-12.
 
 ---
 
@@ -55,11 +55,11 @@ the deliverable is large enough to warrant its own plan — the issue links to `
 rather than inlining the detail. One issue is the unit; the story frames it; the spec link carries the
 depth.
 
-**Ranked-vs-unranked (Proposed):** an idea with no driving use case yet claimed enters as an *unranked
+**Ranked-vs-unranked:** an idea with no driving use case yet claimed enters as an *unranked
 wishlist* entry — one line, "no use case claimed yet; per `use-case-driven-backlog` it waits until one
 does" — not as a ready issue. It is promoted to a full backlog issue only when a named near-term use
-case claims it. (Grounded in the `#49` backlog-seed plan's owner-decision default; marked Proposed
-until ratified as a standing rule.)
+case claims it. (Grounded in the `#49` backlog-seed plan's owner-decision default; ratified as a
+standing rule by owner ruling 2026-07-12.)
 
 ### Application B — bench-entry form (a candidate enters the incubator)
 
