@@ -1,0 +1,15 @@
+{
+  "display_title": "private-fork",
+  "endpoint": "POST /v1/skills",
+  "files": [
+    "SKILL.md",
+    "assets/templates/FORK_CHANGES.md",
+    "assets/templates/fork-customizations.md",
+    "assets/templates/upstream-check.yml",
+    "assets/templates/upstream-digest.sh",
+    "assets/templates/upstream-review-log.md",
+    "references/divergence-rubric.md",
+    "references/setup.md",
+    "references/upstream-sync.md"
+  ]
+}
