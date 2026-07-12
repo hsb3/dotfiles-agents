@@ -393,6 +393,12 @@
         "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
         "skipped": false
       },
+      "private-fork": {
+        "capability": "render",
+        "destination": "claude-agents/skills/private-fork",
+        "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
+        "skipped": false
+      },
       "python-test-writer": {
         "capability": "render",
         "destination": "claude-agents/agents/python-test-writer.json",
@@ -879,6 +885,12 @@
         "capability": "native",
         "destination": "claude-code/skills/pptx-henry",
         "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
+        "skipped": false
+      },
+      "private-fork": {
+        "capability": "native",
+        "destination": "claude-code/plugins/project-workflow/skills/private-fork",
+        "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
         "skipped": false
       },
       "python-standards.PostToolUse.post-tool-use": {
@@ -1379,6 +1391,12 @@
         "capability": "native",
         "destination": "opencode/skills/pptx-henry",
         "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
+        "skipped": false
+      },
+      "private-fork": {
+        "capability": "native",
+        "destination": "opencode/skills/private-fork",
+        "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
         "skipped": false
       },
       "python-test-writer": {

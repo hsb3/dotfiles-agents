@@ -558,6 +558,16 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Create, edit, and review PowerPoint presentations using Henry's approved color palettes, semantic theme tokens, monospaced typography, and visual QA workflow."
+  - id: private-fork
+    type: skill
+    source: primitives-core/skills/private-fork
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code, opencode, claude-agents]
+    plugins: [project-workflow]
+    summary: "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle."
   - id: react-doctor
     type: skill
     source: primitives-core/skills/react-doctor
