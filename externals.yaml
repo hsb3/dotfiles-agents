@@ -107,6 +107,12 @@ externals:
     targets: [claude-code, opencode, claude-agents]
 
   # --- third-party marketplace plugins (trimmed snapshots; clone from upstream, do not vendor) ---
+  - id: assistant-ui
+    kind: plugin
+    upstream: https://github.com/assistant-ui/skills
+    ref: 7fe715ffee2907e2582ea431655e7da23cff3ab3
+    provides: "Skills for the assistant-ui React chat-UI library (9 skills: setup, primitives, runtime, streaming, thread-list, tools, cloud, update). Owner-ruled into the curated set 2026-07-12 (da#48 D3); was installed/cached but untracked."
+    targets: [claude-code]
   - id: agent-sdk-dev
     kind: plugin
     upstream: null
