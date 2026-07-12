@@ -22,8 +22,8 @@ react-doctor vs frontend-quality-guard, and webapp-designer's `frontend-design` 
 rationale per non-core item, executions spun off as follow-on issues. This issue itself is
 report-only: no gates fire on it._
 
-Status: draft
-Date: 2026-07-03
+Status: active — deliverables A/B/C delivered 2026-07-12 (inventory.md, overlap-map.md, curation-plan.md + six draft-issue-*.md). Follow-on issue bodies staged, NOT filed (owner-approval gate).
+Date: 2026-07-03 (plan) · 2026-07-12 (deliverables)
 
 ## Tracking
 
