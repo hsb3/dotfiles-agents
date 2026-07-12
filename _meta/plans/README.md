@@ -46,7 +46,12 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | extender-ideas-backlog-seed | #49 | plan drafted 2026-07-03 beside the staged body; T-23 unrun, home decision open |
 | agnostic-base-format | #59 | drafted 2026-07-03; survey -> spec -> incremental migration; decisions 1-5 open |
 | roster-retriage | #81 | executed 2026-07-12; 14 demotions to wb incubator + 5 origin flips (framework-selection, 4 openspec-*); paired da#81/wb PRs open |
-| entry-form-standard | #84 | drafted 2026-07-12; entry forms + shared milestone set as planning-desk reference; unranked-wishlist rule Proposed |
+| entry-form-standard | #84 | drafted 2026-07-12; entry forms + shared milestone set as planning-desk reference; unranked-wishlist rule ratified 2026-07-12 |
+| toolkit-body-only-folders | #68 | drafted 2026-07-12; adversarially reviewed; warn already fires, fix suppresses redundant drift; decisions 1-5 open |
+| issue-template-format-align | #69 | drafted 2026-07-12; adversarially reviewed; .yml forms exist to copy, seed-and-point fix; decisions 1-2 open |
+| plan-frontmatter-schema | #70 | drafted 2026-07-12; adversarially reviewed; single-file fix to references/plan.md; decisions 1-3 open |
+| rename-plans-to-issues | #82 | drafted 2026-07-12; adversarially reviewed; lands LAST in wave; standard-vs-instance decision open (1-6) |
+| require-both-artifacts | #83 | drafted 2026-07-12; adversarially reviewed; backfill debt = 7 plan-only folders; decisions 1-4 open |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 

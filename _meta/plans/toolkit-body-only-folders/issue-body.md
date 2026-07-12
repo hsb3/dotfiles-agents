@@ -1,0 +1,37 @@
+## What happened
+
+Real-world use in `mhi-raptorxai/raptorxai-infra` (2026-07-03): a fresh desk was scaffolded and three `issue-body.md` files were staged per the skill's own issue mode (bodies first, `plan.md` later). The governance toolkit could not see them:
+
+- `reconcile.py` header reported `(3 active rows, 0 archived, 0 folders)` and emitted `DRIFT [row-no-folder] ... ACTIVE row has no plan folder on disk` — while the folders existed on disk with staged `issue-body.md` files.
+- `sync-bodies.py` reported `Sync _meta/plans/*/issue-body.md vs GitHub (0 folders)` and compared nothing, even after the bodies were published as live issues #1-#3. Its stated purpose ("each folder's issue-body.md vs the live GitHub body") silently doesn't apply to any folder lacking `plan.md`.
+
+Root cause: `disk_folders()` in `reconcile.py` (and the equivalent in `sync-bodies.py`) defines a plan folder as `(p / "plan.md").is_file()`.
+
+## Why it matters
+
+The skill's own workflow produces issue-body-only folders as a normal intermediate state (issue mode explicitly ships `issue-body.md` as the contract, with `plan.md` authored later "if the work needs build detail"). In that state the toolkit is blind: reconcile emits a misleading drift kind (`row-no-folder` for a folder that exists), and sync-bodies gives false assurance (0 differ) while staged bodies could drift from live issues unchecked.
+
+Workaround used: kept such folders out of the ACTIVE table and invented a "PUBLISHED, plan pending" list in the README prose — which also reveals the README schema has no documented home for the staged-not-filed and published-no-plan lifecycle states.
+
+## Suggested direction
+
+- Count a folder with either artifact; distinguish `plan.md missing` (warn) from `folder missing` (drift).
+- Make `sync-bodies.py` key on `issue-body.md` presence (that's the artifact it diffs).
+- Give the plans-README template a documented state for pre-plan rows (or bless the prose-list pattern).
+
+Observed with planning-desk from plugin cache 0.1.0 while repo-compliance-audit ran from 0.2.1 (mixed-version cache — separate note in the other issues). If 0.2.1+ already fixes this, close.
+
+## Acceptance criteria
+
+- `reconcile.py` `disk_folders()` counts a folder that has EITHER `plan.md` OR `issue-body.md`; a folder with only `issue-body.md` plus a matching ACTIVE README row no longer emits `row-no-folder` drift (add a fixture folder with only `issue-body.md`, assert reconcile exits clean).
+- `sync-bodies.py` classifies and diffs folders keyed on `issue-body.md` presence: a staged `issue-body.md` differing from its live GitHub issue is reported (today 0 folders are compared when no `plan.md` exists).
+- reconcile output distinguishes `plan.md missing` (warn) from `folder missing` (drift).
+- `plans-README.md` documents a state for pre-plan (issue-body-only) rows, or blesses the prose-list pattern; a fresh desk with only staged bodies reconciles clean.
+
+## Dependencies & gates
+
+- **Blocks on:** nothing. Self-contained fix under `primitives-core/skills/planning-desk/scripts/_utils/`.
+- **Gates:** `make ci` green + `targets/` regenerated via `make build` (planning-desk scripts are distributed primitives; never hand-edit `targets/`). `project-workflow` plugin version bump. No roster schema change.
+
+> Verified against plugin source 0.2.4 (filed against 0.1.0): defect confirmed still present at `reconcile.py:122-125` and `sync-bodies.py:32`.
+
