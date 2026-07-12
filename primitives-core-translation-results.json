@@ -312,7 +312,7 @@
       "planning-desk": {
         "capability": "render",
         "destination": "claude-agents/skills/planning-desk",
-        "sha256": "20369ec06aef15864ce687e46502ae0cb3596703712bbe3c2c7129ea4d3b9182",
+        "sha256": "ce2d6f19a4c625e479a4e5cc2e58362c2503ac012fb350edc1506759b9b6dab5",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -728,7 +728,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/planning-desk",
-        "sha256": "20369ec06aef15864ce687e46502ae0cb3596703712bbe3c2c7129ea4d3b9182",
+        "sha256": "ce2d6f19a4c625e479a4e5cc2e58362c2503ac012fb350edc1506759b9b6dab5",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -1138,7 +1138,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "opencode/skills/planning-desk",
-        "sha256": "20369ec06aef15864ce687e46502ae0cb3596703712bbe3c2c7129ea4d3b9182",
+        "sha256": "ce2d6f19a4c625e479a4e5cc2e58362c2503ac012fb350edc1506759b9b6dab5",
         "skipped": false
       },
       "plugin-scaffolder": {

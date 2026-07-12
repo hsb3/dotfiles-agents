@@ -65,6 +65,10 @@ reference dir path; idea 4: the presentation-norms file + pptx-henry pairing; id
 backlog note; idea 3: whatever owner decision 3 names). The home's header gets a one-line flag:
 "interim wishlist — T-23 absorbs this into the ranked backlog when it runs."
 
+> Entry shape + minimum fields follow the **backlog-entry form** standard (#84):
+> `planning-desk` skill `references/entry-forms-and-milestones.md` (Part 1, Application A). The three
+> fields above (use case, existing assets, source pointers) are that form's shared core.
+
 Acceptance (maps to issue checkboxes 1 and 2):
 - All eight ideas appear in the chosen home with use case + existing-asset pointers, or are explicitly declined with a one-line reason.
 - None of the eight exists only in a location the ranking process cannot see (NOTE.md is already gone; the check is that the chosen home + issue #49 body are consistent).
