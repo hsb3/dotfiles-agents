@@ -1,0 +1,164 @@
+[
+  {
+    "kicker": "DOTFILES-AGENTS + WORKBENCH - PROJECT STATUS",
+    "notes": "Status briefing with next-step recommendations, requested after the 2026-07-12 wave + compliance cleanup. Companion audio in the same folder. Theme: boardroom.",
+    "blocks": [
+      { "type": "heading", "level": 1, "text": "Where we stand, and what to pull next" },
+      { "type": "subtitle", "text": "2026-07-12 - prepared for Henry Burden - the wave is fully merged, both repos audit clean and fully planned; the recommended next pull is the two anchor close-outs" }
+    ]
+  },
+  {
+    "kicker": "Executive summary",
+    "footer": "Boards are the live source of truth: github.com/hsb3/dotfiles-agents + dotfiles-agents-workbench",
+    "blocks": [
+      { "type": "heading", "text": "Executive summary" },
+      { "type": "subtitle", "text": "The 2026-07-12 wave landed completely - eleven PRs merged across the two repos in one day, every owner ruling executed and transcribed to the issues. Today's compliance pass then took both repos to a clean audit. Nothing on either board is blocked; what remains is ordered work plus a short list of decisions only you can make." },
+      { "type": "bullets", "items": [
+        "Compliance: dotfiles-agents audits 70 pass / 0 gap (was 64/6 this morning); the workbench reads 69/1, and its one gap - the missing charter page - is already owned by an open issue (wb#30)",
+        "The backlog is fully groomed: 14 + 3 open issues, all template-conformant, every dotfiles-agents issue plan-covered, zero unmilestoned items on either board",
+        "The fable-foreman delegation skill is now live on main: the review findings landed as a follow-up fix (PR #95), and the original PR #86 was closed in its favor",
+        "Recommended next: close out the frozen-repo retirement (#32, the top-ranked P1) and the fleet-dashboard pilot (#33) - the two anchors that prove the P1 and P2 promises"
+      ] }
+    ]
+  },
+  {
+    "kicker": "SINCE YESTERDAY, IN NUMBERS",
+    "footer": "Counts as-of 2026-07-12 evening; live counts belong to the boards",
+    "blocks": [
+      { "type": "heading", "text": "One day: the wave merged, then the desks came clean" },
+      { "type": "columns", "columns": [
+        [ { "type": "stat", "value": "18", "label": "merges to main", "sub": "10 dotfiles-agents + 8 workbench" } ],
+        [ { "type": "stat", "value": "70/0", "label": "compliance audit", "sub": "was 64 pass / 6 gap" } ],
+        [ { "type": "stat", "value": "17", "label": "open issues", "sub": "0 unmilestoned, 100% conformant" } ],
+        [ { "type": "stat", "value": "6 to 0", "label": "evidence gaps closed", "sub": "old closes now cite their PRs" } ]
+      ] }
+    ]
+  },
+  {
+    "kicker": "TODAY'S HYGIENE PASS",
+    "footer": "Desk cleanup: PR #97 (merged, CI green); the governance scripts all exit clean",
+    "blocks": [
+      { "type": "heading", "text": "From post-wave drift to a clean desk, in five moves" },
+      { "type": "bullets", "items": [
+        "Archived the two plans whose issues shipped in the wave - roster re-triage (#81) and the entry-form standard (#84); the desk index reconciles with zero drift again",
+        "Fixed all six compliance gaps (missing frontmatter); the assistant-ui draft is marked resolved - its decision already shipped (PR #94)",
+        "Two live issues (#48, #49) still said 'Tracking: #TBD'; corrected - staged desk bodies are now byte-identical to GitHub",
+        "Six old closed issues carried no proof of delivery; each now has an evidence comment citing its delivering commit or PR",
+        "Workbench: the hooks-intake issue (wb#35) got real acceptance criteria for what remains after the wb#42 retirements; all three open issues now carry milestones"
+      ] }
+    ]
+  },
+  {
+    "kicker": "THE BOARD, NOW",
+    "footer": "Milestones are gate promises, not dates; check the gate, not the issue count",
+    "blocks": [
+      { "type": "heading", "text": "Seventeen open issues, all binned by gate promise" },
+      { "type": "columns", "columns": [
+        [
+          { "type": "heading", "level": 2, "text": "The near lane (P1)" },
+          { "type": "bullets", "items": [
+            "Retire the frozen plugins repo (#32) - top-ranked, unblocked",
+            "Frontend curation (#48) - paused on your scope entries",
+            "Extender-ideas backlog seed (#49)",
+            "Workbench: hooks follow-ups (wb#35) + python-standards intake (wb#37)"
+          ] }
+        ],
+        [
+          { "type": "heading", "level": 2, "text": "Behind it (P2 to P4)" },
+          { "type": "bullets", "items": [
+            "P2 Pilot proven (6): the fleet-dashboard pilot (#33), four toolkit fixes (#68 #69 #70 #83), roster provenance (#39)",
+            "P3 Rollout and retire (4): project-workflow v2 (#27), clone-at-build externals (#36), ra-platform adoption (#37), the rename (#82); plus the workbench charter (wb#30)",
+            "P4 Cross-tool parity (1): the agnostic base format (#59)"
+          ] }
+        ]
+      ] }
+    ]
+  },
+  {
+    "kicker": "RECOMMENDATION 1 - THE FIRST PULL",
+    "footer": "Plan: _meta/plans/retire-hsb3-custom-plugins - residuals verified on the issue",
+    "blocks": [
+      { "type": "heading", "text": "Finish retiring the frozen plugins repo (#32) - the only ranked-P1 build" },
+      { "type": "bullets", "items": [
+        "It is unblocked: the one open decision (fold vs drop the python commands) resolved to the workbench's python-standards intake (wb#37), which the issue now cites as the fold path",
+        "Residual work: record the 16-command dispositions, rescue the python templates and the session-summary script, retire the dead skills CLI, update the three dotfiles doc surfaces, then archive the frozen repo",
+        "Machine-state gotcha, recorded on the issue: ~/.claude/skills/ currently holds 8 symlinks into the frozen repo - more than the plan's 2026-07-03 verification found; re-verify before archiving",
+        "Closing it empties the build half of P1 and removes the last dependency on the migration source"
+      ] }
+    ]
+  },
+  {
+    "kicker": "RECOMMENDATION 2 - THE SECOND PULL",
+    "footer": "Proof already attached to #33: gap-filling run + idempotence record",
+    "blocks": [
+      { "type": "heading", "text": "Close the fleet-dashboard pilot (#33) - the proof is already on the issue" },
+      { "type": "bullets", "items": [
+        "The joint proof is complete: the raptorgpt gap-filling run and the fleet-dashboard idempotence record (0 create / 3 conflict / 1 manual / 66 ok) are both attached to the issue",
+        "What remains is small: draft fleet-dashboard's charter page for your review, refresh the pilot plan's stale raptorgpt prose, then close",
+        "Closing it proves Gate 2 - project-workflow demonstrated end-to-end on a real repo - and unlocks the P2 promise",
+        "The four toolkit fixes sitting in P2 (#68 #69 #70 #83) are independent of the pilot and can run as a parallel wave in their ruled order"
+      ] }
+    ]
+  },
+  {
+    "kicker": "OWNER DECISION QUEUE",
+    "footer": "These move only when you move them; everything else routes around them",
+    "blocks": [
+      { "type": "heading", "text": "Three things only you can unblock" },
+      { "type": "bullets", "items": [
+        "Frontend (#48): fill the driving-use-case table in the scope doc (scope.md, section 1) - until then the six drafted issues stay held and the salvage pile stays parked, per your scope-first ruling",
+        "Canon records (vault TODO): the workbench gate ratification (wb#32), the raptorgpt-GO supersession, and the two new standing policies - no standalone hooks, and scope-first extender creation",
+        "Optional, low stakes: give the workbench the type:/gate: label taxonomy during the P3 rollout - it still runs on GitHub's default labels"
+      ] }
+    ]
+  },
+  {
+    "kicker": "AFTER THE ANCHORS - THE RULED WAVE",
+    "footer": "Order was ruled 2026-07-12: #68 then #83 then #82 - the rename lands LAST",
+    "blocks": [
+      { "type": "heading", "text": "The toolkit wave is planned, reviewed, and ordered - it just waits its turn" },
+      { "type": "bullets", "items": [
+        "Toolkit fixes in ruled order: make the governance scripts see body-only plan folders (#68), then require both artifacts per folder (#83), then rename _meta/plans to _meta/issues (#82) - all three have adversarially-reviewed build plans",
+        "Alongside: project-workflow v2 (#27) - the pw- naming pass and plugin README, likely the 0.4.0 version bump",
+        "Then P3 proper: clone-at-build externals (#36, the last unbuilt translation capability) and the ra-platform commands-to-skill adoption (#37, use-citation #1 for planning-desk)",
+        "P4 (the agnostic base format, #59) stays parked until the P3 promises land"
+      ] }
+    ]
+  },
+  {
+    "kicker": "WORKBENCH LANE - RUNS IN PARALLEL",
+    "footer": "Lifecycle work: the J1 evidence bar is 2 cited real uses (CANON 12)",
+    "blocks": [
+      { "type": "heading", "text": "The bench's job now is evidence, not construction" },
+      { "type": "bullets", "items": [
+        "Enable curate-memories live and let its J1 evidence window run - it is the strongest promote-track candidate from the hooks intake, and needs 2 cited real uses",
+        "Confirm speak-summary's speak_gemini wiring actually works - that was the condition of its sole-survivor re-scope",
+        "Rework web-setup to check-and-notify (the ruled option 2) so its H4 blocker clears and the judgment checks become reachable",
+        "Author the workbench charter (wb#30) - a small docs-only issue that closes the last compliance-audit gap on either repo",
+        "python-standards intake (wb#37) is spec-first: the scope doc comes before any code, and it doubles as the #32 fold path"
+      ] }
+    ]
+  },
+  {
+    "kicker": "HAZARDS & WATCH-ITEMS",
+    "footer": "Surface these now so none becomes a mid-wave surprise",
+    "blocks": [
+      { "type": "heading", "text": "What could bite during the close-outs" },
+      { "type": "bullets", "items": [
+        "The #32 archive step depends on machine state: re-verify the ~/.claude/skills/ symlinks first - the count already drifted once from what the plan recorded",
+        "The frontend drafts do not self-promote: without your scope entries, #48 sits parked by design - flag it if that is not the intent",
+        "fable-foreman entered core by PR review, not the bench gate; the #81 re-triage just demoted 14 untested primitives - cite its real uses or expect it to surface at the next re-triage",
+        "The naming-grammar test silently skips when the sibling workbench checkout is absent - run make ci once from the main tree after any worktree-based wave",
+        "Keep the ruled order: landing the rename (#82) before #68/#83 churns the same desk those fixes edit"
+      ] }
+    ]
+  },
+  {
+    "kicker": "THE STATUS IN ONE SENTENCE",
+    "footer": "Boards: github.com/hsb3/dotfiles-agents + dotfiles-agents-workbench - as-of 2026-07-12",
+    "blocks": [
+      { "type": "heading", "text": "Both repos are clean, fully planned, and unblocked - pull the frozen-repo retirement and the pilot close-out, and the P1 and P2 promises both land" },
+      { "type": "subtitle", "text": "Everything else is either sequenced behind them (the toolkit wave, the P3 rollout), running in parallel on the bench (evidence windows, two re-scopes, the charter), or waiting on one of your three decisions." }
+    ]
+  }
+]
