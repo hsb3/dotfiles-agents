@@ -1,3 +1,12 @@
+---
+title: "chore: retire the frontend-extras plugin shell; keep its skills standalone"
+type: proposed-issue
+status: draft
+created: 2026-07-12
+purpose: Staged chore issue from the #48 curation plan.
+notes: Held with the #48 draft set pending owner entries in scope.md section 1; owner approves before filing.
+---
+
 # chore: retire the frontend-extras plugin shell; keep its skills standalone
 
 > **Draft — staged, not filed.** Follow-on from #48 curation-plan.md. Owner approves before filing.

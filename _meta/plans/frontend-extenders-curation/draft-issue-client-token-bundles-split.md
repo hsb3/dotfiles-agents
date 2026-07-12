@@ -1,3 +1,12 @@
+---
+title: "refactor: split the three client-token frontend bundles -- capability out, tokens to client store"
+type: proposed-issue
+status: draft
+created: 2026-07-12
+purpose: Staged refactor issue from the #48 curation plan (ruling 48.4 + the wb#25 split precedent).
+notes: Held with the #48 draft set pending owner entries in scope.md section 1; owner approves before filing.
+---
+
 # refactor: split the three client-token frontend bundles — capability out, tokens to client store
 
 > **Draft — staged, not filed.** Follow-on from #48 curation-plan.md. Owner approves before filing.

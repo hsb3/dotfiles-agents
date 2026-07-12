@@ -1,3 +1,12 @@
+---
+title: "fleet-dashboard Gate-2 pilot -- BASELINE audit (2026-07-12)"
+type: reference
+status: final
+created: 2026-07-12
+purpose: Point-in-time baseline compliance-audit record of fleet-dashboard at 3d81a48, before the Gate-2 manifest + scaffold pass (#33).
+notes: Snapshot record -- not updated in place; a re-audit produces a new dated file.
+---
+
 # fleet-dashboard Gate-2 pilot — BASELINE audit
 
 Date: 2026-07-12
