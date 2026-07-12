@@ -72,10 +72,9 @@ re-slice.
 
 Fan out read-only Explore / general-purpose agents on cheaper models for anything where the value
 is the conclusion, not the traversal. Default scouts to `haiku` — a read-only pass against a
-written convention or a bounded question rarely needs more, and at 1/2 sonnet rates the scan
-phase becomes nearly free; reserve `sonnet` scouts for questions needing real synthesis. Ask for
-concise evidence: files, line refs, commands run, uncertainties, stop conditions hit. This is the
-`efficient-fable` pattern — that skill's delegation and handoff-packet guidance applies verbatim.
+written convention or a bounded question rarely needs more, and at a fraction of sonnet rates the
+scan phase becomes nearly free; reserve `sonnet` scouts for questions needing real synthesis. Ask
+for concise evidence: files, line refs, commands run, uncertainties, stop conditions hit.
 
 ### C. Flat fan-out
 
