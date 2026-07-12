@@ -42,7 +42,7 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | externals-clone-at-build | #36 | drafted 2026-07-03; 36 entries, 31 null upstreams; decisions 1-7 open |
 | ra-platform-commands-skill | #37 | drafted 2026-07-03; skill half shipped as planning-desk, residual = adoption + retirement; decisions 1-6 open |
 | roster-provenance-field | #39 | drafted 2026-07-03; decide-first (field vs ratify summary); decisions 1-5 open |
-| frontend-extenders-curation | #48 | plan drafted 2026-07-03 beside the staged body; decisions 1-6 open |
+| frontend-extenders-curation | #48 | owner-ruled 2026-07-12 (D3): scope-first — scope.md drafted awaiting owner need statements; existing items = salvage pile; assistant-ui tracked in externals.yaml; six issue drafts held |
 | extender-ideas-backlog-seed | #49 | plan drafted 2026-07-03 beside the staged body; T-23 unrun, home decision open |
 | agnostic-base-format | #59 | drafted 2026-07-03; survey -> spec -> incremental migration; decisions 1-5 open |
 | roster-retriage | #81 | executed 2026-07-12; 14 demotions to wb incubator + 5 origin flips (framework-selection, 4 openspec-*); paired da#81/wb PRs open |
