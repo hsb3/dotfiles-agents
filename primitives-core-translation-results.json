@@ -324,7 +324,7 @@
       "pptx-henry": {
         "capability": "render",
         "destination": "claude-agents/skills/pptx-henry",
-        "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
+        "sha256": "6d61ed46cf6b69db59db2d5025f6e9f13b18e899f77ef61a634509c083b7d3fc",
         "skipped": false
       },
       "private-fork": {
@@ -740,7 +740,7 @@
       "pptx-henry": {
         "capability": "native",
         "destination": "claude-code/skills/pptx-henry",
-        "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
+        "sha256": "6d61ed46cf6b69db59db2d5025f6e9f13b18e899f77ef61a634509c083b7d3fc",
         "skipped": false
       },
       "private-fork": {
@@ -1150,7 +1150,7 @@
       "pptx-henry": {
         "capability": "native",
         "destination": "opencode/skills/pptx-henry",
-        "sha256": "f041b642e9dc3d59a5061cf0f2a5cdc7cef55f0c9253bd2ee3012a6039523412",
+        "sha256": "6d61ed46cf6b69db59db2d5025f6e9f13b18e899f77ef61a634509c083b7d3fc",
         "skipped": false
       },
       "private-fork": {
