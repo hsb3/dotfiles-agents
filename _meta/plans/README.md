@@ -46,6 +46,7 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | extender-ideas-backlog-seed | #49 | plan drafted 2026-07-03 beside the staged body; T-23 unrun, home decision open |
 | agnostic-base-format | #59 | drafted 2026-07-03; survey -> spec -> incremental migration; decisions 1-5 open |
 | roster-retriage | #81 | executed 2026-07-12; 14 demotions to wb incubator + 5 origin flips (framework-selection, 4 openspec-*); paired da#81/wb PRs open |
+| entry-form-standard | #84 | drafted 2026-07-12; entry forms + shared milestone set as planning-desk reference; unranked-wishlist rule Proposed |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 

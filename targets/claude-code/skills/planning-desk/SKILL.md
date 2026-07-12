@@ -61,6 +61,13 @@ reference you don't need.
 If the desk doesn't exist yet (`_meta/plans/` is absent) and the user asks for issue/plan/loop work,
 do **setup first** (it's quick), then proceed — a one-line "I'm scaffolding the desk first" is enough.
 
+Two standing standards underpin the modes above — read `references/entry-forms-and-milestones.md`
+when the question is **what shape a unit of work takes to enter a queue** (the backlog-entry form for
+a use case entering a project backlog, and the bench-entry form for a candidate entering an incubator —
+one shared field core, two applications) or **what gate/milestone vocabulary a board should speak** (the
+shared `P<n> — <promise>` milestone set + `gate:<promise>` labels). Issue authoring cites the
+backlog-entry form; board setup cites the milestone set.
+
 ## First, always: orient
 
 1. **Confirm `gh` is authed and the repo is GitHub-backed.** `gh repo view --json nameWithOwner`.
