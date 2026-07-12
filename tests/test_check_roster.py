@@ -172,10 +172,11 @@ class ParseRoster(unittest.TestCase):
         entries = C.parse_roster(C.ROSTER)
         self.assertTrue(entries)
         ids = {e.get("id") for e in entries}
-        # one of each rostered type (mcp is empty since #79 demoted the unprovenanced specs)
+        # rostered types present today: skill + agent. mcp is empty since #79 demoted the
+        # unprovenanced specs; hooks are empty since #81 demoted the python-standards hook
+        # (the last rostered hook) to the workbench incubator.
         self.assertIn("comms", ids)  # a skill
         self.assertIn("board-analyst", ids)  # an agent
-        self.assertIn("python-standards.Stop.stop", ids)  # a hook handler
 
     def test_required_fields_present_on_every_entry(self):
         for e in C.parse_roster(C.ROSTER):

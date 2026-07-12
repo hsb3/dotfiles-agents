@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Enforces modern Python standards: uv for packages, ty for type checking, ruff for linting/formatting. Auto-detects Python projects, auto-formats on save, validates before session end.",
-  "name": "python-standards",
-  "version": "1.0.0"
-}

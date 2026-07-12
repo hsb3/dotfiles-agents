@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Claude Code plugin for building Obsidian plugins with guidance on API, DOM, MCP integration, and chat/copilot features",
+  "description": "Claude Code plugin for building Obsidian plugins. The six obsidian-* guidance skills (API, DOM, MCP, chat/copilot, CLI, best-practices) were demoted for testing at 0.1.2 (#81); the langgraph-sse-client skill + chat-ui-builder / mcp-integrator / plugin-scaffolder agents remain.",
   "name": "obsidian-plugin-dev",
-  "version": "0.1.1"
+  "version": "0.1.2"
 }

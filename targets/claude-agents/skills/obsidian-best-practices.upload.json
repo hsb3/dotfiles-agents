@@ -1,9 +1,0 @@
-{
-  "display_title": "obsidian-best-practices",
-  "endpoint": "POST /v1/skills",
-  "files": [
-    "SKILL.md",
-    "references/common-violations.md",
-    "references/review-requirements.md"
-  ]
-}

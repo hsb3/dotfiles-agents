@@ -31,16 +31,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
     summary: "Write a new CLAUDE.md (or AGENTS.md) from scratch, or audit and improve an existing one, so it actually helps a coding agent navigate the codebase."
-  - id: api-server-design
-    type: skill
-    source: primitives-core/skills/api-server-design
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: []
-    summary: "Use when building, scaffolding, or extending an HTTP API server in any framework (FastAPI, Express/NestJS, Spring, Rails, Django, Go) — adding endpoints, str…"
   - id: board-reporting
     type: skill
     source: primitives-core/skills/board-reporting
@@ -71,36 +61,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Expert Carbon Design System (IBM) builder for React and Web Components — no MCP server required."
-  - id: cms-bigquery-etl-generator
-    type: skill
-    source: primitives-core/skills/cms-bigquery-etl-generator
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: []
-    summary: "Generate complete production-ready BigQuery ETL pipelines from JSON data dictionaries."
-  - id: cms-json-data-dictionary
-    type: skill
-    source: primitives-core/skills/cms-json-data-dictionary
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: []
-    summary: "Create comprehensive machine-readable JSON data dictionaries from CMS markdown documentation."
-  - id: cms-pdf-to-markdown
-    type: skill
-    source: primitives-core/skills/cms-pdf-to-markdown
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: []
-    summary: "Convert CMS PDF documentation (data dictionaries, methodology documents, technical specifications) to clean markdown format using pdfplumber."
   - id: comms
     type: skill
     source: primitives-core/skills/comms
@@ -160,16 +120,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Creates devcontainers with Claude Code, language-specific tooling (Python/Node/Rust/Go), and persistent volumes."
-  - id: developer-focus
-    type: skill
-    source: primitives-core/skills/developer-focus
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [dev-focus]
-    summary: "Use this skill when the user gives a broad, multi-step, or ambiguous task."
   - id: diagrams
     type: skill
     source: primitives-core/skills/diagrams
@@ -228,9 +178,11 @@ primitives:
     type: skill
     source: primitives-core/skills/framework-selection
     shelf: toggle
-    origin: authored
+    origin: sourced
     disposition: grandfathered-pending-use
-    vendor: null
+    vendor: langchain-ai
+    upstream: https://github.com/langchain-ai/langchain-skills
+    ref: c88193a48f387560697e1152e32dc5fd239c83e4
     targets: [claude-code, opencode, claude-agents]
     plugins: [meta]
     summary: "INVOKE THIS SKILL at the START of any LangChain/LangGraph/Deep Agents project, before writing any agent code."
@@ -426,67 +378,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Write Python scripts to interact with the Notion API."
-  - id: obsidian-api-basics
-    type: skill
-    source: primitives-core/skills/obsidian-api-basics
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [obsidian-plugin-dev]
-    summary: "This skill should be used when the user asks to \"create an Obsidian plugin\", \"plugin lifecycle\", \"plugin settings\", \"vault API\", \"register command\", \"add rib…"
-  - id: obsidian-best-practices
-    type: skill
-    source: primitives-core/skills/obsidian-best-practices
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [obsidian-plugin-dev]
-    summary: "This skill should be used when the user asks about \"community plugin review\", \"plugin approval\", \"common mistakes\", \"gotchas\", \"console.log\", \"promise handli…"
-  - id: obsidian-chat-ui
-    type: skill
-    source: primitives-core/skills/obsidian-chat-ui
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [obsidian-plugin-dev]
-    summary: "This skill should be used when the user asks to \"create chat interface\", \"build sidebar\", \"ItemView\", \"streaming messages\", \"chat sidebar\", \"copilot UI\", or…"
-  - id: obsidian-cli
-    type: skill
-    source: primitives-core/skills/obsidian-cli
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    requires: [cli:obsidian]
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [obsidian-plugin-dev]
-    summary: "This skill should be used when the user asks about \"obsidian cli\", \"command line interface for obsidian\", \"automate obsidian\", \"script obsidian vault\", \"obsi…"
-  - id: obsidian-dom-helpers
-    type: skill
-    source: primitives-core/skills/obsidian-dom-helpers
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [obsidian-plugin-dev]
-    summary: "This skill should be used when the user asks about \"DOM manipulation\", \"create elements\", \"innerHTML\", \"safe rendering\", \"MarkdownRenderer\", or mentions crea…"
-  - id: obsidian-mcp-server
-    type: skill
-    source: primitives-core/skills/obsidian-mcp-server
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [obsidian-plugin-dev]
-    summary: "This skill should be used when the user asks to \"add MCP server\", \"Model Context Protocol\", \"expose vault tools\", \"Streamable HTTP\", \"MCP tools\", or mentions…"
   - id: opencode-expertise
     type: skill
     source: primitives-core/skills/opencode-expertise
@@ -501,9 +392,11 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-apply-change
     shelf: toggle
-    origin: authored
+    origin: sourced
     disposition: grandfathered-pending-use
-    vendor: null
+    vendor: Fission-AI
+    upstream: https://github.com/Fission-AI/OpenSpec
+    ref: 6a3a1263fe4d5994716841c46acdd3c3d799c042
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
     summary: "Implement tasks from an OpenSpec change."
@@ -511,9 +404,11 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-archive-change
     shelf: toggle
-    origin: authored
+    origin: sourced
     disposition: grandfathered-pending-use
-    vendor: null
+    vendor: Fission-AI
+    upstream: https://github.com/Fission-AI/OpenSpec
+    ref: 6a3a1263fe4d5994716841c46acdd3c3d799c042
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
     summary: "Archive a completed change in the experimental workflow."
@@ -521,9 +416,11 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-explore
     shelf: toggle
-    origin: authored
+    origin: sourced
     disposition: grandfathered-pending-use
-    vendor: null
+    vendor: Fission-AI
+    upstream: https://github.com/Fission-AI/OpenSpec
+    ref: 6a3a1263fe4d5994716841c46acdd3c3d799c042
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
     summary: "Enter explore mode - a thinking partner for exploring ideas, investigating problems, and clarifying requirements."
@@ -531,9 +428,11 @@ primitives:
     type: skill
     source: primitives-core/skills/openspec-propose
     shelf: toggle
-    origin: authored
+    origin: sourced
     disposition: grandfathered-pending-use
-    vendor: null
+    vendor: Fission-AI
+    upstream: https://github.com/Fission-AI/OpenSpec
+    ref: 6a3a1263fe4d5994716841c46acdd3c3d799c042
     targets: [claude-code, opencode, claude-agents]
     plugins: [openspec]
     summary: "Propose a new change with all artifacts generated in one step."
@@ -609,17 +508,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: [project-workflow]
     summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."
-  - id: setup-project-dashboard
-    type: skill
-    source: primitives-core/skills/setup-project-dashboard
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    requires: [cli:speak_gemini]
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [project-dashboard]
-    summary: "Scaffold a `_project-dashboard/` status-dashboard folder into a project that doesn't have one yet, from the bundled reference template, then adapt it to the…"
   - id: shadcn
     type: skill
     source: primitives-core/skills/shadcn
@@ -654,16 +542,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Creates well-structured Claude Code sub-agents with validated YAML configuration and clear system prompts."
-  - id: update-project-dashboard
-    type: skill
-    source: primitives-core/skills/update-project-dashboard
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [project-dashboard]
-    summary: "Run a project's dashboard-update pass by finding and faithfully following its own `_project-dashboard/AGENTS.md` playbook."
   - id: board-analyst
     type: agent
     source: primitives-core/agents/board-analyst.md
@@ -844,39 +722,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Use this agent when you need to review testing implementation and coverage."
-  - id: python-standards.SessionStart.session-start
-    type: hook
-    source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.SessionStart.session-start.sh
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    requires: [cli:ty, cli:ruff]
-    vendor: null
-    targets: [claude-code]
-    plugins: [python-standards]
-    summary: "Inject Python standards guidance at session start."
-  - id: python-standards.PostToolUse.post-tool-use
-    type: hook
-    source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.PostToolUse.post-tool-use.sh
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    requires: [cli:ty, cli:ruff]
-    vendor: null
-    targets: [claude-code]
-    plugins: [python-standards]
-    summary: "Auto-format Python with ruff after Write/Edit (matcher: Write|Edit)."
-  - id: python-standards.Stop.stop
-    type: hook
-    source: primitives-core/hooks/python-standards/hooks-handlers/python-standards.Stop.stop.sh
-    shelf: toggle
-    origin: authored
-    disposition: grandfathered-pending-use
-    requires: [cli:ty, cli:ruff]
-    vendor: null
-    targets: [claude-code]
-    plugins: [python-standards]
-    summary: "Python-standards cleanup/summary at Stop."
   # ── mcp: self-authored connection specs (local stdio → CC + opencode; CMA is remote-only).
   # Empty since #79 demoted the 4 unprovenanced specs to the workbench; a new spec must carry
   # an `install:` block (validate_primitives.py) and declare its binary via requires cli:<name>. ──

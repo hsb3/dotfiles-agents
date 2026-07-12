@@ -9,12 +9,6 @@
         "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
         "skipped": false
       },
-      "api-server-design": {
-        "capability": "render",
-        "destination": "claude-agents/skills/api-server-design",
-        "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
-        "skipped": false
-      },
       "board-analyst": {
         "capability": "render",
         "destination": "claude-agents/agents/board-analyst.json",
@@ -51,28 +45,10 @@
         "sha256": "ffb50d2e0d3a05426865e3b7cd78ec880b3cd9ccbef287b0cbfda9a9e5ba29df",
         "skipped": false
       },
-      "cms-bigquery-etl-generator": {
-        "capability": "render",
-        "destination": "claude-agents/skills/cms-bigquery-etl-generator",
-        "sha256": "0ecb1b6d54d29710d126ec8c2e5f625c1f0c62d692b2f0500ae42c769e370241",
-        "skipped": false
-      },
       "cms-data-engineer": {
         "capability": "render",
         "destination": "claude-agents/agents/cms-data-engineer.json",
         "sha256": "bbad7f834bab879c02da5cd81ef94f47a908203af6787d9192fd3840c003566f",
-        "skipped": false
-      },
-      "cms-json-data-dictionary": {
-        "capability": "render",
-        "destination": "claude-agents/skills/cms-json-data-dictionary",
-        "sha256": "e0bdcded79fa8b1e8adea0a361eb8ab07057532e3c8ff54bd44ef17108ffb249",
-        "skipped": false
-      },
-      "cms-pdf-to-markdown": {
-        "capability": "render",
-        "destination": "claude-agents/skills/cms-pdf-to-markdown",
-        "sha256": "05068f0a052571ce88bdc43a59999b5cbac041ebd75b61e6b388a7bf59f48a5f",
         "skipped": false
       },
       "code-quality-reviewer": {
@@ -127,12 +103,6 @@
         "capability": "render",
         "destination": "claude-agents/skills/devcontainer-setup",
         "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
-        "skipped": false
-      },
-      "developer-focus": {
-        "capability": "render",
-        "destination": "claude-agents/skills/developer-focus",
-        "sha256": "4a695b70511142078747039ff24e36b19b4dd634c5370dc57d71ad973624ac86",
         "skipped": false
       },
       "diagrams": {
@@ -303,42 +273,6 @@
         "sha256": "d116ea8e138c18e7e572e4652638ed78da8fc250b707b13ab4ddbafca4777ea2",
         "skipped": false
       },
-      "obsidian-api-basics": {
-        "capability": "render",
-        "destination": "claude-agents/skills/obsidian-api-basics",
-        "sha256": "a7b33c80d77ff0037017a09de60adb3f598b7814009adec5fc81f1e59ebbf6ab",
-        "skipped": false
-      },
-      "obsidian-best-practices": {
-        "capability": "render",
-        "destination": "claude-agents/skills/obsidian-best-practices",
-        "sha256": "fa1633b818da508445b9c622a840c4d79c6a70e412c33df2eb3bcb8e2f4aed6b",
-        "skipped": false
-      },
-      "obsidian-chat-ui": {
-        "capability": "render",
-        "destination": "claude-agents/skills/obsidian-chat-ui",
-        "sha256": "3feb31894fbeb6aa32f5a82bfc49b1888eec7093f9f3557c52a7bb82a66f2507",
-        "skipped": false
-      },
-      "obsidian-cli": {
-        "capability": "render",
-        "destination": "claude-agents/skills/obsidian-cli",
-        "sha256": "d9f380d90984248e171a0163cc817e8d548247cb384b263d59e3a431e7c6f7b6",
-        "skipped": false
-      },
-      "obsidian-dom-helpers": {
-        "capability": "render",
-        "destination": "claude-agents/skills/obsidian-dom-helpers",
-        "sha256": "fc00c36d315306bcc059fd633333d41e346e8a4156866372c48befe03898032b",
-        "skipped": false
-      },
-      "obsidian-mcp-server": {
-        "capability": "render",
-        "destination": "claude-agents/skills/obsidian-mcp-server",
-        "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
-        "skipped": false
-      },
       "opencode-expertise": {
         "capability": "render",
         "destination": "claude-agents/skills/opencode-expertise",
@@ -435,12 +369,6 @@
         "sha256": "1b482b77f5221494a25bf2d47dbafa1c5fc524bf45d47d7cf756d4a01a1c145b",
         "skipped": false
       },
-      "setup-project-dashboard": {
-        "capability": "render",
-        "destination": "claude-agents/skills/setup-project-dashboard",
-        "sha256": "22be4d9a4a9efc7b0352c1da1ffc2e6a93e394975c41140054407e0bd140abd2",
-        "skipped": false
-      },
       "shadcn": {
         "capability": "render",
         "destination": "claude-agents/skills/shadcn",
@@ -464,12 +392,6 @@
         "destination": "claude-agents/agents/test-coverage-reviewer.json",
         "sha256": "fac6100d20c519f2d3f4342f47f3842fa33a270e54be6e90de20ba20b93b8d78",
         "skipped": false
-      },
-      "update-project-dashboard": {
-        "capability": "render",
-        "destination": "claude-agents/skills/update-project-dashboard",
-        "sha256": "aec55de1e5600a41bb83d82b808913e55468cb27bb8617e3f8ddc01f763856b4",
-        "skipped": false
       }
     },
     "claude-code": {
@@ -477,12 +399,6 @@
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/agent-dot-md-authoring",
         "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
-        "skipped": false
-      },
-      "api-server-design": {
-        "capability": "native",
-        "destination": "claude-code/skills/api-server-design",
-        "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
         "skipped": false
       },
       "azure-tools": {
@@ -533,28 +449,10 @@
         "sha256": "3541310a6704e86c5712b53434e4093055dec5a030d584f2399cf609b115e53b",
         "skipped": false
       },
-      "cms-bigquery-etl-generator": {
-        "capability": "native",
-        "destination": "claude-code/skills/cms-bigquery-etl-generator",
-        "sha256": "0ecb1b6d54d29710d126ec8c2e5f625c1f0c62d692b2f0500ae42c769e370241",
-        "skipped": false
-      },
       "cms-data-engineer": {
         "capability": "native",
         "destination": "claude-code/agents/cms-data-engineer.md",
         "sha256": "39485483e32bc902e37c4dc038ba5a9973129924b371e32b3448f5887c16f767",
-        "skipped": false
-      },
-      "cms-json-data-dictionary": {
-        "capability": "native",
-        "destination": "claude-code/skills/cms-json-data-dictionary",
-        "sha256": "e0bdcded79fa8b1e8adea0a361eb8ab07057532e3c8ff54bd44ef17108ffb249",
-        "skipped": false
-      },
-      "cms-pdf-to-markdown": {
-        "capability": "native",
-        "destination": "claude-code/skills/cms-pdf-to-markdown",
-        "sha256": "05068f0a052571ce88bdc43a59999b5cbac041ebd75b61e6b388a7bf59f48a5f",
         "skipped": false
       },
       "code-quality-reviewer": {
@@ -609,12 +507,6 @@
         "capability": "native",
         "destination": "claude-code/skills/devcontainer-setup",
         "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
-        "skipped": false
-      },
-      "developer-focus": {
-        "capability": "native",
-        "destination": "claude-code/plugins/dev-focus/skills/developer-focus",
-        "sha256": "4a695b70511142078747039ff24e36b19b4dd634c5370dc57d71ad973624ac86",
         "skipped": false
       },
       "diagrams": {
@@ -797,42 +689,6 @@
         "sha256": "d116ea8e138c18e7e572e4652638ed78da8fc250b707b13ab4ddbafca4777ea2",
         "skipped": false
       },
-      "obsidian-api-basics": {
-        "capability": "native",
-        "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-api-basics",
-        "sha256": "a7b33c80d77ff0037017a09de60adb3f598b7814009adec5fc81f1e59ebbf6ab",
-        "skipped": false
-      },
-      "obsidian-best-practices": {
-        "capability": "native",
-        "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-best-practices",
-        "sha256": "fa1633b818da508445b9c622a840c4d79c6a70e412c33df2eb3bcb8e2f4aed6b",
-        "skipped": false
-      },
-      "obsidian-chat-ui": {
-        "capability": "native",
-        "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-chat-ui",
-        "sha256": "3feb31894fbeb6aa32f5a82bfc49b1888eec7093f9f3557c52a7bb82a66f2507",
-        "skipped": false
-      },
-      "obsidian-cli": {
-        "capability": "native",
-        "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-cli",
-        "sha256": "d9f380d90984248e171a0163cc817e8d548247cb384b263d59e3a431e7c6f7b6",
-        "skipped": false
-      },
-      "obsidian-dom-helpers": {
-        "capability": "native",
-        "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-dom-helpers",
-        "sha256": "fc00c36d315306bcc059fd633333d41e346e8a4156866372c48befe03898032b",
-        "skipped": false
-      },
-      "obsidian-mcp-server": {
-        "capability": "native",
-        "destination": "claude-code/plugins/obsidian-plugin-dev/skills/obsidian-mcp-server",
-        "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
-        "skipped": false
-      },
       "opencode-expertise": {
         "capability": "native",
         "destination": "claude-code/skills/opencode-expertise",
@@ -893,24 +749,6 @@
         "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
         "skipped": false
       },
-      "python-standards.PostToolUse.post-tool-use": {
-        "capability": "native",
-        "destination": "claude-code/plugins/python-standards/hooks-handlers/python-standards.PostToolUse.post-tool-use.sh",
-        "sha256": "abe10e6e31e1b57bcf0870abceb84a8590f8b30f461d442a66c71327b133c026",
-        "skipped": false
-      },
-      "python-standards.SessionStart.session-start": {
-        "capability": "native",
-        "destination": "claude-code/plugins/python-standards/hooks-handlers/python-standards.SessionStart.session-start.sh",
-        "sha256": "c2b6f10dcc126ae873250736847e8d4b69b53834cbb8db5f7698c78a36629e39",
-        "skipped": false
-      },
-      "python-standards.Stop.stop": {
-        "capability": "native",
-        "destination": "claude-code/plugins/python-standards/hooks-handlers/python-standards.Stop.stop.sh",
-        "sha256": "4634c81f93d85ea2e1d09681dbb29a5ec3eb210502dc02e49221d6b01f4e896b",
-        "skipped": false
-      },
       "python-test-writer": {
         "capability": "native",
         "destination": "claude-code/agents/python-test-writer.md",
@@ -947,12 +785,6 @@
         "sha256": "41732a89e6af707041d6d767f5d71c324d6fdab808b76c6cb10fff6664f5de5c",
         "skipped": false
       },
-      "setup-project-dashboard": {
-        "capability": "native",
-        "destination": "claude-code/plugins/project-dashboard/skills/setup-project-dashboard",
-        "sha256": "22be4d9a4a9efc7b0352c1da1ffc2e6a93e394975c41140054407e0bd140abd2",
-        "skipped": false
-      },
       "shadcn": {
         "capability": "native",
         "destination": "claude-code/plugins/frontend-extras/skills/shadcn",
@@ -976,12 +808,6 @@
         "destination": "claude-code/agents/test-coverage-reviewer.md",
         "sha256": "1747fa00bc1cd3de9aec93d5a6181661393fd0df43202308132b5363a5aef192",
         "skipped": false
-      },
-      "update-project-dashboard": {
-        "capability": "native",
-        "destination": "claude-code/plugins/project-dashboard/skills/update-project-dashboard",
-        "sha256": "aec55de1e5600a41bb83d82b808913e55468cb27bb8617e3f8ddc01f763856b4",
-        "skipped": false
       }
     },
     "opencode": {
@@ -989,12 +815,6 @@
         "capability": "native",
         "destination": "opencode/skills/agent-dot-md-authoring",
         "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
-        "skipped": false
-      },
-      "api-server-design": {
-        "capability": "native",
-        "destination": "opencode/skills/api-server-design",
-        "sha256": "41aad1c6241cf9d895e2b947585290eea338e2d929d9b7bf62c53df052dd4796",
         "skipped": false
       },
       "azure-tools": {
@@ -1045,28 +865,10 @@
         "sha256": "6dbc1a3e4053a5fcc2c5b7a8432e6811fc74887a508f4d75561da9278cefaddd",
         "skipped": false
       },
-      "cms-bigquery-etl-generator": {
-        "capability": "native",
-        "destination": "opencode/skills/cms-bigquery-etl-generator",
-        "sha256": "0ecb1b6d54d29710d126ec8c2e5f625c1f0c62d692b2f0500ae42c769e370241",
-        "skipped": false
-      },
       "cms-data-engineer": {
         "capability": "transform",
         "destination": "opencode/agents/cms-data-engineer.md",
         "sha256": "9236bab1f37facef7809410fb4ee88eb9e27dcf6d787b694b19d9562bc8e0938",
-        "skipped": false
-      },
-      "cms-json-data-dictionary": {
-        "capability": "native",
-        "destination": "opencode/skills/cms-json-data-dictionary",
-        "sha256": "e0bdcded79fa8b1e8adea0a361eb8ab07057532e3c8ff54bd44ef17108ffb249",
-        "skipped": false
-      },
-      "cms-pdf-to-markdown": {
-        "capability": "native",
-        "destination": "opencode/skills/cms-pdf-to-markdown",
-        "sha256": "05068f0a052571ce88bdc43a59999b5cbac041ebd75b61e6b388a7bf59f48a5f",
         "skipped": false
       },
       "code-quality-reviewer": {
@@ -1121,12 +923,6 @@
         "capability": "native",
         "destination": "opencode/skills/devcontainer-setup",
         "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
-        "skipped": false
-      },
-      "developer-focus": {
-        "capability": "native",
-        "destination": "opencode/skills/developer-focus",
-        "sha256": "4a695b70511142078747039ff24e36b19b4dd634c5370dc57d71ad973624ac86",
         "skipped": false
       },
       "diagrams": {
@@ -1303,42 +1099,6 @@
         "sha256": "d116ea8e138c18e7e572e4652638ed78da8fc250b707b13ab4ddbafca4777ea2",
         "skipped": false
       },
-      "obsidian-api-basics": {
-        "capability": "native",
-        "destination": "opencode/skills/obsidian-api-basics",
-        "sha256": "a7b33c80d77ff0037017a09de60adb3f598b7814009adec5fc81f1e59ebbf6ab",
-        "skipped": false
-      },
-      "obsidian-best-practices": {
-        "capability": "native",
-        "destination": "opencode/skills/obsidian-best-practices",
-        "sha256": "fa1633b818da508445b9c622a840c4d79c6a70e412c33df2eb3bcb8e2f4aed6b",
-        "skipped": false
-      },
-      "obsidian-chat-ui": {
-        "capability": "native",
-        "destination": "opencode/skills/obsidian-chat-ui",
-        "sha256": "3feb31894fbeb6aa32f5a82bfc49b1888eec7093f9f3557c52a7bb82a66f2507",
-        "skipped": false
-      },
-      "obsidian-cli": {
-        "capability": "native",
-        "destination": "opencode/skills/obsidian-cli",
-        "sha256": "d9f380d90984248e171a0163cc817e8d548247cb384b263d59e3a431e7c6f7b6",
-        "skipped": false
-      },
-      "obsidian-dom-helpers": {
-        "capability": "native",
-        "destination": "opencode/skills/obsidian-dom-helpers",
-        "sha256": "fc00c36d315306bcc059fd633333d41e346e8a4156866372c48befe03898032b",
-        "skipped": false
-      },
-      "obsidian-mcp-server": {
-        "capability": "native",
-        "destination": "opencode/skills/obsidian-mcp-server",
-        "sha256": "628a360aa03dc5f3b529cf8798cd3ce471a09abdf8c442e4caff2e966833814d",
-        "skipped": false
-      },
       "opencode-expertise": {
         "capability": "native",
         "destination": "opencode/skills/opencode-expertise",
@@ -1435,12 +1195,6 @@
         "sha256": "10e6a65f90a118be47f71bbe635aeed0d2364b89db488047b80ad640a59eb4d7",
         "skipped": false
       },
-      "setup-project-dashboard": {
-        "capability": "native",
-        "destination": "opencode/skills/setup-project-dashboard",
-        "sha256": "22be4d9a4a9efc7b0352c1da1ffc2e6a93e394975c41140054407e0bd140abd2",
-        "skipped": false
-      },
       "shadcn": {
         "capability": "native",
         "destination": "opencode/skills/shadcn",
@@ -1463,12 +1217,6 @@
         "capability": "transform",
         "destination": "opencode/agents/test-coverage-reviewer.md",
         "sha256": "354894047706e3af3cf331fccb2156981b8606387fe17eaf2b76df936926c51e",
-        "skipped": false
-      },
-      "update-project-dashboard": {
-        "capability": "native",
-        "destination": "opencode/skills/update-project-dashboard",
-        "sha256": "aec55de1e5600a41bb83d82b808913e55468cb27bb8617e3f8ddc01f763856b4",
         "skipped": false
       }
     }
