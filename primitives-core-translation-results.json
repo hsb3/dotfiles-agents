@@ -396,7 +396,7 @@
       "private-fork": {
         "capability": "render",
         "destination": "claude-agents/skills/private-fork",
-        "sha256": "99ce9b59ed51cea45a054e7b7bcde239a62cb91c77fa3d001abad3d9e83eae36",
+        "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
         "skipped": false
       },
       "python-test-writer": {
@@ -890,7 +890,7 @@
       "private-fork": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/private-fork",
-        "sha256": "99ce9b59ed51cea45a054e7b7bcde239a62cb91c77fa3d001abad3d9e83eae36",
+        "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
         "skipped": false
       },
       "python-standards.PostToolUse.post-tool-use": {
@@ -1396,7 +1396,7 @@
       "private-fork": {
         "capability": "native",
         "destination": "opencode/skills/private-fork",
-        "sha256": "99ce9b59ed51cea45a054e7b7bcde239a62cb91c77fa3d001abad3d9e83eae36",
+        "sha256": "629577a02bf44e05c7128e3f2c5592ac0ac48845d842b2546c0f452d400443b1",
         "skipped": false
       },
       "python-test-writer": {
