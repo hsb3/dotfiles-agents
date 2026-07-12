@@ -46,6 +46,8 @@ jobs:
           digest_file="${RUNNER_TEMP}/upstream-digest.md"
           bash scripts/upstream-digest.sh > "$digest_file"
 
+          # Watermark lookup mirrors upstream-digest.sh — keep the two in sync,
+          # or the issue's commit count can disagree with the digest it carries.
           watermark="$(grep -m1 '^Last-reviewed-upstream-commit:' docs/upstream-review-log.md | awk '{print $2}')"
           if [[ -z "$watermark" ]]; then
             watermark="$(git rev-parse upstream-{{BRANCH}} 2>/dev/null || git rev-parse upstream/{{BRANCH}})"

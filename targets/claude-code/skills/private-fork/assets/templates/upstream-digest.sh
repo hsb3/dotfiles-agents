@@ -124,12 +124,12 @@ render_rows() {
     echo ""
     echo "| Verdict | Commit | Subject / PR | Auto-triage |"
     echo "|---|---|---|---|"
-    grep $'^FLAG\t' <<<"$triage" | render_rows
+    { grep $'^FLAG\t' <<<"$triage" || true; } | render_rows
     echo ""
     echo "**REVIEW commits by prefix (top 20):**"
     echo ""
     echo '```'
-    grep $'^REVIEW\t' <<<"$triage" | cut -f3 \
+    { grep $'^REVIEW\t' <<<"$triage" || true; } | cut -f3 \
       | sed -E -e 's/^([a-z]+(\([^)]*\))?:).*/\1/' -e 't' -e 's/.*/(no prefix)/' \
       | sort | uniq -c | sort -rn | awk 'NR<=20'
     echo '```'
