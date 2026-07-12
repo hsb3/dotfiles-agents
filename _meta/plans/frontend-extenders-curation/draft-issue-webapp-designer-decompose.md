@@ -1,3 +1,12 @@
+---
+title: "refactor: decompose webapp-designer on promotion; retire the dormant local plugin cache"
+type: proposed-issue
+status: draft
+created: 2026-07-12
+purpose: Staged refactor issue from the #48 curation plan.
+notes: Held with the #48 draft set pending owner entries in scope.md section 1; owner approves before filing.
+---
+
 # refactor: decompose webapp-designer on promotion; retire the dormant local plugin cache
 
 > **Draft — staged, not filed.** Follow-on from #48 curation-plan.md. Owner approves before filing.

@@ -45,8 +45,6 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | frontend-extenders-curation | #48 | owner-ruled 2026-07-12 (D3): scope-first — scope.md drafted awaiting owner need statements; existing items = salvage pile; assistant-ui tracked in externals.yaml; six issue drafts held |
 | extender-ideas-backlog-seed | #49 | plan drafted 2026-07-03 beside the staged body; T-23 unrun, home decision open |
 | agnostic-base-format | #59 | drafted 2026-07-03; survey -> spec -> incremental migration; decisions 1-5 open |
-| roster-retriage | #81 | executed 2026-07-12; 14 demotions to wb incubator + 5 origin flips (framework-selection, 4 openspec-*); paired da#81/wb PRs open |
-| entry-form-standard | #84 | drafted 2026-07-12; entry forms + shared milestone set as planning-desk reference; unranked-wishlist rule ratified 2026-07-12 |
 | toolkit-body-only-folders | #68 | drafted 2026-07-12; adversarially reviewed; warn already fires, fix suppresses redundant drift; decisions 1-5 open |
 | issue-template-format-align | #69 | drafted 2026-07-12; adversarially reviewed; .yml forms exist to copy, seed-and-point fix; decisions 1-2 open |
 | plan-frontmatter-schema | #70 | drafted 2026-07-12; adversarially reviewed; single-file fix to references/plan.md; decisions 1-3 open |
@@ -62,6 +60,8 @@ ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`)
 | `_meta/_archive/41-board-scripts-bundling.md` | #41 | shipped via PR #43 (staged body archived; no deep plan) |
 | `_meta/_archive/40-docs-planning-standard.md` | #40 | shipped via PR #62 (DOCS-01..05 rows, scaffold assets, apply, plugin 0.2.0); #40 closed |
 | `_meta/_archive/79-portability-conformance-wave.md` | #79 (+ workbench#32) | shipped via PR #80 (dependency contract, mirror checks, in-place fixes, demotions) + wb#33 (gate amendments ratified); both closed 2026-07-04 |
+| `_meta/_archive/81-roster-retriage.md` | #81 | shipped via PR #90 (14 demotions to wb incubator + 5 origin flips); #81 closed 2026-07-12 |
+| `_meta/_archive/84-entry-form-standard.md` | #84 | shipped via PR #88 (entry-form + shared milestone-set standards, planning-desk reference); unranked-wishlist rule ratified; #84 closed 2026-07-12 |
 
 ## The loop (how plans get produced)
 

@@ -4,6 +4,7 @@ type: scope
 status: draft — awaiting owner need statements
 created: 2026-07-12
 purpose: The stated-need/scope document that must exist BEFORE any frontend extender is built or promoted (owner ruling 2026-07-12, da#48 D3). What we optimize for and evaluate against.
+notes: Section 1 driving-use-case table awaits owner entries; the six draft-issue files in this folder stay held until then.
 ---
 
 # Frontend extenders — scope

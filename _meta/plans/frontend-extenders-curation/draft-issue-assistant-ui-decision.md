@@ -1,3 +1,12 @@
+---
+title: "decide: track assistant-ui in externals, or purge the dormant cache"
+type: proposed-issue
+status: resolved
+created: 2026-07-12
+purpose: Staged decision issue for the dormant assistant-ui plugin cache surfaced by the #48 inventory.
+notes: Resolved without filing -- owner ruling (da#48 D3) chose track; shipped via PR #94 (externals.yaml entry, pinned ref). Kept for the #48 record.
+---
+
 # decide: track assistant-ui in externals, or purge the dormant cache
 
 > **Draft — staged, not filed.** Follow-on from #48 curation-plan.md (new find, not in the 2026-07-03 plan). Owner approves before filing.

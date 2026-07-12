@@ -1,3 +1,12 @@
+---
+title: "fix: record upstream + pinned ref for the frontend-design external (and typescript-lsp)"
+type: proposed-issue
+status: draft
+created: 2026-07-12
+purpose: Staged fix issue from the #48 curation plan (ruling 48.5).
+notes: Held with the #48 draft set pending owner entries in scope.md section 1; owner approves before filing.
+---
+
 # fix: record upstream + pinned ref for the frontend-design external (and typescript-lsp)
 
 > **Draft — staged, not filed.** Follow-on from #48 curation-plan.md (ruling 48.5). Owner approves before filing.
