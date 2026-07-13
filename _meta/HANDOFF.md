@@ -8,20 +8,37 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 
 ## 1 · Current state
 
-- **Translation service is feature-complete** across all four primitive types (skills · agents · CMA payloads · mcp) plus internal + externals-mcp inputs: `scripts/translate.py` renders `primitives-core/` + `externals.yaml` → `targets/{claude-code,opencode,claude-agents}/` + a content-hash lock. **Roster/build/test counts are live — run `make ci`** (5 lanes: `check` roster↔disk · `validate` primitive content · `names` id grammar · `build-check` targets drift · `test`). Green on main; roster at 65 ids (agent=18, skill=47) + 8 plugin ids after the merged #90 re-triage (project-workflow now 0.3.1).
+- **Translation service is feature-complete** across all four primitive types (skills · agents · CMA payloads · mcp) plus internal + externals-mcp inputs: `scripts/translate.py` renders `primitives-core/` + `externals.yaml` → `targets/{claude-code,opencode,claude-agents}/` + a content-hash lock. **Roster/build/test counts are live — run `make ci`** (5 lanes: `check` roster↔disk · `validate` primitive content · `names` id grammar · `build-check` targets drift · `test`). Green on main; roster at 65 ids (agent=18, skill=47) + 8 plugin ids after the merged #90 re-triage (project-workflow now 0.3.1). fable-foreman is live on core (PR #86 closed in favor of merged PR #95).
+- **Both desks audit clean (2026-07-12 pass):** compliance 70/0 here · 69/1 workbench (gap = wb#30 charter); all open issues template-conformant, plan-covered, milestoned; evidence audit + reconcile + sync-bodies all exit 0 (PR #97). **Provenance audit ran over all 65 items:** roster labels honest (all 22 `sourced` carry upstream+ref), BUT 22 items are third-party content vendored in `primitives-core/` and the charter is SILENT on the sourced-vs-external boundary (the "tracked, not vendored" rule exists only in CLAUDE.md) — remediation staged, below.
 - **Roster schema:** `origin: authored|sourced` (internal is dead), required `disposition:`, optional `requires:` capability flags, sourced ⇒ `upstream`+`ref` guard-enforced.
 - **Promotion gate RATIFIED** (CANON 12; J1 = ≥2 real uses). **Branch protection** live: required check is the `make ci` aggregate; force-push/deletion blocked; admin bypass retained — agents PR.
 
 ## 2 · In flight / next up
 
-- **The 2026-07-12 wave is FULLY EXECUTED (merged same day):** all 9 wave PRs landed (da #90 #88
-  #89 #91 #92 · wb #39 #40 #38 #41) plus the two ruling-execution PRs (wb#42 hook retirements,
-  da#94 assistant-ui + frontend scope doc). Owner rulings (verbatim in
-  `_meta/briefings/2026-07-12-wave-decisions/brief.md`, untracked) are all transcribed to the
-  issues: #33 joint-proof + idempotence record, wb#35 dispositions, #48 scope-first pivot,
-  #82/#83 ordering + hyphen, wb#40 salvage-pile note. Worktrees pruned, both mains green
-  (`make ci` / `make promote-check-all`). The unranked-wishlist rule is ratified in the shipped
-  entry-form standard (#88).
+- **BUILD NEXT — #99 gitignore policy (owner-ruled, ready).** Filed 2026-07-12 (owner directive);
+  **owner ruled 2026-07-13: option 2 — track-by-default inside `_meta/` with targeted ignores
+  only** (`operations/`, caches, OS litter). Ruling + open decision 2 (operations/ stays inside
+  by default) transcribed on #99. Decide-first plan at `_meta/plans/meta-gitignore-policy/plan.md`:
+  ADR first, then repo migration (MANDATORY secrets scan before the flip; `operations/` stays
+  ignored), then the repo-meta-structure standard + IGNORE checklist rows + scaffold template in
+  the same PR, then adopter notes (wb, fleet-dashboard, dotfiles memory-hygiene stanza).
+  **Sequencing: #82 edits the same standard files — land #99 before or after #82, never interleaved.**
+- **Owner-approved close-outs, queued not started (2026-07-12):** #32 first (residuals + the
+  8-symlink machine-state gotcha are on the issue), then #33 (draft fleet-dashboard CHARTER for
+  owner review + refresh the plan's stale raptorgpt prose, then close).
+- **Two staged proposals await owner approval to FILE** (`_meta/plans/inbox/`, merged via PR #98):
+  (1) *third-party disposition* — boundary ADR + per-item disposition for the 22 vendored sourced
+  items (depends on #36 for any move-to-externals); (2) *plugin business-case retrofit* — entry-form
+  core applied to each of the 8 plugins, retire/merge proposal where no credible case exists.
+  Decision brief with all links: https://claude.ai/code/artifact/7356f208-9e49-44ef-a928-a43dfdd55226
+  (source in `_meta/briefings/2026-07-12-extender-governance-brief/`, untracked until #99 lands).
+- **Ecosystem survey done** (owner request, incl. his links ECC + gsd-core):
+  `_meta/research/extender-distribution-ecosystem.md` — LOCAL/gitignored until #99 flips the
+  policy. Net: ruler/rulesync are the peers, ECC the closest at scale, agentskills standardization
+  pushes translation value toward agents/hooks/mcp/plugins; recommendation = fold into #59, no new issue.
+- **The 2026-07-12 wave** (9 wave PRs + 2 ruling-execution PRs, both repos) is fully merged and
+  transcribed; details live in the PRs and `_meta/briefings/2026-07-12-wave-decisions/`. The
+  unranked-wishlist rule is ratified in the shipped entry-form standard (#88).
 - **NEW STANDING POLICIES from the rulings (both recorded in repo docs, CANON recording = owner TODO):**
   (1) *no standalone hooks* — every hook promotion names its owning plugin (hook-only plugins fine;
   hook-bundle plugin if enough accumulate) — promotion-gate H4 amendment, wb#42.
@@ -29,19 +46,10 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   (business case); never promote untested skills or ones that don't beat no-skill / reputable
   off-the-shelf. Encoded in `_meta/plans/frontend-extenders-curation/scope.md`; demoted/frontend
   items are a **salvage pile** claimed by use cases, never self-promoting.
-- **Next build waves, in order:**
-  1. **#32 close-out** (the only P1) — unblocked; decision-1 fold path = wb#39's `python-standards`
-     skill (cited on the issue). Residuals: 16-command disposition record, python-standards
-     `templates/` + dev-focus `session-summary.py` rescue, retire the dead `skills` CLI, three
-     dotfiles doc surfaces, archive the frozen repo. **Machine-state gotcha (recorded on #32):**
-     `~/.claude/skills/` currently has 8 symlinks into the frozen repo — more than the plan's
-     2026-07-03 verification found; re-verify before archiving.
-  2. **#33 close-out** — joint proof complete (raptorgpt gap-filling + fleet-dashboard idempotence
-     `0 create / 3 conflict / 1 manual / 66 ok`, both on the issue). Remaining: draft
-     fleet-dashboard `docs/CHARTER.md` for owner review, refresh the pilot plan.md's stale
-     raptorgpt prose, then close.
-  3. **#27** (pw- rename, plugin 0.3.x→0.4.0?) and the planned wave **#68 → #83 → #82** (ruled
-     order; #82 renames the repo-meta-structure STANDARD + migrates adopters).
+- **After those:** #27 (pw- rename, plugin 0.3.x→0.4.0?) and the ruled wave **#68 → #83 → #82**
+  (#82 renames the repo-meta-structure STANDARD + migrates adopters; mind the #99 sequencing rule).
+- **Watch-item:** fable-foreman entered core via PR review, without bench J1 evidence — cite real
+  uses as they occur or expect it to surface at the next re-triage (the #81 precedent demoted 14).
 - **Frontend (#48): paused on owner input** — `scope.md` §1 driving-use-case table awaits owner
   entries; the six drafted issues stay held; `assistant-ui` now tracked in `externals.yaml`
   (pinned to the installed clone's ref).
@@ -60,8 +68,6 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   (re-qualification record in the workbench promotions log) or demote on failure-in-use. #37's
   ra-platform adoption is use-citation #1 for `planning-desk`. **Promoting a parked item**
   (CANON 12) needs ≥2 cited real uses + H1–H5; `opencode-expert` is the strongest candidate.
-- **PR #86 (fable-foreman skill) is still open** — predates the wave, not part of it; review/merge
-  separately.
 
 ## 3 · Conventions & gotchas
 
@@ -79,7 +85,8 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 - **Board scripts are authoritative HERE** (`primitives-core/skills/github-project-board/scripts/`) — deliberately diverged from frozen hsb3-custom-plugins; never re-copy from the frozen repo.
 - **Archived plans:** `_meta/_archive/<issue>-<slug>.md` (tracked via gitignore negation). On close, `git mv` the `plan.md` there and move its README row ACTIVE→ARCHIVED so `reconcile.py` stays clean. Run `_meta/plans/_utils/` scripts from the **main tree** (they read live `gh` + disk; `coverage.py`/`reconcile.py` resolve the desk via `__file__`, so a worktree copy reads the worktree's desk). ACTIVE README rows use the **bare slug**, not a markdown link.
 - **`gh` token gotcha:** env `GITHUB_TOKEN` can't resolve project-board owner — use `env -u GITHUB_TOKEN gh …` for `gh project` / `gh repo create`.
-- **Conflicting PRs get NO CI:** GitHub skips `pull_request` workflows when the merge ref won't build — "no checks reported" means rebase onto main first, not that CI failed.
+- **Conflicting PRs get NO CI:** GitHub skips `pull_request` workflows when the merge ref won't build — "no checks reported" means rebase onto main first, not that CI failed. (On a FRESH branch it can also just be a registration race — wait ~10s and re-run `gh pr checks`.)
+- **`audit.py` outside the harness needs `--plugin-root`** — `$CLAUDE_PLUGIN_ROOT` is unset in plain Bash; pass the plugin cache dir (see the repo-compliance-audit skill's run instructions).
 - **Deploy targets (verified, opencode 1.16.2):** opencode agents → `.opencode/agent(s)/` or `~/.config/opencode/agent(s)/`; opencode skills auto-scanned from `~/.claude/skills/` + `~/.agents/skills/` (config loaded once — restart opencode to pick up new skills). CC marketplace = two generated catalogs: `claude plugin marketplace add hsb3/dotfiles-agents` reads the repo-root `.claude-plugin/marketplace.json`; a local-path add of `targets/claude-code` reads that dir's own marketplace.json (what `dotfiles-bootstrap` uses). Both drift-guarded in `make ci`.
 - `bgIsolation:none` in `.claude/settings.json` — this repo isn't parallel-mutated by default; when a session DOES run parallel da builders, give each its own `git worktree` + branch (this wave's pattern).
 - Trunk-based, remote is SSH: branch `<type>/<name>`, squash-merge, commits end with the `Claude-Session:` footer; agents PR (don't push main).
