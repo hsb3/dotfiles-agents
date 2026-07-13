@@ -18,10 +18,12 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 - **#99 SHIPPED 2026-07-13 (ADR-0006):** `_meta/` is now tracked by default everywhere — this
   repo + the packaged standard via PR #102, workbench via wb PR #45, fleet-dashboard via its
   PR #14 (all squash-merged, audits 69/1 with only the known charter gaps). Plan archived at
-  `_meta/_archive/99-meta-gitignore-policy.md` (+ adopter notes alongside). **Residual:** the
-  dotfiles repo's `project-protocol.md` §2 still describes the old negation stanza — reword per
-  the archived adopter note (owner/dotfiles-side change). The #82 sequencing constraint is
-  cleared: #99 landed first.
+  `_meta/_archive/99-meta-gitignore-policy.md` (+ adopter notes alongside). Residuals resolved
+  2026-07-13: dotfiles rules/instructions reworded (dotfiles PR #77) — but the dotfiles repo's
+  OWN `_meta/*` stanza was deliberately left (flipping it would newly track machine-local
+  scratch; owner call, procedure in the archived adopter note; the dotfiles-expert skill's
+  repo-and-stow line stays accurate until then). The #82 sequencing constraint is cleared:
+  #99 landed first.
 - **Owner-approved close-outs, queued not started (2026-07-12):** #32 first (residuals + the
   8-symlink machine-state gotcha are on the issue), then #33 (draft fleet-dashboard CHARTER for
   owner review + refresh the plan's stale raptorgpt prose, then close).
@@ -55,8 +57,7 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   (pinned to the installed clone's ref).
 - **Workbench follow-ups:** enable `curate-memories` live for its J1 evidence window; confirm
   `speak-summary`'s speak_gemini wiring (condition of its sole-survivor re-scope); rework
-  `web-setup` to check-and-notify; remove the stray `_meta/archive/` duplicate dir (gitkeep-only
-  twin of `_archive/`, surfaced by the #99 flip).
+  `web-setup` to check-and-notify. (The stray `_meta/archive/` dup dir is gone — wb PR #46.)
 - **Owner TODOs (vault/CANON):** record the wb#32 gate-ratification, the raptorgpt-GO
   supersession in `DECISIONS.md`, and the two new standing policies above.
 - **Testing-infrastructure note (owner, 2026-07-12):** as this matures, evolve testing by
