@@ -39,9 +39,9 @@ the repo's issue template. The `plan.md` is the *build detail* — what already 
 residual, every claim cited to `path:line`, deliverables sliced into ownable units, the gates that
 fire, and the safe landing order. The board tracks STATE; the desk holds DETAIL.
 
-**The desk is git-tracked via a `.gitignore` negation** (the rest of `_meta/` stays local). That
-makes plans + scripts visible in a fresh clone and to cloud/worktree agents, while keeping rapid
-scratch out of the worktree. The scripts are generated VIEWS over `gh` + disk — never
+**The desk is git-tracked** (`_meta/` is tracked by default, ADR-0006). That
+makes plans + scripts visible in a fresh clone and to cloud/worktree agents; the toolkit's
+`__pycache__/` bytecode stays ignored. The scripts are generated VIEWS over `gh` + disk — never
 hand-maintained state — each with `--json` and a non-zero exit on findings, so any one can gate a
 wave in CI or a pre-push hook.
 
@@ -89,20 +89,24 @@ specifics by writing `_config.md`. Do it in this order.
    to `_meta/plans/README.md` (it carries the `ACTIVE plans` / `ARCHIVED (` section markers that
    `reconcile.py` parses — keep them). These scripts are dependency-free stdlib + `gh`; no install.
 
-2. **Wire the `.gitignore` negation** so the desk is tracked but the rest of `_meta/` isn't. If
-   `_meta/` is ignored, add negations beneath it — the ignore line MUST be the `_meta/*` form
-   (git cannot negate paths inside a wholly-ignored `_meta/` directory), and the trailing
-   `__pycache__` line is required or the negation re-includes the toolkit's bytecode and a
-   `git add -A` commits `.pyc` files:
+2. **Check the `.gitignore` so the desk is tracked.** Under ADR-0006 `_meta/` is tracked by
+   default — no negation machinery. If the target repo already tracks `_meta/` (or doesn't
+   ignore it), the desk is tracked with no change; just keep the toolkit's bytecode out with a
+   `__pycache__/` rule if the repo lacks a global one:
    ```gitignore
-   _meta/*
-   !_meta/plans/
-   !_meta/plans/**
    _meta/plans/_utils/__pycache__/
    ```
-   If `_meta/` isn't ignored at all, the user may want it local — ask whether to ignore `_meta/*`
-   with the plans desk negated, or track all of `_meta/`. Confirm with `git check-ignore -v
-   _meta/plans/README.md` (should print nothing once negated).
+   If the repo currently ignores `_meta/` (a broad `_meta/*`/`_meta/` line), replace that broad
+   ignore with the track-by-default stanza rather than adding negations — the `operations/` pair
+   plus the cache rule:
+   ```gitignore
+   _meta/operations/*
+   !_meta/operations/.gitkeep
+   _meta/plans/_utils/__pycache__/
+   ```
+   Flipping a formerly-ignored `_meta/` newly tracks whatever was sitting there: run a secrets
+   scan of the newly-tracked content before committing (ADR-0006's pre-flip guard). Confirm the
+   desk is tracked with `git check-ignore -v _meta/plans/README.md` (should print nothing).
 
 3. **Detect this project's gates + templates, then write `_config.md`.** This is the step that
    makes the desk portable. Investigate, don't assume:

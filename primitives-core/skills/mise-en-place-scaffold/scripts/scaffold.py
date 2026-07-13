@@ -123,28 +123,27 @@ class ScaffoldError(Exception):
 
 META_README_STUB = """# `_meta/` — the local working desk
 
-Gitignored by default (`_meta/*`); durable items tracked via negation
-(`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`,
-plus the `_archive/briefings/operations/research` `.gitkeep`s so the dirs survive a
-fresh clone). The purpose of the ignore is that rapid working material never dirties
-the worktree — not secrecy of everything in it.
+Tracked by default (ADR-0006); the only ignored path is `operations/` content (its
+secrets/live-ops material), plus tool caches and OS litter. Desk content is
+clone-survivable by default; deliberately-local scratch belongs in `operations/` or
+outside the repo.
 
 | Entry | Purpose |
 |---|---|
 | `_archive/` | Superseded working material — moved, never deleted |
 | `briefings/` | Dated readouts (`yyyy-mm-dd-subject/`) |
-| `plans/` | The code planning desk — issue bodies and build plans, tracked via negation; `plans/inbox/` receives communication-package intake |
+| `plans/` | The code planning desk — issue bodies and build plans, tracked; `plans/inbox/` receives communication-package intake |
 | `operations/` | Live URLs, credentials, runbooks with secrets — never tracked, never in `docs/` |
 | `research/` | Live investigations; findings graduate to `docs/` or issues |
-| `HANDOFF.md` | Cold-start bridge — tracked via negation, secret-free |
+| `HANDOFF.md` | Cold-start bridge — tracked, secret-free |
 | `README.md` | This file — states the taxonomy |
-| `mise-en-place.yml` | Per-repo variance manifest — tracked via negation |
+| `mise-en-place.yml` | Per-repo variance manifest — tracked |
 """
 
 HANDOFF_STUB = """# HANDOFF
 
-_Cold-start bridge: what a brand-new session must know before working here. Tracked via
-gitignore negation; keep it secret-free (secrets live in `_meta/operations/`). This is a
+_Cold-start bridge: what a brand-new session must know before working here. Tracked by
+default (ADR-0006); keep it secret-free (secrets live in `_meta/operations/`). This is a
 scaffolded skeleton — fill it via the handoff skill at the first session boundary._
 
 ## 0. Orientation
@@ -211,7 +210,7 @@ AUTHORED_FILES = {
 }
 
 MANIFEST_TEMPLATE = """\
-# _meta/mise-en-place.yml — per-repo variance manifest (tracked via gitignore negation).
+# _meta/mise-en-place.yml — per-repo variance manifest (tracked by default; ADR-0006).
 # The standards define the invariants; this file is the ONLY home for per-repo variance.
 # Field reference: the mise-en-place-scaffold skill's references/manifest.md.
 # Readers: repo-compliance-audit + mise-en-place-scaffold consume default_branch,
@@ -859,7 +858,7 @@ def compute_plan(repo, plugin_root, manifest):
     # Gitignore-swallow probe: a planned creation the TARGET repo's own ignore rules
     # swallow is still created (additive-only, and presence-on-disk is the audit's
     # pass condition) but is invisible to `git status` and lost on a fresh clone —
-    # warn per path so the owner adds a negation or fixes the rule. Probed against
+    # warn per path so the owner tracks `_meta/` by default or fixes the rule. Probed against
     # the current rules: a .gitignore planned by this same run is not on disk yet.
     ctx.swallowed = [rel for rel, _ in ctx.files if check_ignore(repo, rel) == 0]
     return actions, ctx
@@ -908,7 +907,7 @@ def init_manifest(repo):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(MANIFEST_TEMPLATE)
     print(f"wrote {MANIFEST_RELPATH} — fill the fields, then commit it")
-    print("(tracked via the standard .gitignore's `!_meta/mise-en-place.yml` negation)")
+    print("(tracked by default under the standard .gitignore — `_meta/` is tracked; ADR-0006)")
     return EXIT_OK
 
 
@@ -970,7 +969,7 @@ def render(repo, mode, actions, ctx, manifest, created=None, skipped=None):
             f"`git status` and lost on a fresh clone:",
         ]
         for p in ctx.swallowed:
-            lines.append(f"  ! {p} — add a gitignore negation or fix the ignore rule")
+            lines.append(f"  ! {p} — track `_meta/` by default (ADR-0006) or fix the ignore rule")
 
     if ctx.notes:
         lines += [

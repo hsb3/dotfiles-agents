@@ -4,8 +4,8 @@ Build-ready planning docs — one subfolder per unit of work (`<slug>/plan.md`, 
 `<slug>/issue-body.md` and any screenshots/artifacts). The board tracks STATE; this desk holds the
 build DETAIL.
 
-This desk is **git-tracked** (negated in `.gitignore`), so the plans + `_utils/` scripts are visible
-in a fresh clone, in worktrees, and in cloud sessions; the rest of `_meta/` stays local. A plan's
+This desk is **git-tracked** (`_meta/` is tracked by default), so the plans + `_utils/` scripts are visible
+in a fresh clone, in worktrees, and in cloud sessions. A plan's
 tracking issue is the first `#NNN` in its `plan.md` `## Tracking` section.
 
 See `_config.md` for THIS project's gate menu, issue-template sections, and canonical docs to cite.

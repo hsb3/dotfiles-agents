@@ -1,16 +1,16 @@
 # The mise-en-place manifest — `_meta/mise-en-place.yml`
 
 **Format owned by this skill.** The standards define the invariants; the manifest is the
-**only** home for per-repo variance. It lives at `_meta/mise-en-place.yml`, tracked via
-the standard `.gitignore`'s `!_meta/mise-en-place.yml` negation so it survives clones
-and worktrees. `scaffold.py --init-manifest` writes the commented template when none
+**only** home for per-repo variance. It lives at `_meta/mise-en-place.yml`, tracked by
+default under the standard `.gitignore` (`_meta/` is tracked; ADR-0006) so it survives
+clones and worktrees. `scaffold.py --init-manifest` writes the commented template when none
 exists (and never overwrites one that does). A missing manifest is not a gap — defaults
 apply.
 
 ## Fields
 
 ```yaml
-# _meta/mise-en-place.yml — tracked via gitignore negation
+# _meta/mise-en-place.yml — tracked by default (ADR-0006)
 owner: ""            # hsb3 | mhi-raptorxai
 repo: ""
 default_branch: main # dev for mhi-raptorxai repos
@@ -52,6 +52,6 @@ parse the manifest with a tailored stdlib reader (no pyyaml). The contract:
 
 ## Tracking
 
-The `.gitignore` template shipped by the repo-meta-structure standard ignores `_meta/*`
-and negates the durable items, including `!_meta/mise-en-place.yml` — the audit's
-`IGNORE-06` row verifies the negation is effective. Commit the manifest after filling it.
+The `.gitignore` template shipped by the repo-meta-structure standard tracks `_meta/` by
+default (ADR-0006) — the manifest needs no special rule to be tracked; the audit's
+`IGNORE-06` row verifies it is not ignored. Commit the manifest after filling it.

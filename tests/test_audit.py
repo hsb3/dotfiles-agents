@@ -445,9 +445,9 @@ class GapClasses(unittest.TestCase):
         )
         self.assertIn("NOTES.md", rows["AVOID-03"][1])
 
-    def test_gitignore_without_meta_negations(self):
+    def test_gitignore_with_blanket_meta_ignore(self):
         def mutate(repo):
-            # blanket `_meta/` ignore: negations cannot work (the /* form is required)
+            # blanket `_meta/` ignore violates track-by-default (ADR-0006)
             _write(
                 os.path.join(repo, ".gitignore"),
                 ".env*\n!.env*.example\n_meta/\n"

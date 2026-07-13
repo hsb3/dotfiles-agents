@@ -5,8 +5,8 @@ description: >-
   "what is the standard for X" in a repo's layout: the `_meta/` directory taxonomy
   (_archive/briefings/plans/operations/research + HANDOFF.md + README.md), the `.claude/`
   layout (what's tracked vs machine-local, commands/ as migration debt), the `.github/`
-  template set, required root files, the gitignore conventions (the `_meta/*` negation
-  pattern, `.env*` handling, the `.claude` stanza), the `_meta/plans/` planning-doc
+  template set, required root files, the gitignore conventions (track-by-default `_meta/`
+  with the `operations/` ignore, `.env*` handling, the `.claude` stanza), the `_meta/plans/` planning-doc
   frontmatter schema, or where communication packages from the strategy desk land
   (`_meta/plans/inbox/`). Use when setting up or reviewing a repo's structure, answering
   layout questions, or checking what belongs where. This skill is reference content only —

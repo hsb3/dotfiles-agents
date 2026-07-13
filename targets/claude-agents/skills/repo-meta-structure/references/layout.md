@@ -7,20 +7,21 @@ is a row in [`checklist.md`](checklist.md).
 
 ## `_meta/` — the local working desk
 
-Gitignored by default; durable items tracked via negation (see
-[`../assets/gitignore.template`](../assets/gitignore.template)). The purpose of the ignore
-is that rapid planning material never dirties the worktree — not secrecy of everything in it.
+Tracked by default; the only ignored path is `operations/` content, plus tool caches and
+OS litter (Decision: ADR-0006 — see [`../assets/gitignore.template`](../assets/gitignore.template)).
+Desk content is clone-survivable by default; deliberately-local scratch belongs in
+`operations/` or outside the repo.
 
 | Entry | Purpose |
 |---|---|
 | `_archive/` | Superseded working material — moved, never deleted |
 | `briefings/` | Dated readouts (`yyyy-mm-dd-subject/`) |
-| `plans/` | The **code planning desk** — issue bodies and build plans authored by coding agents (the `planning-desk` skill's workspace). Tracked via negation. Also holds `inbox/` for communication-package intake — see [`planning-docs.md`](planning-docs.md) |
+| `plans/` | The **code planning desk** — issue bodies and build plans authored by coding agents (the `planning-desk` skill's workspace). Also holds `inbox/` for communication-package intake — see [`planning-docs.md`](planning-docs.md) |
 | `operations/` | Live URLs, credentials, runbooks with secrets — never tracked, never in `docs/` |
 | `research/` | Live investigations; findings graduate to `docs/` or issues |
-| `HANDOFF.md` | Cold-start bridge — tracked via negation, secret-free |
-| `README.md` | States this taxonomy — tracked via negation |
-| `mise-en-place.yml` | Per-repo variance manifest — tracked via negation (format owned by the mise-en-place scaffold skill: `skills/mise-en-place-scaffold/references/manifest.md`) |
+| `HANDOFF.md` | Cold-start bridge — tracked, secret-free |
+| `README.md` | States this taxonomy |
+| `mise-en-place.yml` | Per-repo variance manifest — tracked (format owned by the mise-en-place scaffold skill: `skills/mise-en-place-scaffold/references/manifest.md`) |
 
 ## `.claude/`
 
@@ -87,18 +88,19 @@ in `_meta/`, not `docs/`.
 ## `.gitignore` conventions
 
 The conforming template is [`../assets/gitignore.template`](../assets/gitignore.template).
-The load-bearing parts:
+The load-bearing parts (Decision: ADR-0006):
 
-- **The `_meta` block must use `_meta/*`, not `_meta/`** — git cannot negate paths inside a
-  wholly-ignored directory, so the `/*` form is required for the negations
-  (`!_meta/plans/`, `!_meta/README.md`, `!_meta/HANDOFF.md`, `!_meta/mise-en-place.yml`)
-  to take effect. `_meta/plans/inbox/` is tracked through `!_meta/plans/` with no extra line.
-- **The scaffolded `_meta/` dirs survive clone via tracked `.gitkeep`s** — each of
-  `_archive/`, `briefings/`, `operations/`, `research/` gets a negation triplet
-  (`!_meta/<dir>/` + `_meta/<dir>/*` + `!_meta/<dir>/.gitkeep`): the `.gitkeep` is tracked
-  so a fresh clone keeps the directory, while everything else in the dir stays ignored —
-  `operations/` content (secrets) is never tracked (checklist rows `IGNORE-13..16`,
-  `IGNORE-01`).
+- **`_meta/` is tracked by default** — no broad-ignore, no negation machinery. Every desk
+  subtree (`_archive/`, `briefings/`, `plans/`, `plans/inbox/`, `research/`) and every
+  durable file (`README.md`, `HANDOFF.md`, `mise-en-place.yml`) tracks with no extra rule
+  (checklist rows `IGNORE-02..06`, `IGNORE-13..16`).
+- **`operations/` content is the one ignored `_meta/` path** — the pair
+  `_meta/operations/*` + `!_meta/operations/.gitkeep` keeps secrets/live-ops material local
+  while the empty dir survives a fresh clone (checklist rows `IGNORE-01`, `IGNORE-15`).
+- **The global litter/cache rules apply again inside `_meta/`** now that no negation
+  re-includes them: the top-of-file `.DS_Store` rule covers `_meta/` Finder litter, and the
+  targeted `_meta/plans/_utils/__pycache__/` rule keeps desk-toolkit bytecode out (checklist
+  rows `IGNORE-18`, `IGNORE-17`).
 - **`.env*` with `!.env*.example`** — secrets ignored, example files tracked.
 - **The `.claude` narrow-ignore stanza** — ignore `settings.local.json`, `worktrees/`,
   `*.lock`, `**/.DS_Store`; everything else in `.claude/` (memory, rules, skills,

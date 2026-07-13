@@ -54,7 +54,7 @@ The skill is global; outputs are per-project. Each deliverable is a dated folder
 
 Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overview`,
 `-client-overview`. Mirror the most recent prior folder of the same type for file layout.
-(`_meta/` is typically gitignored; these are a local working desk unless the project negates them.)
+(`_meta/` is tracked by default under the standard, ADR-0006; these land in the repo unless the project keeps its `_meta/` local.)
 
 ## Voice baseline (all comms; playbooks note deltas)
 

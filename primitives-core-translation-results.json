@@ -60,7 +60,7 @@
       "comms": {
         "capability": "render",
         "destination": "claude-agents/skills/comms",
-        "sha256": "63c476019196a087a4c43ac8d36bf30e369eca81440bc9bfc18071d217764f42",
+        "sha256": "6687cdb6d92199676a328b0b8583c23551f9e999cfe0cc34146733d86e39c62d",
         "skipped": false
       },
       "deep-agents-core": {
@@ -162,7 +162,7 @@
       "handoff": {
         "capability": "render",
         "destination": "claude-agents/skills/handoff",
-        "sha256": "47ab2d40b642602fd873584da89b22d71ed41b8061e0f5f3592462e5d903aae5",
+        "sha256": "49f886272a20a9c5891bfd9f1556fb5b7642b2002a9416a4643d3a38afd7e5c5",
         "skipped": false
       },
       "healthcare-analytics-architect": {
@@ -258,7 +258,7 @@
       "mise-en-place-scaffold": {
         "capability": "render",
         "destination": "claude-agents/skills/mise-en-place-scaffold",
-        "sha256": "c7e6b2fc9d682d7f42aaa8af2cb7bfa25f7015c3afeac0ac990761fe2741a44a",
+        "sha256": "1f92e8824b5fb651df9328b0c0f28395695ca44477733f111fcbb85fb0a1be5c",
         "skipped": false
       },
       "nanobanana": {
@@ -312,7 +312,7 @@
       "planning-desk": {
         "capability": "render",
         "destination": "claude-agents/skills/planning-desk",
-        "sha256": "629bf5b1d222a4879549c168777f85564137802f8984433edbb6da163068f4ef",
+        "sha256": "2c8ecd0d7006e49766533a79c3b04625c00fb2a2528d296fca996b520dbd5802",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -354,13 +354,13 @@
       "repo-compliance-audit": {
         "capability": "render",
         "destination": "claude-agents/skills/repo-compliance-audit",
-        "sha256": "2a59bd493df8287200b616ce40e97e6c41fecdd950ab2e9bcb7c433c4aa54826",
+        "sha256": "3a8a7b6336a3366d6d5d230aeb8e66aa07a151cce9645d7f566d7bec3e4a9e7b",
         "skipped": false
       },
       "repo-meta-structure": {
         "capability": "render",
         "destination": "claude-agents/skills/repo-meta-structure",
-        "sha256": "54b016f0ea643cf69d7fb5261821a3c350b63d4011c515933a455a40df79afa6",
+        "sha256": "289751d87670a3091b231507820eff3b235d058f50bd224f4c1cc73593332bcc",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -464,7 +464,7 @@
       "comms": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/comms",
-        "sha256": "63c476019196a087a4c43ac8d36bf30e369eca81440bc9bfc18071d217764f42",
+        "sha256": "6687cdb6d92199676a328b0b8583c23551f9e999cfe0cc34146733d86e39c62d",
         "skipped": false
       },
       "deep-agents-core": {
@@ -578,7 +578,7 @@
       "handoff": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/handoff",
-        "sha256": "47ab2d40b642602fd873584da89b22d71ed41b8061e0f5f3592462e5d903aae5",
+        "sha256": "49f886272a20a9c5891bfd9f1556fb5b7642b2002a9416a4643d3a38afd7e5c5",
         "skipped": false
       },
       "healthcare-analytics-architect": {
@@ -674,7 +674,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/mise-en-place-scaffold",
-        "sha256": "c7e6b2fc9d682d7f42aaa8af2cb7bfa25f7015c3afeac0ac990761fe2741a44a",
+        "sha256": "1f92e8824b5fb651df9328b0c0f28395695ca44477733f111fcbb85fb0a1be5c",
         "skipped": false
       },
       "nanobanana": {
@@ -728,7 +728,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/planning-desk",
-        "sha256": "629bf5b1d222a4879549c168777f85564137802f8984433edbb6da163068f4ef",
+        "sha256": "2c8ecd0d7006e49766533a79c3b04625c00fb2a2528d296fca996b520dbd5802",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -770,13 +770,13 @@
       "repo-compliance-audit": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/repo-compliance-audit",
-        "sha256": "2a59bd493df8287200b616ce40e97e6c41fecdd950ab2e9bcb7c433c4aa54826",
+        "sha256": "3a8a7b6336a3366d6d5d230aeb8e66aa07a151cce9645d7f566d7bec3e4a9e7b",
         "skipped": false
       },
       "repo-meta-structure": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/repo-meta-structure",
-        "sha256": "54b016f0ea643cf69d7fb5261821a3c350b63d4011c515933a455a40df79afa6",
+        "sha256": "289751d87670a3091b231507820eff3b235d058f50bd224f4c1cc73593332bcc",
         "skipped": false
       },
       "security-code-reviewer": {
@@ -880,7 +880,7 @@
       "comms": {
         "capability": "native",
         "destination": "opencode/skills/comms",
-        "sha256": "63c476019196a087a4c43ac8d36bf30e369eca81440bc9bfc18071d217764f42",
+        "sha256": "6687cdb6d92199676a328b0b8583c23551f9e999cfe0cc34146733d86e39c62d",
         "skipped": false
       },
       "deep-agents-core": {
@@ -988,7 +988,7 @@
       "handoff": {
         "capability": "native",
         "destination": "opencode/skills/handoff",
-        "sha256": "47ab2d40b642602fd873584da89b22d71ed41b8061e0f5f3592462e5d903aae5",
+        "sha256": "49f886272a20a9c5891bfd9f1556fb5b7642b2002a9416a4643d3a38afd7e5c5",
         "skipped": false
       },
       "healthcare-analytics-architect": {
@@ -1084,7 +1084,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "opencode/skills/mise-en-place-scaffold",
-        "sha256": "c7e6b2fc9d682d7f42aaa8af2cb7bfa25f7015c3afeac0ac990761fe2741a44a",
+        "sha256": "1f92e8824b5fb651df9328b0c0f28395695ca44477733f111fcbb85fb0a1be5c",
         "skipped": false
       },
       "nanobanana": {
@@ -1138,7 +1138,7 @@
       "planning-desk": {
         "capability": "native",
         "destination": "opencode/skills/planning-desk",
-        "sha256": "629bf5b1d222a4879549c168777f85564137802f8984433edbb6da163068f4ef",
+        "sha256": "2c8ecd0d7006e49766533a79c3b04625c00fb2a2528d296fca996b520dbd5802",
         "skipped": false
       },
       "plugin-scaffolder": {
@@ -1180,13 +1180,13 @@
       "repo-compliance-audit": {
         "capability": "native",
         "destination": "opencode/skills/repo-compliance-audit",
-        "sha256": "2a59bd493df8287200b616ce40e97e6c41fecdd950ab2e9bcb7c433c4aa54826",
+        "sha256": "3a8a7b6336a3366d6d5d230aeb8e66aa07a151cce9645d7f566d7bec3e4a9e7b",
         "skipped": false
       },
       "repo-meta-structure": {
         "capability": "native",
         "destination": "opencode/skills/repo-meta-structure",
-        "sha256": "54b016f0ea643cf69d7fb5261821a3c350b63d4011c515933a455a40df79afa6",
+        "sha256": "289751d87670a3091b231507820eff3b235d058f50bd224f4c1cc73593332bcc",
         "skipped": false
       },
       "security-code-reviewer": {

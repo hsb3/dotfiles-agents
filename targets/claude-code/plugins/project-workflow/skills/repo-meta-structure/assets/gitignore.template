@@ -10,35 +10,12 @@ secrets
 skills-lock.json
 .agents
 
-# _meta dir — ignored by default, durable items tracked via negation.
-# MUST be `_meta/*` (not `_meta/`): git cannot negate paths inside a
-# wholly-ignored directory, so the negations only work with the /* form.
-_meta/*
-!_meta/plans/
-!_meta/README.md
-!_meta/HANDOFF.md
-!_meta/mise-en-place.yml
-# scaffolded dirs: track only the .gitkeep so the dirs survive a fresh clone;
-# content stays local (operations/ especially — secrets are never tracked).
-# Each dir needs the triplet: re-include the dir, ignore its content, keep the keep.
-!_meta/_archive/
-_meta/_archive/*
-!_meta/_archive/.gitkeep
-!_meta/briefings/
-_meta/briefings/*
-!_meta/briefings/.gitkeep
-!_meta/operations/
+# _meta dir — tracked by default; targeted ignores only (ADR-0006, dotfiles-agents).
+# operations/ holds secrets and live-ops material — its content is never tracked.
 _meta/operations/*
 !_meta/operations/.gitkeep
-!_meta/research/
-_meta/research/*
-!_meta/research/.gitkeep
-# desk-toolkit bytecode + Finder litter: the plans negation re-includes everything
-# under the desk, so without these a `git add -A` commits _utils/ .pyc files and
-# .DS_Store past the global rule (last match wins).
+# desk-toolkit bytecode (this template has no global Python section)
 _meta/plans/_utils/__pycache__/
-_meta/plans/**/.DS_Store
-_meta/plans/.DS_Store
 
 # .claude — track memory/, rules/, skills/, settings.json; ignore machine-local
 .claude/settings.local.json

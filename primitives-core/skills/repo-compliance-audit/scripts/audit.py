@@ -310,7 +310,7 @@ def check_gitignore(repo, arg, want_ignored):
     return (
         (PASS, f"tracked (not ignored): {arg}")
         if not ignored
-        else (GAP, f"probe is ignored: {arg} — negation missing/ineffective")
+        else (GAP, f"probe is ignored: {arg} — expected tracked but an ignore rule matches")
     )
 
 

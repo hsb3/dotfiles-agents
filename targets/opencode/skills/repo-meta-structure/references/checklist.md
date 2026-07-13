@@ -101,9 +101,9 @@ ignore behavior, not a byte-match against the template.
 
 | ID | Area | Check | Pass condition |
 |---|---|---|---|
-| IGNORE-01 | gitignore | `gitignore-ignores: _meta/operations/probe` | Ignored (non-negated `_meta/` content stays local) |
-| IGNORE-02 | gitignore | `gitignore-tracks: _meta/plans/probe.md` | Not ignored (`!_meta/plans/` negation effective — requires the `_meta/*` form) |
-| IGNORE-03 | gitignore | `gitignore-tracks: _meta/plans/inbox/probe.md` | Not ignored (nested intake tracked through `!_meta/plans/`, no extra negation) |
+| IGNORE-01 | gitignore | `gitignore-ignores: _meta/operations/probe` | Ignored (the secrets dir content — ADR-0006's one ignored `_meta/` path — is never tracked) |
+| IGNORE-02 | gitignore | `gitignore-tracks: _meta/plans/probe.md` | Not ignored (`_meta/` is tracked by default; no negation needed) |
+| IGNORE-03 | gitignore | `gitignore-tracks: _meta/plans/inbox/probe.md` | Not ignored (nested intake tracked by default) |
 | IGNORE-04 | gitignore | `gitignore-tracks: _meta/README.md` | Not ignored |
 | IGNORE-05 | gitignore | `gitignore-tracks: _meta/HANDOFF.md` | Not ignored |
 | IGNORE-06 | gitignore | `gitignore-tracks: _meta/mise-en-place.yml` | Not ignored (manifest survives clones and worktrees) |
@@ -113,12 +113,12 @@ ignore behavior, not a byte-match against the template.
 | IGNORE-10 | gitignore | `gitignore-ignores: .claude/worktrees/probe/file` | Ignored (harness worktrees never tracked) |
 | IGNORE-11 | gitignore | `gitignore-tracks: .claude/settings.json` | Not ignored (tracked project policy) |
 | IGNORE-12 | gitignore | `gitignore-tracks: .claude/memory/MEMORY.md` | Not ignored (tracked memory travels with the repo) |
-| IGNORE-13 | gitignore | `gitignore-tracks: _meta/_archive/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/_archive/` content stays ignored) |
-| IGNORE-14 | gitignore | `gitignore-tracks: _meta/briefings/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/briefings/` content stays ignored) |
-| IGNORE-15 | gitignore | `gitignore-tracks: _meta/operations/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; `IGNORE-01` still holds — `_meta/operations/` content is never tracked) |
-| IGNORE-16 | gitignore | `gitignore-tracks: _meta/research/.gitkeep` | Not ignored (the scaffolded dir survives a fresh clone; other `_meta/research/` content stays ignored) |
-| IGNORE-17 | gitignore | `gitignore-ignores: _meta/plans/_utils/__pycache__/probe.pyc` | Ignored (desk-toolkit bytecode never tracked — the `_meta/plans/` negation would otherwise re-include it) |
-| IGNORE-18 | gitignore | `gitignore-ignores: _meta/plans/.DS_Store` | Ignored (Finder litter — the `_meta/plans/` negation re-includes it past the global `.DS_Store` rule) |
+| IGNORE-13 | gitignore | `gitignore-tracks: _meta/_archive/probe.md` | Not ignored (archived content is tracked by default, clone-survivable) |
+| IGNORE-14 | gitignore | `gitignore-tracks: _meta/briefings/probe/deck.md` | Not ignored (communication packages are tracked by default, clone-survivable) |
+| IGNORE-15 | gitignore | `gitignore-tracks: _meta/operations/.gitkeep` | Not ignored (the dir survives a fresh clone; `IGNORE-01` still holds — `_meta/operations/` content is never tracked) |
+| IGNORE-16 | gitignore | `gitignore-tracks: _meta/research/probe.md` | Not ignored (research is tracked by default, clone-survivable) |
+| IGNORE-17 | gitignore | `gitignore-ignores: _meta/plans/_utils/__pycache__/probe.pyc` | Ignored (desk-toolkit bytecode never tracked — the targeted cache rule) |
+| IGNORE-18 | gitignore | `gitignore-ignores: _meta/plans/.DS_Store` | Ignored (Finder litter — covered by the global `.DS_Store` rule) |
 
 ## AVOID list
 
