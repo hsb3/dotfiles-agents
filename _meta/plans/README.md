@@ -50,6 +50,7 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | plan-frontmatter-schema | #70 | drafted 2026-07-12; adversarially reviewed; single-file fix to references/plan.md; decisions 1-3 open |
 | rename-plans-to-issues | #82 | drafted 2026-07-12; adversarially reviewed; lands LAST in wave; standard-vs-instance decision open (1-6) |
 | require-both-artifacts | #83 | drafted 2026-07-12; adversarially reviewed; backfill debt = 7 plan-only folders; decisions 1-4 open |
+| meta-gitignore-policy | #99 | filed 2026-07-12 (owner directive); decide-first — ADR on the successor policy gates repo + standard + adopter migration; decisions 1-2 open |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
