@@ -1,3 +1,5 @@
+_Owner desk note — absolute paths below are author-local (this machine), kept for provenance._
+
 - a version of the project-workflow is active in this project (in addition to be subject of development)
 - strategy desk is setup here: /Users/henry/Documents/Claude/Projects/dotfiles-agents-cowork
   - uses this draft skill: /Users/henry/Developer/dotfiles-agents-workbench/incubator/strategy-desk

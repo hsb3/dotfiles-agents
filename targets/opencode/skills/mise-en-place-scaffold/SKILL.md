@@ -81,7 +81,7 @@ Planned empty directories get a `.gitkeep` so they survive clone. A dirty workin
 on `--apply` produces a warning but proceeds — creations are additive-only, so a dirty
 tree is safe; the warning keeps the diff reviewable.
 
-A **gitignore-swallow warning** (`! <path> — track `_meta/` by default…`) means the
+A **gitignore-swallow warning** (``! <path> — track `_meta/` by default…``) means the
 target repo's own `.gitignore` ignores a planned creation: the file is still created
 (additive-only, and presence-on-disk is the audit's pass condition), but it is invisible
 to `git status` and will not survive a fresh clone. Surface these to the owner — the fix

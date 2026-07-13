@@ -258,7 +258,7 @@
       "mise-en-place-scaffold": {
         "capability": "render",
         "destination": "claude-agents/skills/mise-en-place-scaffold",
-        "sha256": "1f92e8824b5fb651df9328b0c0f28395695ca44477733f111fcbb85fb0a1be5c",
+        "sha256": "d3763df6b2b60d58225a07facd4a8df3d5e394e51db55e9e37cef3f6f5165757",
         "skipped": false
       },
       "nanobanana": {
@@ -674,7 +674,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "claude-code/plugins/project-workflow/skills/mise-en-place-scaffold",
-        "sha256": "1f92e8824b5fb651df9328b0c0f28395695ca44477733f111fcbb85fb0a1be5c",
+        "sha256": "d3763df6b2b60d58225a07facd4a8df3d5e394e51db55e9e37cef3f6f5165757",
         "skipped": false
       },
       "nanobanana": {
@@ -1084,7 +1084,7 @@
       "mise-en-place-scaffold": {
         "capability": "native",
         "destination": "opencode/skills/mise-en-place-scaffold",
-        "sha256": "1f92e8824b5fb651df9328b0c0f28395695ca44477733f111fcbb85fb0a1be5c",
+        "sha256": "d3763df6b2b60d58225a07facd4a8df3d5e394e51db55e9e37cef3f6f5165757",
         "skipped": false
       },
       "nanobanana": {
