@@ -81,11 +81,11 @@ _Cold-start onboarding. Last updated: YYYY-MM-DD. Keep updated at session bounda
 ## Rules
 
 - No secrets in the handoff, ever (it may be committed or shared).
-- If the handoff is COMMITTED/tracked (the multi-checkout exception above, or a `.gitignore`
-  negation that tracks it inside an ignored desk), exempt its path from the repo's prose
+- If the handoff is COMMITTED/tracked (the standard tracks `_meta/` by default, ADR-0006, so
+  `_meta/HANDOFF.md` is in-tree), exempt its path from the repo's prose
   formatter so handoff prose (em-dashes, long lines, no-table markdown) can't fail the format
-  CI and block merges - e.g. add it to `.prettierignore`. Gotcha: a `.gitignore` negation
-  (`!_meta/HANDOFF.md`) pulls a tracked file back INTO the formatter's scope, so it must be
+  CI and block merges - e.g. add it to `.prettierignore`. Gotcha: a tracked `_meta/HANDOFF.md`
+  is IN the formatter's scope, so it must be
   listed in the formatter's OWN ignore file (which prettier reads after `.gitignore`, so it wins).
 - Target cost: ~1-2k tokens of writing per boundary. If an update takes much longer, the
   file has rotted - distill it as part of the pass.

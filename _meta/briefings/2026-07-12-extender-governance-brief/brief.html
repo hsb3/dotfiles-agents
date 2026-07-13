@@ -1,0 +1,232 @@
+<title>Extender governance — decision brief</title>
+<style>
+  :root {
+    --paper: #F7F8F5;
+    --card: #FFFFFF;
+    --ink: #1E2422;
+    --muted: #5A6660;
+    --line: #DDE3DE;
+    --pine: #0E6B58;
+    --pine-dark: #0A4F41;
+    --amber: #A65E12;
+    --amber-bg: #FBF3E7;
+    --moss: #2E7D46;
+    --moss-bg: #EDF5EE;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --sans: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --serif: Charter, "Iowan Old Style", Georgia, serif;
+  }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--serif);
+    color: var(--ink);
+    line-height: 1.55;
+    margin: 0;
+    padding: 3rem 1.25rem 5rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--sans); line-height: 1.2; text-wrap: balance; }
+  h1 { font-size: 1.9rem; font-weight: 700; margin: 0.4rem 0 0.6rem; }
+  h2 { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.75rem; }
+  h3 { font-size: 1.02rem; font-weight: 600; margin: 0 0 0.4rem; }
+  p { margin: 0 0 0.9rem; }
+  a { color: var(--pine); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--pine-dark); }
+  a:focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; border-radius: 2px; }
+  code { font-family: var(--mono); font-size: 0.86em; background: #EEF1ED; padding: 0.08em 0.35em; border-radius: 3px; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--pine);
+  }
+  header .meta { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 1.1rem; margin-bottom: 2.2rem; }
+  section { margin-bottom: 2.6rem; }
+  .lede { font-size: 1.06rem; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 4px solid var(--amber);
+    border-radius: 4px; padding: 1.1rem 1.3rem; margin: 0 0 1.1rem;
+  }
+  .card.settled { border-left-color: var(--moss); }
+  .card .tag {
+    display: inline-block; font-family: var(--sans); font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.15rem 0.5rem; border-radius: 999px; margin-bottom: 0.55rem;
+  }
+  .tag.open { background: var(--amber-bg); color: var(--amber); }
+  .tag.done { background: var(--moss-bg); color: var(--moss); }
+  .card p { margin: 0 0 0.7rem; }
+  .card .rec { font-family: var(--sans); font-size: 0.9rem; }
+  .card .rec strong { color: var(--pine-dark); }
+  .clicks {
+    font-family: var(--sans); font-size: 0.88rem;
+    background: #F2F5F1; border-radius: 4px; padding: 0.7rem 0.9rem; margin-top: 0.75rem;
+  }
+  .clicks .label { font-weight: 600; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+  .clicks ul { margin: 0; padding-left: 1.1rem; }
+  .clicks li { margin-bottom: 0.25rem; }
+
+  ul.plain { padding-left: 1.2rem; margin: 0 0 0.9rem; }
+  ul.plain li { margin-bottom: 0.45rem; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-family: var(--sans); font-size: 0.84rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); }
+  th { font-size: 0.7rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); background: #F2F5F1; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .note { font-family: var(--sans); font-size: 0.82rem; color: var(--muted); }
+  footer { border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; font-family: var(--sans); font-size: 0.8rem; color: var(--muted); }
+</style>
+
+<main>
+<header>
+  <span class="eyebrow">dotfiles-agents · owner decision brief</span>
+  <h1>The extenders written by other people, and what to do about them</h1>
+  <p class="meta">2026-07-12 · prepared for Henry Burden · follows the same-day status briefing; every claim links to its source</p>
+</header>
+
+<section>
+  <p class="lede">The full-roster audit ran today. Bottom line: the roster's <em>labels</em> are honest, but <strong>22 of 65 primitives are third-party content vendored inside <code>primitives-core/</code></strong>, four plugins are 100% other people's work, and the rule that should govern this lives only in CLAUDE.md — the charter, which wins, is silent. Two remediation issues are drafted and staged; the ecosystem survey (including your two links) is done. Four decisions below, each with a recommendation and the documents to click through.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Section 1</span>
+  <h2>Decisions on your desk</h2>
+
+  <div class="card">
+    <span class="tag open">D1 · Open</span>
+    <h3>File the third-party disposition issue?</h3>
+    <p>Ratify the boundary (when third-party content may live in <code>primitives-core</code> as <code>sourced</code> vs in <code>externals.yaml</code>) as an ADR, then record a disposition for each of the 22 sourced items: adopt-as-fork, move to externals, or retire to the salvage pile.</p>
+    <p class="rec"><strong>Recommendation:</strong> file it at P1. Default boundary: <code>sourced</code> only for items you intentionally maintain and diverge; everything tracked-verbatim moves to externals once clone-at-build (#36) lands. Sub-decision inside: whether "written by not me" also covers the Claude-generated <code>authored</code> agents — if yes, D2 is the vehicle that judges them.</p>
+    <div class="clicks"><span class="label">Click to decide</span>
+      <ul>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/_meta/plans/inbox/proposed-issue-third-party-disposition.md">The staged issue draft</a> — full findings, deliverables, acceptance criteria, your two open calls</li>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/docs/CHARTER.md">docs/CHARTER.md</a> — note it never states the vendoring rule · <a href="https://github.com/hsb3/dotfiles-agents/blob/main/CLAUDE.md">CLAUDE.md</a> — states "tracked, not vendored"</li>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/issues/36">#36 clone-at-build externals</a> (the move path) · <a href="https://github.com/hsb3/dotfiles-agents/issues/39">#39 roster provenance field</a> (the recording mechanism)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="tag open">D2 · Open</span>
+    <h3>File the plugin business-case retrofit issue?</h3>
+    <p>Your directive: retrofit a business case onto each of the 8 plugin distributions. Each case carries the ratified entry-form core — driving use case, what it bundles, evaluation against no-skill and the best off-the-shelf alternative, overlaps, source pointers. A plugin that can't produce a credible case gets a retire/merge proposal instead.</p>
+    <p class="rec"><strong>Recommendation:</strong> file it at P1, sequenced after D1's ADR (the case for a plugin depends on where its content is allowed to live). Sub-decisions inside: where case docs live (recommended <code>docs/plugins/&lt;name&gt;.md</code>), and whether the single-skill plugins (<code>meta</code>, <code>media-gen</code>) get full cases or fold into their skill's scope.</p>
+    <div class="clicks"><span class="label">Click to decide</span>
+      <ul>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/_meta/plans/inbox/proposed-issue-plugin-business-case-retrofit.md">The staged issue draft</a> — deliverables A–C, acceptance criteria, both sub-decisions</li>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/primitives-core/skills/planning-desk/references/entry-forms-and-milestones.md">The entry-form standard</a> (shipped in <a href="https://github.com/hsb3/dotfiles-agents/pull/88">PR #88</a>) — the five core fields each case must carry</li>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/_meta/plans/frontend-extenders-curation/scope.md">The scope-first ruling as encoded</a> — the policy this retrofits backwards</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="tag open">D3 · Open</span>
+    <h3>Direct the ecosystem follow-ups</h3>
+    <p>Survey of 17 projects is in (15 researched + your two links). Two are true peers (ruler, rulesync); ECC is the closest thing at scale to your design; the agentskills standard is making <em>skills</em> translation unnecessary, concentrating your translation layer's value in agents, hooks, MCP wiring, and plugin packaging.</p>
+    <p class="rec"><strong>Recommendation:</strong> no new issue — fold the survey into #59's plan (agnostic base format) as required reading, benchmark rulesync before building new translation capability, and treat the public catalogs as sourcing lists under the ratified unranked-wishlist rule.</p>
+    <div class="clicks"><span class="label">Click to review</span>
+      <ul>
+        <li>Your links: <a href="https://github.com/affaan-m/ECC">ECC</a> — 278 skills / 67 agents / hooks across 10+ harnesses, marketplace + npm + adapters · <a href="https://github.com/open-gsd/gsd-core">gsd-core</a> — spec-driven methodology, npm installer, 10+ harnesses</li>
+        <li>The peers: <a href="https://github.com/intellectronica/ruler">ruler</a> · <a href="https://github.com/dyoshikawa/rulesync">rulesync</a> (only one covering hooks + permissions) · <a href="https://github.com/yelmuratoff/agent_sync">agent_sync</a> (your drift-guard pattern, 10 stars)</li>
+        <li>The standard: <a href="https://github.com/agentskills/agentskills">agentskills spec</a> + <a href="https://github.com/anthropics/skills">anthropics/skills</a> · full table in section 4 below</li>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/issues/59">#59 agnostic base format</a> — where the implications land</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="tag open">D4 · Carried over</span>
+    <h3>Still parked on you from the status briefing</h3>
+    <p>Unchanged from this morning: the frontend scope entries and the canon records.</p>
+    <div class="clicks"><span class="label">Click to unblock</span>
+      <ul>
+        <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/_meta/plans/frontend-extenders-curation/scope.md">scope.md section 1</a> — the driving-use-case table that un-pauses <a href="https://github.com/hsb3/dotfiles-agents/issues/48">#48</a> and its six held drafts</li>
+        <li>Canon records (vault TODO): wb#32 gate ratification, raptorgpt-GO supersession, the two standing policies (no standalone hooks · scope-first)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card settled">
+    <span class="tag done">Settled</span>
+    <h3>Already agreed, queued to build</h3>
+    <p>The frozen-repo retirement close-out (<a href="https://github.com/hsb3/dotfiles-agents/issues/32">#32</a>) and the pilot close-out (<a href="https://github.com/hsb3/dotfiles-agents/issues/33">#33</a>) — approved this morning, not yet started. Say the word and #32 kicks off first.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Section 2</span>
+  <h2>What the audit actually found</h2>
+  <p>All 65 roster items were audited for authorship truth, then the agent's findings were re-verified against the roster and charter before anything below was written.</p>
+  <ul class="plain">
+    <li><strong>The labels are honest.</strong> All 22 <code>origin: sourced</code> entries carry a real upstream + pinned ref (the CI guard works). Spot-checked <code>authored</code> items genuinely reference your own conventions — no vendor-doc dumps mislabeled as yours.</li>
+    <li><strong>The storage rule is the gap.</strong> <a href="https://github.com/hsb3/dotfiles-agents/blob/main/CLAUDE.md">CLAUDE.md</a> says externals are "tracked, not vendored"; the <a href="https://github.com/hsb3/dotfiles-agents/blob/main/docs/CHARTER.md">charter</a> (which wins) never addresses it; practice vendors third-party content with a pinned ref. D1 resolves this.</li>
+    <li><strong>62 of 65 items are <code>grandfathered-pending-use</code></strong> — plugin membership is currently the only signal of intent, which is what D2 fixes.</li>
+  </ul>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Plugin</th><th>Members</th><th>Third-party</th><th>Upstream</th></tr>
+      <tr><td>langchain-stack</td><td class="num">10</td><td class="num">10 / 10</td><td><a href="https://github.com/langchain-ai">langchain-ai</a> (langchain-skills, langsmith-skills)</td></tr>
+      <tr><td>openspec</td><td class="num">4</td><td class="num">4 / 4</td><td><a href="https://github.com/Fission-AI/OpenSpec">Fission-AI/OpenSpec</a></td></tr>
+      <tr><td>deep-agents</td><td class="num">3</td><td class="num">3 / 3</td><td>langchain-ai/langchain-skills</td></tr>
+      <tr><td>meta</td><td class="num">1</td><td class="num">1 / 1</td><td>langchain-ai (framework-selection)</td></tr>
+      <tr><td>frontend-extras</td><td class="num">2</td><td class="num">1 / 2</td><td><a href="https://github.com/shadcn-ui/ui">shadcn-ui/ui</a></td></tr>
+      <tr><td>project-workflow</td><td class="num">15</td><td class="num">0 / 15</td><td>—</td></tr>
+      <tr><td>obsidian-plugin-dev, media-gen</td><td class="num">4 + 1</td><td class="num">0</td><td>—</td></tr>
+      <tr><td>unbundled (no plugin)</td><td class="num">25</td><td class="num">3</td><td>anthropics/skills · vercel-labs/skills · trailofbits/skills</td></tr>
+    </table>
+  </div>
+  <p class="note">Counts re-verified by grep against <a href="https://github.com/hsb3/dotfiles-agents/blob/main/primitives-core.yaml">primitives-core.yaml</a>, not taken from the audit agent. Total: 22 third-party of 65.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Section 3</span>
+  <h2>Where your two links fit</h2>
+  <p><a href="https://github.com/affaan-m/ECC">ECC</a> is the closest peer at scale: like this repo, it renders one source into per-harness layouts and ships both a plugin-marketplace path and raw installs, hooks included. What it lacks is your curation layer — no provenance discipline, no promotion gate, no shelf model; it maximizes catalog size (278 skills) where you maximize proof. <a href="https://github.com/open-gsd/gsd-core">gsd-core</a> is less a distributor than a methodology product (five-phase loops, fresh-context subagents, spec artifacts) with a smart runtime-detecting installer; its process layer competes with project-workflow's SOPs more than with the build step.</p>
+  <p>The strategic read across all 17: <strong>the moat is proven-and-provenanced, not the translator.</strong> As SKILL.md standardizes (~40 clients read it natively), translation value concentrates in what hasn't standardized — and D1/D2 are exactly the curation discipline none of these projects has.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Section 4</span>
+  <h2>The full survey table</h2>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Project</th><th>Distributes</th><th>Targets</th><th>Mechanism</th><th>Maturity</th><th>Relevance</th></tr>
+      <tr><td><a href="https://github.com/affaan-m/ECC">ECC</a> †</td><td>skills, agents, rules, hooks, MCP</td><td>10+ harnesses</td><td>single source → per-harness adapters; marketplace + npm</td><td class="num">211.9k★*</td><td>peer at scale, no curation layer</td></tr>
+      <tr><td><a href="https://github.com/open-gsd/gsd-core">gsd-core</a> †</td><td>agents, commands, skills, hooks, specs</td><td>10+</td><td>npm installer, runtime-detecting</td><td class="num">6.5k★</td><td>methodology product; installer pattern</td></tr>
+      <tr><td><a href="https://github.com/intellectronica/ruler">ruler</a></td><td>rules, MCP, skills, subagents</td><td>30+</td><td><code>.ruler/</code> source → generated native files</td><td class="num">2.8k★</td><td>true peer, project-scoped</td></tr>
+      <tr><td><a href="https://github.com/dyoshikawa/rulesync">rulesync</a></td><td>+ commands, hooks, permissions</td><td>30+</td><td>build + bidirectional import/export</td><td class="num">1.2k★</td><td>broadest coverage; benchmark before #59</td></tr>
+      <tr><td><a href="https://github.com/yelmuratoff/agent_sync">agent_sync</a></td><td>rules, commands, agents</td><td class="num">11</td><td>transform + SHA-256 drift manifest</td><td class="num">10★</td><td>your conventions, zero adoption</td></tr>
+      <tr><td><a href="https://github.com/johnlindquist/dotagent">dotagent</a></td><td>rules only</td><td class="num">16</td><td>bidirectional converter, unified IR</td><td class="num">144★</td><td>IR idea for #59</td></tr>
+      <tr><td><a href="https://github.com/vercel-labs/skills">vercel-labs/skills</a></td><td>skills</td><td class="num">75+</td><td>package manager + skills.sh registry, symlink</td><td class="num">25.9k★</td><td>your <code>find-skills</code> is sourced from it</td></tr>
+      <tr><td><a href="https://github.com/numman-ali/openskills">openskills</a></td><td>skills</td><td>AGENTS.md readers</td><td>runtime shim (index injection)</td><td class="num">10.6k★</td><td>runtime vs build-time adaptation</td></tr>
+      <tr><td><a href="https://github.com/agentskills/agentskills">agentskills spec</a> + <a href="https://github.com/anthropics/skills">anthropics/skills</a></td><td>skills standard</td><td>~40 clients</td><td>standardize the format instead</td><td class="num">22.9k / 161k★</td><td>shifts translation value off skills</td></tr>
+      <tr><td><a href="https://github.com/davila7/claude-code-templates">claude-code-templates</a></td><td>agents, commands, skills, MCP, hooks</td><td>Claude Code</td><td>catalog + CLI installer</td><td class="num">29.2k★</td><td>sourcing catalog</td></tr>
+      <tr><td><a href="https://github.com/Kamalnrf/claude-plugins">claude-plugins</a></td><td>12k plugins / 63k skills indexed</td><td class="num">15+</td><td>auto-crawled registry</td><td class="num">527★</td><td>sourcing catalog</td></tr>
+      <tr><td><a href="https://github.com/FutureExcited/vibe-rules">vibe-rules</a></td><td>rules</td><td class="num">9</td><td>rules inside npm packages</td><td class="num">525★</td><td>novel channel</td></tr>
+      <tr><td><a href="https://github.com/lbb00/ai-rules-sync">ai-rules-sync</a></td><td>rules, skills, commands, agents</td><td class="num">13+</td><td>symlink, no translation</td><td class="num">35★</td><td>counter-design</td></tr>
+      <tr><td><a href="https://github.com/steipete/agent-rules">agent-rules</a></td><td>rules</td><td class="num">2</td><td>copy-in scripts</td><td class="num">5.7k★, archived</td><td>collections without use cases rot</td></tr>
+      <tr><td>MCP registries: <a href="https://smithery.ai">Smithery</a> · <a href="https://glama.ai/mcp">Glama</a> · <a href="https://mcp.so">mcp.so</a></td><td>MCP servers</td><td>any MCP client</td><td>registry + hosting</td><td>large, active</td><td>adjacent, one primitive type</td></tr>
+    </table>
+  </div>
+  <p class="note">* As shown on the repo page 2026-07-12, not independently verified. † Your referenced links. Excluded as unverifiable: agent-skills-cli / SkillsMP. Full survey with per-project detail: <code>_meta/research/extender-distribution-ecosystem.md</code> (local, attached alongside this brief).</p>
+</section>
+
+<section>
+  <span class="eyebrow">Section 5</span>
+  <h2>All supporting documents</h2>
+  <ul class="plain">
+    <li><a href="https://github.com/hsb3/dotfiles-agents/blob/main/_meta/plans/inbox/proposed-issue-third-party-disposition.md">Staged issue: third-party disposition</a> · <a href="https://github.com/hsb3/dotfiles-agents/blob/main/_meta/plans/inbox/proposed-issue-plugin-business-case-retrofit.md">staged issue: business-case retrofit</a> (both landed via <a href="https://github.com/hsb3/dotfiles-agents/pull/98">PR #98</a>, CI green)</li>
+    <li>Ecosystem survey: <code>_meta/research/extender-distribution-ecosystem.md</code> — local research desk, sent as a file with this brief</li>
+    <li>Governing docs: <a href="https://github.com/hsb3/dotfiles-agents/blob/main/docs/CHARTER.md">charter</a> · <a href="https://github.com/hsb3/dotfiles-agents/blob/main/primitives-core.yaml">roster</a> · <a href="https://github.com/hsb3/dotfiles-agents/blob/main/externals.yaml">externals.yaml</a> · <a href="https://github.com/hsb3/dotfiles-agents/blob/main/primitives-core/skills/planning-desk/references/entry-forms-and-milestones.md">entry-form standard</a></li>
+    <li>Earlier today: <a href="https://github.com/hsb3/dotfiles-agents/pull/97">PR #97 desk cleanup</a> · status deck at <code>_meta/briefings/2026-07-12-project-status/</code></li>
+  </ul>
+</section>
+
+<footer>
+  Prepared 2026-07-12 · audit + survey by parallel research agents, load-bearing claims re-verified against source by the session · boards are the live truth: <a href="https://github.com/hsb3/dotfiles-agents/issues">dotfiles-agents</a> · <a href="https://github.com/hsb3/dotfiles-agents-workbench/issues">workbench</a>
+</footer>
+</main>

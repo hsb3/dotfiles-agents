@@ -205,9 +205,9 @@ class Conflicts(unittest.TestCase):
             actions = parse_actions(r.stdout)
             self.assertEqual(actions["ROOT-06"][0], "CONFLICT")
             self.assertEqual(actions["IGNORE-06"][0], "CONFLICT")
-            # the diff points at the missing negation lines
+            # the diff points at the missing track-by-default stanza (ADR-0006)
             self.assertIn("Conflict diffs", r.stdout)
-            self.assertIn("+!_meta/mise-en-place.yml", r.stdout)
+            self.assertIn("+_meta/operations/*", r.stdout)
             self.assertNotIn(".gitignore", parse_created(r.stdout))
             # re-run audit: the row keeps failing (never silently passed)
             audit_rows = parse_rows(run_audit(repo).stdout)
@@ -301,7 +301,7 @@ class ManifestInit(unittest.TestCase):
                     "required_files": [],
                 },
             )
-            # not ignored: the standard gitignore's negation tracks it
+            # not ignored: _meta/ is tracked by default (ADR-0006)
             probe = subprocess.run(
                 ["git", "check-ignore", "-q", "--", "_meta/mise-en-place.yml"],
                 cwd=repo,

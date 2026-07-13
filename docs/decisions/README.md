@@ -34,3 +34,4 @@ Status: active
 | [0003](0003-externals-tracked-not-vendored.md) | Externals tracked-and-cloned (upstream + pinned ref), never vendored | Accepted | CANON 11/16; backfill #40 |
 | [0004](0004-rules-and-memory-translation-policy.md) | Rules CC-only; auto-memory translates lossily to opencode | Accepted | Q-03; vault migration 2026-07-05 |
 | [0005](0005-frontend-stack.md) | Frontend stack (Vite+React+shadcn) for agent-built UI | Proposed | Q-07 gate; vault migration 2026-07-05 |
+| [0006](0006-meta-tracked-by-default.md) | `_meta/` tracked by default; targeted ignores only (operations/, caches, litter) | Accepted | #99 owner ruling 2026-07-13 |

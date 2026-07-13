@@ -13,35 +13,11 @@
 .env.*
 !.env.example
 
-# --- _meta: ignore by default, track durable items via negation ---
-_meta/*
-!_meta/README.md
-!_meta/HANDOFF.md
-!_meta/mise-en-place.yml
-!_meta/plans/
-!_meta/plans/**
-# the plans negation re-includes Finder litter past the global .DS_Store rule
-_meta/plans/**/.DS_Store
-_meta/plans/.DS_Store
-# briefings + _archive are TRACKED (comm packages + archived plans must survive a clone;
-# 2026-07-05 — briefings flipped from gitkeep-only to fully tracked)
-!_meta/briefings/
-!_meta/briefings/**
-_meta/briefings/**/.DS_Store
-_meta/briefings/.DS_Store
-# operations/ + research/: track only the .gitkeep (operations/ holds secrets — never tracked)
-!_meta/operations/
+# --- _meta: tracked by default (ADR-0006); operations/ holds secrets — its content is never tracked ---
 _meta/operations/*
 !_meta/operations/.gitkeep
-!_meta/research/
-_meta/research/*
-!_meta/research/.gitkeep
-!_meta/_archive/
-!_meta/_archive/**
-_meta/_archive/**/.DS_Store
-_meta/_archive/.DS_Store
 
-# --- Python (after the _meta negation so toolkit caches stay untracked) ---
+# --- Python ---
 __pycache__/
 *.pyc
 .ruff_cache/

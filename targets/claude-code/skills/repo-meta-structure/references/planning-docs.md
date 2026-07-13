@@ -60,8 +60,8 @@ strategy desk proposes.
 - **Location:** packages land in `_meta/plans/inbox/`.
 - **Format:** the planning-doc frontmatter schema above, with `type: proposed-issue` or
   `type: reprioritization-memo`.
-- **Tracking:** the gitignore negation `!_meta/plans/` already covers the inbox — packages
-  survive into fresh clones and worktrees with no extra negation line (checklist row
+- **Tracking:** `_meta/` is tracked by default (ADR-0006), so the inbox is covered — packages
+  survive into fresh clones and worktrees with no extra rule (checklist row
   `IGNORE-03`).
 - **Not HANDOFF:** `_meta/HANDOFF.md` is *intra-desk* continuity (session → session within
   one desk/repo); communication packages are the *cross-desk* channel (strategy desk → code
