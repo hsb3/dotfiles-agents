@@ -15,14 +15,13 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
 
 ## 2 · In flight / next up
 
-- **BUILD NEXT — #99 gitignore policy (owner-ruled, ready).** Filed 2026-07-12 (owner directive);
-  **owner ruled 2026-07-13: option 2 — track-by-default inside `_meta/` with targeted ignores
-  only** (`operations/`, caches, OS litter). Ruling + open decision 2 (operations/ stays inside
-  by default) transcribed on #99. Decide-first plan at `_meta/plans/meta-gitignore-policy/plan.md`:
-  ADR first, then repo migration (MANDATORY secrets scan before the flip; `operations/` stays
-  ignored), then the repo-meta-structure standard + IGNORE checklist rows + scaffold template in
-  the same PR, then adopter notes (wb, fleet-dashboard, dotfiles memory-hygiene stanza).
-  **Sequencing: #82 edits the same standard files — land #99 before or after #82, never interleaved.**
+- **#99 SHIPPED 2026-07-13 (ADR-0006):** `_meta/` is now tracked by default everywhere — this
+  repo + the packaged standard via PR #102, workbench via wb PR #45, fleet-dashboard via its
+  PR #14 (all squash-merged, audits 69/1 with only the known charter gaps). Plan archived at
+  `_meta/_archive/99-meta-gitignore-policy.md` (+ adopter notes alongside). **Residual:** the
+  dotfiles repo's `project-protocol.md` §2 still describes the old negation stanza — reword per
+  the archived adopter note (owner/dotfiles-side change). The #82 sequencing constraint is
+  cleared: #99 landed first.
 - **Owner-approved close-outs, queued not started (2026-07-12):** #32 first (residuals + the
   8-symlink machine-state gotcha are on the issue), then #33 (draft fleet-dashboard CHARTER for
   owner review + refresh the plan's stale raptorgpt prose, then close).
@@ -31,10 +30,10 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   items (depends on #36 for any move-to-externals); (2) *plugin business-case retrofit* — entry-form
   core applied to each of the 8 plugins, retire/merge proposal where no credible case exists.
   Decision brief with all links: https://claude.ai/code/artifact/7356f208-9e49-44ef-a928-a43dfdd55226
-  (source in `_meta/briefings/2026-07-12-extender-governance-brief/`, untracked until #99 lands).
+  (source tracked at `_meta/briefings/2026-07-12-extender-governance-brief/` since #99/PR #102).
 - **Ecosystem survey done** (owner request, incl. his links ECC + gsd-core):
-  `_meta/research/extender-distribution-ecosystem.md` — LOCAL/gitignored until #99 flips the
-  policy. Net: ruler/rulesync are the peers, ECC the closest at scale, agentskills standardization
+  `_meta/research/extender-distribution-ecosystem.md` — tracked since PR #102.
+  Net: ruler/rulesync are the peers, ECC the closest at scale, agentskills standardization
   pushes translation value toward agents/hooks/mcp/plugins; recommendation = fold into #59, no new issue.
 - **The 2026-07-12 wave** (9 wave PRs + 2 ruling-execution PRs, both repos) is fully merged and
   transcribed; details live in the PRs and `_meta/briefings/2026-07-12-wave-decisions/`. The
@@ -47,7 +46,8 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   off-the-shelf. Encoded in `_meta/plans/frontend-extenders-curation/scope.md`; demoted/frontend
   items are a **salvage pile** claimed by use cases, never self-promoting.
 - **After those:** #27 (pw- rename, plugin 0.3.x→0.4.0?) and the ruled wave **#68 → #83 → #82**
-  (#82 renames the repo-meta-structure STANDARD + migrates adopters; mind the #99 sequencing rule).
+  (#82 renames the repo-meta-structure STANDARD + migrates adopters; #99 landed first, so the
+  no-interleave constraint is satisfied).
 - **Watch-item:** fable-foreman entered core via PR review, without bench J1 evidence — cite real
   uses as they occur or expect it to surface at the next re-triage (the #81 precedent demoted 14).
 - **Frontend (#48): paused on owner input** — `scope.md` §1 driving-use-case table awaits owner
@@ -55,7 +55,8 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   (pinned to the installed clone's ref).
 - **Workbench follow-ups:** enable `curate-memories` live for its J1 evidence window; confirm
   `speak-summary`'s speak_gemini wiring (condition of its sole-survivor re-scope); rework
-  `web-setup` to check-and-notify.
+  `web-setup` to check-and-notify; remove the stray `_meta/archive/` duplicate dir (gitkeep-only
+  twin of `_archive/`, surfaced by the #99 flip).
 - **Owner TODOs (vault/CANON):** record the wb#32 gate-ratification, the raptorgpt-GO
   supersession in `DECISIONS.md`, and the two new standing policies above.
 - **Testing-infrastructure note (owner, 2026-07-12):** as this matures, evolve testing by
@@ -83,7 +84,7 @@ Source of truth for **proven** coding-agent extenders (created 2026-06-26; built
   substring matches — even *quoting* a forbidden token in prose flags (hit twice this wave).
 - **Naming grammar is shared with the workbench:** `tests/test_check_naming.py` imports the sibling `../dotfiles-agents-workbench/scripts/promote_check.py` constants and asserts no drift — but it **silently skips when the sibling checkout is absent**, including from INSIDE a da worktree (the relative path breaks); run it once from the main tree after worktree-based waves. Keep the two repos side-by-side; don't rename the grammar constants on either side.
 - **Board scripts are authoritative HERE** (`primitives-core/skills/github-project-board/scripts/`) — deliberately diverged from frozen hsb3-custom-plugins; never re-copy from the frozen repo.
-- **Archived plans:** `_meta/_archive/<issue>-<slug>.md` (tracked via gitignore negation). On close, `git mv` the `plan.md` there and move its README row ACTIVE→ARCHIVED so `reconcile.py` stays clean. Run `_meta/plans/_utils/` scripts from the **main tree** (they read live `gh` + disk; `coverage.py`/`reconcile.py` resolve the desk via `__file__`, so a worktree copy reads the worktree's desk). ACTIVE README rows use the **bare slug**, not a markdown link.
+- **Archived plans:** `_meta/_archive/<issue>-<slug>.md` (tracked — `_meta/` is track-by-default per ADR-0006). On close, `git mv` the `plan.md` there and move its README row ACTIVE→ARCHIVED so `reconcile.py` stays clean. Run `_meta/plans/_utils/` scripts from the **main tree** (they read live `gh` + disk; `coverage.py`/`reconcile.py` resolve the desk via `__file__`, so a worktree copy reads the worktree's desk). ACTIVE README rows use the **bare slug**, not a markdown link.
 - **`gh` token gotcha:** env `GITHUB_TOKEN` can't resolve project-board owner — use `env -u GITHUB_TOKEN gh …` for `gh project` / `gh repo create`.
 - **Conflicting PRs get NO CI:** GitHub skips `pull_request` workflows when the merge ref won't build — "no checks reported" means rebase onto main first, not that CI failed. (On a FRESH branch it can also just be a registration race — wait ~10s and re-run `gh pr checks`.)
 - **`audit.py` outside the harness needs `--plugin-root`** — `$CLAUDE_PLUGIN_ROOT` is unset in plain Bash; pass the plugin cache dir (see the repo-compliance-audit skill's run instructions).

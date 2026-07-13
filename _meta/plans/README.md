@@ -4,8 +4,8 @@ Build-ready planning docs — one subfolder per unit of work (`<slug>/plan.md`, 
 `<slug>/issue-body.md` and any screenshots/artifacts). The board tracks STATE; this desk holds the
 build DETAIL.
 
-This desk is **git-tracked** (negated in `.gitignore`), so the plans + `_utils/` scripts are visible
-in a fresh clone, in worktrees, and in cloud sessions; the rest of `_meta/` stays local. A plan's
+This desk is **git-tracked** (`_meta/` is tracked by default, ADR-0006), so the plans + `_utils/`
+scripts are visible in a fresh clone, in worktrees, and in cloud sessions. A plan's
 tracking issue is the first `#NNN` in its `plan.md` `## Tracking` section.
 
 See `_config.md` for THIS project's gate menu, issue-template sections, and canonical docs to cite.
@@ -50,7 +50,6 @@ ACTIVE plans (associated with an OPEN issue) — add a row per plan you draft:
 | plan-frontmatter-schema | #70 | drafted 2026-07-12; adversarially reviewed; single-file fix to references/plan.md; decisions 1-3 open |
 | rename-plans-to-issues | #82 | drafted 2026-07-12; adversarially reviewed; lands LAST in wave; standard-vs-instance decision open (1-6) |
 | require-both-artifacts | #83 | drafted 2026-07-12; adversarially reviewed; backfill debt = 7 plan-only folders; decisions 1-4 open |
-| meta-gitignore-policy | #99 | filed 2026-07-12 (owner directive); decide-first — ADR on the successor policy gates repo + standard + adopter migration; decisions 1-2 open |
 
 ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`):
 
@@ -63,6 +62,7 @@ ARCHIVED (issue closed/merged; plan moved to `_meta/_archive/<issue>-<slug>.md`)
 | `_meta/_archive/79-portability-conformance-wave.md` | #79 (+ workbench#32) | shipped via PR #80 (dependency contract, mirror checks, in-place fixes, demotions) + wb#33 (gate amendments ratified); both closed 2026-07-04 |
 | `_meta/_archive/81-roster-retriage.md` | #81 | shipped via PR #90 (14 demotions to wb incubator + 5 origin flips); #81 closed 2026-07-12 |
 | `_meta/_archive/84-entry-form-standard.md` | #84 | shipped via PR #88 (entry-form + shared milestone-set standards, planning-desk reference); unranked-wishlist rule ratified; #84 closed 2026-07-12 |
+| `_meta/_archive/99-meta-gitignore-policy.md` | #99 | shipped via PR #102 (ADR-0006 track-by-default; repo + standard migrated) + wb PR #45 + fleet-dashboard PR #14 (adopter flips, audits 69/1); staged body + adopter notes archived alongside; #99 closed 2026-07-13 |
 
 ## The loop (how plans get produced)
 
