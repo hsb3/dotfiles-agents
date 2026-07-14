@@ -1,7 +1,0 @@
-{
-  "display_title": "board-reporting",
-  "endpoint": "POST /v1/skills",
-  "files": [
-    "SKILL.md"
-  ]
-}

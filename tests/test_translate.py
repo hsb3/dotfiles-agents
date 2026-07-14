@@ -201,7 +201,11 @@ class Parsers(unittest.TestCase):
         roster = T.parse_roster(T.ROSTER)
         by_id = {e["id"]: e for e in roster}
         self.assertNotIn("agent-bus", by_id)  # demoted (#79)
-        self.assertEqual(by_id["diagrams"]["requires"], "[cli:graphviz]")
+        # diagrams (formerly the cli: exemplar) demoted to the workbench at #106; pin on
+        # another kept entry carrying the cli: requires grammar.
+        self.assertEqual(
+            by_id["readme-value-and-proof"]["requires"], "[cli:capture-console-errors]"
+        )
         self.assertEqual(by_id["dotfiles-expert"]["requires"], "[env:dotfiles]")
 
     def test_externals_has_kind_mcp(self):

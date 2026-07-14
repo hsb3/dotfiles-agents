@@ -37,15 +37,6 @@
       }
     },
     {
-      "name": "media-gen",
-      "source": "./plugins/media-gen",
-      "description": "Image generation skills - Nano Banana / Gemini image workflows",
-      "version": "0.0.1",
-      "author": {
-        "name": "Henry S. Burden III"
-      }
-    },
-    {
       "name": "meta",
       "source": "./plugins/meta",
       "description": "Meta skills for AI engineering - selecting the right agent framework",
@@ -75,8 +66,8 @@
     {
       "name": "project-workflow",
       "source": "./plugins/project-workflow",
-      "description": "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs \u2014 CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/.",
-      "version": "0.3.1",
+      "description": "Run a software project through the session-discipline loop \u2014 plan the work into conformant issues and source-grounded plans, keep sessions clearable with a durable handoff, delegate down-tier, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms. Harness-agnostic; the process SOPs live in docs/sops/.",
+      "version": "0.4.0",
       "author": {
         "name": "Henry S. Burden III"
       }

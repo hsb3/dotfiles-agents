@@ -3,24 +3,6 @@
   "generated": true,
   "results": {
     "claude-agents": {
-      "agent-dot-md-authoring": {
-        "capability": "render",
-        "destination": "claude-agents/skills/agent-dot-md-authoring",
-        "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
-        "skipped": false
-      },
-      "board-analyst": {
-        "capability": "render",
-        "destination": "claude-agents/agents/board-analyst.json",
-        "sha256": "bba6166db58caed8db8a6af0823d1a40ec9dbdf6803cb4cbccff82376599ba01",
-        "skipped": false
-      },
-      "board-reporting": {
-        "capability": "render",
-        "destination": "claude-agents/skills/board-reporting",
-        "sha256": "40a2e3e585db6e39fa4c7ef490c195029319250081cf863879d66adc84f294cd",
-        "skipped": false
-      },
       "board-triage": {
         "capability": "render",
         "destination": "claude-agents/skills/board-triage",
@@ -103,12 +85,6 @@
         "capability": "render",
         "destination": "claude-agents/skills/devcontainer-setup",
         "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
-        "skipped": false
-      },
-      "diagrams": {
-        "capability": "render",
-        "destination": "claude-agents/skills/diagrams",
-        "sha256": "bfe77f0a34a4d722bfe567f28b5cc1dd3e4013fdd78528281c0a75774adb5526",
         "skipped": false
       },
       "dlt-pipelines": {
@@ -395,28 +371,10 @@
       }
     },
     "claude-code": {
-      "agent-dot-md-authoring": {
-        "capability": "native",
-        "destination": "claude-code/plugins/project-workflow/skills/agent-dot-md-authoring",
-        "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
-        "skipped": false
-      },
       "azure-tools": {
         "capability": "render",
         "destination": "claude-code/mcp/azure-tools.json",
         "sha256": "9c0fb5181ca99f79d38004ffed53ad0d3e9875372d9e319eb8aec420a381cfb2",
-        "skipped": false
-      },
-      "board-analyst": {
-        "capability": "native",
-        "destination": "claude-code/plugins/project-workflow/agents/board-analyst.md",
-        "sha256": "59c3c9a2172b527ad16d7b84c2b648cccf477884403d2d056d82e00e96704984",
-        "skipped": false
-      },
-      "board-reporting": {
-        "capability": "native",
-        "destination": "claude-code/plugins/project-workflow/skills/board-reporting",
-        "sha256": "40a2e3e585db6e39fa4c7ef490c195029319250081cf863879d66adc84f294cd",
         "skipped": false
       },
       "board-triage": {
@@ -507,12 +465,6 @@
         "capability": "native",
         "destination": "claude-code/skills/devcontainer-setup",
         "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
-        "skipped": false
-      },
-      "diagrams": {
-        "capability": "native",
-        "destination": "claude-code/plugins/project-workflow/skills/diagrams",
-        "sha256": "bfe77f0a34a4d722bfe567f28b5cc1dd3e4013fdd78528281c0a75774adb5526",
         "skipped": false
       },
       "dlt-pipelines": {
@@ -677,12 +629,6 @@
         "sha256": "d3763df6b2b60d58225a07facd4a8df3d5e394e51db55e9e37cef3f6f5165757",
         "skipped": false
       },
-      "nanobanana": {
-        "capability": "native",
-        "destination": "claude-code/plugins/media-gen/skills/nanobanana",
-        "sha256": "6fc50710d519b581f7ed5eff43a1a482e3b96b8dfb008281530f96b03239c25e",
-        "skipped": false
-      },
       "notion-api": {
         "capability": "native",
         "destination": "claude-code/skills/notion-api",
@@ -811,28 +757,10 @@
       }
     },
     "opencode": {
-      "agent-dot-md-authoring": {
-        "capability": "native",
-        "destination": "opencode/skills/agent-dot-md-authoring",
-        "sha256": "af91d5e7e3f4b3e1455f3238d68a79f53bbc0c1fdd7a49043e6bc06b1cde61e7",
-        "skipped": false
-      },
       "azure-tools": {
         "capability": "render",
         "destination": "opencode/mcp/azure-tools.json",
         "sha256": "d14b64b47d781330eea37cd024324103b1e17df26ba3d48009bd76b53241acf4",
-        "skipped": false
-      },
-      "board-analyst": {
-        "capability": "transform",
-        "destination": "opencode/agents/board-analyst.md",
-        "sha256": "87eeb1cad19c7ba80689c3ee12561dda494eea5b3c518da338ae0737fb7ebef5",
-        "skipped": false
-      },
-      "board-reporting": {
-        "capability": "native",
-        "destination": "opencode/skills/board-reporting",
-        "sha256": "40a2e3e585db6e39fa4c7ef490c195029319250081cf863879d66adc84f294cd",
         "skipped": false
       },
       "board-triage": {
@@ -923,12 +851,6 @@
         "capability": "native",
         "destination": "opencode/skills/devcontainer-setup",
         "sha256": "e8fcc0c50a7909e295eafafc9676dcc871cf6e7ffefe3770fee21fea943a226d",
-        "skipped": false
-      },
-      "diagrams": {
-        "capability": "native",
-        "destination": "opencode/skills/diagrams",
-        "sha256": "bfe77f0a34a4d722bfe567f28b5cc1dd3e4013fdd78528281c0a75774adb5526",
         "skipped": false
       },
       "dlt-pipelines": {

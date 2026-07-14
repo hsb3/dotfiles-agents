@@ -17,14 +17,13 @@ One plugin that covers running a software project end-to-end:
 
 - **Repo standards** — a canonical layout standard, a read-only compliance audit, and an
   additive-only scaffold that fills the gaps.
-- **Board operations** — stand up a GitHub Project (v2) board, run weekly triage, and
-  produce status digests, with a subagent for snapshot-based analysis.
+- **Board operations** — stand up a GitHub Project (v2) board and run weekly triage.
 - **Planning** — turn intent into conformant issue bodies and source-grounded build plans.
 - **Session continuity** — a durable handoff file so any session can be cleared safely.
-- **Project docs & comms** — CLAUDE.md/AGENTS.md authoring, value-and-proof READMEs,
-  architecture diagrams, and recurring status decks/briefings.
+- **Project docs & comms** — value-and-proof READMEs and recurring status
+  decks/briefings.
 
-13 skills + 1 agent, all generated from `primitives-core/` (membership is the
+11 skills, all generated from `primitives-core/` (membership is the
 `plugins: [project-workflow]` field in `primitives-core.yaml`). **Never edit the plugin
 directory under `targets/` — fix the primitive and rebuild.**
 
@@ -47,9 +46,6 @@ Skills trigger two ways:
   below are examples, not magic words.
 - **Explicitly** — `/project-workflow:<skill>` (e.g. `/project-workflow:handoff init`).
 
-The `board-analyst` agent is not invoked directly; Claude launches it as a subagent
-during board triage (or when you hand it a `board-snapshot.json`).
-
 ## The lifecycle at a glance
 
 | Stage | You say | Skill(s) |
@@ -57,11 +53,10 @@ during board triage (or when you hand it a `board-snapshot.json`).
 | Stand up / check a repo | "run the compliance audit" → "fill the audit gaps" | `repo-compliance-audit` → `mise-en-place-scaffold` |
 | Layout / memory questions | "what's the standard for _meta?", "where does this memory go?" | `repo-meta-structure`, `memory-taxonomy` |
 | Stand up the board | "set up a project board" | `github-project-board` |
-| Weekly triage | "run board triage" | `board-triage` (+ `board-analyst`) |
-| Status rollup | "board status", "weekly digest" | `board-reporting` |
+| Weekly triage | "run board triage" | `board-triage` |
 | Plan work | "write me an issue", "plan this out" | `planning-desk` |
 | End a session | "wrap up", `/project-workflow:handoff` | `handoff` |
-| Project docs | "fix my CLAUDE.md", "refresh the README", "architecture diagram" | `agent-dot-md-authoring`, `readme-value-and-proof`, `diagrams` |
+| Project docs | "refresh the README" | `readme-value-and-proof` |
 | Briefings & decks | "morning briefing", "board deck", "comms package" | `comms` |
 
 ## Component reference
@@ -99,7 +94,7 @@ Typical loop: **audit → scaffold → re-audit**.
 
 ### Board operations
 
-All four components share one field model, one Impact×Effort rubric, and one changeset
+Both components share one field model, one Impact×Effort rubric, and one changeset
 contract, defined in `github-project-board`. Prereq for all: `gh` authenticated with the
 project scope (`gh auth refresh -s project`).
 
@@ -115,17 +110,6 @@ unranked/blank/stale items, judges them against the repo's plans and issue bodie
 emits a **diff-only changeset TSV** (`issue<TAB>field<TAB>value`). Applying is dry-run
 first, idempotent, and writes only differing cells. Items lacking context are left blank
 and flagged — "honest blank beats a fabricated rank."
-
-**board-reporting** — a written digest from the snapshot: counts by
-Status/Priority/Workstream, in-progress and blocked lists, target slippage, what landed
-since the last snapshot. Read-first — it reports what the board says and changes nothing,
-except optionally posting the project's native status-update banner, and only after you
-confirm. The digest can feed a deck or audio brief — in this plugin that's `comms`.
-
-**board-analyst** (agent) — the judgment half of the loop when it runs as a subagent:
-reads a snapshot, applies the rubric, writes the changeset TSV plus per-issue rationale
-and a skipped list. Hard boundary: it **never applies changes to the board**; applying is
-a deliberate human/script step.
 
 The three helper scripts behind the loop (`board-export.py`, `board-fields.py`,
 `board-apply.py`) ship in the `github-project-board` skill's `scripts/` directory —
@@ -154,20 +138,10 @@ the answer must be nothing.
 
 ### Project docs & comms
 
-**agent-dot-md-authoring** — write a CLAUDE.md/AGENTS.md from scratch (8-section
-skeleton) or audit an existing one (scored x/10 against a checklist, with line-referenced
-failures). Verifies that every command, path, and port it cites actually exists in the
-repo.
-
 **readme-value-and-proof** — rewrite a README as an honest, user-centric pitch (why it
 exists / what you get / what it's not / roadmap) backed by **real screenshots captured
 from the running app** — never mockups. Needs a runnable app and headless Chromium via
 Playwright.
-
-**diagrams** — architecture/infrastructure diagrams via Python's `diagrams`
-(mingrammer) library; AWS/Azure/GCP/K8s/on-prem/generic nodes; renders png/svg/pdf/jpg.
-Needs `pip install diagrams` + Graphviz. Keeps its own memory file of rendering
-learnings and improves across uses.
 
 **comms** — Henry's recurring communication deliverables (morning briefing, EOD wrap-up,
 weekly planning briefing, advisor board readout, client product overview) as a deck plus
@@ -181,9 +155,8 @@ never round up, numbers live in systems and the deck points to them.
 
 | Component | Needs |
 |---|---|
-| board skills + agent | `gh` CLI authed with project scope (`gh auth refresh -s project`); helper scripts bundled (stdlib-only) |
+| board skills | `gh` CLI authed with project scope (`gh auth refresh -s project`); helper scripts bundled (stdlib-only) |
 | planning-desk | `gh` authed; GitHub-backed repo; run from the main working tree (not a worktree) |
-| diagrams | Python `diagrams` package + Graphviz |
 | readme-value-and-proof | runnable app; Playwright/headless Chromium |
 | comms | deck-builder + audio MCP servers (local); `pptx-henry` skill for external decks — none ship in this plugin |
 | everything else | none beyond the repo itself |
@@ -194,9 +167,7 @@ never round up, numbers live in systems and the deck points to them.
 |---|---|
 | repo-compliance-audit | never writes to the audited repo |
 | mise-en-place-scaffold | additive-only; plan-first; never touches an existing file |
-| board-analyst | never applies changes to the board |
 | board-apply step (triage) | dry-run by default; idempotent; diff-only |
-| board-reporting | changes nothing; banner post only on explicit confirmation |
 | planning-desk | live issue create/edit only with owner confirmation |
 | handoff | no secrets, ever |
 
@@ -207,9 +178,9 @@ this plugin is its Claude Code delivery:
 
 | SOP | Delivered by |
 |---|---|
-| `milestones-and-board.md` | github-project-board (+ board-triage, board-reporting) |
+| `milestones-and-board.md` | github-project-board (+ board-triage) |
 | `issues-and-plans.md` | planning-desk |
 | `session-continuity.md` | handoff |
 
-The remaining components (repo standards, docs, diagrams, comms) have no SOP yet — the
+The remaining components (repo standards, docs, comms) have no SOP yet — the
 skill text is currently their only process documentation.
