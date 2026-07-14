@@ -15,6 +15,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+import gen_standalone as G  # noqa: E402
 import translate as T  # noqa: E402
 import validate_primitives as V  # noqa: E402
 
@@ -124,6 +125,39 @@ class Determinism(unittest.TestCase):
                 [],
                 f"{t} differs between two builds",
             )
+
+
+class StandaloneWrappers(unittest.TestCase):
+    """Claude Code one-skill wrappers (scripts/gen_standalone) — built into tmpdirs only. These
+    are NOT wired into `make build` yet (Wave C, gated on #112/#113), so they must never appear
+    in the committed targets/ tree or touch the root marketplace manifest."""
+
+    def test_wrappers_are_one_skill_and_byte_identical(self):
+        tmp = tempfile.mkdtemp()
+        ids = G.build_standalone(tmp)
+        self.assertTrue(ids, "expected at least one standalone wrapper")
+        self.assertEqual(G.verify_wrappers(tmp, ids), [])
+
+    def test_plugin_name_equals_skill_id(self):
+        tmp = tempfile.mkdtemp()
+        ids = G.build_standalone(tmp)
+        for skill_id in ids:
+            pj = _load(os.path.join(tmp, skill_id, ".claude-plugin", "plugin.json"))
+            self.assertEqual(pj["name"], skill_id)
+
+    def test_generator_does_not_write_into_committed_targets(self):
+        # the committed claude-code plugins are the bundles only — no standalone wrapper id
+        # (e.g. carbon-builder) should have leaked in as its own top-level plugin folder.
+        plugins_dir = os.path.join(TARGETS, "claude-code", "plugins")
+        committed = (
+            set(os.listdir(plugins_dir)) if os.path.isdir(plugins_dir) else set()
+        )
+        standalone_ids = {e["id"] for e in G.C.parse_catalog(G.C.CATALOG)}
+        self.assertEqual(
+            committed & standalone_ids,
+            set(),
+            "a standalone wrapper leaked into committed targets/ (Wave C boundary)",
+        )
 
 
 class SecretHygiene(unittest.TestCase):

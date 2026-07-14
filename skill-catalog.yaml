@@ -1,0 +1,64 @@
+# skill-catalog.yaml — THE STANDALONE SKILL CATALOG
+#
+# The set of skills that qualify to ship *standalone* — one skill installed on its own,
+# without taking a whole plugin bundle. Claude Code gets a generated one-skill marketplace
+# plugin per entry (scripts/gen_standalone.py); opencode gets the same set through
+# scripts/install-skill. The skill BODY still lives once in primitives-core/skills/<id>/ —
+# this catalog is a thin projection that only references roster ids and adds the
+# standalone-specific fields; it never re-authors source, provenance, or `requires`, which
+# stay owned by the roster (primitives-core.yaml). scripts/check_skill_catalog.py enforces
+# eligibility + catalog<->roster drift + the namespacing invariant, and runs in `make ci`.
+#
+# Entry schema (thin projection — everything else is read from the roster):
+#   id                 the roster skill id this entry projects (must be type: skill)
+#   standalone         true — installable on its own (the only value today)
+#   clients            [claude-code, opencode] — must be a subset of the roster targets[]
+#   depends_on_skills  [] — asserted empty; a non-empty value disqualifies (no sibling coupling)
+#   prerequisites      advisory cli:/env: needs the installer PRINTS (never rejects) — issue #79
+#   provenance         must equal the roster `origin` for this id (drift-checked)
+#
+# Eligibility (all enforced by the check script; see its docstring for the full rule set):
+#   roster origin: authored · `requires` excludes local-mcp/hosted-mcp/hooks · no agents/ in
+#   the folder · empty depends_on_skills + no sibling-skill path/wikilink reference · every
+#   in-folder markdown link resolves inside the folder · clients ⊆ roster targets · plugin
+#   name == skill id with no clash against a bundle id in plugins.yaml.
+
+version: 1
+
+skills:
+  - id: carbon-builder
+    standalone: true
+    clients: [claude-code, opencode]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored
+  - id: notion-api
+    standalone: true
+    clients: [claude-code, opencode]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored
+  - id: opencode-expertise
+    standalone: true
+    clients: [claude-code, opencode]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored
+  - id: dlt-pipelines
+    standalone: true
+    clients: [claude-code, opencode]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored
+  - id: subagent-creator
+    standalone: true
+    clients: [claude-code, opencode]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored
+  - id: private-fork
+    standalone: true
+    clients: [claude-code, opencode]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored

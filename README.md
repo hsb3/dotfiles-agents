@@ -71,6 +71,23 @@ $ claude plugin install project-workflow@dotfiles-agents
 
 The `owner/repo` shorthand reads the generated repo-root `.claude-plugin/marketplace.json` (sources point into `targets/`). `project-workflow` bundles the project-management workflow — board, planning, handoff, and project docs ([user guide](docs/plugins/project-workflow.md)). Core skills/agents also deploy raw cross-tool (Claude Code + opencode) via the distribution CLI in `dotfiles`.
 
+## Standalone skills vs bundles
+
+A **bundle** (`project-workflow`, `openspec`, …) ships a curated group of skills/agents that work together — take the whole plugin when you want the workflow. A **standalone skill** ships one skill on its own, for when you want exactly that capability and nothing else. The set that qualifies to ship standalone is declared in [`skill-catalog.yaml`](skill-catalog.yaml) and enforced by `make ci` (`scripts/check_skill_catalog.py`): a skill is eligible only if it is self-contained — authored here, no MCP/hook requirement, no bundled companion agent, and no dependency on a sibling skill. The body still lives once in `primitives-core/skills/<id>/`; a standalone install is byte-identical to that source.
+
+Install one skill per client:
+
+```console
+# opencode — copies the skill folder to ~/.agents/skills/<name>/ (available today)
+$ scripts/install-skill carbon-builder
+$ scripts/install-skill --list          # what's installable + any advisory prerequisites
+
+# Claude Code — a generated one-skill marketplace plugin (name == skill id)
+$ claude plugin install carbon-builder@dotfiles-agents
+```
+
+The opencode installer works today. The Claude Code one-skill wrappers are generated and tested (`scripts/gen_standalone.py`), but publishing them into the root marketplace is sequenced after the marketplace-manifest serialization work (#112/#113) lands — until then, `claude plugin install <skill>@dotfiles-agents` resolves only the existing bundles.
+
 - **Canonical page** (wins over everything): [`docs/CHARTER.md`](docs/CHARTER.md)
 - **Agent guide:** [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md)
 - **Process SOPs:** [`docs/sops/`](docs/sops/)

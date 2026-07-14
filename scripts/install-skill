@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+"""install-skill — install one catalog-qualified standalone skill for opencode (issue #115).
+
+opencode has no marketplace; a skill is just a folder it discovers on disk. This installer is
+opencode's half of the standalone-skill catalog (Claude Code's half is the generated one-skill
+marketplace plugin, scripts/gen_standalone.py). It copies a single skill body verbatim from
+primitives-core/skills/<name>/ — the same single source the whole repo builds from, so an
+installed skill is byte-identical to source — after checking the name is catalogued, eligible,
+and opencode-compatible. It refuses anything else with a non-zero exit that names the failed
+check.
+
+Install locations:
+  --global (default)   ~/.agents/skills/<name>/         (opencode's global skills dir)
+  --project <dir>      <dir>/.opencode/skills/<name>/    (skills scoped to one project)
+  --dir <path>         <path>/<name>/                    (install under an explicit directory)
+
+Update   = re-run with --force (idempotent re-copy over the existing install).
+Uninstall = install-skill <name> --uninstall [location flag]  (removes just that one folder).
+
+Stdlib-only; no third-party deps. Reads skill-catalog.yaml + primitives-core.yaml from the
+repo this script lives in.
+
+Examples:
+  install-skill --list                     # list installable skills + their prerequisites
+  install-skill carbon-builder             # install to ~/.agents/skills/carbon-builder/
+  install-skill notion-api --project .     # install into ./.opencode/skills/notion-api/
+  install-skill dlt-pipelines --dir /tmp/x # install into /tmp/x/dlt-pipelines/
+  install-skill carbon-builder --force     # update an existing install in place
+  install-skill carbon-builder --uninstall # remove ~/.agents/skills/carbon-builder/
+"""
+
+import argparse
+import os
+import shutil
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(REPO, "scripts"))
+
+import check_skill_catalog as C  # noqa: E402
+from check_roster import parse_roster  # noqa: E402
+
+IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
+
+
+def load_catalog():
+    """Return {id: catalog_entry} for every catalogued skill."""
+    return {e["id"]: e for e in C.parse_catalog(C.CATALOG)}
+
+
+def load_roster():
+    """Return {id: roster_entry} for every roster primitive."""
+    return {e["id"]: e for e in parse_roster(C.ROSTER)}
+
+
+def eligibility_error(name, catalog, roster):
+    """Return a human message if `name` is not installable for opencode, else None.
+
+    Order matters — the FIRST failed check is named, so the message is specific: unknown vs
+    ineligible vs incompatible are distinct exits."""
+    if name not in catalog:
+        return f"unknown skill '{name}' — not in skill-catalog.yaml (run --list to see installable skills)"
+    # Re-run the full eligibility gate for this one id so an install can never bypass the
+    # invariants the CI guard enforces.
+    problems = []
+    C.check_entry(
+        catalog[name],
+        roster,
+        {e["id"] for e in roster.values() if e.get("type") == "skill"},
+        set(C.parse_bundle_ids(C.PLUGINS_YAML)),
+        problems,
+    )
+    if problems:
+        return f"'{name}' is not standalone-eligible: {problems[0]}"
+    if "opencode" not in catalog[name].get("clients", []):
+        return f"'{name}' is not opencode-compatible (catalog clients: {catalog[name].get('clients')})"
+    return None
+
+
+def resolve_dest(name, args):
+    """Map the chosen location flag to the install directory for this skill."""
+    if args.dir:
+        return os.path.join(os.path.abspath(args.dir), name)
+    if args.project:
+        return os.path.join(os.path.abspath(args.project), ".opencode", "skills", name)
+    return os.path.join(os.path.expanduser("~/.agents/skills"), name)
+
+
+def do_list(catalog, roster):
+    """Print the installable skills (opencode-compatible + eligible) with prerequisites."""
+    rows = []
+    for name in sorted(catalog):
+        if eligibility_error(name, catalog, roster):
+            continue
+        prereqs = catalog[name].get("prerequisites") or []
+        rows.append((name, ", ".join(prereqs) if prereqs else "—"))
+    if not rows:
+        print("no installable standalone skills")
+        return 0
+    width = max(len(n) for n, _ in rows)
+    print("installable standalone skills (opencode):")
+    for name, prereqs in rows:
+        print(f"  {name.ljust(width)}   prerequisites: {prereqs}")
+    return 0
+
+
+def do_uninstall(name, dest):
+    """Remove a single installed skill folder."""
+    if not os.path.isdir(dest):
+        print(f"'{name}' is not installed at {dest} — nothing to remove")
+        return 0
+    shutil.rmtree(dest)
+    print(f"✓ uninstalled '{name}' from {dest}")
+    return 0
+
+
+def do_install(name, src, dest, catalog, force):
+    """Copy the skill folder verbatim to dest; print prerequisites."""
+    if os.path.exists(dest):
+        if not force:
+            print(
+                f"'{name}' already installed at {dest} — pass --force to update (re-copy) it",
+                file=sys.stderr,
+            )
+            return 1
+        shutil.rmtree(dest)
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    shutil.copytree(src, dest, ignore=IGNORE)
+    print(f"✓ installed '{name}' → {dest}")
+    prereqs = catalog[name].get("prerequisites") or []
+    if prereqs:
+        print(
+            f"  prerequisites (advisory — install/verify these yourself): {', '.join(prereqs)}"
+        )
+    return 0
+
+
+def build_parser():
+    p = argparse.ArgumentParser(
+        prog="install-skill",
+        description="Install one catalog-qualified standalone skill for opencode.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "locations:\n"
+            "  --global (default)  ~/.agents/skills/<name>/\n"
+            "  --project <dir>     <dir>/.opencode/skills/<name>/\n"
+            "  --dir <path>        <path>/<name>/\n\n"
+            "update:    re-run with --force (idempotent re-copy over the existing install).\n"
+            "uninstall: install-skill <name> --uninstall [location flag]."
+        ),
+    )
+    p.add_argument(
+        "name", nargs="?", help="the standalone skill id to install (see --list)"
+    )
+    loc = p.add_mutually_exclusive_group()
+    loc.add_argument(
+        "--global",
+        dest="global_",
+        action="store_true",
+        help="install to ~/.agents/skills/ (default)",
+    )
+    loc.add_argument(
+        "--project", metavar="DIR", help="install into DIR/.opencode/skills/"
+    )
+    loc.add_argument("--dir", metavar="PATH", help="install under PATH/")
+    p.add_argument(
+        "--uninstall",
+        action="store_true",
+        help="remove the named skill instead of installing",
+    )
+    p.add_argument(
+        "--list", action="store_true", help="list installable skills and exit"
+    )
+    p.add_argument(
+        "--force", action="store_true", help="overwrite/update an existing install"
+    )
+    return p
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    catalog, roster = load_catalog(), load_roster()
+
+    if args.list:
+        return do_list(catalog, roster)
+    if not args.name:
+        print("error: a skill name is required (or use --list)", file=sys.stderr)
+        return 2
+
+    name = args.name
+    dest = resolve_dest(name, args)
+
+    if args.uninstall:
+        return do_uninstall(name, dest)
+
+    err = eligibility_error(name, catalog, roster)
+    if err:
+        print(f"error: {err}", file=sys.stderr)
+        return 1
+
+    src = os.path.join(REPO, roster[name]["source"])
+    if not os.path.isdir(src):
+        print(
+            f"error: source folder missing for '{name}': {roster[name]['source']}",
+            file=sys.stderr,
+        )
+        return 1
+    return do_install(name, src, dest, catalog, args.force)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
