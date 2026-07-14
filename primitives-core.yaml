@@ -21,26 +21,6 @@
 version: 1
 
 primitives:
-  - id: agent-dot-md-authoring
-    type: skill
-    source: primitives-core/skills/agent-dot-md-authoring
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [project-workflow]
-    summary: "Write a new CLAUDE.md (or AGENTS.md) from scratch, or audit and improve an existing one, so it actually helps a coding agent navigate the codebase."
-  - id: board-reporting
-    type: skill
-    source: primitives-core/skills/board-reporting
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [project-workflow]
-    summary: "This skill should be used when the user asks for a \"board status\", \"project status update\", \"standup from the board\", \"weekly board digest\", \"what changed on…"
   - id: board-triage
     type: skill
     source: primitives-core/skills/board-triage
@@ -120,17 +100,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Creates devcontainers with Claude Code, language-specific tooling (Python/Node/Rust/Go), and persistent volumes."
-  - id: diagrams
-    type: skill
-    source: primitives-core/skills/diagrams
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    requires: [cli:graphviz]
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [project-workflow]
-    summary: "Create technical architecture diagrams using Python's diagrams library (mingrammer/diagrams)."
   - id: dlt-pipelines
     type: skill
     source: primitives-core/skills/dlt-pipelines
@@ -366,7 +335,7 @@ primitives:
     disposition: grandfathered-pending-use
     vendor: null
     targets: [claude-code, opencode, claude-agents]
-    plugins: [media-gen]
+    plugins: []
     summary: "Gemini-native Nano Banana image generation and editing across Nano Banana, Nano Banana 2, and Nano Banana Pro. Prompting guidance (references/prompting.md) folded from the retired nano-banana-2 RunComfy wrapper (dedup 2026-07-02; see workbench docs/promotions-log.md)."
   - id: notion-api
     type: skill
@@ -542,16 +511,6 @@ primitives:
     targets: [claude-code, opencode, claude-agents]
     plugins: []
     summary: "Creates well-structured Claude Code sub-agents with validated YAML configuration and clear system prompts."
-  - id: board-analyst
-    type: agent
-    source: primitives-core/agents/board-analyst.md
-    shelf: core
-    origin: authored
-    disposition: grandfathered-pending-use
-    vendor: null
-    targets: [claude-code, opencode, claude-agents]
-    plugins: [project-workflow]
-    summary: "Use this agent to turn a GitHub Project (v2) snapshot into a reviewed CHANGESET — the judgment half of the export -> analyze -> apply loop."
   - id: chat-ui-builder
     type: agent
     source: primitives-core/agents/chat-ui-builder.md

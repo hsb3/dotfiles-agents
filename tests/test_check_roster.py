@@ -176,7 +176,7 @@ class ParseRoster(unittest.TestCase):
         # unprovenanced specs; hooks are empty since #81 demoted the python-standards hook
         # (the last rostered hook) to the workbench incubator.
         self.assertIn("comms", ids)  # a skill
-        self.assertIn("board-analyst", ids)  # an agent
+        self.assertIn("chat-ui-builder", ids)  # an agent (board-analyst demoted at #106)
 
     def test_required_fields_present_on_every_entry(self):
         for e in C.parse_roster(C.ROSTER):

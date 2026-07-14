@@ -20,9 +20,6 @@ plugins:
   - id: langchain-stack
     version: "0.0.1"
     description: "LangChain, LangGraph, and LangSmith fundamentals - building, persisting, evaluating, and tracing LLM agent applications"
-  - id: media-gen
-    version: "0.0.1"
-    description: "Image generation skills - Nano Banana / Gemini image workflows"
   - id: meta
     version: "0.0.1"
     description: "Meta skills for AI engineering - selecting the right agent framework"
@@ -33,5 +30,5 @@ plugins:
     version: "0.0.1"
     description: "OpenSpec change workflow - propose, apply, archive, and explore spec-driven changes"
   - id: project-workflow
-    version: "0.3.1"
-    description: "Run a software project end-to-end: stand up and operate a GitHub Project (v2) board (setup, weekly triage, status reporting, dependency sequencing), turn intent into conformant issues and source-grounded plans, keep sessions continuous via a durable handoff, and produce project docs — CLAUDE.md/AGENTS.md, value-and-proof READMEs, diagrams, and status comms. Harness-agnostic; the process SOPs live in docs/sops/."
+    version: "0.4.0"
+    description: "Run a software project through the session-discipline loop — plan the work into conformant issues and source-grounded plans, keep sessions clearable with a durable handoff, delegate down-tier, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms. Harness-agnostic; the process SOPs live in docs/sops/."

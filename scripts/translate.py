@@ -406,6 +406,11 @@ def build(out_root, roster, plugins_meta, caps, cma_model, externals):
         with open(os.path.join(proot, ".claude-plugin", "plugin.json"), "w") as fh:
             json.dump(pj, fh, indent=2, sort_keys=True)
             fh.write("\n")
+        # optional plugin-level README — authored at primitives-core/plugins/<p>/README.md
+        # (source mirrors the built layout); copied verbatim to the plugin root.
+        readme_src = os.path.join(REPO, "primitives-core", "plugins", p, "README.md")
+        if os.path.isfile(readme_src):
+            shutil.copy2(readme_src, os.path.join(proot, "README.md"))
         hooks_done = False
         for e in sorted(members, key=lambda x: x["id"]):
             t, pid, src = e["type"], e["id"], os.path.join(REPO, e["source"])
