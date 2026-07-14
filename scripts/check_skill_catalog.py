@@ -115,7 +115,11 @@ def sibling_reference(folder, this_id, other_ids):
         for oid in other_ids:
             if oid == this_id:
                 continue
-            for pat in (rf"skills/{re.escape(oid)}\b", rf"\[\[{re.escape(oid)}\]\]"):
+            # wikilink form allows the piped alias `[[id|display text]]` (Obsidian et al.)
+            for pat in (
+                rf"skills/{re.escape(oid)}\b",
+                rf"\[\[{re.escape(oid)}(\|[^\]]+)?\]\]",
+            ):
                 if re.search(pat, text):
                     return (oid, os.path.relpath(path, folder))
     return None
@@ -210,11 +214,14 @@ def check_entry(entry, roster_by_id, all_skill_ids, bundle_ids, problems):
             f"[{cid}] not standalone-eligible: roster `requires` includes {sorted(bad)} "
             f"(a standalone install cannot provision {sorted(bad)})"
         )
-    # 6. clients subset of roster targets
+    # 6. clients subset of roster targets. check_roster.parse_roster leaves `targets` a raw
+    # string (e.g. "[claude-code, opencode]"), so parse it to a real list — a bare `in` on the
+    # string would substring-match and silently pass a client that is a substring of another.
+    roster_targets = _list(r.get("targets", ""))
     for c in entry.get("clients", []):
-        if c not in r.get("targets", []):
+        if c not in roster_targets:
             problems.append(
-                f"[{cid}] client `{c}` not in roster targets {r.get('targets')}"
+                f"[{cid}] client `{c}` not in roster targets {roster_targets}"
             )
 
     folder = os.path.join(REPO, r.get("source", ""))

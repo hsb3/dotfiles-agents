@@ -110,11 +110,12 @@ class GuardRejects(unittest.TestCase):
         # rule directly by injecting the bundle id as a fake skill entry.
         probs = []
         fake_roster = dict(roster)
+        # targets mirrors parse_roster's raw-string form (not a parsed list)
         fake_roster[clash] = {
             "id": clash,
             "type": "skill",
             "origin": "authored",
-            "targets": ["claude-code", "opencode"],
+            "targets": "[claude-code, opencode]",
             "source": roster["carbon-builder"]["source"],
         }
         C.check_entry(_entry(clash), fake_roster, skill_ids | {clash}, bundles, probs)

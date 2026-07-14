@@ -40,7 +40,7 @@ def _run(argv):
 
 def _identical(a, b):
     cmp = filecmp.dircmp(a, b)
-    if cmp.left_only or cmp.right_only or cmp.diff_files:
+    if cmp.left_only or cmp.right_only or cmp.diff_files or cmp.funny_files:
         return False
     _, mismatch, errors = filecmp.cmpfiles(a, b, cmp.common_files, shallow=False)
     if mismatch or errors:
@@ -116,10 +116,10 @@ class ListAndErrors(unittest.TestCase):
             self.assertIn(name, out)
 
     def test_rejects_unknown_name(self):
-        tmp = tempfile.mkdtemp()
-        code, _o, err = _run(["nope-skill", "--dir", tmp])
-        self.assertEqual(code, 1)
-        self.assertIn("unknown skill", err)
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _o, err = _run(["nope-skill", "--dir", tmp])
+            self.assertEqual(code, 1)
+            self.assertIn("unknown skill", err)
 
     def test_no_name_and_no_list_errors(self):
         code, _o, err = _run([])
