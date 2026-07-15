@@ -191,6 +191,15 @@ def main(argv=None):
     dest = resolve_dest(name, args)
 
     if args.uninstall:
+        # Gate uninstall behind the catalog membership check BEFORE dest is used: catalog ids
+        # are fixed, slash-free strings, so membership closes a path-traversal by construction
+        # (an unvalidated `name` like `../../.ssh` would otherwise reach shutil.rmtree via dest).
+        if name not in catalog:
+            print(
+                f"error: unknown skill '{name}' — not in skill-catalog.yaml (run --list to see installable skills)",
+                file=sys.stderr,
+            )
+            return 1
         return do_uninstall(name, dest)
 
     err = eligibility_error(name, catalog, roster)

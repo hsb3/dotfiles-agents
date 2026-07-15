@@ -93,6 +93,26 @@ class HappyPath(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("nothing to remove", out)
 
+    def test_uninstall_rejects_path_traversal_name(self):
+        # An unvalidated `--uninstall` name must NOT reach shutil.rmtree. Put a sentinel dir
+        # OUTSIDE the --dir base, then aim a `../`-bearing name at it: dest would resolve to
+        # the sentinel, so an ungated rmtree would delete it. The guard must exit non-zero and
+        # leave the sentinel untouched (non-vacuous: the sentinel exists before and after).
+        base = os.path.join(self.tmp, "base")
+        os.makedirs(base)
+        sentinel = os.path.join(self.tmp, "victim")
+        os.makedirs(sentinel)
+        with open(os.path.join(sentinel, "keep.txt"), "w") as fh:
+            fh.write("do not delete")
+        # os.path.join(abspath(base), "../victim") resolves to self.tmp/victim (the sentinel).
+        code, _o, err = _run(["../victim", "--dir", base, "--uninstall"])
+        self.assertEqual(code, 1)
+        self.assertIn("unknown skill", err)
+        self.assertTrue(
+            os.path.isfile(os.path.join(sentinel, "keep.txt")),
+            "path-traversal uninstall must delete nothing outside the base dir",
+        )
+
     def test_project_flag_uses_opencode_skills_path(self):
         code, _o, _e = _run(["notion-api", "--project", self.tmp])
         self.assertEqual(code, 0)

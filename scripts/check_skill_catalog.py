@@ -106,7 +106,12 @@ def _text_files(folder):
 def sibling_reference(folder, this_id, other_ids):
     """Return the first (other-id, evidence) pair where the folder references ANOTHER skill id
     as a path or wikilink, else None. Path/wikilink form only — a bare topic mention of the
-    word does not count (that is why opencode-expertise discussing 'MCP' or 'skills' is fine)."""
+    word does not count (that is why opencode-expertise discussing 'MCP' or 'skills' is fine).
+
+    Known gap (theoretical, not live): a bare-relative prose cross-reference to a sibling id
+    WITHOUT a `skills/` prefix or wikilink brackets isn't tripped. Harmless today because no
+    catalogued id is a prefix of another; the declared-empty `depends_on_skills` field is the
+    primary gate, with this heuristic as a backstop."""
     for path in _text_files(folder):
         try:
             text = _read(path)
