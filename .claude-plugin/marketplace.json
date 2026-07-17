@@ -13,6 +13,15 @@
       "author": {
         "name": "Henry S. Burden III"
       },
+      "description": "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.",
+      "name": "private-fork",
+      "source": "./plugins/private-fork",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
       "description": "Run a software project through the session-discipline loop \u2014 plan the work into conformant issues and source-grounded plans, keep sessions clearable with a durable handoff, delegate down-tier, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms.",
       "name": "project-workflow",
       "source": "./plugins/project-workflow",

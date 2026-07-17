@@ -47,6 +47,7 @@ import tempfile
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
+import gen_standalone  # noqa: E402
 from check_roster import parse_roster  # noqa: E402
 
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
@@ -245,6 +246,13 @@ def build_marketplace(out_root):
             }
         )
 
+    # Standalone one-skill wrappers (D4): gen_standalone emits each catalogued skill as its own
+    # plugin under plugins/<id>/, and its marketplace entries are merged here so the one
+    # committed marketplace.json covers bundles AND standalone installs. A standalone plugin
+    # name is the skill id (guaranteed distinct from bundle ids by check_skill_catalog).
+    gen_standalone.build_standalone(plugins_out)
+    entries.extend(gen_standalone.standalone_entries())
+
     marketplace = {
         "$schema": MARKETPLACE_SCHEMA,
         "name": MARKETPLACE_NAME,
@@ -334,7 +342,7 @@ def main(argv=None):
     m = regenerate()
     n = len(m["plugins"])
     names = ", ".join(pl["name"] for pl in m["plugins"])
-    print(f"✓ regenerated marketplace — {n} bundle(s): {names}")
+    print(f"✓ regenerated marketplace — {n} plugin(s): {names}")
     return 0
 
 
