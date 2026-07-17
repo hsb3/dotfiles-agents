@@ -20,7 +20,7 @@ const SRC = "Sources: acme-platform charter (2026-06-09) - acme-labs product the
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE";
-pres.author = "Henry S. Burden III";
+pres.author = "Sample Presenter";
 pres.title = "RA Platform - Advisor Board Overview";
 pres.theme = { headFontFace: FONT, bodyFontFace: FONT, lang: "en-US" };
 
@@ -106,7 +106,7 @@ function bullets(s, items, x, y, w, h, opts = {}) {
     x: MX + 0.28, y: 5.1, w: 7.8, h: 1.35, fontFace: FONT, fontSize: 14.5,
     margin: 0, valign: "middle",
   });
-  s.addText("Henry S. Burden III - June 12, 2026", {
+  s.addText("Sample Presenter - June 12, 2026", {
     x: MX, y: 6.85, w: CW, h: 0.35, fontFace: FONT, fontSize: 11,
     color: C.textSecondary, margin: 0,
   });
@@ -477,7 +477,7 @@ function bullets(s, items, x, y, w, h, opts = {}) {
     s.addText(a.t, { x: x + 0.3, y: 4.62, w: cw3 - 0.55, h: 0.4, fontFace: FONT, fontSize: 16, bold: true, color: C.textPrimary, margin: 0 });
     s.addText(a.d, { x: x + 0.3, y: 5.05, w: cw3 - 0.55, h: 1.1, fontFace: FONT, fontSize: 12.5, color: C.textSecondary, margin: 0 });
   });
-  footer(s, "Contact: Henry S. Burden III");
+  footer(s, "Contact: Sample Presenter");
 }
 
 pres.writeFile({ fileName: "<dev-root>/acme-platform/_meta/briefings/2026-06-12-advisor-board-overview/acme-platform-advisor-overview.pptx" })

@@ -8,7 +8,7 @@ CMS files.** Toolchain pptx-henry; theme `actuarial-signal` (or a client-safe to
 per client); `.pptx` + `.pdf` with a confidential + client-name footer. Folder slug
 `-client-overview`.
 
-> Assumptions to confirm with Henry: as-needed cadence; pptx-henry; theme + audio per engagement.
+> Assumptions to confirm with the owner: as-needed cadence; pptx-henry; theme + audio per engagement.
 > No prior instance exists - ships without a `sample.*`; the advisor `sample.deck.js` next door is
 > the closest layout reference. Invoke the `pptx-henry` skill for palette/tokens/QA, and the
 > `readme-value-and-proof` skill to capture real app screenshots for the "what it looks like" slide.

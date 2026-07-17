@@ -11,8 +11,8 @@ current field values + light context (labels, milestone, parent). Deliberately
 omits issue bodies so the output stays small enough to hand to an analyst / agent.
 
 Usage:
-    ./board-export.py --owner hsb3 --number 8 --out board-snapshot.json
-    ./board-export.py -o hsb3 -n 8                 # prints to stdout
+    ./board-export.py --owner acme --number 8 --out board-snapshot.json
+    ./board-export.py -o acme -n 8                 # prints to stdout
 
 Auth: shells out to `gh` with GITHUB_TOKEN UNSET (a repo-scoped GITHUB_TOKEN shadows
 the project-scoped keyring login -> INSUFFICIENT_SCOPES). Needs `gh auth refresh -s project`.

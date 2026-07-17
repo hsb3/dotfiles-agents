@@ -1,11 +1,11 @@
 ---
 name: comms
-description: Produce Henry's recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when Henry asks for any of those by name, or for a "briefing", "status deck", "status readout", "board deck", or "comms package". Composes with the pptx-henry skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.
+description: Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a "briefing", "status deck", "status readout", "board deck", or "comms package". Composes with the pptx-henry skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.
 ---
 
 # Comms
 
-Henry's communication deliverables, produced to one standard so each is fast to make and
+your communication deliverables, produced to one standard so each is fast to make and
 consistent to read. A deliverable is a dated folder under the project's
 `_meta/briefings/<YYYY-MM-DD>-<slug>/` holding the deck source, exported deck, optional audio,
 and a `sources.md` provenance file.
@@ -15,7 +15,7 @@ comm type has a self-contained playbook + a real worked example in **`examples/<
 
 ## Which comm (decision table)
 
-| If Henry wants | Comm type | Toolchain | Audio | Playbook |
+| If you want | Comm type | Toolchain | Audio | Playbook |
 | --- | --- | --- | --- | --- |
 | the decision for today | morning briefing | deck-builder | yes (2-3 min) | `examples/morning-briefing/playbook.md` |
 | to close today, tee up tomorrow | end-of-day wrap-up | deck-builder (light) | optional | `examples/end-of-day-wrapup/playbook.md` |
@@ -45,7 +45,7 @@ phrased.
 
 ## Hard rules (the standard's spine - never skip)
 
-- **Lead with the outcome / the decision; bury the detail.** Henry's standing complaint:
+- **Lead with the outcome / the decision; bury the detail.** the reader's standing complaint:
   "I'm drowning in details I don't really need before I get to what I need to know."
 - **Honest framing only.** Describe what is actually proven; call out gaps explicitly; never
   blanket accuracy or certification claims; never round up. External comms guard this hardest.

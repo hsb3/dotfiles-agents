@@ -6,7 +6,7 @@
 """Harvest CANDIDATE native "blocked-by" dependency edges from open-issue bodies.
 
 GitHub-native blocked-by edges are entered by hand and lag the prose: an issue
-body says "blocked by #532" or "depends on #410" while the native edge was never
+body says "blocked by #NNN" or "depends on #NNN" while the native edge was never
 created. This script reads every open issue body, finds dependency-signal phrases
 that precede a `#NNN`, and proposes the edges as candidates for a human to confirm.
 

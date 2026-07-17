@@ -7,12 +7,25 @@ permissions:
   contents: read
 
 jobs:
-  gates:
-    name: roster + marketplace drift guards + tests
+  # Tier-1 entry-gate machine floor — required status check on every PR into dev.
+  # A red floor is not mergeable (identity-neutrality · tests · provenance · hook-layout).
+  entry-gate-floor:
+    name: entry-gate floor (identity · tests · provenance · hook-layout)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - run: make ci
+      - run: make floor
+
+  # Generated-artifact drift guards — roster<->disk and marketplace regen.
+  drift-guards:
+    name: drift guards (roster · marketplace)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: make check build-check

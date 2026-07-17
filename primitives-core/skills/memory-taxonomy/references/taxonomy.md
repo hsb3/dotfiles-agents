@@ -77,12 +77,12 @@ Promotion happens at curation, never automatically:
 Each default below is explicitly marked. Position: ship with stated defaults, revise on
 evidence.
 
-1. **Curation cadence** — `accepted` (Henry, 2026-07-02). Triggered by project boundaries
+1. **Curation cadence** — `accepted` (owner, 2026-07-02). Triggered by project boundaries
    (wrap-up / handoff moments), not a calendar. Revisit only if memory demonstrably rots
    between boundaries.
-2. **Limits** — `accepted` (Henry, 2026-07-02). Hard-cap the always-loaded index at ~1
+2. **Limits** — `accepted` (owner, 2026-07-02). Hard-cap the always-loaded index at ~1
    screen (~40 lines); **no cap** on lazily-loaded topic files. The cap is a promotion
    gate, not tooling: measure whether index bloat actually occurs before building
    enforcement for it.
-3. **Rules vs skills vs memory** — `accepted` (Henry, 2026-07-02). The Axis 3 triage above
+3. **Rules vs skills vs memory** — `accepted` (owner, 2026-07-02). The Axis 3 triage above
    is the criterion.

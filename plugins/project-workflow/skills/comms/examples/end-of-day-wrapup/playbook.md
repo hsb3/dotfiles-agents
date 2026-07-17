@@ -2,12 +2,12 @@ _End-of-day wrap-up playbook. Shared machinery: `references/comm-package-standar
 
 # End-of-day wrap-up
 
-Daily PM, audience Henry. **The one job: close today and tee up tomorrow's first move.** It is
+Daily PM, audience the owner. **The one job: close today and tee up tomorrow's first move.** It is
 the spoken/visual companion to the HANDOFF refresh - the wrap-up is the readout, the `/handoff`
 skill writes the file. Toolchain deck-builder (`boardroom`), lighter than the morning brief
 (4-5 slides); audio optional (~1-2 min). Folder slug `-eod-wrapup`.
 
-> Assumptions to confirm with Henry: daily PM cadence; deck-builder; audio optional. No prior
+> Assumptions to confirm with the owner: daily PM cadence; deck-builder; audio optional. No prior
 > instance exists - this playbook ships without a `sample.*` artifact; create one on first run.
 
 ## The one rule
