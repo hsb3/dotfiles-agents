@@ -4,12 +4,12 @@ _Advisor board readout playbook. Shared machinery: `references/comm-package-stan
 
 Monthly or as-called, audience advisors / board. **The one job: show progress against the thesis
 and make the ask of the board** - the open questions are commercial, not technical, which is
-exactly what the board is for. Toolchain pptx-henry (NOT deck-builder); theme `actuarial-signal`;
+exactly what the board is for. Toolchain pptx-themes (NOT deck-builder); theme `actuarial-signal`;
 `.pptx` + `.pdf` with a confidential footer; audio optional. Folder slug `-advisor-overview`.
 
-> Invoke the `pptx-henry` skill for palette, tokens, typography, and visual QA. `sample.deck.js`
+> Invoke the `pptx-themes` skill for palette, tokens, typography, and visual QA. `sample.deck.js`
 > is the gold reference for layout (cards, ledger columns, 2x2 matrix, status chips); note its
-> `require` of the pptx-henry `theme-tokens.js` - keep that pattern.
+> `require` of the pptx-themes `theme-tokens.js` - keep that pattern.
 
 ## The one rule
 

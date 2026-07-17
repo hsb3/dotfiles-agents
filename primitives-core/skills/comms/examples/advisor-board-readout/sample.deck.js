@@ -5,7 +5,7 @@
 // Sources: docs/charter.md (2026-06-09), acme-labs docs/PRODUCT.md (2026-06-10).
 
 const pptxgen = require("pptxgenjs");
-const { THEMES } = require("~/.claude/skills/pptx-henry/assets/theme-tokens.js");
+const { THEMES } = require("~/.claude/skills/pptx-themes/assets/theme-tokens.js");
 
 const C = THEMES["actuarial-signal"];
 const FONT = "Avenir Next";

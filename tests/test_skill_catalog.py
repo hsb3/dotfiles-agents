@@ -54,7 +54,7 @@ class Clean(unittest.TestCase):
 
     def test_catalog_lists_exactly_the_shipped_standalone_skills(self):
         ids = [e["id"] for e in C.parse_catalog(C.CATALOG)]
-        self.assertEqual(ids, ["private-fork", "opencode-expertise"])
+        self.assertEqual(ids, ["private-fork", "opencode-expertise", "pptx-themes"])
 
     def test_valid_entry_has_no_problems(self):
         self.assertEqual(_check(_cat_entry(), [_roster_entry()]), [])

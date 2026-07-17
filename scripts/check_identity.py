@@ -49,8 +49,8 @@ TEXT_EXT = (".md", ".json", ".sh", ".py", ".js", ".ts", ".yaml", ".yml", ".toml"
 
 # ── Identity tokens: name / org / client / repo / issue hardcoded in a shipped body. ──
 # Lookbehind/ahead exclude a leading/trailing word-char OR hyphen so a personal name embedded
-# in a skill id (e.g. `pptx-henry`) is not matched — a skill-id reference is a structural
-# dependency, not baked-in personalization, and renaming one is out of scope for this lint.
+# in a skill id (e.g. a hypothetical `foo-henry`) is not matched — a skill-id reference is a
+# structural dependency, not baked-in personalization, and renaming one is out of scope here.
 IDENTITY = [
     (re.compile(r"(?<![\w-])[Hh]enry(?![\w-])"), "personal name 'Henry'"),
     (re.compile(r"(?<![\w-])[Bb]urden(?![\w-])"), "personal name 'Burden'"),

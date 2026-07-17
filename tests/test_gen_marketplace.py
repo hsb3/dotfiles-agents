@@ -48,7 +48,7 @@ class Build(unittest.TestCase):
         # exactly the two bundles + the two standalone skills, sorted by name
         self.assertEqual(
             names,
-            ["opencode-expertise", "private-fork", "project-workflow", "repo-standards"],
+            ["opencode-expertise", "pptx-themes", "private-fork", "project-workflow", "repo-standards"],
         )
         self.assertEqual(self.market["name"], "dotfiles-agents")
 

@@ -22,6 +22,15 @@
       "author": {
         "name": "Henry S. Burden III"
       },
+      "description": "Create, edit, and review PowerPoint presentations with a curated theme layer \u2014 semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow \u2014 composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml).",
+      "name": "pptx-themes",
+      "source": "./plugins/pptx-themes",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
       "description": "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.",
       "name": "private-fork",
       "source": "./plugins/private-fork",
