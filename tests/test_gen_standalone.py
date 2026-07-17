@@ -55,8 +55,10 @@ class Invariants(unittest.TestCase):
 
     def test_standalone_entries_shape(self):
         entries = G.standalone_entries()
-        self.assertEqual([e["name"] for e in entries], ["private-fork"])
-        e = entries[0]
+        self.assertEqual(
+            [e["name"] for e in entries], ["opencode-expertise", "private-fork"]
+        )
+        e = entries[1]
         self.assertEqual(e["source"], "./plugins/private-fork")
         self.assertTrue(e["description"])
         self.assertEqual(e["author"], G.author())

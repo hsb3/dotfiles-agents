@@ -45,8 +45,11 @@ class Build(unittest.TestCase):
 
     def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
-        # exactly the two bundles + the private-fork standalone, sorted by name
-        self.assertEqual(names, ["private-fork", "project-workflow", "repo-standards"])
+        # exactly the two bundles + the two standalone skills, sorted by name
+        self.assertEqual(
+            names,
+            ["opencode-expertise", "private-fork", "project-workflow", "repo-standards"],
+        )
         self.assertEqual(self.market["name"], "dotfiles-agents")
 
     def test_source_points_into_plugins_dir(self):

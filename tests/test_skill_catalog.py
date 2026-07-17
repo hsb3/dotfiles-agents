@@ -1,8 +1,8 @@
 """Tests for scripts/check_skill_catalog.py -- standalone eligibility + drift guard (D4).
 
-Proves the committed catalog (private-fork only) is clean and that each eligibility/drift rule
-is demonstrably red-able on a seeded bad entry. Stdlib-only; fixtures build tiny in-memory
-roster/catalog dicts, no filesystem roster edits.
+Proves the committed catalog (private-fork + opencode-expertise) is clean and that each
+eligibility/drift rule is demonstrably red-able on a seeded bad entry. Stdlib-only; fixtures
+build tiny in-memory roster/catalog dicts, no filesystem roster edits.
 """
 
 import os
@@ -52,9 +52,9 @@ class Clean(unittest.TestCase):
         self.assertEqual(problems, [])
         self.assertGreaterEqual(n, 1)
 
-    def test_private_fork_is_the_only_entry(self):
+    def test_catalog_lists_exactly_the_shipped_standalone_skills(self):
         ids = [e["id"] for e in C.parse_catalog(C.CATALOG)]
-        self.assertEqual(ids, ["private-fork"])
+        self.assertEqual(ids, ["private-fork", "opencode-expertise"])
 
     def test_valid_entry_has_no_problems(self):
         self.assertEqual(_check(_cat_entry(), [_roster_entry()]), [])
