@@ -45,7 +45,7 @@ class Build(unittest.TestCase):
 
     def test_marketplace_lists_bundle(self):
         names = [p["name"] for p in self.market["plugins"]]
-        self.assertEqual(names, ["project-workflow"])
+        self.assertEqual(names, ["project-workflow", "repo-standards"])
         self.assertEqual(self.market["name"], "dotfiles-agents")
 
     def test_source_points_into_plugins_dir(self):
