@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """gen_marketplace.py — assemble the Claude Code marketplace from primitives-core.
 
-This is the repo's reference generator: it turns the two hand-authored inputs — the roster
-(primitives-core.yaml, which records membership via each entry's `plugins:` field) and the
-bundle metadata (plugins.yaml) — into two generated, committed, drift-guarded artifacts:
+This is the repo's reference generator: it turns the hand-authored inputs — the roster
+(primitives-core.yaml, which records membership via each entry's `plugins:` field), the
+bundle metadata (plugins.yaml), and each bundle's README source
+(primitives-core/bundles/<id>/README.md) — into two generated, committed, drift-guarded
+artifacts:
 
   plugins/<bundle>/.claude-plugin/plugin.json   the CC plugin manifest (name == bundle id)
   plugins/<bundle>/skills/<id>/                 each member skill body, copied verbatim from
                                                 primitives-core/skills/<id>/
+  plugins/<bundle>/README.md                    the bundle's value/proof README, copied
+                                                verbatim from its source (optional — a bundle
+                                                with no README source ships without one)
   .claude-plugin/marketplace.json               the marketplace root listing every bundle,
                                                 each source pointing at ./plugins/<bundle>
 
 A Claude Code marketplace installs a *plugin*, and a plugin is a directory holding
 `.claude-plugin/plugin.json` plus its skills. A bundle is a curated subset of the roster's
 skills, so it cannot point straight at primitives-core (which holds every skill); the subset
-is assembled here. The skill BODY still lives once in primitives-core/skills/<id>/ — the
-assembled copy under plugins/ is generated output and is never hand-edited.
+is assembled here. The skill BODY still lives once in primitives-core/skills/<id>/, and a
+bundle's README source lives once in primitives-core/bundles/<id>/README.md — the assembled
+copies under plugins/ are generated output and are never hand-edited.
 
 Deterministic and stdlib-only (stable ordering, no clocks/random), so a `--check` run never
 false-fails. Two modes:
@@ -46,6 +52,7 @@ from check_roster import parse_roster  # noqa: E402
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
 PLUGINS_DIR = os.path.join(REPO, "plugins")
+BUNDLES_DIR = os.path.join(REPO, "primitives-core", "bundles")
 MARKETPLACE = os.path.join(REPO, ".claude-plugin", "marketplace.json")
 
 IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
@@ -172,6 +179,15 @@ def build_hooks_manifest(hook_ids, src_by_id):
     return {"hooks": events}
 
 
+def _copy_bundle_readme(bundle, proot):
+    """Copy primitives-core/bundles/<bundle>/README.md -> <proot>/README.md if the source
+    exists. Additive only: a bundle with no README source ships without one — this must
+    never fail the build."""
+    src = os.path.join(BUNDLES_DIR, bundle, "README.md")
+    if os.path.isfile(src):
+        shutil.copy2(src, os.path.join(proot, "README.md"))
+
+
 def build_marketplace(out_root):
     """Assemble every bundle under out_root/plugins/ and write out_root/.claude-plugin/
     marketplace.json. Returns the marketplace dict. Bundles with no members are skipped."""
@@ -218,6 +234,7 @@ def build_marketplace(out_root):
             with open(os.path.join(proot, "hooks", "hooks.json"), "w") as fh:
                 json.dump(hooks_manifest, fh, indent=2, sort_keys=True)
                 fh.write("\n")
+        _copy_bundle_readme(bundle, proot)
         entries.append(
             {
                 "name": bundle,
