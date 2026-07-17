@@ -1,7 +1,8 @@
 # Contributing
 
 *The process for developing and shipping a coding-agent extender in this marketplace.
-Status: active.*
+Status: active. Graduated from the executive desk's extender-development SOP per decision
+0016.*
 
 This repo is a Claude Code marketplace: a curated set of coding-agent extenders — skills,
 agent personas, hooks, MCP connection specs — assembled from `primitives-core/` into plugin
@@ -9,10 +10,12 @@ bundles. Contributing here means adding, changing, or retiring one of those.
 
 ## 1. Decide it's worth building
 
-Apply the standing litmus before writing anything: **does this reduce future tooling time?**
-Capability-adds wait behind a named, real use-case pull — no speculative extenders built
-ahead of need. There is no separate incubation/workbench repo to develop against; the single
-control point is the entry gate on the PR into `dev` (below).
+Apply the standing litmus before writing anything (Charter G1–G6): **does this reduce future
+tooling time?** Capability-adds wait behind a named, real use-case pull — no speculative
+extenders built ahead of need. If it clears the litmus and has a use-case pull, add an entry
+to the candidate ledger (tracked on the executive desk) so the in-flight work is visible.
+There is no separate incubation/workbench repo to develop against; the single control point
+is the entry gate on the PR into `dev` (below).
 
 ## 2. Develop it — anywhere
 
@@ -81,6 +84,6 @@ Passing both tiers *is* graduation — there's no separate promotion ceremony.
 
 ## 4. After merge
 
-If the extender was tracked as a candidate before it shipped, close that out as
-graduated/shipped. A candidate that never earns its use-case pull gets closed as dropped
-instead — a candidate list is a baton, not a permanent backlog.
+If the extender had a candidate-ledger entry, update it to graduated/shipped. A candidate
+that never earns its use-case pull gets closed as dropped instead — the candidate ledger is
+a baton, not a permanent backlog.
