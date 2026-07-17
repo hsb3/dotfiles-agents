@@ -155,3 +155,13 @@ primitives:
     targets: [claude-code]
     plugins: [project-workflow]
     summary: "PreCompact nudge hook: blocks a manual /compact when the project's HANDOFF.md is stale/missing (run /handoff first); never blocks auto-compaction — fails open with non-blocking guidance instead."
+  - id: opencode-expertise
+    type: skill
+    source: primitives-core/skills/opencode-expertise
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: []
+    summary: "Expert knowledge of opencode — every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code → opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works."
