@@ -281,12 +281,12 @@ To see the valid field names + option values a changeset may use, run
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts"   # this skill's scripts dir
 # 1. local side exports (GITHUB_TOKEN is unset inside the scripts to dodge the shadowing gotcha)
-python3 "$S/board-export.py" -o hsb3 -n 8 --out board-snapshot.json
+python3 "$S/board-export.py" -o acme -n 8 --out board-snapshot.json
 # 2. analyst reads board-snapshot.json, writes changeset.tsv (issue / field / value)
 # 3. local side previews, then applies
-python3 "$S/board-apply.py" -o hsb3 -n 8 --changeset changeset.tsv            # dry-run diff
-python3 "$S/board-apply.py" -o hsb3 -n 8 --changeset changeset.tsv --apply    # write
-python3 "$S/board-apply.py" -o hsb3 -n 8 --changeset edges.tsv --repo <owner>/acme-platform --apply
+python3 "$S/board-apply.py" -o acme -n 8 --changeset changeset.tsv            # dry-run diff
+python3 "$S/board-apply.py" -o acme -n 8 --changeset changeset.tsv --apply    # write
+python3 "$S/board-apply.py" -o acme -n 8 --changeset edges.tsv --repo acme/acme-platform --apply
 ```
 
 **Why issue-number keys, not item-ids:** item-ids change if an item is removed and re-added;

@@ -11,8 +11,8 @@ to write a changeset that only references real fields and real option names, and
 field/option ids for hand-written mutations.
 
 Usage:
-    ./board-fields.py -o hsb3 -n 8            # human-readable table
-    ./board-fields.py -o hsb3 -n 8 --json     # machine-readable
+    ./board-fields.py -o acme -n 8            # human-readable table
+    ./board-fields.py -o acme -n 8 --json     # machine-readable
 
 Auth: shells out to `gh` with GITHUB_TOKEN UNSET (avoids the repo-scope shadowing gotcha).
 Needs `gh auth refresh -s project`.

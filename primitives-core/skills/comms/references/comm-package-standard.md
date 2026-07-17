@@ -58,7 +58,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 
 ## Voice baseline (all comms; playbooks note deltas)
 
-- **Lead with the outcome / the decision; bury the detail.** Henry's standing complaint:
+- **Lead with the outcome / the decision; bury the detail.** the reader's standing complaint:
   "I'm drowning in details I don't really need before I get to what I need to know."
 - **Honest framing only.** Describe what is actually proven (e.g. "proven on a synthetic
   known-answer cohort"); never blanket accuracy or certification claims; call out verification
@@ -67,8 +67,8 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
   registry, as-of the date. No headline metric committed as a bare value without an as-of.
 - **Phrases, not sentences** on slides; detail goes to the audio or skippable slides.
 - **Pitch to the audience.** Self-comms are blunt and imperative and may name issue/PR ids —
-  but **plain-English label first, id second** ("the scaffold-warning fix (da#38)", never a
-  bare "da#38"): Henry shouldn't need ids or internal shorthand memorized to read his own
+  but **plain-English label first, id second** ("the scaffold-warning fix (da#NN)", never a
+  bare "da#NN"): the reader shouldn't need ids or internal shorthand memorized to read their own
   deck (HB feedback 2026-07-02). External comms (board, client) drop internal jargon and
   unexplained issue numbers entirely, carry a confidential footer, and commit to no roadmap
   dates.
@@ -113,5 +113,5 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 
 ## Delivery
 
-`SendUserFile` the PDF (and MP3) so they surface in a viewer, not the terminal. Henry reads long
+`SendUserFile` the PDF (and MP3) so they surface in a viewer, not the terminal. the reader reads long
 content in a viewer; the terminal is for tap-to-answer decisions.

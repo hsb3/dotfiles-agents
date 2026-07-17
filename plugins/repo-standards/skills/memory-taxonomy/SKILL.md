@@ -19,7 +19,7 @@ description: >-
 The **single consultable source** for where agent memory lives and how it moves. Three
 consumers read this identical content: a human/agent session (you, now), the
 repo-compliance-audit skill (checks structure against `references/checklist.md`), and
-Henry at curation time. The system *design* behind it — storage mechanics, loading
+the owner at curation time. The system *design* behind it — storage mechanics, loading
 semantics, settings precedence — is the memory-standard technical design (in this repo at
 `docs/design/memory-standard.md`); this
 content is the standard a session applies, and it links to that design rather than
@@ -59,7 +59,7 @@ invisible, non-portable state this standard eliminates. Instead:
 - **No auditing** — pass/gap verdicts come from the sibling `repo-compliance-audit` skill,
   which reads `references/checklist.md` from this skill's directory.
 - **No content judgment** — the `MEM-xx` rows are structure-only; what a memory *says* is
-  Henry's curation judgment, never a compliance surface.
+  the owner's curation judgment, never a compliance surface.
 - **No layout ownership** — that `.claude/memory/` appears in the repo layout at all is the
   repo-meta-structure standard's row (`CLAUDE-03` / `IGNORE-12`); everything
   memory-specific beyond placement is owned here.

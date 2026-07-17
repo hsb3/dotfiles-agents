@@ -11,9 +11,9 @@ apply.
 
 ```yaml
 # _meta/mise-en-place.yml — tracked by default (ADR-0006)
-owner: ""            # hsb3 | mhi-raptorxai
+owner: ""            # e.g. your GitHub owner
 repo: ""
-default_branch: main # dev for mhi-raptorxai repos
+default_branch: main # e.g. dev in some orgs
 gh_issue_labels: []  # [{name, color, description}]
 gh_milestones: []    # [{title, description}]
 board_title: ""
@@ -23,9 +23,9 @@ required_files: []
 
 | Field | Type | Consumed by | Semantics |
 |---|---|---|---|
-| `owner` | scalar | (declared) | GitHub owner — `hsb3` or `mhi-raptorxai` |
+| `owner` | scalar | (declared) | GitHub owner (user or org) |
 | `repo` | scalar | (declared) | Repository name |
-| `default_branch` | scalar | audit + scaffold | Recorded variance (e.g. `dev` for mhi-raptorxai repos); must be non-empty if present |
+| `default_branch` | scalar | audit + scaffold | Recorded variance (e.g. `dev` in some orgs); must be non-empty if present |
 | `gh_issue_labels` | list of `{name, color, description}` | github-project-board | Declared, never provisioned by the scaffold |
 | `gh_milestones` | list of `{title, description}` | github-project-board | Declared, never provisioned by the scaffold |
 | `board_title` | scalar | github-project-board | Declared, never provisioned by the scaffold |

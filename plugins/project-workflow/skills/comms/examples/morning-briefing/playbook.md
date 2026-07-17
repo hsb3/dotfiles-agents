@@ -2,7 +2,7 @@ _Morning briefing playbook. Shared machinery: `references/comm-package-standard.
 
 # Morning briefing
 
-Daily AM, audience Henry. **The one job: the decision he has to make today, in the first 30
+Daily AM, audience the owner. **The one job: the decision he has to make today, in the first 30
 seconds.** Toolchain deck-builder (`boardroom`); audio companion (~2-3 min). Folder slug
 `-morning-status`.
 
@@ -44,6 +44,6 @@ Scale 5-6 up or down to fit the day's volume; some days "what shipped" is one sl
 
 ## Voice deltas (beyond the baseline)
 
-- Recommendation slide uses imperative verbs and names the issue/PR (e.g. `#128`), not prose.
+- Recommendation slide uses imperative verbs and names the issue/PR (e.g. `#NNN`), not prose.
 - Audio is spoken: spell acronyms and ids for TTS (read `ESRD` as `E.S.R.D.`, say "issue 128"
-  not "#128"). Build the spell-out list from the day's own domain terms.
+  not "#NNN"). Build the spell-out list from the day's own domain terms.

@@ -216,9 +216,9 @@ MANIFEST_TEMPLATE = """\
 # Readers: repo-compliance-audit + mise-en-place-scaffold consume default_branch,
 # required_folders, required_files; the gh_* / board_title fields are declared here for
 # the github-project-board skill. Unknown fields are tolerated by both readers.
-owner: ""            # hsb3 | mhi-raptorxai
+owner: ""            # e.g. your GitHub owner
 repo: ""
-default_branch: main # dev for mhi-raptorxai repos
+default_branch: main # e.g. dev in some orgs
 gh_issue_labels: []  # [{name, color, description}] — consumed by github-project-board
 gh_milestones: []    # [{title, description}] — consumed by github-project-board
 board_title: ""
@@ -548,7 +548,7 @@ CI_TARGET_RE = re.compile(r"^ci\s*:", re.M)
 def makefile_has_ci_target(repo):
     """True when the target repo's Makefile defines a `ci:` target. The standard
     ci.yml template runs `make ci`; a repo without the target gets a red check on its
-    first push (fleet-dashboard test-bed finding, #67). The Makefile stub deliberately
+    first push (fleet-dashboard test-bed finding). The Makefile stub deliberately
     ships without a no-op `ci:` — a green gate that runs nothing would be worse."""
     path = os.path.join(repo, "Makefile")
     if not os.path.isfile(path):

@@ -4,7 +4,7 @@
     "notes": "Hybrid artifact: morning briefing fused with the week's plan. Companion executive-brief audio in the same folder. Theme: boardroom.",
     "blocks": [
       { "type": "heading", "level": 1, "text": "Where we stand, and the week to the demo" },
-      { "type": "subtitle", "text": "2026-06-12 (Friday) - prepared for Henry Burden - the board now reads as a plan; the Stage 9 demo lands Monday 6/15" }
+      { "type": "subtitle", "text": "2026-06-12 (Friday) - prepared for the recipient - the board now reads as a plan; the Stage 9 demo lands Monday 6/15" }
     ]
   },
   {
@@ -14,10 +14,10 @@
       { "type": "heading", "text": "Executive summary" },
       { "type": "subtitle", "text": "The desktop installable is real and in hand. This session turned a 61-issue pile into a dated plan: six milestones, a Stage 9 demo due Monday, and the data-acquisition feeders that gate real math now tracked upstream in acme-labs. The week's single job is to converge the demo." },
       { "type": "bullets", "items": [
-        "Build state is unchanged from this morning: the .app ships the real cockpit, boots embedded Postgres on a real install, proven offline - what's left is owner-gated (signing, #360), not engineering",
+        "Build state is unchanged from this morning: the .app ships the real cockpit, boots embedded Postgres on a real install, proven offline - what's left is owner-gated (signing, #NNN), not engineering",
         "The board was restructured today: 53 unmilestoned issues binned into 6 themed milestones; Stage 9 - Desktop demo carries the 10-issue critical path with a 2026-06-15 due date",
-        "The real-math gate is now traceable end-to-end: two acme-labs feeders filed (ESRD model #93, PY2025 ratebook #94) -> platform #388 -> #389 -> the #285 demo",
-        "Hygiene done: 82 stale local + 27 remote branches removed; the open Dependabot moderate alert is mapped to #282 and pulled into the demo milestone"
+        "The real-math gate is now traceable end-to-end: two acme-labs feeders filed (ESRD model #NNN, PY2025 ratebook #NNN) -> platform #NNN -> #NNN -> the #NNN demo",
+        "Hygiene done: 82 stale local + 27 remote branches removed; the open Dependabot moderate alert is mapped to #NNN and pulled into the demo milestone"
       ] }
     ]
   },
@@ -29,7 +29,7 @@
       { "type": "columns", "columns": [
         [ { "type": "stat", "value": "6", "label": "themed milestones", "sub": "53 issues binned, 0 left" } ],
         [ { "type": "stat", "value": "10", "label": "Stage 9 demo issues", "sub": "due Mon 2026-06-15" } ],
-        [ { "type": "stat", "value": "2", "label": "acme-labs feeders filed", "sub": "#93 ESRD, #94 ratebook" } ],
+        [ { "type": "stat", "value": "2", "label": "acme-labs feeders filed", "sub": "#NNN ESRD, #NNN ratebook" } ],
         [ { "type": "stat", "value": "109", "label": "branches pruned", "sub": "82 local + 27 remote" } ]
       ] }
     ]
@@ -53,8 +53,8 @@
           { "type": "heading", "level": 2, "text": "What's gated (owner)" },
           { "type": "bullets", "items": [
             "Developer ID signing - has lead time; until it lands, Gatekeeper blocks an unsigned download",
-            "#360 sidecar auth token - before any real PHI touches the sidecar",
-            "#353 refdata shipping model - first-boot import vs zips-in-app vs SQL dump",
+            "#NNN sidecar auth token - before any real PHI touches the sidecar",
+            "#NNN refdata shipping model - first-boot import vs zips-in-app vs SQL dump",
             "Clean-Mac dress rehearsal - the last unproven install step"
           ] }
         ]
@@ -81,7 +81,7 @@
             "Model/data/modeling completeness: 8 - ESRD, multi-year, modeling architecture",
             "Platform foundations: 9 - tenant lifecycle, SDLC, testing, the onboarding gate",
             "Ops & observability: 6 - status, logging baseline, support bundle",
-            "Expert agent: 8 - explicitly LAST, by owner directive on #115"
+            "Expert agent: 8 - explicitly LAST, by owner directive on #NNN"
           ] }
         ]
       ] }
@@ -89,14 +89,14 @@
   },
   {
     "kicker": "STAGE 9 - THE DEMO CRITICAL PATH",
-    "footer": "Gating chain: acme-labs #93 / #94 -> #388 -> #389 -> #285 demo",
+    "footer": "Gating chain: acme-labs #NNN / #NNN -> #NNN -> #NNN -> #NNN demo",
     "blocks": [
       { "type": "heading", "text": "The demo's chain runs from CMS data, through the engine, to the surface" },
       { "type": "bullets", "items": [
-        "Acquisition (acme-labs, owner-external lead time): #93 CMS-HCC ESRD model + #94 PY2025 county ratebook - then graduate from platform/loaders into packages/cms-loaders",
-        "Cloud math: #388 - load ESRD + verify all model variants (gate:audit-math)",
-        "Desktop math [BLOCKING]: #389 - ship + load all HCC models incl ESRD + refdata on install; replace the silent no-op with a visible 'not loaded' guard",
-        "Demo surface: #285 PY2025 financial-validation (PPR+MOR partial-set), #352 per-check skips, #300 real-data wiring, #343 mock 404s, #334 short ids"
+        "Acquisition (acme-labs, owner-external lead time): #NNN CMS-HCC ESRD model + #NNN PY2025 county ratebook - then graduate from platform/loaders into packages/cms-loaders",
+        "Cloud math: #NNN - load ESRD + verify all model variants (gate:audit-math)",
+        "Desktop math [BLOCKING]: #NNN - ship + load all HCC models incl ESRD + refdata on install; replace the silent no-op with a visible 'not loaded' guard",
+        "Demo surface: #NNN PY2025 financial-validation (PPR+MOR partial-set), #NNN per-check skips, #NNN real-data wiring, #NNN mock 404s, #NNN short ids"
       ] }
     ]
   },
@@ -110,24 +110,24 @@
           { "type": "heading", "level": 2, "text": "Owner decisions" },
           { "type": "bullets", "items": [
             "Kick off Developer ID signing - the long pole",
-            "Decide #353 refdata shipping model",
-            "Start CMS ESRD-model acquisition (#93) - separately published, has lead time"
+            "Decide #NNN refdata shipping model",
+            "Start CMS ESRD-model acquisition (#NNN) - separately published, has lead time"
           ] }
         ],
         [
           { "type": "heading", "level": 2, "text": "Engineering tail" },
           { "type": "bullets", "items": [
-            "#389 visible 'refdata not loaded' guard so a blank install can't read as a real audit",
-            "#352 surface per-check skips; #300 kill remaining placeholder data",
-            "#282 glib bump - clears the Dependabot alert and greens the build"
+            "#NNN visible 'refdata not loaded' guard so a blank install can't read as a real audit",
+            "#NNN surface per-check skips; #NNN kill remaining placeholder data",
+            "#NNN glib bump - clears the Dependabot alert and greens the build"
           ] }
         ],
         [
           { "type": "heading", "level": 2, "text": "Demo readiness" },
           { "type": "bullets", "items": [
-            "PY2025 partial-set ingest proven on the PPR+MOR-first path (#285)",
+            "PY2025 partial-set ingest proven on the PPR+MOR-first path (#NNN)",
             "Dress rehearsal on a clean Mac from the LOCAL build (USB/scp until signing)",
-            "Synthetic corpus stands in until #360 lands - hold real PHI"
+            "Synthetic corpus stands in until #NNN lands - hold real PHI"
           ] }
         ]
       ] }
@@ -135,7 +135,7 @@
   },
   {
     "kicker": "DEFINITION OF DEMO-READY",
-    "footer": "Acceptance criteria lifted from #389 and #285",
+    "footer": "Acceptance criteria lifted from #NNN and #NNN",
     "blocks": [
       { "type": "heading", "text": "What 'ready for Monday' means, concretely" },
       { "type": "bullets", "items": [
@@ -156,17 +156,17 @@
         [
           { "type": "heading", "level": 2, "text": "Clears real onboarding" },
           { "type": "bullets", "items": [
-            "#238 onboarding gate - real CMS bytes (NDA + CSSC paperwork); owner-external, no engineering substitute",
-            "#388 ESRD on cloud + a recall / accuracy check on a known-answer cohort",
-            "#387 multi-year coverage - PY2025 MVP -> PY2023 backfill"
+            "#NNN onboarding gate - real CMS bytes (NDA + CSSC paperwork); owner-external, no engineering substitute",
+            "#NNN ESRD on cloud + a recall / accuracy check on a known-answer cohort",
+            "#NNN multi-year coverage - PY2025 MVP -> PY2023 backfill"
           ] }
         ],
         [
           { "type": "heading", "level": 2, "text": "Platform depth (parallelizable)" },
           { "type": "bullets", "items": [
-            "Model/data/modeling: #396 modeling architecture, #397 per-year model + blend schema, #398 methodology audit",
-            "Platform foundations: tenant lifecycle (#121), SDLC (#124), testing & validation (#125)",
-            "Expert agent (#115) - explicitly last"
+            "Model/data/modeling: #NNN modeling architecture, #NNN per-year model + blend schema, #NNN methodology audit",
+            "Platform foundations: tenant lifecycle (#NNN), SDLC (#NNN), testing & validation (#NNN)",
+            "Expert agent (#NNN) - explicitly last"
           ] }
         ]
       ] }
@@ -179,10 +179,10 @@
       { "type": "heading", "text": "What could slip the demo or bite right after" },
       { "type": "bullets", "items": [
         "Lead-time items can't be compressed: Developer ID signing and CMS ESRD-model acquisition both start with you and gate downstream work",
-        "Demo dollar math needs the real PY2025 ratebook (acme-labs #94) - the cache currently holds only the 2026 book; verify PY2025 coverage before relying on D-family numbers",
-        "The silent no-op is the trap: a blank install currently PASSes a run with zero recompute - #389's visible guard must land or the demo can mislead",
-        "Dependabot moderate (glib, #282) is open on main - low risk, but clear it inside the demo milestone",
-        "Real PHI stays out until #360 (sidecar token) lands - synthetic corpus only for the rehearsal"
+        "Demo dollar math needs the real PY2025 ratebook (acme-labs #NNN) - the cache currently holds only the 2026 book; verify PY2025 coverage before relying on D-family numbers",
+        "The silent no-op is the trap: a blank install currently PASSes a run with zero recompute - #NNN's visible guard must land or the demo can mislead",
+        "Dependabot moderate (glib, #NNN) is open on main - low risk, but clear it inside the demo milestone",
+        "Real PHI stays out until #NNN (sidecar token) lands - synthetic corpus only for the rehearsal"
       ] }
     ]
   },

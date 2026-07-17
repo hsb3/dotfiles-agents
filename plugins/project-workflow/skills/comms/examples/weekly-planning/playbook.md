@@ -2,7 +2,7 @@ _Weekly planning playbook. Shared machinery: `references/comm-package-standard.m
 
 # Weekly planning briefing
 
-Weekly (Friday), audience Henry. **The one job: name the week's single converging objective,
+Weekly (Friday), audience the owner. **The one job: name the week's single converging objective,
 then the parallel lanes and owner-gated decisions that reach it.** A hybrid artifact - it fuses
 a status look-back with the forward plan. Toolchain deck-builder (`boardroom`); audio companion
 (~3-4 min, "executive brief"). Folder slug `-weekly-plan`.

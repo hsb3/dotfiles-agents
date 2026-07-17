@@ -8,7 +8,7 @@ inline elsewhere — link here.
 - **Origin:** the ratified `use-case-driven-backlog` decision (an extender enters a queue because a
   named project or workflow needs it, ranked by how soon the need is real; the vendor/resources list
   is a sourcing catalog, not a backlog). Formalizes what `dotfiles-agents#84` asked for; the bench
-  form is the `#84` owner amendment (2026-07-11).
+  form is the owner amendment (2026-07-11).
 - **Status:** the entry-form core fields and the milestone-set vocabulary are grounded in shipped
   practice below; the unranked-wishlist rule was ratified by owner ruling 2026-07-12.
 
@@ -19,7 +19,7 @@ inline elsewhere — link here.
 A "well-defined unit of work" does not enter a queue as a bare title. It enters carrying a fixed set
 of fields so it can be ranked, picked up cold, and judged. There is **one shared core**, then **two
 applications** of it: the backlog-entry form (a use case entering a project backlog) and the
-bench-entry form (a candidate entering `dotfiles-agents-workbench/incubator/`).
+bench-entry form (a candidate entering `<incubator-repo>/incubator/`).
 
 ### The shared core (both forms carry these)
 
@@ -58,12 +58,12 @@ depth.
 **Ranked-vs-unranked:** an idea with no driving use case yet claimed enters as an *unranked
 wishlist* entry — one line, "no use case claimed yet; per `use-case-driven-backlog` it waits until one
 does" — not as a ready issue. It is promoted to a full backlog issue only when a named near-term use
-case claims it. (Grounded in the `#49` backlog-seed plan's owner-decision default; ratified as a
+case claims it. (Grounded in the backlog-seed plan's owner-decision default; ratified as a
 standing rule by owner ruling 2026-07-12.)
 
 ### Application B — bench-entry form (a candidate enters the incubator)
 
-A candidate enters `dotfiles-agents-workbench/incubator/<name>/` only with a **scope doc** carrying the
+A candidate enters `<incubator-repo>/incubator/<name>/` only with a **scope doc** carrying the
 shared core, mapped onto the promotion gate's H/J checks so the entry is gate-ready from day one:
 
 | Core field | In the scope doc as | Maps to gate check |
@@ -76,18 +76,18 @@ shared core, mapped onto the promotion gate's H/J checks so the entry is gate-re
 
 The scope doc is the incubation-stage companion to the `REGISTRY.md` row; it states the *bet* (J1
 hypothesis) up front so incubation accumulates the right evidence. The gate itself
-(`dotfiles-agents-workbench/docs/promotion-gate.md`) and the pipeline
+(`<incubator-repo>/docs/promotion-gate.md`) and the pipeline
 (`docs/extender-lifecycle.md`) are canonical for pass/fail — this form governs *entry*, not
 qualification.
 
 ### Where the forms are cited
 
-- **Backlog seed** (`#49`): the backlog-seed workflow references this form for entry shape + minimum
+- **Backlog seed**: the backlog-seed workflow references this form for entry shape + minimum
   fields (use case, deliverables, overlaps, source pointers) — see the pointer in
   `_meta/plans/extender-ideas-backlog-seed/`.
 - **Issue authoring** (`references/issue-body.md`): the backlog-entry form IS the issue-body
   conformance bar; that reference is authoritative for the mechanics.
-- **Bench intake** (`dotfiles-agents-workbench/docs/extender-lifecycle.md`, Stage 1): intake
+- **Bench intake** (`<incubator-repo>/docs/extender-lifecycle.md`, Stage 1): intake
   references this form for the scope-doc requirement.
 
 ---
@@ -117,7 +117,7 @@ promises to its own arc; it keeps the "ordered promise, not a date" discipline.
 
 Alongside milestones, a `gate:<promise>` label marks the issues that **block reaching the next promise
 level**. An empty gate means that promise is safe to make — you check the gate, not the raw issue
-count. (From Henry's project protocol: gate labels answer "what blocks the next promise level" and live
+count. (From the project protocol: gate labels answer "what blocks the next promise level" and live
 separately from the backlog.) Example in use: `dotfiles-agents` tracks P4 with the `gate:cross-tool`
 label (per the P4 milestone description).
 
@@ -134,9 +134,9 @@ the *blocker set* for the next hop. A milestone with an empty gate is ready to c
    from either repo lands under the same promise level — the board is the single source of promise
    state.
 
-### Mapping — the Agent Extenders board (hsb3/projects/9)
+### Mapping — the Agent Extenders board (acme/projects/9)
 
-The joint `dotfiles-agents` + `dotfiles-agents-workbench` board ("Agent Extenders", one item set, many
+The joint `dotfiles-agents` + `<incubator-repo>` board ("Agent Extenders", one item set, many
 views) adopts the set as follows:
 
 | Element | Value on the board |

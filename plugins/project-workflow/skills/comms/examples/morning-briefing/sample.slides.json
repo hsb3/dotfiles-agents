@@ -4,19 +4,19 @@
     "notes": "Companion audio briefing alongside this deck in _meta/briefings/2026-06-13-morning-status/. Theme: boardroom. Order: recommendation -> horizon -> what shipped.",
     "blocks": [
       { "type": "heading", "level": 1, "text": "What to do today" },
-      { "type": "subtitle", "text": "2026-06-13 - prepared for Henry Burden - the recommendation first, the detail last" }
+      { "type": "subtitle", "text": "2026-06-13 - prepared for the recipient - the recommendation first, the detail last" }
     ]
   },
   {
     "kicker": "RECOMMENDED TODAY",
     "layout": "top",
-    "footer": "All three route around the first-client gate (epic #471)",
+    "footer": "All three route around the first-client gate (epic #NNN)",
     "blocks": [
       { "type": "heading", "text": "Build the BPT loader; decide signing; everything else is parallel" },
       { "type": "bullets", "items": [
-        "BUILD #128 BPT loader - highest leverage, pure engineering, makes the payment numbers honest (D1 is skipped on every real run today)",
-        "DECIDE #123 Developer ID signing - the long pole, has lead time, nothing else needs it",
-        "PARALLEL: #472 export, and closing the ESRD verification tail (#485) - both need no decision",
+        "BUILD #NNN BPT loader - highest leverage, pure engineering, makes the payment numbers honest (D1 is skipped on every real run today)",
+        "DECIDE #NNN Developer ID signing - the long pole, has lead time, nothing else needs it",
+        "PARALLEL: #NNN export, and closing the ESRD verification tail (#NNN) - both need no decision",
         "30-second call: keep or discard the uncommitted Stop hook in .claude/settings.json"
       ] }
     ]
@@ -30,18 +30,18 @@
         [
           { "type": "heading", "level": 2, "text": "Install-week blockers" },
           { "type": "bullets", "items": [
-            "#128 BPT loader (honest payment math)",
-            "#123 Developer ID signing (clean install)",
-            "#472 export (no CSV/PDF today)"
+            "#NNN BPT loader (honest payment math)",
+            "#NNN Developer ID signing (clean install)",
+            "#NNN export (no CSV/PDF today)"
           ] }
         ],
         [
           { "type": "heading", "level": 2, "text": "Then: credibility" },
           { "type": "bullets", "items": [
-            "Known-answer proof writeup (#473)",
-            "Methodology one-pager (#474)",
-            "Sandbox wired to a finding (#475)",
-            "Validation gate #238 - your call"
+            "Known-answer proof writeup (#NNN)",
+            "Methodology one-pager (#NNN)",
+            "Sandbox wired to a finding (#NNN)",
+            "Validation gate #NNN - your call"
           ] }
         ]
       ] }
@@ -67,7 +67,7 @@
   {
     "kicker": "WHAT SHIPPED - 1",
     "layout": "top",
-    "footer": "Proven locally; cloud-acceptance tail tracked on #485 / #446",
+    "footer": "Proven locally; cloud-acceptance tail tracked on #NNN / #NNN",
     "blocks": [
       { "type": "heading", "text": "ESRD scoring is graduated and wired through the platform" },
       { "type": "bullets", "items": [
@@ -81,13 +81,13 @@
   {
     "kicker": "WHAT SHIPPED - 2",
     "layout": "top",
-    "footer": "Honest gap: counts + banner not yet confirmed live (#485)",
+    "footer": "Honest gap: counts + banner not yet confirmed live (#NNN)",
     "blocks": [
       { "type": "heading", "text": "Dev refdata fix and the carbon UX wave" },
       { "type": "bullets", "items": [
-        "#461 fixed: bootstrap now migrates + loads all three databases explicitly, fail-loud",
+        "#NNN fixed: bootstrap now migrates + loads all three databases explicitly, fail-loud",
         "Dev ops re-ran clean (both exit 0); no infra change needed",
-        "Carbon: per-check skips surfaced (#352), assurance wired to real data (#300)",
+        "Carbon: per-check skips surfaced (#NNN), assurance wired to real data (#NNN)",
         "The stale 12/12 recall number was fake - now live"
       ] }
     ]

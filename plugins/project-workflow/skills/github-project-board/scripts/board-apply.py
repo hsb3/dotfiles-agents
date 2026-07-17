@@ -24,9 +24,9 @@ single-select is the OPTION NAME (resolved to its id here). `blocked_by` is a
 pseudo-field routed to the REST dependencies endpoint.
 
 Usage:
-    ./board-apply.py -o hsb3 -n 8 --changeset triage-batch2.tsv            # dry-run
-    ./board-apply.py -o hsb3 -n 8 --changeset triage-batch2.tsv --apply
-    ./board-apply.py -o hsb3 -n 8 --changeset edges.tsv --repo hsb3/ra-platform --apply
+    ./board-apply.py -o acme -n 8 --changeset triage-batch2.tsv            # dry-run
+    ./board-apply.py -o acme -n 8 --changeset triage-batch2.tsv --apply
+    ./board-apply.py -o acme -n 8 --changeset edges.tsv --repo acme/acme-platform --apply
 
 Auth: shells out to `gh` with GITHUB_TOKEN UNSET. Needs `gh auth refresh -s project`.
 Exit code is non-zero if any change failed.
