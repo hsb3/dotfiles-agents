@@ -1,0 +1,23 @@
+# --- Claude Code (track memory/rules/settings; ignore machine-local/transient) ---
+.claude/settings.local.json
+.claude/worktrees/
+.claude/*.lock
+.claude/**/.DS_Store
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+
+# --- secrets ---
+.env
+.env.*
+!.env.example
+
+# --- _meta: tracked by default (ADR-0006); operations/ holds secrets — its content is never tracked ---
+_meta/operations/*
+!_meta/operations/.gitkeep
+
+# --- Python ---
+__pycache__/
+*.pyc
+.ruff_cache/

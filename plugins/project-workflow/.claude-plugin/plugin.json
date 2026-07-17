@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Run a software project through the session-discipline loop \u2014 plan the work into conformant issues and source-grounded plans, keep sessions clearable with a durable handoff, delegate down-tier, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms.",
+  "name": "project-workflow",
+  "version": "0.4.0"
+}

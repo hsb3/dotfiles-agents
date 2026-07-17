@@ -1,0 +1,20 @@
+# plugins.yaml — PLUGIN BUNDLE METADATA
+#
+# Metadata for each plugin bundle (name/description/version). The roster
+# (primitives-core.yaml) defines MEMBERSHIP (which primitives ship in each plugin via the
+# `plugins:` field); this file carries the plugin-level metadata the marketplace root needs.
+# scripts/gen_marketplace.py joins the two to assemble each Claude Code bundle under plugins/
+# and regenerate .claude-plugin/marketplace.json.
+#
+# D1 SCAFFOLD: only project-workflow carries the seed skill. repo-standards and the standalone
+# catalog entries land in D3/D4.
+
+version: 1
+
+owner:
+  name: "Henry S. Burden III"
+
+plugins:
+  - id: project-workflow
+    version: "0.4.0"
+    description: "Run a software project through the session-discipline loop — plan the work into conformant issues and source-grounded plans, keep sessions clearable with a durable handoff, delegate down-tier, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms."

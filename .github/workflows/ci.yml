@@ -1,0 +1,18 @@
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: roster + marketplace drift guards + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: make ci

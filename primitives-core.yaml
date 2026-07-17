@@ -1,0 +1,33 @@
+# primitives-core.yaml — THE ROSTER
+#
+# Authoritative manifest of every primitive. Manifest-over-filename-sort: the marketplace
+# assembler and the roster<->disk drift guard read this file, not a directory listing.
+#
+# Entry schema (see primitives-core/README.md):
+#   id · type · source · shelf{core|toggle} · origin{authored|sourced} ·
+#   disposition{qualified|grandfathered-pending-use|demoted|untriaged} · vendor · targets[] ·
+#   plugins[] · summary · requires[] (optional; absent = no needs) — capability words
+#   {hooks|local-mcp|hosted-mcp} plus dependency declarations cli:<kebab> (a binary/app that
+#   must be installed) and env:<kebab> (machine state, e.g. env:dotfiles) — issue #79
+# origin is provenance (authored here vs sourced from upstream) and is immutable per entry;
+# origin: sourced entries must carry non-null `upstream:` and `ref:` fields (enforced by
+# scripts/check_roster.py). This is a Claude-Code-only distribution, so targets carry
+# `claude-code` alone; the multi-vendor translation surface was dropped at the rebuild.
+#
+# D1 SCAFFOLD: seeded with a single primitive (handoff) to wire the roster -> disk ->
+# generated-marketplace -> drift-guard loop end to end. The full 0007 lineup lands in the
+# bundle-port waves (D2/D3/D4); this file grows one appended entry at a time.
+
+version: 1
+
+primitives:
+  - id: handoff
+    type: skill
+    source: primitives-core/skills/handoff
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "Maintain the project's session-handoff file so a brand-new session can pick up work cold. Use at session boundaries when the user says \"wrap up\", \"update the handoff\", or runs /handoff."
