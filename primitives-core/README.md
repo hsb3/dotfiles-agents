@@ -33,6 +33,16 @@ Every entry in [`../primitives-core.yaml`](../primitives-core.yaml) carries thes
 `primitives-core` holds **self-authored** primitives only (ADR 0015); third-party items are
 recorded by reference in [`../externals.yaml`](../externals.yaml), never copied in.
 
+## Bundle README sources
+
+`bundles/<id>/README.md` is the value/proof README source for one plugin bundle (packaging
+P3 — every plugin folder ships a README). It isn't a roster primitive — there's no
+`primitives-core.yaml` entry for it — but it ships to a user the same way a skill body does:
+`scripts/gen_marketplace.py` copies it verbatim to `plugins/<id>/README.md`. Optional per
+bundle; a bundle with no README source ships without one rather than failing the build. In
+scope for the identity-neutrality lint (`scripts/check_identity.py`) for the same reason it's
+in scope for the drift guard — it ships.
+
 ## The regenerate + drift-guard invariant
 
 Every generated artifact (the assembled `plugins/` trees, `.claude-plugin/marketplace.json`)

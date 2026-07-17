@@ -127,6 +127,37 @@ class HookAssembly(unittest.TestCase):
         )
 
 
+class BundleReadmeAssembly(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-readmes-")
+        G.build_marketplace(self.tmp)
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_project_workflow_readme_byte_identical_to_source(self):
+        built = os.path.join(self.tmp, "plugins", "project-workflow", "README.md")
+        src = os.path.join(G.BUNDLES_DIR, "project-workflow", "README.md")
+        self.assertTrue(os.path.isfile(built))
+        self.assertTrue(G._identical(src, built))
+
+    def test_repo_standards_readme_byte_identical_to_source(self):
+        built = os.path.join(self.tmp, "plugins", "repo-standards", "README.md")
+        src = os.path.join(G.BUNDLES_DIR, "repo-standards", "README.md")
+        self.assertTrue(os.path.isfile(built))
+        self.assertTrue(G._identical(src, built))
+
+    def test_missing_readme_source_is_tolerated(self):
+        # A bundle with no primitives-core/bundles/<id>/README.md ships without one --
+        # the copy step must be a no-op, never a hard failure.
+        proot = os.path.join(self.tmp, "plugins", "no-such-bundle")
+        os.makedirs(proot)
+        G._copy_bundle_readme("no-such-bundle", proot)
+        self.assertFalse(os.path.exists(os.path.join(proot, "README.md")))
+
+
 class CheckCommitted(unittest.TestCase):
     def test_check_passes_on_committed_tree(self):
         self.assertEqual(G.check(), [])
