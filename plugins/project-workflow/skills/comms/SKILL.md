@@ -5,7 +5,7 @@ description: Produce your recurring communication deliverables - a morning statu
 
 # Comms
 
-your communication deliverables, produced to one standard so each is fast to make and
+Your communication deliverables, produced to one standard so each is fast to make and
 consistent to read. A deliverable is a dated folder under the project's
 `_meta/briefings/<YYYY-MM-DD>-<slug>/` holding the deck source, exported deck, optional audio,
 and a `sources.md` provenance file.
@@ -45,7 +45,7 @@ phrased.
 
 ## Hard rules (the standard's spine - never skip)
 
-- **Lead with the outcome / the decision; bury the detail.** the reader's standing complaint:
+- **Lead with the outcome / the decision; bury the detail.** The reader's standing complaint:
   "I'm drowning in details I don't really need before I get to what I need to know."
 - **Honest framing only.** Describe what is actually proven; call out gaps explicitly; never
   blanket accuracy or certification claims; never round up. External comms guard this hardest.

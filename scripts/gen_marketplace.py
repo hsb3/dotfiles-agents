@@ -65,7 +65,14 @@ MARKETPLACE_NAME = "dotfiles-agents"
 MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 METADATA = {
     "version": "0.2.0",
-    "description": "Proven Claude Code extenders, assembled from primitives-core.",
+    "description": (
+        "Two workflow bundles — project-workflow (plan, work, and report on a software "
+        "project without losing state between sessions) and repo-standards (bring a repo "
+        "to a documented meta-structure, audit-first) — plus three standalone skills: "
+        "private-fork (operate a private mirror of an upstream repo), opencode-expertise "
+        "(reference knowledge for opencode extension and Claude Code → opencode porting), "
+        "and pptx-themes (themed PowerPoint decks composed over Anthropic's pptx base)."
+    ),
 }
 
 
