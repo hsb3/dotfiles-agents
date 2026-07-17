@@ -82,6 +82,51 @@ class Build(unittest.TestCase):
             shutil.rmtree(other, ignore_errors=True)
 
 
+class HookAssembly(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-hooks-")
+        G.build_marketplace(self.tmp)
+        self.pw_hooks = os.path.join(self.tmp, "plugins", "project-workflow", "hooks")
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_hook_maps_to_project_workflow(self):
+        hooks = G.bundle_hooks(R.parse_roster(R.ROSTER))
+        self.assertIn("context-watermark", hooks.get("project-workflow", []))
+        self.assertIn("handoff-freshness-guard", hooks.get("project-workflow", []))
+
+    def test_hook_body_assembled_byte_identical(self):
+        built = os.path.join(self.pw_hooks, "context-watermark")
+        src = os.path.join(G.REPO, "primitives-core", "hooks", "context-watermark")
+        self.assertTrue(G._identical(src, built))
+
+    def test_plugin_hooks_manifest_written(self):
+        with open(os.path.join(self.pw_hooks, "hooks.json")) as fh:
+            manifest = json.load(fh)
+        self.assertIn("UserPromptSubmit", manifest["hooks"])
+        self.assertIn("PreCompact", manifest["hooks"])
+        cmd = manifest["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py", cmd)
+        self.assertIn("CONTEXT_WATERMARK_SOFT=70000", cmd)
+
+    def test_manifest_command_env_is_deterministic(self):
+        # Sorted env keys -> HARD before SOFT, every build.
+        m = G.build_hooks_manifest(
+            ["context-watermark"],
+            {"context-watermark": "primitives-core/hooks/context-watermark"},
+        )
+        cmd = m["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+        self.assertTrue(cmd.index("CONTEXT_WATERMARK_HARD") < cmd.index("CONTEXT_WATERMARK_SOFT"))
+
+    def test_bundle_without_hooks_has_no_hooks_dir(self):
+        self.assertFalse(
+            os.path.exists(os.path.join(self.tmp, "plugins", "repo-standards", "hooks"))
+        )
+
+
 class CheckCommitted(unittest.TestCase):
     def test_check_passes_on_committed_tree(self):
         self.assertEqual(G.check(), [])

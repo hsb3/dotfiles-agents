@@ -119,13 +119,57 @@ def parse_plugins_yaml(path):
 
 def bundle_members(roster):
     """Map each bundle id -> sorted list of the skill ids that name it in `plugins:`."""
+    return _members_of_type(roster, "skill")
+
+
+def bundle_hooks(roster):
+    """Map each bundle id -> sorted list of the hook ids that name it in `plugins:`."""
+    return _members_of_type(roster, "hook")
+
+
+def _members_of_type(roster, wanted):
     members = {}
     for e in roster:
-        if e.get("type") != "skill":
+        if e.get("type") != wanted:
             continue
         for bundle in _list(e.get("plugins", "")):
             members.setdefault(bundle, []).append(e["id"])
     return {b: sorted(ids) for b, ids in members.items()}
+
+
+def _hook_command(name, cfg):
+    """The plugin hooks-manifest command for one hook: an env prefix (sorted, deterministic)
+    then `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/<name>/hook.py"`."""
+    env = cfg.get("env") or {}
+    prefix = "".join(f"{k}={env[k]} " for k in sorted(env))
+    return f'{prefix}python3 "${{CLAUDE_PLUGIN_ROOT}}/hooks/{name}/hook.py"'
+
+
+def build_hooks_manifest(hook_ids, src_by_id):
+    """Synthesize the plugin `hooks/hooks.json` from each hook's committed config.json (which
+    carries its event binding). Returns the manifest dict, or None if the bundle has no hooks.
+    Deterministic: hooks grouped per event, ordered by hook id."""
+    if not hook_ids:
+        return None
+    events = {}
+    for name in sorted(hook_ids):
+        cfg_path = os.path.join(REPO, src_by_id[name], "config.json")
+        with open(cfg_path, encoding="utf-8") as fh:
+            cfg = json.load(fh)
+        events.setdefault(cfg["event"], []).append(
+            {
+                "matcher": cfg.get("matcher", "*"),
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": _hook_command(name, cfg),
+                        "timeout": cfg.get("timeout", 10),
+                        "statusMessage": cfg.get("statusMessage", ""),
+                    }
+                ],
+            }
+        )
+    return {"hooks": events}
 
 
 def build_marketplace(out_root):
@@ -136,13 +180,15 @@ def build_marketplace(out_root):
     roster = parse_roster(ROSTER)
     src_by_id = {e["id"]: e["source"] for e in roster}
     members = bundle_members(roster)
+    hooks = bundle_hooks(roster)
 
     plugins_out = os.path.join(out_root, "plugins")
     entries = []
     for meta in plugin_meta:
         bundle = meta["id"]
         ids = members.get(bundle, [])
-        if not ids:
+        hook_ids = hooks.get(bundle, [])
+        if not ids and not hook_ids:
             continue  # a metadata-only bundle with no roster members does not ship yet
         proot = os.path.join(plugins_out, bundle)
         os.makedirs(os.path.join(proot, ".claude-plugin"), exist_ok=True)
@@ -161,6 +207,17 @@ def build_marketplace(out_root):
                 os.path.join(proot, "skills", skill_id),
                 ignore=IGNORE,
             )
+        for hook_id in hook_ids:
+            shutil.copytree(
+                os.path.join(REPO, src_by_id[hook_id]),
+                os.path.join(proot, "hooks", hook_id),
+                ignore=IGNORE,
+            )
+        hooks_manifest = build_hooks_manifest(hook_ids, src_by_id)
+        if hooks_manifest is not None:
+            with open(os.path.join(proot, "hooks", "hooks.json"), "w") as fh:
+                json.dump(hooks_manifest, fh, indent=2, sort_keys=True)
+                fh.write("\n")
         entries.append(
             {
                 "name": bundle,

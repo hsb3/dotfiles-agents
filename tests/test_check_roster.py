@@ -115,6 +115,41 @@ class DiskPrimitives(unittest.TestCase):
             C.PC, C.REPO = old_pc, old_repo
         self.assertIn("mcp", {t for t, _src in found})
 
+    def _hook_disk(self, spec):
+        """Build a primitives-core/hooks/ tree from {name: has_hook_py} and scan it."""
+        repo = tempfile.mkdtemp()
+        d = os.path.join(repo, "primitives-core")
+        for name, has_py in spec.items():
+            hd = os.path.join(d, "hooks", name)
+            os.makedirs(hd)
+            if has_py:
+                with open(os.path.join(hd, "hook.py"), "w") as fh:
+                    fh.write("print(1)\n")
+        old_pc, old_repo = C.PC, C.REPO
+        C.PC, C.REPO = d, repo
+        try:
+            return {src for t, src in C.disk_primitives() if t == "hook"}, d
+        finally:
+            C.PC, C.REPO = old_pc, old_repo
+
+    def test_discovers_ratified_layout_hook(self):
+        found, _ = self._hook_disk({"context-watermark": True})
+        self.assertIn("primitives-core/hooks/context-watermark", found)
+
+    def test_ignores_hook_dir_without_hook_py(self):
+        found, _ = self._hook_disk({"stub": False})
+        self.assertEqual(found, set())
+
+    def test_roster_and_hook_layout_agree(self):
+        # Drift guard: a hook check_roster discovers must also pass check_hook_layout, and a
+        # layout check_hook_layout bans (legacy .sh) must NOT be discovered as a hook.
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        import check_hook_layout as HL
+
+        found, d = self._hook_disk({"context-watermark": True})
+        self.assertIn("primitives-core/hooks/context-watermark", found)
+        self.assertEqual(HL.check_root(os.path.join(d, "hooks"), d), [])
+
 
 class CleanTree(unittest.TestCase):
     def test_main_returns_zero(self):
