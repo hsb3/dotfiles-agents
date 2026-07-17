@@ -14,12 +14,11 @@ Enforces the composition + provenance invariants of the rebuild (ADR 0015 / desk
 The `origin: sourced ⇒ non-null upstream+ref` roster rule is already enforced by
 `check_roster.py`; this check owns the *placement* invariant (1) and the externals intent (2).
 
-SEQUENCING GATE (foreman coupling): externals-entry intent enforcement (2) is coupled to
-D5/DEV-34, which is still gated on Henry's J5 ruling — the current `externals.yaml` (once D5
-lands it) will carry unresearched null entries by design. So (2) is built and proven red-able
-via a fixture, but its activation is behind `ENFORCE_EXTERNALS_INTENT` (default False): the
-check REPORTS the current externals conformance state without blocking CI on it. Flip the flag
-(a one-line change) when D5 has researched the entries. Invariant (1) always blocks.
+Externals-entry intent enforcement (2) was gated behind `ENFORCE_EXTERNALS_INTENT` while
+D5/DEV-34 was pending Henry's J5 ruling (so `externals.yaml` didn't exist and couldn't carry
+recorded intent yet). J5 ruled 2026-07-17 (decision 0019: keep 5, drop 26) and D5 populated
+`externals.yaml` with those 5 entries, each with non-null `upstream` + `ref` — the flag is now
+`True` and (2) blocks CI like (1) always has. Invariant (1) always blocks.
 
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violation.
 Usage: python3 scripts/check_provenance.py   (run from the repo root)
@@ -38,9 +37,10 @@ ROSTER = os.path.join(REPO, "primitives-core.yaml")
 EXTERNALS = os.path.join(REPO, "externals.yaml")
 PRIMITIVES_CORE_PREFIX = "primitives-core/"
 
-# Coupled to D5/DEV-34 (Henry's J5 ruling). Keep False until the externals entries are
-# researched; the check reports state but does not block CI. Flip to True to activate.
-ENFORCE_EXTERNALS_INTENT = False
+# Activated at D5 (J5-ruled, decision 0019): externals.yaml now carries recorded intent for
+# its 5 kept entries. The check blocks CI on missing/null upstream+ref like it always has for
+# invariant (1).
+ENFORCE_EXTERNALS_INTENT = True
 
 
 def authored_placement_violations(roster):

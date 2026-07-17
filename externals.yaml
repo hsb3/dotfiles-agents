@@ -1,0 +1,66 @@
+# externals.yaml — EXTERNAL / VENDORED EXTENDER TRACKER
+#
+# Third-party extenders are NOT vendored into primitives-core/ (ADR 0015 / composition
+# principle). This tracker records each one's upstream source repo + pinned ref, by reference
+# only. The clone-at-build step that renders these into targets/ under a byte-diff drift guard
+# is separate work (DEV-34 / GitHub #36); this file is the recorded intent that step consumes.
+# Claude-Code-only distribution (R4): every entry's `targets` carries `claude-code` alone.
+#
+# Entry schema:
+#   - id:       <kebab>                                the roster/catalog id this projects
+#     kind:     plugin | skill | mcp                    what upstream form it takes
+#     upstream: <git url>                                repo the ref is pinned against
+#     path:     <repo-relative path>                     optional — subdir within a monorepo
+#                                                         upstream (omitted when upstream IS
+#                                                         the thing, e.g. a single-skill repo)
+#     ref:      <immutable commit SHA>                   pin for reproducible clones; never a
+#                                                         branch name (a branch pins nothing)
+#     provides: <one line>                               what it gives us
+#     targets:  [claude-code]
+#
+# Enforcement: scripts/check_provenance.py's ENFORCE_EXTERNALS_INTENT requires every entry here
+# to carry non-null upstream + ref — activated once this file is genuinely researched (D5).
+#
+# Provenance (J5 / decision 0019, accepted 2026-07-17): keep 5 of the 31 previously-unresearched
+# entries on the pre-rebuild tree's externals.yaml, drop the other 26 (zero usage signal / no
+# resolvable upstream) — see DEV-34 (GitHub #36) for the full research + ruling. SHAs below are
+# each repo's HEAD as of the 2026-07-17 research pass, frozen as immutable pins per the ruling
+# (re-confirm only on a deliberate bump — not automatically).
+
+version: 1
+
+externals:
+  - id: excalidraw-diagram-coleam00
+    kind: skill
+    upstream: https://github.com/coleam00/excalidraw-diagram-skill
+    ref: 8646fcc9f74f38539c6cdb4c969723336a96ddcd
+    provides: "Excalidraw diagram JSON that makes visual arguments."
+    targets: [claude-code]
+  - id: frontend-design
+    kind: plugin
+    upstream: https://github.com/anthropics/claude-plugins-official
+    path: plugins/frontend-design
+    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
+    provides: "Distinctive production-grade frontend interfaces."
+    targets: [claude-code]
+  - id: code-simplifier
+    kind: plugin
+    upstream: https://github.com/anthropics/claude-plugins-official
+    path: plugins/code-simplifier
+    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
+    provides: "Simplifies/refines code for clarity & maintainability."
+    targets: [claude-code]
+  - id: typescript-lsp
+    kind: plugin
+    upstream: https://github.com/anthropics/claude-plugins-official
+    path: plugins/typescript-lsp
+    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
+    provides: "TS/JS language server."
+    targets: [claude-code]
+  - id: skill-creator
+    kind: plugin
+    upstream: https://github.com/anthropics/claude-plugins-official
+    path: plugins/skill-creator
+    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
+    provides: "Create/improve/measure skills."
+    targets: [claude-code]
