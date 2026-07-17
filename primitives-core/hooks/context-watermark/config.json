@@ -1,0 +1,10 @@
+{
+  "event": "UserPromptSubmit",
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Checking context watermark...",
+  "env": {
+    "CONTEXT_WATERMARK_SOFT": "70000",
+    "CONTEXT_WATERMARK_HARD": "100000"
+  }
+}

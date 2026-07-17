@@ -14,8 +14,9 @@
 # scripts/check_roster.py). This is a Claude-Code-only distribution, so targets carry
 # `claude-code` alone; the multi-vendor translation surface was dropped at the rebuild.
 #
-# Wave 1 (D2/D3): the 0007 bundle lineup lands here — project-workflow (5) + repo-standards
-# (6). Ported verbatim from dev-legacy; identity-neutralization deferred to D6/F.
+# The 0007 bundle lineup: project-workflow (5 skills + 2 nudge hooks) + repo-standards (6
+# skills). Skill bodies ported from dev-legacy and identity-neutralized at D6; the two nudge
+# hooks ported from foreman-kit v0.5.0 at D2 (context-watermark, handoff-freshness-guard).
 
 version: 1
 
@@ -134,3 +135,23 @@ primitives:
     targets: [claude-code]
     plugins: [repo-standards]
     summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."
+  - id: context-watermark
+    type: hook
+    source: primitives-core/hooks/context-watermark
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "UserPromptSubmit nudge hook: warns when session context crosses the soft/hard token watermarks and nudges toward /handoff + /clear (or /compact). Ships the operating line soft=70k/hard=100k; fails open, never blocks a prompt."
+  - id: handoff-freshness-guard
+    type: hook
+    source: primitives-core/hooks/handoff-freshness-guard
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "PreCompact nudge hook: blocks a manual /compact when the project's HANDOFF.md is stale/missing (run /handoff first); never blocks auto-compaction — fails open with non-blocking guidance instead."

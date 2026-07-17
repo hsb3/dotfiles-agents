@@ -97,13 +97,19 @@ def disk_primitives():
         for f in os.listdir(ag):
             if f.endswith(".md"):
                 found.add(("agent", f"primitives-core/agents/{f}"))
+    # Ratified hook-dir layout: each hooks/<name>/ carrying a hook.py is one hook primitive
+    # (source = the dir, like a skill). Must stay consistent with scripts/check_hook_layout.py,
+    # which bans the old hooks-handlers/*.sh layout; a test guards the two against drifting.
     hk = os.path.join(PC, "hooks")
-    for root, _dirs, files in os.walk(hk):
-        if os.path.basename(root) == "hooks-handlers":
-            for f in files:
-                if f.endswith(".sh"):
-                    rel = os.path.relpath(os.path.join(root, f), REPO)
-                    found.add(("hook", rel))
+    if os.path.isdir(hk):
+        for d in sorted(os.listdir(hk)):
+            dp = os.path.join(hk, d)
+            if (
+                os.path.isdir(dp)
+                and not d.startswith(".")
+                and os.path.isfile(os.path.join(dp, "hook.py"))
+            ):
+                found.add(("hook", f"primitives-core/hooks/{d}"))
     mc = os.path.join(PC, "mcp")
     if os.path.isdir(mc):
         for f in os.listdir(mc):

@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff-freshness-guard/hook.py\"",
+            "statusMessage": "Checking handoff freshness...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "CONTEXT_WATERMARK_HARD=100000 CONTEXT_WATERMARK_SOFT=70000 python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
+            "statusMessage": "Checking context watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}
