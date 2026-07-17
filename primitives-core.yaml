@@ -14,9 +14,8 @@
 # scripts/check_roster.py). This is a Claude-Code-only distribution, so targets carry
 # `claude-code` alone; the multi-vendor translation surface was dropped at the rebuild.
 #
-# D1 SCAFFOLD: seeded with a single primitive (handoff) to wire the roster -> disk ->
-# generated-marketplace -> drift-guard loop end to end. The full 0007 lineup lands in the
-# bundle-port waves (D2/D3/D4); this file grows one appended entry at a time.
+# Wave 1 (D2/D3): the 0007 bundle lineup lands here — project-workflow (5) + repo-standards
+# (6). Ported verbatim from dev-legacy; identity-neutralization deferred to D6/F.
 
 version: 1
 
@@ -31,3 +30,107 @@ primitives:
     targets: [claude-code]
     plugins: [project-workflow]
     summary: "Maintain the project's session-handoff file so a brand-new session can pick up work cold. Use at session boundaries when the user says \"wrap up\", \"update the handoff\", or runs /handoff."
+  - id: board-triage
+    type: skill
+    source: primitives-core/skills/board-triage
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "This skill should be used when the user asks to \"run board triage\", \"triage the backlog\", \"prioritize the issues\", \"rank the unranked issues\", \"fill in Impac…"
+  - id: comms
+    type: skill
+    source: primitives-core/skills/comms
+    shelf: core
+    origin: authored
+    disposition: qualified
+    requires: [local-mcp]
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "Produce Henry's recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout,…"
+  - id: github-project-board
+    type: skill
+    source: primitives-core/skills/github-project-board
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma…"
+  - id: memory-taxonomy
+    type: skill
+    source: primitives-core/skills/memory-taxonomy
+    shelf: core
+    origin: authored
+    disposition: qualified
+    requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
+    vendor: null
+    targets: [claude-code]
+    plugins: [repo-standards]
+    summary: "The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism; carries the approved v1 defaults and the MEM-xx structure checklist the compliance audit consumes."
+  - id: mise-en-place-scaffold
+    type: skill
+    source: primitives-core/skills/mise-en-place-scaffold
+    shelf: core
+    origin: authored
+    disposition: qualified
+    requires: [cli:cc-project-memory]
+    vendor: null
+    targets: [claude-code]
+    plugins: [repo-standards]
+    summary: "Fill-only mise-en-place scaffold — plans (--plan, default) and creates (--apply) the repo meta-structure the compliance audit flags, from the standards' assets, honoring _meta/mise-en-place.yml variance (--init-manifest writes the template); additive-only, never overwrites, conflicts reported with diffs."
+  - id: planning-desk
+    type: skill
+    source: primitives-core/skills/planning-desk
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "Stand up and run a source-grounded planning desk under _meta/plans/ — the workflow for authoring conformant GitHub issue bodies, writing deep build plans, an…"
+  - id: private-fork
+    type: skill
+    source: primitives-core/skills/private-fork
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [repo-standards]
+    summary: "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle."
+  - id: readme-value-and-proof
+    type: skill
+    source: primitives-core/skills/readme-value-and-proof
+    shelf: core
+    origin: authored
+    disposition: qualified
+    requires: [cli:capture-console-errors]
+    vendor: null
+    targets: [claude-code]
+    plugins: [repo-standards]
+    summary: "Turn a README into a user-centric pitch backed by real visual proof."
+  - id: repo-compliance-audit
+    type: skill
+    source: primitives-core/skills/repo-compliance-audit
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [repo-standards]
+    summary: "Read-only repo compliance audit — one command prints a pass/gap table (ID | Area | Verdict | Detail) against the repo-meta-structure and memory-taxonomy checklists plus HOOK-01, honoring _meta/mise-en-place.yml variance; reports, never writes or polices."
+  - id: repo-meta-structure
+    type: skill
+    source: primitives-core/skills/repo-meta-structure
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [repo-standards]
+    summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."

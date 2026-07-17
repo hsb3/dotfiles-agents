@@ -17,6 +17,15 @@
       "name": "project-workflow",
       "source": "./plugins/project-workflow",
       "version": "0.4.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Bring a repo to the meta-structure standard \u2014 audit compliance, scaffold the gaps, apply the memory taxonomy and repo layout standards, turn the README into an honest value-and-proof pitch, and run a private fork's upstream review cycle.",
+      "name": "repo-standards",
+      "source": "./plugins/repo-standards",
+      "version": "0.1.0"
     }
   ]
 }
