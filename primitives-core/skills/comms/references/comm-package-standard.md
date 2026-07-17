@@ -16,15 +16,15 @@ Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 ## Two toolchains
 
-| | deck-builder (MCP) | pptx-henry (skill) |
+| | deck-builder (MCP) | pptx-themes (skill) |
 | --- | --- | --- |
 | Source | `slides.json` (block types: heading / subtitle / bullets / columns / stat) | `deck.js` (pptxgenjs) + `package.json` |
-| Theme | `boardroom` (deck-builder theme arg) | semantic tokens from the pptx-henry skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
+| Theme | `boardroom` (deck-builder theme arg) | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
 | Output | `.pdf` + `.mp3` | `.pptx` + `.pdf` |
 | Strengths | fast, structured, validated, linkifies bare #refs, audio companion | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
 | Use for | internal, frequent, decision-first (morning, EOD, weekly) | external, high-stakes (advisor board, client overview) |
 
-For pptx-henry decks, invoke the **`pptx-henry` skill** - it owns the approved palette, semantic
+For pptx-themes decks, invoke the **`pptx-themes` skill** - it owns the approved palette, semantic
 theme tokens, typography, and the visual-QA workflow. Available token themes: `actuarial-signal`,
 `boardroom`, `clinical-intelligence`, `human-outcomes`, `carbon-white`, `ivory`, `midnight`.
 
@@ -45,9 +45,9 @@ The skill is global; outputs are per-project. Each deliverable is a dated folder
 
 ```
 <project>/_meta/briefings/<YYYY-MM-DD>-<slug>/
-  slides.json | deck.js (+ package.json)   # source: deck-builder OR pptx-henry
+  slides.json | deck.js (+ package.json)   # source: deck-builder OR pptx-themes
   <name>.pdf                                # exported deck (always)
-  <name>.pptx                               # pptx-henry only
+  <name>.pptx                               # pptx-themes only
   <name>.mp3                                # audio, if the playbook calls for it
   sources.md                                # claim-by-claim provenance
 ```
@@ -89,10 +89,10 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 7. Write `sources.md` (provenance per claim + "board is the live source of truth").
 8. Deliver: `SendUserFile` the PDF (and MP3).
 
-**pptx-henry path** (advisor board, client overview):
+**pptx-themes path** (advisor board, client overview):
 
 1. Gather + decide the narrative arc and the ask (see playbook).
-2. Invoke the `pptx-henry` skill; author `deck.js` against the chosen token theme.
+2. Invoke the `pptx-themes` skill; author `deck.js` against the chosen token theme.
 3. `node deck.js` to write the `.pptx`; export / convert the `.pdf`.
 4. Run the skill's visual-QA pass (overflow, contrast, alignment).
 5. Write `sources.md`; deliver via `SendUserFile`.
@@ -108,7 +108,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 - **Prettier table-cell trap** (only matters if a `.md` gets committed): no unicode width chars
   (em-dash, middle-dot, arrows, ellipsis) or literal `|` inside markdown table cells - use ASCII
   (`-`, `to`, `vs`). Prose and JSON and code blocks are fine.
-- **pptx-henry leaves `node_modules/` + `package-lock.json`** in the output folder; that's fine
+- **pptx-themes leaves `node_modules/` + `package-lock.json`** in the output folder; that's fine
   - the folder is typically gitignored. Don't commit them.
 
 ## Delivery

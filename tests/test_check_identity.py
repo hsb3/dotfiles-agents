@@ -59,8 +59,9 @@ class Precision(unittest.TestCase):
         self.assertFalse(any("cc-project-memory" in p for p in probs))
 
     def test_skill_id_with_embedded_name_not_flagged(self):
-        # `pptx-henry` is a skill-id reference (structural dependency), not baked-in identity.
-        self.assertEqual([p for p in _scan("compose with the pptx-henry skill")], [])
+        # A name embedded in a hyphenated skill id (e.g. foo-henry) is a structural reference,
+        # not baked-in identity — the hyphen-boundary rule must not flag the embedded token.
+        self.assertEqual([p for p in _scan("compose with the foo-henry skill")], [])
 
     def test_checklist_gh_id_not_flagged(self):
         # GH-01..GH-09 are repo-meta-structure checklist ids, not issue refs.

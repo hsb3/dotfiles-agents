@@ -45,6 +45,31 @@ class Build(unittest.TestCase):
         self.assertEqual(G.verify_wrappers(self.tmp, self.ids), [])
 
 
+class ComposedSkill(unittest.TestCase):
+    """pptx-themes composes an authored theme layer over a verbatim-vendored Anthropic base."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-standalone-composed-")
+        G.build_standalone(self.tmp)
+        self.wrapper = os.path.join(self.tmp, "pptx-themes", "skills", "pptx-themes")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_pptx_themes_wrapper_emitted(self):
+        self.assertIn("pptx-themes", os.listdir(self.tmp))
+
+    def test_vendored_base_and_license_ship(self):
+        self.assertTrue(os.path.isfile(os.path.join(self.wrapper, "base", "LICENSE.txt")))
+        self.assertTrue(os.path.isfile(os.path.join(self.wrapper, "base", "SKILL.md")))
+
+    def test_attribution_readme_cites_the_pin(self):
+        with open(os.path.join(self.wrapper, "README.md"), encoding="utf-8") as fh:
+            readme = fh.read()
+        self.assertIn("fa0fa64bdc967915dc8399e803be67759e1e62b8", readme)
+        self.assertIn("anthropics/skills", readme)
+
+
 class Invariants(unittest.TestCase):
     def test_check_mode_passes_on_committed_catalog(self):
         self.assertEqual(G.main(["--check"]), 0)
@@ -56,9 +81,9 @@ class Invariants(unittest.TestCase):
     def test_standalone_entries_shape(self):
         entries = G.standalone_entries()
         self.assertEqual(
-            [e["name"] for e in entries], ["opencode-expertise", "private-fork"]
+            [e["name"] for e in entries], ["opencode-expertise", "pptx-themes", "private-fork"]
         )
-        e = entries[1]
+        e = next(x for x in entries if x["name"] == "private-fork")
         self.assertEqual(e["source"], "./plugins/private-fork")
         self.assertTrue(e["description"])
         self.assertEqual(e["author"], G.author())
