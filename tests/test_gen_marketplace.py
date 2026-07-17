@@ -43,14 +43,16 @@ class Build(unittest.TestCase):
 
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_marketplace_lists_bundle(self):
+    def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
-        self.assertEqual(names, ["project-workflow", "repo-standards"])
+        # exactly the two bundles + the private-fork standalone, sorted by name
+        self.assertEqual(names, ["private-fork", "project-workflow", "repo-standards"])
         self.assertEqual(self.market["name"], "dotfiles-agents")
 
     def test_source_points_into_plugins_dir(self):
-        pw = self.market["plugins"][0]
-        self.assertEqual(pw["source"], "./plugins/project-workflow")
+        by_name = {p["name"]: p for p in self.market["plugins"]}
+        self.assertEqual(by_name["project-workflow"]["source"], "./plugins/project-workflow")
+        self.assertEqual(by_name["private-fork"]["source"], "./plugins/private-fork")
 
     def test_plugin_name_equals_bundle_id(self):
         with open(
@@ -156,6 +158,43 @@ class BundleReadmeAssembly(unittest.TestCase):
         os.makedirs(proot)
         G._copy_bundle_readme("no-such-bundle", proot)
         self.assertFalse(os.path.exists(os.path.join(proot, "README.md")))
+
+
+class StandaloneAssembly(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-standalone-")
+        self.market = G.build_marketplace(self.tmp)
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_standalone_wrapper_assembled(self):
+        wrapper = os.path.join(self.tmp, "plugins", "private-fork")
+        self.assertTrue(os.path.isdir(wrapper))
+        with open(os.path.join(wrapper, ".claude-plugin", "plugin.json")) as fh:
+            manifest = json.load(fh)
+        self.assertEqual(manifest["name"], "private-fork")
+        # exactly one skill folder, its own
+        self.assertEqual(sorted(os.listdir(os.path.join(wrapper, "skills"))), ["private-fork"])
+
+    def test_wrapped_body_byte_identical_to_source(self):
+        built = os.path.join(self.tmp, "plugins", "private-fork", "skills", "private-fork")
+        src = os.path.join(G.REPO, "primitives-core", "skills", "private-fork")
+        self.assertTrue(G._identical(src, built))
+
+    def test_standalone_entry_in_marketplace(self):
+        by_name = {p["name"]: p for p in self.market["plugins"]}
+        self.assertIn("private-fork", by_name)
+        self.assertEqual(by_name["private-fork"]["source"], "./plugins/private-fork")
+
+    def test_standalone_coexists_with_bundle(self):
+        # private-fork ships BOTH as a standalone plugin and inside the repo-standards bundle.
+        bundle_skill = os.path.join(
+            self.tmp, "plugins", "repo-standards", "skills", "private-fork"
+        )
+        self.assertTrue(os.path.isdir(bundle_skill))
 
 
 class CheckCommitted(unittest.TestCase):
