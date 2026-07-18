@@ -6,8 +6,11 @@
 # scripts/gen_marketplace.py joins the two to assemble each Claude Code bundle under plugins/
 # and regenerate .claude-plugin/marketplace.json.
 #
-# Wave 1 (D2/D3): repo-standards joins project-workflow as the second 0007 bundle. The
-# standalone catalog entries land in D4.
+# E4/E5/E6 (ruling 0020): the two desk bundles recompose along desk lines. project-workflow
+# renames to code-desk and absorbs repo-standards' six skills (repo-standards retires);
+# exec-desk is new (the executive-desk overhead: planning, comms, board triage, deck themes).
+# github-project-board drops to standalone-only (skill-catalog.yaml). The standalone catalog
+# entries land in D4.
 
 version: 1
 
@@ -15,12 +18,12 @@ owner:
   name: "Henry S. Burden III"
 
 plugins:
-  - id: project-workflow
-    version: "0.4.0"
-    description: "Run a software project through the session-discipline loop — plan the work into conformant issues and source-grounded plans, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms."
-  - id: repo-standards
+  - id: code-desk
     version: "0.1.0"
-    description: "Bring a repo to the meta-structure standard — audit compliance, scaffold the gaps, apply the memory taxonomy and repo layout standards, turn the README into an honest value-and-proof pitch, and run a private fork's upstream review cycle."
+    description: "Bring a software project through the next-release execution loop and a documented repo standard together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle."
+  - id: exec-desk
+    version: "0.1.0"
+    description: "The executive-desk overhead — stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks."
   - id: foreman-kit
     version: "0.5.0"
     description: "A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout · builder · reviewer · lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, and four hooks — context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage."

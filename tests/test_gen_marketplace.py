@@ -21,8 +21,8 @@ class PluginsYaml(unittest.TestCase):
         owner, plugins = G.parse_plugins_yaml(G.PLUGINS_YAML)
         self.assertTrue(owner)
         ids = {p["id"] for p in plugins}
-        self.assertIn("project-workflow", ids)
-        pw = next(p for p in plugins if p["id"] == "project-workflow")
+        self.assertIn("code-desk", ids)
+        pw = next(p for p in plugins if p["id"] == "code-desk")
         self.assertTrue(pw.get("version"))
         self.assertTrue(pw.get("description"))
 
@@ -36,8 +36,10 @@ class Membership(unittest.TestCase):
     def test_handoff_not_in_project_workflow(self):
         # E3 dedup: no primitive ships in both foreman-kit and a desk bundle.
         members = G.bundle_members(R.parse_roster(R.ROSTER))
-        self.assertNotIn("handoff", members.get("project-workflow", []))
-        self.assertIn("board-triage", members.get("project-workflow", []))
+        self.assertNotIn("handoff", members.get("code-desk", []))
+        self.assertNotIn("handoff", members.get("exec-desk", []))
+        # E4/E5/E6 recomposition: board-triage moved from project-workflow to exec-desk.
+        self.assertIn("board-triage", members.get("exec-desk", []))
 
 
 class Build(unittest.TestCase):
@@ -52,31 +54,39 @@ class Build(unittest.TestCase):
 
     def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
-        # three bundles (foreman-kit, project-workflow, repo-standards) + three standalone
-        # skills (opencode-expertise, pptx-themes, private-fork), sorted by name
+        # two bundles (code-desk, exec-desk) + foreman-kit + four standalone skills
+        # (github-project-board, opencode-expertise, pptx-themes, private-fork), sorted by name
         self.assertEqual(
             names,
-            ["foreman-kit", "opencode-expertise", "pptx-themes", "private-fork", "project-workflow", "repo-standards"],
+            [
+                "code-desk",
+                "exec-desk",
+                "foreman-kit",
+                "github-project-board",
+                "opencode-expertise",
+                "pptx-themes",
+                "private-fork",
+            ],
         )
         self.assertEqual(self.market["name"], "dotfiles-agents")
 
     def test_source_points_into_plugins_dir(self):
         by_name = {p["name"]: p for p in self.market["plugins"]}
-        self.assertEqual(by_name["project-workflow"]["source"], "./plugins/project-workflow")
+        self.assertEqual(by_name["code-desk"]["source"], "./plugins/code-desk")
         self.assertEqual(by_name["private-fork"]["source"], "./plugins/private-fork")
 
     def test_plugin_name_equals_bundle_id(self):
         with open(
             os.path.join(
-                self.tmp, "plugins", "project-workflow", ".claude-plugin", "plugin.json"
+                self.tmp, "plugins", "code-desk", ".claude-plugin", "plugin.json"
             )
         ) as fh:
             manifest = json.load(fh)
-        self.assertEqual(manifest["name"], "project-workflow")
+        self.assertEqual(manifest["name"], "code-desk")
 
     def test_skill_body_is_byte_identical_to_source(self):
         built = os.path.join(
-            self.tmp, "plugins", "project-workflow", "skills", "board-triage"
+            self.tmp, "plugins", "exec-desk", "skills", "board-triage"
         )
         src = os.path.join(G.REPO, "primitives-core", "skills", "board-triage")
         self.assertTrue(G._identical(src, built))
@@ -113,8 +123,9 @@ class HookAssembly(unittest.TestCase):
         for hid in ("context-watermark", "handoff-freshness-guard",
                     "session-handoff-surfacer", "subagent-telemetry"):
             self.assertIn(hid, fk)
-        # E3 dedup: hooks no longer ship in project-workflow.
-        self.assertEqual(hooks.get("project-workflow", []), [])
+        # E3 dedup: hooks no longer ship in a desk bundle.
+        self.assertEqual(hooks.get("code-desk", []), [])
+        self.assertEqual(hooks.get("exec-desk", []), [])
 
     def test_hook_body_assembled_byte_identical(self):
         built = os.path.join(self.fk_hooks, "context-watermark")
@@ -142,7 +153,7 @@ class HookAssembly(unittest.TestCase):
 
     def test_bundle_without_hooks_has_no_hooks_dir(self):
         self.assertFalse(
-            os.path.exists(os.path.join(self.tmp, "plugins", "repo-standards", "hooks"))
+            os.path.exists(os.path.join(self.tmp, "plugins", "code-desk", "hooks"))
         )
 
 
@@ -163,8 +174,9 @@ class AgentAssembly(unittest.TestCase):
         fk = agents.get("foreman-kit", [])
         for aid in ("scout", "builder", "reviewer", "lead"):
             self.assertIn(aid, fk)
-        # seed-agent removed: no agents ship in project-workflow anymore.
-        self.assertEqual(agents.get("project-workflow", []), [])
+        # seed-agent removed: no agents ship in a desk bundle.
+        self.assertEqual(agents.get("code-desk", []), [])
+        self.assertEqual(agents.get("exec-desk", []), [])
 
     def test_agent_body_assembled_byte_identical(self):
         built = os.path.join(self.fk_agents, "scout.md")
@@ -174,7 +186,7 @@ class AgentAssembly(unittest.TestCase):
 
     def test_bundle_without_agents_has_no_agents_dir(self):
         self.assertFalse(
-            os.path.exists(os.path.join(self.tmp, "plugins", "repo-standards", "agents"))
+            os.path.exists(os.path.join(self.tmp, "plugins", "code-desk", "agents"))
         )
 
     def test_agent_drift_is_red_able(self):
@@ -294,15 +306,15 @@ class BundleReadmeAssembly(unittest.TestCase):
 
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_project_workflow_readme_byte_identical_to_source(self):
-        built = os.path.join(self.tmp, "plugins", "project-workflow", "README.md")
-        src = os.path.join(G.BUNDLES_DIR, "project-workflow", "README.md")
+    def test_code_desk_readme_byte_identical_to_source(self):
+        built = os.path.join(self.tmp, "plugins", "code-desk", "README.md")
+        src = os.path.join(G.BUNDLES_DIR, "code-desk", "README.md")
         self.assertTrue(os.path.isfile(built))
         self.assertTrue(G._identical(src, built))
 
-    def test_repo_standards_readme_byte_identical_to_source(self):
-        built = os.path.join(self.tmp, "plugins", "repo-standards", "README.md")
-        src = os.path.join(G.BUNDLES_DIR, "repo-standards", "README.md")
+    def test_exec_desk_readme_byte_identical_to_source(self):
+        built = os.path.join(self.tmp, "plugins", "exec-desk", "README.md")
+        src = os.path.join(G.BUNDLES_DIR, "exec-desk", "README.md")
         self.assertTrue(os.path.isfile(built))
         self.assertTrue(G._identical(src, built))
 
@@ -345,9 +357,9 @@ class StandaloneAssembly(unittest.TestCase):
         self.assertEqual(by_name["private-fork"]["source"], "./plugins/private-fork")
 
     def test_standalone_coexists_with_bundle(self):
-        # private-fork ships BOTH as a standalone plugin and inside the repo-standards bundle.
+        # private-fork ships BOTH as a standalone plugin and inside the code-desk bundle.
         bundle_skill = os.path.join(
-            self.tmp, "plugins", "repo-standards", "skills", "private-fork"
+            self.tmp, "plugins", "code-desk", "skills", "private-fork"
         )
         self.assertTrue(os.path.isdir(bundle_skill))
 
