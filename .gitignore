@@ -21,3 +21,6 @@ _meta/operations/*
 __pycache__/
 *.pyc
 .ruff_cache/
+
+# --- runtime logs (e.g. foreman-kit subagent-telemetry -> logs/delegation.jsonl) ---
+logs/
