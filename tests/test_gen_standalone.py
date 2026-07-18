@@ -81,7 +81,8 @@ class Invariants(unittest.TestCase):
     def test_standalone_entries_shape(self):
         entries = G.standalone_entries()
         self.assertEqual(
-            [e["name"] for e in entries], ["opencode-expertise", "pptx-themes", "private-fork"]
+            [e["name"] for e in entries],
+            ["github-project-board", "opencode-expertise", "pptx-themes", "private-fork"],
         )
         e = next(x for x in entries if x["name"] == "private-fork")
         self.assertEqual(e["source"], "./plugins/private-fork")

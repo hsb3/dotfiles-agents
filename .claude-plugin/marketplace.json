@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Two workflow bundles \u2014 project-workflow (plan, work, and report on a software project without losing state between sessions) and repo-standards (bring a repo to a documented meta-structure, audit-first) \u2014 plus three standalone skills: private-fork (operate a private mirror of an upstream repo), opencode-expertise (reference knowledge for opencode extension and Claude Code \u2192 opencode porting), and pptx-themes (themed PowerPoint decks composed over Anthropic's pptx base).",
+    "description": "Two desk bundles \u2014 code-desk (slim next-release execution under a documented repo standard) and exec-desk (the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus foreman-kit (tiered delegation agents and session-discipline hooks) and four standalone one-skill plugins: github-project-board, private-fork, opencode-expertise, and pptx-themes.",
     "version": "0.2.0"
   },
   "name": "dotfiles-agents",
@@ -13,10 +13,37 @@
       "author": {
         "name": "Henry S. Burden III"
       },
+      "description": "Bring a software project through the next-release execution loop and a documented repo standard together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.",
+      "name": "code-desk",
+      "source": "./plugins/code-desk",
+      "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "The executive-desk overhead \u2014 stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks.",
+      "name": "exec-desk",
+      "source": "./plugins/exec-desk",
+      "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
       "description": "A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout \u00b7 builder \u00b7 reviewer \u00b7 lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, and four hooks \u2014 context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage.",
       "name": "foreman-kit",
       "source": "./plugins/foreman-kit",
       "version": "0.5.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma\u2026",
+      "name": "github-project-board",
+      "source": "./plugins/github-project-board",
+      "version": "0.0.1"
     },
     {
       "author": {
@@ -44,24 +71,6 @@
       "name": "private-fork",
       "source": "./plugins/private-fork",
       "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Run a software project through the session-discipline loop \u2014 plan the work into conformant issues and source-grounded plans, and report out via a GitHub Project (v2) board, value-and-proof READMEs, and status comms.",
-      "name": "project-workflow",
-      "source": "./plugins/project-workflow",
-      "version": "0.4.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Bring a repo to the meta-structure standard \u2014 audit compliance, scaffold the gaps, apply the memory taxonomy and repo layout standards, turn the README into an honest value-and-proof pitch, and run a private fork's upstream review cycle.",
-      "name": "repo-standards",
-      "source": "./plugins/repo-standards",
-      "version": "0.1.0"
     }
   ]
 }

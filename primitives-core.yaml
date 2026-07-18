@@ -14,12 +14,15 @@
 # scripts/check_roster.py). This is a Claude-Code-only distribution, so targets carry
 # `claude-code` alone; the multi-vendor translation surface was dropped at the rebuild.
 #
-# The bundle lineup: project-workflow (4 skills) + repo-standards (6 skills) + the standalone
-# foreman-kit (foreman + handoff skills, 4 agents scout/builder/reviewer/lead, 4 hooks). Desk
-# skill bodies ported from dev-legacy and identity-neutralized at D6; foreman-kit ported from
-# the foreman-kit v0.5.0 upstream at E2/E3 and is the sole home of the handoff skill plus the
-# four delegation hooks (context-watermark, handoff-freshness-guard, session-handoff-surfacer,
-# subagent-telemetry).
+# The bundle lineup (E4/E5/E6 recomposition, ruling 0020): code-desk (7 skills: next-release
+# execution + repo-standards hygiene merged) + exec-desk (4 skills: the executive-desk
+# overhead — planning, comms, board triage, deck themes) + the standalone foreman-kit
+# (foreman + handoff skills, 4 agents scout/builder/reviewer/lead, 4 hooks). project-workflow
+# and repo-standards retired as bundle names (superseded by code-desk); github-project-board
+# went standalone-only. Desk skill bodies ported from dev-legacy and identity-neutralized at
+# D6; foreman-kit ported from the foreman-kit v0.5.0 upstream at E2/E3 and is the sole home of
+# the handoff skill plus the four delegation hooks (context-watermark, handoff-freshness-guard,
+# session-handoff-surfacer, subagent-telemetry).
 
 version: 1
 
@@ -42,7 +45,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: [exec-desk]
     summary: "This skill should be used when the user asks to \"run board triage\", \"triage the backlog\", \"prioritize the issues\", \"rank the unranked issues\", \"fill in Impac…"
   - id: comms
     type: skill
@@ -53,7 +56,7 @@ primitives:
     requires: [local-mcp]
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: [exec-desk]
     summary: "Produce Henry's recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout,…"
   - id: github-project-board
     type: skill
@@ -63,7 +66,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: []
     summary: "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma…"
   - id: memory-taxonomy
     type: skill
@@ -74,7 +77,7 @@ primitives:
     requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
     vendor: null
     targets: [claude-code]
-    plugins: [repo-standards]
+    plugins: [code-desk]
     summary: "The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism; carries the approved v1 defaults and the MEM-xx structure checklist the compliance audit consumes."
   - id: mise-en-place-scaffold
     type: skill
@@ -85,7 +88,7 @@ primitives:
     requires: [cli:cc-project-memory]
     vendor: null
     targets: [claude-code]
-    plugins: [repo-standards]
+    plugins: [code-desk]
     summary: "Fill-only mise-en-place scaffold — plans (--plan, default) and creates (--apply) the repo meta-structure the compliance audit flags, from the standards' assets, honoring _meta/mise-en-place.yml variance (--init-manifest writes the template); additive-only, never overwrites, conflicts reported with diffs."
   - id: planning-desk
     type: skill
@@ -95,7 +98,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: [exec-desk]
     summary: "Stand up and run a source-grounded planning desk under _meta/plans/ — the workflow for authoring conformant GitHub issue bodies, writing deep build plans, an…"
   - id: private-fork
     type: skill
@@ -105,7 +108,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [repo-standards]
+    plugins: [code-desk]
     summary: "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle."
   - id: readme-value-and-proof
     type: skill
@@ -116,7 +119,7 @@ primitives:
     requires: [cli:capture-console-errors]
     vendor: null
     targets: [claude-code]
-    plugins: [repo-standards]
+    plugins: [code-desk]
     summary: "Turn a README into a user-centric pitch backed by real visual proof."
   - id: repo-compliance-audit
     type: skill
@@ -126,7 +129,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [repo-standards]
+    plugins: [code-desk]
     summary: "Read-only repo compliance audit — one command prints a pass/gap table (ID | Area | Verdict | Detail) against the repo-meta-structure and memory-taxonomy checklists plus HOOK-01, honoring _meta/mise-en-place.yml variance; reports, never writes or polices."
   - id: repo-meta-structure
     type: skill
@@ -136,7 +139,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [repo-standards]
+    plugins: [code-desk]
     summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."
   - id: context-watermark
     type: hook
@@ -236,7 +239,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: []
+    plugins: [code-desk]
     summary: "Expert knowledge of opencode — every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code → opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works."
   - id: pptx-themes
     type: skill
@@ -246,5 +249,5 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: []
+    plugins: [exec-desk]
     summary: "Create, edit, and review PowerPoint presentations with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml)."

@@ -70,12 +70,11 @@ MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 METADATA = {
     "version": "0.2.0",
     "description": (
-        "Two workflow bundles — project-workflow (plan, work, and report on a software "
-        "project without losing state between sessions) and repo-standards (bring a repo "
-        "to a documented meta-structure, audit-first) — plus three standalone skills: "
-        "private-fork (operate a private mirror of an upstream repo), opencode-expertise "
-        "(reference knowledge for opencode extension and Claude Code → opencode porting), "
-        "and pptx-themes (themed PowerPoint decks composed over Anthropic's pptx base)."
+        "Two desk bundles — code-desk (slim next-release execution under a documented repo "
+        "standard) and exec-desk (the executive-desk overhead: planning, comms, board "
+        "triage, deck themes) — plus foreman-kit (tiered delegation agents and "
+        "session-discipline hooks) and four standalone one-skill plugins: "
+        "github-project-board, private-fork, opencode-expertise, and pptx-themes."
     ),
 }
 

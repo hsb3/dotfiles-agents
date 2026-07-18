@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Bring a software project through the next-release execution loop and a documented repo standard together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.",
+  "name": "code-desk",
+  "version": "0.1.0"
+}
