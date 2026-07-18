@@ -3,14 +3,14 @@
 A Claude Code marketplace of proven coding-agent extenders, assembled from a single canonical
 source (`primitives-core/`) into installable plugin bundles.
 
-Clean-room rebuild to the 0007 lineup: two self-authored bundles — **project-workflow** (the
-session-discipline loop) and **repo-standards** — plus one-skill standalone distribution.
-Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`.
-
-> **Status:** rebuild in progress. This is the D1 fresh-history base — the build harness and
-> the regenerate + drift-guard pattern, seeded with one primitive wired end to end
-> (`project-workflow` / `handoff`). The bundle ports (D2–D4), the entry-gate CI floor (D6),
-> and the READMEs (D8) land on top of it.
+The lineup is organized around desk sets: two desk bundles — **code-desk** (slim
+next-release execution under a documented repo standard) and **exec-desk** (the
+executive-desk overhead: planning, comms, board triage, deck themes) — plus **foreman-kit**
+(tiered delegation agents and session-discipline hooks, enabled on every desk) and four
+standalone one-skill plugins (**github-project-board**, **private-fork**,
+**opencode-expertise**, **pptx-themes**). Cross-desk items ship standalone, never inside a
+desk bundle. Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`
+(consumers install from `main`, the published branch).
 
 ## Layout
 
