@@ -76,6 +76,11 @@ IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
 # resolve against (`<plugin>@dotfiles-agents`); it is the one identity the entry gate accepts
 # at the marketplace root and must be preserved across the rebuild.
 MARKETPLACE_NAME = "dotfiles-agents"
+
+# The allowed `kind:` vocabulary for plugins.yaml entries — the PLUGINS.md inventory category.
+# "standalone skill" is NOT in this set: standalone wrappers come from skill-catalog.yaml and
+# get that kind assigned during assembly, never via plugins.yaml.
+PLUGIN_KINDS = ("bundle", "plugin")
 MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 METADATA = {
     "version": "0.2.0",
@@ -105,7 +110,7 @@ def _list(v):
 
 
 def parse_plugins_yaml(path):
-    """Parse plugins.yaml into (owner_name, [{id, version, description}]). Tailored line
+    """Parse plugins.yaml into (owner_name, [{id, kind, version, description}]). Tailored line
     parser for our controlled format — no pyyaml, so it runs in CI with zero install."""
     owner_name = ""
     plugins, cur = [], None
@@ -143,6 +148,28 @@ def parse_plugins_yaml(path):
     if cur is not None:
         plugins.append(cur)
     return owner_name, plugins
+
+
+def plugin_meta_problems(plugin_meta):
+    """Validate the parsed plugins.yaml entries. `kind:` is REQUIRED on every entry and must
+    be one of PLUGIN_KINDS — a missing kind used to silently default to "bundle" (PR #145
+    review flag), a latent mislabeling risk for future kits. Returns a list of problems
+    (empty = clean), each naming the offending entry."""
+    allowed = ", ".join(PLUGIN_KINDS)
+    problems = []
+    for meta in plugin_meta:
+        pid = meta.get("id") or "(missing id)"
+        kind = meta.get("kind")
+        if not kind:
+            problems.append(
+                f"plugins.yaml: entry '{pid}' is missing required field `kind` "
+                f"(allowed: {allowed}) — no silent default"
+            )
+        elif kind not in PLUGIN_KINDS:
+            problems.append(
+                f"plugins.yaml: entry '{pid}' has invalid kind '{kind}' (allowed: {allowed})"
+            )
+    return problems
 
 
 def bundle_members(roster):
@@ -218,6 +245,13 @@ def build_marketplace(out_root):
     """Assemble every bundle under out_root/plugins/ and write out_root/.claude-plugin/
     marketplace.json. Returns the marketplace dict. Bundles with no members are skipped."""
     owner_name, plugin_meta = parse_plugins_yaml(PLUGINS_YAML)
+    meta_problems = plugin_meta_problems(plugin_meta)
+    if meta_problems:
+        raise ValueError(
+            "invalid plugins.yaml — "
+            + f"{len(meta_problems)} problem(s):\n"
+            + "\n".join(f"  - {p}" for p in meta_problems)
+        )
     author = {"name": owner_name}
     roster = parse_roster(ROSTER)
     src_by_id = {e["id"]: e["source"] for e in roster}
@@ -230,7 +264,8 @@ def build_marketplace(out_root):
     # PLUGINS.md (issue #144): per-entry inventory metadata, gathered alongside assembly so it
     # is derived from the SAME data the plugin.json / marketplace.json entries are built from —
     # never a second, divergeable source. `kind` is a plain-English inventory category (bundle /
-    # plugin / standalone skill), NOT the skill-catalog's structural distinction.
+    # plugin / standalone skill), NOT the skill-catalog's structural distinction. It is required
+    # on every plugins.yaml entry (validated above in plugin_meta_problems — no silent default).
     kind_of = {}
     contents_of = {}
     for meta in plugin_meta:
@@ -240,7 +275,7 @@ def build_marketplace(out_root):
         agent_ids = agents.get(bundle, [])
         if not ids and not hook_ids and not agent_ids:
             continue  # a metadata-only bundle with no roster members does not ship yet
-        kind_of[bundle] = meta.get("kind") or "bundle"
+        kind_of[bundle] = meta["kind"]
         contents_of[bundle] = {"skills": ids, "hooks": hook_ids, "agents": agent_ids}
         proot = os.path.join(plugins_out, bundle)
         os.makedirs(os.path.join(proot, ".claude-plugin"), exist_ok=True)
@@ -437,17 +472,23 @@ def main(argv=None):
     )
     args = p.parse_args(argv)
 
-    if args.check:
-        problems = check()
-        if problems:
-            print(f"✗ marketplace drift: {len(problems)} problem(s)")
-            for pr in problems:
-                print(f"  - {pr}")
-            return 1
-        print("✓ marketplace artifacts match source — no drift")
-        return 0
+    try:
+        if args.check:
+            problems = check()
+            if problems:
+                print(f"✗ marketplace drift: {len(problems)} problem(s)")
+                for pr in problems:
+                    print(f"  - {pr}")
+                return 1
+            print("✓ marketplace artifacts match source — no drift")
+            return 0
 
-    m = regenerate()
+        m = regenerate()
+    except ValueError as e:
+        # Bad hand-authored input (e.g. a plugins.yaml entry with a missing/invalid `kind`)
+        # fails loudly in both modes — never a silent default.
+        print(f"✗ {e}")
+        return 1
     n = len(m["plugins"])
     names = ", ".join(pl["name"] for pl in m["plugins"])
     print(f"✓ regenerated marketplace — {n} plugin(s): {names}")
