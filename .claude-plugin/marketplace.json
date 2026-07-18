@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Two desk bundles \u2014 code-desk (slim next-release execution under a documented repo standard) and exec-desk (the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus foreman-kit (tiered delegation agents and session-discipline hooks) and four standalone one-skill plugins: github-project-board, private-fork, opencode-expertise, and pptx-themes.",
-    "version": "0.2.0"
+    "description": "Two desk bundles \u2014 code-desk (slim next-release execution under a documented repo standard) and exec-desk (the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and five standalone one-skill plugins: github-project-board, private-fork, opencode-expertise, owner-signoff, and pptx-themes.",
+    "version": "0.3.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -16,6 +16,15 @@
       "description": "Bring a software project through the next-release execution loop and a documented repo standard together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
+      "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.",
+      "name": "diagrams",
+      "source": "./plugins/diagrams",
       "version": "0.1.0"
     },
     {
@@ -49,9 +58,27 @@
       "author": {
         "name": "Henry S. Burden III"
       },
+      "description": "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.",
+      "name": "obsidian-toolkit",
+      "source": "./plugins/obsidian-toolkit",
+      "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
       "description": "Expert knowledge of opencode \u2014 every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code \u2192 opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works.",
       "name": "opencode-expertise",
       "source": "./plugins/opencode-expertise",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically.",
+      "name": "owner-signoff",
+      "source": "./plugins/owner-signoff",
       "version": "0.0.1"
     },
     {

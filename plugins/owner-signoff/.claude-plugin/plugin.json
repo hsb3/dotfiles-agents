@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically.",
+  "name": "owner-signoff",
+  "version": "0.0.1"
+}

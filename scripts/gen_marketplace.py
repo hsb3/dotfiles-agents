@@ -83,13 +83,15 @@ MARKETPLACE_NAME = "dotfiles-agents"
 PLUGIN_KINDS = ("bundle", "plugin")
 MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 METADATA = {
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": (
         "Two desk bundles — code-desk (slim next-release execution under a documented repo "
         "standard) and exec-desk (the executive-desk overhead: planning, comms, board "
-        "triage, deck themes) — plus foreman-kit (tiered delegation agents and "
-        "session-discipline hooks) and four standalone one-skill plugins: "
-        "github-project-board, private-fork, opencode-expertise, and pptx-themes."
+        "triage, deck themes) — plus three kits (foreman-kit: tiered delegation agents and "
+        "session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: "
+        "Obsidian plugin-dev guidance) and five standalone one-skill plugins: "
+        "github-project-board, private-fork, opencode-expertise, owner-signoff, and "
+        "pptx-themes."
     ),
 }
 

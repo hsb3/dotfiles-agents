@@ -33,7 +33,15 @@ plugins:
     kind: bundle
     version: "0.1.0"
     description: "The executive-desk overhead — stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks."
+  - id: diagrams
+    kind: plugin
+    version: "0.1.0"
+    description: "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes."
   - id: foreman-kit
     kind: plugin
     version: "0.5.0"
     description: "A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout · builder · reviewer · lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, and four hooks — context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage."
+  - id: obsidian-toolkit
+    kind: plugin
+    version: "0.1.0"
+    description: "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin."

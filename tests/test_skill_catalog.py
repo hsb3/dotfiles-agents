@@ -56,7 +56,13 @@ class Clean(unittest.TestCase):
         ids = [e["id"] for e in C.parse_catalog(C.CATALOG)]
         self.assertEqual(
             ids,
-            ["private-fork", "opencode-expertise", "pptx-themes", "github-project-board"],
+            [
+                "private-fork",
+                "opencode-expertise",
+                "pptx-themes",
+                "github-project-board",
+                "owner-signoff",
+            ],
         )
 
     def test_valid_entry_has_no_problems(self):
