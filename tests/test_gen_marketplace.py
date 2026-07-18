@@ -369,5 +369,146 @@ class CheckCommitted(unittest.TestCase):
         self.assertEqual(G.check(), [])
 
 
+class PluginsMd(unittest.TestCase):
+    """Tests for the PLUGINS.md generated inventory (issue #144, D1)."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-plugins-md-")
+        self.market = G.build_marketplace(self.tmp)
+        with open(os.path.join(self.tmp, "PLUGINS.md"), encoding="utf-8") as fh:
+            self.md = fh.read()
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_written_alongside_marketplace_json(self):
+        self.assertTrue(os.path.isfile(os.path.join(self.tmp, "PLUGINS.md")))
+
+    def test_marked_generated(self):
+        self.assertIn("do not hand-edit", self.md)
+        self.assertIn("make build", self.md)
+
+    def test_every_plugin_has_a_section(self):
+        for entry in self.market["plugins"]:
+            self.assertIn(f"## {entry['name']}", self.md)
+
+    def test_kind_bundle_vs_plugin_vs_standalone(self):
+        # code-desk/exec-desk are desk bundles; foreman-kit is a kit (plugin), not a desk
+        # bundle; the four one-skill wrappers are standalone skills (skill-catalog.yaml).
+        by_section = self.md.split("## ")
+        sections = {s.split("\n", 1)[0]: s for s in by_section[1:]}
+        self.assertIn("**Kind:** bundle", sections["code-desk"])
+        self.assertIn("**Kind:** bundle", sections["exec-desk"])
+        self.assertIn("**Kind:** plugin", sections["foreman-kit"])
+        self.assertIn("**Kind:** standalone skill", sections["private-fork"])
+
+    def test_install_command_uses_marketplace_name(self):
+        self.assertIn("claude plugin install code-desk@dotfiles-agents", self.md)
+        self.assertIn("claude plugin install private-fork@dotfiles-agents", self.md)
+
+    def test_contents_summary_lists_members(self):
+        self.assertIn("repo-compliance-audit", self.md)  # a code-desk member skill
+        self.assertIn("context-watermark", self.md)  # a foreman-kit member hook
+        self.assertIn("scout", self.md)  # a foreman-kit member agent
+
+    def test_deterministic(self):
+        other = tempfile.mkdtemp(prefix="gen-marketplace-plugins-md-2-")
+        try:
+            G.build_marketplace(other)
+            with open(os.path.join(other, "PLUGINS.md"), encoding="utf-8") as fh:
+                other_md = fh.read()
+            self.assertEqual(self.md, other_md)
+        finally:
+            import shutil
+
+            shutil.rmtree(other, ignore_errors=True)
+
+    def test_committed_plugins_md_matches_regenerated(self):
+        with open(G.PLUGINS_MD, encoding="utf-8") as fh:
+            committed = fh.read()
+        self.assertEqual(committed, self.md)
+
+
+class ReadmeCoverage(unittest.TestCase):
+    """D3 (issue #144): every distributed plugin must ship plugins/<id>/README.md."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-readme-coverage-")
+        self.market = G.build_marketplace(self.tmp)
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_clean_tree_has_no_coverage_problems(self):
+        self.assertEqual(G.readme_coverage_problems(self.tmp, self.market), [])
+
+    def test_all_seven_plugins_ship_a_readme(self):
+        for entry in self.market["plugins"]:
+            readme = os.path.join(self.tmp, "plugins", entry["name"], "README.md")
+            self.assertTrue(os.path.isfile(readme), f"missing {readme}")
+
+    def test_removing_one_readme_is_red_able(self):
+        # Red: delete a real, already-shipped README from the freshly built tree.
+        victim = os.path.join(self.tmp, "plugins", "private-fork", "README.md")
+        self.assertTrue(os.path.isfile(victim))
+        os.remove(victim)
+        problems = G.readme_coverage_problems(self.tmp, self.market)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("private-fork", problems[0])
+
+    def test_check_fails_when_a_readme_source_is_removed(self):
+        # End-to-end red-ability: with a README SOURCE temporarily removed, check() (the
+        # `make build-check` / `make ci` lane) must report the gap, and restoring the source
+        # must make it green again.
+        src = os.path.join(
+            G.REPO, "primitives-core", "standalone-readmes", "private-fork", "README.md"
+        )
+        with open(src, encoding="utf-8") as fh:
+            saved = fh.read()
+        try:
+            os.remove(src)
+            problems = G.check()
+            self.assertTrue(
+                any("private-fork" in p and "README" in p for p in problems),
+                problems,
+            )
+        finally:
+            with open(src, "w", encoding="utf-8") as fh:
+                fh.write(saved)
+        self.assertEqual(G.check(), [])  # green again once the source is restored
+
+
+class StandaloneByteIdentityStillRedAble(unittest.TestCase):
+    """Issue #144: proves the wrapper-root README addition (D2) did NOT weaken the pre-existing
+    skills/ byte-identity drift guard for a standalone wrapper — a real skill-source mutation
+    is still caught by check(), the same mechanism AgentAssembly.test_agent_drift_is_red_able
+    proves for bundle-assembled agents."""
+
+    def setUp(self):
+        self.src = os.path.join(G.REPO, "primitives-core", "skills", "private-fork", "SKILL.md")
+        with open(self.src, encoding="utf-8") as fh:
+            self.saved = fh.read()
+
+    def tearDown(self):
+        with open(self.src, "w", encoding="utf-8") as fh:
+            fh.write(self.saved)
+
+    def test_skill_source_mutation_is_caught_by_check(self):
+        self.assertEqual(G.check(), [])  # green before mutation
+        with open(self.src, "a", encoding="utf-8") as fh:
+            fh.write("\ndrift injected by test\n")
+        problems = G.check()
+        self.assertTrue(
+            any("plugins/" in p and "drift" in p for p in problems), problems
+        )
+        with open(self.src, "w", encoding="utf-8") as fh:
+            fh.write(self.saved)
+        self.assertEqual(G.check(), [])  # green again after restoring
+
+
 if __name__ == "__main__":
     unittest.main()

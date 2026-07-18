@@ -70,6 +70,53 @@ class ComposedSkill(unittest.TestCase):
         self.assertIn("anthropics/skills", readme)
 
 
+class WrapperReadme(unittest.TestCase):
+    """Issue #144 (D2): each wrapper ships a plugin-root README.md, copied verbatim from
+    primitives-core/standalone-readmes/<id>/README.md — additive-only, mirroring
+    gen_marketplace._copy_bundle_readme, and sitting OUTSIDE skills/ (never compared by the
+    byte-identity invariant, which only ever inspects skills/<id>/)."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-standalone-readme-")
+        self.ids = G.build_standalone(self.tmp)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_every_wrapper_ships_a_root_readme(self):
+        for skill_id in self.ids:
+            readme = os.path.join(self.tmp, skill_id, "README.md")
+            self.assertTrue(os.path.isfile(readme), f"missing {readme}")
+
+    def test_readme_byte_identical_to_source(self):
+        src = os.path.join(G.STANDALONE_README_DIR, "private-fork", "README.md")
+        built = os.path.join(self.tmp, "private-fork", "README.md")
+        with open(src, encoding="utf-8") as fa, open(built, encoding="utf-8") as fb:
+            self.assertEqual(fa.read(), fb.read())
+
+    def test_readme_sits_outside_skills_subtree(self):
+        # The wrapper root README must NOT be inside skills/<id>/ — that subtree is exactly
+        # what verify_wrappers's byte-identity check compares against primitives-core source.
+        self.assertFalse(
+            os.path.isfile(
+                os.path.join(self.tmp, "private-fork", "skills", "private-fork", "README.md")
+            )
+        )
+
+    def test_missing_readme_source_is_tolerated(self):
+        # Additive-only, like gen_marketplace._copy_bundle_readme: no source -> no README, not
+        # a hard failure.
+        proot = os.path.join(self.tmp, "no-such-skill")
+        os.makedirs(proot)
+        G._copy_standalone_readme("no-such-skill", proot)
+        self.assertFalse(os.path.exists(os.path.join(proot, "README.md")))
+
+    def test_readme_absence_does_not_break_wrapper_invariants(self):
+        # A missing README source must never fail verify_wrappers (D3 coverage is a separate,
+        # marketplace-level guard in gen_marketplace, not a wrapper-shape invariant here).
+        self.assertEqual(G.verify_wrappers(self.tmp, self.ids), [])
+
+
 class Invariants(unittest.TestCase):
     def test_check_mode_passes_on_committed_catalog(self):
         self.assertEqual(G.main(["--check"]), 0)

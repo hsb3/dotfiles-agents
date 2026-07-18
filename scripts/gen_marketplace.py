@@ -19,6 +19,15 @@ artifacts:
                                                 with no README source ships without one)
   .claude-plugin/marketplace.json               the marketplace root listing every bundle,
                                                 each source pointing at ./plugins/<bundle>
+  PLUGINS.md                                    a generated inventory of every distributed
+                                                plugin (name, kind, version, description,
+                                                contents, install command) at the repo root
+
+Every distributed plugin (bundle, kit, or standalone skill) must ship its own
+plugins/<id>/README.md — asserted by readme_coverage_problems() as part of --check (issue
+#144); a bundle/standalone README source with no committed README is a build failure, not the
+additive-only tolerance _copy_bundle_readme/gen_standalone._copy_standalone_readme apply while
+assembling the tree.
 
 A Claude Code marketplace installs a *plugin*, and a plugin is a directory holding
 `.claude-plugin/plugin.json` plus its skills. A bundle is a curated subset of the roster's
@@ -59,6 +68,7 @@ PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
 PLUGINS_DIR = os.path.join(REPO, "plugins")
 BUNDLES_DIR = os.path.join(REPO, "primitives-core", "bundles")
 MARKETPLACE = os.path.join(REPO, ".claude-plugin", "marketplace.json")
+PLUGINS_MD = os.path.join(REPO, "PLUGINS.md")
 
 IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
 
@@ -217,6 +227,12 @@ def build_marketplace(out_root):
 
     plugins_out = os.path.join(out_root, "plugins")
     entries = []
+    # PLUGINS.md (issue #144): per-entry inventory metadata, gathered alongside assembly so it
+    # is derived from the SAME data the plugin.json / marketplace.json entries are built from —
+    # never a second, divergeable source. `kind` is a plain-English inventory category (bundle /
+    # plugin / standalone skill), NOT the skill-catalog's structural distinction.
+    kind_of = {}
+    contents_of = {}
     for meta in plugin_meta:
         bundle = meta["id"]
         ids = members.get(bundle, [])
@@ -224,6 +240,8 @@ def build_marketplace(out_root):
         agent_ids = agents.get(bundle, [])
         if not ids and not hook_ids and not agent_ids:
             continue  # a metadata-only bundle with no roster members does not ship yet
+        kind_of[bundle] = meta.get("kind") or "bundle"
+        contents_of[bundle] = {"skills": ids, "hooks": hook_ids, "agents": agent_ids}
         proot = os.path.join(plugins_out, bundle)
         os.makedirs(os.path.join(proot, ".claude-plugin"), exist_ok=True)
         manifest = {
@@ -279,7 +297,10 @@ def build_marketplace(out_root):
     # committed marketplace.json covers bundles AND standalone installs. A standalone plugin
     # name is the skill id (guaranteed distinct from bundle ids by check_skill_catalog).
     gen_standalone.build_standalone(plugins_out)
-    entries.extend(gen_standalone.standalone_entries())
+    for entry in gen_standalone.standalone_entries():
+        entries.append(entry)
+        kind_of[entry["name"]] = "standalone skill"
+        contents_of[entry["name"]] = {"skills": [entry["name"]], "hooks": [], "agents": []}
 
     marketplace = {
         "$schema": MARKETPLACE_SCHEMA,
@@ -292,7 +313,62 @@ def build_marketplace(out_root):
     with open(os.path.join(out_root, ".claude-plugin", "marketplace.json"), "w") as fh:
         json.dump(marketplace, fh, indent=2, sort_keys=True)
         fh.write("\n")
+    _write_plugins_md(out_root, marketplace, kind_of, contents_of)
     return marketplace
+
+
+def _contents_line(contents):
+    """One human line per non-empty primitive type, e.g. '2 skills — foreman, handoff'."""
+    parts = []
+    for label, ids in (("skill", contents["skills"]), ("hook", contents["hooks"]), ("agent", contents["agents"])):
+        if not ids:
+            continue
+        plural = label if len(ids) == 1 else f"{label}s"
+        parts.append(f"{len(ids)} {plural} — {', '.join(ids)}")
+    return "; ".join(parts) if parts else "(no members)"
+
+
+def _write_plugins_md(out_root, marketplace, kind_of, contents_of):
+    """Render PLUGINS.md: one section per distributed plugin (name, kind, version, description,
+    contents summary, install command), sorted the same as marketplace.json (by name).
+    Deterministic — reads only the marketplace dict + the kind/contents gathered during
+    assembly, so a rebuild with unchanged source is byte-identical output."""
+    lines = [
+        "# Plugin inventory",
+        "",
+        "<!-- GENERATED FILE — do not hand-edit. Regenerate via `make build` "
+        "(scripts/gen_marketplace.py); `make build-check` fails on drift. -->",
+        "",
+        f"Every plugin distributed by the `{MARKETPLACE_NAME}` marketplace, generated from "
+        "`plugins.yaml` + `primitives-core.yaml` (bundles/kits) and `skill-catalog.yaml` "
+        "(standalone skills).",
+        "",
+    ]
+    for entry in marketplace["plugins"]:
+        name = entry["name"]
+        lines.append(f"## {name}")
+        lines.append("")
+        lines.append(f"- **Kind:** {kind_of.get(name, 'standalone skill')}")
+        lines.append(f"- **Version:** {entry['version']}")
+        lines.append(f"- **Description:** {entry['description']}")
+        lines.append(f"- **Ships:** {_contents_line(contents_of.get(name, {'skills': [], 'hooks': [], 'agents': []}))}")
+        lines.append(f"- **Install:** `claude plugin install {name}@{MARKETPLACE_NAME}`")
+        lines.append("")
+    with open(os.path.join(out_root, "PLUGINS.md"), "w") as fh:
+        fh.write("\n".join(lines).rstrip("\n") + "\n")
+
+
+def readme_coverage_problems(out_root, marketplace):
+    """D3 (issue #144): every distributed plugin must ship plugins/<id>/README.md. Returns a
+    list of problems (empty = clean); red-able by removing any README source, since a missing
+    source means `_copy_bundle_readme` / `_copy_standalone_readme` write nothing."""
+    problems = []
+    for entry in marketplace["plugins"]:
+        name = entry["name"]
+        readme = os.path.join(out_root, "plugins", name, "README.md")
+        if not os.path.isfile(readme):
+            problems.append(f"plugins/{name}/README.md: missing (every distributed plugin must ship a README)")
+    return problems
 
 
 def _identical(a, b):
@@ -319,7 +395,7 @@ def check():
     tmp = tempfile.mkdtemp(prefix="gen-marketplace-check-")
     problems = []
     try:
-        build_marketplace(tmp)
+        marketplace = build_marketplace(tmp)
         pairs = [
             (os.path.join(tmp, "plugins"), PLUGINS_DIR, "plugins/"),
             (
@@ -327,12 +403,16 @@ def check():
                 MARKETPLACE,
                 ".claude-plugin/marketplace.json",
             ),
+            (os.path.join(tmp, "PLUGINS.md"), PLUGINS_MD, "PLUGINS.md"),
         ]
         for built, committed, label in pairs:
             if not os.path.exists(committed):
                 problems.append(f"{label}: missing (run `make build` and commit)")
             elif not _identical(built, committed):
                 problems.append(f"{label}: drift — committed copy != freshly generated")
+        # D3 (issue #144): every distributed plugin ships plugins/<id>/README.md. Checked
+        # against the freshly-built tmp tree, same as the drift pairs above.
+        problems.extend(readme_coverage_problems(tmp, marketplace))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     return problems
