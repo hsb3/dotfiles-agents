@@ -174,6 +174,97 @@ class AgentAssembly(unittest.TestCase):
         self.assertTrue(G._identical(src, built))  # green again after regeneration
 
 
+class AgentOnlyBundleAssembly(unittest.TestCase):
+    """Fixture repo exercising two branches the committed roster can't reach today:
+    (1) an AGENT-ONLY bundle (zero skills/hooks) hitting the skip-condition path, and
+    (2) a member whose source filename stem != its roster id, proving the shipped file is
+    keyed on the id (agents/<id>.md), not the source basename. Both are dormant in the real
+    tree (both bundles have skills; the seed's id == its stem) but E2 ships foreman-kit as a
+    standalone bundle whose members may be agent-only and renamed."""
+
+    def setUp(self):
+        import shutil
+
+        self.fix = tempfile.mkdtemp(prefix="gen-marketplace-agent-only-fixture-")
+        self.addCleanup(shutil.rmtree, self.fix, ignore_errors=True)
+        pc_agents = os.path.join(self.fix, "primitives-core", "agents")
+        os.makedirs(pc_agents)
+        # id 'solo' deliberately != source filename stem 'solo-agent'.
+        self.agent_src = os.path.join(pc_agents, "solo-agent.md")
+        with open(self.agent_src, "w", encoding="utf-8") as fh:
+            fh.write("---\nname: solo\ndescription: fixture agent.\n---\n\nbody\n")
+        with open(os.path.join(self.fix, "primitives-core.yaml"), "w", encoding="utf-8") as fh:
+            fh.write(
+                "version: 1\nprimitives:\n"
+                "  - id: solo\n"
+                "    type: agent\n"
+                "    source: primitives-core/agents/solo-agent.md\n"
+                "    shelf: core\n"
+                "    origin: authored\n"
+                "    disposition: qualified\n"
+                "    vendor: null\n"
+                "    targets: [claude-code]\n"
+                "    plugins: [solo-kit]\n"
+                '    summary: "fixture"\n'
+            )
+        with open(os.path.join(self.fix, "plugins.yaml"), "w", encoding="utf-8") as fh:
+            fh.write(
+                'version: 1\nowner:\n  name: "Owner"\nplugins:\n'
+                "  - id: solo-kit\n"
+                '    version: "0.0.1"\n'
+                '    description: "agent-only fixture bundle"\n'
+            )
+        # Point the generator at the fixture; stub the standalone step (it reads the real
+        # skill-catalog, out of scope here). These are module globals resolved at call time.
+        # addCleanup (not tearDown) so a failure mid-setUp still restores — a leaked patch
+        # would corrupt every later test class that reads the real roster.
+        saved = {k: getattr(G, k) for k in ("REPO", "ROSTER", "PLUGINS_YAML", "BUNDLES_DIR")}
+        saved_standalone = (
+            G.gen_standalone.build_standalone,
+            G.gen_standalone.standalone_entries,
+        )
+
+        def _restore():
+            for k, v in saved.items():
+                setattr(G, k, v)
+            (
+                G.gen_standalone.build_standalone,
+                G.gen_standalone.standalone_entries,
+            ) = saved_standalone
+
+        self.addCleanup(_restore)
+        G.REPO = self.fix
+        G.ROSTER = os.path.join(self.fix, "primitives-core.yaml")
+        G.PLUGINS_YAML = os.path.join(self.fix, "plugins.yaml")
+        G.BUNDLES_DIR = os.path.join(self.fix, "primitives-core", "bundles")
+        G.gen_standalone.build_standalone = lambda out_root: None
+        G.gen_standalone.standalone_entries = lambda: []
+
+        self.out = tempfile.mkdtemp(prefix="gen-marketplace-agent-only-out-")
+        self.addCleanup(shutil.rmtree, self.out, ignore_errors=True)
+        G.build_marketplace(self.out)
+        self.proot = os.path.join(self.out, "plugins", "solo-kit")
+
+    def test_agent_only_bundle_ships(self):
+        # skip condition: no skills, no hooks, but agents -> the bundle must still assemble.
+        self.assertTrue(os.path.isdir(self.proot))
+        self.assertTrue(
+            os.path.isfile(os.path.join(self.proot, ".claude-plugin", "plugin.json"))
+        )
+
+    def test_shipped_agent_keyed_on_id_not_source_stem(self):
+        by_id = os.path.join(self.proot, "agents", "solo.md")
+        self.assertTrue(os.path.isfile(by_id))  # agents/<id>.md
+        self.assertFalse(  # NOT agents/<source-stem>.md
+            os.path.exists(os.path.join(self.proot, "agents", "solo-agent.md"))
+        )
+        self.assertTrue(G._identical(self.agent_src, by_id))  # byte-identical to source
+
+    def test_agent_only_bundle_has_no_skill_or_hook_dirs(self):
+        self.assertFalse(os.path.exists(os.path.join(self.proot, "skills")))
+        self.assertFalse(os.path.exists(os.path.join(self.proot, "hooks")))
+
+
 class BundleReadmeAssembly(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-readmes-")

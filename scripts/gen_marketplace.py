@@ -11,8 +11,9 @@ artifacts:
   plugins/<bundle>/skills/<id>/                 each member skill body, copied verbatim from
                                                 primitives-core/skills/<id>/
   plugins/<bundle>/agents/<id>.md               each member agent body, copied verbatim from
-                                                primitives-core/agents/<id>.md (single .md file,
-                                                mirroring the skill/hook member assembly)
+                                                its primitives-core/agents/ source (single .md
+                                                file); the shipped file is keyed on the roster
+                                                id, mirroring skills/<id>/ and hooks/<id>/
   plugins/<bundle>/README.md                    the bundle's value/proof README, copied
                                                 verbatim from its source (optional — a bundle
                                                 with no README source ships without one)
@@ -255,10 +256,13 @@ def build_marketplace(out_root):
         if agent_ids:
             os.makedirs(os.path.join(proot, "agents"), exist_ok=True)
             for agent_id in agent_ids:
-                src = src_by_id[agent_id]  # primitives-core/agents/<id>.md — a single file
+                src = src_by_id[agent_id]  # primitives-core/agents/<file>.md — a single file
+                # Key the shipped artifact on the roster id (like skills/<skill_id> and
+                # hooks/<hook_id>), NOT the source filename — otherwise a source-filename ≠ id
+                # mismatch ships silently, uncaught by the roster/identity guards.
                 shutil.copy2(
                     os.path.join(REPO, src),
-                    os.path.join(proot, "agents", os.path.basename(src)),
+                    os.path.join(proot, "agents", f"{agent_id}.md"),
                 )
         _copy_bundle_readme(bundle, proot)
         entries.append(
