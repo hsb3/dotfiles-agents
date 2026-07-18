@@ -1,0 +1,20 @@
+# Blocks pull requests that target `main`.
+#
+# `main` is the published product and is rebuilt exclusively by the publish
+# workflow (force-push from `dev` — see ADR 0014 and publish.yml). All changes
+# move up through `dev`: open PRs against `dev`, where the entry-gate machine
+# floor runs. The job name below must match the required status check
+# configured on the `main` branch protection.
+name: pr-target-guard
+on:
+  pull_request:
+    branches: [main]
+permissions: {}
+jobs:
+  block:
+    name: "PRs target dev — main is publish-only (ADR 0014)"
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::PRs never target 'main' — it is rebuilt only by the publish workflow (ADR 0014). Re-open this PR against 'dev'."
+          exit 1
