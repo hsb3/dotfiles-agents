@@ -1,0 +1,28 @@
+name: publish
+
+# Rebuilds `main` from `dev` — the ONLY sanctioned way `main` is updated.
+# ADR 0014: `main` is CI-published, never hand-committed. Manual + typed-confirmation guarded.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "publish" to rebuild main from dev'
+        required: true
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: ${{ github.event.inputs.confirm == 'publish' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - name: Publish dev -> main (force; histories are unrelated by design)
+        run: |
+          git push --force origin HEAD:refs/heads/main
