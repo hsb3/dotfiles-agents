@@ -15,7 +15,9 @@
 # `kind` (issue #144 — PLUGINS.md inventory): a plain-English inventory category, distinct
 # from the standalone catalog's structural "standalone skill" kind — `bundle` for the two
 # desk collections, `plugin` for foreman-kit (a kit, not a desk bundle). Read by
-# scripts/gen_marketplace.py when it renders PLUGINS.md; defaults to "bundle" if absent.
+# scripts/gen_marketplace.py when it renders PLUGINS.md. REQUIRED on every entry (allowed:
+# bundle, plugin) — a missing/invalid kind fails the build loudly; there is no silent default
+# (PR #145 review flag).
 
 version: 1
 

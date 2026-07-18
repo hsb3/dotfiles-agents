@@ -5,6 +5,8 @@ name == bundle id, byte-identical skill bodies), determinism, and the committed-
 Stdlib-only, and never mutates the committed tree (every build targets a tempdir).
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -25,6 +27,67 @@ class PluginsYaml(unittest.TestCase):
         pw = next(p for p in plugins if p["id"] == "code-desk")
         self.assertTrue(pw.get("version"))
         self.assertTrue(pw.get("description"))
+
+
+class PluginKindValidation(unittest.TestCase):
+    """PR #145 review flag: `kind` is REQUIRED on every plugins.yaml entry. A missing kind
+    used to silently default to "bundle" — a latent mislabeling risk for future kits; now the
+    generator fails loudly (non-zero, naming the entry) on a missing or invalid kind."""
+
+    def test_committed_entries_all_carry_valid_kind(self):
+        _, plugins = G.parse_plugins_yaml(G.PLUGINS_YAML)
+        self.assertEqual(G.plugin_meta_problems(plugins), [])
+        for p in plugins:
+            self.assertIn(p.get("kind"), G.PLUGIN_KINDS)
+
+    def test_missing_kind_is_reported_naming_the_entry(self):
+        problems = G.plugin_meta_problems([{"id": "future-kit", "version": "0.1.0"}])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("future-kit", problems[0])
+        self.assertIn("kind", problems[0])
+
+    def test_invalid_kind_is_reported_naming_the_value(self):
+        problems = G.plugin_meta_problems([{"id": "future-kit", "kind": "kit"}])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("future-kit", problems[0])
+        self.assertIn("'kit'", problems[0])
+
+    def test_standalone_skill_is_not_a_plugins_yaml_kind(self):
+        # "standalone skill" is assigned during assembly from skill-catalog.yaml, never
+        # hand-authored in plugins.yaml.
+        problems = G.plugin_meta_problems([{"id": "x", "kind": "standalone skill"}])
+        self.assertEqual(len(problems), 1)
+
+    def test_build_goes_red_when_a_kind_line_is_removed(self):
+        # End-to-end red-ability: strip foreman-kit's `kind: plugin` line from a COPY of the
+        # committed plugins.yaml, point the generator at it — the build must raise (naming
+        # the entry) and the --check CLI lane (`make build-check` / `make ci`) must exit 1.
+        # Restoring the real path goes green again (the surrounding suite proves that).
+        with open(G.PLUGINS_YAML, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        stripped = [ln for ln in lines if ln.strip() != "kind: plugin"]
+        self.assertEqual(len(stripped), len(lines) - 1)  # exactly one kind line removed
+        tmpdir = tempfile.mkdtemp(prefix="gen-marketplace-kind-red-")
+        bad_yaml = os.path.join(tmpdir, "plugins.yaml")
+        with open(bad_yaml, "w", encoding="utf-8") as fh:
+            fh.writelines(stripped)
+        real = G.PLUGINS_YAML
+        try:
+            G.PLUGINS_YAML = bad_yaml
+            with self.assertRaises(ValueError) as ctx:
+                G.build_marketplace(os.path.join(tmpdir, "out"))
+            self.assertIn("foreman-kit", str(ctx.exception))
+            self.assertIn("kind", str(ctx.exception))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = G.main(["--check"])
+            self.assertEqual(rc, 1)
+            self.assertIn("foreman-kit", out.getvalue())
+        finally:
+            G.PLUGINS_YAML = real
+            import shutil
+
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 class Membership(unittest.TestCase):
@@ -242,6 +305,7 @@ class AgentOnlyBundleAssembly(unittest.TestCase):
             fh.write(
                 'version: 1\nowner:\n  name: "Owner"\nplugins:\n'
                 "  - id: solo-kit\n"
+                "    kind: plugin\n"  # kind is now required on every entry — no silent default
                 '    version: "0.0.1"\n'
                 '    description: "agent-only fixture bundle"\n'
             )
