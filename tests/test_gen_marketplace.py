@@ -28,9 +28,16 @@ class PluginsYaml(unittest.TestCase):
 
 
 class Membership(unittest.TestCase):
-    def test_handoff_maps_to_project_workflow(self):
+    def test_handoff_maps_to_foreman_kit(self):
+        # E3: handoff is re-homed to foreman-kit as its sole owner.
         members = G.bundle_members(R.parse_roster(R.ROSTER))
-        self.assertIn("handoff", members.get("project-workflow", []))
+        self.assertIn("handoff", members.get("foreman-kit", []))
+
+    def test_handoff_not_in_project_workflow(self):
+        # E3 dedup: no primitive ships in both foreman-kit and a desk bundle.
+        members = G.bundle_members(R.parse_roster(R.ROSTER))
+        self.assertNotIn("handoff", members.get("project-workflow", []))
+        self.assertIn("board-triage", members.get("project-workflow", []))
 
 
 class Build(unittest.TestCase):
@@ -45,10 +52,11 @@ class Build(unittest.TestCase):
 
     def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
-        # exactly the two bundles + the two standalone skills, sorted by name
+        # three bundles (foreman-kit, project-workflow, repo-standards) + three standalone
+        # skills (opencode-expertise, pptx-themes, private-fork), sorted by name
         self.assertEqual(
             names,
-            ["opencode-expertise", "pptx-themes", "private-fork", "project-workflow", "repo-standards"],
+            ["foreman-kit", "opencode-expertise", "pptx-themes", "private-fork", "project-workflow", "repo-standards"],
         )
         self.assertEqual(self.market["name"], "dotfiles-agents")
 
@@ -68,9 +76,9 @@ class Build(unittest.TestCase):
 
     def test_skill_body_is_byte_identical_to_source(self):
         built = os.path.join(
-            self.tmp, "plugins", "project-workflow", "skills", "handoff"
+            self.tmp, "plugins", "project-workflow", "skills", "board-triage"
         )
-        src = os.path.join(G.REPO, "primitives-core", "skills", "handoff")
+        src = os.path.join(G.REPO, "primitives-core", "skills", "board-triage")
         self.assertTrue(G._identical(src, built))
 
     def test_build_is_deterministic(self):
@@ -91,28 +99,34 @@ class HookAssembly(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-hooks-")
         G.build_marketplace(self.tmp)
-        self.pw_hooks = os.path.join(self.tmp, "plugins", "project-workflow", "hooks")
+        # E3: the four hooks are re-homed to foreman-kit (sole owner).
+        self.fk_hooks = os.path.join(self.tmp, "plugins", "foreman-kit", "hooks")
 
     def tearDown(self):
         import shutil
 
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_hook_maps_to_project_workflow(self):
+    def test_hooks_map_to_foreman_kit(self):
         hooks = G.bundle_hooks(R.parse_roster(R.ROSTER))
-        self.assertIn("context-watermark", hooks.get("project-workflow", []))
-        self.assertIn("handoff-freshness-guard", hooks.get("project-workflow", []))
+        fk = hooks.get("foreman-kit", [])
+        for hid in ("context-watermark", "handoff-freshness-guard",
+                    "session-handoff-surfacer", "subagent-telemetry"):
+            self.assertIn(hid, fk)
+        # E3 dedup: hooks no longer ship in project-workflow.
+        self.assertEqual(hooks.get("project-workflow", []), [])
 
     def test_hook_body_assembled_byte_identical(self):
-        built = os.path.join(self.pw_hooks, "context-watermark")
+        built = os.path.join(self.fk_hooks, "context-watermark")
         src = os.path.join(G.REPO, "primitives-core", "hooks", "context-watermark")
         self.assertTrue(G._identical(src, built))
 
     def test_plugin_hooks_manifest_written(self):
-        with open(os.path.join(self.pw_hooks, "hooks.json")) as fh:
+        with open(os.path.join(self.fk_hooks, "hooks.json")) as fh:
             manifest = json.load(fh)
-        self.assertIn("UserPromptSubmit", manifest["hooks"])
-        self.assertIn("PreCompact", manifest["hooks"])
+        # All four hook events assemble into the one bundle manifest.
+        for event in ("UserPromptSubmit", "PreCompact", "SessionStart", "SubagentStop"):
+            self.assertIn(event, manifest["hooks"])
         cmd = manifest["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
         self.assertIn("${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py", cmd)
         self.assertIn("CONTEXT_WATERMARK_SOFT=70000", cmd)
@@ -136,20 +150,25 @@ class AgentAssembly(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-agents-")
         G.build_marketplace(self.tmp)
-        self.pw_agents = os.path.join(self.tmp, "plugins", "project-workflow", "agents")
+        # E2: the four foreman-kit agents are the first real agent members.
+        self.fk_agents = os.path.join(self.tmp, "plugins", "foreman-kit", "agents")
 
     def tearDown(self):
         import shutil
 
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_agent_maps_to_project_workflow(self):
+    def test_agents_map_to_foreman_kit(self):
         agents = G.bundle_agents(R.parse_roster(R.ROSTER))
-        self.assertIn("seed-agent", agents.get("project-workflow", []))
+        fk = agents.get("foreman-kit", [])
+        for aid in ("scout", "builder", "reviewer", "lead"):
+            self.assertIn(aid, fk)
+        # seed-agent removed: no agents ship in project-workflow anymore.
+        self.assertEqual(agents.get("project-workflow", []), [])
 
     def test_agent_body_assembled_byte_identical(self):
-        built = os.path.join(self.pw_agents, "seed-agent.md")
-        src = os.path.join(G.REPO, "primitives-core", "agents", "seed-agent.md")
+        built = os.path.join(self.fk_agents, "scout.md")
+        src = os.path.join(G.REPO, "primitives-core", "agents", "scout.md")
         self.assertTrue(os.path.isfile(built))
         self.assertTrue(G._identical(src, built))
 
@@ -162,8 +181,8 @@ class AgentAssembly(unittest.TestCase):
         # The roster<->generated-tree guard compares bytes (G._identical, what check() uses):
         # a freshly generated agent matches its source; a drifted one is caught; regenerating
         # (re-copying from source) restores the match. Mirrors the hook-member drift guard.
-        built = os.path.join(self.pw_agents, "seed-agent.md")
-        src = os.path.join(G.REPO, "primitives-core", "agents", "seed-agent.md")
+        built = os.path.join(self.fk_agents, "scout.md")
+        src = os.path.join(G.REPO, "primitives-core", "agents", "scout.md")
         self.assertTrue(G._identical(src, built))  # green: generated tree == roster source
         with open(built, "a", encoding="utf-8") as fh:
             fh.write("\ndrift injected\n")

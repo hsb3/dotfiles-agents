@@ -308,7 +308,7 @@ def main():
                 out = {
                     "additionalContext": message,
                     "systemMessage": (
-                        f"project-workflow: context ~{round(ctx_tokens / 1000)}k tokens — "
+                        f"foreman-kit: context ~{round(ctx_tokens / 1000)}k tokens — "
                         f"{tier} watermark crossed; nudging /handoff + /clear."
                     ),
                 }

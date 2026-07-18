@@ -1,0 +1,6 @@
+{
+  "event": "SessionStart",
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Checking for a project handoff..."
+}

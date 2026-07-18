@@ -14,9 +14,12 @@
 # scripts/check_roster.py). This is a Claude-Code-only distribution, so targets carry
 # `claude-code` alone; the multi-vendor translation surface was dropped at the rebuild.
 #
-# The 0007 bundle lineup: project-workflow (5 skills + 2 nudge hooks) + repo-standards (6
-# skills). Skill bodies ported from dev-legacy and identity-neutralized at D6; the two nudge
-# hooks ported from foreman-kit v0.5.0 at D2 (context-watermark, handoff-freshness-guard).
+# The bundle lineup: project-workflow (4 skills) + repo-standards (6 skills) + the standalone
+# foreman-kit (foreman + handoff skills, 4 agents scout/builder/reviewer/lead, 4 hooks). Desk
+# skill bodies ported from dev-legacy and identity-neutralized at D6; foreman-kit ported from
+# the foreman-kit v0.5.0 upstream at E2/E3 and is the sole home of the handoff skill plus the
+# four delegation hooks (context-watermark, handoff-freshness-guard, session-handoff-surfacer,
+# subagent-telemetry).
 
 version: 1
 
@@ -29,7 +32,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: [foreman-kit]
     summary: "Maintain the project's session-handoff file so a brand-new session can pick up work cold. Use at session boundaries when the user says \"wrap up\", \"update the handoff\", or runs /handoff."
   - id: board-triage
     type: skill
@@ -143,7 +146,7 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: [foreman-kit]
     summary: "UserPromptSubmit nudge hook: warns when session context crosses the soft/hard token watermarks and nudges toward /handoff + /clear (or /compact). Ships the operating line soft=70k/hard=100k; fails open, never blocks a prompt."
   - id: handoff-freshness-guard
     type: hook
@@ -153,18 +156,78 @@ primitives:
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
+    plugins: [foreman-kit]
     summary: "PreCompact nudge hook: blocks a manual /compact when the project's HANDOFF.md is stale/missing (run /handoff first); never blocks auto-compaction — fails open with non-blocking guidance instead."
-  - id: seed-agent
-    type: agent
-    source: primitives-core/agents/seed-agent.md
+  - id: foreman
+    type: skill
+    source: primitives-core/skills/foreman
     shelf: core
     origin: authored
     disposition: qualified
     vendor: null
     targets: [claude-code]
-    plugins: [project-workflow]
-    summary: "Harness seed agent that exercises the type:agent assembly path (roster -> plugin agents/ tree). A fixture-scale placeholder proving the marketplace assembler ships agent members; replaced when the first real agent primitive lands."
+    plugins: [foreman-kit]
+    summary: "Size a substantial task and run the session as a foreman: pick a delegation architecture (A-E), bind slices to the scout/builder/reviewer/lead agents with dispatch-time model tiers, hold the never-delegated floor, and apply findings-backed context-hygiene defaults. Self-contained delegation doctrine."
+  - id: scout
+    type: agent
+    source: primitives-core/agents/scout.md
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "Read-only recon agent — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to haiku."
+  - id: builder
+    type: agent
+    source: primitives-core/agents/builder.md
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "Scoped implementation agent working inside an owned file list against explicit acceptance criteria. Defaults to sonnet; dispatch with model:opus for coupled or costly-to-unwind slices."
+  - id: reviewer
+    type: agent
+    source: primitives-core/agents/reviewer.md
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "Adversarial, report-only verification agent — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. Use whenever a claim or diff will drive further changes."
+  - id: lead
+    type: agent
+    source: primitives-core/agents/lead.md
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "Architecture-D chain proxy agent — drives a coupled dependent chain, spawns its own bounded-link workers, and verifies before reporting a proof package. Not for independent parallelizable work."
+  - id: session-handoff-surfacer
+    type: hook
+    source: primitives-core/hooks/session-handoff-surfacer
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "SessionStart hook: on a genuine cold start (startup or clear), surfaces an existing project handoff as a pointer + capped head excerpt so a fresh session picks up prior work. Silent no-op on resume/compact and when no handoff exists; fails open."
+  - id: subagent-telemetry
+    type: hook
+    source: primitives-core/hooks/subagent-telemetry
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "SubagentStop hook: appends one JSONL row per delegation (agent_id, agent_type, model, ctx_tokens) to a local ledger so tier usage can be measured offline. Silent — no stdout, never blocks; reads model/usage from the subagent's own transcript."
   - id: opencode-expertise
     type: skill
     source: primitives-core/skills/opencode-expertise
