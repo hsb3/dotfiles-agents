@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.",
+  "name": "diagrams",
+  "version": "0.1.0"
+}

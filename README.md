@@ -5,11 +5,13 @@ source (`primitives-core/`) into installable plugin bundles.
 
 The lineup is organized around desk sets: two desk bundles — **code-desk** (slim
 next-release execution under a documented repo standard) and **exec-desk** (the
-executive-desk overhead: planning, comms, board triage, deck themes) — plus **foreman-kit**
-(tiered delegation agents and session-discipline hooks, enabled on every desk) and four
-standalone one-skill plugins (**github-project-board**, **private-fork**,
-**opencode-expertise**, **pptx-themes**). Cross-desk items ship standalone, never inside a
-desk bundle. Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`
+executive-desk overhead: planning, comms, board triage, deck themes) — plus three kits —
+**foreman-kit** (tiered delegation agents and session-discipline hooks, enabled on every
+desk), **diagrams** (structural diagrams: Mermaid, Python cloud-architecture diagrams,
+draw.io, Excalidraw, Graphviz), and **obsidian-toolkit** (Obsidian plugin-dev guidance and
+vault automation) — and five standalone one-skill plugins (**github-project-board**,
+**private-fork**, **opencode-expertise**, **owner-signoff**, **pptx-themes**). Cross-desk
+items ship standalone, never inside a desk bundle. Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`
 (consumers install from `main`, the published branch).
 
 ## Layout

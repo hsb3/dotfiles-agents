@@ -251,3 +251,96 @@ primitives:
     targets: [claude-code]
     plugins: [exec-desk]
     summary: "Create, edit, and review PowerPoint presentations with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml)."
+  - id: diagrams
+    type: skill
+    source: primitives-core/skills/diagrams
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    requires: [cli:graphviz]
+    vendor: null
+    targets: [claude-code]
+    plugins: [diagrams]
+    summary: "Hub of the diagrams plugin — structural-diagram tool selection, cloud-architecture diagrams with provider icons via Python's diagrams library (Azure first), raw Graphviz dot for dependency graphs and trees, and the SVG+PNG output pipelines for GitHub docs, decks, and briefings."
+  - id: mermaid
+    type: skill
+    source: primitives-core/skills/mermaid
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    vendor: null
+    targets: [claude-code]
+    plugins: [diagrams]
+    summary: "Mermaid for GitHub-rendered markdown — flowcharts, sequence diagrams for auth flows, ERDs, and state diagrams, with the house rule that node labels carry no parentheses or special characters, light/dark theming, and mermaid-cli rendering to SVG/PNG."
+  - id: drawio
+    type: skill
+    source: primitives-core/skills/drawio
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    requires: [cli:drawio]
+    vendor: null
+    targets: [claude-code]
+    plugins: [diagrams]
+    summary: "Read, convert, and headlessly export draw.io / diagrams.net files — the compressed and uncompressed mxGraph XML formats, a stdlib Python decompression recipe, legacy-to-Mermaid conversion, and desktop-app CLI export to PNG/SVG."
+  - id: excalidraw
+    type: skill
+    source: primitives-core/skills/excalidraw
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    vendor: null
+    targets: [claude-code]
+    plugins: [diagrams]
+    summary: "Sketch-style architecture diagrams as .excalidraw files — uses the Excalidraw MCP tools when a session exposes them, otherwise authors the scene JSON directly (schema, arrow binding, labels), with SVG/PNG export guidance."
+  - id: obsidian-api-basics
+    type: skill
+    source: primitives-core/skills/obsidian-api-basics
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    vendor: null
+    targets: [claude-code]
+    plugins: [obsidian-toolkit]
+    summary: "Foundational guidance for building Obsidian plugins — plugin lifecycle (onload/onunload), settings and saveData/loadData patterns, vault API operations, command registration, and ribbon icons."
+  - id: obsidian-chat-ui
+    type: skill
+    source: primitives-core/skills/obsidian-chat-ui
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    vendor: null
+    targets: [claude-code]
+    plugins: [obsidian-toolkit]
+    summary: "Patterns for chat and copilot-style interfaces in Obsidian plugins — ItemView sidebar panels, streaming message rendering, and workspace integration."
+  - id: obsidian-cli
+    type: skill
+    source: primitives-core/skills/obsidian-cli
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    requires: [cli:obsidian]
+    vendor: null
+    targets: [claude-code]
+    plugins: [obsidian-toolkit]
+    summary: "The official Obsidian CLI (v1.12+) — interact with vaults, manage files, execute commands, and automate workflows from the terminal."
+  - id: obsidian-mcp-server
+    type: skill
+    source: primitives-core/skills/obsidian-mcp-server
+    shelf: toggle
+    origin: authored
+    disposition: grandfathered-pending-use
+    vendor: null
+    targets: [claude-code]
+    plugins: [obsidian-toolkit]
+    summary: "MCP servers inside Obsidian plugins — Streamable HTTP transport setup and tool patterns that expose vault operations to AI agents."
+  - id: owner-signoff
+    type: skill
+    source: primitives-core/skills/owner-signoff
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: []
+    summary: "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically."

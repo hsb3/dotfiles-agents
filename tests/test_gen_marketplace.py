@@ -65,7 +65,13 @@ class PluginKindValidation(unittest.TestCase):
         # Restoring the real path goes green again (the surrounding suite proves that).
         with open(G.PLUGINS_YAML, encoding="utf-8") as fh:
             lines = fh.readlines()
-        stripped = [ln for ln in lines if ln.strip() != "kind: plugin"]
+        # Several entries carry `kind: plugin` now — strip only the one that immediately
+        # follows foreman-kit's `- id:` line so the raised error names that entry.
+        idx = next(
+            i for i, ln in enumerate(lines) if ln.strip() == "- id: foreman-kit"
+        )
+        self.assertEqual(lines[idx + 1].strip(), "kind: plugin")
+        stripped = lines[: idx + 1] + lines[idx + 2 :]
         self.assertEqual(len(stripped), len(lines) - 1)  # exactly one kind line removed
         tmpdir = tempfile.mkdtemp(prefix="gen-marketplace-kind-red-")
         bad_yaml = os.path.join(tmpdir, "plugins.yaml")
@@ -117,16 +123,20 @@ class Build(unittest.TestCase):
 
     def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
-        # two bundles (code-desk, exec-desk) + foreman-kit + four standalone skills
-        # (github-project-board, opencode-expertise, pptx-themes, private-fork), sorted by name
+        # two bundles (code-desk, exec-desk) + three kits (diagrams, foreman-kit,
+        # obsidian-toolkit) + five standalone skills (github-project-board,
+        # opencode-expertise, owner-signoff, pptx-themes, private-fork), sorted by name
         self.assertEqual(
             names,
             [
                 "code-desk",
+                "diagrams",
                 "exec-desk",
                 "foreman-kit",
                 "github-project-board",
+                "obsidian-toolkit",
                 "opencode-expertise",
+                "owner-signoff",
                 "pptx-themes",
                 "private-fork",
             ],

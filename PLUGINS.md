@@ -12,6 +12,14 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Ships:** 7 skills — memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
 - **Install:** `claude plugin install code-desk@dotfiles-agents`
 
+## diagrams
+
+- **Kind:** plugin
+- **Version:** 0.1.0
+- **Description:** Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.
+- **Ships:** 4 skills — diagrams, drawio, excalidraw, mermaid
+- **Install:** `claude plugin install diagrams@dotfiles-agents`
+
 ## exec-desk
 
 - **Kind:** bundle
@@ -36,6 +44,14 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Ships:** 1 skill — github-project-board
 - **Install:** `claude plugin install github-project-board@dotfiles-agents`
 
+## obsidian-toolkit
+
+- **Kind:** plugin
+- **Version:** 0.1.0
+- **Description:** Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.
+- **Ships:** 4 skills — obsidian-api-basics, obsidian-chat-ui, obsidian-cli, obsidian-mcp-server
+- **Install:** `claude plugin install obsidian-toolkit@dotfiles-agents`
+
 ## opencode-expertise
 
 - **Kind:** standalone skill
@@ -43,6 +59,14 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Description:** Expert knowledge of opencode — every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code → opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works.
 - **Ships:** 1 skill — opencode-expertise
 - **Install:** `claude plugin install opencode-expertise@dotfiles-agents`
+
+## owner-signoff
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically.
+- **Ships:** 1 skill — owner-signoff
+- **Install:** `claude plugin install owner-signoff@dotfiles-agents`
 
 ## pptx-themes
 
