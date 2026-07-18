@@ -10,6 +10,9 @@ artifacts:
   plugins/<bundle>/.claude-plugin/plugin.json   the CC plugin manifest (name == bundle id)
   plugins/<bundle>/skills/<id>/                 each member skill body, copied verbatim from
                                                 primitives-core/skills/<id>/
+  plugins/<bundle>/agents/<id>.md               each member agent body, copied verbatim from
+                                                primitives-core/agents/<id>.md (single .md file,
+                                                mirroring the skill/hook member assembly)
   plugins/<bundle>/README.md                    the bundle's value/proof README, copied
                                                 verbatim from its source (optional — a bundle
                                                 with no README source ships without one)
@@ -142,6 +145,11 @@ def bundle_hooks(roster):
     return _members_of_type(roster, "hook")
 
 
+def bundle_agents(roster):
+    """Map each bundle id -> sorted list of the agent ids that name it in `plugins:`."""
+    return _members_of_type(roster, "agent")
+
+
 def _members_of_type(roster, wanted):
     members = {}
     for e in roster:
@@ -205,6 +213,7 @@ def build_marketplace(out_root):
     src_by_id = {e["id"]: e["source"] for e in roster}
     members = bundle_members(roster)
     hooks = bundle_hooks(roster)
+    agents = bundle_agents(roster)
 
     plugins_out = os.path.join(out_root, "plugins")
     entries = []
@@ -212,7 +221,8 @@ def build_marketplace(out_root):
         bundle = meta["id"]
         ids = members.get(bundle, [])
         hook_ids = hooks.get(bundle, [])
-        if not ids and not hook_ids:
+        agent_ids = agents.get(bundle, [])
+        if not ids and not hook_ids and not agent_ids:
             continue  # a metadata-only bundle with no roster members does not ship yet
         proot = os.path.join(plugins_out, bundle)
         os.makedirs(os.path.join(proot, ".claude-plugin"), exist_ok=True)
@@ -242,6 +252,14 @@ def build_marketplace(out_root):
             with open(os.path.join(proot, "hooks", "hooks.json"), "w") as fh:
                 json.dump(hooks_manifest, fh, indent=2, sort_keys=True)
                 fh.write("\n")
+        if agent_ids:
+            os.makedirs(os.path.join(proot, "agents"), exist_ok=True)
+            for agent_id in agent_ids:
+                src = src_by_id[agent_id]  # primitives-core/agents/<id>.md — a single file
+                shutil.copy2(
+                    os.path.join(REPO, src),
+                    os.path.join(proot, "agents", os.path.basename(src)),
+                )
         _copy_bundle_readme(bundle, proot)
         entries.append(
             {

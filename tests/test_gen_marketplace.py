@@ -132,6 +132,48 @@ class HookAssembly(unittest.TestCase):
         )
 
 
+class AgentAssembly(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-agents-")
+        G.build_marketplace(self.tmp)
+        self.pw_agents = os.path.join(self.tmp, "plugins", "project-workflow", "agents")
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_agent_maps_to_project_workflow(self):
+        agents = G.bundle_agents(R.parse_roster(R.ROSTER))
+        self.assertIn("seed-agent", agents.get("project-workflow", []))
+
+    def test_agent_body_assembled_byte_identical(self):
+        built = os.path.join(self.pw_agents, "seed-agent.md")
+        src = os.path.join(G.REPO, "primitives-core", "agents", "seed-agent.md")
+        self.assertTrue(os.path.isfile(built))
+        self.assertTrue(G._identical(src, built))
+
+    def test_bundle_without_agents_has_no_agents_dir(self):
+        self.assertFalse(
+            os.path.exists(os.path.join(self.tmp, "plugins", "repo-standards", "agents"))
+        )
+
+    def test_agent_drift_is_red_able(self):
+        # The roster<->generated-tree guard compares bytes (G._identical, what check() uses):
+        # a freshly generated agent matches its source; a drifted one is caught; regenerating
+        # (re-copying from source) restores the match. Mirrors the hook-member drift guard.
+        built = os.path.join(self.pw_agents, "seed-agent.md")
+        src = os.path.join(G.REPO, "primitives-core", "agents", "seed-agent.md")
+        self.assertTrue(G._identical(src, built))  # green: generated tree == roster source
+        with open(built, "a", encoding="utf-8") as fh:
+            fh.write("\ndrift injected\n")
+        self.assertFalse(G._identical(src, built))  # red: tree drifted from the roster
+        import shutil
+
+        shutil.copy2(src, built)
+        self.assertTrue(G._identical(src, built))  # green again after regeneration
+
+
 class BundleReadmeAssembly(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gen-marketplace-readmes-")
