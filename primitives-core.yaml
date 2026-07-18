@@ -155,6 +155,16 @@ primitives:
     targets: [claude-code]
     plugins: [project-workflow]
     summary: "PreCompact nudge hook: blocks a manual /compact when the project's HANDOFF.md is stale/missing (run /handoff first); never blocks auto-compaction — fails open with non-blocking guidance instead."
+  - id: seed-agent
+    type: agent
+    source: primitives-core/agents/seed-agent.md
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [project-workflow]
+    summary: "Harness seed agent that exercises the type:agent assembly path (roster -> plugin agents/ tree). A fixture-scale placeholder proving the marketplace assembler ships agent members; replaced when the first real agent primitive lands."
   - id: opencode-expertise
     type: skill
     source: primitives-core/skills/opencode-expertise
