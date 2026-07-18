@@ -13,6 +13,11 @@ to emit each wrapper into `plugins/<skill-id>/` and merges `standalone_entries()
 install alongside the bundles. A standalone wrapper's plugin name is the skill id; the catalog
 guard (check_skill_catalog.py) enforces that it never clashes with a bundle id.
 
+Each wrapper also ships `README.md` at its ROOT (issue #144), copied verbatim from
+`primitives-core/standalone-readmes/<id>/README.md` if that source exists — additive only,
+mirroring gen_marketplace's bundle-README mechanism. It sits outside `skills/<id>/`, so it is
+never part of the byte-identity comparison the invariants below assert.
+
 Stand-alone entry points (used by tests + as an independent invariant guard):
   python3 scripts/gen_standalone.py --out DIR   emit wrappers under DIR/<id>/
   python3 scripts/gen_standalone.py --check      build to a temp dir + assert invariants
@@ -42,6 +47,7 @@ from check_roster import parse_roster  # noqa: E402
 
 IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
 PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
+STANDALONE_README_DIR = os.path.join(REPO, "primitives-core", "standalone-readmes")
 DEFAULT_VERSION = "0.0.1"
 
 
@@ -97,6 +103,16 @@ def plugin_manifest(skill_id, roster_entry):
     }
 
 
+def _copy_standalone_readme(skill_id, proot):
+    """Copy primitives-core/standalone-readmes/<skill_id>/README.md -> <proot>/README.md if the
+    source exists. Additive only, mirroring gen_marketplace._copy_bundle_readme — never fails
+    the build. Placed at the wrapper ROOT (a sibling of skills/), outside the skills/ subtree
+    that the byte-identity invariant (verify_wrappers) compares against primitives-core source."""
+    src = os.path.join(STANDALONE_README_DIR, skill_id, "README.md")
+    if os.path.isfile(src):
+        shutil.copy2(src, os.path.join(proot, "README.md"))
+
+
 def write_wrapper(out_root, catalog_entry, roster_entry):
     """Emit one wrapper under out_root/<id>/ and return its path."""
     skill_id = catalog_entry["id"]
@@ -107,6 +123,7 @@ def write_wrapper(out_root, catalog_entry, roster_entry):
         fh.write("\n")
     src = os.path.join(REPO, roster_entry["source"])
     shutil.copytree(src, os.path.join(proot, "skills", skill_id), ignore=IGNORE)
+    _copy_standalone_readme(skill_id, proot)
     return proot
 
 

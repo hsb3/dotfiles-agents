@@ -21,6 +21,7 @@ desk bundle. Claude-Code-only; the marketplace resolves by name as `<plugin>@dot
 | `plugins.yaml` | plugin-bundle metadata (name / version / description) |
 | `plugins/` | **generated** — assembled Claude Code plugin bundles (never hand-edited) |
 | `.claude-plugin/marketplace.json` | **generated** — the marketplace root |
+| `PLUGINS.md` | **generated** — inventory of every distributed plugin (kind, version, contents, install command) |
 | `hooks/` | the ratified hook-dir layout (`hooks/<name>/hook.py`) |
 | `scripts/` | roster guard + generators, each with a `--check` drift mode |
 | `tests/` | stdlib-only unit tests (zero install) |

@@ -7,9 +7,10 @@ into a primitive body. This is the vendored, in-repo successor to the archived w
 `scripts/promote_check.py` H2/H5 checks — no cross-repo import at runtime.
 
 Scope = the shipped primitive bodies under `primitives-core/{skills,agents,hooks}/`, plus each
-bundle's README source under `primitives-core/bundles/<id>/README.md` — that file is copied
-verbatim into the installed plugin (`plugins/<bundle>/README.md`), so it ships to a user the
-same as a skill body and is in scope for the same reason. The marketplace/plugin
+bundle's README source under `primitives-core/bundles/<id>/README.md` and each standalone
+wrapper's README source under `primitives-core/standalone-readmes/<id>/README.md` — both are
+copied verbatim into the installed plugin (`plugins/<id>/README.md`), so they ship to a user
+the same as a skill body and are in scope for the same reason. The marketplace/plugin
 `owner`/`author` metadata is the *sanctioned* data surface for authorship and is deliberately
 out of scope (that is where identity is allowed to live). Repo-internal docs that never leave
 the source tree (root README, CONTRIBUTING, ADRs, _meta) do not ship to a user and are not
@@ -44,6 +45,7 @@ SCAN_ROOTS = (
     os.path.join(REPO, "primitives-core", "agents"),
     os.path.join(REPO, "primitives-core", "hooks"),
     os.path.join(REPO, "primitives-core", "bundles"),
+    os.path.join(REPO, "primitives-core", "standalone-readmes"),
 )
 TEXT_EXT = (".md", ".json", ".sh", ".py", ".js", ".ts", ".yaml", ".yml", ".toml", ".txt")
 
