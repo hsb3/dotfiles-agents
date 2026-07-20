@@ -1,0 +1,2 @@
+- [Desk-platform research element-model review](desk-platform-research-elementmodel.md) — verified _headcase claims accurate; recurring research gaps = missing claim/citation + experiment/dataset entities
+- [rg color masking gotcha](rg-color-masking-gotcha.md) — rg default output garbles matched terms in Bash tool; use --color=never for quotable evidence
