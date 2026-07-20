@@ -17,10 +17,13 @@
 _meta/operations/*
 !_meta/operations/.gitkeep
 
-# --- extender-db: live PocketBase database is machine-local; scripts/README are tracked.
-# pb_migrations/ is PocketBase's auto-generated schema journal — schema.py is the one
-# rebuild path (CHARTER.md decision 2); tracking both would create a second schema source.
-_meta/extender-db/pb_data/
+# --- extender-db (_meta/extender-db/_structure/CHARTER.md decisions 2+4):
+# data.db is tracked (small, private repo — state travels with the repo); transient
+# siblings are not: auxiliary.db is request logs, WAL/SHM are live journals, types.d.ts is
+# generated. pb_migrations/ is PocketBase's auto-generated schema journal — schema.py is
+# the one rebuild path; tracking both would create a second schema source.
+_meta/extender-db/pb_data/*
+!_meta/extender-db/pb_data/data.db
 _meta/extender-db/pb_migrations/
 
 # --- Python ---

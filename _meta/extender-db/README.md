@@ -4,9 +4,11 @@ _Internal analysis tool: a queryable database of this repo's agent extenders (th
 structure, and packaging) plus the mental models used to compose and evaluate them._
 Status: active (seed scope: skills + agent personas; expansion path below).
 
-This is a mini-project: [CHARTER.md](CHARTER.md) is the canonical page (mission, scope,
-decisions, promotion gate), [PLAN.md](PLAN.md) carries deliverables/criteria/parallelism,
-and [OPEN-ITEMS.md](OPEN-ITEMS.md) is the issue tracker. This README is the operator doc.
+This is a mini-project — the project docs live in `_structure/`:
+[CHARTER.md](_structure/CHARTER.md) is the canonical page (mission, scope, decisions,
+promotion gate), [PLAN.md](_structure/PLAN.md) carries deliverables/criteria/parallelism,
+and [OPEN-ITEMS.md](_structure/OPEN-ITEMS.md) is the issue tracker. This README is the
+operator doc.
 
 The repo itself stays the source of truth — this database is a **projection for analysis**,
 rebuilt at any time by re-running the ingest. Never edit extender content here and expect it
@@ -26,8 +28,10 @@ Configuration resolves from env vars first, then `_meta/operations/extender-db.e
 `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` (superuser, no default). PocketBase itself only
 takes the data dir as a `--dir` flag — `serve.sh` is the env-var surface, and forwards any
 other subcommand with `--dir` appended (e.g. `serve.sh superuser upsert EMAIL PASS`). The
-live database (`pb_data/`) is machine-local and gitignored; the scripts and this README are
-tracked.
+live database is tracked in git as `pb_data/data.db` (private repo, ~6 MB); the rest of
+`pb_data/` — request logs (`auxiliary.db`), WAL/SHM journals, generated typings — is
+transient and stays ignored. Stop the server before committing so the WAL is checkpointed
+into `data.db`.
 Admin UI: <http://127.0.0.1:8090/_/>. All collections are superuser-only (no public API rules).
 
 ## Data model
@@ -106,4 +110,6 @@ against the same catalog is the point of the model.
 - `pb.py` — minimal stdlib REST client (superuser auth, upsert helpers)
 - `schema.py` — collection definitions; safe to re-run (merges by field name, preserves ids)
 - `ingest.py` — repo scan + framework seeds + mechanical assessments; safe to re-run
-- `pb_data/` — the live SQLite-backed database (gitignored)
+- `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`)
+- `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS
+- `pb_data/` — the live database; only `data.db` is tracked (logs/journals/typings ignored)

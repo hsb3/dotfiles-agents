@@ -30,8 +30,10 @@ are both queries.
   frameworks, mechanical assessments.
 - **Committed expansion:** hooks, MCP servers, commands (`extenders.kind` and vocabularies
   already carry them); externals by reference; judged (non-mechanical) assessment passes.
-- **Store:** PocketBase, local, single-machine, superuser-only. `pb_data/` is machine-local
-  and gitignored; everything needed to rebuild it (schema, ingest, seeds) is tracked.
+- **Store:** PocketBase, local, single-machine, superuser-only. The database file
+  (`pb_data/data.db`) is tracked in git (decision 4, revised 2026-07-20); transient siblings
+  (request logs, WAL/SHM, typings) are ignored, and everything needed to rebuild from
+  scratch (schema, ingest, seeds) is tracked regardless.
 
 ## Non-goals
 
@@ -56,7 +58,10 @@ are both queries.
 - **Doctrine is append-and-supersede.** A framework proven wrong or replaced gets
   `status: superseded` and a successor row with its own citation — never overwritten.
 - **Secrets discipline.** Credentials live in `_meta/operations/extender-db.env`
-  (untracked). Nothing under `_meta/extender-db/` may contain a secret.
+  (untracked). Nothing under `_meta/extender-db/` may contain a plaintext secret. Known
+  exception, accepted: the tracked `data.db` contains the bcrypt hash of the superuser
+  password (random 32-hex, localhost-only service, private repo). If the repo ever goes
+  public, rotate the superuser and strip `data.db` from history first.
 
 ## Decisions
 
@@ -65,7 +70,7 @@ are both queries.
 | 1 | PocketBase as the store | Single binary, zero-infra, admin UI for browsing, REST API scriptable from stdlib Python — matches the repo's zero-install posture. |
 | 2 | Projection, not source of truth | The repo already has manifest + drift-guard machinery; duplicating authority would create a second truth to reconcile. |
 | 3 | Doctrine modeled as data (frameworks/elements), not code | The point is analyzing the catalog BY competing mental models; models must be comparable, citable, and supersedable. |
-| 4 | Lives under `_meta/extender-db/` with gitignored `pb_data/` | It is desk tooling (ADR-0006 track-by-default), not a shipped artifact; the live DB is machine-local. |
+| 4 | Lives under `_meta/extender-db/`; `pb_data/data.db` tracked, transient siblings ignored | Desk tooling (ADR-0006 track-by-default), not a shipped artifact. _Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo make committing the live DB worth it so state travels with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stay ignored._ |
 | 5 | Mechanical vs judged assessments split by `assessor` | Regeneration must never destroy judgment; judgment must never block re-ingest. |
 
 ## Promotion gate
@@ -89,8 +94,8 @@ when made, not presumed now.
 
 | File | Role |
 |---|---|
-| `CHARTER.md` | This page — canonical; precedence over all other project docs. |
-| `PLAN.md` | Deliverables · acceptance criteria · parallelism (no timelines). |
-| `OPEN-ITEMS.md` | The project's issue tracker — open items, findings, resolved log. |
-| `README.md` | Operator doc: data model reference + how to run. |
-| `pb.py` / `schema.py` / `ingest.py` | The tool. |
+| `_structure/CHARTER.md` | This page — canonical; precedence over all other project docs. |
+| `_structure/PLAN.md` | Deliverables · acceptance criteria · parallelism (no timelines). |
+| `_structure/OPEN-ITEMS.md` | The project's issue tracker — open items, findings, resolved log. |
+| `README.md` | Operator doc: data model reference + how to run (folder root). |
+| `pb.py` / `schema.py` / `ingest.py` / `serve.sh` | The tool (folder root). |
