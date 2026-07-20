@@ -1,0 +1,420 @@
+{
+ "generated": "2026-07-20",
+ "counts": {
+  "extenders_total": 37,
+  "by_kind": {
+   "skill": 25,
+   "agent": 4,
+   "hook": 4,
+   "plugin": 4
+  },
+  "by_origin": {
+   "authored": 31,
+   "external": 6
+  },
+  "files": 192,
+  "distributions": 10,
+  "frameworks": 6,
+  "framework_elements": 39,
+  "assessments_by_assessor": {
+   "mechanical-v1": 197,
+   "judged-v1": 345,
+   "review-v1": 120
+  }
+ },
+ "archetype_distribution": {
+  "workflow-procedure": 4,
+  "deliverable-producer": 4,
+  "domain-expertise": 11,
+  "orchestration-delegation": 1,
+  "scaffold-auditor": 3
+ },
+ "archetype_by_skill": {
+  "board-triage": "workflow-procedure",
+  "comms": "deliverable-producer",
+  "diagrams": "domain-expertise",
+  "drawio": "domain-expertise",
+  "excalidraw": "domain-expertise",
+  "foreman": "orchestration-delegation",
+  "github-project-board": "workflow-procedure",
+  "handoff": "workflow-procedure",
+  "memory-taxonomy": "domain-expertise",
+  "mermaid": "domain-expertise",
+  "mise-en-place-scaffold": "scaffold-auditor",
+  "obsidian-api-basics": "domain-expertise",
+  "obsidian-chat-ui": "deliverable-producer",
+  "obsidian-cli": "domain-expertise",
+  "obsidian-mcp-server": "domain-expertise",
+  "opencode-expertise": "domain-expertise",
+  "owner-signoff": "workflow-procedure",
+  "planning-desk": "scaffold-auditor",
+  "pptx-themes": "deliverable-producer",
+  "private-fork": "domain-expertise",
+  "readme-value-and-proof": "deliverable-producer",
+  "repo-compliance-audit": "scaffold-auditor",
+  "repo-meta-structure": "domain-expertise"
+ },
+ "section_matrix": {
+  "board-triage": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "present"
+  },
+  "comms": {
+   "anti-patterns": "partial",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "partial",
+   "workflow-steps": "present"
+  },
+  "diagrams": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "present"
+  },
+  "drawio": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "present"
+  },
+  "excalidraw": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "partial"
+  },
+  "foreman": {
+   "anti-patterns": "present",
+   "examples": "absent",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "present"
+  },
+  "github-project-board": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "partial",
+   "workflow-steps": "present"
+  },
+  "handoff": {
+   "anti-patterns": "present",
+   "examples": "absent",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "absent",
+   "trigger-when-to-use": "partial",
+   "workflow-steps": "present"
+  },
+  "memory-taxonomy": {
+   "anti-patterns": "partial",
+   "examples": "absent",
+   "integration-partners": "present",
+   "output-format": "partial",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "partial"
+  },
+  "mermaid": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "partial"
+  },
+  "mise-en-place-scaffold": {
+   "anti-patterns": "present",
+   "examples": "partial",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "partial",
+   "workflow-steps": "present"
+  },
+  "obsidian-api-basics": {
+   "anti-patterns": "partial",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "absent"
+  },
+  "obsidian-chat-ui": {
+   "anti-patterns": "absent",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "partial"
+  },
+  "obsidian-cli": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "partial",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "partial"
+  },
+  "obsidian-mcp-server": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "partial"
+  },
+  "opencode-expertise": {
+   "anti-patterns": "partial",
+   "examples": "absent",
+   "integration-partners": "partial",
+   "output-format": "absent",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "absent"
+  },
+  "owner-signoff": {
+   "anti-patterns": "partial",
+   "examples": "partial",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "partial",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "present"
+  },
+  "planning-desk": {
+   "anti-patterns": "present",
+   "examples": "absent",
+   "integration-partners": "partial",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "present"
+  },
+  "pptx-themes": {
+   "anti-patterns": "partial",
+   "examples": "present",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "present"
+  },
+  "private-fork": {
+   "anti-patterns": "present",
+   "examples": "partial",
+   "integration-partners": "absent",
+   "output-format": "present",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "present"
+  },
+  "readme-value-and-proof": {
+   "anti-patterns": "present",
+   "examples": "present",
+   "integration-partners": "absent",
+   "output-format": "present",
+   "prerequisites": "partial",
+   "purpose-overview": "present",
+   "reference-pointers": "absent",
+   "trigger-when-to-use": "absent",
+   "workflow-steps": "present"
+  },
+  "repo-compliance-audit": {
+   "anti-patterns": "present",
+   "examples": "absent",
+   "integration-partners": "present",
+   "output-format": "present",
+   "prerequisites": "present",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "partial",
+   "workflow-steps": "partial"
+  },
+  "repo-meta-structure": {
+   "anti-patterns": "absent",
+   "examples": "absent",
+   "integration-partners": "present",
+   "output-format": "partial",
+   "prerequisites": "absent",
+   "purpose-overview": "present",
+   "reference-pointers": "present",
+   "trigger-when-to-use": "present",
+   "workflow-steps": "absent"
+  }
+ },
+ "section_totals": {
+  "anti-patterns": {
+   "present": 15,
+   "partial": 6,
+   "absent": 2
+  },
+  "examples": {
+   "present": 13,
+   "absent": 7,
+   "partial": 3
+  },
+  "integration-partners": {
+   "present": 19,
+   "partial": 2,
+   "absent": 2
+  },
+  "output-format": {
+   "present": 19,
+   "partial": 3,
+   "absent": 1
+  },
+  "prerequisites": {
+   "partial": 7,
+   "absent": 8,
+   "present": 8
+  },
+  "purpose-overview": {
+   "present": 23
+  },
+  "reference-pointers": {
+   "present": 20,
+   "absent": 2,
+   "partial": 1
+  },
+  "trigger-when-to-use": {
+   "present": 10,
+   "partial": 5,
+   "absent": 8
+  },
+  "workflow-steps": {
+   "present": 13,
+   "partial": 7,
+   "absent": 3
+  }
+ },
+ "size_top": [
+  {
+   "slug": "diagrams",
+   "words": 2817,
+   "files": 7
+  },
+  {
+   "slug": "github-project-board",
+   "words": 2462,
+   "files": 4
+  },
+  {
+   "slug": "foreman",
+   "words": 2258,
+   "files": 2
+  },
+  {
+   "slug": "obsidian-cli",
+   "words": 1842,
+   "files": 6
+  },
+  {
+   "slug": "planning-desk",
+   "words": 1512,
+   "files": 19
+  },
+  {
+   "slug": "obsidian-mcp-server",
+   "words": 1301,
+   "files": 5
+  }
+ ],
+ "concise_violations": [
+  {
+   "slug": "diagrams",
+   "evidence": "653 lines"
+  },
+  {
+   "slug": "obsidian-cli",
+   "evidence": "753 lines"
+  }
+ ],
+ "hook_checks": {
+  "total": 16,
+  "present": 16
+ },
+ "custom_dimensions": [
+  {
+   "kind": "agent",
+   "key": "memory",
+   "observed": 1
+  },
+  {
+   "kind": "skill",
+   "key": "metadata",
+   "observed": 2
+  },
+  {
+   "kind": "skill",
+   "key": "version",
+   "observed": 2
+  }
+ ]
+}
