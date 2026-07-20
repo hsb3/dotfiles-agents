@@ -47,10 +47,25 @@ PocketBase DB of all agent extenders + the mental models used to compose/evaluat
   `eval_runs`/`eval_responses`; all 662 assessments linked). Briefing deck + explainer:
   `_meta/briefings/2026-07-20-extender-db/`; artifact
   https://claude.ai/code/artifact/d3a884d2-441d-410d-a779-5503057c8669
-- **NEXT (agreed 2026-07-20): the EDB-13 job-taxonomy conversation with Henry** — authors
-  the jobs-to-be-done framework (encodes what his work needs; not derivable from the
-  corpus); unblocks W9 portfolio coverage. W8 protocol (EDB-12) draftable solo. EDB-9
-  (obsidian-cli phantom refs) is a ready catalog fix that doubles as the W6 update proof.
+- **Done (this session, 2026-07-20):**
+  - **W9 taxonomy / EDB-13** (commit `b3d4248`) — `hsb3-jobs-to-be-done` framework loaded:
+    24 solution-agnostic job elements, 7 families (new `framework_elements.category`), kind
+    `job-taxonomy`, candidate. Authored with Henry at **deliverable altitude / all-work scope**.
+  - **Trusted-source registry / EDB-15** (commit `0c7cd29`) — new `sources` collection
+    (publisher-level: `trust_tier`, `publishes_evals`, cited `rationale`/`evidence_url`) +
+    `extenders.source` relation; **8 publishers** seeded from an adversarially verified
+    deep-research pass (anthropic + mcp-registry trusted; obra-superpowers/daymade/vinnie357/
+    coleam00 provisional; skills-sh/tonsofskills watch = W8 comparator baselines). All 6
+    externals linked to their publisher. Schema was **signed off by Henry** before build.
+  - Both idempotent; 662 prior assessments untouched throughout.
+- **NEXT: the W9 mapping body** — map all 37 extenders → the 24 jobs as `assessments`
+  (which extender serves which job), add pairwise relationships (dup/conflict/complement),
+  and produce the coverage matrix. **Two decisions to make there:** (a) the per-job
+  **disposition** model author/vendor/reference/compare and where it's stored (a
+  `job_coverage` collection vs assessment metadata) — deferred deliberately; (b) don't
+  default gaps to "author from scratch" — draw from the sources registry (Henry, 2026-07-20).
+  Also open: EDB-16 (registry follow-ups), W8 protocol (EDB-12, solo-draftable), EDB-9
+  (obsidian-cli phantom refs — ready catalog fix, doubles as W6 update proof).
 - **Operational:** server `_meta/extender-db/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
   in untracked `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the
   server before committing (WAL checkpoint) and land the data.db delta in the same commit
