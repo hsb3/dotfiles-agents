@@ -1,0 +1,89 @@
+# Extender-DB — Project Plan
+
+_Deliverables, acceptance criteria, and parallelism for the extender-db mini-project.
+Subordinate to [CHARTER.md](CHARTER.md); open items and findings tracked in
+[OPEN-ITEMS.md](OPEN-ITEMS.md)._
+Status: active · 2026-07-20
+
+## W0 — Seed (DONE)
+
+**Delivered:** 7-collection schema (`schema.py`), repo ingest (`ingest.py`) covering 23
+skills + 4 agents with full file inventories, 10 distributions, 14 frontmatter dimensions,
+5 seeded frameworks / 35 elements, 181 mechanical assessments.
+
+**Acceptance (met):** schema and ingest idempotent (re-run creates 0 records); `make ci`
+clean; database answers analytic queries (concise-body violations, custom frontmatter keys)
+with correct values verified against the tree.
+
+## W1 — Judged assessment pass
+
+**Deliverable:** archetype tagging (`hsb3-skill-archetypes`: one `present` primary + any
+`partial` secondaries per skill) and section-taxonomy coverage (`skill-section-taxonomy`:
+present/absent per section) for all 23 skills, written by review agents under a dedicated
+assessor value (e.g. `judged-v1`), with per-verdict `evidence` quoting the body.
+
+**Acceptance:**
+- Every skill has exactly one primary archetype; every (skill × section) pair has a verdict.
+- Spot verification: an independent agent re-derives a sample (≥5 skills) from source with
+  ≥90% agreement; disagreements adjudicated and recorded in OPEN-ITEMS.md.
+- Ingest re-run afterwards leaves judged rows untouched (assessor discipline proof).
+
+## W2 — Kind expansion: hooks
+
+**Deliverable:** ingest the 4 roster hooks as `kind: hook` extenders (hook.py + config file
+inventory); seed a `hook-dir-layout` framework from the ratified layout
+(`scripts/check_hook_layout.py` is the source); mechanical checks (hook.py present,
+stdlib-only import scan, config shape).
+
+**Acceptance:** roster↔DB parity — every roster entry of an ingested kind has exactly one
+extenders row; hook mechanical assessments populated; idempotence holds.
+
+## W3 — Externals by reference
+
+**Deliverable:** `externals.yaml` entries as `origin: external` extender rows (upstream URL,
+no file ingest), so curation queries cover the full curated surface, not just self-authored.
+
+**Acceptance:** all 6 externals present; distributions/membership untouched; queries can
+partition authored vs sourced vs external.
+
+## W4 — Analysis surface
+
+**Deliverable:** a `report.py` producing a markdown catalog report from the DB — conformance
+summary per framework, custom-dimension inventory, size outliers, distribution coverage —
+plus a small set of documented canned queries in README.md.
+
+**Acceptance:** report runs from a fresh ingest with no manual steps; at least 3 findings
+flow into OPEN-ITEMS.md as candidate repo actions (feeds the promotion gate).
+
+## W5 — Doctrine enrichment
+
+**Deliverable:** additional cited frameworks worth measuring against — e.g. Anthropic's
+skill-authoring best practices (skill-creator guidance), the plugin/marketplace packaging
+spec — added as framework rows with source URLs; mechanical checks where checkable.
+
+**Acceptance:** each new framework has provenance (`source_org`, `source_url`), status, and
+≥1 assessment pass over the applicable kinds; no existing framework overwritten (supersede
+only).
+
+## W6 — Update-path proof
+
+**Deliverable:** after a real catalog change lands on `dev` (any new or edited skill),
+re-ingest and verify the diff shows in the DB (changed sha256s, metrics, assessments) with
+no duplicate rows.
+
+**Acceptance:** documented in OPEN-ITEMS.md with before/after counts; closes the last
+promotion-gate box that scripts can close.
+
+## Parallelism
+
+- **W1, W2, W3 are independent** — different collections/rows; can run as parallel agents.
+- **W4 needs W1** (report includes judged conformance) but only W1.
+- **W5 is independent** of all others.
+- **W6 is event-driven** — runs whenever the next real catalog change lands; not blocked on
+  W1–W5.
+
+## Promotion
+
+When the [CHARTER.md](CHARTER.md) promotion gate is fully checked, bring the decision
+(stay desk tool / graduate to `scripts/` + make lane / own repo) back to Henry with the
+gate evidence. Not a work item until then.
