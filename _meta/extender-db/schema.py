@@ -5,6 +5,7 @@ Run after `pocketbase serve` is up and the superuser exists:
 
 Collections (see README.md for the full data model):
     frameworks, framework_elements        - mental models used to compose/evaluate
+    sources                               - trusted publishers of extenders + quality signals
     extenders, files                      - the extender registry + file inventory
     distributions                         - bundle/plugin/standalone packaging
     frontmatter_dimensions                - per-kind frontmatter key catalog
@@ -125,6 +126,32 @@ def collection_specs(ids):
             ],
         },
         {
+            "name": "sources",
+            "type": "base",
+            "fields": [
+                text("slug", required=True),
+                text("name", required=True),
+                text("url"),
+                select(
+                    "publisher_kind",
+                    ["first-party", "marketplace", "individual", "research-lab",
+                     "community-collection"],
+                ),
+                select("publishes", EXTENDER_KINDS, max_select=len(EXTENDER_KINDS)),
+                select("trust_tier", ["trusted", "provisional", "watch", "avoid"]),
+                boolean("publishes_evals"),
+                select("maintenance", ["active", "sporadic", "dormant", "unknown"]),
+                text("license"),
+                text("adoption_signal"),
+                text("rationale", max_len=20000),
+                text("evidence_url", max_len=20000),
+                select("status", ["active", "candidate", "superseded"]),
+                text("notes", max_len=20000),
+                *stamps(),
+            ],
+            "indexes": ["CREATE UNIQUE INDEX idx_sources_slug ON sources (slug)"],
+        },
+        {
             "name": "extenders",
             "type": "base",
             "fields": [
@@ -136,6 +163,7 @@ def collection_specs(ids):
                 text("upstream"),
                 text("upstream_ref"),
                 text("repo_path"),
+                rel("source", ids["sources"]),
                 select("shelf", ["core", "toggle"]),
                 select(
                     "disposition",
@@ -292,6 +320,7 @@ def main():
     # with a growing `ids` map suffices; specs are re-derived each iteration.
     order = [
         "frameworks",
+        "sources",
         "extenders",
         "framework_elements",
         "files",

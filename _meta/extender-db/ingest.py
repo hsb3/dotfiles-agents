@@ -16,7 +16,10 @@ What it loads:
                            hook-dir-layout framework. Judgment-based assessments
                            (archetype tagging, section taxonomy) are left to humans/agents
                            writing rows with a different `assessor` value.
-  6. externals.yaml rows - third-party extenders recorded by reference (origin `external`,
+  6. sources             - trusted-publisher registry (SOURCES): curated extender publishers
+                           with quality signals + trust tier (see EDB-15). externals link to
+                           their publisher via extenders.source.
+  7. externals.yaml rows - third-party extenders recorded by reference (origin `external`,
                            no file ingest) so curation queries cover the full curated surface.
 """
 
@@ -222,6 +225,120 @@ FRAMEWORKS = [
         ],
     },
 ]
+
+
+# Trusted-source (publisher) registry — EDB-15. Seeded 2026-07-20 from an adversarially
+# verified research pass (deep-research, 103 agents, 22 confirmed claims; every row grounded
+# in a fetched primary source, see evidence_url). Publisher-level unit. trust_tier semantics:
+# trusted = vetted, ships evals + active + clean license, vendor/use directly; provisional =
+# promising but unproven (reference, or vendor only after our own eval); watch = quality
+# uncertain, comparator baseline only ("first search hit"); avoid = red flags. Idempotent
+# (upsert by slug). Key nuance from the research: "publishes_evals" means eval TOOLING or
+# METHODOLOGY or self-authored/behavioral tests — NO publisher ships an objective
+# cross-publisher benchmark leaderboard ranking third-party extenders.
+SOURCES = [
+    {
+        "slug": "anthropic", "name": "Anthropic", "url": "https://github.com/anthropics",
+        "publisher_kind": "first-party",
+        "publishes": ["skill", "plugin", "agent", "command", "hook", "mcp"],
+        "trust_tier": "trusted", "publishes_evals": True, "maintenance": "active",
+        "license": "Apache-2.0",
+        "adoption_signal": "anthropics/skills ~163k stars; anthropics/claude-code ~138k stars (2026-07)",
+        "rationale": "First-party. Ships skills (anthropics/skills), plugin-dev skills for every extender type (anthropics/claude-code), the claude-plugins-official marketplace, and first-party eval tooling — skill-creator writes evals.json test cases and a benchmark mode reporting pass rate / time / tokens. The eval tooling is the standout quality signal.",
+        "evidence_url": "https://github.com/anthropics/skills | https://github.com/anthropics/claude-code/tree/main/plugins/plugin-dev/skills | https://github.com/anthropics/claude-plugins-official | https://claude.com/blog/improving-skill-creator-test-measure-and-refine-agent-skills",
+        "status": "active",
+        "notes": "skill-creator evals are AUTHOR tooling (user-authored cases), not an Anthropic-published cross-publisher benchmark dataset. claude-plugins-official 'curation' = submission approval + automated security review, not per-plugin functional vetting; it also hosts quality/security-gated third-party external_plugins.",
+    },
+    {
+        "slug": "mcp-registry", "name": "Official MCP Registry", "url": "https://modelcontextprotocol.io/registry/about",
+        "publisher_kind": "marketplace", "publishes": ["mcp"],
+        "trust_tier": "trusted", "publishes_evals": False, "maintenance": "active",
+        "license": "",
+        "adoption_signal": "Backed by Anthropic, GitHub, PulseMCP, Microsoft; under Linux Foundation governance",
+        "rationale": "Publisher-trust infrastructure for MCP servers: reverse-DNS namespace authentication (io.github.user/server) tied to verified GitHub accounts/domains, so only the legitimate owner can publish. Best trust anchor for the MCP-server slice — identity trust, not code safety or evals.",
+        "evidence_url": "https://modelcontextprotocol.io/registry/about",
+        "status": "candidate",
+        "notes": "In 'preview'. Namespace auth attests IDENTITY, not code safety; code security is delegated to package registries + downstream scanners.",
+    },
+    {
+        "slug": "obra-superpowers", "name": "Jesse Vincent (obra) - superpowers", "url": "https://github.com/obra/superpowers",
+        "publisher_kind": "individual", "publishes": ["skill", "plugin"],
+        "trust_tier": "provisional", "publishes_evals": True, "maintenance": "unknown",
+        "license": "",
+        "adoption_signal": "",
+        "rationale": "Ships a dedicated behavioral eval harness: skill-behavior tests run via the 'drill eval harness' from the companion superpowers-evals project (drives real coding-agent CLIs through a QA agent, grading workflow compliance + deterministic post-checks). The strongest INDEPENDENT (non-self-scored) eval approach among individual authors — top promotion candidate.",
+        "evidence_url": "https://github.com/obra/superpowers | https://github.com/prime-radiant-inc/superpowers-evals",
+        "status": "active",
+        "notes": "Eval repo (superpowers-evals) sits under the prime-radiant-inc org (same author) — 'individual' is approximate. License/adoption not captured in the research pass.",
+    },
+    {
+        "slug": "daymade", "name": "daymade", "url": "https://github.com/daymade/claude-code-skills",
+        "publisher_kind": "individual", "publishes": ["skill"],
+        "trust_tier": "provisional", "publishes_evals": True, "maintenance": "active",
+        "license": "MIT", "adoption_signal": "~1.3k stars, 211 forks",
+        "rationale": "Individual-authored skills marketplace shipping a real eval pipeline (evals/evals.json, grader/comparator agents, eval-viewer) and a README scorecard. Ships evals — but its headline 65/80-vs-42/80 result is a SELF-SCORED fork-vs-official comparison (inherently biased).",
+        "evidence_url": "https://github.com/daymade/claude-code-skills",
+        "status": "active",
+        "notes": "Provisional: ships evals (good signal) but self-comparison bias; single-user account.",
+    },
+    {
+        "slug": "vinnie357", "name": "Vinnie Mazza (vinnie357)", "url": "https://github.com/vinnie357/claude-skills",
+        "publisher_kind": "individual", "publishes": ["skill"],
+        "trust_tier": "provisional", "publishes_evals": True, "maintenance": "active",
+        "license": "MIT", "adoption_signal": "~21 stars (modest)",
+        "rationale": "Ships claude-skills-benchmark: a concrete, falsifiable eval methodology - A/B blind comparator, multi-model pass-rate targets (Haiku 70%+ / Sonnet 85%+ / Opus 95%+), activation targets (90%+ true-positive / <5% false-positive), an 11+ check static scorecard, and a /benchmark-skills command.",
+        "evidence_url": "https://github.com/vinnie357/claude-skills",
+        "status": "active",
+        "notes": "Benchmark TOOLING/methodology, not published result datasets. Low adoption.",
+    },
+    {
+        "slug": "coleam00", "name": "Cole Medin (coleam00)", "url": "https://github.com/coleam00/excalidraw-diagram-skill",
+        "publisher_kind": "individual", "publishes": ["skill"],
+        "trust_tier": "provisional", "publishes_evals": False, "maintenance": "unknown",
+        "license": "", "adoption_signal": "",
+        "rationale": "Vendored by us: excalidraw-diagram-skill is our excalidraw external. Not independently vetted in the 2026-07-20 research pass - quality/eval signals TBD.",
+        "evidence_url": "https://github.com/coleam00/excalidraw-diagram-skill",
+        "status": "candidate",
+        "notes": "Added because we already source from this publisher; tier is conservative pending a real vetting pass.",
+    },
+    {
+        "slug": "skills-sh", "name": "skills.sh (Vercel Labs)", "url": "https://skills.sh/",
+        "publisher_kind": "marketplace", "publishes": ["skill"],
+        "trust_tier": "watch", "publishes_evals": False, "maintenance": "active",
+        "license": "",
+        "adoption_signal": "~953,593 all-time installs (leaderboard, 2026-07); lists Anthropic, Vercel, Microsoft, Firebase, Supabase, etc.",
+        "rationale": "Dominant community aggregator and 'first search hit' baseline (npx skills add). Ranks by install count; only quality layer is security-audit grades (Gen Agent Trust Hub / Socket / Snyk), NOT functional evals.",
+        "evidence_url": "https://skills.sh/ | https://www.skills.sh/audits",
+        "status": "active",
+        "notes": "Primary W8 comparator baseline (the skills.sh first hit). Install counts self-reported and time-sensitive.",
+    },
+    {
+        "slug": "tonsofskills", "name": "Tons of Skills (jeremylongshore)", "url": "https://github.com/jeremylongshore/claude-code-plugins-plus-skills",
+        "publisher_kind": "community-collection",
+        "publishes": ["skill", "plugin", "agent", "mcp", "command", "hook"],
+        "trust_tier": "watch", "publishes_evals": False, "maintenance": "active",
+        "license": "MIT",
+        "adoption_signal": "~2.5k stars; self-reported ~2,810 skills / 425 plugins / 200 agents",
+        "rationale": "Large community-collection marketplace (tonsofskills.com + ccpi CLI). Scale over curation; only a self-defined 100-point rubric + validation scripts, no functional evals. Comparator baseline.",
+        "evidence_url": "https://github.com/jeremylongshore/claude-code-plugins-plus-skills",
+        "status": "active",
+        "notes": "Self-reported badge counts are internally inconsistent (425/2,810 vs a 470/3,677 category table).",
+    },
+]
+
+# Map an external's upstream repo URL to its publisher (sources.slug), by org prefix.
+SOURCE_BY_UPSTREAM = [
+    ("https://github.com/anthropics/", "anthropic"),
+    ("https://github.com/coleam00/", "coleam00"),
+]
+
+
+def source_for_upstream(url):
+    """Return the sources.slug whose org-prefix matches this upstream URL, else ''."""
+    for prefix, slug in SOURCE_BY_UPSTREAM:
+        if url.startswith(prefix):
+            return slug
+    return ""
 
 
 # ---------- parsing helpers ----------
@@ -492,18 +609,31 @@ def ingest_distributions(pb, ext_ids, ext_meta):
         print(f"distribution: {sid}-standalone")
 
 
-def ingest_externals(pb):
+def ingest_sources(pb):
+    """Seed the trusted-source (publisher) registry from SOURCES. Idempotent (upsert by
+    slug). Returns {slug: record_id} so externals can link their publisher."""
+    src_ids = {}
+    for s in SOURCES:
+        rec, created = pb.upsert("sources", f"slug='{esc(s['slug'])}'", dict(s))
+        src_ids[s["slug"]] = rec["id"]
+    print(f"sources: {len(SOURCES)}")
+    return src_ids
+
+
+def ingest_externals(pb, src_ids):
     """externals.yaml -> extenders rows with origin `external` (no file scan, no
     distribution membership — third-party items are recorded by reference only, per
-    ADR 0015 / the README expansion path)."""
+    ADR 0015 / the README expansion path). Links each to its publisher (sources)."""
     n = 0
     for e in parse_externals(EXTERNALS):
+        src_slug = source_for_upstream(e.get("upstream", ""))
         rec, created = pb.upsert("extenders", f"slug='{esc(e['id'])}'", {
             "slug": e["id"],
             "name": e["id"],
             "kind": e.get("kind", ""),
             "description": e.get("provides", ""),
             "origin": "external",
+            "source": src_ids.get(src_slug, ""),
             "upstream": e.get("upstream", ""),
             "upstream_ref": e.get("ref", ""),
             "repo_path": "",
@@ -629,7 +759,8 @@ def main():
     ingest_distributions(pb, ext_ids, ext_meta)
     ingest_dimensions(pb, ext_meta, fw_ids)
     ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids)
-    ingest_externals(pb)
+    src_ids = ingest_sources(pb)
+    ingest_externals(pb, src_ids)
     print("done.")
 
 

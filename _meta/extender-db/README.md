@@ -42,6 +42,7 @@ Two halves, joined by `assessments`: the **inventory** (what the extenders ARE) 
 ```mermaid
 erDiagram
     extenders ||--o{ files : "file inventory"
+    sources ||--o{ extenders : publishes
     distributions }o--o{ extenders : members
     frameworks ||--o{ framework_elements : contains
     extenders ||--o{ assessments : "judged by"
@@ -57,6 +58,7 @@ erDiagram
 | `files` | file inside an extender | `relpath`, `role` (entrypoint / reference / script / asset / template / eval / doc / license / config / other), full `content` (text files), `sha256`, `size_bytes`, `language`, `is_binary` |
 | `distributions` | packaging unit | `slug`, `kind` (bundle / plugin / standalone), `version`, `members` (relation → extenders). From `plugins.yaml` + `skill-catalog.yaml`. |
 | `frontmatter_dimensions` | (kind, frontmatter key) pair | `requirement` (required / optional / harness / custom / deprecated), `observed_count` across the catalog, `spec_framework` (which doctrine defines it). The custom rows are the interesting ones — keys we use that no spec defines. |
+| `sources` | a trusted **publisher** of extenders | `slug`, `publisher_kind` (first-party / marketplace / individual / research-lab / community-collection), `publishes` (which kinds), `trust_tier` (trusted / provisional / watch / avoid), `publishes_evals`, `maintenance`, `license`, `adoption_signal`, cited `rationale` + `evidence_url`. Curated from research (EDB-15). `extenders.source` links each external to its publisher; the tier decides eligibility to vendor / reference / use as a W8 comparator baseline. |
 
 ### Doctrine side (the mental models)
 
