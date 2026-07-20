@@ -173,6 +173,54 @@ FRAMEWORKS = [
             ("requires-capabilities", "requires capabilities", "dimension", "Capability words {hooks, local-mcp, hosted-mcp} + cli:/env: dependency declarations.", "Dependencies declared in requires, not prose-only."),
         ],
     },
+    {
+        # Authored 2026-07-20 with Henry (EDB-13). Deliverable-altitude ("one nameable
+        # deliverable you'd hand a single agent session"), all-work scope. Elements are
+        # the JOBS his work needs done, phrased solution-agnostically; an assessment
+        # (extender x job) records whether an extender SERVES that job. Candidate: refines
+        # to a successor row on supersession, never overwritten. category = job family.
+        "slug": "hsb3-jobs-to-be-done",
+        "name": "hsb3 jobs-to-be-done taxonomy",
+        "source_org": "internal",
+        "source_url": "",
+        "kind": "job-taxonomy",
+        "applies_to": ["any"],
+        "status": "candidate",
+        "summary": "The jobs Henry's agent work needs done, at deliverable altitude and spanning all work (software, exec/comms, research, knowledge-tooling, meta). Elements are solution-agnostic outcomes; W9 maps every extender to the jobs it serves so coverage gaps and overlaps become queries. Authored 2026-07-20 (EDB-13).",
+        "elements": [
+            # A - Understand & research
+            ("orient-codebase", "Orient in an unfamiliar codebase", "job", "When facing a system I don't know, get a reliable map of where things live and how they fit before acting.", "Serves this job if it helps an agent locate, inventory, or explain an unfamiliar codebase or system before changes are made.", "understand-research"),
+            ("research-question", "Research an open question into a cited answer", "job", "When the answer lives outside the repo, gather multiple sources, verify them, and synthesize a cited result.", "Serves if it drives external information-gathering with source-grounding or fact verification.", "understand-research"),
+            ("consult-domain-expertise", "Consult domain expertise on demand", "job", "When working in a specific technology, get its patterns and pitfalls in-session instead of guessing.", "Serves if its primary value is teaching or reference knowledge of a domain, tool, or API.", "understand-research"),
+            # B - Build software
+            ("plan-work", "Plan a piece of work", "job", "Turn a goal into a sequenced, scoped, source-grounded plan before building.", "Serves if it produces an actionable plan or decomposition of work not yet built.", "build-software"),
+            ("implement-change", "Implement a bounded change", "job", "Build a specified feature or fix within an owned file scope against acceptance criteria.", "Serves if it writes or edits product code to satisfy a defined change.", "build-software"),
+            ("improve-code", "Improve existing code without changing behavior", "job", "Refactor, simplify, or tidy working code while preserving its behavior.", "Serves if it restructures existing code for quality without adding features.", "build-software"),
+            ("migrate-at-scale", "Apply one change across many sites", "job", "Perform a single mechanical transformation across a large surface, with verification.", "Serves if it drives a repeated or bulk transform across many files or repos.", "build-software"),
+            # C - Assure quality
+            ("review-change", "Review a change for defects before it lands", "job", "Find correctness, security, or quality defects in a diff before it merges.", "Serves if it inspects a change or diff and reports defects or risks.", "assure-quality"),
+            ("verify-works", "Verify a change actually works", "job", "Drive the real system and observe the change behaving as intended.", "Serves if it exercises the running system to confirm behavior, beyond static checks.", "assure-quality"),
+            # D - Orchestrate & sustain
+            ("delegate-large-job", "Delegate a large job across agents", "job", "Decompose a big task, fan it out to agents, and reconcile the results.", "Serves if it structures multi-agent decomposition, dispatch, or reconciliation.", "orchestrate-sustain"),
+            ("sustain-continuity", "Maintain project continuity across sessions", "job", "Capture load-bearing state so a fresh or cold session can pick up the work.", "Serves if it externalizes session state for pickup or handoff.", "orchestrate-sustain"),
+            ("manage-backlog", "Manage a backlog or project board", "job", "Triage, prioritize, sequence, and gate the work items.", "Serves if it operates or triages an issue or project backlog.", "orchestrate-sustain"),
+            # E - Produce deliverables for people
+            ("produce-briefing", "Produce a stakeholder briefing", "job", "Deliver a status or readout communication for a human audience.", "Serves if its output is a briefing, status, or readout artifact.", "produce-deliverables"),
+            ("produce-deck", "Produce a slide deck", "job", "Deliver a themed slide presentation.", "Serves if its output is a presentation or slide deck.", "produce-deliverables"),
+            ("produce-diagram", "Produce a diagram or architecture visual", "job", "Deliver a structural, architecture, or flow visual.", "Serves if its output is a diagram (flowchart, ERD, architecture, sketch).", "produce-deliverables"),
+            ("produce-dataviz", "Produce a data visualization", "job", "Deliver a chart or data-driven visual.", "Serves if its output is a chart, plot, or dashboard from data.", "produce-deliverables"),
+            ("produce-readme", "Produce a README or project pitch", "job", "Deliver a README or pitch that communicates a project to its users.", "Serves if its output is user-facing project documentation or a pitch.", "produce-deliverables"),
+            # F - Govern the estate
+            ("enforce-standards", "Enforce and scaffold repo standards", "job", "Audit or scaffold a repo against a documented meta-structure standard.", "Serves if it checks or creates repo or project structure against a standard.", "govern-estate"),
+            ("govern-external-code", "Govern external or OSS code", "job", "Bring in and steward third-party code (fork, mirror, divergence tracking).", "Serves if it manages inbound external or OSS code and its governance.", "govern-estate"),
+            ("get-owner-signoff", "Get owner decision or sign-off", "job", "Surface a batch of decisions to the owner for approval, outside chat.", "Serves if it collects owner decisions or approvals as a workflow.", "govern-estate"),
+            # G - Extend the tooling itself (meta)
+            ("author-evaluate-extender", "Author, evaluate, or curate an agent extender", "job", "Build, judge, or curate a skill, agent, or hook and prove it earns its place.", "Serves if it creates, evaluates, or curates agent extenders themselves.", "extend-tooling"),
+            ("configure-harness", "Configure the agent harness", "job", "Set up settings, hooks, keybindings, or permissions of the agent environment.", "Serves if it configures the harness or runtime (settings, hooks, keybindings, permissions).", "extend-tooling"),
+            ("integrate-knowledge-system", "Integrate a personal-knowledge system", "job", "Build or automate integrations for a knowledge tool such as an Obsidian vault or plugins.", "Serves if it builds or automates integration with a personal-knowledge system.", "extend-tooling"),
+            ("operate-browser-ui", "Operate a browser or external UI", "job", "Drive a browser or external UI to complete a task the CLI cannot.", "Serves if it automates a browser or GUI to accomplish work.", "extend-tooling"),
+        ],
+    },
 ]
 
 
@@ -346,13 +394,17 @@ def ingest_frameworks(pb):
         body = {k: fw[k] for k in ("slug", "name", "source_org", "source_url", "kind", "applies_to", "status", "summary")}
         rec, created = pb.upsert("frameworks", f"slug='{esc(fw['slug'])}'", body)
         fw_ids[fw["slug"]] = rec["id"]
-        for i, (slug, name, ekind, desc, criteria) in enumerate(fw["elements"]):
+        for i, el_spec in enumerate(fw["elements"]):
+            # Element tuple is (slug, name, ekind, desc, criteria[, category]); category is
+            # optional so the pre-existing 5-tuple frameworks stay valid unchanged.
+            slug, name, ekind, desc, criteria = el_spec[:5]
+            category = el_spec[5] if len(el_spec) > 5 else ""
             el, _ = pb.upsert(
                 "framework_elements",
                 f"framework='{rec['id']}' && slug='{esc(slug)}'",
                 {"framework": rec["id"], "slug": slug, "name": name,
                  "element_kind": ekind, "description": desc, "criteria": criteria,
-                 "sort_order": i},
+                 "category": category, "sort_order": i},
             )
             el_ids[(fw["slug"], slug)] = el["id"]
         print(f"framework {'created' if created else 'updated'}: {fw['slug']} ({len(fw['elements'])} elements)")

@@ -83,7 +83,9 @@ different assessor value and are never touched by the ingest. The unique index i
 | `claude-code-subagents` | schema-spec | Anthropic docs | Persona frontmatter (name/description/tools/model), system-prompt body, single responsibility |
 | `hsb3-skill-archetypes` | archetype-set | internal (candidate) | What a skill fundamentally is: workflow-procedure, domain-expertise, deliverable-producer, guardrail-override, orchestration-delegation, scaffold-auditor |
 | `skill-section-taxonomy` | section-taxonomy | internal (candidate) | Recurring SKILL.md section types (trigger, prerequisites, workflow steps, anti-patterns, output contract, integration partners, …) |
+| `hook-dir-layout` | schema-spec | this repo | The ratified `hooks/<name>/hook.py` layout (`scripts/check_hook_layout.py`): Python-only handler, stdlib-only imports, co-located config |
 | `dotfiles-agents-roster-schema` | schema-spec | this repo | The `primitives-core.yaml` entry schema (shelf, origin/provenance rule, disposition, membership, requires) |
+| `hsb3-jobs-to-be-done` | job-taxonomy | internal (candidate) | The jobs Henry's agent work needs done (deliverable altitude, all-work scope), grouped by `category` into 7 families; 24 solution-agnostic job elements. W9 maps every extender to the jobs it serves |
 
 If Anthropic later publishes a canonical archetype set, add it as a NEW framework row with
 its citation and mark the internal one `superseded` — don't overwrite; comparing frameworks

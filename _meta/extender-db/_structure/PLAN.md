@@ -125,6 +125,14 @@ combine/coalesce workflow.
 **Acceptance:** every extender maps to ≥1 job or is explicitly flagged jobless; the
 matrix names concrete gaps and dupes; findings land in OPEN-ITEMS as candidate actions.
 
+**Status (2026-07-20):** the **taxonomy is authored + loaded** — `hsb3-jobs-to-be-done`
+(kind `job-taxonomy`, candidate), 24 job elements across 7 families (`category` field),
+authored with Henry per EDB-13 at deliverable altitude / all-work scope. **Remaining:**
+map all 37 extenders → jobs (assessments) + pairwise relationships → coverage matrix.
+The mapping should record a per-job **disposition** (author / vendor / reference /
+compare) drawn from the sources registry (EDB-15), not default gaps to "author from
+scratch" (Henry, 2026-07-20).
+
 ## Parallelism
 
 - **W1 and W2+W3 run in parallel** — W1's judges are read-only (JSON out); the W2/W3
