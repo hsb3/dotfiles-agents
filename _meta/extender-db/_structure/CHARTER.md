@@ -26,13 +26,15 @@ are both queries.
 
 ## Scope
 
-- **Seed (this phase):** skills and agent personas from `primitives-core/`, the five seeded
+- **Seed (this phase):** skills and agent personas from `primitives-core/`, the initial seeded
   frameworks, mechanical assessments.
 - **Committed expansion:** hooks, MCP servers, commands (`extenders.kind` and vocabularies
   already carry them); externals by reference; judged (non-mechanical) assessment passes;
   **evaluation provenance** (added 2026-07-20: `eval_runs` + `eval_responses` store each
   campaign's method, criteria, exact prompts, and raw agent responses, with every
-  assessment row linked to its run).
+  assessment row linked to its run). Doctrine has since grown to **9 frameworks** (incl. the
+  `hsb3-jobs-to-be-done` taxonomy and the adopted `skillopt` / `closedloop-judges` eval
+  methodologies) and a **`sources`** trusted-publisher registry (2026-07-20).
 - **Store:** PocketBase, local, single-machine, superuser-only. The database file
   (`pb_data/data.db`) is tracked in git (decision 4, revised 2026-07-20); transient siblings
   (request logs, WAL/SHM, typings) are ignored, and everything needed to rebuild from
@@ -77,7 +79,7 @@ are both queries.
 | 5 | Mechanical vs judged assessments split by `assessor` | Regeneration must never destroy judgment; judgment must never block re-ingest. |
 | 6 | **Adopt external eval methodology, don't build a bespoke harness** (2026-07-20) | Mature, permissively-licensed frameworks now exist (SkillOpt MIT, ClosedLoop Apache-2.0). Extends "don't author each extender from scratch" up to the eval harness itself; reserves our build for the IP only we have (job taxonomy, coverage, curation decisions). Defers EDB-14 bespoke agents further. |
 | 7 | **Two complementary adopted methodologies, by eval question** (2026-07-20) | Qualitative "does extender X meet the bar" → the ClosedLoop judges+CaseScore rubric pattern (maps onto our `assessments`; W1 is a lighter version). Quantitative "how good is skill X / can we improve it" → SkillOpt (authored task set + checkable reward + validation-gated edit). Recorded as frameworks `closedloop-judges` / `skillopt`. |
-| 8 | **Cheap-model substrate for evals** (2026-07-20) | Comparative + improvement evals run on inexpensive/free models via SkillOpt's `openai_compatible` backend (Ollama/OpenRouter/local). Because any CC extender ports to opencode (hooks the main translation gap — covered by our `opencode-expertise`), an optional `opencode_exec` harness gives faithful *agentic* eval of CC skills at low cost. |
+| 8 | **Cheap-model substrate + reused harness for evals** (2026-07-20) | Comparative + improvement evals run on inexpensive/free models. Layers: *methodology* is adopted (SkillOpt scoring/gating + ClosedLoop judges); *execution* is **reused — Henry already has a meta-harness for testing across opencode + other coding-agent harnesses, so we do NOT build one** (decision 6 applies to the harness too; likely the EDB-14 code). Any CC extender ports to opencode (hooks the main translation gap — covered by our `opencode-expertise`), enabling faithful *agentic* eval of CC skills on cheap/free models through that harness. |
 
 ## Lifecycle ambition (added 2026-07-20)
 
@@ -125,7 +127,7 @@ Two tracks; milestones (deliverables + acceptance, no timelines) detailed in
 
 **Track II — Evaluation & improvement (adopt external):**
 - **M4** — Doctrine: `skillopt` + `closedloop-judges` frameworks loaded (done); formalize our judge+rubric+CaseScore conformance pattern.
-- **M5** — W8 first comparative eval on ONE skill: authored SkillOpt benchmark (task set + checkable reward), with-skill vs without vs a skills.sh / trusted-publisher alternative, on cheap models; optional `opencode_exec` harness for faithful agentic eval.
+- **M5** — W8 first comparative eval on ONE skill: authored SkillOpt benchmark (task set + checkable reward), with-skill vs without vs a skills.sh / trusted-publisher alternative, on cheap models, executed through Henry's existing meta-harness (reuse, not build).
 - **M6** — Self-improvement loop prototype (create→evaluate→improve→use) on one skill, using SkillOpt's gated edit / `skillopt_sleep` + ClosedLoop `self-learning` as references. Acceptance: a measured before/after eval delta, human-in-the-loop adopt. Gated behind M4+M5.
 
 **External references (inspiration, not DB rows):** microsoft/hve-core (rigorous CI/CD
@@ -157,5 +159,6 @@ when made, not presumed now.
 | `_structure/CHARTER.md` | This page — canonical; precedence over all other project docs. |
 | `_structure/PLAN.md` | Deliverables · acceptance criteria · parallelism (no timelines). |
 | `_structure/OPEN-ITEMS.md` | The project's issue tracker — open items, findings, resolved log. |
+| `_structure/INSIGHTS.md` | Running log of insights/observations — feeder material for the comprehensive docs. |
 | `README.md` | Operator doc: data model reference + how to run (folder root). |
-| `pb.py` / `schema.py` / `ingest.py` / `serve.sh` | The tool (folder root). |
+| `pb.py` / `schema.py` / `ingest.py` / `load_*.py` / `serve.sh` | The tool (folder root). |

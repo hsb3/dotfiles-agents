@@ -5,10 +5,11 @@ structure, and packaging) plus the mental models used to compose and evaluate th
 Status: active (covers skills, agent personas, hooks, and externals-by-reference).
 
 This is a mini-project — the project docs live in `_structure/`:
-[CHARTER.md](_structure/CHARTER.md) is the canonical page (mission, scope, decisions,
-promotion gate), [PLAN.md](_structure/PLAN.md) carries deliverables/criteria/parallelism,
-and [OPEN-ITEMS.md](_structure/OPEN-ITEMS.md) is the issue tracker. This README is the
-operator doc.
+[CHARTER.md](_structure/CHARTER.md) is the canonical page (mission, scope, decisions, roadmap,
+promotion gate), [PLAN.md](_structure/PLAN.md) carries deliverables/criteria/milestones,
+[OPEN-ITEMS.md](_structure/OPEN-ITEMS.md) is the issue tracker, and
+[INSIGHTS.md](_structure/INSIGHTS.md) is the running log of learnings feeding the eventual
+comprehensive docs. This README is the operator doc.
 
 The repo itself stays the source of truth — this database is a **projection for analysis**,
 rebuilt at any time by re-running the ingest. Never edit extender content here and expect it
@@ -120,5 +121,5 @@ against the same catalog is the point of the model.
 - `ingest.py` — repo scan + framework seeds + mechanical assessments; safe to re-run
 - `load_eval_run.py` — manifest-driven loader for evaluation provenance (runs, prompts, responses)
 - `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`)
-- `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS
+- `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS, INSIGHTS
 - `pb_data/` — the live database; only `data.db` is tracked (logs/journals/typings ignored)

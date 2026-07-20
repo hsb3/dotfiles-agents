@@ -37,8 +37,9 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
 
 PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
 (inventory ⋈ doctrine via assessments). **Self-describing — read
-`_meta/extender-db/_structure/CHARTER.md` (canonical), `PLAN.md`, `OPEN-ITEMS.md`, and
-`_meta/extender-db/README.md` (operator doc) first**; below is only what they don't carry.
+`_meta/extender-db/_structure/` CHARTER.md (canonical), PLAN.md, OPEN-ITEMS.md, INSIGHTS.md
+(learnings for future docs), and `_meta/extender-db/README.md` (operator doc) first**; below
+is only what they don't carry.
 
 - **Branch:** off `origin/dev`, pushed through `eac4aa5`. No PR — Henry promotes when the
   charter gate (2/4 ticked) is satisfied.
@@ -68,8 +69,10 @@ PocketBase DB of all agent extenders + the mental models used to compose/evaluat
     substrate, `skillopt_sleep`) for quantitative eval/improvement; `closedloop-judges`
     (Apache-2.0 — judge+rubric→CaseScore verdict, maps onto our `assessments`) for
     qualitative conformance. Two sources added (jeffallan, closedloop-ai). Cheap evals run
-    on free models via SkillOpt's `openai_compatible` backend; `opencode_exec` harness is
-    an optional faithful-agentic-eval task (EDB-19). Repos cloned at `~/developer/tmp/{SkillOpt,claude-plugins-closedloop}` (untracked, kept for M5).
+    on free models; the eval **execution harness is REUSED, not built** — Henry has a
+    meta-harness for opencode + other coding-agent harnesses (EDB-19, likely = EDB-14), so
+    do NOT build an `opencode_exec` backend. Repos cloned at
+    `~/developer/tmp/{SkillOpt,claude-plugins-closedloop}` (untracked, kept for M5).
 - **NEXT: M1 = the W9 mapping body** — map all 37 extenders → the 24 jobs as `assessments`
   (which extender serves which job), add pairwise relationships (dup/conflict/complement),
   produce the coverage matrix. **Two decisions there:** (a) the per-job **disposition**

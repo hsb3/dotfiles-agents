@@ -16,7 +16,7 @@ Track II adopts external eval machinery (SkillOpt + ClosedLoop judges).
 | **M2** Analysis surface | W4 | queued |
 | **M3** Combine/coalesce | (new, post-W9) | queued |
 | **M4** Adopt eval doctrine | W5 | frameworks loaded; judge-pattern formalization pending (EDB-21) |
-| **M5** First comparative eval | W8 | queued (author benchmark; optional `opencode_exec` harness EDB-19) |
+| **M5** First comparative eval | W8 | queued (author benchmark; reuse Henry's meta-harness for execution — EDB-19) |
 | **M6** Self-improvement loop | W10 | staged, gated behind M4+M5 |
 
 Foundations already done: W0 seed · W1 judged · W2 hooks · W3 externals · W7 eval
@@ -136,9 +136,9 @@ test. Conformance/adherence evidence uses the `closedloop-judges` pattern onto o
 hit," on ONE skill: an authored SkillOpt benchmark; trials of (a) no skill, (b) our skill,
 (c) an external alternative (drawn from the `sources` registry — e.g. a `skills-sh` /
 `tonsofskills` baseline); outcomes stored as `eval_runs` kind `comparative`/`experiment`
-with full prompts/responses; a written, rerunnable protocol. **Optional sub-task:** stand up
-an `opencode_exec` SkillOpt harness for faithful *agentic* eval of CC skills on free models
-(a ~4-step change mirroring `run_claude_code_exec`; leans on `opencode-expertise`) — EDB-19.
+with full prompts/responses; a written, rerunnable protocol. **Execution layer is reused, not
+built:** Henry already has a meta-harness for testing across opencode + other coding-agent
+harnesses — wire M5 through it rather than building an `opencode_exec` SkillOpt backend (EDB-19).
 
 **Acceptance:** one skill has comparative data answering the question with numbers + stored
 transcripts; the protocol is documented and rerunnable; negative results are kept, not discarded.

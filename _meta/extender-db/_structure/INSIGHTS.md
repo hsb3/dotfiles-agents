@@ -57,11 +57,13 @@ _(from the 2026-07-20 research pass + reading SkillOpt & ClosedLoop at source)_
   ingest) and judged (never touched by ingest) verdicts coexist on the same
   (extender, framework, element) cell. Every eval paradigm we adopt writes under its own
   assessor value; the unique index enforces coexistence. → docs:assessments
-- **Adopt-not-build flipped the roadmap.** The pivotal insight: mature, permissively-licensed
-  eval machinery (SkillOpt MIT, ClosedLoop Apache-2.0) already targets Claude Code, so a
-  bespoke harness would duplicate it. Reserve the build for the IP only we have (taxonomy,
-  coverage, curation decisions). This is "don't author each extender from scratch" applied one
-  level up — to the harness itself. → docs:strategy
+- **Adopt-not-build flipped the roadmap, and applies at every layer.** The pivotal insight:
+  mature, permissively-licensed eval machinery already targets Claude Code, so bespoke would
+  duplicate it. It resolves into three reuse layers: *methodology* = adopt (SkillOpt MIT +
+  ClosedLoop Apache-2.0); *execution/harness* = reuse Henry's existing meta-harness for
+  opencode + other coding-agent harnesses (do NOT build an `opencode_exec` backend — EDB-19);
+  *build* only the IP nobody else has (job taxonomy, coverage, curation decisions). "Don't
+  author each extender from scratch" applied all the way up the stack. → docs:strategy
 
 ## 3 · Technical gotchas (must survive into the operations docs)
 
@@ -78,11 +80,12 @@ _(from the 2026-07-20 research pass + reading SkillOpt & ClosedLoop at source)_
   set with a machine-checkable reward — the scorer *is* the rubric. Every skill under eval
   needs a small authored benchmark; that authoring is the real cost, and the reason M5 starts
   with exactly one skill. → docs:evaluation
-- **Cheap evals don't require an opencode harness** — SkillOpt reaches free/local models via
-  its `openai_compatible` backend (target and optimizer roles configured independently, so a
-  cheap target + stronger optimizer is possible). An `opencode_exec` harness only matters for
-  *faithful agentic* eval of CC skills (they run in a tool-use loop, not single-shot chat).
-  → docs:evaluation
+- **Cheap evals need free/local models, not a new harness.** SkillOpt reaches free/local
+  models via its `openai_compatible` backend (target and optimizer roles configured
+  independently, so a cheap target + stronger optimizer is possible). *Faithful agentic* eval
+  of CC skills (they run in a tool-use loop, not single-shot chat) needs a driving harness —
+  but Henry already has a meta-harness for opencode + other coding-agent harnesses, so that
+  layer is **reused, not built** (EDB-19/EDB-14). → docs:evaluation
 - **`skillopt_sleep` is the closest out-of-box "improve my CC skills"** — harvests real Claude
   Code / Codex transcripts, mines checkable tasks, gate-improves offline, human-adopts. Data
   boundary caveat: it sends transcript excerpts to the model provider. → docs:self-improvement
