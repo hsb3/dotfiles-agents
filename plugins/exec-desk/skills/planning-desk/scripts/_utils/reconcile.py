@@ -35,6 +35,9 @@ ISSUE_RE = re.compile(r"#(\d+)")
 ACTIVE_MARKER = "ACTIVE plans"
 ARCHIVED_MARKER = "ARCHIVED ("
 
+# `gh issue list` page cap; warn if a call saturates it (results may be truncated).
+ISSUE_LIST_LIMIT = 1000
+
 
 def parse_readme_rows() -> tuple[list[dict], list[dict]]:
     """Return (active_rows, archived_rows). Each row: {plan, issues:[int], raw}."""
@@ -108,7 +111,7 @@ def fetch_issue_states() -> dict[int, str]:
             "--state",
             "all",
             "--limit",
-            "1000",
+            str(ISSUE_LIST_LIMIT),
             "--json",
             "number,state",
         ],
@@ -116,7 +119,14 @@ def fetch_issue_states() -> dict[int, str]:
         text=True,
         check=True,
     ).stdout
-    return {it["number"]: it["state"] for it in json.loads(out)}
+    items = json.loads(out)
+    if len(items) >= ISSUE_LIST_LIMIT:
+        print(
+            f"WARNING: issue list hit the {ISSUE_LIST_LIMIT}-issue limit; "
+            "results may be incomplete",
+            file=sys.stderr,
+        )
+    return {it["number"]: it["state"] for it in items}
 
 
 def disk_folders() -> set[str]:
@@ -125,7 +135,7 @@ def disk_folders() -> set[str]:
     }
 
 
-def reconcile() -> dict:
+def run() -> dict:
     active, archived = parse_readme_rows()
     states = fetch_issue_states()
     folders = disk_folders()
@@ -238,7 +248,7 @@ def reconcile() -> dict:
 
 
 def main() -> int:
-    result = reconcile()
+    result = run()
     if "--json" in sys.argv[1:]:
         print(json.dumps(result, indent=2))
         return 1 if result["drift"] else 0
