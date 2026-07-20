@@ -224,6 +224,45 @@ FRAMEWORKS = [
             ("operate-browser-ui", "Operate a browser or external UI", "job", "Drive a browser or external UI to complete a task the CLI cannot.", "Serves if it automates a browser or GUI to accomplish work.", "extend-tooling"),
         ],
     },
+    {
+        # Adopted 2026-07-20 (EDB-18, roadmap M4) as the QUANTITATIVE eval+improvement
+        # methodology for W8/M5/M6 — verified by reading the source (MIT). Elements are the
+        # principles/components we adopt.
+        "slug": "skillopt",
+        "name": "SkillOpt skill-optimization methodology",
+        "source_org": "Microsoft",
+        "source_url": "https://github.com/microsoft/SkillOpt",
+        "kind": "evaluation-methodology",
+        "applies_to": ["skill", "agent", "command"],
+        "status": "candidate",
+        "summary": "Microsoft SkillOpt: treats a skill document as trainable state and improves it via scored rollouts against a task set with a machine-checkable reward, keeping an edit only when the candidate strictly beats the current skill on a held-out split. Cheap-model-native (openai_compatible backend -> Ollama/OpenRouter/local). Adopted as the quantitative eval+improvement methodology (W8/M5/M6). MIT.",
+        "elements": [
+            ("scored-rollout", "Scored rollout", "principle", "Evaluate a skill by running it as the system prompt/skill over a task set and scoring each rollout with a checkable reward (hard = exact-match 0/1, soft = partial 0-1).", "Eval scores a skill against a task set with a per-item reward, not by vibes."),
+            ("validation-gated-edit", "Validation-gated edit", "principle", "Accept a proposed skill edit only if the candidate STRICTLY beats the current skill on a held-out selection split; otherwise revert.", "Improvements are gated on a held-out score delta, never asserted."),
+            ("authored-benchmark-required", "Authored benchmark required", "rule", "There is no generic 'grade my skill' - you author a task set plus a scorer (the reward IS the rubric) per skill/job.", "Each evaluated skill has an authored task set with a machine-checkable reward."),
+            ("cheap-model-substrate", "Cheap-model substrate", "component", "Runs against any OpenAI-compatible endpoint (Ollama/OpenRouter/vLLM/local); target and optimizer roles configured independently, so evals are cheap.", "Eval runs on inexpensive/free models via an openai-compatible endpoint."),
+            ("transcript-mined-improvement", "Transcript-mined improvement (Sleep)", "component", "skillopt_sleep harvests real Claude Code/Codex transcripts, mines checkable tasks, and gate-improves the skill offline with human-in-the-loop adopt.", "Improvement can be sourced from real usage transcripts, gated before adoption."),
+        ],
+    },
+    {
+        # Adopted 2026-07-20 (EDB-18, roadmap M4) as the QUALITATIVE conformance-judging
+        # pattern — maps onto our existing `assessments`; our W1 judged pass is a lighter
+        # version. Verified by reading the source (Apache-2.0).
+        "slug": "closedloop-judges",
+        "name": "ClosedLoop judges + CaseScore rubric pattern",
+        "source_org": "ClosedLoop.AI",
+        "source_url": "https://github.com/closedloop-ai/claude-plugins",
+        "kind": "evaluation-methodology",
+        "applies_to": ["skill", "agent", "hook", "mcp", "command", "plugin"],
+        "status": "candidate",
+        "summary": "LLM-as-judge conformance pattern: each quality dimension is a judge prompt file carrying a deterministic rubric (severity table -> numeric formula -> threshold -> worked examples) that emits a strict CaseScore verdict; lightweight {id, input, expected_outcome} eval cases; a self-learning loop that persists validated patterns and injects them into future runs. Adopted as the qualitative conformance-judging pattern (borrowed onto our assessments). Apache-2.0.",
+        "elements": [
+            ("judge-as-prompt-rubric", "Judge-as-prompt with embedded rubric", "component", "Each quality dimension is one LLM judge defined by a prompt file carrying a deterministic rubric: severity table, numeric scoring formula, threshold, and worked pass/fail/error examples.", "A conformance judge carries an explicit reproducible rubric, not vibes."),
+            ("casescore-verdict", "CaseScore verdict contract", "component", "A judge emits a strict verdict {final_status: pass/fail/error, metrics:[{name, threshold, score, justification}]}; the error state is excluded from aggregates so a crashed judge does not tank the grade.", "Verdicts are a validated schema with a first-class error state."),
+            ("lightweight-eval-case", "Lightweight eval case", "component", "An eval case is {id, input, expected_outcome} (JSONL) plus a 1-5 multi-dimension rubric - the cheapest hand-authorable golden set.", "Eval cases are small, declarative, and hand-authorable."),
+            ("self-learning-loop", "Self-learning feedback loop", "principle", "Capture learnings (decision-tree gated) -> dedup/validate -> persist with deterministic success rates from an outcomes log -> inject top-N relevant patterns into future agent runs via a hook; citation-verified anti-gaming.", "Improvements are captured, validated deterministically, and fed back into future runs."),
+        ],
+    },
 ]
 
 
@@ -323,6 +362,26 @@ SOURCES = [
         "evidence_url": "https://github.com/jeremylongshore/claude-code-plugins-plus-skills",
         "status": "active",
         "notes": "Self-reported badge counts are internally inconsistent (425/2,810 vs a 470/3,677 category table).",
+    },
+    {
+        "slug": "jeffallan", "name": "Jeff Allan (jeffallan)", "url": "https://github.com/jeffallan/claude-skills",
+        "publisher_kind": "individual", "publishes": ["skill", "command", "plugin"],
+        "trust_tier": "provisional", "publishes_evals": False, "maintenance": "active",
+        "license": "MIT", "adoption_signal": "~10.7k stars; 66 skills + 9 commands (v0.4.15, May 2026)",
+        "rationale": "High-adoption individual-authored Claude Code skills collection (full-stack dev). No published evals found - adoption is the only quality signal, so provisional pending vetting / comparator use.",
+        "evidence_url": "https://github.com/jeffallan/claude-skills",
+        "status": "active",
+        "notes": "Author: Principal Consultant at Synergetic Solutions. Suggested by Henry (2026-07-20); candidate comparator/vendor after a vetting pass.",
+    },
+    {
+        "slug": "closedloop-ai", "name": "ClosedLoop.AI", "url": "https://github.com/closedloop-ai/claude-plugins",
+        "publisher_kind": "research-lab", "publishes": ["plugin", "skill", "agent", "command", "hook"],
+        "trust_tier": "provisional", "publishes_evals": True, "maintenance": "active",
+        "license": "Apache-2.0", "adoption_signal": "~101 stars; company-backed (commercial platform + OSS)",
+        "rationale": "Company-published Claude Code plugin suite for multi-agent SDLC (code, code-review, judges, platform, self-learning). Ships a real LLM-as-judge eval framework (CaseScore verdicts + deterministic rubrics) and a working self-learning loop; small human eval set (evals/code-review). Trusted-referred (Henry, 2026-07-20). Provisional: strong eval machinery, low adoption.",
+        "evidence_url": "https://github.com/closedloop-ai/claude-plugins",
+        "status": "active",
+        "notes": "Its judges + self-learning designs are adopted as doctrine (see framework `closedloop-judges`). publisher_kind research-lab = commercial AI-platform vendor.",
     },
 ]
 

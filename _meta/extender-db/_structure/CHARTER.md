@@ -75,6 +75,9 @@ are both queries.
 | 3 | Doctrine modeled as data (frameworks/elements), not code | The point is analyzing the catalog BY competing mental models; models must be comparable, citable, and supersedable. |
 | 4 | Lives under `_meta/extender-db/`; `pb_data/data.db` tracked, transient siblings ignored | Desk tooling (ADR-0006 track-by-default), not a shipped artifact. _Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo make committing the live DB worth it so state travels with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stay ignored._ |
 | 5 | Mechanical vs judged assessments split by `assessor` | Regeneration must never destroy judgment; judgment must never block re-ingest. |
+| 6 | **Adopt external eval methodology, don't build a bespoke harness** (2026-07-20) | Mature, permissively-licensed frameworks now exist (SkillOpt MIT, ClosedLoop Apache-2.0). Extends "don't author each extender from scratch" up to the eval harness itself; reserves our build for the IP only we have (job taxonomy, coverage, curation decisions). Defers EDB-14 bespoke agents further. |
+| 7 | **Two complementary adopted methodologies, by eval question** (2026-07-20) | Qualitative "does extender X meet the bar" → the ClosedLoop judges+CaseScore rubric pattern (maps onto our `assessments`; W1 is a lighter version). Quantitative "how good is skill X / can we improve it" → SkillOpt (authored task set + checkable reward + validation-gated edit). Recorded as frameworks `closedloop-judges` / `skillopt`. |
+| 8 | **Cheap-model substrate for evals** (2026-07-20) | Comparative + improvement evals run on inexpensive/free models via SkillOpt's `openai_compatible` backend (Ollama/OpenRouter/local). Because any CC extender ports to opencode (hooks the main translation gap — covered by our `opencode-expertise`), an optional `opencode_exec` harness gives faithful *agentic* eval of CC skills at low cost. |
 
 ## Lifecycle ambition (added 2026-07-20)
 
@@ -102,6 +105,33 @@ Two standing questions those workflows must answer, both as data in this databas
 Applies to all extender kinds, not just skills. Related but deferred: Henry has built-in
 agent code in another repo that could power the evaluation harness — integration is out of
 scope until the retrofit is solid (EDB-14).
+
+**Strategy for the "evaluate" half (2026-07-20, decisions 6–8):** we do NOT build a bespoke
+eval harness. We **adopt** two external, permissively-licensed methodologies — the ClosedLoop
+judges+CaseScore rubric pattern for qualitative conformance (it maps onto our `assessments`)
+and Microsoft SkillOpt for quantitative "how good / can we improve," run on cheap/free models.
+Both were read at source before adoption. Our build stays on the IP only we have: the job
+taxonomy, coverage/portfolio analysis, and the curation decisions.
+
+## Roadmap (2026-07-20)
+
+Two tracks; milestones (deliverables + acceptance, no timelines) detailed in
+[PLAN.md](PLAN.md). Track I is our IP; Track II adopts external machinery.
+
+**Track I — Portfolio & curation (our IP):**
+- **M1** — W9 mapping body: 37 extenders → 24 jobs, pairwise relationships, coverage matrix, per-job dispositions.
+- **M2** — W4 analysis surface: `report.py` + canned queries/views.
+- **M3** — Combine/coalesce: act on the overlaps/gaps the matrix surfaces (first real curation actions).
+
+**Track II — Evaluation & improvement (adopt external):**
+- **M4** — Doctrine: `skillopt` + `closedloop-judges` frameworks loaded (done); formalize our judge+rubric+CaseScore conformance pattern.
+- **M5** — W8 first comparative eval on ONE skill: authored SkillOpt benchmark (task set + checkable reward), with-skill vs without vs a skills.sh / trusted-publisher alternative, on cheap models; optional `opencode_exec` harness for faithful agentic eval.
+- **M6** — Self-improvement loop prototype (create→evaluate→improve→use) on one skill, using SkillOpt's gated edit / `skillopt_sleep` + ClosedLoop `self-learning` as references. Acceptance: a measured before/after eval delta, human-in-the-loop adopt. Gated behind M4+M5.
+
+**External references (inspiration, not DB rows):** microsoft/hve-core (rigorous CI/CD
+validation-standards process, though for GitHub Copilot — an adjacent ecosystem) and
+karpathy/autoresearch (the canonical closed-loop self-improvement pattern: modify → evaluate →
+keep/discard → repeat) inform M4/M6 without being extender publishers we'd vendor from.
 
 ## Promotion gate
 

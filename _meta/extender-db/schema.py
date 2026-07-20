@@ -90,6 +90,7 @@ def collection_specs(ids):
                         "evaluation-rubric",
                         "principles",
                         "job-taxonomy",
+                        "evaluation-methodology",
                     ],
                     required=True,
                 ),

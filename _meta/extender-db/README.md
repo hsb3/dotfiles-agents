@@ -88,6 +88,8 @@ different assessor value and are never touched by the ingest. The unique index i
 | `hook-dir-layout` | schema-spec | this repo | The ratified `hooks/<name>/hook.py` layout (`scripts/check_hook_layout.py`): Python-only handler, stdlib-only imports, co-located config |
 | `dotfiles-agents-roster-schema` | schema-spec | this repo | The `primitives-core.yaml` entry schema (shelf, origin/provenance rule, disposition, membership, requires) |
 | `hsb3-jobs-to-be-done` | job-taxonomy | internal (candidate) | The jobs Henry's agent work needs done (deliverable altitude, all-work scope), grouped by `category` into 7 families; 24 solution-agnostic job elements. W9 maps every extender to the jobs it serves |
+| `skillopt` | evaluation-methodology | Microsoft (candidate) | Adopted quantitative eval+improvement method: skill-as-trainable-state, scored rollouts, validation-gated edits, cheap-model substrate, transcript-mined improvement. For W8/M5/M6 |
+| `closedloop-judges` | evaluation-methodology | ClosedLoop.AI (candidate) | Adopted qualitative conformance pattern: judge-as-prompt-with-rubric emitting a CaseScore verdict, lightweight `{id,input,expected_outcome}` eval cases, a self-learning feedback loop. Maps onto our `assessments` |
 
 If Anthropic later publishes a canonical archetype set, add it as a NEW framework row with
 its citation and mark the internal one `superseded` — don't overwrite; comparing frameworks

@@ -5,6 +5,23 @@ Subordinate to [CHARTER.md](CHARTER.md); open items and findings tracked in
 [OPEN-ITEMS.md](OPEN-ITEMS.md)._
 Status: active · 2026-07-20
 
+## Milestone map (roadmap 2026-07-20 → work items)
+
+Two tracks from the [CHARTER roadmap](CHARTER.md#roadmap-2026-07-20). Track I is our IP;
+Track II adopts external eval machinery (SkillOpt + ClosedLoop judges).
+
+| Milestone | Work item(s) | State |
+|---|---|---|
+| **M1** Coverage mapping | W9 body | next |
+| **M2** Analysis surface | W4 | queued |
+| **M3** Combine/coalesce | (new, post-W9) | queued |
+| **M4** Adopt eval doctrine | W5 | frameworks loaded; judge-pattern formalization pending (EDB-21) |
+| **M5** First comparative eval | W8 | queued (author benchmark; optional `opencode_exec` harness EDB-19) |
+| **M6** Self-improvement loop | W10 | staged, gated behind M4+M5 |
+
+Foundations already done: W0 seed · W1 judged · W2 hooks · W3 externals · W7 eval
+provenance · the W9 taxonomy (`hsb3-jobs-to-be-done`) · the EDB-15 sources registry.
+
 ## W0 — Seed (DONE)
 
 **Delivered:** 7-collection schema (`schema.py`), repo ingest (`ingest.py`) covering 23
@@ -80,6 +97,11 @@ spec — added as framework rows with source URLs; mechanical checks where check
 ≥1 assessment pass over the applicable kinds; no existing framework overwritten (supersede
 only).
 
+**Status (2026-07-20):** two **evaluation-methodology** frameworks landed (adopted, not just
+measured against) — `skillopt` (Microsoft, MIT) and `closedloop-judges` (ClosedLoop,
+Apache-2.0), each with cited elements read from source. This is milestone **M4** doctrine.
+Remaining M4: formalize our own judge+rubric+CaseScore conformance pattern (EDB-21).
+
 ## W6 — Update-path proof
 
 **Deliverable:** after a real catalog change lands on `dev` (any new or edited skill),
@@ -100,18 +122,37 @@ code-assessor run. All 662 assessment rows link to their run.
 **Acceptance (met):** the chain verdict → run → prompt/response resolves for every
 assessor; zero unlinked assessments; unique (run, role) prevents duplicate responses.
 
-## W8 — Comparative quality evidence
+## W8 — Comparative quality evidence (= milestone M5)
 
-**Deliverable:** the experimental design and first data for "why use this skill over the
-first search hit on skills.sh": a small benchmark job set per skill under test; trials of
-(a) no skill, (b) our skill, (c) an external alternative where one exists; outcomes stored
-as `eval_runs` kind `comparative`/`experiment` with full prompts/responses; a written
-protocol so runs are repeatable. Adherence evidence counts too: conformance to frameworks
-that carry their own citations is recorded alongside experimental results.
+**Approach (revised 2026-07-20, charter decisions 6–8):** adopt **SkillOpt** (framework
+`skillopt`) as the methodology rather than build a bespoke harness. SkillOpt scores a skill
+as trainable state against an authored task set with a machine-checkable reward, on cheap
+models via its `openai_compatible` backend. The catch (verified at source): there is no
+generic "grade my skill" — we author a small benchmark (task set + scorer) per skill under
+test. Conformance/adherence evidence uses the `closedloop-judges` pattern onto our existing
+`assessments`.
 
-**Acceptance:** at least one skill has comparative data sufficient to answer the question
-with numbers and stored transcripts; the protocol is documented and rerunnable; negative
-results are recorded, not discarded.
+**Deliverable:** first comparative data for "why use this skill over the first skills.sh
+hit," on ONE skill: an authored SkillOpt benchmark; trials of (a) no skill, (b) our skill,
+(c) an external alternative (drawn from the `sources` registry — e.g. a `skills-sh` /
+`tonsofskills` baseline); outcomes stored as `eval_runs` kind `comparative`/`experiment`
+with full prompts/responses; a written, rerunnable protocol. **Optional sub-task:** stand up
+an `opencode_exec` SkillOpt harness for faithful *agentic* eval of CC skills on free models
+(a ~4-step change mirroring `run_claude_code_exec`; leans on `opencode-expertise`) — EDB-19.
+
+**Acceptance:** one skill has comparative data answering the question with numbers + stored
+transcripts; the protocol is documented and rerunnable; negative results are kept, not discarded.
+
+## W10 — Self-improvement loop prototype (= milestone M6, gated behind W8)
+
+**Deliverable:** a create→evaluate→improve→use loop run on ONE skill — using SkillOpt's
+validation-gated edit / `skillopt_sleep` (transcript-mined, gated) and ClosedLoop
+`self-learning` as references. Propose an edit, re-evaluate on a held-out split, keep only on
+a strict improvement, human-in-the-loop adopt.
+
+**Acceptance:** one skill improved with a **measured before/after eval delta**, the improved
+artifact + both eval runs stored, and the adopt step recorded. Negative/no-improvement runs
+kept as evidence.
 
 ## W9 — Portfolio coverage & relationships
 
