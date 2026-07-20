@@ -29,7 +29,10 @@ are both queries.
 - **Seed (this phase):** skills and agent personas from `primitives-core/`, the five seeded
   frameworks, mechanical assessments.
 - **Committed expansion:** hooks, MCP servers, commands (`extenders.kind` and vocabularies
-  already carry them); externals by reference; judged (non-mechanical) assessment passes.
+  already carry them); externals by reference; judged (non-mechanical) assessment passes;
+  **evaluation provenance** (added 2026-07-20: `eval_runs` + `eval_responses` store each
+  campaign's method, criteria, exact prompts, and raw agent responses, with every
+  assessment row linked to its run).
 - **Store:** PocketBase, local, single-machine, superuser-only. The database file
   (`pb_data/data.db`) is tracked in git (decision 4, revised 2026-07-20); transient siblings
   (request logs, WAL/SHM, typings) are ignored, and everything needed to rebuild from
@@ -72,6 +75,33 @@ are both queries.
 | 3 | Doctrine modeled as data (frameworks/elements), not code | The point is analyzing the catalog BY competing mental models; models must be comparable, citable, and supersedable. |
 | 4 | Lives under `_meta/extender-db/`; `pb_data/data.db` tracked, transient siblings ignored | Desk tooling (ADR-0006 track-by-default), not a shipped artifact. _Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo make committing the live DB worth it so state travels with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stay ignored._ |
 | 5 | Mechanical vs judged assessments split by `assessor` | Regeneration must never destroy judgment; judgment must never block re-ingest. |
+
+## Lifecycle ambition (added 2026-07-20)
+
+The retrofit (evaluating the existing collection) is the seed of a larger loop. The target
+is three workflows, each ending in the same evaluate→use tail:
+
+1. **Create → evaluate → use** — author a new extender against the frameworks, evaluate it
+   before it ships, track it in use.
+2. **Curate → evaluate → use** — bring an external extender in by reference, evaluate it
+   against the same bar as authored ones.
+3. **Combine/coalesce → evaluate → use** — merge overlapping extenders or compose
+   complementary ones, and prove the composite earns its place.
+
+Two standing questions those workflows must answer, both as data in this database:
+
+- **Quality evidence** — "how good is this skill, and why use it over the first search hit
+  on skills.sh?" Answered by (a) experimental/comparative data (`eval_runs` of kind
+  `comparative`/`experiment`: same job, our skill vs baseline vs external alternative) and
+  (b) adherence evidence — conformance to frameworks that carry their own citations.
+- **Portfolio analysis** — do we have coverage for the jobs we need done? Which extenders
+  are duplicative, conflicting, or deliberately complementary? Modeled as a
+  jobs-to-be-done framework plus pairwise relationship data, so coverage gaps and overlaps
+  are queries, not impressions.
+
+Applies to all extender kinds, not just skills. Related but deferred: Henry has built-in
+agent code in another repo that could power the evaluation harness — integration is out of
+scope until the retrofit is solid (EDB-14).
 
 ## Promotion gate
 

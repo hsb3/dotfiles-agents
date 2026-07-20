@@ -12,6 +12,9 @@ with a one-line outcome (and stays there — the log is the promotion-gate evide
 
 | Id | Item | Notes |
 |---|---|---|
+| EDB-14 | Built-in agents from Henry's other repo | Henry has code elsewhere that could power built-in evaluation agents. Deliberately deferred until the retrofit is solid; capture the repo pointer here when provided. |
+| EDB-13 | Jobs-to-be-done coverage framework (W9) | Needs the job-type taxonomy authored with Henry — it encodes what his work needs done, not something derivable from the corpus. |
+| EDB-12 | Comparative-evaluation protocol (W8) | Design the benchmark-job / A-B-baseline trial protocol, incl. how skills.sh alternatives are selected and pinned. |
 | EDB-10 | Judging-criteria v2 before any judged-v2 pass | Reviewer calibration flags from W1: (a) present/partial/absent boundary underspecified — 15/16 section disagreements were adjacent-step; (b) does "body" mean SKILL.md only or include references/? (changes primaries for reference-heavy skills); (c) frontmatter-only triggers score `absent` on trigger-when-to-use — penalizes well-placed frontmatter, maybe unintended; (d) `examples` bar for bare commands without expected output; (e) no rule for "prominent but not dominant" guardrail sections. Fold into the frameworks' `criteria` fields, then supersede per charter. |
 | EDB-8 | Standalone distribution rows carry no version | `skill-catalog.yaml` wrappers get a generated version at assembly; decide whether to read it from `gen_standalone.py` output or leave blank. |
 | EDB-7 | No snapshot/time-series story | Rows are mutate-in-place; trend analysis needs a `snapshots` collection keyed by git ref (see README expansion path). Decide at W4 whether it earns its cost. |

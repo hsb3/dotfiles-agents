@@ -8,7 +8,10 @@ Collections (see README.md for the full data model):
     extenders, files                      - the extender registry + file inventory
     distributions                         - bundle/plugin/standalone packaging
     frontmatter_dimensions                - per-kind frontmatter key catalog
-    assessments                           - extender x framework-element verdicts
+    eval_runs, eval_responses             - evaluation provenance: campaigns, prompts,
+                                            raw agent responses
+    assessments                           - extender x framework-element verdicts,
+                                            linked to their eval_run
 """
 
 import sys
@@ -215,12 +218,53 @@ def collection_specs(ids):
             ],
         },
         {
+            "name": "eval_runs",
+            "type": "base",
+            "fields": [
+                text("slug", required=True),
+                select(
+                    "kind",
+                    ["mechanical", "judged", "adversarial-review", "adjudication",
+                     "comparative", "experiment"],
+                    required=True,
+                ),
+                text("method", max_len=200000),
+                text("criteria_text", max_len=2000000),
+                rel("frameworks", ids["frameworks"], max_select=20),
+                select("status", ["planned", "running", "complete", "abandoned"]),
+                text("notes", max_len=200000),
+                *stamps(),
+            ],
+            "indexes": ["CREATE UNIQUE INDEX idx_eval_runs_slug ON eval_runs (slug)"],
+        },
+        {
+            "name": "eval_responses",
+            "type": "base",
+            "fields": [
+                rel("run", ids["eval_runs"], required=True, cascade=True),
+                text("role", required=True),
+                text("agent_type"),
+                text("model"),
+                text("prompt", max_len=2000000),
+                text("response_text", max_len=2000000),
+                js("response_json"),
+                rel("extenders", ids["extenders"], max_select=100),
+                num("tokens"),
+                num("duration_ms"),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_eval_responses ON eval_responses (run, role)"
+            ],
+        },
+        {
             "name": "assessments",
             "type": "base",
             "fields": [
                 rel("extender", ids["extenders"], required=True, cascade=True),
                 rel("framework", ids["frameworks"], required=True),
                 rel("element", ids["framework_elements"]),
+                rel("eval_run", ids["eval_runs"]),
                 select(
                     "verdict",
                     ["present", "partial", "absent", "not-applicable"],
@@ -251,6 +295,8 @@ def main():
         "files",
         "distributions",
         "frontmatter_dimensions",
+        "eval_runs",
+        "eval_responses",
         "assessments",
     ]
     for name in order:

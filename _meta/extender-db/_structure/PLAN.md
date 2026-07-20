@@ -89,6 +89,42 @@ no duplicate rows.
 **Acceptance:** documented in OPEN-ITEMS.md with before/after counts; closes the last
 promotion-gate box that scripts can close.
 
+## W7 — Evaluation provenance (DONE 2026-07-20)
+
+**Delivered:** `eval_runs` + `eval_responses` collections and a manifest-driven
+`load_eval_run.py`. The W1 pass is backfilled in full: campaign method + criteria text,
+each judge/reviewer's exact dispatch prompt, verbatim final message, verdict JSON, and
+token/duration stats; the session adjudication as its own run; `mechanical-v1` as a
+code-assessor run. All 662 assessment rows link to their run.
+
+**Acceptance (met):** the chain verdict → run → prompt/response resolves for every
+assessor; zero unlinked assessments; unique (run, role) prevents duplicate responses.
+
+## W8 — Comparative quality evidence
+
+**Deliverable:** the experimental design and first data for "why use this skill over the
+first search hit on skills.sh": a small benchmark job set per skill under test; trials of
+(a) no skill, (b) our skill, (c) an external alternative where one exists; outcomes stored
+as `eval_runs` kind `comparative`/`experiment` with full prompts/responses; a written
+protocol so runs are repeatable. Adherence evidence counts too: conformance to frameworks
+that carry their own citations is recorded alongside experimental results.
+
+**Acceptance:** at least one skill has comparative data sufficient to answer the question
+with numbers and stored transcripts; the protocol is documented and rerunnable; negative
+results are recorded, not discarded.
+
+## W9 — Portfolio coverage & relationships
+
+**Deliverable:** a jobs-to-be-done framework (elements = the job types Henry's work
+needs), assessments mapping every extender to the jobs it serves, and pairwise
+relationship data (duplicative / conflicting / complementary — e.g. the
+mise-en-place-scaffold ↔ repo-compliance-audit fill/measure pair W1 already surfaced).
+Output: a coverage matrix with named gaps and overlap candidates for the
+combine/coalesce workflow.
+
+**Acceptance:** every extender maps to ≥1 job or is explicitly flagged jobless; the
+matrix names concrete gaps and dupes; findings land in OPEN-ITEMS as candidate actions.
+
 ## Parallelism
 
 - **W1 and W2+W3 run in parallel** — W1's judges are read-only (JSON out); the W2/W3
