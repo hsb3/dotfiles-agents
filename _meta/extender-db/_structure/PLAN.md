@@ -15,7 +15,7 @@ skills + 4 agents with full file inventories, 10 distributions, 14 frontmatter d
 clean; database answers analytic queries (concise-body violations, custom frontmatter keys)
 with correct values verified against the tree.
 
-## W1 — Judged assessment pass
+## W1 — Judged assessment pass (DONE 2026-07-20)
 
 **Deliverable:** archetype tagging (`hsb3-skill-archetypes`: one `present` primary + any
 `partial` secondaries per skill) and section-taxonomy coverage (`skill-section-taxonomy`:
@@ -36,7 +36,7 @@ layer: opus reviewers blind-re-derive a stratified ~8-skill sample; the session 
 disagreements. A session-run `load_assessments.py` validates the JSON against element slugs
 and writes rows as `judged-v1`.
 
-## W2 — Kind expansion: hooks
+## W2 — Kind expansion: hooks (DONE 2026-07-20)
 
 **Deliverable:** ingest the 4 roster hooks as `kind: hook` extenders (hook.py + config file
 inventory); seed a `hook-dir-layout` framework from the ratified layout
@@ -46,7 +46,7 @@ stdlib-only import scan, config shape).
 **Acceptance:** roster↔DB parity — every roster entry of an ingested kind has exactly one
 extenders row; hook mechanical assessments populated; idempotence holds.
 
-## W3 — Externals by reference
+## W3 — Externals by reference (DONE 2026-07-20)
 
 **Deliverable:** `externals.yaml` entries as `origin: external` extender rows (upstream URL,
 no file ingest), so curation queries cover the full curated surface, not just self-authored.

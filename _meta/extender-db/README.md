@@ -2,7 +2,7 @@
 
 _Internal analysis tool: a queryable database of this repo's agent extenders (their content,
 structure, and packaging) plus the mental models used to compose and evaluate them._
-Status: active (seed scope: skills + agent personas; expansion path below).
+Status: active (covers skills, agent personas, hooks, and externals-by-reference).
 
 This is a mini-project — the project docs live in `_structure/`:
 [CHARTER.md](_structure/CHARTER.md) is the canonical page (mission, scope, decisions,

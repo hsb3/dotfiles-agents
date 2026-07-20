@@ -49,6 +49,7 @@ guardrail-override 0.
 
 | Id | Item | Outcome |
 |---|---|---|
-| EDB-5 | Judged assessments not yet run | W1 complete 2026-07-20: 345 `judged-v1` + 120 `review-v1` rows loaded via `load_assessments.py`; gates passed (exactly-one-primary 23/23, full section coverage, ingest re-run leaves judged rows untouched). See the W1 adjudication log below. |
+| EDB-11 | `extenders.kind` vocabulary lacked `plugin` | Found verifying the W2/W3 builder (externals.yaml carries `kind: plugin`; the builder had patched only its throwaway instance and its handoff was cut off). Fixed durably in schema.py (EXTENDER_KINDS + dynamic applies_to maxSelect); live schema updated in place. Lesson: a builder "proof" on a held-out instance can mask a divergence from the tracked schema source — the session gate caught it. |
+| EDB-5 | Judged assessments not yet run | W1 complete 2026-07-20: 345 `judged-v1` + 120 `review-v1` rows loaded via `load_assessments.py`; gates passed (exactly-one-primary 23/23, full section coverage, ingest re-run leaves judged rows untouched). See the W1 adjudication log below. W2/W3 same day: hooks + externals ingested (37 extenders; 197 mechanical rows incl. 16 hook checks, all present). |
 | EDB-2 | PocketBase default 5000-char cap broke ingest of large bodies | Explicit `max` on `extenders.body` and `files.content` (2 MB); documented in schema.py. |
 | EDB-1 | Collection PATCH without field ids drops-and-recreates columns (data loss) | schema.py merges by field name and preserves ids on update; noted as invariant in CHARTER.md. |

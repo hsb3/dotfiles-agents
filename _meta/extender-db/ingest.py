@@ -3,20 +3,24 @@
     python3 _meta/extender-db/ingest.py
 
 What it loads:
-  1. extenders + files   - every roster skill/agent: parsed frontmatter, entrypoint body,
-                           full file inventory with content + sha256.
+  1. extenders + files   - every roster skill/agent/hook: parsed frontmatter (hooks carry
+                           none), entrypoint body, full file inventory with content + sha256.
   2. distributions       - plugins.yaml bundles/plugins + skill-catalog.yaml standalones,
                            with a members relation resolved against the roster.
   3. frontmatter_dimensions - one row per (kind, key): spec-known keys get their
                            requirement level; unknown observed keys land as `custom`.
   4. frameworks + framework_elements - seeded mental models (see FRAMEWORKS below).
   5. assessments         - mechanical checks (assessor `mechanical-v1`) of each skill
-                           against the Anthropic Agent Skills spec and each agent against
-                           the Claude Code subagent schema. Judgment-based assessments
+                           against the Anthropic Agent Skills spec, each agent against
+                           the Claude Code subagent schema, and each hook against the
+                           hook-dir-layout framework. Judgment-based assessments
                            (archetype tagging, section taxonomy) are left to humans/agents
                            writing rows with a different `assessor` value.
+  6. externals.yaml rows - third-party extenders recorded by reference (origin `external`,
+                           no file ingest) so curation queries cover the full curated surface.
 """
 
+import ast
 import hashlib
 import os
 import re
@@ -34,6 +38,7 @@ from pb import PB, esc  # noqa: E402
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
 CATALOG = os.path.join(REPO, "skill-catalog.yaml")
+EXTERNALS = os.path.join(REPO, "externals.yaml")
 
 LANG_BY_EXT = {
     ".py": "python", ".sh": "shell", ".js": "javascript", ".ts": "typescript",
@@ -133,6 +138,22 @@ FRAMEWORKS = [
             ("anti-patterns", "Anti-patterns / pitfalls", "section", "What NOT to do; known failure modes.", "A pitfalls/anti-pattern/common-mistakes section exists."),
             ("output-format", "Output format contract", "section", "Exact shape of the deliverable the skill produces.", "A section specifies the output's structure."),
             ("integration-partners", "Integration partners", "section", "Co-homed hooks/skills/agents this skill is load-bearing with.", "Body names sibling components and the shared contract."),
+        ],
+    },
+    {
+        "slug": "hook-dir-layout",
+        "name": "Hook directory layout",
+        "source_org": "internal",
+        "source_url": "https://github.com/hsb3/dotfiles-agents/blob/dev/scripts/check_hook_layout.py",
+        "kind": "schema-spec",
+        "applies_to": ["hook"],
+        "status": "active",
+        "summary": "The ratified hook-dir layout enforced by scripts/check_hook_layout.py: each hook is a directory `hooks/<name>/` whose handler is `hook.py` (legacy flat `.sh` handlers and the old `hooks-handlers/` tree are banned), plus the stdlib-only rule from primitives-core/README.md ('hooks/<name>/ ... Claude-Code-only; stdlib-only (no pip/npm deps)').",
+        "elements": [
+            ("hook-py-entrypoint", "hook.py entrypoint", "component", "The hook's handler lives at `hook.py` inside its own `<name>/` directory (ratified layout).", "hook.py exists in the hook's directory."),
+            ("python-only-handler", "Python-only handler", "rule", "No legacy `.sh` handler — check_hook_layout.py bans `.sh` files anywhere under a hook.", "No `.sh` file present in the hook's file inventory."),
+            ("stdlib-only-imports", "stdlib-only imports", "rule", "The handler ships zero third-party dependencies (Python 3 stdlib only) — primitives-core/README.md's hook row.", "hook.py's top-level imports resolve to the Python stdlib only."),
+            ("config-present", "config co-located", "component", "Optional `config.json`/`hook.json` sits beside `hook.py` in the same directory.", "config.json or hook.json present in the hook's directory (optional)."),
         ],
     },
     {
@@ -262,6 +283,61 @@ def parse_catalog_ids(path):
     return ids
 
 
+def parse_externals(path):
+    """Parse externals.yaml's `externals:` list into dicts. Tailored line parser (see
+    parse_roster / parse_plugins_yaml) — no pyyaml, controlled flat-key format only."""
+    entries, cur = [], None
+    in_list = False
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    for raw in text.splitlines():
+        line = raw.rstrip("\n")
+        if re.match(r"^externals:\s*$", line):
+            in_list = True
+            continue
+        if not in_list:
+            continue
+        if re.match(r"^\S", line):  # a later top-level key ends the list
+            in_list = False
+            continue
+        m = re.match(r"^  - id:\s*(.*)$", line)
+        if m:
+            if cur is not None:
+                entries.append(cur)
+            cur = {"id": unquote(m.group(1))}
+            continue
+        m = re.match(r"^    (\w+):\s*(.*)$", line)
+        if m and cur is not None:
+            cur[m.group(1)] = unquote(m.group(2))
+    if cur is not None:
+        entries.append(cur)
+    return entries
+
+
+def stdlib_import_violations(source):
+    """Return the sorted list of top-level (module-level) import roots in `source` that are
+    NOT in the Python 3 stdlib (sys.stdlib_module_names, 3.10+). None if `source` fails to
+    parse as Python."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    stdlib = sys.stdlib_module_names
+    bad = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root = alias.name.split(".")[0]
+                if root not in stdlib:
+                    bad.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level == 0 and node.module:
+                root = node.module.split(".")[0]
+                if root not in stdlib:
+                    bad.add(node.module)
+    return sorted(bad)
+
+
 # ---------- ingest passes ----------
 
 def ingest_frameworks(pb):
@@ -284,17 +360,27 @@ def ingest_frameworks(pb):
 
 
 def ingest_extenders(pb):
-    entries = [e for e in parse_roster(ROSTER) if e.get("type") in ("skill", "agent")]
+    entries = [e for e in parse_roster(ROSTER) if e.get("type") in ("skill", "agent", "hook")]
     ext_ids = {}      # roster id -> record id
     ext_meta = {}     # roster id -> dict used by later passes
     for e in entries:
         kind = e["type"]
         source = e["source"]
         abs_source = os.path.join(REPO, source)
-        entry_file = "SKILL.md" if kind == "skill" else os.path.basename(source)
+        if kind == "skill":
+            entry_file = "SKILL.md"
+        elif kind == "hook":
+            entry_file = "hook.py"
+        else:
+            entry_file = os.path.basename(source)
         files = scan_files(abs_source, entry_file)
         entry = next((f for f in files if f["role"] == "entrypoint"), None)
-        fm, body = parse_frontmatter(entry["content"]) if entry else ({}, "")
+        if kind == "hook":
+            # Hooks carry no frontmatter (hook.py is plain Python, not a fenced doc) — the
+            # roster summary is the description source instead (see below).
+            fm, body = {}, ""
+        else:
+            fm, body = parse_frontmatter(entry["content"]) if entry else ({}, "")
         upstream = unquote(e.get("upstream", "")) if e.get("upstream", "null") != "null" else ""
         rec, created = pb.upsert("extenders", f"slug='{esc(e['id'])}'", {
             "slug": e["id"],
@@ -352,6 +438,36 @@ def ingest_distributions(pb, ext_ids, ext_meta):
             "members": [ext_ids[sid]],
         })
         print(f"distribution: {sid}-standalone")
+
+
+def ingest_externals(pb):
+    """externals.yaml -> extenders rows with origin `external` (no file scan, no
+    distribution membership — third-party items are recorded by reference only, per
+    ADR 0015 / the README expansion path)."""
+    n = 0
+    for e in parse_externals(EXTERNALS):
+        rec, created = pb.upsert("extenders", f"slug='{esc(e['id'])}'", {
+            "slug": e["id"],
+            "name": e["id"],
+            "kind": e.get("kind", ""),
+            "description": e.get("provides", ""),
+            "origin": "external",
+            "upstream": e.get("upstream", ""),
+            "upstream_ref": e.get("ref", ""),
+            "repo_path": "",
+            "shelf": "",
+            "disposition": "",
+            "requires": [],
+            "frontmatter": {},
+            "body": "",
+            "entry_file": "",
+            "file_count": 0,
+            "total_bytes": 0,
+            "word_count": 0,
+        })
+        print(f"external {'created' if created else 'updated'}: {e['id']} ({e.get('kind', '')})")
+        n += 1
+    print(f"externals: {n}")
 
 
 def ingest_dimensions(pb, ext_meta, fw_ids):
@@ -412,7 +528,7 @@ def ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids):
                        "present" if have else "absent",
                        f"{len(have)} file(s)" if have else "not bundled (optional)")
             n += 7
-        else:
+        elif m["kind"] == "agent":
             fw = fw_ids["claude-code-subagents"]
             def el(s):
                 return el_ids[("claude-code-subagents", s)]
@@ -424,6 +540,33 @@ def ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids):
                    "present" if m["body"].strip() else "absent",
                    f"{len(m['body'].split())} words")
             n += 5
+        elif m["kind"] == "hook":
+            fw = fw_ids["hook-dir-layout"]
+            def el(s):
+                return el_ids[("hook-dir-layout", s)]
+            hook_py = next((f for f in files if f["relpath"] == "hook.py"), None)
+            assess(pb, ext, fw, el("hook-py-entrypoint"),
+                   "present" if hook_py else "absent",
+                   "hook.py in the hook's directory" if hook_py else "no hook.py found")
+            shell_files = [f["relpath"] for f in files if f["relpath"].endswith(".sh")]
+            assess(pb, ext, fw, el("python-only-handler"),
+                   "absent" if shell_files else "present",
+                   f"legacy .sh handler(s): {shell_files}" if shell_files else "no .sh handler")
+            if hook_py is None:
+                assess(pb, ext, fw, el("stdlib-only-imports"), "absent", "no hook.py to scan")
+            else:
+                violations = stdlib_import_violations(hook_py["content"])
+                if violations is None:
+                    assess(pb, ext, fw, el("stdlib-only-imports"), "partial", "hook.py did not parse as Python")
+                elif violations:
+                    assess(pb, ext, fw, el("stdlib-only-imports"), "partial", f"non-stdlib imports: {violations}")
+                else:
+                    assess(pb, ext, fw, el("stdlib-only-imports"), "present", "all top-level imports are stdlib")
+            config_files = [f["relpath"] for f in files if f["relpath"] in ("config.json", "hook.json")]
+            assess(pb, ext, fw, el("config-present"),
+                   "present" if config_files else "absent",
+                   f"{len(config_files)} file(s)" if config_files else "not bundled (optional)")
+            n += 4
     print(f"mechanical assessments: {n}")
 
 
@@ -434,6 +577,7 @@ def main():
     ingest_distributions(pb, ext_ids, ext_meta)
     ingest_dimensions(pb, ext_meta, fw_ids)
     ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids)
+    ingest_externals(pb)
     print("done.")
 
 

@@ -15,7 +15,8 @@ import sys
 
 from pb import PB
 
-EXTENDER_KINDS = ["skill", "agent", "hook", "mcp", "command"]
+# "plugin" covers whole-plugin externals recorded by reference (externals.yaml kind: plugin)
+EXTENDER_KINDS = ["skill", "agent", "hook", "mcp", "command", "plugin"]
 
 
 def text(name, required=False, max_len=0):
@@ -87,7 +88,7 @@ def collection_specs(ids):
                     ],
                     required=True,
                 ),
-                select("applies_to", EXTENDER_KINDS + ["any"], max_select=6),
+                select("applies_to", EXTENDER_KINDS + ["any"], max_select=len(EXTENDER_KINDS) + 1),
                 text("summary"),
                 select("status", ["active", "candidate", "superseded"]),
                 text("notes"),
