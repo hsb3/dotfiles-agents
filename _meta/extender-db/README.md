@@ -15,14 +15,19 @@ to flow back; edit `primitives-core/` and re-ingest.
 ## Run it
 
 ```sh
-pocketbase serve --dir _meta/extender-db/pb_data --http 127.0.0.1:8090   # server + admin UI
+_meta/extender-db/serve.sh             # server + admin UI (env-configured, see below)
 python3 _meta/extender-db/schema.py    # create/update collections (idempotent)
 python3 _meta/extender-db/ingest.py    # scan repo + seed frameworks (idempotent upserts)
 ```
 
-Superuser credentials live in `_meta/operations/extender-db.env` (untracked;
-`PB_URL` / `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` — env vars override). The live database
-(`pb_data/`) is machine-local and gitignored; the scripts and this README are tracked.
+Configuration resolves from env vars first, then `_meta/operations/extender-db.env`
+(untracked), then defaults: `PB_DATA_DIR` (data directory; default
+`_meta/extender-db/pb_data`), `PB_URL` (default `http://127.0.0.1:8090`),
+`PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` (superuser, no default). PocketBase itself only
+takes the data dir as a `--dir` flag — `serve.sh` is the env-var surface, and forwards any
+other subcommand with `--dir` appended (e.g. `serve.sh superuser upsert EMAIL PASS`). The
+live database (`pb_data/`) is machine-local and gitignored; the scripts and this README are
+tracked.
 Admin UI: <http://127.0.0.1:8090/_/>. All collections are superuser-only (no public API rules).
 
 ## Data model
