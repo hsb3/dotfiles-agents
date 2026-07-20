@@ -18,6 +18,9 @@ Both build epics are **DONE and CLOSED**; `make ci` is green; `dev` and `main` a
 Live marketplace lineup: code-desk · exec-desk · foreman-kit · github-project-board · opencode-expertise ·
 pptx-themes · private-fork · diagrams · obsidian-toolkit · owner-signoff.
 
+**Also active: the extender-db mini-project on branch `feat/extender-db`** (§2b) — separate
+effort from the rebuild epics; do not fold it into dev without Henry's promotion decision.
+
 ## 2 · Recent deliveries (2026-07-20)
 
 - **Epic close-out (this session):** ran #111's install-smoke proof — the only unrecorded acceptance item.
@@ -29,6 +32,35 @@ pptx-themes · private-fork · diagrams · obsidian-toolkit · owner-signoff.
   branches + pruned 10 local; now on `dev`, clean. **Open PRs: 0.**
 - **Backlog externalized to the exec desk** — planning for this repo now runs from the dev-tooling desk,
   not in-repo `_meta/plans/`.
+
+## 2b · Extender-db mini-project (active, branch `feat/extender-db`, 2026-07-20)
+
+PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
+(inventory ⋈ doctrine via assessments). **Self-describing — read
+`_meta/extender-db/_structure/CHARTER.md` (canonical), `PLAN.md`, `OPEN-ITEMS.md`, and
+`_meta/extender-db/README.md` (operator doc) first**; below is only what they don't carry.
+
+- **Branch:** off `origin/dev`, pushed through `eac4aa5`. No PR — Henry promotes when the
+  charter gate (2/4 ticked) is satisfied.
+- **Done:** W0 seed · W1 judged pass (6 judges + 2 blind reviewers + session adjudication) ·
+  W2 hooks · W3 externals · W7 eval provenance (exact prompts + verbatim agent responses in
+  `eval_runs`/`eval_responses`; all 662 assessments linked). Briefing deck + explainer:
+  `_meta/briefings/2026-07-20-extender-db/`; artifact
+  https://claude.ai/code/artifact/d3a884d2-441d-410d-a779-5503057c8669
+- **NEXT (agreed 2026-07-20): the EDB-13 job-taxonomy conversation with Henry** — authors
+  the jobs-to-be-done framework (encodes what his work needs; not derivable from the
+  corpus); unblocks W9 portfolio coverage. W8 protocol (EDB-12) draftable solo. EDB-9
+  (obsidian-cli phantom refs) is a ready catalog fix that doubles as the W6 update proof.
+- **Operational:** server `_meta/extender-db/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
+  in untracked `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the
+  server before committing (WAL checkpoint) and land the data.db delta in the same commit
+  as its cause. `pb_migrations/` is gitignored on purpose: schema.py is the ONE schema source.
+- **Gotchas:** PocketBase text fields default-cap at 5000 chars (set `max` explicitly);
+  PATCHing a collection with field defs lacking ids drops+recreates columns — schema.py
+  merges by name, never bypass it; a builder proving work on a throwaway PB instance can
+  mask live-schema divergence (EDB-11) — re-run schema+ingest+gates on the live DB yourself.
+- Also on this branch: pocketbase-best-practices skill install (`.agents/`,
+  `skills-lock.json`, `.claude/skills/` symlink) — desk tooling, not a roster primitive.
 
 ## 3 · Next up (dotfiles-agents proper)
 
