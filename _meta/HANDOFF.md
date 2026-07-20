@@ -58,14 +58,26 @@ PocketBase DB of all agent extenders + the mental models used to compose/evaluat
     coleam00 provisional; skills-sh/tonsofskills watch = W8 comparator baselines). All 6
     externals linked to their publisher. Schema was **signed off by Henry** before build.
   - Both idempotent; 662 prior assessments untouched throughout.
-- **NEXT: the W9 mapping body** — map all 37 extenders → the 24 jobs as `assessments`
+  - **Adopt-external eval roadmap / EDB-17,18** (commit `3d348cd`) — Henry-approved
+    revision. **Read the new CHARTER "Roadmap" section + decisions 6–8 and the PLAN
+    "Milestone map".** Two tracks, six milestones (M1 coverage · M2 analysis · M3
+    combine · M4 eval doctrine · M5 first comparative eval · M6 self-improvement loop,
+    staged). Strategy: **adopt external eval methodology, don't build bespoke.** Two
+    frameworks loaded (`evaluation-methodology` kind) after reading both repos at source:
+    `skillopt` (Microsoft/MIT — scored rollout, validation-gated edit, cheap-model
+    substrate, `skillopt_sleep`) for quantitative eval/improvement; `closedloop-judges`
+    (Apache-2.0 — judge+rubric→CaseScore verdict, maps onto our `assessments`) for
+    qualitative conformance. Two sources added (jeffallan, closedloop-ai). Cheap evals run
+    on free models via SkillOpt's `openai_compatible` backend; `opencode_exec` harness is
+    an optional faithful-agentic-eval task (EDB-19). Repos cloned at `~/developer/tmp/{SkillOpt,claude-plugins-closedloop}` (untracked, kept for M5).
+- **NEXT: M1 = the W9 mapping body** — map all 37 extenders → the 24 jobs as `assessments`
   (which extender serves which job), add pairwise relationships (dup/conflict/complement),
-  and produce the coverage matrix. **Two decisions to make there:** (a) the per-job
-  **disposition** model author/vendor/reference/compare and where it's stored (a
-  `job_coverage` collection vs assessment metadata) — deferred deliberately; (b) don't
-  default gaps to "author from scratch" — draw from the sources registry (Henry, 2026-07-20).
-  Also open: EDB-16 (registry follow-ups), W8 protocol (EDB-12, solo-draftable), EDB-9
-  (obsidian-cli phantom refs — ready catalog fix, doubles as W6 update proof).
+  produce the coverage matrix. **Two decisions there:** (a) the per-job **disposition**
+  model author/vendor/reference/compare + where it's stored (`job_coverage` collection vs
+  assessment metadata) — deferred; (b) don't default gaps to "author from scratch" — draw
+  from the `sources` registry. Then M4 EDB-21 (formalize judge+CaseScore pattern) → M5
+  EDB-20 (author first benchmark). Also open: EDB-9 (obsidian-cli phantom refs — ready
+  catalog fix, doubles as W6 update proof).
 - **Operational:** server `_meta/extender-db/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
   in untracked `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the
   server before committing (WAL checkpoint) and land the data.db delta in the same commit
