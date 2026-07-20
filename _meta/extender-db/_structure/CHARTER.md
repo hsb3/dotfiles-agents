@@ -80,6 +80,8 @@ are both queries.
 | 6 | **Adopt external eval methodology, don't build a bespoke harness** (2026-07-20) | Mature, permissively-licensed frameworks now exist (SkillOpt MIT, ClosedLoop Apache-2.0). Extends "don't author each extender from scratch" up to the eval harness itself; reserves our build for the IP only we have (job taxonomy, coverage, curation decisions). Defers EDB-14 bespoke agents further. |
 | 7 | **Two complementary adopted methodologies, by eval question** (2026-07-20) | Qualitative "does extender X meet the bar" → the ClosedLoop judges+CaseScore rubric pattern (maps onto our `assessments`; W1 is a lighter version). Quantitative "how good is skill X / can we improve it" → SkillOpt (authored task set + checkable reward + validation-gated edit). Recorded as frameworks `closedloop-judges` / `skillopt`. |
 | 8 | **Cheap-model substrate + reused harness for evals** (2026-07-20) | Comparative + improvement evals run on inexpensive/free models. Layers: *methodology* is adopted (SkillOpt scoring/gating + ClosedLoop judges); *execution* is **reused — Henry already has a meta-harness for testing across opencode + other coding-agent harnesses, so we do NOT build one** (decision 6 applies to the harness too; likely the EDB-14 code). Any CC extender ports to opencode (hooks the main translation gap — covered by our `opencode-expertise`), enabling faithful *agentic* eval of CC skills on cheap/free models through that harness. |
+| 9 | **Per-job disposition lives in a new `job_coverage` collection** (2026-07-20, Henry signed off) | The EDB-13 deferred decision. Disposition (`author/vendor/reference/compare`) + coverage status + chosen `sources` link is per-JOB, not per (extender × job), so it doesn't fit `assessments`. A first-class collection stays queryable, carries its own provenance, and can be re-decided without disturbing the candidate taxonomy — the "doctrine/curation as data" spirit. M3 combine/coalesce reads it directly. Rejected: fields on `framework_elements` (mixes mutable curation into candidate doctrine) and a field on `assessments` (wrong granularity — duplicated ~37×). |
+| 10 | **Pairwise relationships live in a new `relationships` collection** (2026-07-20, Henry signed off; extended for direction) | Links between two extenders had no home. A pair collection (`extender_a`, `extender_b`, `kind`, overlap `job`, `evidence`, `assessor`, `eval_run`) keeps them queryable so M3 can select "all duplicative pairs" as data. `kind` carries symmetric values (duplicative/conflicting/complementary) **and directional ones (`precedes`/`feeds-into`, read A→B)** — directed compositions (lifecycle ambition) need ordering, so the hand-off links are the planner's raw material. Rejected: encoding pairs in assessment evidence/notes (prose, not queryable). |
 
 ## Lifecycle ambition (added 2026-07-20)
 
@@ -103,6 +105,21 @@ Two standing questions those workflows must answer, both as data in this databas
   are duplicative, conflicting, or deliberately complementary? Modeled as a
   jobs-to-be-done framework plus pairwise relationship data, so coverage gaps and overlaps
   are queries, not impressions.
+
+**Directed compositions — the "use" surface (emerging 2026-07-20).** The three workflows
+compose *individual* extenders; the payoff is composing them into **directed
+compositions** — an ordered, branching set of extenders for a given goal *and context*
+(making a deck may also pull in research and disambiguation, or not — it depends what you
+start with). These are **not static recipes**: a **grounded planner** (a smart model —
+Fable/Opus — reasoning over this DB's coverage map, directional `relationships`, and each
+tool's trigger/output) assembles the composition at request time, and the planner is
+itself an extender (its job is *pick the extenders*). Compositions are **living** —
+periodically tested against outcomes and updated, the evaluate→improve loop one level up
+from a single extender. **Future direction, deferred (EDB-22):** the testing/update
+infrastructure for directed compositions is out of scope until the coverage substrate (M1)
+and eval milestones (M4–M6) are solid; noted so it isn't lost. Near-term enabler: M1
+captures what a planner needs — coverage, directional hand-off links, per-tool
+trigger/output.
 
 Applies to all extender kinds, not just skills. Related but deferred: Henry has built-in
 agent code in another repo that could power the evaluation harness — integration is out of
@@ -139,10 +156,11 @@ keep/discard → repeat) inform M4/M6 without being extender publishers we'd ven
 
 "Satisfied" means all of the following, checked against the database itself:
 
-- [ ] A judged assessment pass exists for every skill (primary archetype + section-taxonomy
-      coverage) and survived spot verification.
-- [ ] At least one expansion kind (hooks) is ingested end-to-end with its own framework and
-      mechanical checks.
+- [x] A judged assessment pass exists for every skill (primary archetype + section-taxonomy
+      coverage) and survived spot verification. _(W1, 2026-07-20 — 6 judges + 2 blind
+      reviewers + session adjudication; see PLAN W1 DONE.)_
+- [x] At least one expansion kind (hooks) is ingested end-to-end with its own framework and
+      mechanical checks. _(W2, 2026-07-20 — see PLAN W2 DONE.)_
 - [ ] The database has answered ≥3 real curation questions that changed something in the
       repo (recorded in OPEN-ITEMS.md as findings → actions).
 - [ ] Re-ingest after a real catalog change (new/edited skill) proved the update path, not

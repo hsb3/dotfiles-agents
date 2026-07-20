@@ -174,6 +174,51 @@ The mapping should record a per-job **disposition** (author / vendor / reference
 compare) drawn from the sources registry (EDB-15), not default gaps to "author from
 scratch" (Henry, 2026-07-20).
 
+**Storage decided (2026-07-20, Henry signed off — CHARTER decisions 9–10):** per-job
+disposition → a new **`job_coverage`** collection (one row per job: `disposition`,
+coverage `status`, `source` link, `rationale`, `eval_run`); pairwise links → a new
+**`relationships`** collection (`extender_a/b`, `kind` = duplicative/conflicting/
+complementary **plus directional `precedes`/`feeds-into`, read A→B**, overlap `job`,
+`evidence`, `assessor`, `eval_run`). Both additive — no
+risk to the EDB-1 field-id gotcha, which only bites PATCHes of existing collections.
+
+**Execution architecture (M1 = W9 body; set 2026-07-20, foreman `standard`, Opus-led):**
+phased crew (audit-free — the taxonomy already exists), three shapes back-to-back.
+
+1. **Schema + loader scaffold (session + one builder, parallel).** Session extends
+   `schema.py` with `job_coverage` + `relationships`, re-runs on the **live** DB, and
+   proves the 662 existing rows survive (the EDB-11 lesson — never trust a throwaway
+   instance). In parallel a **sonnet `builder`** writes `load_coverage.py` — mirrors
+   `load_assessments.py`'s validate→upsert shape but keyed on all **37 extenders × 24
+   jobs**, assessor `coverage-v1`, unlisted jobs default to `absent`. Session reviews the
+   diff (loader integrity is load-bearing) before any load.
+2. **Mapping fan-out (~6–7 sonnet judges).** Mirrors the W1 architecture: judges emit
+   **structured JSON with evidence quotes and never touch the DB** (credentials stay with
+   the session; assessor discipline stays enforceable). Batched **by kind** for consistent
+   context — ~5 skill batches (~5 each) · 1 agents+hooks (8) · 1 externals (6, mapped by
+   description only, no bodies ingested). Each returns per extender the jobs it
+   `present`/`partial` serves + evidence, or a `jobless` flag. While each extender is
+   open, judges also capture cheaply — its trigger/when-to-use, what it produces, and any
+   directional hand-off hint (X typically precedes Y) — the substrate a future
+   directed-composition planner reasons over (EDB-22).
+3. **Adversarial verify (2 opus `reviewer`s + session adjudication).** Reviewers blind-
+   re-derive a stratified ~8-extender sample across kinds/families; session adjudicates
+   and logs rulings (as the W1 adjudication log did for the `partial` boundary).
+4. **Synthesis + gates (session floor).** Session loads the JSON; creates `eval_runs`
+   for the judge/review/adjudication passes and links every new assessment (W7
+   invariant). Derives **relationships** by querying jobs with ≥2 `present` extenders
+   (bounded candidate set) and classifying each — the `duplicative` calls get one opus
+   `reviewer` check (they drive M3). Sets each job's **`job_coverage`** disposition +
+   status, drawing gaps from the `sources` registry. Renders the coverage matrix; ≥3
+   findings → OPEN-ITEMS.
+
+**Definition of done (session runs the gates):** a check query returns 0 unmapped
+extenders (each has ≥1 present/partial job or an explicit jobless flag); every job has a
+`job_coverage` row; `load_coverage.py` re-run creates 0 rows and `ingest.py` re-run leaves
+`coverage-v1` + the new collections untouched (assessor discipline); 0 unlinked
+assessments; `make ci` green; `data.db` committed in the same commit as its cause with the
+server stopped for WAL checkpoint; ≥3 findings logged.
+
 ## Parallelism
 
 - **W1 and W2+W3 run in parallel** — W1's judges are read-only (JSON out); the W2/W3

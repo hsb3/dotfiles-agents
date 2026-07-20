@@ -39,6 +39,13 @@ _(from the 2026-07-20 research pass + reading SkillOpt & ClosedLoop at source)_
 
 ## 2 · Design rationale — non-obvious modeling choices
 
+- **Directed compositions are planner-generated and living, not stored recipes.** The DB's
+  ultimate consumer is a *grounded planner* — a smart model that reads coverage + directional
+  relationships + tool triggers and assembles an ordered, context-branching toolkit for a goal
+  at request time; the compositions it emits get periodically tested and updated, never frozen.
+  So the DB models the *substrate* (what each tool does, how they hand off) rather than the
+  recipes themselves; direction on relationships (`precedes`/`feeds-into`) exists for exactly
+  this. Testing infra for compositions is a deferred future direction (EDB-22). → docs:workflows
 - **Doctrine as data, append-and-supersede.** Frameworks/elements are rows with provenance +
   status, never code constants to overwrite. Competing mental models (our archetypes vs a
   future Anthropic canonical set) coexist and are compared against the same catalog; a
@@ -106,8 +113,12 @@ _(from the 2026-07-20 research pass + reading SkillOpt & ClosedLoop at source)_
 
 ## 5 · Open tensions the docs must not paper over
 
-- **Per-job disposition storage undecided** — author / vendor / reference / compare per job; a
-  `job_coverage` collection vs assessment metadata. Resolved during M1 (W9). → docs:jobs-taxonomy
+- **Per-job disposition storage — RESOLVED 2026-07-20** to a first-class `job_coverage`
+  collection (one row per job: disposition author/vendor/reference/compare + coverage status +
+  `sources` link), over assessment metadata or fields-on-the-taxonomy; pairwise links likewise
+  got their own `relationships` collection (CHARTER decisions 9–10, Henry signed off). The
+  through-line: curation state is modeled as its own queryable, supersedable data, never folded
+  into the candidate doctrine rows or duplicated across assessments. → docs:jobs-taxonomy
 - **No snapshot / time-series story** (EDB-7) — rows mutate in place; trend analysis would need
   a `snapshots` collection keyed by git ref. Deferred; docs should say so, not imply history.
 - **`coleam00` is in the registry unvetted** (we vendor its excalidraw skill) — its trust tier
