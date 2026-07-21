@@ -17,6 +17,9 @@ Collections (see README.md for the full data model):
                                             status, chosen source, linked eval_run
     relationships                         - pairwise extender links: duplicative /
                                             conflicting / complementary / directional
+    coverage_gaps  (view)                 - read-only saved view over job_coverage joined
+                                            to its job element, non-covered rows only
+                                            (status != 'covered'): gaps + partials
 """
 
 import sys
@@ -356,6 +359,29 @@ def collection_specs(ids):
                 "CREATE UNIQUE INDEX idx_relationships ON relationships (extender_a, extender_b, kind, job)"
             ],
         },
+        {
+            # coverage_gaps (view, GH #161): gaps + partials as a first-class saved view
+            # for the admin UI and API. Read-only projection over job_coverage joined to
+            # its job element, filtered to non-covered rows. A view is defined ONLY by its
+            # `viewQuery`; PocketBase derives the fields from the query (no stored `fields`),
+            # so there are no field ids to preserve — the merge-by-name guard in main() is a
+            # no-op for it. Must sit LAST in `order`: the query references the job_coverage
+            # and framework_elements tables, which must already exist when the view is
+            # created. Views need an id column, so `id` aliases job_coverage.id. Portable
+            # SQLite; `job` is a single relation (maxSelect 1) stored as the related id text,
+            # so `fe.id = jc.job` joins directly.
+            "name": "coverage_gaps",
+            "type": "view",
+            "viewQuery": (
+                "SELECT jc.id AS id, "
+                "fe.slug AS job_slug, fe.name AS job_name, fe.category AS category, "
+                "jc.status AS status, jc.disposition AS disposition, "
+                "jc.rationale AS rationale, jc.updated AS updated "
+                "FROM job_coverage jc "
+                "JOIN framework_elements fe ON fe.id = jc.job "
+                "WHERE jc.status != 'covered'"
+            ),
+        },
     ]
 
 
@@ -378,6 +404,7 @@ def main():
         "assessments",
         "job_coverage",
         "relationships",
+        "coverage_gaps",
     ]
     for name in order:
         existing = pb.get_collection(name)
@@ -392,8 +419,11 @@ def main():
         if existing:
             # Merge by field name, preserving existing field ids — a field sent without
             # its id is treated as NEW by PocketBase (old column dropped = data loss).
-            by_name = {f["name"]: f for f in existing["fields"]}
-            for f in spec["fields"]:
+            # View collections have no stored fields (PocketBase re-derives them from
+            # viewQuery on every write), so `.get("fields", [])` makes this a no-op for
+            # them while the create-vs-update-by-name flow still holds.
+            by_name = {f["name"]: f for f in existing.get("fields", [])}
+            for f in spec.get("fields", []):
                 if f["name"] in by_name:
                     f["id"] = by_name[f["name"]]["id"]
             pb.update_collection(name, spec)

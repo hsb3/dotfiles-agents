@@ -31,19 +31,29 @@ validation error); every job element not listed for an extender is written as an
 `absent` assessment row with empty evidence. All rows are stamped
 `assessor=coverage-v1` and linked to the given `eval_run`.
 
+Scoped delta mode (`--extenders slug1,slug2`, EDB-26): restricts a pass to exactly the
+named extenders — `mappings` must equal that set, not the full DB roster, and only
+their rows are built/written; other extenders' rows (including their `eval_run` stamp)
+are never touched. Fixes the delta-loader provenance bug: an unscoped delta input still
+carries every unchanged extender verbatim, and loading it relinks ALL those carried
+rows' `eval_run` to the new run (see PROCEDURES.md's ordering gotchas). Default
+(`--extenders` omitted) is unchanged byte-for-byte.
+
 Key Functions:
     validate_shape(): pure input-shape checks (malformed types, bad verdict, duplicate
         extender/element strings, jobless/jobs conflict) — run BEFORE any DB call, so a
         structurally bad file fails without needing the server up.
-    validate_against_db(): DB-dependent checks (extender/element/eval_run existence,
-        full extender coverage) — run only after validate_shape() passes clean.
-    build_rows(): expands the mapping into the full 37x24 cross product.
+    validate_against_db(): DB-dependent checks (extender/element/eval_run existence;
+        full roster coverage, or exactly `scope` if given) — run after validate_shape().
+    build_rows(): expands the mapping into the cross product (all extenders, or just
+        `scope`) x 24 job elements.
     plan_and_apply(): diffs the cross product against existing coverage-v1 rows
         (create/update/unchanged) and, unless --dry-run, writes it.
 
 Limitations:
     - "extender"/"element" values in the input may be either the DB `slug` or `name`
-      field; the first record seen wins on a collision (none expected at this scale).
+      field; the first record seen wins on a collision (none expected at this scale;
+      `--extenders` values resolve the same way).
     - Idempotency is judged on (verdict, evidence, eval_run, assessor); `score` is left
       untouched (not part of this brief).
 """
@@ -152,7 +162,12 @@ def build_lookup(records: list[dict]) -> dict[str, str]:
     return lookup
 
 
-def validate_against_db(pb: PB, data: dict, elements: list[dict], extenders: list[dict]) -> list[str]:
+def validate_against_db(
+    pb: PB, data: dict, elements: list[dict], extenders: list[dict],
+    scope: list[str] | None = None,
+) -> list[str]:
+    """`scope`, if given (raw `--extenders` slugs/names), requires `mappings` contain
+    EXACTLY that set instead of the full DB roster — missing AND extra are both errors."""
     errs: list[str] = []
     el_lookup = build_lookup(elements)
     ext_lookup = build_lookup(extenders)
@@ -178,11 +193,29 @@ def validate_against_db(pb: PB, data: dict, elements: list[dict], extenders: lis
                     f"mappings[{i}].jobs[{j}] ({ext_name!r}): unknown job element "
                     f"{el_name!r} (not in {FRAMEWORK_SLUG})"
                 )
-    all_ext_ids = {e["id"] for e in extenders}
-    missing = all_ext_ids - set(resolved)
+    if scope is None:
+        target_ids = {e["id"] for e in extenders}
+        label = "DB extenders"
+    else:
+        target_ids = set()
+        for s in scope:
+            eid = ext_lookup.get(s)
+            if eid is None:
+                errs.append(f"--extenders: unknown extender {s!r} (not in DB)")
+            else:
+                target_ids.add(eid)
+        label = "--extenders scope"
+    missing = target_ids - set(resolved)
     if missing:
         missing_slugs = sorted(ext_slug_by_id[i] for i in missing)
-        errs.append(f"{len(missing)} DB extenders missing from input: {missing_slugs}")
+        errs.append(f"{len(missing)} {label} missing from input: {missing_slugs}")
+    if scope is not None:
+        extra = set(resolved) - target_ids
+        if extra:
+            extra_slugs = sorted(ext_slug_by_id[i] for i in extra)
+            errs.append(
+                f"{len(extra)} extenders in input outside --extenders scope: {extra_slugs}"
+            )
     eval_run_id = data.get("eval_run")
     if eval_run_id and pb.find_first("eval_runs", f"id='{esc(eval_run_id)}'") is None:
         errs.append(f"eval_run not found in DB: {eval_run_id!r}")
@@ -191,13 +224,21 @@ def validate_against_db(pb: PB, data: dict, elements: list[dict], extenders: lis
 
 # --- cross product + diff/write ---------------------------------------------------------
 
-def build_rows(data: dict, fw_id: str, elements: list[dict], extenders: list[dict]) -> list[dict]:
+def build_rows(
+    data: dict, fw_id: str, elements: list[dict], extenders: list[dict],
+    scope: list[str] | None = None,
+) -> list[dict]:
     """Expand the mapping into one row per (extender, job element) — the full cross
-    product. Unlisted jobs (or every job, if `jobless`) default to verdict=absent."""
+    product, or just `scope`'s extenders if given (so plan_and_apply() never sees,
+    diffs, or re-stamps rows outside scope). Unlisted jobs (or all, if `jobless`)
+    default to verdict=absent."""
     el_lookup = build_lookup(elements)
     ext_lookup = build_lookup(extenders)
     elements_sorted = sorted(elements, key=lambda e: e["slug"])
     extenders_sorted = sorted(extenders, key=lambda e: e["slug"])
+    if scope is not None:
+        scope_ids = {ext_lookup[s] for s in scope}
+        extenders_sorted = [e for e in extenders_sorted if e["id"] in scope_ids]
     mapping_by_ext_id = {ext_lookup[m["extender"]]: m for m in data["mappings"]}
 
     rows = []
@@ -269,6 +310,13 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true",
                      help="validate and print the plan (create/update/unchanged counts); "
                           "make no writes")
+    ap.add_argument(
+        "--extenders",
+        help="comma-separated extender slugs/names: restrict this pass to EXACTLY these "
+             "extenders (EDB-26 scoped delta mode) — 'mappings' must match this set "
+             "exactly, and only their rows are written/relinked; every other extender's "
+             "rows are left untouched. Omitted: unchanged full-roster mode.",
+    )
     args = ap.parse_args()
 
     try:
@@ -286,20 +334,25 @@ def main() -> int:
         print("VALIDATION FAILED (input shape):\n  " + "\n  ".join(shape_errs))
         return 1
 
+    scope = None
+    if args.extenders:
+        scope = [s.strip() for s in args.extenders.split(",") if s.strip()]
+
     pb = PB()
     fw_id, elements, extenders = fetch_reference(pb)
-    db_errs = validate_against_db(pb, data, elements, extenders)
+    db_errs = validate_against_db(pb, data, elements, extenders, scope)
     if db_errs:
         print("VALIDATION FAILED (against DB):\n  " + "\n  ".join(db_errs))
         return 1
 
-    rows = build_rows(data, fw_id, elements, extenders)
+    rows = build_rows(data, fw_id, elements, extenders, scope)
     n_create, n_update, n_unchanged = plan_and_apply(pb, rows, data["eval_run"], args.dry_run)
+    scope_note = f" (scoped to {len(scope)} extenders)" if scope else ""
     if args.dry_run:
-        print(f"[dry-run] plan for {len(rows)} assessment rows: "
+        print(f"[dry-run] plan for {len(rows)} assessment rows{scope_note}: "
               f"{n_create} create, {n_update} update, {n_unchanged} unchanged; no writes made")
     else:
-        print(f"upserted {len(rows)} assessment rows as assessor={ASSESSOR!r} "
+        print(f"upserted {len(rows)} assessment rows{scope_note} as assessor={ASSESSOR!r} "
               f"({n_create} created, {n_update} updated, {n_unchanged} unchanged), "
               f"linked to eval_run={data['eval_run']!r}")
     return 0

@@ -124,7 +124,11 @@ against the same catalog is the point of the model.
 - `load_eval_run.py` — manifest-driven loader for evaluation provenance (runs, prompts, responses)
 - `load_assessments.py` — judged/review verdict loader (W1-style passes)
 - `load_coverage.py` — coverage-mapping loader: full extender × job cross product, assessor `coverage-v1`
-- `render_matrix.py` — regenerates `coverage-matrix.md` from the DB (generated file — never hand-edit)
+- `report.py` — regenerates the analysis surface from the DB: `coverage-matrix.md` +
+  `analysis.md` (both generated — never hand-edit); `--fixtures dir` swaps in JSON dumps
+  for credential-free development. Supersedes the former `render_matrix.py`.
+- `coverage_gaps` (view collection) — read-only saved view over `job_coverage` ⋈ its job
+  element, non-covered rows only (gaps + partials); browsable in the admin UI and API.
 - `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`)
 - `PROCEDURES.md` — the runbook: run order, evaluated-pass pattern, gates, commit discipline
 - `DECISIONS-NEEDED.md` — open owner-decision batch (tracked as issue #153)

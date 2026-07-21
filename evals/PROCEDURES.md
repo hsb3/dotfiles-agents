@@ -18,8 +18,8 @@ no shell, which makes the no-DB-access discipline structural, not just briefed).
 | 2 | `ingest.py` | repo (`primitives-core/`, rosters, `externals.yaml`) | inventory collections + framework seeds + `mechanical-v1` assessments | After any catalog change. Never touches non-mechanical assessors or `job_coverage`/`relationships`. |
 | 3 | `load_eval_run.py` | a manifest JSON (run metadata + prompt/response files) | `eval_runs`, `eval_responses` | **Before** loading any judged/coverage assessments — their loader input needs the run id it creates. |
 | 4a | `load_assessments.py` | judged-verdict JSON | `assessments` (per-row upsert) | W1-style judged/review passes (`judged-v1`, `review-v1`). |
-| 4b | `load_coverage.py` | mapping JSON (see its docstring) | `assessments`, assessor `coverage-v1`, full 37×24 cross product, unlisted = absent | Coverage passes. `--dry-run` first, always. Bulk-diff upsert; re-run must report 0 create. |
-| 5 | `render_matrix.py` | DB (coverage assessments, `job_coverage`, `relationships`) | `coverage-matrix.md` (generated — never hand-edit) | After anything changes coverage data. Deterministic; no-op on unchanged data. |
+| 4b | `load_coverage.py` | mapping JSON (see its docstring) | `assessments`, assessor `coverage-v1` — full cross product, or ONLY the named extenders' rows with `--extenders slug1,slug2` (EDB-26 delta mode) | Coverage passes. `--dry-run` first, always. Bulk-diff upsert; re-run must report 0 create. **Delta passes MUST use `--extenders`** so carried extenders' rows and `eval_run` stamps are never touched. |
+| 5 | `report.py` | DB (or `--fixtures dir` for credential-free dev) | `coverage-matrix.md` + `analysis.md` (both generated — never hand-edit) | After anything changes coverage/relationship/assessment data. Deterministic; no-op on unchanged data. Supersedes `render_matrix.py` (removed 2026-07-21, W3). |
 | — | `pb.py` | — | — | Shared REST client (auth, `upsert`, `list_all`, `esc`). Import target, not a CLI. |
 
 Cold rebuild from a fresh clone: 0 → 1 → 2, then re-load eval provenance if wanted
@@ -59,7 +59,7 @@ hold every prompt + verbatim response). The shape:
 9. **Synthesis rows** (`relationships`, `job_coverage`) link to the adjudication run.
    Contested duplicative calls get one targeted reviewer check before landing — see the
    composition tells in INSIGHTS §2.
-10. **Render** (`render_matrix.py`) and run the gates (below).
+10. **Render** (`report.py`) and run the gates (below).
 
 ## Procedure: the gates (before declaring any pass done)
 
@@ -103,11 +103,16 @@ throwaway-instance proof can mask live divergence, so the live proof is mandator
 - **Scratchpad artifacts are ephemeral** — prompts/responses/logs must land in
   `eval_responses` (via the manifest) before the session ends; the DB is the only durable
   home for eval provenance.
-- **Delta passes: the coverage loader re-stamps `eval_run` on carried rows** (EDB-26,
-  bit the W2 delta). `load_coverage.py` wants the full cross product, so a delta input
-  carries the unchanged extenders' verdicts — and the load relinks ALL their rows to the
-  new run, forging provenance. After a delta load: restore the original `eval_run` per
-  carried row from the git-committed pre-pass `data.db` (the W2 adjudication run's notes
-  record the pattern), and expect the post-restore `--dry-run` to report those rows as
-  pending updates forever — never run it for real. Fix properly by giving the loader a
-  scoped mode (M2/#162).
+- **Delta passes: use `--extenders`, never an unscoped full-cross-product input**
+  (EDB-26, bit the W2 delta). Unscoped, the loader relinks every carried row's
+  `eval_run` to the new run — forged provenance for extenders the pass never judged
+  (W2 restored 864 rows from the git-committed pre-pass `data.db`; the pattern lives in
+  the W2 adjudication run's notes if it is ever needed again). The scoped mode (W3,
+  #162) validates the input against exactly the named set and touches nothing else.
+  Post-adjudication scoped dry-runs still report the adjudicated rows as pending
+  updates — expected; never run for real.
+- **View collections carry no stored fields** (#161) — `coverage_gaps` is defined only
+  by its `viewQuery` (PocketBase derives the columns; `id` must alias a real column,
+  here `job_coverage.id`). schema.py's merge-by-name guard is a no-op for it, and it
+  sits LAST in `order` because its query references `job_coverage` +
+  `framework_elements`, which must exist first.
