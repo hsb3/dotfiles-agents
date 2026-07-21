@@ -31,7 +31,8 @@ Configuration resolves from env vars first, then `_meta/operations/extender-db.e
 `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` (superuser, no default). PocketBase itself only
 takes the data dir as a `--dir` flag — `serve.sh` is the env-var surface, and forwards any
 other subcommand with `--dir` appended (e.g. `serve.sh superuser upsert EMAIL PASS`). The
-live database is tracked in git as `pb_data/data.db` (private repo, ~6 MB); the rest of
+live database is tracked in git as `pb_data/data.db` (private repo, ~6 MB), as is
+`pb_data/storage/` (file-field blobs — harness artifacts, #174); the rest of
 `pb_data/` — request logs (`auxiliary.db`), WAL/SHM journals, generated typings — is
 transient and stays ignored. Stop the server before committing so the WAL is checkpointed
 into `data.db`.
@@ -80,6 +81,19 @@ taxonomy, "is this single-responsibility" — are written by humans or review ag
 different assessor value and are never touched by the ingest. The unique index is
 (extender, framework, element, assessor), so mechanical and judged verdicts coexist per element.
 
+### Harness telemetry side (#174)
+
+The agent-harness run-log corpus (`harness/results.jsonl` + `harness/runs/*.log`),
+normalized for agent-usage analytics. Loaded by `load_harness_runs.py`; joined to the rest
+of the model informally (a run's `candidate` slug matches `extenders.slug`).
+
+| Collection | One row per | Key fields |
+|---|---|---|
+| `runs` | harness trial (ledger row ⋈ log) | the 7-field resume key (`campaign`,`harness`,`model`,`candidate`,`case`,`config`,`trial` — unique), `era` (legacy / post / na), `session_id` (unique when present; the log↔run join), verdict + token/cost/turn counts, `checks`/`grades`/`model_usage`/`provenance` (json), `log_path` |
+| `run_events` | raw log line (minus `system/thinking_tokens` noise) | `run` (cascade), `seq` (unique per run), `role` (assistant / tool_call / tool_result / system / result), `event_type`, per-step tokens/cost, `payload` (json, mirror-deduped), `artifact` |
+| `tool_calls` | tool call (claude call+result pair or opencode fused event) | `run` (cascade), `tool_call_id` (unique per run), `tool_name`, `input`/`output` (json), `status`, `wallclock_ms`, `artifact` |
+| `artifacts` | distinct blob (content-addressed) | `sha256` (unique — global dedup), `kind` (write_content / edit_diff / screenshot / tool_output), `blob` (**file** field — written via `pb.create_multipart`, blobs live in tracked `pb_data/storage/`), `byte_size`, `text_ref` |
+
 ### Seeded frameworks
 
 | Slug | Kind | Source | What it captures |
@@ -124,6 +138,9 @@ against the same catalog is the point of the model.
 - `load_eval_run.py` — manifest-driven loader for evaluation provenance (runs, prompts, responses)
 - `load_assessments.py` — judged/review verdict loader (W1-style passes)
 - `load_coverage.py` — coverage-mapping loader: full extender × job cross product, assessor `coverage-v1`
+- `load_harness_runs.py` — harness telemetry ingester (#174): ledger + raw run logs →
+  `runs`/`run_events`/`tool_calls`/`artifacts`; `--parse-only` (offline), `--dry-run`,
+  `--campaign` scoping. See PROCEDURES "ingesting a harness campaign".
 - `report.py` — regenerates the analysis surface from the DB: `coverage-matrix.md` +
   `analysis.md` (both generated — never hand-edit); `--fixtures dir` swaps in JSON dumps
   for credential-free development. Supersedes the former `render_matrix.py`.

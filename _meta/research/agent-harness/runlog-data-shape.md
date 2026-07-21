@@ -1,6 +1,6 @@
 *Empirical shape of the agent-harness run-log corpus, to inform durable PocketBase collection designs (GitHub #174).*
 
-Status: active — 2026-07-21
+Status: implemented — 2026-07-21. Schema + ingester landed (`evals/schema.py`, `evals/load_harness_runs.py`); the §5 owner decisions and the verified ingest counts are recorded on #174. Implementation deviations from §4: the `artifacts.event` relation was dropped (relation cycle with `run_events.artifact`; the rel lives on the many side only, creation order `runs → artifacts → run_events → tool_calls`); `runs.ts` is text, not date (naive local ISO stamps); the `session_id` unique index is partial (`WHERE session_id != ''`); write/edit content is externalized only above `ARTIFACT_TEXT_THRESHOLD = 5000` chars.
 
 Every number below is computed by the scripts in `scratchpad/logshape/` (filenames in the footer); nothing is hand-transcribed. The PocketBase (extender-db) instance is **not touched** — this is a shape proposal only.
 
