@@ -89,9 +89,9 @@ METADATA = {
         "standard) and exec-desk (the executive-desk overhead: planning, comms, board "
         "triage, deck themes) — plus three kits (foreman-kit: tiered delegation agents and "
         "session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: "
-        "Obsidian plugin-dev guidance) and five standalone one-skill plugins: "
-        "github-project-board, private-fork, opencode-expertise, owner-signoff, and "
-        "pptx-themes."
+        "Obsidian plugin-dev guidance) and eight standalone one-skill plugins: "
+        "github-project-board, private-fork, opencode-expertise, owner-signoff, "
+        "pptx-themes, deep-research, dataviz, and update-config."
     ),
 }
 

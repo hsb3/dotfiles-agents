@@ -38,9 +38,17 @@ briefings/issues cite the old path.** **Self-describing — read
 `evals/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
 gates, data.db commit discipline) first**; below is only what they don't carry.
 
-- **Branch:** off `origin/dev`, pushed through `c7eacc6`. No PR — **the charter promotion
-  gate is 4/4** (2026-07-21) — **the promotion decision is in Henry's court** (PLAN
-  "Promotion": stay desk tool / graduate to scripts+make lane / own repo).
+- **Branch:** off `origin/dev` @ `a6c77e4`. No PR — **the charter promotion gate is 4/4**
+  (2026-07-21) — **the promotion decision is in Henry's court** (PLAN "Promotion": stay
+  desk tool / graduate to scripts+make lane / own repo).
+- **dev has moved under this branch (2026-07-21): a PARALLEL effort merged the
+  agent-harness (PR #169, `feat/agent-harness` → dev @ `7b0bfd1`; also #150).** Promotion
+  merge overlap is exactly 2 files: `.gitignore` (disjoint hunks) and `_meta/HANDOFF.md`
+  (both efforts added a §2b — resolve by keeping BOTH sections). The untracked `harness/`
+  dir sitting in this checkout is that effort's material (tracked on dev, absent on this
+  branch) — never sweep, delete, or commit it from here. NOTE: the harness (#169,
+  follow-ups #172–#174) looks like a candidate for the EDB-14/19 "meta-harness pointer"
+  that blocks #165/M5 — Henry confirms, don't assume.
 - **State (2026-07-21): epic #154 Waves 0–3 DONE** (wave map + per-wave DoD in PLAN.md;
   evidence on the epic's comments; commits `ab3e2e6`→`c7eacc6`). Coverage now
   **0 gap / 2 partial** over 24 jobs; 8 sub-issues functionally complete (#155–#162,
