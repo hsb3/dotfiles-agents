@@ -80,11 +80,19 @@ gates, data.db commit discipline) first**; below is only what they don't carry.
   #153 item**) · M6/#166 (gated behind M4+M5) · externals descriptions/#167.
   `DECISIONS-NEEDED.md` is now the decision record. Status briefing (deck+narration):
   `_meta/briefings/2026-07-20-extender-db-status/`.
-- **NEXT:** Wave 3 of the PLAN wave map — #161 (coverage_gaps view, opus builder + live
-  proof), #162 (M2 report.py, absorbs render_matrix; also the EDB-26 loader delta mode),
-  #167 (externals descriptions). Then Wave 4 = #164 (M4 criteria v2). #163 (M3) is now
-  unblocked (its five inputs #155–#159 all landed). #165 still waits on Henry's
-  meta-harness pointer. Owner court: the promotion decision (gate 4/4) + #165 pointer.
+- **Wave 3 DONE (2026-07-21, `1edf9d2`):** #161 coverage_gaps view live (returns exactly
+  migrate-at-scale + operate-browser-ui) · #162 `report.py` supersedes render_matrix.py
+  (REMOVED; renders coverage-matrix.md + new analysis.md; `--fixtures` dev mode) +
+  `load_coverage.py --extenders` scoped delta mode (EDB-26 RESOLVED — delta passes must
+  use it, see PROCEDURES gotchas) · #167 externals `provides` enriched from pinned-ref
+  upstreams + ingested (EDB-23 progressed; typescript-lsp = declarative LSP config, no
+  invokable surface — explains the M1 judge split).
+- **NEXT:** Wave 4 = #164 (M4 judging-criteria v2; fold in the EDB-23 externals re-judge
+  via the scoped loader — prioritized list in the W3 externals handoff, typescript-lsp
+  first). Then Wave 5 = #163 (M3 curation — now unblocked, all five inputs landed).
+  #165 still waits on Henry's meta-harness pointer. Owner court: the promotion decision
+  (charter gate 4/4) + the #165 pointer. Issues #155–#162/#167 are functionally done but
+  left open for Henry's review/close.
 - **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
   in untracked `_meta/operations/extender-db.env` (env file stayed in `_meta/operations/` —
   secrets home is policy-bound, only the project moved). `pb_data/data.db` is TRACKED — stop the
