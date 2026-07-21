@@ -9,6 +9,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -105,6 +106,41 @@ class PB:
 
     def create(self, coll, body):
         return self._req("POST", f"/api/collections/{coll}/records", body)
+
+    def create_multipart(self, coll, body, files):
+        """POST a record whose fields include file uploads (PB file fields cannot be
+        set via JSON). `files`: {field_name: (filename, content_bytes, mime)}. The
+        `@jsonPayload` part is PocketBase's special key that preserves json/bool/number
+        field types (a plain form part would stringify them). Mirrors `_req`'s auth +
+        HTTPError->RuntimeError handling; hand-builds the multipart body (stdlib only)."""
+        boundary = "pb" + uuid.uuid4().hex
+        dash = b"--" + boundary.encode()
+        parts = [
+            dash,
+            b'Content-Disposition: form-data; name="@jsonPayload"',
+            b"",
+            json.dumps(body).encode(),
+        ]
+        for field, (filename, content, mime) in files.items():
+            parts += [
+                dash,
+                f'Content-Disposition: form-data; name="{field}"; filename="{filename}"'.encode(),
+                f"Content-Type: {mime}".encode(),
+                b"",
+                content,
+            ]
+        parts += [dash + b"--", b""]
+        data = b"\r\n".join(parts)
+        path = f"/api/collections/{coll}/records"
+        req = urllib.request.Request(self.base + path, data=data, method="POST")
+        req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+        req.add_header("Authorization", self.token)
+        try:
+            with urllib.request.urlopen(req) as r:
+                return json.loads(r.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode(errors="replace")
+            raise RuntimeError(f"POST {path} -> {e.code}: {detail}") from None
 
     def update(self, coll, rec_id, body):
         return self._req("PATCH", f"/api/collections/{coll}/records/{rec_id}", body)
