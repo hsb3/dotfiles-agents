@@ -1,0 +1,4 @@
+- [Extender estate cohesion](extender-estate-cohesion.md) — 3-surface estate (dotfiles-agents + desk-standard + dev-tooling-desk); datamodel NOT greenfield (extenders.yaml + committed PocketBase); desk-standard is a rapid-dev co-product not yet distributed
+- [Approve major IA changes](approve-major-ia-changes.md) — Henry signs off on any major information-architecture change (new entities, plane/relation/workflow reframes) before it's finalized or built
+- [Desk-platform research element-model review](desk-platform-research-elementmodel.md) — verified _headcase claims accurate; recurring research gaps = missing claim/citation + experiment/dataset entities
+- [rg color masking gotcha](rg-color-masking-gotcha.md) — rg default output garbles matched terms in Bash tool; use --color=never for quotable evidence
