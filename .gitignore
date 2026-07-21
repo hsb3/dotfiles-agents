@@ -31,3 +31,4 @@ logs/
 harness/runs/
 harness/workspaces/
 harness/.venv/
+*.log
