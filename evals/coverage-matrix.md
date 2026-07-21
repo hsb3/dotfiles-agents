@@ -13,50 +13,47 @@ Provenance: eval_runs `m1-coverage-judged-2026-07-20`,
 | Job | Family | Status | Present | Partial | Disposition | Source |
 |---|---|---|---|---|---|---|
 | `orient-codebase` | understand-research | **covered** | scout | repo-meta-structure, typescript-lsp | author | — |
-| `research-question` | understand-research | **gap** | — | — | author | — |
-| `consult-domain-expertise` | understand-research | **covered** | opencode-expertise | memory-taxonomy, obsidian-api-basics | author | — |
+| `research-question` | understand-research | **covered** | deep-research | — | author | — |
+| `consult-domain-expertise` | understand-research | **covered** | opencode-expertise | dataviz, memory-taxonomy, obsidian-api-basics | author | — |
 | `plan-work` | build-software | **covered** | planning-desk | foreman | author | — |
 | `implement-change` | build-software | **covered** | builder, frontend-design | lead, typescript-lsp | author | anthropic |
 | `improve-code` | build-software | **covered** | code-simplifier | — | vendor | anthropic |
-| `migrate-at-scale` | build-software | **partial** | — | builder | author | — |
+| `migrate-at-scale` | build-software | **partial** | — | builder, foreman | author | — |
 | `review-change` | assure-quality | **covered** | reviewer | — | author | — |
 | `verify-works` | assure-quality | **covered** | reviewer | readme-value-and-proof | author | — |
 | `delegate-large-job` | orchestrate-sustain | **covered** | foreman, lead | — | author | — |
-| `sustain-continuity` | orchestrate-sustain | **covered** | handoff, handoff-freshness-guard, session-handoff-surfacer | context-watermark | author | — |
+| `sustain-continuity` | orchestrate-sustain | **covered** | handoff, handoff-freshness-guard, session-handoff-surfacer | context-watermark, foreman | author | — |
 | `manage-backlog` | orchestrate-sustain | **covered** | board-triage, github-project-board, planning-desk | — | author | — |
 | `produce-briefing` | produce-deliverables | **covered** | comms | — | author | — |
 | `produce-deck` | produce-deliverables | **covered** | comms, pptx, pptx-themes | — | author | anthropic |
 | `produce-diagram` | produce-deliverables | **covered** | diagrams, excalidraw, excalidraw-diagram-coleam00, mermaid | drawio | author | — |
-| `produce-dataviz` | produce-deliverables | **gap** | — | — | author | — |
+| `produce-dataviz` | produce-deliverables | **covered** | dataviz | — | author | — |
 | `produce-readme` | produce-deliverables | **covered** | readme-value-and-proof | — | author | — |
 | `enforce-standards` | govern-estate | **covered** | mise-en-place-scaffold, repo-compliance-audit, repo-meta-structure | memory-taxonomy, planning-desk, private-fork | author | — |
 | `govern-external-code` | govern-estate | **covered** | private-fork | — | author | — |
 | `get-owner-signoff` | govern-estate | **covered** | owner-signoff | — | author | — |
 | `author-evaluate-extender` | extend-tooling | **covered** | skill-creator | subagent-telemetry | author | anthropic |
-| `configure-harness` | extend-tooling | **partial** | — | github-project-board, opencode-expertise | author | — |
+| `configure-harness` | extend-tooling | **covered** | update-config | github-project-board, opencode-expertise | author | — |
 | `integrate-knowledge-system` | extend-tooling | **covered** | obsidian-api-basics, obsidian-chat-ui, obsidian-cli, obsidian-mcp-server | — | author | — |
 | `operate-browser-ui` | extend-tooling | **partial** | — | readme-value-and-proof | reference | anthropic |
 
 ## Gaps and partial coverage
 
-- **`research-question`** (gap, disposition author): No roster extender. An in-estate user-level deep-research skill exists (not rostered) - disposition author = promote/adapt it, not from-scratch. Registry alternatives: none of the trusted publishers ship a research harness.
-- **`migrate-at-scale`** (partial, disposition author): builder partial only. The mechanism exists as foreman architecture C (flat fan-out over many sites); fold an explicit migration playbook into foreman-kit rather than sourcing externally.
-- **`produce-dataviz`** (gap, disposition author): No roster extender. An in-estate user-level dataviz skill exists (not rostered) - disposition author = promote/adapt it, not from-scratch.
-- **`configure-harness`** (partial, disposition author): opencode-expertise + github-project-board partial only. An in-estate user-level update-config skill exists (not rostered) - promote/adapt it.
+- **`migrate-at-scale`** (partial, disposition author): STAYS partial after W2 delta: foreman gained the named migrate-at-scale playbook (#158) and both judge and blind reviewer independently scored it partial — the playbook strengthens support but no extender carries the job as a primary purpose. Honest negative; revisit if a dedicated migration skill lands.
 - **`operate-browser-ui`** (partial, disposition reference): readme-value-and-proof partial (headless Playwright capture, found at review). Full browser operation is served at harness level by Anthropic's claude-in-chrome MCP - reference it rather than author a roster extender.
 
 ## Relationships
 
 | Kind | Count |
 |---|---|
-| complementary | 24 |
+| complementary | 31 |
 | duplicative | 1 |
-| feeds-into | 14 |
-| precedes | 7 |
+| feeds-into | 17 |
+| precedes | 9 |
 
 ### Duplicative pairs (M3 coalesce candidates)
 
-- excalidraw = excalidraw-diagram-coleam00: Dup-check verdict: both emit the same .excalidraw JSON; the diagrams hub routes only to the authored skill; coleam00's 'visual arguments' angle is wired to no trigger. M3: drop or fold the vendored skill.
+- excalidraw = excalidraw-diagram-coleam00: Dup-check verdict: both emit the same .excalidraw JSON; the diagrams hub routes only to the authored skill; coleam00's 'visual arguments' angle is wired to no trigger. M3: drop or fold the vendored skill. RESOLVED 2026-07-21: vendored twin dropped from externals.yaml (#159, owner decision B1); residual upstream capabilities tracked as #168.
 
 ### Directed hand-off links (composition-planner substrate, EDB-22)
 
@@ -64,8 +61,12 @@ Provenance: eval_runs `m1-coverage-judged-2026-07-20`,
 - builder => reviewer (feeds-into)
 - comms => pptx-themes (feeds-into)
 - context-watermark -> handoff-freshness-guard (precedes)
+- deep-research => comms (feeds-into)
+- deep-research -> planning-desk (precedes)
 - drawio => mermaid (feeds-into)
+- foreman => builder (feeds-into)
 - foreman => handoff (feeds-into)
+- foreman => scout (feeds-into)
 - github-project-board -> board-triage (precedes)
 - handoff => comms (feeds-into)
 - handoff-freshness-guard -> session-handoff-surfacer (precedes)
@@ -81,3 +82,4 @@ Provenance: eval_runs `m1-coverage-judged-2026-07-20`,
 - repo-meta-structure => repo-compliance-audit (feeds-into)
 - reviewer => builder (feeds-into)
 - scout -> builder (precedes)
+- skill-creator -> update-config (precedes)

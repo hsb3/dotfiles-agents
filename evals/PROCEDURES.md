@@ -103,3 +103,11 @@ throwaway-instance proof can mask live divergence, so the live proof is mandator
 - **Scratchpad artifacts are ephemeral** — prompts/responses/logs must land in
   `eval_responses` (via the manifest) before the session ends; the DB is the only durable
   home for eval provenance.
+- **Delta passes: the coverage loader re-stamps `eval_run` on carried rows** (EDB-26,
+  bit the W2 delta). `load_coverage.py` wants the full cross product, so a delta input
+  carries the unchanged extenders' verdicts — and the load relinks ALL their rows to the
+  new run, forging provenance. After a delta load: restore the original `eval_run` per
+  carried row from the git-committed pre-pass `data.db` (the W2 adjudication run's notes
+  record the pattern), and expect the post-restore `--dry-run` to report those rows as
+  pending updates forever — never run it for real. Fix properly by giving the loader a
+  scoped mode (M2/#162).

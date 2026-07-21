@@ -44,8 +44,23 @@ briefings/issues cite the old path.** **Self-describing — read
 `evals/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
 gates, data.db commit discipline) first**; below is only what they don't carry.
 
-- **Branch:** off `origin/dev`, pushed through `4bd082e`. No PR — Henry promotes when the
-  charter gate is satisfied (2/4 ticked; **#160 completes criteria 3+4**).
+- **Branch:** off `origin/dev`, pushed through the Wave-2 close-out (2026-07-21). No PR —
+  **the charter promotion gate is now 4/4** (gate 3: six findings→actions; gate 4: #160's
+  update-path proof) — **the promotion decision is in Henry's court** (PLAN "Promotion":
+  stay desk tool / graduate to scripts+make lane / own repo, decided with gate evidence).
+- **Epic #154 execution (2026-07-21, foreman-led; wave map in PLAN.md):** Waves 0–2 DONE.
+  W0 = #160 (EDB-9 fix + update-path proof, `ab3e2e6`). W1 = #155–#159 (`8bcb4e0`):
+  deep-research/dataviz/update-config authored as ORIGINALS (harness-shipped namesakes
+  have no source — EDB-25), standalone-only + skill-catalog; foreman migrate-at-scale
+  playbook; coleam00 dropped from externals (residual value → #168). W2 = coverage delta
+  evaluated pass (runs `w2-coverage-{judged,review,adjudication}-2026-07-21`): 40×24=960
+  rows, **0 gap / 2 partial jobs** (research-question, produce-dataviz, configure-harness
+  → covered), 58 relationships, all gates green. **Honest negative: migrate-at-scale
+  STAYS partial** — judge + blind reviewer independently scored the playbook-bearing
+  foreman partial; #158's "upgrade to covered" was not ratified by the data.
+  **Gotcha that bit (EDB-26):** the coverage loader re-stamps eval_run on carried rows in
+  delta passes — W2 restored provenance from the committed pre-pass data.db; see
+  PROCEDURES gotchas before running any future delta.
 - **Done (one line per era — full records live in PLAN's DONE blocks, OPEN-ITEMS' resolved
   log + M1 adjudication log, and git):** W0 seed · W1 judged pass · W2 hooks · W3
   externals · W7 eval provenance · W9 taxonomy + sources registry (EDB-13/15) ·
@@ -65,8 +80,11 @@ gates, data.db commit discipline) first**; below is only what they don't carry.
   #153 item**) · M6/#166 (gated behind M4+M5) · externals descriptions/#167.
   `DECISIONS-NEEDED.md` is now the decision record. Status briefing (deck+narration):
   `_meta/briefings/2026-07-20-extender-db-status/`.
-- **NEXT:** pick from epic #154 — unblocked starters are #160 (gate 3+4), #161 (gaps
-  view), the promotions #155–#158, and #162 (M2). #165 waits on the meta-harness pointer.
+- **NEXT:** Wave 3 of the PLAN wave map — #161 (coverage_gaps view, opus builder + live
+  proof), #162 (M2 report.py, absorbs render_matrix; also the EDB-26 loader delta mode),
+  #167 (externals descriptions). Then Wave 4 = #164 (M4 criteria v2). #163 (M3) is now
+  unblocked (its five inputs #155–#159 all landed). #165 still waits on Henry's
+  meta-harness pointer. Owner court: the promotion decision (gate 4/4) + #165 pointer.
 - **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
   in untracked `_meta/operations/extender-db.env` (env file stayed in `_meta/operations/` —
   secrets home is policy-bound, only the project moved). `pb_data/data.db` is TRACKED — stop the
