@@ -413,7 +413,9 @@ def _identical(a, b):
     if os.path.isdir(a) or os.path.isdir(b):
         if not (os.path.isdir(a) and os.path.isdir(b)):
             return False
-        cmp = filecmp.dircmp(a, b)
+        # ignore OS litter: Finder drops .DS_Store into browsed dirs, which would make
+        # the drift check false-fail against a freshly generated tree
+        cmp = filecmp.dircmp(a, b, ignore=filecmp.DEFAULT_IGNORES + [".DS_Store"])
         if cmp.left_only or cmp.right_only or cmp.diff_files or cmp.funny_files:
             return False
         _, mismatch, errors = filecmp.cmpfiles(a, b, cmp.common_files, shallow=False)

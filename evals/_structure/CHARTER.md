@@ -161,10 +161,13 @@ keep/discard → repeat) inform M4/M6 without being extender publishers we'd ven
       reviewers + session adjudication; see PLAN W1 DONE.)_
 - [x] At least one expansion kind (hooks) is ingested end-to-end with its own framework and
       mechanical checks. _(W2, 2026-07-20 — see PLAN W2 DONE.)_
-- [ ] The database has answered ≥3 real curation questions that changed something in the
-      repo (recorded in OPEN-ITEMS.md as findings → actions). _(1 of 3 landed: EDB-9 →
-      the obsidian-cli fix, 2026-07-21, #160. The M1-gap-driven promotions #155–#157 and
-      the coleam00 drop #159 each count when they land — ticks at Wave-1 reconciliation.)_
+- [x] The database has answered ≥3 real curation questions that changed something in the
+      repo (recorded in OPEN-ITEMS.md as findings → actions). _(6 landed by 2026-07-21:
+      EDB-9 → obsidian-cli fix (#160); M1 gap research-question → deep-research authored
+      + rostered (#155); M1 gap produce-dataviz → dataviz (#156); M1 partial
+      configure-harness → update-config (#157); M1 partial migrate-at-scale → foreman
+      playbook (#158); M1 duplicative relationship → coleam00 dropped from externals.yaml
+      (#159, EDB-16b). See OPEN-ITEMS EDB-9/EDB-16/EDB-25.)_
 - [x] Re-ingest after a real catalog change (new/edited skill) proved the update path, not
       just the create path. _(2026-07-21, #160 — obsidian-cli EDB-9 fix re-ingested:
       `extender updated: skill/obsidian-cli`, row id unchanged (`hbt6ac5r9sjkoji`),

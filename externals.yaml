@@ -30,12 +30,6 @@
 version: 1
 
 externals:
-  - id: excalidraw-diagram-coleam00
-    kind: skill
-    upstream: https://github.com/coleam00/excalidraw-diagram-skill
-    ref: 8646fcc9f74f38539c6cdb4c969723336a96ddcd
-    provides: "Excalidraw diagram JSON that makes visual arguments."
-    targets: [claude-code]
   - id: frontend-design
     kind: plugin
     upstream: https://github.com/anthropics/claude-plugins-official

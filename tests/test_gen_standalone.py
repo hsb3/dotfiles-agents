@@ -130,11 +130,14 @@ class Invariants(unittest.TestCase):
         self.assertEqual(
             [e["name"] for e in entries],
             [
+                "dataviz",
+                "deep-research",
                 "github-project-board",
                 "opencode-expertise",
                 "owner-signoff",
                 "pptx-themes",
                 "private-fork",
+                "update-config",
             ],
         )
         e = next(x for x in entries if x["name"] == "private-fork")

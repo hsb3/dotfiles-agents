@@ -118,6 +118,13 @@ run, uncertainties, stop conditions hit.
    rename fallout). Give the punch list to a single agent; do not fan out cleanup.
 6. The session validates against the DoD and runs the gates itself.
 
+**Named playbook — migrate-at-scale.** The recurring C shape of one mechanical transform
+repeated across many sites (a rename, an API-signature change, a codemod) has its own
+dispatchable playbook: discovering and slicing the site inventory, a mechanical-transform brief
+template for cheap-model workers, what stays with the foreman (transform spec, site inventory,
+odd-site judgment calls), and the grep-zero + full-suite + no-silent-caps gates that close it out.
+See **`references/migrate-at-scale.md`**.
+
 **D. Lead-driven team** (coupled work — a dependent chain implement → wire → test → fix):
 Spawn **one `lead`** as the session's proxy. Give it the full brief (see
 `references/lead-brief.md`): objective, DoD verbatim, constraints, worker-model guidance, evidence
@@ -243,3 +250,6 @@ rule, downtiering) come from measured findings on delegation cost and context ec
 ## Additional resources
 
 - **`references/lead-brief.md`** — the fill-in-the-blanks architecture-D lead-agent brief template.
+- **`references/migrate-at-scale.md`** — the named architecture-C playbook for fanning a
+  mechanical transform out across many sites (site inventory, worker brief template,
+  reconciliation, gates, when not to fan out).
