@@ -38,3 +38,20 @@ smoke: ## Loadability smoke: install the bundles into a live Claude Code session
 # is required CI on every PR into dev; check (roster drift) + build-check (marketplace drift) +
 # catalog (standalone eligibility/drift) guard the generated artifacts.
 ci: check identity provenance hook-layout catalog build-check test ## All gates: floor + drift guards
+
+# --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
+# (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).
+.PHONY: harness-test harness-eval harness-report
+harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
+	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q
+
+harness-eval: ## Eval grid for a candidate: ITEM=<name> [HARNESS=claude] [MODEL=] (NOT in ci)
+	@test -n "$(ITEM)" || { echo "usage: make harness-eval ITEM=<candidate> [HARNESS=claude] [MODEL=<model>]"; exit 2; }
+	@dir=$$(find primitives-core -mindepth 2 -maxdepth 2 -type d -name "$(ITEM)" | head -1); \
+	  test -n "$$dir" || { echo "no primitive named '$(ITEM)' under primitives-core/"; exit 2; }; \
+	  uv run --project harness agent-harness "$(ITEM)" --candidate-dir "$$dir" \
+	    --harness "$(or $(HARNESS),claude)" $(if $(MODEL),--model "$(MODEL)")
+
+harness-report: ## Aggregate the harness ledger for a candidate: ITEM=<name> (NOT in ci)
+	@test -n "$(ITEM)" || { echo "usage: make harness-report ITEM=<candidate>"; exit 2; }
+	@uv run --project harness agent-harness "$(ITEM)" --report
