@@ -20,6 +20,14 @@ Collections (see README.md for the full data model):
     coverage_gaps  (view)                 - read-only saved view over job_coverage joined
                                             to its job element, non-covered rows only
                                             (status != 'covered'): gaps + partials
+
+    harness telemetry (GH #174):
+    runs                                  - one row per harness trial: ledger row (verdict +
+                                            token/cost counts) fused with log provenance
+    artifacts                             - content-addressed blobs (file writes,
+                                            screenshots) as PB file fields, sha-deduped
+    run_events                            - normalized event stream, one row per log line
+    tool_calls                            - denormalized convenience, one row per tool call
 """
 
 import sys
@@ -66,6 +74,14 @@ def rel(name, collection_id, required=False, cascade=False, max_select=1):
         "cascadeDelete": cascade,
         "maxSelect": max_select,
     }
+
+
+def file_field(name, max_size=10_000_000, max_select=1, mime_types=None):
+    # PocketBase file field: blob lands in pb_data/storage/<coll>/<rec>/; JSON
+    # record writes can't carry it — use pb.create_multipart().
+    return {"name": name, "type": "file", "required": False,
+            "maxSelect": max_select, "maxSize": max_size,
+            "mimeTypes": mime_types or [], "thumbs": [], "protected": False}
 
 
 def stamps():
@@ -365,9 +381,11 @@ def collection_specs(ids):
             # its job element, filtered to non-covered rows. A view is defined ONLY by its
             # `viewQuery`; PocketBase derives the fields from the query (no stored `fields`),
             # so there are no field ids to preserve — the merge-by-name guard in main() is a
-            # no-op for it. Must sit LAST in `order`: the query references the job_coverage
-            # and framework_elements tables, which must already exist when the view is
-            # created. Views need an id column, so `id` aliases job_coverage.id. Portable
+            # no-op for it. Must sit after the tables it queries in `order`: the query
+            # references the job_coverage and framework_elements tables, which must already
+            # exist when the view is created (the harness-telemetry base collections that
+            # follow it in `order` don't feed the view, so trailing them is safe).
+            # Views need an id column, so `id` aliases job_coverage.id. Portable
             # SQLite; `job` is a single relation (maxSelect 1) stored as the related id text,
             # so `fe.id = jc.job` joins directly.
             "name": "coverage_gaps",
@@ -381,6 +399,140 @@ def collection_specs(ids):
                 "JOIN framework_elements fe ON fe.id = jc.job "
                 "WHERE jc.status != 'covered'"
             ),
+        },
+        {
+            # Harness telemetry (GH #174), one row per harness trial: the ledger row
+            # (candidate x case x config x trial verdict + token/cost/turn counts) fused
+            # with log provenance (session_id joins log lines back to the run). Small
+            # bounded strings stay text; per-row arrays/maps (checks, grades, model_usage,
+            # provenance) are json. `ts` is text deliberately — ledger stamps are naive
+            # local ISO with no zone, and a PB date field would coerce/shift them.
+            "name": "runs",
+            "type": "base",
+            "fields": [
+                select("harness", ["claude", "opencode"], required=True),
+                select("era", ["legacy", "post", "na"]),
+                text("campaign"),
+                text("candidate", required=True),
+                text("case", required=True),
+                select("config", ["with", "baseline"]),
+                text("kind"),
+                num("trial"),
+                text("model"),
+                text("grader_model"),
+                text("cli_version"),
+                text("session_id"),
+                boolean("passed"),
+                boolean("skill_used"),
+                num("exit_code"),
+                num("num_turns"),
+                num("cost_usd"),
+                num("duration_ms"),
+                num("input_tokens"),
+                num("output_tokens"),
+                num("cache_creation_tokens"),
+                num("cache_read_tokens"),
+                text("error", max_len=2000),
+                text("workspace"),
+                js("checks"),
+                js("grades"),
+                js("tool_names"),
+                js("model_usage"),
+                js("provenance"),
+                text("log_path"),
+                text("ts"),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_runs_key ON runs "
+                "(campaign, harness, model, candidate, `case`, config, trial)",
+                # partial: empty session_ids (legacy rows) must not collide on unique
+                "CREATE UNIQUE INDEX idx_runs_session ON runs (session_id) WHERE session_id != ''",
+                "CREATE INDEX idx_runs_log ON runs (log_path)",
+            ],
+        },
+        {
+            # Content-addressed blobs too large for a text field (base64 screenshots
+            # 24-75 KB, file writes up to ~5 KB). NO cascade and NO `event` rel: a
+            # sha-deduped artifact may be referenced by many events across runs, so the
+            # rel lives on the many side (run_events.artifact / tool_calls.artifact).
+            # Dropping the doc's artifacts.event rel also breaks the run_events<->artifacts
+            # cycle so single-pass ordered creation holds. `blob` is a file field; write
+            # it via pb.create_multipart(), not a JSON record body.
+            "name": "artifacts",
+            "type": "base",
+            "fields": [
+                rel("run", ids["runs"], required=True),
+                select("kind", ["write_content", "edit_diff", "screenshot", "tool_output"]),
+                text("mime"),
+                file_field("blob"),
+                text("sha256", required=True),
+                num("byte_size"),
+                text("text_ref", max_len=5000),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_artifacts_sha ON artifacts (sha256)",
+                "CREATE INDEX idx_artifacts_run ON artifacts (run)",
+            ],
+        },
+        {
+            # Normalized event stream: one row per raw log line minus dropped types
+            # (system/thinking_tokens noise). `ts` is ms epoch (opencode native; claude
+            # derived). `payload` is json so the 2 % of tool bodies over the 5000-char cap
+            # fit; oversized blobs are externalized to `artifact`. Cascade on `run`.
+            "name": "run_events",
+            "type": "base",
+            "fields": [
+                rel("run", ids["runs"], required=True, cascade=True),
+                num("seq"),
+                num("ts"),
+                select("vendor", ["claude", "opencode"]),
+                select("role", ["assistant", "tool_call", "tool_result", "system", "result"]),
+                text("event_type"),
+                text("tool_name"),
+                text("tool_call_id"),
+                text("status"),
+                boolean("is_error"),
+                num("input_tokens"),
+                num("output_tokens"),
+                num("cache_read_tokens"),
+                num("cache_write_tokens"),
+                num("cost_usd"),
+                num("wallclock_ms"),
+                text("text", max_len=5000),
+                js("payload"),
+                rel("artifact", ids["artifacts"]),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_run_events_key ON run_events (run, seq)",
+                "CREATE INDEX idx_run_events_call ON run_events (tool_call_id)",
+            ],
+        },
+        {
+            # Denormalized convenience: one row per tool call (claude call+result pair or
+            # fused opencode event), so tool-level analytics don't re-parse payload. Cascade
+            # on `run`. `input`/`output` are json (cap headroom); oversized output -> artifact.
+            "name": "tool_calls",
+            "type": "base",
+            "fields": [
+                rel("run", ids["runs"], required=True, cascade=True),
+                text("tool_call_id", required=True),
+                text("tool_name", required=True),
+                js("input"),
+                js("output"),
+                text("status"),
+                boolean("is_error"),
+                num("wallclock_ms"),
+                num("started_ts"),
+                rel("artifact", ids["artifacts"]),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_tool_calls_key ON tool_calls (run, tool_call_id)",
+                "CREATE INDEX idx_tool_calls_name ON tool_calls (tool_name)",
+            ],
         },
     ]
 
@@ -405,6 +557,10 @@ def main():
         "job_coverage",
         "relationships",
         "coverage_gaps",
+        "runs",
+        "artifacts",
+        "run_events",
+        "tool_calls",
     ]
     for name in order:
         existing = pb.get_collection(name)

@@ -24,6 +24,8 @@ _meta/operations/*
 # the one rebuild path; tracking both would create a second schema source.
 evals/pb_data/*
 !evals/pb_data/data.db
+# file-field blobs (harness artifacts) must travel with the repo like data.db does (#174)
+!evals/pb_data/storage/
 evals/pb_migrations/
 
 # --- Python ---

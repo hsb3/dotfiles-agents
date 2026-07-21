@@ -20,7 +20,8 @@ no shell, which makes the no-DB-access discipline structural, not just briefed).
 | 4a | `load_assessments.py` | judged-verdict JSON | `assessments` (per-row upsert) | W1-style judged/review passes (`judged-v1`, `review-v1`). |
 | 4b | `load_coverage.py` | mapping JSON (see its docstring) | `assessments`, assessor `coverage-v1` — full cross product, or ONLY the named extenders' rows with `--extenders slug1,slug2` (EDB-26 delta mode) | Coverage passes. `--dry-run` first, always. Bulk-diff upsert; re-run must report 0 create. **Delta passes MUST use `--extenders`** so carried extenders' rows and `eval_run` stamps are never touched. |
 | 5 | `report.py` | DB (or `--fixtures dir` for credential-free dev) | `coverage-matrix.md` + `analysis.md` (both generated — never hand-edit) | After anything changes coverage/relationship/assessment data. Deterministic; no-op on unchanged data. Supersedes `render_matrix.py` (removed 2026-07-21, W3). |
-| — | `pb.py` | — | — | Shared REST client (auth, `upsert`, `list_all`, `esc`). Import target, not a CLI. |
+| 6 | `load_harness_runs.py` | `harness/results.jsonl` + `harness/runs/*.log` | `runs`, `artifacts`, `run_events`, `tool_calls` (harness telemetry, #174) | After a harness campaign, **deliberately, in-session** — `--parse-only` first (no DB), then `--dry-run`, then real. Scoped delta loads use `--campaign LABEL`. NEVER invoked by the scheduled campaign runner (data.db commit discipline). |
+| — | `pb.py` | — | — | Shared REST client (auth, `upsert`, `list_all`, `esc`, `create_multipart` for file fields). Import target, not a CLI. |
 
 Cold rebuild from a fresh clone: 0 → 1 → 2, then re-load eval provenance if wanted
 (the DB is a projection; `data.db` is tracked, so normally you just serve what git has).
@@ -60,6 +61,34 @@ hold every prompt + verbatim response). The shape:
    Contested duplicative calls get one targeted reviewer check before landing — see the
    composition tells in INSIGHTS §2.
 10. **Render** (`report.py`) and run the gates (below).
+
+## Procedure: ingesting a harness campaign (#174)
+
+After `make harness-campaign` (or any `agent-harness` run) produces new ledger rows + logs:
+
+1. Server up (`serve.sh`); after any schema change, `schema.py` first (as always).
+2. `python3 evals/load_harness_runs.py --parse-only` — offline sanity: planned counts,
+   log linkage, era split, warnings. No DB connection.
+3. `--dry-run` (add `--campaign LABEL` to scope a delta load — same EDB-26 discipline as
+   coverage: nothing outside the scoped campaign is read, diffed, or restamped).
+4. Real run, then **re-run `--dry-run` to prove idempotence** (expect 0 create / 0 update).
+5. Commit `data.db` **+ `pb_data/storage/`** per the commit procedure below — artifact
+   blobs land on disk under `pb_data/storage/<collection>/<record>/` and are tracked
+   (the `.gitignore` negation), so a blob-bearing ingest changes both.
+
+Gotchas specific to this lane:
+- **File fields can't be written via JSON** — `artifacts.blob` goes through
+  `pb.create_multipart()` (multipart/form-data with PB's `@jsonPayload` part). A plain
+  `pb.create()` on `artifacts` silently leaves `blob` empty.
+- **PB `json` fields coerce string input by a first-byte rule**: a string whose
+  UNTRIMMED first byte can start a JSON value (`{ [ " -` digit `t f n`) and that then
+  parses is stored PARSED (read-back returns the structure); `'     266'` (space
+  first) stays a verbatim string while `'7853\n'` comes back as an int — both proven
+  on the live corpus. The loader mirrors this at body-build time (`_coerce_json`);
+  without it, string-JSON tool outputs (todowrite, Bash JSON prints) diff as
+  "changed" forever (bit the first #174 ingest — 91 rows).
+- The scheduled weekly campaign runner never auto-ingests: unattended writes would dirty
+  the tracked `data.db` outside the stop-server/checkpoint/commit-with-cause discipline.
 
 ## Procedure: the gates (before declaring any pass done)
 
