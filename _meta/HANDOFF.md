@@ -38,8 +38,9 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
 PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
 (inventory ⋈ doctrine via assessments). **Self-describing — read
 `_meta/extender-db/_structure/` CHARTER.md (canonical), PLAN.md, OPEN-ITEMS.md, INSIGHTS.md
-(learnings for future docs), and `_meta/extender-db/README.md` (operator doc) first**; below
-is only what they don't carry.
+(learnings for future docs), `_meta/extender-db/README.md` (operator doc), and
+`_meta/extender-db/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
+gates, data.db commit discipline) first**; below is only what they don't carry.
 
 - **Branch:** off `origin/dev`, pushed through `492432d`. No PR — Henry promotes when the
   charter gate (2/4 ticked) is satisfied.
