@@ -249,3 +249,21 @@ OPEN-ITEMS (M1 adjudication log, EDB-23/24, EDB-10/16 updates).
 When the [CHARTER.md](CHARTER.md) promotion gate is fully checked, bring the decision
 (stay desk tool / graduate to `scripts/` + make lane / own repo) back to Henry with the
 gate evidence. Not a work item until then.
+
+## Execution wave map (2026-07-21, foreman-led — epic #154)
+
+Deliverables · criteria · parallelism for the remaining epic #154 backlog; no timelines.
+Standing constraints apply to every wave: session-only DB writes, evaluated-pass pattern
+for anything judged, supersede-never-overwrite, `data.db` commits with cause.
+
+| Wave | Contents | Architecture | Gate |
+|---|---|---|---|
+| 0 | #160 obsidian-cli fix (charter gate 3+4 evidence) | session-direct | re-ingest shows update-not-create; gate boxes ticked with evidence; EDB-9 resolved |
+| 1a | #155 deep-research · #156 dataviz · #157 update-config — **authored** originals for the jobs (harness-shipped versions have no on-disk estate source; see finding in OPEN-ITEMS) | flat fan-out, 3 opus builders, disjoint new skill dirs; roster untouched by builders | skill dirs complete + schema-complete proposed roster blocks in handoff notes |
+| 1b | #158 migrate-at-scale playbook (foreman skill) · #159 coleam00 drop/fold (externals.yaml) — dispatched after Wave 0's re-ingest so ingest-read files stay quiet during the update-path proof | 2 sonnet builders, disjoint scopes | playbook section landed; externals entry dispositioned with fold-residual report |
+| 1r | Reconciliation: apply the 3 roster entries, `make build`, `make ci`, diff review | one serial pass (session or single builder) | `make ci` green |
+| 2 | Coverage delta evaluated pass over all Wave-1 changes (new/changed extenders × 24 jobs; job_coverage flips for research-question, produce-dataviz, configure-harness, migrate-at-scale; coleam00 relationship annotated resolved) | session-orchestrated M1 pattern: scout judges → blind review → adjudication → load → render | full PROCEDURES gate battery; satisfies the coverage clause of #155–#159 |
+| 3 | #161 coverage_gaps view (opus builder; schema.py view-type; live proof by session per EDB-11) · #162 report.py (sonnet builder; JSON-fixture dev, session runs live) · #167 externals descriptions (sonnet builder; after #159) | flat fan-out | per-issue acceptance verbatim; #167 re-judging folds into next judged pass (stated, not silent) |
+| 4 | #164 M4 judging-criteria v2 (opus builder drafts; reviewer adversarial check vs known failure modes; session loads criteria + runs the v2 pilot pass) | draft → review → session pilot | criteria in frameworks fields (supersede); one judged pass reproducible under v2; EDB-10/21 resolved |
+| 5 | #163 M3 curation pass (scouts assemble overlap evidence; session makes merge/drop calls; builders execute) | B + session floor + C | ≥1 real catalog change from relationship data; findings→actions logged; matrix regen |
+| parked | #165 M5 (blocked: owner meta-harness pointer + M4) · #166 M6 (M4+M5). Pre-stage once M4 lands: EDB-20 benchmark authoring + EDB-12 protocol; nothing harness-shaped built (decision 8) | — | — |

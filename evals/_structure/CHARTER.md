@@ -162,9 +162,13 @@ keep/discard → repeat) inform M4/M6 without being extender publishers we'd ven
 - [x] At least one expansion kind (hooks) is ingested end-to-end with its own framework and
       mechanical checks. _(W2, 2026-07-20 — see PLAN W2 DONE.)_
 - [ ] The database has answered ≥3 real curation questions that changed something in the
-      repo (recorded in OPEN-ITEMS.md as findings → actions).
-- [ ] Re-ingest after a real catalog change (new/edited skill) proved the update path, not
-      just the create path.
+      repo (recorded in OPEN-ITEMS.md as findings → actions). _(1 of 3 landed: EDB-9 →
+      the obsidian-cli fix, 2026-07-21, #160. The M1-gap-driven promotions #155–#157 and
+      the coleam00 drop #159 each count when they land — ticks at Wave-1 reconciliation.)_
+- [x] Re-ingest after a real catalog change (new/edited skill) proved the update path, not
+      just the create path. _(2026-07-21, #160 — obsidian-cli EDB-9 fix re-ingested:
+      `extender updated: skill/obsidian-cli`, row id unchanged (`hbt6ac5r9sjkoji`),
+      count 37→37, judgment rows untouched; see OPEN-ITEMS EDB-9 Resolved entry.)_
 
 Promotion itself is a separate decision with its own options (stay a `_meta` desk tool ·
 graduate scripts into `scripts/` with a make lane · extract to its own repo) — recorded here

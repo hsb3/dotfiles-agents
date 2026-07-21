@@ -55,3 +55,5 @@ you want rostered? (Feeds M3 combine/coalesce.)
 - [x] **F1** Add a `coverage_gaps` PocketBase **view collection** via schema.py (SQL view
       over `job_coverage` where status != covered) so the gaps are a first-class saved
       view in the admin UI instead of a filter. _Default: skip — matrix + filter suffice._
+      _**Outcome: REVERSED by Henry 2026-07-20 — BUILD the view** (see header line and
+      issue #161); the checkbox above records the default as presented, not the ruling._
