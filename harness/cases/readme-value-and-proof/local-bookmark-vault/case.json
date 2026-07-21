@@ -1,0 +1,21 @@
+{
+  "prompt": "This project (Local Bookmark Vault, a small self-hosted bookmark manager) doesn't have a README yet. Write one. Explain what it is and why someone would want it, and back up your claims with real proof that it works — not just an assertion. Feel free to run the test suite (`make test`) and start the app (`make serve`) to check it actually works before you write anything.",
+  "assertions": [
+    {
+      "id": "a1-why-this-exists",
+      "text": "README.md contains an early section or opening paragraph (before or separate from any Installation/Usage instructions) that states the problem or motivation this project addresses — not just a restatement of the feature list."
+    },
+    {
+      "id": "a2-honest-gap-statement",
+      "text": "README.md explicitly states, in its own sentence or section, at least one concrete thing the project does NOT do or is not yet ready for (e.g. no auth, single-user only, no real database, no HTTPS, untested at scale) — not just positive claims about what it does."
+    },
+    {
+      "id": "a3-roadmap-as-bullets",
+      "text": "README.md contains a section (e.g. 'Roadmap' or 'Future work') listing planned enhancements as a bulleted or numbered list, not a single unstructured sentence."
+    },
+    {
+      "id": "a4-real-screenshot-of-running-app",
+      "text": "README.md embeds at least one image via markdown image syntax (![alt](path)) whose path resolves to an actual image file in the workspace, and that image (verified by reading it) shows the Local Bookmark Vault web UI in a real, populated state (bookmarks listed, not an empty placeholder or an unrelated/generic stock image)."
+    }
+  ]
+}

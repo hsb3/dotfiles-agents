@@ -27,9 +27,13 @@ class TestRegistry(unittest.TestCase):
         self.assertTrue(get_adapter("claude", allow_bash=True).allow_bash)
         self.assertFalse(get_adapter("claude").allow_bash)
 
+    def test_opencode_is_registered(self):
+        self.assertIn("opencode", list_adapters())
+
     def test_unknown_harness_raises_listing_valid_names(self):
         with self.assertRaises(UnknownHarness) as ctx:
-            get_adapter("opencode")  # not wired until Wave 2
+            get_adapter("codex")  # a non-goal adapter; genuinely unregistered
+        # The message lists the valid names, which now include opencode.
         self.assertIn("claude", str(ctx.exception))
         self.assertIn("opencode", str(ctx.exception))
 

@@ -43,12 +43,22 @@ def _parser():
     ap.add_argument(
         "--harness",
         default="claude",
-        help=f"harness to drive (valid: {', '.join(list_adapters())})",
+        help=(
+            "harness(es) to drive — comma-separated for a grid "
+            f"(valid: {', '.join(list_adapters())}; e.g. claude,opencode)"
+        ),
     )
     ap.add_argument("--case", help="run a single case id")
     ap.add_argument("--trials", type=int, default=DEFAULT_TRIALS)
     ap.add_argument("--configs", default="with,baseline")
-    ap.add_argument("--model", help="trial model override (default: CLI default)")
+    ap.add_argument(
+        "--model",
+        help=(
+            "trial model(s) — comma-separated for a grid (default: CLI default). "
+            "Bare ids are provider-normalized per harness, so one list spans "
+            "claude and opencode cells (e.g. claude-sonnet-4-5,claude-haiku-4-5)"
+        ),
+    )
     ap.add_argument(
         "--grader-model",
         default=DEFAULT_GRADER_MODEL,
@@ -69,11 +79,29 @@ def _parser():
     return ap
 
 
+def _cells(harness_arg, model_arg):
+    """Expand comma-separated --harness/--model into ``(harness, model)`` cells.
+
+    Model ids stay as-typed here (each adapter provider-normalizes at invocation,
+    so one bare-id list spans claude and opencode cells — DESIGN §4). A missing
+    ``--model`` yields a single ``None`` cell (the CLI default). Harness order and
+    dedupe are preserved so ``claude,opencode`` runs claude cells then opencode.
+    """
+    harnesses = [h.strip() for h in (harness_arg or "").split(",") if h.strip()] or ["claude"]
+    models = [m.strip() for m in model_arg.split(",") if m.strip()] if model_arg else [None]
+    if not models:
+        models = [None]
+    return [(h, m) for h in harnesses for m in models]
+
+
 def main(argv=None):
     args = _parser().parse_args(argv)
+    cells = _cells(args.harness, args.model)
 
+    # Validate every harness name up front (any unknown -> exit 3, unchanged).
+    harnesses = list(dict.fromkeys(h for h, _ in cells))
     try:
-        adapter = get_adapter(args.harness, allow_bash=args.allow_bash)
+        adapters = {h: get_adapter(h, allow_bash=args.allow_bash) for h in harnesses}
     except UnknownHarness as exc:
         print(str(exc), file=sys.stderr)
         return 3
@@ -82,17 +110,7 @@ def main(argv=None):
         print_report(args.candidate, read_rows(args.results, args.candidate))
         return 0
 
-    pf = adapter.preflight()
-    if pf == "missing":
-        print(
-            f"{adapter.name} CLI not on PATH — install it or run in the devcontainer",
-            file=sys.stderr,
-        )
-        return 1
-    if pf == "noauth":
-        print(f"{adapter.name} CLI not authenticated — configure credentials", file=sys.stderr)
-        return 1
-
+    # Candidate validation is shared by every cell (done once).
     if not args.candidate_dir:
         print("--candidate-dir is required (path to the extender to inject)", file=sys.stderr)
         return 2
@@ -107,11 +125,38 @@ def main(argv=None):
         )
         return 2
 
-    if args.smoke:
-        return 0 if smoke(adapter, args.candidate, kind, args.candidate_dir, args) else 1
+    single = len(cells) == 1
+    ran_any = False
+    smoke_all_ok = True
+    for harness, model in cells:
+        adapter = adapters[harness]
+        pf = adapter.preflight()
+        if pf != "ok":
+            reason = (
+                "not on PATH — install it or run in the devcontainer"
+                if pf == "missing"
+                else "not authenticated — configure credentials"
+            )
+            print(f"{adapter.name} CLI {reason}", file=sys.stderr)
+            # One cell: preserve the exit-1 contract. Grid: skip this harness,
+            # let the reachable cells still run (no silent whole-run abort).
+            if single:
+                return 1
+            continue
+        args.model = model
+        if args.smoke:
+            ok = smoke(adapter, args.candidate, kind, args.candidate_dir, args)
+            ran_any = True
+            smoke_all_ok = smoke_all_ok and ok
+            if single:
+                return 0 if ok else 1
+        else:
+            run_candidate(adapter, args.candidate, kind, args.candidate_dir, args)
+            ran_any = True
 
-    run_candidate(adapter, args.candidate, kind, args.candidate_dir, args)
-    return 0
+    if args.smoke:
+        return 0 if (ran_any and smoke_all_ok) else 1
+    return 0 if ran_any else 1
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -9,15 +9,17 @@ from __future__ import annotations
 
 from .base import Adapter, Injection, NormalizedRecord
 from .claude import ClaudeAdapter
+from .opencode import OpencodeAdapter
 
 
 class UnknownHarness(ValueError):
     """Raised for a harness name that is not registered."""
 
 
-#: Registered adapters, keyed by ``name``. Wave 2 appends "opencode".
+#: Registered adapters, keyed by ``name``.
 ADAPTERS = {
     ClaudeAdapter.name: ClaudeAdapter,
+    OpencodeAdapter.name: OpencodeAdapter,
 }
 
 
@@ -46,6 +48,7 @@ __all__ = [
     "Injection",
     "NormalizedRecord",
     "ClaudeAdapter",
+    "OpencodeAdapter",
     "UnknownHarness",
     "ADAPTERS",
     "list_adapters",
