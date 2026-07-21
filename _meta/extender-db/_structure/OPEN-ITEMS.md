@@ -8,6 +8,10 @@ Conventions: `EDB-N` ids, newest first within each section. An item moves to **R
 with a one-line outcome (and stays there — the log is the promotion-gate evidence for
 "findings → actions").
 
+**2026-07-20:** remaining development is mirrored on GitHub as **epic #154** (sub-issues
+#155–#167) per Henry's decision batch. EDB ids stay the canonical fine-grained log; the
+epic is the execution tracker — when a sub-issue closes, record the outcome here too.
+
 ## Open — tool
 
 | Id | Item | Notes |
@@ -30,7 +34,6 @@ with a one-line outcome (and stays there — the log is the promotion-gate evide
 
 | Id | Item | Notes |
 |---|---|---|
-| EDB-24 | M1 coverage gaps/partials all have in-estate or harness-level candidates | From the coverage matrix (2026-07-20): `research-question` → promote the user-level deep-research skill; `produce-dataviz` → promote the user-level dataviz skill; `configure-harness` → promote the user-level update-config skill; `migrate-at-scale` → fold a migration playbook into foreman-kit (architecture C is the mechanism); `operate-browser-ui` → reference Anthropic's claude-in-chrome MCP (readme-value-and-proof carries a Playwright partial). **No from-scratch authoring needed anywhere.** Owner decision: which promotions to roster (feeds M3). |
 | EDB-9 | obsidian-cli SKILL.md cites nonexistent files | **Confirmed by two independent agents** (a judge and a blind reviewer): "Additional Resources" names `references/query-commands.md`, `plugin-commands.md`, `developer-commands.md`, `examples/batch-operations.sh` — none exist; actual files are `file-commands.md`, `quick-reference.md`, `setup-guide.md`, `daily-automation.sh`, `vault-reports.sh`. Fix the skill body in `primitives-core/` (candidate promotion-gate "finding → action"). |
 | EDB-4 | Custom frontmatter keys with no spec | skill `metadata` (2), skill `version` (2), agent `memory` (1). Decide each: adopt into an internal spec framework (requirement != custom), or remove from the bodies. |
 | EDB-3 | Two skills exceed the ≤500-line SKILL.md guideline | `diagrams` 653 lines, `obsidian-cli` 753 lines (framework `anthropic-agent-skills` / `concise-body`). Candidate fix: push depth into `references/`. |
@@ -74,6 +77,7 @@ eval_runs `m1-coverage-{judged,review,adjudication}-2026-07-20` in the DB.
 
 | Id | Item | Outcome |
 |---|---|---|
+| EDB-24 | M1 coverage gaps/partials — owner decisions | Decided 2026-07-20 (issue #153 → closed): all five in-estate answers approved — promote deep-research (#155), dataviz (#156), update-config (#157); foreman-kit migration playbook (#158); operate-browser-ui stays `reference` (claude-in-chrome). Plus: coleam00 excalidraw drop approved (#159), vendor `improve-code` accepted, EDB-9 fix approved (#160), and the F-item `coverage_gaps` view REVERSED to build (#161). Remaining development consolidated as **epic #154** (sub-issues #155–#167). Meta-harness pointer (EDB-14/19) still outstanding — blocks #165/M5. |
 | EDB-13 | Jobs-to-be-done coverage framework (W9/M1) | 2026-07-20 complete: taxonomy (24 jobs / 7 families) + the M1 body — 888 `coverage-v1` assessments (37×24 cross product, idempotent), 46 `relationships` (24 complementary · 1 duplicative · 21 directed hand-off links), 24 `job_coverage` rows (19 covered / 3 partial / 2 gap; dispositions 22 author · 1 vendor · 1 reference), `coverage-matrix.md` rendered via `render_matrix.py`. Provenance in 3 eval_runs. Findings → M1 adjudication log + EDB-23/24. |
 | EDB-18 | Adopt SkillOpt + ClosedLoop judges as eval doctrine (M4) | 2026-07-20: both cloned (`~/developer/tmp`), read at source by two subagents, and loaded as `evaluation-methodology` frameworks — `skillopt` (5 cited elements: scored-rollout, validation-gated-edit, authored-benchmark-required, cheap-model-substrate, transcript-mined-improvement) and `closedloop-judges` (4: judge-as-prompt-rubric, casescore-verdict, lightweight-eval-case, self-learning-loop). Charter decisions 6–8 record the adopt-not-build strategy. |
 | EDB-17 | Add Henry's suggested publishers to the registry | 2026-07-20: researched all 5 suggestions; added `jeffallan` (individual, ~10.7k★, no evals → provisional) and `closedloop-ai` (research-lab, ships judges+self-learning evals → provisional) as `sources`. hve-core (Copilot, adjacent) + autoresearch (ML self-improvement pattern) recorded as charter references, not registry rows. SkillOpt → framework, not source (it's a methodology, not an extender publisher). |
