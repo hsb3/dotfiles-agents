@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Two desk bundles \u2014 code-desk (slim next-release execution under a documented repo standard) and exec-desk (the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and five standalone one-skill plugins: github-project-board, private-fork, opencode-expertise, owner-signoff, and pptx-themes.",
+    "description": "Two desk bundles \u2014 code-desk (slim next-release execution under a documented repo standard) and exec-desk (the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and eight standalone one-skill plugins: github-project-board, private-fork, opencode-expertise, owner-signoff, pptx-themes, deep-research, dataviz, and update-config.",
     "version": "0.3.0"
   },
   "name": "dotfiles-agents",
@@ -17,6 +17,24 @@
       "name": "code-desk",
       "source": "./plugins/code-desk",
       "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Design data visualizations - charts, plots, dashboards - that are correct, legible, and honest, consulted before any chart code in any library or medium: data-shape to mark-type heuristic, anti-patterns to refuse (pie overuse, dual axes, truncated bars, rainbow scales, 3D), a brand-neutral colorblind-safe palette with light/dark themes and brand-swap, composition, interaction plus static degradation, and a final validation checklist. Data charts only - structural diagrams belong to diagrams/mermaid, deck theming to pptx-themes.",
+      "name": "dataviz",
+      "source": "./plugins/dataviz",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings.",
+      "name": "deep-research",
+      "source": "./plugins/deep-research",
+      "version": "0.0.1"
     },
     {
       "author": {
@@ -97,6 +115,15 @@
       "description": "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.",
       "name": "private-fork",
       "source": "./plugins/private-fork",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Configure the Claude Code harness through its settings files: route each change to the correct file by precedence (managed policy vs user vs project vs machine-local), apply narrowest-scope allow/deny/ask permission rules, implement automated behaviors as ratified directory-based hooks (config plus script file, never inline shell), set env vars, register MCP servers, then verify every edit for JSON validity and take-effect.",
+      "name": "update-config",
+      "source": "./plugins/update-config",
       "version": "0.0.1"
     }
   ]

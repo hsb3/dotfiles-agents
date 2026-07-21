@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings.",
+  "name": "deep-research",
+  "version": "0.0.1"
+}

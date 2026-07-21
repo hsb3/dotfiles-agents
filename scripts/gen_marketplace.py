@@ -89,9 +89,9 @@ METADATA = {
         "standard) and exec-desk (the executive-desk overhead: planning, comms, board "
         "triage, deck themes) — plus three kits (foreman-kit: tiered delegation agents and "
         "session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: "
-        "Obsidian plugin-dev guidance) and five standalone one-skill plugins: "
-        "github-project-board, private-fork, opencode-expertise, owner-signoff, and "
-        "pptx-themes."
+        "Obsidian plugin-dev guidance) and eight standalone one-skill plugins: "
+        "github-project-board, private-fork, opencode-expertise, owner-signoff, "
+        "pptx-themes, deep-research, dataviz, and update-config."
     ),
 }
 
@@ -413,7 +413,9 @@ def _identical(a, b):
     if os.path.isdir(a) or os.path.isdir(b):
         if not (os.path.isdir(a) and os.path.isdir(b)):
             return False
-        cmp = filecmp.dircmp(a, b)
+        # ignore OS litter: Finder drops .DS_Store into browsed dirs, which would make
+        # the drift check false-fail against a freshly generated tree
+        cmp = filecmp.dircmp(a, b, ignore=filecmp.DEFAULT_IGNORES + [".DS_Store"])
         if cmp.left_only or cmp.right_only or cmp.diff_files or cmp.funny_files:
             return False
         _, mismatch, errors = filecmp.cmpfiles(a, b, cmp.common_files, shallow=False)

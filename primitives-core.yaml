@@ -344,3 +344,33 @@ primitives:
     targets: [claude-code]
     plugins: []
     summary: "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically."
+  - id: deep-research
+    type: skill
+    source: primitives-core/skills/deep-research
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: []
+    summary: "Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings."
+  - id: dataviz
+    type: skill
+    source: primitives-core/skills/dataviz
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: []
+    summary: "Design data visualizations - charts, plots, dashboards - that are correct, legible, and honest, consulted before any chart code in any library or medium: data-shape to mark-type heuristic, anti-patterns to refuse (pie overuse, dual axes, truncated bars, rainbow scales, 3D), a brand-neutral colorblind-safe palette with light/dark themes and brand-swap, composition, interaction plus static degradation, and a final validation checklist. Data charts only - structural diagrams belong to diagrams/mermaid, deck theming to pptx-themes."
+  - id: update-config
+    type: skill
+    source: primitives-core/skills/update-config
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: []
+    summary: "Configure the Claude Code harness through its settings files: route each change to the correct file by precedence (managed policy vs user vs project vs machine-local), apply narrowest-scope allow/deny/ask permission rules, implement automated behaviors as ratified directory-based hooks (config plus script file, never inline shell), set env vars, register MCP servers, then verify every edit for JSON validity and take-effect."

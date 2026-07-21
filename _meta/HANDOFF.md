@@ -18,19 +18,76 @@ Both build epics are **DONE and CLOSED**; `make ci` is green; `dev` and `main` a
 Live marketplace lineup: code-desk · exec-desk · foreman-kit · github-project-board · opencode-expertise ·
 pptx-themes · private-fork · diagrams · obsidian-toolkit · owner-signoff.
 
-## 2 · Recent deliveries (2026-07-20)
+**Also live: the extender-db mini-project, MERGED to dev 2026-07-21 (owner promotion decision)** (§2b) — separate
+effort from the rebuild epics; do not fold it into dev without Henry's promotion decision.
 
-- **Epic close-out (this session):** ran #111's install-smoke proof — the only unrecorded acceptance item.
-  Observed, not asserted: all **10 lineup plugins loaded from their generated `plugins/` artifacts** in fresh
-  `claude --print --output-format stream-json` sessions (the harness `init` event enumerates loaded skills/agents;
-  each session completed a real turn). Ran `make ci` locally — green (120 tests). Proof recorded on #111; closed
-  #111/#134 + mirrors #121/#135 as completed.
-- **PR/branch triage:** closed stale PR #148 (redundant, wrong base = main); deleted 11 orphaned remote
-  branches + pruned 10 local; now on `dev`, clean. **Open PRs: 0.**
-- **Backlog externalized to the exec desk** — planning for this repo now runs from the dev-tooling desk,
-  not in-repo `_meta/plans/`.
+## 2 · Recent deliveries (era pointers — blow-by-blow lives in issues/git)
 
-## 2b · Agent-harness (delivered 2026-07-21, PR #169 → dev)
+- 2026-07-20: #111 install-smoke proof recorded + epics closed (see §1); branch triage → Open PRs 0;
+  planning externalized to the exec desk (see §3).
+- 2026-07-21: epic #154 Waves 0–3 executed on `feat/extender-db` (see §2b).
+
+## 2b · Extender-db mini-project (merged to dev 2026-07-21)
+
+PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
+(inventory ⋈ doctrine via assessments). **Re-housed 2026-07-21 (owner decision): moved from
+`_meta/extender-db/` to root `evals/` — same layout, project name unchanged; pre-move
+briefings/issues cite the old path.** **Self-describing — read
+`evals/_structure/` CHARTER.md (canonical), PLAN.md, OPEN-ITEMS.md, INSIGHTS.md
+(learnings for future docs), `evals/README.md` (operator doc), and
+`evals/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
+gates, data.db commit discipline) first**; below is only what they don't carry.
+
+- **Promotion: DECIDED + EXECUTED 2026-07-21** — Henry chose merge-to-dev (the charter
+  gate was 4/4). The former `feat/extender-db` branch (through `4e5ecb3` + `fb0e69f`) was
+  merged with dev (which had independently taken the agent-harness, PR #169 @ `7b0bfd1`);
+  the predicted 2-file overlap resolved as planned (.gitignore union; both HANDOFF §2b
+  blocks kept). Extender-db and the harness now share one lane on dev. NOTE: the harness
+  (#169, follow-ups #172–#174) looks like a candidate for the EDB-14/19 "meta-harness
+  pointer" that blocks #165/M5 — Henry confirms, don't assume.
+- **State (2026-07-21): epic #154 Waves 0–3 DONE** (wave map + per-wave DoD in PLAN.md;
+  evidence on the epic's comments; commits `ab3e2e6`→`c7eacc6`). Coverage now
+  **0 gap / 2 partial** over 24 jobs; 8 sub-issues functionally complete (#155–#162,
+  #167) and left open for Henry's review/close; #168 filed (excalidraw residual value).
+  Era pointers, oldest first — full records in PLAN DONE blocks, OPEN-ITEMS resolved log,
+  eval_runs provenance, git: W0 seed → W1 judged pass → W2 hooks → W3 externals → W7
+  provenance → W9 taxonomy+sources → adopt-external roadmap (CHARTER decisions 6–8;
+  harness is REUSED, never built — EDB-14/19) → M1 coverage body (2026-07-20, eval_runs
+  `m1-coverage-*`) → #153 decision batch (A–E accepted, F reversed; DECISIONS-NEEDED.md
+  is the record) → epic waves 0–3 (2026-07-21, eval_runs `w2-coverage-*`).
+- **Findings a next session should know (details in OPEN-ITEMS):** EDB-25 — the three
+  promoted skills are authored ORIGINALS (harness-shipped namesakes have no distributable
+  source). **Honest negative:** migrate-at-scale STAYS partial — judge + blind reviewer
+  independently declined to rate the playbook-bearing foreman `present`; #158's
+  upgrade-to-covered intent was not ratified. typescript-lsp is a declarative LSP config
+  with no invokable surface (EDB-23) — its re-judge is queued for the #164 v2 pilot.
+- **NEXT:** Wave 4 = #164 (M4 judging-criteria v2 + the EDB-23 externals re-judge via
+  `load_coverage.py --extenders`). Then Wave 5 = #163 (M3 curation — unblocked).
+  #165 waits on Henry's meta-harness pointer. Owner court: promotion decision + that
+  pointer + review/close of the 8 done issues.
+- **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
+  in untracked `_meta/operations/extender-db.env` (env file stayed in `_meta/operations/` —
+  secrets home is policy-bound, only the project moved). `pb_data/data.db` is TRACKED — stop the
+  server before committing (WAL checkpoint) and land the data.db delta in the same commit
+  as its cause. `pb_migrations/` is gitignored on purpose: schema.py is the ONE schema source.
+  SkillOpt + ClosedLoop reference clones live untracked at
+  `~/Developer/EVAL_WORKBENCH/{SkillOpt,claude-plugins-closedloop}` (re-housed 2026-07-21
+  from `~/developer/tmp`) — kept for M5/#165.
+- **Gotchas:** PocketBase text fields default-cap at 5000 chars (set `max` explicitly);
+  PATCHing a collection with field defs lacking ids drops+recreates columns — schema.py
+  merges by name, never bypass it; a builder proving work on a throwaway PB instance can
+  mask live-schema divergence (EDB-11) — re-run schema+ingest+gates on the live DB yourself;
+  **delta coverage passes MUST use `load_coverage.py --extenders`** (unscoped delta loads
+  forge carried-row provenance — EDB-26, full gotcha list in `evals/PROCEDURES.md`);
+  **stop the PB server before BRANCH SWITCHES, not just commits** — a live server had its
+  tracked data.db checked out from under it (2026-07-21) and SQLite recreated a hollow
+  data.db that blocked switching back; pattern: `pgrep -fl pocketbase` → kill → move the
+  orphan aside → checkout → restart `evals/serve.sh` (orphan preserved that day at
+  `~/.Trash/extender-db-orphan-data.db-20260721`).
+- Also on this branch: pocketbase-best-practices skill install (`.agents/`,
+  `skills-lock.json`, `.claude/skills/` symlink) — desk tooling, not a roster primitive.
+
+## 2c · Agent-harness (delivered 2026-07-21, PR #169 → dev)
 
 Reusable extender-eval harness at root `harness/` (self-contained uv project): drives **Claude Code
 or opencode** headlessly against fixture workspaces with a candidate injected per kind, grades
@@ -61,6 +118,19 @@ Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extende
   #139 claude-code-expertise (standalone). Names/homes held pending the estate cohesion review (below).
 - **Sequenced backlog:** #32 (retire hsb3-custom-plugins) · #36/#122 (clone-at-build externals) · #37.
 - **New (filed 2026-07-20):** #149 — standard gap: no `_meta/` slot for secret-free runbooks/reference. Untriaged.
+- **Harness follow-ups — QUEUED FOR NEXT SESSION (Henry's ask, 2026-07-21).** The harness
+  lives on dev (`harness/`, PR #169 @ `7b0bfd1`; docs under `_meta/research/agent-harness/`,
+  entry point its §2b block in dev's HANDOFF). Two deliverables were offered and accepted:
+  1. **Campaign-runner routine** — a `make harness-campaign`-style target + a LOCAL
+     cron/loop invoking it (must be local: runs need `secret get ANTHROPIC_API_KEY` + both
+     CLIs; cloud routines lack both). Design discussed in-session only — build from scratch.
+  2. **#174 PB collections** — Henry's retention decision, then create the four proposed
+     collections (`runs`, `run_events`, `tool_calls`, `artifacts`) per
+     `_meta/research/agent-harness/runlog-data-shape.md` §4 (on dev), THROUGH the
+     extender-db `schema.py` lane (never raw PATCH). Raw corpus: 72 logs, machine-local in
+     gitignored `harness/runs/` (on the dev checkout's working tree) — don't lose it.
+  Also open: #172 (hermeticity bundle) · #173 (candidate fixes: mermaid phrasing, harder
+  scout traps). Auth for any live run: `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"`.
 - No `gate:*` label carries an open issue — nothing gate-blocked.
 
 ## 4 · CROSS-REPO — the session pivoted to a desk-platform design effort (lives on the desk, NOT here)
@@ -92,7 +162,17 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
   invalidated #148). Branch off `dev`, PR into `dev`.
 - Planning/PM for this repo is run from the exec desk (dev-tooling-desk), not in-repo.
 - Comms/decks: the exec-desk `comms` skill uses deck-builder MCP (boardroom theme); `SendUserFile` is absent
-  in this env — deliver PDFs via `open`.
+  in this env — deliver PDFs via `open`. In-repo deck fallback (proven twice): copy the prior briefing's
+  `build_deck.py` (python-pptx via `uv run --with python-pptx`, carbon-white theme), export PDF via
+  `soffice --headless --convert-to pdf`, QA-render pages with `pdftoppm` and view them. Audio:
+  `speak_gemini --profile briefing --save x.mp3`, but cloud TTS needs fresh `gcloud auth
+  application-default login` (interactive, Henry-only) and the kokoro fallback IGNORES
+  `--save`/`--no-play` — it just plays aloud.
+- Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — before
+  committing, sweep for stray nested `.claude/` dirs; distill anything valuable first, then delete.
+  **Scope the sweep to the worker-created subdirs ONLY:** the repo-root `.claude/agent-memory/` is
+  TRACKED, legitimate memory — a whole-dir `git rm` swept it once (2026-07-21) and cost a restore
+  commit (`c2133fe`).
 - **Henry signs off on major IA changes before they are finalized/built** (standing directive 2026-07-20;
   memory `approve-major-ia-changes`). Present IA changes as an approval gate, not a done deal.
 

@@ -12,6 +12,22 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Ships:** 7 skills — memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
 - **Install:** `claude plugin install code-desk@dotfiles-agents`
 
+## dataviz
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Design data visualizations - charts, plots, dashboards - that are correct, legible, and honest, consulted before any chart code in any library or medium: data-shape to mark-type heuristic, anti-patterns to refuse (pie overuse, dual axes, truncated bars, rainbow scales, 3D), a brand-neutral colorblind-safe palette with light/dark themes and brand-swap, composition, interaction plus static degradation, and a final validation checklist. Data charts only - structural diagrams belong to diagrams/mermaid, deck theming to pptx-themes.
+- **Ships:** 1 skill — dataviz
+- **Install:** `claude plugin install dataviz@dotfiles-agents`
+
+## deep-research
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings.
+- **Ships:** 1 skill — deep-research
+- **Install:** `claude plugin install deep-research@dotfiles-agents`
+
 ## diagrams
 
 - **Kind:** plugin
@@ -83,3 +99,11 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Description:** Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.
 - **Ships:** 1 skill — private-fork
 - **Install:** `claude plugin install private-fork@dotfiles-agents`
+
+## update-config
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Configure the Claude Code harness through its settings files: route each change to the correct file by precedence (managed policy vs user vs project vs machine-local), apply narrowest-scope allow/deny/ask permission rules, implement automated behaviors as ratified directory-based hooks (config plus script file, never inline shell), set env vars, register MCP servers, then verify every edit for JSON validity and take-effect.
+- **Ships:** 1 skill — update-config
+- **Install:** `claude plugin install update-config@dotfiles-agents`

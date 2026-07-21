@@ -1,0 +1,96 @@
+{
+  "about": "Brand-neutral default palette for data visualization. Categorical hues follow an established colorblind-safe qualitative set (distinguishable under deuteranopia, protanopia, and tritanopia). Sequential and diverging ramps are perceptually ordered by luminance. Every value is a six-digit hex. To rebrand, replace the accent and categorical values with your own brand hues and RE-CHECK contrast and colorblind separation; keep the neutral theme scaffold (background, panel, gridline, axis, text) unless your brand mandates otherwise. See color.md for the swap procedure and contrast rules.",
+  "categorical": {
+    "note": "Ordered by assignment priority. Use in order; do not shuffle per chart. On a light background the final entries (yellow) have weak contrast for thin marks - use them for large fills only. Pick the theme variant that matches the page.",
+    "light": [
+      "#0072B2",
+      "#D55E00",
+      "#009E73",
+      "#CC79A7",
+      "#E69F00",
+      "#56B4E9",
+      "#333333",
+      "#F0E442"
+    ],
+    "dark": [
+      "#56B4E9",
+      "#E69F00",
+      "#4DC4A0",
+      "#E48BC0",
+      "#F0E442",
+      "#F07A3D",
+      "#7FB8E6",
+      "#C9D1DA"
+    ]
+  },
+  "sequential": {
+    "note": "Light-to-dark, low-to-high value. Perceptually ordered by decreasing relative luminance. Use for a single quantitative field with a meaningful zero or floor.",
+    "blue": [
+      "#EAF2FB",
+      "#C6DCF2",
+      "#97C0E6",
+      "#619FD6",
+      "#3C7EC2",
+      "#205FA0",
+      "#0E3E6E"
+    ],
+    "teal": [
+      "#E6F5F1",
+      "#BFE6DC",
+      "#8FD1C1",
+      "#57B79F",
+      "#2E9B80",
+      "#0F7860",
+      "#0A5241"
+    ]
+  },
+  "diverging": {
+    "note": "Blue (low) through a neutral midpoint to orange (high). Blue-orange is colorblind-safer than red-green for diverging data. Anchor the neutral midpoint at the meaningful zero, not at the data median.",
+    "blueOrange": [
+      "#0E3E6E",
+      "#205FA0",
+      "#619FD6",
+      "#B9D6EE",
+      "#F0F0EC",
+      "#F4CE9E",
+      "#DA9A48",
+      "#B26E1E",
+      "#7A4708"
+    ]
+  },
+  "semantic": {
+    "note": "Reserve these for meaning (good/bad/warn/info), never as decoration. Do not encode a category with a semantic color unless the category IS that meaning. The light set is tuned to read as colored TEXT on a light page; the dark set is lightened so the same meanings read as text on the dark background.",
+    "light": {
+      "positive": "#0E7A46",
+      "negative": "#C33A2E",
+      "caution": "#8F5B0E",
+      "informational": "#2163A8",
+      "neutral": "#6B7480"
+    },
+    "dark": {
+      "positive": "#3FBE86",
+      "negative": "#F0705F",
+      "caution": "#E0A63A",
+      "informational": "#5B9BE0",
+      "neutral": "#9AA5B2"
+    }
+  },
+  "theme": {
+    "light": {
+      "background": "#FFFFFF",
+      "panel": "#F5F7FA",
+      "gridline": "#E4E8ED",
+      "axis": "#5B6672",
+      "textPrimary": "#1C2530",
+      "textSecondary": "#4A5561"
+    },
+    "dark": {
+      "background": "#0F141B",
+      "panel": "#1A2029",
+      "gridline": "#2B333E",
+      "axis": "#8C97A4",
+      "textPrimary": "#E8ECF1",
+      "textSecondary": "#A6B0BC"
+    }
+  }
+}

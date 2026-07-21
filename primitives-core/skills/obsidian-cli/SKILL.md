@@ -727,17 +727,15 @@ obsidian files
 ### Reference Files
 
 For detailed command references:
+- **`references/quick-reference.md`** - Fast lookup for common commands and patterns
 - **`references/file-commands.md`** - Complete file operation commands
-- **`references/query-commands.md`** - Search, tags, properties, links
-- **`references/plugin-commands.md`** - Plugin and command management
-- **`references/developer-commands.md`** - Dev tools and debugging
+- **`references/setup-guide.md`** - Setup and quick start (v1.12+)
 
 ### Examples
 
 Working examples in `examples/`:
 - **`daily-automation.sh`** - Daily note workflows
 - **`vault-reports.sh`** - Generate vault statistics
-- **`batch-operations.sh`** - Bulk file management
 
 ### Official Documentation
 

@@ -17,6 +17,15 @@
 _meta/operations/*
 !_meta/operations/.gitkeep
 
+# --- extender-db, at evals/ (evals/_structure/CHARTER.md decisions 2+4):
+# data.db is tracked (small, private repo — state travels with the repo); transient
+# siblings are not: auxiliary.db is request logs, WAL/SHM are live journals, types.d.ts is
+# generated. pb_migrations/ is PocketBase's auto-generated schema journal — schema.py is
+# the one rebuild path; tracking both would create a second schema source.
+evals/pb_data/*
+!evals/pb_data/data.db
+evals/pb_migrations/
+
 # --- Python ---
 __pycache__/
 *.pyc
@@ -24,6 +33,7 @@ __pycache__/
 
 # --- runtime logs (e.g. foreman-kit subagent-telemetry -> logs/delegation.jsonl) ---
 logs/
+*.log
 
 # --- agent harness (harness/ uv project) — runtime artifacts, never tracked
 # (results.jsonl IS tracked: battle-test evidence, DESIGN §8-D3). Temp workspaces
@@ -31,4 +41,3 @@ logs/
 harness/runs/
 harness/workspaces/
 harness/.venv/
-*.log

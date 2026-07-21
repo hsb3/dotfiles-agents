@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Configure the Claude Code harness through its settings files: route each change to the correct file by precedence (managed policy vs user vs project vs machine-local), apply narrowest-scope allow/deny/ask permission rules, implement automated behaviors as ratified directory-based hooks (config plus script file, never inline shell), set env vars, register MCP servers, then verify every edit for JSON validity and take-effect.",
+  "name": "update-config",
+  "version": "0.0.1"
+}

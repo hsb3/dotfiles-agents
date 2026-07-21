@@ -62,6 +62,9 @@ class Clean(unittest.TestCase):
                 "pptx-themes",
                 "github-project-board",
                 "owner-signoff",
+                "deep-research",
+                "dataviz",
+                "update-config",
             ],
         )
 
