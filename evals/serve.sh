@@ -15,7 +15,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(dirname "$(dirname "$HERE")")"
+REPO="$(dirname "$HERE")"
 ENV_FILE="$REPO/_meta/operations/extender-db.env"
 
 if [ -f "$ENV_FILE" ]; then

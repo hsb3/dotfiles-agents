@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(os.path.dirname(HERE))
+REPO = os.path.dirname(HERE)
 ENV_FILE = os.path.join(REPO, "_meta", "operations", "extender-db.env")
 
 

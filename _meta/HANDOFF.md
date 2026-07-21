@@ -36,10 +36,12 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
 ## 2b · Extender-db mini-project (active, branch `feat/extender-db`, 2026-07-20)
 
 PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
-(inventory ⋈ doctrine via assessments). **Self-describing — read
-`_meta/extender-db/_structure/` CHARTER.md (canonical), PLAN.md, OPEN-ITEMS.md, INSIGHTS.md
-(learnings for future docs), `_meta/extender-db/README.md` (operator doc), and
-`_meta/extender-db/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
+(inventory ⋈ doctrine via assessments). **Re-housed 2026-07-21 (owner decision): moved from
+`_meta/extender-db/` to root `evals/` — same layout, project name unchanged; pre-move
+briefings/issues cite the old path.** **Self-describing — read
+`evals/_structure/` CHARTER.md (canonical), PLAN.md, OPEN-ITEMS.md, INSIGHTS.md
+(learnings for future docs), `evals/README.md` (operator doc), and
+`evals/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
 gates, data.db commit discipline) first**; below is only what they don't carry.
 
 - **Branch:** off `origin/dev`, pushed through `4bd082e`. No PR — Henry promotes when the
@@ -65,12 +67,14 @@ gates, data.db commit discipline) first**; below is only what they don't carry.
   `_meta/briefings/2026-07-20-extender-db-status/`.
 - **NEXT:** pick from epic #154 — unblocked starters are #160 (gate 3+4), #161 (gaps
   view), the promotions #155–#158, and #162 (M2). #165 waits on the meta-harness pointer.
-- **Operational:** server `_meta/extender-db/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
-  in untracked `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the
+- **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
+  in untracked `_meta/operations/extender-db.env` (env file stayed in `_meta/operations/` —
+  secrets home is policy-bound, only the project moved). `pb_data/data.db` is TRACKED — stop the
   server before committing (WAL checkpoint) and land the data.db delta in the same commit
   as its cause. `pb_migrations/` is gitignored on purpose: schema.py is the ONE schema source.
   SkillOpt + ClosedLoop reference clones live untracked at
-  `~/developer/tmp/{SkillOpt,claude-plugins-closedloop}` — kept for M5/#165.
+  `~/Developer/EVAL_WORKBENCH/{SkillOpt,claude-plugins-closedloop}` (re-housed 2026-07-21
+  from `~/developer/tmp`) — kept for M5/#165.
 - **Gotchas:** PocketBase text fields default-cap at 5000 chars (set `max` explicitly);
   PATCHing a collection with field defs lacking ids drops+recreates columns — schema.py
   merges by name, never bypass it; a builder proving work on a throwaway PB instance can

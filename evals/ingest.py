@@ -1,6 +1,6 @@
 """Populate the extender-db from this repo (idempotent, upsert-by-slug).
 
-    python3 _meta/extender-db/ingest.py
+    python3 evals/ingest.py
 
 What it loads:
   1. extenders + files   - every roster skill/agent/hook: parsed frontmatter (hooks carry
@@ -30,7 +30,7 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(os.path.dirname(HERE))
+REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 

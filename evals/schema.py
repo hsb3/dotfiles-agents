@@ -1,7 +1,7 @@
 """Create/update the extender-db collections in PocketBase (idempotent).
 
 Run after `pocketbase serve` is up and the superuser exists:
-    python3 _meta/extender-db/schema.py
+    python3 evals/schema.py
 
 Collections (see README.md for the full data model):
     frameworks, framework_elements        - mental models used to compose/evaluate

@@ -63,7 +63,7 @@ are both queries.
 - **Doctrine is append-and-supersede.** A framework proven wrong or replaced gets
   `status: superseded` and a successor row with its own citation — never overwritten.
 - **Secrets discipline.** Credentials live in `_meta/operations/extender-db.env`
-  (untracked). Nothing under `_meta/extender-db/` may contain a plaintext secret. Known
+  (untracked). Nothing under `evals/` may contain a plaintext secret. Known
   exception, accepted: the tracked `data.db` contains the bcrypt hash of the superuser
   password (random 32-hex, localhost-only service, private repo). If the repo ever goes
   public, rotate the superuser and strip `data.db` from history first.
@@ -75,7 +75,7 @@ are both queries.
 | 1 | PocketBase as the store | Single binary, zero-infra, admin UI for browsing, REST API scriptable from stdlib Python — matches the repo's zero-install posture. |
 | 2 | Projection, not source of truth | The repo already has manifest + drift-guard machinery; duplicating authority would create a second truth to reconcile. |
 | 3 | Doctrine modeled as data (frameworks/elements), not code | The point is analyzing the catalog BY competing mental models; models must be comparable, citable, and supersedable. |
-| 4 | Lives under `_meta/extender-db/`; `pb_data/data.db` tracked, transient siblings ignored | Desk tooling (ADR-0006 track-by-default), not a shipped artifact. _Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo make committing the live DB worth it so state travels with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stay ignored._ |
+| 4 | Lives at root `evals/`; `pb_data/data.db` tracked, transient siblings ignored | _Revised 2026-07-21 (owner decision): re-housed from `_meta/extender-db/` to root `evals/` — promoted from desk tooling to a first-class home for the eval infrastructure._ _Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo make committing the live DB worth it so state travels with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stay ignored._ Originally desk tooling (ADR-0006 track-by-default), not a shipped artifact. |
 | 5 | Mechanical vs judged assessments split by `assessor` | Regeneration must never destroy judgment; judgment must never block re-ingest. |
 | 6 | **Adopt external eval methodology, don't build a bespoke harness** (2026-07-20) | Mature, permissively-licensed frameworks now exist (SkillOpt MIT, ClosedLoop Apache-2.0). Extends "don't author each extender from scratch" up to the eval harness itself; reserves our build for the IP only we have (job taxonomy, coverage, curation decisions). Defers EDB-14 bespoke agents further. |
 | 7 | **Two complementary adopted methodologies, by eval question** (2026-07-20) | Qualitative "does extender X meet the bar" → the ClosedLoop judges+CaseScore rubric pattern (maps onto our `assessments`; W1 is a lighter version). Quantitative "how good is skill X / can we improve it" → SkillOpt (authored task set + checkable reward + validation-gated edit). Recorded as frameworks `closedloop-judges` / `skillopt`. |
