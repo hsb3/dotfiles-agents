@@ -49,6 +49,16 @@ def _parser():
         ),
     )
     ap.add_argument("--case", help="run a single case id")
+    ap.add_argument(
+        "--campaign",
+        default="",
+        help=(
+            "campaign label — the first dimension of the resume key "
+            "(campaign|harness|model|candidate|case|config|trial). Use it to keep "
+            "a re-run after a harness fix distinct from the pre-fix rows in the "
+            "same ledger (e.g. --campaign skillfix). Default: '' (unlabeled)."
+        ),
+    )
     ap.add_argument("--trials", type=int, default=DEFAULT_TRIALS)
     ap.add_argument("--configs", default="with,baseline")
     ap.add_argument(

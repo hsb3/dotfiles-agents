@@ -1,9 +1,10 @@
 """Results ledger — append-only JSONL, resumable.
 
-One row per trial, ``json.dumps(sort_keys=True)``. The resume key gains the two
-new run dimensions over the workbench: **harness|model**|candidate|case|config|trial
-(DESIGN §3), so the same candidate/case run under a different harness or model is a
-distinct cell, not a resume-skip.
+One row per trial, ``json.dumps(sort_keys=True)``. The resume key is
+**campaign|harness|model|candidate|case|config|trial**: ``harness``/``model`` were
+added over the workbench (DESIGN §3); ``campaign`` is prepended (#171) so a re-run
+after a harness fix stays distinct from the pre-fix rows in the same ledger. Rows
+written before the campaign field read as ``""`` (backward compatible).
 """
 
 from __future__ import annotations
@@ -13,9 +14,13 @@ import os
 
 
 def row_key(row):
-    """Resume key: harness|model|candidate|case|config|trial."""
+    """Resume key: campaign|harness|model|candidate|case|config|trial.
+
+    ``campaign`` defaults to ``""`` for rows predating the field, so old rows keep
+    their key shape (empty first segment) and never collide with a labeled re-run.
+    """
     return (
-        f"{row['harness']}|{row['model']}|{row['candidate']}"
+        f"{row.get('campaign', '')}|{row['harness']}|{row['model']}|{row['candidate']}"
         f"|{row['case']}|{row['config']}|{row['trial']}"
     )
 

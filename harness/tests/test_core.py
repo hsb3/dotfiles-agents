@@ -87,6 +87,7 @@ class CoreTestBase(unittest.TestCase):
     def _args(self, **over):
         ns = types.SimpleNamespace(
             model=None,
+            campaign="",
             trials=1,
             configs="with",
             case=None,
@@ -198,6 +199,29 @@ class TestWorkspaceLifecycle(CoreTestBase):
         self.assertEqual(set(row), set(ROW_FIELDS))
         self.assertEqual(row["harness"], "stub-cmd")
         self.assertEqual(row["model"], "default")
+        # Campaign + log_path + token fields present (tokens None for a stub).
+        self.assertEqual(row["campaign"], "")
+        self.assertIsNotNone(row["log_path"])
+        self.assertTrue(row["log_path"].endswith(".log"))
+        for tf in ("input_tokens", "output_tokens", "cache_read_tokens",
+                   "cache_creation_tokens"):
+            self.assertIn(tf, row)
+            self.assertIsNone(row[tf])
+
+    def test_campaign_flows_into_row_and_skip_row(self):
+        adapter = _CmdAdapter(["true"])
+        row = run_trial(
+            adapter, "cand", "skill", "/x", self._case(), "with", 0,
+            self._args(campaign="skillfix"),
+        )
+        self.assertEqual(row["campaign"], "skillfix")
+        # A skip row (unsupported inject) also carries the campaign + null log_path.
+        skip = run_trial(
+            _UnsupportedAdapter(), "cand", "weird", "/x", self._case(), "with", 0,
+            self._args(campaign="skillfix"),
+        )
+        self.assertEqual(skip["campaign"], "skillfix")
+        self.assertIsNone(skip["log_path"])
 
 
 if __name__ == "__main__":

@@ -40,6 +40,13 @@ from .base import Adapter, Injection, NormalizedRecord
 _SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
+def _as_int(value) -> int:
+    """Coerce a token count to int (0 for None/non-numeric/bool)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0
+    return int(value)
+
+
 class OpencodeAdapter(Adapter):
     name = "opencode"
 
@@ -288,6 +295,8 @@ class OpencodeAdapter(Adapter):
         have_cost = False
         steps = 0
         timestamps = []
+        tok = {"input": 0, "output": 0, "read": 0, "write": 0}
+        have_tokens = False
         for line in (raw or "").splitlines():
             line = line.strip()
             if not line:
@@ -320,6 +329,14 @@ class OpencodeAdapter(Adapter):
                 if isinstance(c, (int, float)) and not isinstance(c, bool):
                     cost += c
                     have_cost = True
+                tokens = part.get("tokens")
+                if isinstance(tokens, dict):
+                    have_tokens = True
+                    cache = tokens.get("cache") or {}
+                    tok["input"] += _as_int(tokens.get("input"))
+                    tok["output"] += _as_int(tokens.get("output"))
+                    tok["read"] += _as_int(cache.get("read"))
+                    tok["write"] += _as_int(cache.get("write"))
             elif etype == "error":
                 msg = self._error_message(ev, part)
                 if msg:
@@ -330,6 +347,11 @@ class OpencodeAdapter(Adapter):
         rec.cost_usd = cost if have_cost else None
         if len(timestamps) >= 2:
             rec.duration_ms = int(max(timestamps) - min(timestamps))
+        if have_tokens:
+            rec.input_tokens = tok["input"]
+            rec.output_tokens = tok["output"]
+            rec.cache_read_tokens = tok["read"]
+            rec.cache_creation_tokens = tok["write"]
         return rec
 
     @staticmethod

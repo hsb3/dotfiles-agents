@@ -1,0 +1,28 @@
+name: harness-test
+
+# Path-filtered lane for the agent-harness (harness/) — its own uv project, kept
+# out of the marketplace `make ci` lanes (DESIGN §5). Runs only when harness/ (or
+# this workflow) changes, so marketplace-only PRs don't pay for it. Mirrors the
+# ci.yml job style: checkout + setup-python + a single `make` target. uv is
+# pip-installed (no third-party action) so `make harness-test` can drive the uv
+# project. Evals are NOT run here — they need live CLIs + API keys (DESIGN §1).
+on:
+  pull_request:
+    paths:
+      - "harness/**"
+      - ".github/workflows/harness-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  harness-test:
+    name: harness unit tests (uv project)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install uv
+      - run: make harness-test

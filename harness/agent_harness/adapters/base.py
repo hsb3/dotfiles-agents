@@ -63,6 +63,12 @@ class NormalizedRecord:
     duration_ms: Optional[int] = None
     num_turns: Optional[int] = None
     error: Optional[str] = None
+    # Token usage, normalized across vendors (None when a vendor doesn't report
+    # one). claude: result-event `usage`; opencode: summed `step_finish` tokens.
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cache_read_tokens: Optional[int] = None
+    cache_creation_tokens: Optional[int] = None
 
 
 class Adapter(abc.ABC):

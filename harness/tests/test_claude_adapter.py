@@ -8,6 +8,7 @@ unknown-kind -> unsupported skip).
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -79,34 +80,97 @@ class TestInjection(unittest.TestCase):
 class TestInvocation(unittest.TestCase):
     def setUp(self):
         self.a = ClaudeAdapter()
+        # A real, writable run tmpdir so invocation() can materialise its
+        # per-run config dir + apiKeyHelper (workspace == <run_tmp>/ws).
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp)
+        self.ws = os.path.join(self.tmp, "ws")
+        os.makedirs(self.ws)
+
+    def _allowed(self, argv):
+        return argv[argv.index("--allowedTools") + 1].split(",")
 
     def test_argv_shape_and_model(self):
         argv, _env = self.a.invocation(
-            "do the thing", "/ws", "claude-sonnet-5", Injection(["--plugin-dir", "/p"])
+            "do the thing", self.ws, "claude-sonnet-5",
+            Injection(["--plugin-dir", "/p"]),
         )
         self.assertEqual(argv[:2], ["claude", "-p"])
         self.assertIn("do the thing", argv)
-        self.assertIn("--bare", argv)
         self.assertEqual(argv[argv.index("--output-format") + 1], "stream-json")
         self.assertIn("--verbose", argv)
         self.assertEqual(argv[argv.index("--permission-mode") + 1], "acceptEdits")
         self.assertIn("--plugin-dir", argv)
-        self.assertEqual(argv[-2:], ["--model", "claude-sonnet-5"])
+        self.assertEqual(argv[argv.index("--model") + 1], "claude-sonnet-5")
+
+    def test_bare_is_dropped(self):
+        # --bare set CLAUDE_CODE_SIMPLE=1 which stripped Skill/Task from the
+        # advertised toolset (#170). It must NOT be in the argv anymore.
+        argv, _env = self.a.invocation("p", self.ws, None, Injection())
+        self.assertNotIn("--bare", argv)
+
+    def test_allowed_tools_surface_skill_and_task(self):
+        # The regression at the heart of #170: Skill (invoke an injected skill)
+        # and Task (invoke an injected agent) must be in the allowlist.
+        argv, _env = self.a.invocation("p", self.ws, None, Injection())
+        allowed = self._allowed(argv)
+        for tool in ("Skill", "Task", "Bash", "Edit", "Read", "Write", "Grep", "Glob"):
+            self.assertIn(tool, allowed)
+
+    def test_injection_kinds_map_to_needed_tools(self):
+        # Assert each injection kind's required tool is auto-allowed: a skill needs
+        # Skill (to invoke the injected skill), an agent needs Task (to dispatch the
+        # injected subagent), a plugin may add either so needs both. Injection is
+        # constant across kinds here, so the invariant is on the allowlist itself.
+        need = {"skill": ["Skill"], "agent": ["Task"], "plugin": ["Skill", "Task"]}
+        allowed = set(ClaudeAdapter.ALLOWED_TOOLS.split(","))
+        for kind, required in need.items():
+            for tool in required:
+                self.assertIn(tool, allowed, f"{kind} needs {tool} auto-allowed")
+        # And the tool actually reaches the argv unchanged.
+        argv, _env = self.a.invocation("p", self.ws, None, Injection())
+        self.assertEqual(set(self._allowed(argv)), allowed)
+
+    def test_env_key_auth_helper_and_isolated_config(self):
+        # Option Z: dropping --bare loses env-key-strict auth + config isolation;
+        # we restore both — an apiKeyHelper via --settings and a fresh
+        # CLAUDE_CONFIG_DIR beside the workspace (cleaned up with the run tmp).
+        argv, env = self.a.invocation("p", self.ws, None, Injection())
+        settings = json.loads(argv[argv.index("--settings") + 1])
+        self.assertIn("apiKeyHelper", settings)
+        self.assertTrue(os.path.isfile(settings["apiKeyHelper"]))
+        self.assertTrue(os.access(settings["apiKeyHelper"], os.X_OK))
+        self.assertIn("CLAUDE_CONFIG_DIR", env)
+        self.assertTrue(os.path.isdir(env["CLAUDE_CONFIG_DIR"]))
+        # config dir + helper live under the run tmp, not the workspace itself.
+        self.assertTrue(env["CLAUDE_CONFIG_DIR"].startswith(self.tmp))
+
+    def test_helper_echoes_env_key(self):
+        # The apiKeyHelper must emit exactly $ANTHROPIC_API_KEY at run time.
+        argv, _env = self.a.invocation("p", self.ws, None, Injection())
+        helper = json.loads(argv[argv.index("--settings") + 1])["apiKeyHelper"]
+        out = subprocess.run(
+            [helper], capture_output=True, text=True,
+            env={"ANTHROPIC_API_KEY": "sk-test-123", "PATH": os.environ.get("PATH", "")},
+        )
+        self.assertEqual(out.stdout, "sk-test-123")
+
+    def test_non_writable_run_dir_falls_back(self):
+        # A bare stub workspace (parent not writable) must not crash — the argv
+        # still surfaces Skill; isolation is simply skipped.
+        argv, env = self.a.invocation("p", "/ws", None, Injection())
+        self.assertIn("Skill", self._allowed(argv))
+        self.assertNotIn("--settings", argv)
+        self.assertNotIn("CLAUDE_CONFIG_DIR", env)
 
     def test_no_model_omits_flag(self):
-        argv, _env = self.a.invocation("p", "/ws", None, Injection())
+        argv, _env = self.a.invocation("p", self.ws, None, Injection())
         self.assertNotIn("--model", argv)
-
-    def test_allow_bash_adds_tool(self):
-        argv, _env = ClaudeAdapter(allow_bash=True).invocation("p", "/ws", None, Injection())
-        self.assertEqual(argv[argv.index("--allowedTools") + 1], "Bash")
-        argv2, _e = ClaudeAdapter(allow_bash=False).invocation("p", "/ws", None, Injection())
-        self.assertNotIn("Bash", argv2)
 
     def test_env_scrubs_claudecode(self):
         os.environ["CLAUDECODE"] = "1"
         try:
-            _argv, env = self.a.invocation("p", "/ws", None, Injection())
+            _argv, env = self.a.invocation("p", self.ws, None, Injection())
             self.assertNotIn("CLAUDECODE", env)
         finally:
             os.environ.pop("CLAUDECODE", None)
@@ -146,6 +210,12 @@ class TestParseLog(unittest.TestCase):
                     "total_cost_usd": 0.12,
                     "duration_ms": 4200,
                     "num_turns": 3,
+                    "usage": {
+                        "input_tokens": 58,
+                        "output_tokens": 3251,
+                        "cache_read_input_tokens": 201107,
+                        "cache_creation_input_tokens": 42055,
+                    },
                 }
             ),
         ]
@@ -157,6 +227,11 @@ class TestParseLog(unittest.TestCase):
         self.assertEqual(rec.result, "done")
         self.assertEqual(rec.cost_usd, 0.12)
         self.assertEqual(rec.num_turns, 3)
+        # Token usage normalized from the result event's `usage` block.
+        self.assertEqual(rec.input_tokens, 58)
+        self.assertEqual(rec.output_tokens, 3251)
+        self.assertEqual(rec.cache_read_tokens, 201107)
+        self.assertEqual(rec.cache_creation_tokens, 42055)
 
     def test_empty_log_is_safe(self):
         rec = self.a.parse_log("")

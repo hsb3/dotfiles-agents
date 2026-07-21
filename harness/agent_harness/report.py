@@ -21,12 +21,14 @@ def _stdev(xs):
 
 
 def summarize(rows):
-    """Per-(harness, model, case, config) stats: n, pass_rate, pass@n, pass^n, cost, dur."""
+    """Per-(campaign, harness, model, case, config) stats: n, pass_rate, pass@n,
+    pass^n, cost, dur. ``campaign`` (default "") is part of the cell key so a
+    labeled re-run never merges with pre-fix rows for the same cell (#171)."""
     groups = {}
     for r in rows:
         if r.get("passed") is None:  # unsupported/skip rows carry no pass signal
             continue
-        key = (r.get("harness"), r.get("model"), r["case"], r["config"])
+        key = (r.get("campaign", ""), r.get("harness"), r.get("model"), r["case"], r["config"])
         groups.setdefault(key, []).append(r)
     out = {}
     for key in sorted(groups, key=lambda k: tuple("" if x is None else str(x) for x in k)):
@@ -54,16 +56,17 @@ def summarize(rows):
 
 
 def deltas(summary):
-    """with-vs-baseline pass-rate delta per (harness, model, case).
+    """with-vs-baseline pass-rate delta per (campaign, harness, model, case).
 
-    Positive = candidate helps. Compared only within one (harness, model) cell.
+    Positive = candidate helps. Compared only within one (campaign, harness,
+    model) cell, so with/baseline must share a campaign to form a delta.
     """
     out = {}
-    for harness, model, case, config in summary:
-        if config == "with" and (harness, model, case, "baseline") in summary:
-            out[(harness, model, case)] = round(
-                summary[(harness, model, case, "with")]["pass_rate"]
-                - summary[(harness, model, case, "baseline")]["pass_rate"],
+    for campaign, harness, model, case, config in summary:
+        if config == "with" and (campaign, harness, model, case, "baseline") in summary:
+            out[(campaign, harness, model, case)] = round(
+                summary[(campaign, harness, model, case, "with")]["pass_rate"]
+                - summary[(campaign, harness, model, case, "baseline")]["pass_rate"],
                 4,
             )
     return out
@@ -79,17 +82,20 @@ def print_report(candidate, rows):
     if not summary:
         print(f"\n{candidate} — {len(rows)} row(s), none with a pass signal")
     else:
-        cw = max(20, max(len(case) for _h, _m, case, _c in summary))
-        mw = max(8, max(len(str(m)) for _h, m, _c2, _c in summary))
-        hw = max(7, max(len(str(h)) for h, _m, _c2, _c in summary))
+        show_campaign = any(camp for camp, _h, _m, _c2, _c in summary)
+        cw = max(20, max(len(case) for _ca, _h, _m, case, _c in summary))
+        mw = max(8, max(len(str(m)) for _ca, _h, m, _c2, _c in summary))
+        hw = max(7, max(len(str(h)) for _ca, h, _m, _c2, _c in summary))
+        gw = max(8, max(len(str(ca)) for ca, _h, _m, _c2, _c in summary)) if show_campaign else 0
         print(f"\n{candidate} — {len(rows)} trial row(s)")
+        camp_hdr = f"{'campaign':<{gw}} " if show_campaign else ""
         hdr = (
-            f"{'harness':<{hw}} {'model':<{mw}} {'case':<{cw}} {'config':<9} "
+            f"{camp_hdr}{'harness':<{hw}} {'model':<{mw}} {'case':<{cw}} {'config':<9} "
             f"{'n':>2} {'pass':>6} {'p@n':>4} {'p^n':>4} {'cost μ±σ':>14} {'ms μ±σ':>16}"
         )
         print(hdr)
         print("-" * len(hdr))
-        for (harness, model, case, config), s in summary.items():
+        for (campaign, harness, model, case, config), s in summary.items():
             cost = (
                 f"{s['cost_mean']}±{s['cost_stdev']}"
                 if s["cost_mean"] is not None
@@ -100,18 +106,22 @@ def print_report(candidate, rows):
                 if s["duration_mean"] is not None
                 else "-"
             )
+            camp_col = f"{str(campaign):<{gw}} " if show_campaign else ""
             print(
-                f"{str(harness):<{hw}} {str(model):<{mw}} {case:<{cw}} {config:<9} "
+                f"{camp_col}{str(harness):<{hw}} {str(model):<{mw}} {case:<{cw}} {config:<9} "
                 f"{s['n']:>2} {s['pass_rate']:>6} "
                 f"{'Y' if s['pass_any'] else 'n':>4} {'Y' if s['pass_all'] else 'n':>4} "
                 f"{cost:>14} {dur:>16}"
             )
-        for (harness, model, case), delta in deltas(summary).items():
-            print(f"delta (with - baseline) [{harness}/{model}] {case}: {delta:+}")
+        for (campaign, harness, model, case), delta in deltas(summary).items():
+            tag = f"{campaign}/" if campaign else ""
+            print(f"delta (with - baseline) [{tag}{harness}/{model}] {case}: {delta:+}")
     if skipped:
         print(f"\n{len(skipped)} unsupported/skip row(s):")
         for r in skipped:
+            camp = r.get("campaign", "")
+            prefix = f"[{camp}] " if camp else ""
             print(
-                f"  ∅ {r.get('harness')}/{r.get('model')} {r['case']} "
+                f"  ∅ {prefix}{r.get('harness')}/{r.get('model')} {r['case']} "
                 f"{r['config']}: {r.get('error')}"
             )

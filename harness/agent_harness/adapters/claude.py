@@ -111,25 +111,70 @@ class ClaudeAdapter(Adapter):
 
     # ── invocation ───────────────────────────────────────────────────────────
 
+    # The eval allowlist. `Skill` + `Task` are load-bearing: without them the
+    # injected skill/agent can never be *invoked* even though it loads (#170).
+    # Bash/Edit/Write/Read/Grep/Glob are the tools a candidate needs to do real
+    # work in its isolated workspace.
+    ALLOWED_TOOLS = "Skill,Task,Bash,Edit,Read,Write,Grep,Glob"
+
     def invocation(self, prompt, workspace, model, injection: Injection):
+        """Build the headless ``claude -p`` argv + env.
+
+        Wave 1 used ``--bare``, but ``--bare`` sets ``CLAUDE_CODE_SIMPLE=1`` which
+        strips the advertised toolset to ``['Bash','Edit','Read']`` — the ``Skill``
+        and ``Task`` tools never surface, so an injected skill/agent loads yet can
+        never be invoked (#170; battle-test §2.1; probe-confirmed 2026-07-21). We
+        drop ``--bare`` (only way the init event advertises ``Skill``) and restore
+        its two load-bearing properties by other means:
+
+        - **env-key auth** (``--bare`` forced ``ANTHROPIC_API_KEY``): a per-run
+          ``apiKeyHelper`` (via ``--settings``) echoes ``$ANTHROPIC_API_KEY``, so
+          headless env-key auth keeps working (``apiKeySource: apiKeyHelper``) and
+          stays reuse-portable — no interactive login required.
+        - **config isolation** (strictly better than ``--bare``, which only skipped
+          plugin *sync*, not *load* — user plugins bled into every trial per
+          handoff-w1 §8b): a fresh per-run ``CLAUDE_CONFIG_DIR`` so no user
+          plugins/skills/hooks load (init ``plugins: []``, verified).
+
+        Net vs ``--bare``: ``Skill``/``Task`` surface, the injected candidate still
+        loads via ``--plugin-dir``/``--agents``, env-key auth works, and hermeticity
+        *improves*. See handoff-w4 §"#170 decision" for the full probe matrix.
+        """
         argv = [
             "claude",
             "-p",
             prompt,
-            "--bare",
             "--output-format",
             "stream-json",
             "--verbose",
             "--permission-mode",
             "acceptEdits",
+            "--allowedTools",
+            self.ALLOWED_TOOLS,
         ]
-        if self.allow_bash:
-            argv += ["--allowedTools", "Bash"]
         argv += list(injection.flags)
         if model:
             argv += ["--model", model]
+
         env = dict(os.environ)
         env.pop("CLAUDECODE", None)  # fleet-dashboard: block nested-claude detection
+
+        # Per-run isolation lives beside the workspace, so the core cleans it up
+        # with the run tmpdir. workspace == <run_tmp>/ws → its parent is the tmp.
+        run_dir = os.path.dirname(os.path.normpath(workspace))
+        try:
+            config_dir = os.path.join(run_dir, "claude-config")
+            os.makedirs(config_dir, exist_ok=True)
+            helper = os.path.join(run_dir, "apikey-helper.sh")
+            with open(helper, "w", encoding="utf-8") as fh:
+                fh.write('#!/bin/sh\nprintf "%s" "${ANTHROPIC_API_KEY:-}"\n')
+            os.chmod(helper, 0o755)
+            env["CLAUDE_CONFIG_DIR"] = config_dir
+            argv += ["--settings", json.dumps({"apiKeyHelper": helper})]
+        except OSError:
+            # Non-writable run dir (e.g. a bare unit-test stub workspace): fall back
+            # to inherited config/auth. The argv still surfaces Skill/Task.
+            pass
         return argv, env
 
     # ── log parsing ──────────────────────────────────────────────────────────
@@ -157,6 +202,11 @@ class ClaudeAdapter(Adapter):
                 rec.cost_usd = ev.get("total_cost_usd")
                 rec.duration_ms = ev.get("duration_ms")
                 rec.num_turns = ev.get("num_turns")
+                usage = ev.get("usage") or {}
+                rec.input_tokens = usage.get("input_tokens")
+                rec.output_tokens = usage.get("output_tokens")
+                rec.cache_read_tokens = usage.get("cache_read_input_tokens")
+                rec.cache_creation_tokens = usage.get("cache_creation_input_tokens")
         rec.skill_used = any(n == "Skill" for n in rec.tool_names)
         return rec
 

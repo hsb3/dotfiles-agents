@@ -39,10 +39,11 @@ CONFIGS = ("with", "baseline")
 SMOKE_PROMPT = "Reply with exactly: OK"
 
 ROW_FIELDS = (
-    "ts", "harness", "model", "candidate", "case", "config", "trial", "kind",
-    "grader_model", "passed", "checks", "grades", "skill_used", "tool_names",
+    "ts", "campaign", "harness", "model", "candidate", "case", "config", "trial",
+    "kind", "grader_model", "passed", "checks", "grades", "skill_used", "tool_names",
     "plugin_errors", "exit_code", "error", "cost_usd", "duration_ms", "num_turns",
-    "workspace", "cli_version",
+    "input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens",
+    "workspace", "log_path", "cli_version",
 )
 
 
@@ -112,13 +113,28 @@ def _log_path(runs_dir, *parts):
     return os.path.join(runs_dir, f"{safe}-{stamp}.log")
 
 
+def _portable_log_path(log_path):
+    """Row-friendly log path: relative to the invocation cwd (repo root in normal
+    use, so rows link as ``harness/runs/…log``); absolute if the log lives outside
+    the cwd tree. Never couples to a hardcoded repo path (DESIGN §5)."""
+    if not log_path:
+        return None
+    try:
+        rel = os.path.relpath(log_path)
+    except ValueError:  # pragma: no cover - different drive (Windows only)
+        return log_path
+    return rel if not rel.startswith("..") else log_path
+
+
 def _build_row(
-    *, ts, harness, model, candidate, case_id, config, trial, kind, grader_model,
-    passed, checks, grades, record: NormalizedRecord, error, workspace,
+    *, ts, campaign, harness, model, candidate, case_id, config, trial, kind,
+    grader_model, passed, checks, grades, record: NormalizedRecord, error,
+    workspace, log_path,
 ):
     """Assemble the full DESIGN §7 row schema (cli_version filled by caller)."""
     return {
         "ts": ts,
+        "campaign": campaign,
         "harness": harness,
         "model": model,
         "candidate": candidate,
@@ -138,7 +154,12 @@ def _build_row(
         "cost_usd": record.cost_usd,
         "duration_ms": record.duration_ms,
         "num_turns": record.num_turns,
+        "input_tokens": record.input_tokens,
+        "output_tokens": record.output_tokens,
+        "cache_read_tokens": record.cache_read_tokens,
+        "cache_creation_tokens": record.cache_creation_tokens,
         "workspace": workspace,
+        "log_path": _portable_log_path(log_path),
         "cli_version": None,
     }
 
@@ -147,6 +168,7 @@ def run_trial(adapter, candidate, kind, candidate_dir, case, config, trial, args
     """One trial: fresh workspace, fixture, headless run, grading, one row."""
     ts = time.strftime("%Y-%m-%dT%H:%M:%S")
     model = args.model or "default"
+    campaign = getattr(args, "campaign", "") or ""
     tmp = tempfile.mkdtemp(
         prefix=f"harness-{adapter.name}-{candidate}-{case['id']}-{config}-{trial}-"
     )
@@ -166,12 +188,12 @@ def run_trial(adapter, candidate, kind, candidate_dir, case, config, trial, args
     if not injection.supported:
         shutil.rmtree(tmp, ignore_errors=True)
         return _build_row(
-            ts=ts, harness=adapter.name, model=model, candidate=candidate,
-            case_id=case["id"], config=config, trial=trial, kind=kind,
-            grader_model=None, passed=None, checks=[], grades=[],
+            ts=ts, campaign=campaign, harness=adapter.name, model=model,
+            candidate=candidate, case_id=case["id"], config=config, trial=trial,
+            kind=kind, grader_model=None, passed=None, checks=[], grades=[],
             record=NormalizedRecord(),
             error=f"unsupported: {adapter.name} cannot host kind={kind}",
-            workspace=None,
+            workspace=None, log_path=None,
         )
 
     argv, env = adapter.invocation(case["prompt"], ws, args.model, injection)
@@ -199,12 +221,37 @@ def run_trial(adapter, candidate, kind, candidate_dir, case, config, trial, args
         shutil.rmtree(tmp, ignore_errors=True)
 
     return _build_row(
-        ts=ts, harness=adapter.name, model=model, candidate=candidate,
-        case_id=case["id"], config=config, trial=trial, kind=kind,
-        grader_model=args.grader_model if assertions else None,
+        ts=ts, campaign=campaign, harness=adapter.name, model=model,
+        candidate=candidate, case_id=case["id"], config=config, trial=trial,
+        kind=kind, grader_model=args.grader_model if assertions else None,
         passed=passed, checks=checks, grades=grades, record=record,
-        error=record.error, workspace=(ws if keep else None),
+        error=record.error, workspace=(ws if keep else None), log_path=log_path,
     )
+
+
+def _preconditions_note(adapter, args):
+    """One-line environment/preconditions header for the run log (#172).
+
+    Cases can be environment-contingent (e.g. a candidate self-installs Playwright
+    at runtime — a blocked npm would collapse the pass path). We can't fully
+    control that yet, but we record the observable preconditions so a later reader
+    knows what environment produced the rows."""
+    campaign = getattr(args, "campaign", "") or ""
+    keys_present = [
+        k for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY")
+        if os.environ.get(k)
+    ]
+    parts = [
+        f"harness={adapter.name}",
+        f"cli={adapter.cli_version()}",
+        f"campaign={campaign or '(none)'}",
+        f"model={args.model or 'default'}",
+        f"grader={getattr(args, 'grader_model', '?')}",
+        f"timeout={getattr(args, 'timeout', '?')}s",
+        f"auth_env={','.join(keys_present) or '(none)'}",
+        "network=assumed-available",
+    ]
+    return "preconditions: " + " · ".join(parts)
 
 
 def run_candidate(adapter, candidate, kind, candidate_dir, args):
@@ -213,12 +260,15 @@ def run_candidate(adapter, candidate, kind, candidate_dir, args):
     done = load_done(args.results)
     version = adapter.cli_version()
     model = args.model or "default"
+    campaign = getattr(args, "campaign", "") or ""
+    print(_preconditions_note(adapter, args))
     configs = [c.strip() for c in args.configs.split(",") if c.strip()]
     ran = skipped = 0
     for case in cases:
         for config in configs:
             for trial in range(args.trials):
                 stub = {
+                    "campaign": campaign,
                     "harness": adapter.name,
                     "model": model,
                     "candidate": candidate,

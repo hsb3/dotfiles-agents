@@ -242,6 +242,33 @@ class TestParseLog(unittest.TestCase):
         self.assertTrue(rec.skill_used)
         self.assertIn("skill", rec.tool_names)
 
+    def test_tokens_summed_across_step_finishes(self):
+        # opencode reports per-step tokens under part.tokens (input/output +
+        # cache.read/write); we sum them across every step_finish.
+        raw = "\n".join([
+            _ev("step_start", {"type": "step-start"}, 1),
+            _ev("step_finish", {"type": "step-finish", "reason": "tool-calls",
+                                "cost": 0.01,
+                                "tokens": {"input": 3, "output": 4,
+                                           "cache": {"read": 0, "write": 7977}}}, 2),
+            _ev("step_start", {"type": "step-start"}, 3),
+            _ev("step_finish", {"type": "step-finish", "reason": "stop",
+                                "cost": 0.02,
+                                "tokens": {"input": 10, "output": 20,
+                                           "cache": {"read": 100, "write": 5}}}, 4),
+        ])
+        rec = self.a.parse_log(raw)
+        self.assertEqual(rec.input_tokens, 13)
+        self.assertEqual(rec.output_tokens, 24)
+        self.assertEqual(rec.cache_read_tokens, 100)
+        self.assertEqual(rec.cache_creation_tokens, 7982)
+
+    def test_tokens_absent_stay_none(self):
+        # A stream with no token blocks leaves the token fields None (not 0).
+        rec = self.a.parse_log(self._stream())
+        self.assertIsNone(rec.input_tokens)
+        self.assertIsNone(rec.cache_creation_tokens)
+
     def test_error_event_captured(self):
         raw = _ev("error", {"message": "provider auth failed"}, 5)
         rec = self.a.parse_log(raw)
