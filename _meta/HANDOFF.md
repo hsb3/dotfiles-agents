@@ -82,7 +82,12 @@ gates, data.db commit discipline) first**; below is only what they don't carry.
   merges by name, never bypass it; a builder proving work on a throwaway PB instance can
   mask live-schema divergence (EDB-11) — re-run schema+ingest+gates on the live DB yourself;
   **delta coverage passes MUST use `load_coverage.py --extenders`** (unscoped delta loads
-  forge carried-row provenance — EDB-26, full gotcha list in `evals/PROCEDURES.md`).
+  forge carried-row provenance — EDB-26, full gotcha list in `evals/PROCEDURES.md`);
+  **stop the PB server before BRANCH SWITCHES, not just commits** — a live server had its
+  tracked data.db checked out from under it (2026-07-21) and SQLite recreated a hollow
+  data.db that blocked switching back; pattern: `pgrep -fl pocketbase` → kill → move the
+  orphan aside → checkout → restart `evals/serve.sh` (orphan preserved that day at
+  `~/.Trash/extender-db-orphan-data.db-20260721`).
 - Also on this branch: pocketbase-best-practices skill install (`.agents/`,
   `skills-lock.json`, `.claude/skills/` symlink) — desk tooling, not a roster primitive.
 
@@ -95,6 +100,19 @@ Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extende
   #139 claude-code-expertise (standalone). Names/homes held pending the estate cohesion review (below).
 - **Sequenced backlog:** #32 (retire hsb3-custom-plugins) · #36/#122 (clone-at-build externals) · #37.
 - **New (filed 2026-07-20):** #149 — standard gap: no `_meta/` slot for secret-free runbooks/reference. Untriaged.
+- **Harness follow-ups — QUEUED FOR NEXT SESSION (Henry's ask, 2026-07-21).** The harness
+  lives on dev (`harness/`, PR #169 @ `7b0bfd1`; docs under `_meta/research/agent-harness/`,
+  entry point its §2b block in dev's HANDOFF). Two deliverables were offered and accepted:
+  1. **Campaign-runner routine** — a `make harness-campaign`-style target + a LOCAL
+     cron/loop invoking it (must be local: runs need `secret get ANTHROPIC_API_KEY` + both
+     CLIs; cloud routines lack both). Design discussed in-session only — build from scratch.
+  2. **#174 PB collections** — Henry's retention decision, then create the four proposed
+     collections (`runs`, `run_events`, `tool_calls`, `artifacts`) per
+     `_meta/research/agent-harness/runlog-data-shape.md` §4 (on dev), THROUGH the
+     extender-db `schema.py` lane (never raw PATCH). Raw corpus: 72 logs, machine-local in
+     gitignored `harness/runs/` (on the dev checkout's working tree) — don't lose it.
+  Also open: #172 (hermeticity bundle) · #173 (candidate fixes: mermaid phrasing, harder
+  scout traps). Auth for any live run: `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"`.
 - No `gate:*` label carries an open issue — nothing gate-blocked.
 
 ## 4 · CROSS-REPO — the session pivoted to a desk-platform design effort (lives on the desk, NOT here)
