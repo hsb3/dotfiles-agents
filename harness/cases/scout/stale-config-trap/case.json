@@ -1,0 +1,13 @@
+{
+  "prompt": "This repository (payments-svc) is a small internal HTTP client library. Using the scout agent, determine two facts about the ACTUAL production code path — the docs, a deprecated settings module, and a test-only stub all disagree with each other and with the real code, so trace imports rather than trusting any single file:\n\n1. What is the request timeout, in seconds, actually used by the production HTTP client when it calls the payments backend? Name the exact source file and line where that value is defined.\n2. Where is the payload-validation logic that the production request-handling path actually executes when `validate_payload` is called — which file and function performs the real schema check (not just any file where a function of that name happens to be defined)?\n\nWrite your findings to a new file named FINDINGS.md in the repository root with exactly two sections, `## Timeout` and `## Validation`. In each section, state your conclusion first, then cite your evidence as `path:line` references to the actual files in this repository (e.g. `src/config.py:10`). Do not modify any other file in the repository.",
+  "assertions": [
+    {
+      "id": "a1-timeout-not-stale",
+      "text": "FINDINGS.md's '## Timeout' section states the production request timeout is 45 seconds and grounds that conclusion in src/config.py — it does not present the README's stale '10 seconds' claim or src/legacy/settings.py's dead '15' value as the actual production timeout."
+    },
+    {
+      "id": "a2-validation-not-stub",
+      "text": "FINDINGS.md's '## Validation' section identifies src/schema_utils.py's check_schema (reached via src/validators.py) as the real validation logic on the production path, and does not present tests/fixtures/stub_validators.py's always-true stub as the production validation logic."
+    }
+  ]
+}

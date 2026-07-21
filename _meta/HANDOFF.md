@@ -18,7 +18,7 @@ Both build epics are **DONE and CLOSED**; `make ci` is green; `dev` and `main` a
 Live marketplace lineup: code-desk · exec-desk · foreman-kit · github-project-board · opencode-expertise ·
 pptx-themes · private-fork · diagrams · obsidian-toolkit · owner-signoff.
 
-**Also active: the extender-db mini-project on branch `feat/extender-db`** (§2b) — separate
+**Also live: the extender-db mini-project, MERGED to dev 2026-07-21 (owner promotion decision)** (§2b) — separate
 effort from the rebuild epics; do not fold it into dev without Henry's promotion decision.
 
 ## 2 · Recent deliveries (era pointers — blow-by-blow lives in issues/git)
@@ -27,7 +27,7 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
   planning externalized to the exec desk (see §3).
 - 2026-07-21: epic #154 Waves 0–3 executed on `feat/extender-db` (see §2b).
 
-## 2b · Extender-db mini-project (active, branch `feat/extender-db`, 2026-07-20)
+## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
 PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
 (inventory ⋈ doctrine via assessments). **Re-housed 2026-07-21 (owner decision): moved from
@@ -38,17 +38,13 @@ briefings/issues cite the old path.** **Self-describing — read
 `evals/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
 gates, data.db commit discipline) first**; below is only what they don't carry.
 
-- **Branch:** off `origin/dev` @ `a6c77e4`. No PR — **the charter promotion gate is 4/4**
-  (2026-07-21) — **the promotion decision is in Henry's court** (PLAN "Promotion": stay
-  desk tool / graduate to scripts+make lane / own repo).
-- **dev has moved under this branch (2026-07-21): a PARALLEL effort merged the
-  agent-harness (PR #169, `feat/agent-harness` → dev @ `7b0bfd1`; also #150).** Promotion
-  merge overlap is exactly 2 files: `.gitignore` (disjoint hunks) and `_meta/HANDOFF.md`
-  (both efforts added a §2b — resolve by keeping BOTH sections). The untracked `harness/`
-  dir sitting in this checkout is that effort's material (tracked on dev, absent on this
-  branch) — never sweep, delete, or commit it from here. NOTE: the harness (#169,
-  follow-ups #172–#174) looks like a candidate for the EDB-14/19 "meta-harness pointer"
-  that blocks #165/M5 — Henry confirms, don't assume.
+- **Promotion: DECIDED + EXECUTED 2026-07-21** — Henry chose merge-to-dev (the charter
+  gate was 4/4). The former `feat/extender-db` branch (through `4e5ecb3` + `fb0e69f`) was
+  merged with dev (which had independently taken the agent-harness, PR #169 @ `7b0bfd1`);
+  the predicted 2-file overlap resolved as planned (.gitignore union; both HANDOFF §2b
+  blocks kept). Extender-db and the harness now share one lane on dev. NOTE: the harness
+  (#169, follow-ups #172–#174) looks like a candidate for the EDB-14/19 "meta-harness
+  pointer" that blocks #165/M5 — Henry confirms, don't assume.
 - **State (2026-07-21): epic #154 Waves 0–3 DONE** (wave map + per-wave DoD in PLAN.md;
   evidence on the epic's comments; commits `ab3e2e6`→`c7eacc6`). Coverage now
   **0 gap / 2 partial** over 24 jobs; 8 sub-issues functionally complete (#155–#162,
@@ -90,6 +86,28 @@ gates, data.db commit discipline) first**; below is only what they don't carry.
   `~/.Trash/extender-db-orphan-data.db-20260721`).
 - Also on this branch: pocketbase-best-practices skill install (`.agents/`,
   `skills-lock.json`, `.claude/skills/` symlink) — desk tooling, not a roster primitive.
+
+## 2c · Agent-harness (delivered 2026-07-21, PR #169 → dev)
+
+Reusable extender-eval harness at root `harness/` (self-contained uv project): drives **Claude Code
+or opencode** headlessly against fixture workspaces with a candidate injected per kind, grades
+two-tier (deterministic `check.py` + pinned-Haiku rubric), appends to the tracked append-only
+ledger `harness/results.jsonl` keyed `campaign|harness|model|candidate|case|config|trial`.
+**Self-describing — read in order:** `_meta/research/agent-harness/DESIGN.md` (signed-off design +
+wave plan) · `handoff-w1/w2/w4.md` (build evidence; w1 §8b auth gotchas) ·
+`battle-test-w3-findings.md` (adversarially verified grid findings) · `runlog-data-shape.md`
+(corpus profile + proposed PocketBase collections for #174) · `harness/README.md` (operator doc +
+extraction checklist). Owner intent: battle-test here, later extract to its own repo.
+- **Auth for live runs:** `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"` (claude
+  invocation uses per-run apiKeyHelper + fresh CLAUDE_CONFIG_DIR — Option Z, handoff-w4 §1; `--bare`
+  was dropped deliberately: it strips the Skill tool).
+- **Battle-test outcome:** readme-value-and-proof shows a genuine +1.0 doctrine delta on BOTH
+  harnesses; mermaid's reserved-node-id rule fires but isn't held under prompt pressure (both
+  harnesses); scout case at ceiling for sonnet-4-5. Ledger: 72 rows (48 legacy pre-Skill-fix claude
+  rows are confounded — campaign label `""` vs `skillfix` disambiguates).
+- **CI:** marketplace lanes untouched; new path-filtered `harness-test` lane + stdlib coupling gate
+  in `make ci`. Open follow-ups: #172 (hermeticity/env-pinning bundle), #173 (candidate-quality
+  findings), #174 (durable run-log corpus → PB collections; analysis half done, see data-shape doc).
 
 ## 3 · Next up (dotfiles-agents proper)
 
