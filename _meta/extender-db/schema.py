@@ -13,6 +13,10 @@ Collections (see README.md for the full data model):
                                             raw agent responses
     assessments                           - extender x framework-element verdicts,
                                             linked to their eval_run
+    job_coverage                          - per-job curation: disposition, coverage
+                                            status, chosen source, linked eval_run
+    relationships                         - pairwise extender links: duplicative /
+                                            conflicting / complementary / directional
 """
 
 import sys
@@ -310,6 +314,48 @@ def collection_specs(ids):
                 "CREATE UNIQUE INDEX idx_assessments ON assessments (extender, framework, element, assessor)"
             ],
         },
+        {
+            # Per-job curation (CHARTER decision 9): disposition + coverage status are
+            # per JOB, not per (extender x job), so they live here, not on assessments.
+            "name": "job_coverage",
+            "type": "base",
+            "fields": [
+                rel("job", ids["framework_elements"], required=True),
+                select("disposition", ["author", "vendor", "reference", "compare"]),
+                select("status", ["covered", "partial", "gap"]),
+                rel("source", ids["sources"]),
+                text("rationale", max_len=10000),
+                rel("eval_run", ids["eval_runs"]),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_job_coverage ON job_coverage (job)"
+            ],
+        },
+        {
+            # Pairwise extender links (CHARTER decision 10). `kind` carries symmetric
+            # values plus directional ones (precedes / feeds-into, read A->B). Composite
+            # unique index keeps upserts idempotent (mirrors assessments).
+            "name": "relationships",
+            "type": "base",
+            "fields": [
+                rel("extender_a", ids["extenders"], required=True),
+                rel("extender_b", ids["extenders"], required=True),
+                select(
+                    "kind",
+                    ["duplicative", "conflicting", "complementary", "precedes", "feeds-into"],
+                    required=True,
+                ),
+                rel("job", ids["framework_elements"]),
+                text("evidence", max_len=10000),
+                text("assessor"),
+                rel("eval_run", ids["eval_runs"]),
+                *stamps(),
+            ],
+            "indexes": [
+                "CREATE UNIQUE INDEX idx_relationships ON relationships (extender_a, extender_b, kind, job)"
+            ],
+        },
     ]
 
 
@@ -330,6 +376,8 @@ def main():
         "eval_runs",
         "eval_responses",
         "assessments",
+        "job_coverage",
+        "relationships",
     ]
     for name in order:
         existing = pb.get_collection(name)

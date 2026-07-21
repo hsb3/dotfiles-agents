@@ -39,6 +39,21 @@ _(from the 2026-07-20 research pass + reading SkillOpt & ClosedLoop at source)_
 
 ## 2 · Design rationale — non-obvious modeling choices
 
+- **The W1 judge→blind-review→adjudicate pattern generalized to coverage (M1) — and blind
+  review is recall, not just error-correction.** 7/10 sample disputes were adjacent-step
+  (the `partial` boundary, same as W1), but the review also ADDED coverage the fan-out
+  missed (readme-value-and-proof's Playwright capture → operate-browser-ui partial, turning
+  a hard gap into partial) and reassigned two thin-description extenders outright. The four
+  boundary rules the adjudication produced are doctrine-in-waiting for the closedloop-judges
+  rubric formalization (EDB-21/M4). → docs:evaluation
+- **"Same deliverable" is a weak duplication signal** (from the M1 dup-check, 2/3 judge
+  duplicative calls refuted): the real test is "same job the SAME WAY." Three composition
+  tells to check before accepting a duplicative verdict — base + override/theme layer (one
+  skill wraps the other and states a precedence rule), orchestrator + worker (one spawns
+  the other; mutually exclusive triggers), and hub-routing (a selection table routes the
+  shared job to exactly one). Only the hub-routing case *confirms* duplication, and only
+  when the un-routed member is a vendored twin with no wired-in specialization
+  (excalidraw-diagram-coleam00). Feed into the EDB-21/M4 rubric. → docs:evaluation
 - **Directed compositions are planner-generated and living, not stored recipes.** The DB's
   ultimate consumer is a *grounded planner* — a smart model that reads coverage + directional
   relationships + tool triggers and assembles an ordered, context-branching toolkit for a goal
@@ -119,6 +134,11 @@ _(from the 2026-07-20 research pass + reading SkillOpt & ClosedLoop at source)_
   got their own `relationships` collection (CHARTER decisions 9–10, Henry signed off). The
   through-line: curation state is modeled as its own queryable, supersedable data, never folded
   into the candidate doctrine rows or duplicated across assessments. → docs:jobs-taxonomy
+- **M1 boundary rules were applied only to sampled rows** (plus one logged rule-extension:
+  owner-signoff × sustain-continuity). Unsampled verdicts a strict sweep might downgrade
+  remain in the matrix; the full-catalog consistency sweep belongs to the next coverage pass
+  once EDB-10 v2 criteria carry the rules. Docs must present the matrix as
+  judged-then-spot-verified, not exhaustively adjudicated. → docs:evaluation
 - **No snapshot / time-series story** (EDB-7) — rows mutate in place; trend analysis would need
   a `snapshots` collection keyed by git ref. Deferred; docs should say so, not imply history.
 - **`coleam00` is in the registry unvetted** (we vendor its excalidraw skill) — its trust tier

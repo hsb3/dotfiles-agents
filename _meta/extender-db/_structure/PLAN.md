@@ -219,6 +219,19 @@ extenders (each has ≥1 present/partial job or an explicit jobless flag); every
 assessments; `make ci` green; `data.db` committed in the same commit as its cause with the
 server stopped for WAL checkpoint; ≥3 findings logged.
 
+**DONE (2026-07-20) — ran exactly per the architecture above, Fable-led:** schema extended
+additively (live-proven — the 662 prior assessment rows checksum-identical before/after);
+`load_coverage.py` loaded the full 37×24 cross product (888 `coverage-v1` rows; re-run
+0 create / 0 update / 888 unchanged); 7 sonnet judges + 2 blind opus reviewers + 1 opus
+duplicative-check + session adjudication (10 rows changed, 4 boundary rules logged;
+provenance = eval_runs `m1-coverage-{judged,review,adjudication}-2026-07-20` with exact
+prompts + verbatim responses); **46 `relationships`** (24 complementary · 1 duplicative,
+opus-verified: excalidraw-diagram-coleam00 ≡ excalidraw · 21 directed hand-off links) +
+**24 `job_coverage`** rows (19 covered / 3 partial / 2 gap; dispositions 22 author ·
+1 vendor `improve-code` · 1 reference `operate-browser-ui`). Matrix rendered by
+`render_matrix.py` → `coverage-matrix.md` (generated, never hand-edited). Findings →
+OPEN-ITEMS (M1 adjudication log, EDB-23/24, EDB-10/16 updates).
+
 ## Parallelism
 
 - **W1 and W2+W3 run in parallel** — W1's judges are read-only (JSON out); the W2/W3
