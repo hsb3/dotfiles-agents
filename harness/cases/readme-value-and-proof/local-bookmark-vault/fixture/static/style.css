@@ -1,0 +1,40 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  max-width: 640px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #1a1a1a;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+#add-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+#add-form input {
+  flex: 1;
+  padding: 0.4rem;
+}
+
+ul#bookmarks {
+  list-style: none;
+  padding: 0;
+}
+
+ul#bookmarks li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.tag {
+  color: #888;
+  font-size: 0.85rem;
+}

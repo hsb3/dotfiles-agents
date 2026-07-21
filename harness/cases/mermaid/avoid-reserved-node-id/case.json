@@ -1,0 +1,9 @@
+{
+  "prompt": "Read `pipeline.py`. It defines five pipeline stage functions, in execution order: `start`, `extract`, `transform`, `load`, `end`. Add a `## Pipeline Flow` section to `PIPELINE.md` containing a single Mermaid flowchart (fenced with ```mermaid) that shows the five stages as nodes, connected by arrows in execution order, using each function's exact name as that node's identifier in the diagram source. Do not modify `pipeline.py`.",
+  "assertions": [
+    {
+      "id": "a1-stages-in-correct-order",
+      "text": "The Mermaid flowchart in PIPELINE.md represents the five pipeline stages from pipeline.py (start, extract, transform, load, end) in their correct execution order, not a generic, reordered, or unrelated diagram."
+    }
+  ]
+}

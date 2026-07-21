@@ -24,3 +24,10 @@ __pycache__/
 
 # --- runtime logs (e.g. foreman-kit subagent-telemetry -> logs/delegation.jsonl) ---
 logs/
+
+# --- agent harness (harness/ uv project) — runtime artifacts, never tracked
+# (results.jsonl IS tracked: battle-test evidence, DESIGN §8-D3). Temp workspaces
+# default to the system tempdir; harness/workspaces/ is a defensive ignore. ---
+harness/runs/
+harness/workspaces/
+harness/.venv/

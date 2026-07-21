@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-07-20. Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-07-21. Refresh at session boundaries (/handoff). Secret-free._
 
 ## 0 · Orientation
 
@@ -29,6 +29,28 @@ pptx-themes · private-fork · diagrams · obsidian-toolkit · owner-signoff.
   branches + pruned 10 local; now on `dev`, clean. **Open PRs: 0.**
 - **Backlog externalized to the exec desk** — planning for this repo now runs from the dev-tooling desk,
   not in-repo `_meta/plans/`.
+
+## 2b · Agent-harness (delivered 2026-07-21, PR #169 → dev)
+
+Reusable extender-eval harness at root `harness/` (self-contained uv project): drives **Claude Code
+or opencode** headlessly against fixture workspaces with a candidate injected per kind, grades
+two-tier (deterministic `check.py` + pinned-Haiku rubric), appends to the tracked append-only
+ledger `harness/results.jsonl` keyed `campaign|harness|model|candidate|case|config|trial`.
+**Self-describing — read in order:** `_meta/research/agent-harness/DESIGN.md` (signed-off design +
+wave plan) · `handoff-w1/w2/w4.md` (build evidence; w1 §8b auth gotchas) ·
+`battle-test-w3-findings.md` (adversarially verified grid findings) · `runlog-data-shape.md`
+(corpus profile + proposed PocketBase collections for #174) · `harness/README.md` (operator doc +
+extraction checklist). Owner intent: battle-test here, later extract to its own repo.
+- **Auth for live runs:** `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"` (claude
+  invocation uses per-run apiKeyHelper + fresh CLAUDE_CONFIG_DIR — Option Z, handoff-w4 §1; `--bare`
+  was dropped deliberately: it strips the Skill tool).
+- **Battle-test outcome:** readme-value-and-proof shows a genuine +1.0 doctrine delta on BOTH
+  harnesses; mermaid's reserved-node-id rule fires but isn't held under prompt pressure (both
+  harnesses); scout case at ceiling for sonnet-4-5. Ledger: 72 rows (48 legacy pre-Skill-fix claude
+  rows are confounded — campaign label `""` vs `skillfix` disambiguates).
+- **CI:** marketplace lanes untouched; new path-filtered `harness-test` lane + stdlib coupling gate
+  in `make ci`. Open follow-ups: #172 (hermeticity/env-pinning bundle), #173 (candidate-quality
+  findings), #174 (durable run-log corpus → PB collections; analysis half done, see data-shape doc).
 
 ## 3 · Next up (dotfiles-agents proper)
 
