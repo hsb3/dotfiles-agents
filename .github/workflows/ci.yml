@@ -19,7 +19,10 @@ jobs:
           python-version: "3.13"
       - run: make floor
 
-  # Generated-artifact drift guards — roster<->disk, marketplace regen, standalone catalog.
+  # Generated-artifact drift guards — roster<->disk, marketplace regen, standalone catalog,
+  # repo-flow DAG (flow.yaml <-> tree). The job name is PINNED by dev's branch-protection
+  # required checks — renaming it strands PRs on a check that never reports; update the
+  # protection setting first if it must change.
   drift-guards:
     name: drift guards (roster · marketplace · catalog)
     runs-on: ubuntu-latest
@@ -28,4 +31,4 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - run: make check build-check catalog
+      - run: make check build-check catalog flow
