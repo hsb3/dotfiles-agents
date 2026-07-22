@@ -99,8 +99,8 @@ nodes:
     layer: workbench
     class: authored
     status: current
-    paths: [.claude]
-    note: "Project-local session tooling under .claude/: the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), and the settings.json autoMemoryDirectory redirect. Not roster primitives; never distributed."
+    paths: [.claude, .vscode]
+    note: "Project-local session tooling: under .claude/, the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — repo path differs per machine); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime
