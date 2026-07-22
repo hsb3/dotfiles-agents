@@ -1,0 +1,121 @@
+# Local Bookmark Vault
+
+A zero-dependency, self-hosted bookmark manager that runs entirely from Python's standard library. No database, no npm install, no external services — just a single JSON file and a simple web UI.
+
+## Why this exists
+
+Browser bookmarks sync is convenient until it isn't: you're locked into one browser vendor's ecosystem, your bookmarks live in proprietary formats, and exporting them for archival or migration is a hassle. Self-hosted solutions typically require PostgreSQL, Redis, Docker Compose stacks, and pages of setup instructions.
+
+Local Bookmark Vault takes a different approach: **one command to start, one file to back up, zero external dependencies**. It's built with Python's `http.server` and persists to a flat `bookmarks.json` file you can version-control, sync with rsync, or grep from the command line. The frontend is vanilla JavaScript with no build step — view source and you see exactly what runs.
+
+## What you get today
+
+**Near-turnkey bookmark storage:**
+- Add, delete, and tag bookmarks through a clean web interface
+- Filter bookmarks by tag with a dropdown (automatically populated from your tags)
+- RESTful JSON API (`GET`, `POST`, `DELETE` on `/api/bookmarks`) for scripting or browser extensions
+- All data stored in a human-readable, git-friendly `bookmarks.json` file
+- Full test coverage of core logic with stdlib `unittest` (run `make test`)
+
+**What it is not (yet):**
+- This is a personal, single-user tool — there's no authentication, multi-user support, or access control.
+- No full-text search across bookmark titles or URLs (only tag filtering).
+- No bookmark import/export UI (though the JSON file is trivial to edit or transform with `jq`).
+- Not battle-tested at scale (hundreds of bookmarks should be fine; tens of thousands may slow down the UI).
+
+**Who this is for:** Developers who want dead-simple bookmark archival without vendor lock-in, or anyone who prefers `git commit bookmarks.json` over proprietary sync. If you need teams, SSO, or browser extension auto-capture, look elsewhere.
+
+## Proof: it actually works
+
+All screenshots below were captured from the running app (zero console errors reported by Playwright).
+
+### Initial state with tagged bookmarks
+The app loads your existing bookmarks from `bookmarks.json` and displays them with their tags. Each bookmark is a link that opens in a new tab, with a delete button for removal.
+
+![Initial bookmark list showing Python docs and Hacker News with tags](docs/images/screenshot-1-initial.png)
+
+### Adding a new bookmark with a tag
+Fill in the URL, title, and optional tag, then click "Add bookmark". The form validates that URLs start with `http://` or `https://` and titles are non-empty (see `validate_bookmark` in `lib.py:10`).
+
+![GitHub bookmark being added with the "dev" tag](docs/images/screenshot-3-added.png)
+
+### Filtering by tag
+Select a tag from the dropdown to view only bookmarks with that tag. The filter is dynamic — add a bookmark with a new tag and it appears in the dropdown immediately.
+
+![Filtered view showing only bookmarks tagged with "dev"](docs/images/screenshot-4-filtered.png)
+
+## Getting started
+
+**Requirements:** Python 3.10+ (no packages to install)
+
+**Run the server:**
+```bash
+make serve
+# or: python3 server.py
+```
+
+Then open http://127.0.0.1:8000/ in your browser. Bookmarks are saved to `bookmarks.json` in the project directory.
+
+**Run the tests:**
+```bash
+make test
+```
+
+All 9 unit tests cover bookmark validation, ID generation, tag filtering, and deletion logic.
+
+## How it works
+
+- **`server.py`** — HTTP server using stdlib's `BaseHTTPRequestHandler`. Serves static files from `static/` and a JSON REST API at `/api/bookmarks`.
+- **`lib.py`** — Pure functions for bookmark validation, filtering, and ID assignment (no I/O, easy to test).
+- **`static/`** — Vanilla HTML/CSS/JS frontend with no build step or framework. Opens bookmarks in new tabs, dynamically updates tag filters, and calls the REST API with `fetch()`.
+- **`bookmarks.json`** — Flat-file storage, human-readable JSON array. Commit it to git, back it up with rsync, or edit it by hand.
+
+The entire app is under 250 lines of code (excluding tests). View source to see exactly what's running.
+
+## API reference
+
+### `GET /api/bookmarks`
+Returns all bookmarks as a JSON array.
+
+**Optional query param:** `?tag=tagname` to filter by tag.
+
+**Example:**
+```bash
+curl http://127.0.0.1:8000/api/bookmarks?tag=reference
+```
+
+### `POST /api/bookmarks`
+Adds a new bookmark. Returns the created bookmark with a generated `id`.
+
+**Request body:**
+```json
+{
+  "url": "https://example.com",
+  "title": "Example Site",
+  "tag": "reference"
+}
+```
+
+**Validation:**
+- `url` must start with `http://` or `https://`
+- `title` must be non-empty
+- `tag` is optional
+
+### `DELETE /api/bookmarks/:id`
+Deletes the bookmark with the given integer `id`. Returns `{"removed": true}` if found, `{"removed": false}` otherwise.
+
+## Roadmap
+
+Planned enhancements (not prioritized):
+
+- **Import/export UI** — Upload/download bookmarks as JSON or Netscape bookmark HTML format
+- **Full-text search** — Filter by title or URL substring, not just tags
+- **Bookmark metadata** — Optional description field, creation timestamp, last-accessed tracking
+- **Multi-user support** — Basic HTTP auth or API tokens (for personal deployments, not large teams)
+- **Browser extension** — One-click "save to vault" button for Chrome/Firefox
+
+Contributions welcome. File an issue before starting work on large features.
+
+## License
+
+MIT (see LICENSE file if present, or assume standard MIT terms)
