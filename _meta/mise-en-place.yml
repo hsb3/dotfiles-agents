@@ -1,0 +1,20 @@
+# _meta/mise-en-place.yml — per-repo variance manifest (tracked by default; ADR-0006).
+# The standards define the invariants; this file is the ONLY home for per-repo variance.
+# Field reference: the mise-en-place-scaffold skill's references/manifest.md.
+# Readers: repo-compliance-audit + mise-en-place-scaffold consume default_branch,
+# required_folders, required_files; the gh_* / board_title fields are declared here for
+# the github-project-board skill. Unknown fields are tolerated by both readers.
+owner: hsb3
+repo: dotfiles-agents
+default_branch: dev  # this repo integrates on dev; main is publish-only
+gh_issue_labels: []
+gh_milestones: []
+board_title: ""
+required_folders:
+  # Secret-free durable runbooks / how-to reference whose audience is this desk
+  # (machine-specific ops detail) — distinct from operations/ (secrets, untracked),
+  # research/ (live investigations), briefings/ (dated), and docs/ (audience-facing).
+  # The standard has no universal slot for this yet (#149); declared here as per-repo
+  # variance until the repo-meta-structure taxonomy adds it.
+  - _meta/reference/
+required_files: []

@@ -30,7 +30,8 @@ Every entry in [`../primitives-core.yaml`](../primitives-core.yaml) carries thes
 | `plugins` | list of bundle ids | membership: which bundle(s) ship this primitive. |
 | `requires` | optional capability/dependency words | `{hooks,local-mcp,hosted-mcp}` + `cli:<kebab>` / `env:<kebab>`. |
 
-`primitives-core` holds **self-authored** primitives only (ADR 0015); third-party items are
+`primitives-core` holds **self-authored** primitives only
+([ADR 0015](../docs/decisions/0015-self-authored-primitives-only.md)); third-party items are
 recorded by reference in [`../externals.yaml`](../externals.yaml), never copied in.
 
 ## Bundle README sources

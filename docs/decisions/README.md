@@ -35,6 +35,11 @@ numbering has intentional gaps: **0004** and **0005** existed pre-rebuild but ar
 | [0006](0006-meta-tracked-by-default.md) | `_meta/` tracked by default; targeted ignores only (operations/, caches, litter) | Accepted | #99 owner ruling 2026-07-13 |
 | [0007](0007-distribution-restructure-dev-main.md) | Distribution restructure: `dev` integrates, `main` publishes — build on `dev`, never `main` | Accepted | DEV-31/#115; mirrors old-desk ADR 0014 |
 | [0008](0008-vendor-dist-lanes-and-filtered-publish.md) | Vendor dist lanes under `dist/`, filtered append-only publish, flow.yaml as standing structural guard | Accepted | opencode lane planning; owner ruling 2026-07-22; restores old-desk 0014 §3 |
+| [0015](0015-self-authored-primitives-only.md) | `primitives-core/` is self-authored only; third-party material by reference in `externals.yaml`, never vendored | Accepted | mirrors the old-desk composition decision (0005·0007); backfilled 2026-07-22 per #203 |
+
+The jump from 0008 to 0015 is the same verbatim-number preservation as the 0004/0005 gaps:
+0015 is the old-desk number of the self-authored-only decision, carried in unchanged. The
+intervening old-desk numbers (0009–0014) have no in-repo mirror.
 
 ### Deliberately not carried
 

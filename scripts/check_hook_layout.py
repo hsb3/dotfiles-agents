@@ -12,8 +12,11 @@ Violations:
   - a hook directory (one carrying config.json/hook.json/hook.py) with no `hook.py`
   - a stray `.py` / `.json` file at a hook root, not inside a `<name>/` hook dir
 
-No hooks ship yet (the hook roots hold only `.gitkeep`), so this is vacuously green today; the
-fixture in the tests proves it goes red on a wrong-layout hook.
+Four hooks now ship under `primitives-core/hooks/` (context-watermark, handoff-freshness-guard,
+session-handoff-surfacer, subagent-telemetry), each a `<name>/hook.py` + `config.json` dir; the
+top-level `hooks/` root remains the empty ratified-layout placeholder (`.gitkeep` only). The
+walk validates every hook against the layout above, and the fixture in the tests proves it goes
+red on a wrong-layout hook.
 
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violation.
 Usage: python3 scripts/check_hook_layout.py   (run from the repo root)

@@ -7,3 +7,4 @@ Quick reference:
 - Edit primitives under `primitives-core/` only; `plugins/` and `.claude-plugin/marketplace.json`
   are generated — run `make build`, never hand-edit them.
 - Branch off `dev`, PR into `dev`; `main` is publish-only.
+- Contributor SOP + the full `make ci` invariant list: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
