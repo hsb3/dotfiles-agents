@@ -99,8 +99,8 @@ nodes:
     layer: workbench
     class: authored
     status: current
-    paths: [.agents, .claude, skills-lock.json]
-    note: "Project-local session tooling: vendored pocketbase skill plus lockfile, repo dev skills, agent memory. Not roster primitives; never distributed."
+    paths: [.claude]
+    note: "Project-local session tooling under .claude/: the pocketbase-best-practices and publish-to-main skills plus tracked agent memory. Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime
