@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Opt a git repo into tracked, in-repo auto-memory and recover a project's memory after its folder moves. project_memory.py wires the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites); migrate_memory.py relocates memory (and optional transcripts) after a move, dry-run by default. Pure Python 3 stdlib.",
+  "name": "project-memory",
+  "version": "0.0.1"
+}

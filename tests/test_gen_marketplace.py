@@ -124,9 +124,9 @@ class Build(unittest.TestCase):
     def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
         # two bundles (code-desk, exec-desk) + three kits (diagrams, foreman-kit,
-        # obsidian-toolkit) + eight standalone skills (dataviz, deep-research,
+        # obsidian-toolkit) + nine standalone skills (dataviz, deep-research,
         # github-project-board, opencode-expertise, owner-signoff, pptx-themes,
-        # private-fork, update-config), sorted by name
+        # private-fork, project-memory, update-config), sorted by name
         self.assertEqual(
             names,
             [
@@ -142,6 +142,7 @@ class Build(unittest.TestCase):
                 "owner-signoff",
                 "pptx-themes",
                 "private-fork",
+                "project-memory",
                 "update-config",
             ],
         )

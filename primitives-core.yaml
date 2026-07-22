@@ -90,6 +90,16 @@ primitives:
     targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "Fill-only mise-en-place scaffold — plans (--plan, default) and creates (--apply) the repo meta-structure the compliance audit flags, from the standards' assets, honoring _meta/mise-en-place.yml variance (--init-manifest writes the template); additive-only, never overwrites, conflicts reported with diffs."
+  - id: project-memory
+    type: skill
+    source: primitives-core/skills/project-memory
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [code-desk]
+    summary: "Opt a git repo into tracked, in-repo auto-memory and recover a project's memory after its folder moves. project_memory.py wires the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites); migrate_memory.py relocates memory (and optional transcripts) after a move, dry-run by default. Pure Python 3 stdlib."
   - id: planning-desk
     type: skill
     source: primitives-core/skills/planning-desk
