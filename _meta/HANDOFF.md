@@ -135,27 +135,31 @@ extraction checklist). Owner intent: battle-test here, later extract to its own 
 
 ## 3 · Next up (dotfiles-agents proper)
 
-**NEXT SESSION (owner-directed 2026-07-22): a foreman + waves mise-en-place/planning round on
-THIS repo.** In order:
-1. **Update installed plugins first** — the local plugin cache still runs foreman-kit **0.5.0**;
-   the `waves` skill ships in **0.6.0** (published on `main`). Refresh the marketplace/plugin,
-   then `/foreman-kit:waves init` to create the pinned triage issue (this repo has none yet —
-   waves plans against it).
-2. **Fold `_meta/operations/NOTE.md` into the triage** (machine-local, untracked — read it there;
-   secret-free gist): move the `.agents/` pocketbase skill under `.claude/` and drop
-   `skills-lock.json`, plus a standing rule that the `npx skills` CLI never writes into code
-   repos (it claims every skill under `.agents`/`.claude` as its own); the
-   `.claude/agent-memory/` vs native `memory/` + settings-redirect question; whether
-   `bundles/` belongs under `primitives-core/`; docs consolidation into `docs/`. These are
-   flow-DAG-touching moves — plan them as waves, run `make flow` per slice.
-3. **Research `hsb3/functionform-asmbl`** (private; "CAD for AI — manage/version/assemble AI
-   primitives (prompts, skills, configs) into deployable agents"; last pushed 2026-07-05) —
-   Henry's earlier take on the same curate/incubate/distribute-across-harnesses problem this
-   repo now solves with roster + dist lanes. Assess overlap: merge, borrow (its API framing),
-   or retire — BEFORE designing more distribution machinery here.
+**PLANNING ROUND DONE + 4 RULINGS EXECUTED (2026-07-22 session).** The `/waves` mise-en-place ran
+to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D3 + O1–O3 remain.
+- Plugins already current (foreman-kit **0.6.0**, `waves` live). Pinned **triage issue #192** created
+  (the in-repo ranked backlog + waves plan + owner queue); refresh it at boundaries alongside `/handoff`.
+- **NOTE.md fully folded in** (source: `_meta/operations/NOTE.md`, updated with per-item status):
+  - item-a (pocketbase→`.claude/`, drop `skills-lock.json`) — was Henry's 42ccc12/b07a534, which
+    **reddened `make ci`** (deleted `hooks/.gitkeep` + stale flow homes) → repaired **PR #187 (merged)**.
+  - **D1 #189** memory folder — RULED rename+redirect → **PR #194 (merged)**: `.claude/agent-memory`
+    → `.claude/memory` + `autoMemoryDirectory` in tracked `.claude/settings.json`; auto-memory now
+    in-repo/transferable (**effective next session**). 9 topic files (old 4 + migrated hidden 5).
+  - **D2 #188** bundles — RULED top-level → **PR #195 (merged)**: `primitives-core/bundles`→`bundles/`,
+    homed under the `bundle-metadata` flow node; output-invariant (`make build` = zero drift).
+  - **D5** npx-skills rule — RULED global → added to `~/.claude/instructions/tools.md`. **⚠ needs a
+    dotfiles-repo commit** (edited but not committed there — that repo's commit discipline is Henry's).
+- **functionform-asmbl (#191)** — RULED **PARK, don't archive** (product-surface seed); borrow 3
+  concepts tracked in **#193** (its `github_sourcing.py` = reference impl for externals-sync #36/#122,
+  noted on #36). Read-only clone; nothing modified.
+
+**→ OWNER'S COURT — still open (triage #192 "Decision gaps"):** **D3 #190** docs — name a specific
+target or authorize a general audit (first pass: docs mostly correctly co-located). **O1** extender-db
+children review/close (#155–159 done via `8bcb4e0`). **O2** meta-harness pointer for #165. **O3**
+forward-skill-wave names/homes (#137/#138/#139, estate-review-gated). Waves 2–5 planned in #192.
 
 Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extenders-estate/`), tracked via
-`sequence.py`/`reconcile.py` there — do not freeze a list here.
+`sequence.py`/`reconcile.py` there; the pinned triage issue **#192** is the in-repo ranked view.
 - ~~**Close-out:** run #111's install-smoke proof, then close #111/#134 + mirrors #121/#135.~~ **DONE (this session).**
 - **Forward skill wave (unblocked):** #138 release-loop (code-desk) · #137 decision-loop (exec-desk) ·
   #139 claude-code-expertise (standalone). Names/homes held pending the estate cohesion review (below).
@@ -225,6 +229,11 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
 
 ## 6 · Map
 
+- **Pinned triage issue #192** — `meta: triaged open-issue backlog (living list)`: the in-repo
+  ranked backlog view + the dotfiles-agents-proper waves plan + the owner decision queue. Refresh
+  it (edit the body, never commit) at session boundaries alongside `/handoff`. Three tracks:
+  dotfiles-agents-proper (waves) · extender-db epic #154 (self-manages via `evals/_structure/`) ·
+  agent-harness #172/#173.
 - CLAUDE.md — task interface + rules · docs/decisions/ — ADR mirrors.
 - **Exec desk** (planning + the desk-platform design): `~/Documents/EXECUTIVE_DESK/Projects/dev-tooling-desk/`
 - **desk-standard** (the exec governor / deskkit source, a core co-product; opencode planned-deferred here):
