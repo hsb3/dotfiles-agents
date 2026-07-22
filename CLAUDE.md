@@ -27,6 +27,8 @@ It is `check` (roster↔disk drift) + `build-check` (marketplace regen drift) + 
 
 ## Governance
 
+Contributor SOP (the human-facing distillation of this digest): [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md).
+
 Branch off `dev`, PR into `dev`. `main` is CI-published and off-limits (publish-only). Never
 merge PRs or commit to the default branch. Keep changes surgical and match existing style.
 Get the owner's approval before major information-architecture changes (moving/renaming
