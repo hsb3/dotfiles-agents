@@ -31,7 +31,7 @@ plugins:
     description: "Bring a software project through the next-release execution loop and a documented repo standard together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle."
   - id: exec-desk
     kind: bundle
-    version: "0.1.0"
+    version: "0.2.0"
     description: "The executive-desk overhead — stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks."
   - id: diagrams
     kind: plugin

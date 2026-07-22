@@ -134,6 +134,24 @@ specifics by writing `_config.md`. Do it in this order.
    gaps), and how to use it: "`planning-desk` issue mode to file an issue, plan mode to plan one,
    loop mode to run a planning session." Offer to author the first plan as a worked example.
 
+### Adoption + migrating off ad-hoc commands
+
+How this skill *arrives* in a repo, and how to retire a hand-rolled predecessor:
+
+- **Distribution.** The skill ships inside the `exec-desk` bundle from the `dotfiles-agents`
+  marketplace; a consuming repo turns it on with `claude plugin enable exec-desk@dotfiles-agents`
+  (project scope), and it then auto-loads by its description — no per-repo copy of the SKILL body.
+  Only the desk's `_utils/` scripts and `_config.md` live in the consuming repo (they read that
+  repo's live `gh` state and disk); the workflow prose travels with the plugin.
+- **Migrating off ad-hoc `.claude/commands/`.** A repo that already runs this workflow as
+  slash-command prompt templates (e.g. a `plan-issue` / `issue-body` pair) should retire them:
+  commands do not migrate as commands — their intent already lives in this skill's **plan** and
+  **issue** modes, so the command file is redundant. Before deleting, **fold each command's
+  hardcoded, project-specific bindings — gate menu, epic/tracker numbers, canonical docs to cite,
+  issue-template names — into `_meta/plans/_config.md`** so nothing the command carried is lost;
+  the generic modes read those bindings from `_config.md`. Then delete the command files. Users
+  invoke the workflow by intent ("write me an issue", "plan this out") instead of a slash command.
+
 ## The non-negotiables (every mode)
 
 These are why the system produces good work rather than plausible-looking work. Carry them into
