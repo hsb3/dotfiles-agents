@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness campaign weekly-20260721 — eval results</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --muted:          #898781;
+    --grid:           #e1e0d9;
+    --baseline-axis:  #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --dot-base:       #86b6ef;   /* ordinal step 250 — validated light pair */
+    --dot-with:       #2a78d6;   /* ordinal step 450 */
+    --delta-good:     #006300;   /* success text (light) */
+    --delta-bad:      #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #898781;
+      --grid:           #2c2c2a;
+      --baseline-axis:  #383835;
+      --border:         rgba(255,255,255,0.10);
+      --dot-base:       #1c5cab; /* ordinal — validated dark pair (dim baseline) */
+      --dot-with:       #3987e5; /* bright emphasis on the with mark */
+      --delta-good:     #0ca30c;
+      --delta-bad:      #d03b3b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted:          #898781;
+    --grid:           #2c2c2a;
+    --baseline-axis:  #383835;
+    --border:         rgba(255,255,255,0.10);
+    --dot-base:       #1c5cab;
+    --dot-with:       #3987e5;
+    --delta-good:     #0ca30c;
+    --delta-bad:      #d03b3b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 56px;
+    background: var(--page); color: var(--text-primary);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); margin: 0 0 24px; font-size: 14px; }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 22px; margin-bottom: 20px;
+  }
+  /* KPI row */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .tile .v { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
+  .tile .l { color: var(--text-secondary); font-size: 12.5px; margin-top: 2px; }
+  .tile .d { font-size: 12.5px; margin-top: 2px; }
+  .good { color: var(--delta-good); }
+  .bad  { color: var(--delta-bad); }
+  .mut  { color: var(--muted); }
+  /* dumbbell chart */
+  h2 { font-size: 15px; margin: 0 0 2px; }
+  .chart-note { color: var(--text-secondary); font-size: 12.5px; margin: 0 0 14px; }
+  .legend { display: flex; gap: 18px; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .grp { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 4px; }
+  .row { display: grid; grid-template-columns: 215px 1fr 96px; align-items: center; gap: 12px; padding: 5px 0; }
+  .row .lab { font-size: 13px; color: var(--text-primary); text-align: right; line-height: 1.25; }
+  .row .lab .h { color: var(--muted); font-size: 11.5px; display: block; }
+  .track { position: relative; height: 26px; }
+  .track .rail { position: absolute; left: 0; right: 0; top: 12.5px; height: 1px; background: var(--grid); }
+  .track .tick { position: absolute; top: 8px; width: 1px; height: 11px; background: var(--grid); }
+  .conn { position: absolute; top: 12px; height: 2px; background: var(--dot-base); border-radius: 1px; }
+  .dot { position: absolute; top: 8.5px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); box-shadow: 0 0 0 2px var(--surface-1); }
+  .dot.b { background: var(--dot-base); }
+  .dot.w { background: var(--dot-with); }
+  .dval { position: absolute; top: -7px; transform: translateX(-50%); font-size: 10.5px; color: var(--text-secondary); }
+  .delta { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .axis { display: grid; grid-template-columns: 215px 1fr 96px; gap: 12px; margin-top: 6px; }
+  .axis .scale { position: relative; height: 16px; color: var(--muted); font-size: 10.5px; }
+  .axis .scale span { position: absolute; transform: translateX(-50%); }
+  /* table */
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th { text-align: left; color: var(--text-secondary); font-weight: 600; font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--baseline-axis); }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  ul { margin: 8px 0 0; padding-left: 20px; }
+  li { margin-bottom: 7px; }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: color-mix(in srgb, var(--text-primary) 6%, transparent); padding: 1px 5px; border-radius: 4px; }
+  /* tooltip */
+  #tip { position: fixed; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+         border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.14);
+         opacity: 0; transition: opacity .08s; max-width: 260px; z-index: 10; }
+  #tip .t { font-weight: 600; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Weekly harness campaign — eval results</h1>
+  <p class="sub">Campaign <code>weekly-20260721</code> · full grid: 3 candidates / 4 cases × claude + opencode × with/baseline × 3 trials · model claude-sonnet-4-5 · run 2026-07-21 by <code>make harness-campaign</code></p>
+
+  <div class="kpis">
+    <div class="tile"><div class="v">48</div><div class="l">trials run, 0 errors</div><div class="d mut">24 with · 24 baseline</div></div>
+    <div class="tile"><div class="v">88%</div><div class="l">pass rate with extender</div><div class="d mut">21 / 24 trials</div></div>
+    <div class="tile"><div class="v">46%</div><div class="l">pass rate baseline</div><div class="d mut">11 / 24 trials</div></div>
+    <div class="tile"><div class="v good">+42 pt</div><div class="l">overall skill lift</div><div class="d good">▲ with − baseline</div></div>
+    <div class="tile"><div class="v">$8.40</div><div class="l">API cost</div><div class="d mut">51.6 agent-minutes</div></div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <h2>Pass rate by case × harness — baseline → with extender</h2>
+    <p class="chart-note">Each row: 3 baseline trials vs 3 with-extender trials. A single dot means baseline and with are equal (case at ceiling).</p>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--dot-base)"></span>baseline</span>
+      <span><span class="sw" style="background:var(--dot-with)"></span>with extender</span>
+    </div>
+
+    <div class="grp">mermaid (skill)</div>
+    <div class="row" data-tip="add-architecture-diagram · claude|baseline 2/3 → with 3/3 · skill fired 3/3">
+      <div class="lab">add-architecture-diagram<span class="h">claude</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="conn" style="left:67%; width:33%"></div>
+        <div class="dot b" style="left:67%"></div><div class="dot w" style="left:100%"></div>
+        <div class="dval" style="left:67%">67</div><div class="dval" style="left:100%">100</div>
+      </div>
+      <div class="delta good">▲ +33 pt</div>
+    </div>
+    <div class="row" data-tip="add-architecture-diagram · opencode|baseline 3/3 → with 3/3 · skill fired 3/3 · at ceiling">
+      <div class="lab">add-architecture-diagram<span class="h">opencode</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="dot w" style="left:100%"></div>
+        <div class="dval" style="left:100%">100</div>
+      </div>
+      <div class="delta mut">— 0 (ceiling)</div>
+    </div>
+    <div class="row" data-tip="avoid-reserved-node-id · claude|baseline 0/3 → with 1/3 · skill fired 3/3 · rule fires but is not held">
+      <div class="lab">avoid-reserved-node-id<span class="h">claude</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="conn" style="left:0%; width:33%"></div>
+        <div class="dot b" style="left:0%"></div><div class="dot w" style="left:33%"></div>
+        <div class="dval" style="left:0%">0</div><div class="dval" style="left:33%">33</div>
+      </div>
+      <div class="delta good">▲ +33 pt</div>
+    </div>
+    <div class="row" data-tip="avoid-reserved-node-id · opencode|baseline 0/3 → with 2/3 · skill fired 3/3">
+      <div class="lab">avoid-reserved-node-id<span class="h">opencode</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="conn" style="left:0%; width:67%"></div>
+        <div class="dot b" style="left:0%"></div><div class="dot w" style="left:67%"></div>
+        <div class="dval" style="left:0%">0</div><div class="dval" style="left:67%">67</div>
+      </div>
+      <div class="delta good">▲ +67 pt</div>
+    </div>
+
+    <div class="grp">readme-value-and-proof (skill)</div>
+    <div class="row" data-tip="local-bookmark-vault · claude|baseline 0/3 → with 3/3 · skill fired 3/3">
+      <div class="lab">local-bookmark-vault<span class="h">claude</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="conn" style="left:0%; width:100%"></div>
+        <div class="dot b" style="left:0%"></div><div class="dot w" style="left:100%"></div>
+        <div class="dval" style="left:0%">0</div><div class="dval" style="left:100%">100</div>
+      </div>
+      <div class="delta good">▲ +100 pt</div>
+    </div>
+    <div class="row" data-tip="local-bookmark-vault · opencode|baseline 0/3 → with 3/3 · skill fired 3/3">
+      <div class="lab">local-bookmark-vault<span class="h">opencode</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="conn" style="left:0%; width:100%"></div>
+        <div class="dot b" style="left:0%"></div><div class="dot w" style="left:100%"></div>
+        <div class="dval" style="left:0%">0</div><div class="dval" style="left:100%">100</div>
+      </div>
+      <div class="delta good">▲ +100 pt</div>
+    </div>
+
+    <div class="grp">scout (agent persona)</div>
+    <div class="row" data-tip="stale-config-trap · claude|baseline 3/3 → with 3/3 · persona never engaged (0/3) · case at ceiling">
+      <div class="lab">stale-config-trap<span class="h">claude</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="dot w" style="left:100%"></div>
+        <div class="dval" style="left:100%">100</div>
+      </div>
+      <div class="delta mut">— 0 (ceiling)</div>
+    </div>
+    <div class="row" data-tip="stale-config-trap · opencode|baseline 3/3 → with 3/3 · persona never engaged (0/3) · case at ceiling">
+      <div class="lab">stale-config-trap<span class="h">opencode</span></div>
+      <div class="track"><div class="rail"></div><div class="tick" style="left:0%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:100%"></div>
+        <div class="dot w" style="left:100%"></div>
+        <div class="dval" style="left:100%">100</div>
+      </div>
+      <div class="delta mut">— 0 (ceiling)</div>
+    </div>
+
+    <div class="axis"><div></div>
+      <div class="scale"><span style="left:0%">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div>
+      <div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What this run says</h2>
+    <ul>
+      <li><strong>readme-value-and-proof is the headline: +100 pt on both harnesses.</strong> Baseline never produces a doctrine-conformant README (0/6); with the skill it always does (6/6, skill fired every trial). This replicates the battle-test's +1.0 delta — the signal is stable across campaigns.</li>
+      <li><strong>mermaid helps but its reserved-node-id rule is still not fully held under prompt pressure</strong> — with the skill loaded and fired 3/3, only 1/3 (claude) and 2/3 (opencode) trials avoided the reserved <code>end</code> node id. Better than the battle-test grid (0/3 on opencode then), still the weakest link. Known issue, tracked as #173 (phrasing fix).</li>
+      <li><strong>scout's case is saturated:</strong> claude-sonnet-4-5 solves the stale-config trap 3/3 unaided on both harnesses, and the persona never engaged (fired 0/6). The case measures nothing at this model tier — #173's "harder traps or weaker trial model" stands.</li>
+      <li><strong>Harness health: clean run.</strong> 48/48 trials, 0 errors, 0 nonzero exits, $8.40 / 51.6 agent-minutes for the full grid. The launchd weekly agent is installed and its kickstart re-run resumed correctly (0 run / 48 skipped).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Exact numbers</h2>
+    <table>
+      <thead><tr><th>Candidate</th><th>Case</th><th>Harness</th><th>Baseline</th><th>With</th><th>Δ pass rate</th><th>Skill fired</th></tr></thead>
+      <tbody>
+        <tr><td>mermaid</td><td>add-architecture-diagram</td><td>claude</td><td>2/3</td><td>3/3</td><td class="good">+33 pt</td><td>3/3</td></tr>
+        <tr><td>mermaid</td><td>add-architecture-diagram</td><td>opencode</td><td>3/3</td><td>3/3</td><td class="mut">0</td><td>3/3</td></tr>
+        <tr><td>mermaid</td><td>avoid-reserved-node-id</td><td>claude</td><td>0/3</td><td>1/3</td><td class="good">+33 pt</td><td>3/3</td></tr>
+        <tr><td>mermaid</td><td>avoid-reserved-node-id</td><td>opencode</td><td>0/3</td><td>2/3</td><td class="good">+67 pt</td><td>3/3</td></tr>
+        <tr><td>readme-value-and-proof</td><td>local-bookmark-vault</td><td>claude</td><td>0/3</td><td>3/3</td><td class="good">+100 pt</td><td>3/3</td></tr>
+        <tr><td>readme-value-and-proof</td><td>local-bookmark-vault</td><td>opencode</td><td>0/3</td><td>3/3</td><td class="good">+100 pt</td><td>3/3</td></tr>
+        <tr><td>scout</td><td>stale-config-trap</td><td>claude</td><td>3/3</td><td>3/3</td><td class="mut">0</td><td>0/3</td></tr>
+        <tr><td>scout</td><td>stale-config-trap</td><td>opencode</td><td>3/3</td><td>3/3</td><td class="mut">0</td><td>0/3</td></tr>
+      </tbody>
+    </table>
+    <p class="foot">Pass = clean CLI exit + no plugin errors (with-config) + every deterministic check + every rubric grade. The metric that matters is the with − baseline delta, not the absolute rate. Source of truth: <code>harness/results.jsonl</code> (campaign <code>weekly-20260721</code>) and the extender-db <code>runs</code>/<code>tool_calls</code> collections; grader pinned to Haiku. Generated 2026-07-21.</p>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+  const tip = document.getElementById('tip');
+  document.querySelectorAll('.row[data-tip]').forEach(row => {
+    row.addEventListener('mousemove', e => {
+      const [t, b] = row.dataset.tip.split('|');
+      tip.innerHTML = '<div class="t"></div><div class="b"></div>';
+      tip.querySelector('.t').textContent = t;
+      tip.querySelector('.b').textContent = b;
+      tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 280) + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+      tip.style.opacity = 1;
+    });
+    row.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+  });
+</script>
+</body>
+</html>

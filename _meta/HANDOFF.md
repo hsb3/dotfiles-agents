@@ -10,7 +10,9 @@ CI-published (publish-only, ADR 0014). Task interface + source-of-truth rules: s
 
 ## 1 · Current standing
 
-Both build epics are **DONE and CLOSED**; `make ci` is green; `dev` and `main` are level (a6c77e4).
+Both build epics are **DONE and CLOSED**; `make ci` is green. `dev` now also carries the
+extender-db merge (#176), the harness (#169), the #174 telemetry lane (PR #177), and the
+campaign runner (§2c); `main` is CI-published and lags until publish.
 - **#111** clean-room rebuild (D1–D8) — merged + **CLOSED** (install-smoke proof recorded on the issue).
 - **#134** desk-set restructure / 0020 lineup (E1–E7) — merged + **CLOSED**, plus #147 (diagrams / obsidian-toolkit / owner-signoff).
 - Multica mirrors **#121** (→#111) and **#135** (→#134) closed to match. **Open PRs: 0.**
@@ -107,7 +109,15 @@ extraction checklist). Owner intent: battle-test here, later extract to its own 
   rows are confounded — campaign label `""` vs `skillfix` disambiguates).
 - **CI:** marketplace lanes untouched; new path-filtered `harness-test` lane + stdlib coupling gate
   in `make ci`. Open follow-ups: #172 (hermeticity/env-pinning bundle), #173 (candidate-quality
-  findings), #174 (durable run-log corpus → PB collections; analysis half done, see data-shape doc).
+  findings). ~~#174~~ **DONE 2026-07-21 (PR #177, issue CLOSED):** four PB collections
+  (`runs`/`artifacts`/`run_events`/`tool_calls`) live in extender-db via the schema.py lane +
+  `evals/load_harness_runs.py` ingester; 72-trial corpus ingested (decision record + verified
+  counts on #174; runbook = PROCEDURES "ingesting a harness campaign"; blobs in tracked
+  `evals/pb_data/storage/`). **Campaign runner also DONE 2026-07-21** (this branch):
+  `make harness-campaign` (full grid, `weekly-YYYYMMDD` resume label, pinned
+  claude-sonnet-4-5) + weekly launchd agent (Mon 09:00,
+  `com.hsb3.dotfiles-agents.harness-campaign`; install/uninstall/status targets). The
+  scheduled path NEVER auto-ingests into PB (tracked data.db discipline).
 
 ## 3 · Next up (dotfiles-agents proper)
 
@@ -118,18 +128,14 @@ Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extende
   #139 claude-code-expertise (standalone). Names/homes held pending the estate cohesion review (below).
 - **Sequenced backlog:** #32 (retire hsb3-custom-plugins) · #36/#122 (clone-at-build externals) · #37.
 - **New (filed 2026-07-20):** #149 — standard gap: no `_meta/` slot for secret-free runbooks/reference. Untriaged.
-- **Harness follow-ups — QUEUED FOR NEXT SESSION (Henry's ask, 2026-07-21).** The harness
-  lives on dev (`harness/`, PR #169 @ `7b0bfd1`; docs under `_meta/research/agent-harness/`,
-  entry point its §2b block in dev's HANDOFF). Two deliverables were offered and accepted:
-  1. **Campaign-runner routine** — a `make harness-campaign`-style target + a LOCAL
-     cron/loop invoking it (must be local: runs need `secret get ANTHROPIC_API_KEY` + both
-     CLIs; cloud routines lack both). Design discussed in-session only — build from scratch.
-  2. **#174 PB collections** — Henry's retention decision, then create the four proposed
-     collections (`runs`, `run_events`, `tool_calls`, `artifacts`) per
-     `_meta/research/agent-harness/runlog-data-shape.md` §4 (on dev), THROUGH the
-     extender-db `schema.py` lane (never raw PATCH). Raw corpus: 72 logs, machine-local in
-     gitignored `harness/runs/` (on the dev checkout's working tree) — don't lose it.
-  Also open: #172 (hermeticity bundle) · #173 (candidate fixes: mermaid phrasing, harder
+- ~~**Harness follow-ups — QUEUED FOR NEXT SESSION (Henry's ask, 2026-07-21).**~~
+  **BOTH DELIVERED 2026-07-21** (owner decisions taken in-session: keep-everything retention,
+  PB file-field blobs + tracked `storage/`, launchd scheduler, weekly full grid):
+  1. **Campaign runner** — `scripts/harness_campaign.sh` (`run`/`install`/`uninstall`/`status`)
+     + `make harness-campaign*` targets + weekly LaunchAgent (Mon 09:00). See §2c.
+  2. **#174 PB collections** — delivered via PR #177, issue CLOSED with the decision record.
+     See §2c. The formerly machine-local 72-log corpus is now durable in extender-db.
+  Still open: #172 (hermeticity bundle) · #173 (candidate fixes: mermaid phrasing, harder
   scout traps). Auth for any live run: `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"`.
 - No `gate:*` label carries an open issue — nothing gate-blocked.
 
