@@ -17,8 +17,9 @@ campaign runner (PR #178, §2c); `main` is CI-published and lags until publish.
 - **#134** desk-set restructure / 0020 lineup (E1–E7) — merged + **CLOSED**, plus #147 (diagrams / obsidian-toolkit / owner-signoff).
 - Multica mirrors **#121** (→#111) and **#135** (→#134) closed to match. **Open PRs: 0.**
 
-Live marketplace lineup: code-desk · exec-desk · foreman-kit · github-project-board · opencode-expertise ·
-pptx-themes · private-fork · diagrams · obsidian-toolkit · owner-signoff.
+Live marketplace lineup: code-desk (0.2.0) · exec-desk · foreman-kit · github-project-board · opencode-expertise ·
+pptx-themes · private-fork · project-memory · diagrams · obsidian-toolkit · owner-signoff (+ dataviz ·
+deep-research · update-config standalones). `main` lags until next publish (project-memory not yet published).
 
 **Also live: the extender-db mini-project, MERGED to dev 2026-07-21 (owner promotion decision)** (§2b) — separate
 effort from the rebuild epics; do not fold it into dev without Henry's promotion decision.
@@ -40,6 +41,15 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
   remapped agents + installer + generated exclusions manifest). Three publishes verified:
   `main` = distributable surface only, append-only ledger (`publish: dev@<sha>` commits),
   `opencode/` live on main. Suite 157 tests; flow: 17 nodes / 15 edges, 0 planned nodes.
+- 2026-07-22 (later session): **main-checkout guard + memory curation + first dotfiles→marketplace
+  migration** — PRs #200 (no-main-checkout PreToolUse hook, publish-tree .gitignore, VSCode branch
+  protection), #201 (memory store curated 9→6 topics; directive → CLAUDE.md; 2 gotchas promoted to
+  global; stale hidden native store deleted), #202 (`project-memory` skill: cc-project-memory +
+  cc-migrate-memory as stdlib skill-wrapper, standalone + code-desk 0.2.0; adversarially reviewed,
+  legacy .gitignore-marker back-compat proven) — all merged; #203 filed (ADR 0015 dangling citation +
+  stale check_hook_layout docstring). **Owner scope ruling:** only the cc-* memory tools migrate for
+  now; workbench hooks (wb#35), cc-hooks/statusline, and MCP-adjacent pools deferred; general CLIs
+  stay in dotfiles permanently.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -197,7 +207,10 @@ stored in **PocketBase** (grow deskkit); v1 surface = a Claude Code persona (ski
 with held diffs (git-agnostic: fsnotify + go-diff). Design runs in **rounds** — R1 (requirements) + R2 (tech +
 MIT-borrow survey) closed; **R3 (element model) drafted + both adversarial reviews done — awaiting Henry's IA approval.**
 
-State (all on the desk): `~/Documents/EXECUTIVE_DESK/Projects/dev-tooling-desk/_meta/plans/desk-platform/`
+State (all on the desk — **path corrected 2026-07-22:** dev-tooling-desk is now archived at
+`~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old/`; the live desks are
+`dotfiles-agents-desk/` and `desk-standard-desk/` under `EXECUTIVE_DESK/Projects/`):
+`.../ARCHIVE/dev-tooling-desk-old/_meta/plans/desk-platform/`
 (`plan.md` = round-by-round index; `spec-element-model.md` = the element proposal + both review findings) and
 `extenders-estate/system-cohesion-and-datamodel.md`. Decks delivered:
 `_meta/briefings/2026-07-20-desk-platform-r3-design/` (R3 design) + `.../2026-07-20-desk-platform-progress/`
@@ -240,9 +253,12 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
   `--save`/`--no-play` — it just plays aloud.
 - Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — before
   committing, sweep for stray nested `.claude/` dirs; distill anything valuable first, then delete.
-  **Scope the sweep to the worker-created subdirs ONLY:** the repo-root `.claude/agent-memory/` is
-  TRACKED, legitimate memory — a whole-dir `git rm` swept it once (2026-07-21) and cost a restore
-  commit (`c2133fe`).
+  Since #194 the tracked store is `.claude/memory/` (repo root), so ANY `.claude/agent-memory/` is
+  litter now — but never whole-dir `git rm` the root `.claude/` (a sweep cost a restore commit
+  `c2133fe` on 2026-07-21).
+- **Never check out `main` locally** (details in CLAUDE.md, hot-loaded). Since #200 a PreToolUse
+  hook denies it in agent sessions and `.git/hooks/post-checkout` (machine-local) warns on manual
+  checkouts; the publish tree now ships a `.gitignore` so an accidental checkout stays quiet.
 - **Henry signs off on major IA changes before they are finalized/built** (standing directive 2026-07-20;
   memory `approve-major-ia-changes`). Present IA changes as an approval gate, not a done deal.
 - Machine-local leftover: `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored) — a
@@ -257,7 +273,7 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
   dotfiles-agents-proper (waves) · extender-db epic #154 (self-manages via `evals/_structure/`) ·
   agent-harness #172/#173.
 - CLAUDE.md — task interface + rules · docs/decisions/ — ADR mirrors.
-- **Exec desk** (planning + the desk-platform design): `~/Documents/EXECUTIVE_DESK/Projects/dev-tooling-desk/`
-- **desk-standard** (the exec governor / deskkit source, a core co-product; opencode planned-deferred here):
-  `~/Developer/desk-standard/`
-- Extender census: `dev-tooling-desk/_knowledge/extenders.yaml`
+- **Exec desks** (paths corrected 2026-07-22 after the EXECUTIVE_DESK reorg): this repo's desk is
+  `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/`; desk-standard work is
+  `.../desk-standard-desk/`; the former dev-tooling-desk (incl. the desk-platform design + extender
+  census `_knowledge/extenders.yaml`) is archived at `.../ARCHIVE/dev-tooling-desk-old/`.
