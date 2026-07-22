@@ -1,9 +1,3 @@
-# --- Claude Code (track memory/rules/settings; ignore machine-local/transient) ---
-.claude/settings.local.json
-.claude/worktrees/
-.claude/*.lock
-.claude/**/.DS_Store
-
 # --- OS / editor ---
 .DS_Store
 *.swp
@@ -45,3 +39,12 @@ harness/workspaces/
 harness/.venv/
 # weekly campaign runner logs (defensive; the global *.log already covers the files)
 harness/campaign-logs/
+
+# >>> cc-project-memory (managed) >>>
+# narrow-ignore: ignore only machine-local/transient; track everything else under .claude/
+# (memory/, rules/, settings.json stay tracked & transferable)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/*.lock
+.claude/**/.DS_Store
+# <<< cc-project-memory (managed) <<<
