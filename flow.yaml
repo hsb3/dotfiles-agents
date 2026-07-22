@@ -26,7 +26,7 @@ nodes:
     class: authored
     status: current
     paths: [primitives-core, hooks]
-    note: "Single source copy of every primitive: skills, agents, hooks, bundle and standalone README sources. hooks/ is the empty ratified-layout placeholder."
+    note: "Single source copy of every primitive: skills, agents, hooks, and standalone README sources. hooks/ is the empty ratified-layout placeholder. (Bundle README sources moved to the top-level bundles/ node.)"
   - id: roster
     layer: roster
     class: authored
@@ -37,8 +37,8 @@ nodes:
     layer: roster
     class: authored
     status: current
-    paths: [plugins.yaml]
-    note: "Bundle id, kind, version, description per distributed plugin."
+    paths: [plugins.yaml, bundles]
+    note: "Bundle membership + metadata (plugins.yaml: id, kind, version, description per distributed plugin) and each bundle's value/proof README source (bundles/<id>/README.md). Bundle configs are assemblies, not primitives — homed here, not under primitives-core."
   - id: standalone-catalog
     layer: roster
     class: authored

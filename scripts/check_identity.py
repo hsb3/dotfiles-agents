@@ -7,7 +7,7 @@ into a primitive body. This is the vendored, in-repo successor to the archived w
 `scripts/promote_check.py` H2/H5 checks — no cross-repo import at runtime.
 
 Scope = the shipped primitive bodies under `primitives-core/{skills,agents,hooks}/`, plus each
-bundle's README source under `primitives-core/bundles/<id>/README.md` and each standalone
+bundle's README source under `bundles/<id>/README.md` and each standalone
 wrapper's README source under `primitives-core/standalone-readmes/<id>/README.md` — both are
 copied verbatim into the installed plugin (`plugins/<id>/README.md`), so they ship to a user
 the same as a skill body and are in scope for the same reason. The marketplace/plugin
@@ -44,7 +44,7 @@ SCAN_ROOTS = (
     os.path.join(REPO, "primitives-core", "skills"),
     os.path.join(REPO, "primitives-core", "agents"),
     os.path.join(REPO, "primitives-core", "hooks"),
-    os.path.join(REPO, "primitives-core", "bundles"),
+    os.path.join(REPO, "bundles"),
     os.path.join(REPO, "primitives-core", "standalone-readmes"),
 )
 TEXT_EXT = (".md", ".json", ".sh", ".py", ".js", ".ts", ".yaml", ".yml", ".toml", ".txt")
