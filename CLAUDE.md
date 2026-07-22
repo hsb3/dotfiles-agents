@@ -32,6 +32,8 @@ merge PRs or commit to the default branch. Keep changes surgical and match exist
 
 ## Where things are
 
+- `docs/FLOW.md` + `flow.yaml` — the repo-flow DAG: the home of every part and the edges
+  between them, enforced by `make flow`. A new top-level path must claim a home there.
 - `docs/decisions/` — ADR mirrors (the dev/main rule).
 - `_meta/HANDOFF.md` — current build state and the rebuild deliverable map (D1–D8).
 - `_meta/` is a tracked working desk; `_meta/operations/` is the only untracked part (secrets).

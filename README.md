@@ -28,6 +28,7 @@ items ship standalone, never inside a desk bundle. Claude-Code-only; the marketp
 | `scripts/` | roster guard + generators, each with a `--check` drift mode |
 | `tests/` | stdlib-only unit tests (zero install) |
 | `docs/decisions/` | in-repo ADR mirrors |
+| `flow.yaml` + `docs/FLOW.md` | the repo-flow DAG — the home of every part, machine-checked by `make flow` |
 
 ## Build interface
 

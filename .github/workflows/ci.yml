@@ -19,13 +19,14 @@ jobs:
           python-version: "3.13"
       - run: make floor
 
-  # Generated-artifact drift guards — roster<->disk, marketplace regen, standalone catalog.
+  # Generated-artifact drift guards — roster<->disk, marketplace regen, standalone catalog,
+  # repo-flow DAG (flow.yaml <-> tree).
   drift-guards:
-    name: drift guards (roster · marketplace · catalog)
+    name: drift guards (roster · marketplace · catalog · flow)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - run: make check build-check catalog
+      - run: make check build-check catalog flow
