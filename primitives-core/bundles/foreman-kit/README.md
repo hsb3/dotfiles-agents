@@ -2,7 +2,7 @@
 
 A context-and-cost optimization kit for multi-agent work: size a task, pick a delegation
 architecture, dispatch to the right model tier, and keep every session clearable instead of
-letting context quietly run out. Two skills, four hooks, and four agents across model tiers,
+letting context quietly run out. Three skills, four hooks, and four agents across model tiers,
 all wired to the same handoff file and the same session-discipline loop.
 
 ## What you get
@@ -11,6 +11,7 @@ all wired to the same handoff file and the same session-discipline loop.
 |---|---|---|
 | `foreman` | skill | Size a substantial task and run the session as a foreman: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration — standard for an Opus-led session, deep for a Fable-led one. |
 | `handoff` | skill | Maintain the project's session-handoff file so a brand-new session can pick up work cold — the externalization pass that makes a session clearable. |
+| `waves` | skill | Drive a repo's issue backlog to closed with near-zero owner input: refresh a pinned triage issue (the living, ranked plan), group buildable issues into branch-sized waves, launch isolated crews via `foreman`, verify and merge each PR in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to the cheapest model tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. |

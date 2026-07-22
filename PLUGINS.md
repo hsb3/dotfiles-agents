@@ -47,9 +47,9 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 ## foreman-kit
 
 - **Kind:** plugin
-- **Version:** 0.5.0
-- **Description:** A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout · builder · reviewer · lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, and four hooks — context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage.
-- **Ships:** 2 skills — foreman, handoff; 4 hooks — context-watermark, handoff-freshness-guard, session-handoff-surfacer, subagent-telemetry; 4 agents — builder, lead, reviewer, scout
+- **Version:** 0.6.0
+- **Description:** A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout · builder · reviewer · lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, a waves skill that drives an issue backlog to closed through a pinned triage issue + wave-planned isolated crews, and four hooks — context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage.
+- **Ships:** 3 skills — foreman, handoff, waves; 4 hooks — context-watermark, handoff-freshness-guard, session-handoff-surfacer, subagent-telemetry; 4 agents — builder, lead, reviewer, scout
 - **Install:** `claude plugin install foreman-kit@dotfiles-agents`
 
 ## github-project-board
