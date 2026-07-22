@@ -1,13 +1,24 @@
 name: publish
 
-# Rebuilds `main` from `dev` — the ONLY sanctioned way `main` is updated.
-# ADR 0014: `main` is CI-published, never hand-committed. Manual + typed-confirmation guarded.
+# Assembles the DISTRIBUTABLE surface from `dev` and commits it to `main` with the previous
+# `main` as parent — filtered and append-only (ADR 0008, restoring old-desk 0014 §3's
+# "rebuilt clean" main; supersedes the whole-tree force push). `main` stays the branch
+# consumers resolve (ADR 0007): the Claude Code marketplace shape at the repo root. The
+# workbench (harness/, evals/, _meta/, .claude/, .agents/) never publishes.
+#
+# Manual + typed-confirmation guarded. The one-time input `reset: orphan` starts a fresh
+# parentless main history (used at the 0008 cutover to drop the pre-0008 whole-tree
+# snapshots from consumer clones); every other run is a fast-forward parented commit.
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Type "publish" to rebuild main from dev'
+        description: 'Type "publish" to assemble dev -> main'
         required: true
+        default: ''
+      reset:
+        description: 'Type "orphan" to restart main parentless (0008 cutover only)'
+        required: false
         default: ''
 
 permissions:
@@ -19,10 +30,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout dev
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: dev
           fetch-depth: 0
-      - name: Publish dev -> main (force; histories are unrelated by design)
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Gate the source tip
+        run: make ci
+      - name: Assemble the publish tree
+        # Lift map (ADR 0008 W2 — current root layout; W3 switches the sources to
+        # dist/claude-code/ and adds dist/opencode -> opencode/).
         run: |
-          git push --force origin HEAD:refs/heads/main
+          set -euo pipefail
+          ASM="$(mktemp -d)"
+          cp -R .claude-plugin "$ASM/.claude-plugin"
+          cp -R plugins "$ASM/plugins"
+          cp PLUGINS.md README.md "$ASM/"
+          echo "ASM=$ASM" >> "$GITHUB_ENV"
+      - name: Commit to main — parented, append-only
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          DEV_SHA="$(git rev-parse --short HEAD)"
+          if [ "${{ github.event.inputs.reset }}" = "orphan" ]; then
+            git checkout --orphan publish-tree
+          else
+            git fetch origin main
+            git checkout -B publish-tree origin/main
+          fi
+          git rm -rfq . 2>/dev/null || true
+          git clean -fdq
+          cp -R "$ASM"/. .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "publish surface unchanged — nothing to publish"
+            exit 0
+          fi
+          git commit -m "publish: dev@${DEV_SHA}" \
+            -m "$(python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); print('\n'.join(p['name']+' '+p['version'] for p in d['plugins']))")"
+          if [ "${{ github.event.inputs.reset }}" = "orphan" ]; then
+            git push --force origin HEAD:refs/heads/main
+          else
+            git push origin HEAD:refs/heads/main
+          fi
