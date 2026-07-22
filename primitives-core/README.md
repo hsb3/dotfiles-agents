@@ -35,9 +35,12 @@ recorded by reference in [`../externals.yaml`](../externals.yaml), never copied 
 
 ## Bundle README sources
 
-`bundles/<id>/README.md` is the value/proof README source for one plugin bundle (packaging
-P3 — every plugin folder ships a README). It isn't a roster primitive — there's no
-`primitives-core.yaml` entry for it — but it ships to a user the same way a skill body does:
+Bundle README sources live in the **top-level `bundles/<id>/README.md`** (a sibling of
+`primitives-core/`, not under it — a bundle config is an assembly, not a primitive; homed under
+the `bundle-metadata` flow node). `bundles/<id>/README.md` is the value/proof README source for
+one plugin bundle (packaging P3 — every plugin folder ships a README). It isn't a roster
+primitive — there's no `primitives-core.yaml` entry for it — but it ships to a user the same
+way a skill body does:
 `scripts/gen_marketplace.py` copies it verbatim to `plugins/<id>/README.md`. Optional per
 bundle; a bundle with no README source ships without one rather than failing the build. In
 scope for the identity-neutrality lint (`scripts/check_identity.py`) for the same reason it's

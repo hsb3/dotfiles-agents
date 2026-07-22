@@ -345,7 +345,7 @@ class AgentOnlyBundleAssembly(unittest.TestCase):
         G.REPO = self.fix
         G.ROSTER = os.path.join(self.fix, "primitives-core.yaml")
         G.PLUGINS_YAML = os.path.join(self.fix, "plugins.yaml")
-        G.BUNDLES_DIR = os.path.join(self.fix, "primitives-core", "bundles")
+        G.BUNDLES_DIR = os.path.join(self.fix, "bundles")
         G.gen_standalone.build_standalone = lambda out_root: None
         G.gen_standalone.standalone_entries = lambda: []
 
@@ -397,7 +397,7 @@ class BundleReadmeAssembly(unittest.TestCase):
         self.assertTrue(G._identical(src, built))
 
     def test_missing_readme_source_is_tolerated(self):
-        # A bundle with no primitives-core/bundles/<id>/README.md ships without one --
+        # A bundle with no bundles/<id>/README.md ships without one --
         # the copy step must be a no-op, never a hard failure.
         proot = os.path.join(self.tmp, "plugins", "no-such-bundle")
         os.makedirs(proot)
