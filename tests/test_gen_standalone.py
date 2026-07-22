@@ -130,6 +130,7 @@ class Invariants(unittest.TestCase):
         self.assertEqual(
             [e["name"] for e in entries],
             [
+                "claude-code-expertise",
                 "dataviz",
                 "deep-research",
                 "github-project-board",

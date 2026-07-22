@@ -1,0 +1,91 @@
+# Distribution — plugins, marketplaces, install/enable mechanics
+
+Skills, subagents, commands, hooks, and MCP servers are authored individually; **plugins** bundle
+them and **marketplaces** distribute the plugins. This is how the surfaces reach another user.
+
+## Plugin structure
+
+A plugin is a directory (usually a repo) with a manifest and the surface subdirectories it ships.
+
+```
+my-plugin/
+├── .claude-plugin/
+│   └── plugin.json           # manifest: name, version, description, author
+├── skills/<name>/SKILL.md    # bundled skills
+├── agents/<name>.md          # bundled subagents
+├── commands/<name>.md        # bundled commands
+├── hooks/<name>/             # bundled hooks (handler + config)
+└── .mcp.json                 # bundled MCP servers (optional)
+```
+
+```jsonc
+// .claude-plugin/plugin.json
+{
+  "name": "my-plugin",         // the id users install; unique within its marketplace
+  "version": "0.1.0",          // semver; bump on every change users should re-pull
+  "description": "What the bundle provides.",
+  "author": { "name": "Author Name" }
+}
+```
+
+The manifest's `name` is the install id. `version` is how an update is recognized — bump it
+whenever the shipped surfaces change. `author` is the **sanctioned place for identity**; the
+surface *bodies* stay identity-neutral (personalization comes from config/data, not the body).
+
+A plugin ships whichever surfaces it contains — a plugin can be a single skill, or a full set of
+skills + agents + hooks + an MCP server. The surfaces inside a plugin use the same contracts as
+their standalone forms (`surfaces.md`); the plugin just packages and versions them together.
+
+## Marketplace registration
+
+A **marketplace** is a directory/repo with a manifest listing the plugins it offers. One
+marketplace serves many plugins; a user adds the marketplace once, then installs plugins by name.
+
+```jsonc
+// .claude-plugin/marketplace.json
+{
+  "name": "my-marketplace",
+  "owner": { "name": "Owner Name" },
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "source": "./plugins/my-plugin",   // path (or repo) the plugin is built from
+      "description": "What the bundle provides.",
+      "version": "0.1.0",
+      "author": { "name": "Author Name" }
+    }
+  ]
+}
+```
+
+Keep the marketplace entry's `name`/`version`/`description` consistent with the plugin's own
+manifest. If a build step generates the marketplace from a source-of-truth manifest, regenerate it
+rather than hand-editing — a generated distribution surface should be deterministic and
+drift-checked, not maintained by hand.
+
+## Install / enable mechanics
+
+- **Add a marketplace:** `/plugin marketplace add <owner/repo | url | path>` — registers the
+  source so its plugins are discoverable.
+- **Install a plugin:** `/plugin install <plugin-name>@<marketplace-name>` — pulls that plugin's
+  surfaces into the session.
+- **Enable in settings (non-interactive):** list the plugin in `settings.json` under
+  `enabledPlugins` as `"<plugin-name>@<marketplace-name>"` so a project turns it on for everyone
+  who trusts the settings.
+- **Update:** bump the plugin `version` at the source; users re-pull to get the new surfaces.
+
+## Standalone vs. bundled
+
+The same skill body can ship two ways: inside a multi-surface **bundle**, or as a **one-skill
+plugin** installed on its own. A skill is eligible to ship standalone only when it is
+self-contained — no bundled companion agent, no MCP/hook requirement it cannot carry alone, and no
+reference to a sibling skill by path. If a build system generates a one-skill wrapper plugin per
+catalogued skill, keep the skill body the single source and let the wrapper be generated — never
+fork the body per distribution form.
+
+## Naming and namespacing
+
+- A plugin's install id must be **unique within its marketplace**; a one-skill wrapper's plugin id
+  is typically the skill id — keep it from clashing with any bundle id so
+  `/plugin install <id>@<marketplace>` is unambiguous.
+- Surface `name`s are lowercase-kebab and match their file/folder.

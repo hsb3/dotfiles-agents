@@ -4,6 +4,14 @@
 
 Every plugin distributed by the `dotfiles-agents` marketplace, generated from `plugins.yaml` + `primitives-core.yaml` (bundles/kits) and `skill-catalog.yaml` (standalone skills).
 
+## claude-code-expertise
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Expert map of Claude Code's extension surfaces for authoring and debugging extenders - skills, subagents, hooks, commands, plugins, marketplaces, MCP servers, and settings/permissions. The map (which surface, which contract, what's idiomatic) complementing the official skill/plugin builders: a surface-selection decision table, each surface's frontmatter/config contract with a minimal example, subagent authoring end to end (scaffold, tool selection, model/tier choice, when-to-use description), cross-surface authoring quality plus a validation checklist, and plugin/marketplace distribution mechanics. Use to pick the right surface for a need, look up a contract, author or debug any extender, or answer how a Claude Code surface works.
+- **Ships:** 1 skill — claude-code-expertise
+- **Install:** `claude plugin install claude-code-expertise@dotfiles-agents`
+
 ## code-desk
 
 - **Kind:** bundle
