@@ -7,9 +7,9 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 ## code-desk
 
 - **Kind:** bundle
-- **Version:** 0.1.0
+- **Version:** 0.2.0
 - **Description:** Bring a software project through the next-release execution loop and a documented repo standard together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.
-- **Ships:** 7 skills — memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
+- **Ships:** 8 skills — memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, project-memory, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
 - **Install:** `claude plugin install code-desk@dotfiles-agents`
 
 ## dataviz
@@ -99,6 +99,14 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Description:** Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.
 - **Ships:** 1 skill — private-fork
 - **Install:** `claude plugin install private-fork@dotfiles-agents`
+
+## project-memory
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Opt a git repo into tracked, in-repo auto-memory and recover a project's memory after its folder moves. project_memory.py wires the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites); migrate_memory.py relocates memory (and optional transcripts) after a move, dry-run by default. Pure Python 3 stdlib.
+- **Ships:** 1 skill — project-memory
+- **Install:** `claude plugin install project-memory@dotfiles-agents`
 
 ## update-config
 

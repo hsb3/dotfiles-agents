@@ -137,6 +137,7 @@ class Invariants(unittest.TestCase):
                 "owner-signoff",
                 "pptx-themes",
                 "private-fork",
+                "project-memory",
                 "update-config",
             ],
         )

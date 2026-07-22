@@ -17,6 +17,7 @@ Ships 24 skills (verbatim; opencode also reads `.claude/skills/` natively — th
 | `context-watermark` | hook | opencode's only event surface is TS-on-Bun plugins; script+config hooks need per-hook wrapper codegen — deferred |
 | `foreman` | skill | delegation doctrine bound to Claude Code dispatch mechanics (Agent tool, per-dispatch model/effort knobs) — needs an opencode adaptation pass |
 | `handoff-freshness-guard` | hook | opencode's only event surface is TS-on-Bun plugins; script+config hooks need per-hook wrapper codegen — deferred |
+| `project-memory` | skill | roster targets do not include opencode |
 | `session-handoff-surfacer` | hook | opencode's only event surface is TS-on-Bun plugins; script+config hooks need per-hook wrapper codegen — deferred |
 | `subagent-telemetry` | hook | opencode's only event surface is TS-on-Bun plugins; script+config hooks need per-hook wrapper codegen — deferred |
 | `update-config` | skill | body configures Claude Code settings.json / hook wiring — harness-specific, not portable content |

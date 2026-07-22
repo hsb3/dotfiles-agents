@@ -16,7 +16,7 @@
       "description": "Bring a software project through the next-release execution loop and a documented repo standard together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "author": {
@@ -115,6 +115,15 @@
       "description": "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.",
       "name": "private-fork",
       "source": "./plugins/private-fork",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Opt a git repo into tracked, in-repo auto-memory and recover a project's memory after its folder moves. project_memory.py wires the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites); migrate_memory.py relocates memory (and optional transcripts) after a move, dry-run by default. Pure Python 3 stdlib.",
+      "name": "project-memory",
+      "source": "./plugins/project-memory",
       "version": "0.0.1"
     },
     {

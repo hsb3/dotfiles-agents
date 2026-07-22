@@ -65,6 +65,7 @@ class Clean(unittest.TestCase):
                 "deep-research",
                 "dataviz",
                 "update-config",
+                "project-memory",
             ],
         )
 
