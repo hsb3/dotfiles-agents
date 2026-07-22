@@ -112,7 +112,7 @@ nodes:
     class: virtual
     status: current
     paths: []
-    note: "The published main branch — the surface consumers resolve. Advanced only by the publish workflow; ADR 0008 plans a filtered parented assembly instead of a whole-tree force push."
+    note: "The published main branch — the surface consumers resolve. Advanced only by the publish workflow: a filtered parented assembly of the distributable surface, append-only per ADR 0008; the workbench never publishes."
   - id: consumers
     layer: consumer
     class: virtual

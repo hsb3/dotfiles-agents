@@ -1,12 +1,17 @@
 ---
 title: "Vendor dist lanes, filtered append-only publish, and the flow manifest"
 type: decision
-status: Proposed
+status: Accepted
 created: 2026-07-22
 summary: distribution grows a second vendor (opencode) — generated dist trees move under dist/<target>/, main becomes a filtered parented assembly of the dist lanes instead of a whole-tree force push, and flow.yaml + check_flow.py become the standing structural guard.
 ---
 
 # 0008 · Vendor dist lanes, filtered append-only publish, and the flow manifest
+
+_Owner-ruled 2026-07-22 ("proceed as proposed"). Old-desk ADR 0014 carries a matching
+amendment (same date): its §3 already specified `main` as "rebuilt clean — marketplace file
++ plugin folders"; the whole-tree force push was the interim implementation's deviation, so
+this ADR **restores** 0014 §3's intent and extends it with parentage and vendor lanes._
 
 ## Context
 
