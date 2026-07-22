@@ -92,6 +92,35 @@ Rows written before the field read as `""` (backward compatible). The report sho
 `campaign` column only when some row carries a non-empty label, and deltas are
 computed **within** a campaign, so a labeled re-run never merges with the old rows.
 
+## Weekly campaign
+
+`make harness-campaign` runs the full grid over every *cased* candidate at once —
+`harness/cases/*/` minus `_template` and `smoke-echo` (currently `mermaid`,
+`readme-value-and-proof`, `scout`) × `{claude, opencode}` × `{with, baseline}` × 3
+trials, model pinned to `claude-sonnet-4-5`. Each candidate's `--candidate-dir`
+resolves like `harness-eval` (skill dir, else a flat `agents/<name>.md` auto-staged).
+The run is labelled `weekly-YYYYMMDD`; because that label is the first segment of the
+resume key, a same-day re-invocation **resumes** (only missing/failed cells re-run).
+Override with `CAMPAIGN=<label>`. Needs live CLIs + the keychain key; it is **not** in
+`make ci`.
+
+Schedule it as a weekly user LaunchAgent (Monday 09:00 local):
+
+| Target | Does |
+|---|---|
+| `make harness-campaign-install` | Render + bootstrap the launchd agent. |
+| `make harness-campaign-uninstall` | Bootout + remove it. |
+| `make harness-campaign-status` | launchctl state / last exit / next fire. |
+
+After `install`, **kickstart it once while logged in** to approve the Keychain prompt
+that the first `secret get` triggers: `launchctl kickstart -k gui/$UID/com.hsb3.dotfiles-agents.harness-campaign`.
+Logs land in `harness/campaign-logs/<label>.log` (agent-harness output, gitignored) and
+`~/Library/Logs/harness-campaign.{out,err}.log` (launchd stdio).
+
+**The campaign runner never ingests into PocketBase.** It only appends to the ledger +
+logs; `evals/pb_data/data.db` is tracked, so ingestion is a deliberate in-session step
+(`evals/load_harness_runs.py` — see `evals/PROCEDURES.md` → "ingesting a harness campaign").
+
 ## Case authoring
 
 A case is data, never code:

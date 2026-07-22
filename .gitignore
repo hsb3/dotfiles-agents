@@ -43,3 +43,5 @@ logs/
 harness/runs/
 harness/workspaces/
 harness/.venv/
+# weekly campaign runner logs (defensive; the global *.log already covers the files)
+harness/campaign-logs/
