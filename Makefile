@@ -18,11 +18,13 @@ hook-layout: ## Entry-gate floor: hooks use the ratified hooks/<name>/hook.py la
 
 floor: identity test provenance hook-layout ## The Tier-1 entry-gate machine floor (required on PRs into dev)
 
-build: ## Regenerate the Claude Code marketplace lane (dist/claude-code/) from source
+build: ## Regenerate the dist lanes (dist/claude-code/ + dist/opencode/) from source
 	@python3 scripts/gen_marketplace.py
+	@python3 scripts/gen_opencode.py
 
-build-check: ## Verify the committed marketplace matches source (regen drift guard)
+build-check: ## Verify the committed dist lanes match source (regen drift guards)
 	@python3 scripts/gen_marketplace.py --check
+	@python3 scripts/gen_opencode.py --check
 
 catalog: ## Standalone skill-catalog eligibility/drift + one-skill wrapper invariants
 	@python3 scripts/check_skill_catalog.py

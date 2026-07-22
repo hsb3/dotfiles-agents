@@ -1,0 +1,33 @@
+# OS / editor
+.DS_Store
+
+# secrets
+.env*
+!.env*.example
+secrets
+
+# skills.sh cli
+skills-lock.json
+.agents
+
+# _meta dir — tracked by default; targeted ignores only (ADR-0006, dotfiles-agents).
+# operations/ holds secrets and live-ops material — its content is never tracked.
+_meta/operations/*
+!_meta/operations/.gitkeep
+# desk-toolkit bytecode (this template has no global Python section)
+_meta/plans/_utils/__pycache__/
+
+# .claude — track memory/, rules/, skills/, settings.json; ignore machine-local
+.claude/settings.local.json
+.claude/worktrees/
+.claude/*.lock
+.claude/**/.DS_Store
+
+# node
+node_modules
+dist
+build
+
+# logging
+logs
+*.log
