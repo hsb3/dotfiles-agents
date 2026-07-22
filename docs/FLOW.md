@@ -103,7 +103,7 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `skill-catalog.yaml` | standalone-catalog | roster | H | skills cleared to ship one-at-a-time |
 | `externals.yaml` | externals | roster | H | third-party by reference; clone-at-build deferred (#36/#122) |
 | `scripts/` | toolchain | generator | H | generators + every checker + campaign runner |
-| `Makefile`, `tests/`, `.github/`, `.gitignore` | gates | gate | H | task interface · unit tests · CI · tracking policy |
+| `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
 | `plugins/`, `.claude-plugin/`, `PLUGINS.md` | dist-claude-code | dist | **G** | by `gen_marketplace.py`; guarded by `build-check`; root-squatting until ADR 0008 W3 |
 | `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/` | repo-docs | docs | H | entry docs, SOP, ADRs, this page |
 | `_meta/` | desk | workbench | H | tracked desk (ADR 0006); operations/ content untracked |

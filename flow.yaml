@@ -61,8 +61,8 @@ nodes:
     layer: gate
     class: authored
     status: current
-    paths: [Makefile, tests, .github, .gitignore]
-    note: "Task interface, stdlib unit tests, CI workflows, tracking policy. make ci is the canonical PR gate."
+    paths: [Makefile, tests, .github, .gitignore, flow.yaml]
+    note: "Task interface, stdlib unit tests, CI workflows, tracking policy, and this flow manifest itself. make ci is the canonical PR gate."
   - id: dist-claude-code
     layer: dist
     class: generated
