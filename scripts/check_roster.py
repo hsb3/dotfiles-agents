@@ -27,6 +27,9 @@ PC = os.path.join(REPO, "primitives-core")
 
 TYPES = {"skill", "agent", "mcp", "hook"}
 SHELVES = {"core", "toggle"}
+# The vendor-lane enum (ADR 0008): a `targets:` value selects which dist lane(s) a primitive
+# ships to. gen_marketplace reads claude-code membership; gen_opencode reads opencode.
+TARGETS = {"claude-code", "opencode"}
 ORIGINS = {"authored", "sourced"}
 DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged"}
 CAPABILITIES = {"hooks", "local-mcp", "hosted-mcp"}
@@ -140,6 +143,12 @@ def check_entry_schema(e, problems):
             f"[{eid}] bad disposition: {e.get('disposition')!r} "
             f"(must be one of {sorted(DISPOSITIONS)})"
         )
+    if "targets" in e:
+        bad = [t2 for t2 in _list(e["targets"]) if t2 not in TARGETS]
+        if bad:
+            problems.append(
+                f"[{eid}] unknown targets entry: {bad} (must be one of {sorted(TARGETS)})"
+            )
     if "requires" in e:
         unknown = {
             r

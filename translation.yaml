@@ -1,0 +1,48 @@
+# translation.yaml — THE CAPABILITY MATRIX (ADR 0008 W4)
+#
+# Per primitive-type × target treatment, read by scripts/gen_opencode.py (design precedent:
+# the pre-rebuild translate.py, dev-legacy commit 4e8a05b). Treatments:
+#   native      — copy verbatim (validated: opencode skill-name regex, description <= 1024)
+#   transform   — mechanical frontmatter remap (agents: mode/model/permission per the
+#                 cc-to-opencode mapping in primitives-core/skills/opencode-expertise)
+#   render      — re-emit as opencode config (mcp entries -> config fragment; none rostered yet)
+#   unsupported — does not travel; listed in the generated exclusions manifest
+#
+# `exclusions` are ROSTER-LEVEL opt-outs with reasons — primitives whose targets stay
+# [claude-code] even though their type is mechanically translatable. The generated
+# dist/opencode/README.md surfaces every exclusion (matrix + roster): no silent caps.
+# `model_aliases` pin the bare model aliases our agent frontmatter uses to the
+# provider-prefixed refs opencode requires.
+
+version: 1
+
+matrix:
+  - type: skill
+    target: opencode
+    treatment: native
+  - type: agent
+    target: opencode
+    treatment: transform
+  - type: hook
+    target: opencode
+    treatment: unsupported
+    reason: "opencode's only event surface is TS-on-Bun plugins; script+config hooks need per-hook wrapper codegen — deferred"
+  - type: mcp
+    target: opencode
+    treatment: render
+
+model_aliases:
+  - alias: haiku
+    ref: anthropic/claude-haiku-4-5
+  - alias: sonnet
+    ref: anthropic/claude-sonnet-5
+  - alias: opus
+    ref: anthropic/claude-opus-4-8
+
+exclusions:
+  - id: update-config
+    reason: "body configures Claude Code settings.json / hook wiring — harness-specific, not portable content"
+  - id: foreman
+    reason: "delegation doctrine bound to Claude Code dispatch mechanics (Agent tool, per-dispatch model/effort knobs) — needs an opencode adaptation pass"
+  - id: waves
+    reason: "composes the foreman skill and Claude Code SendMessage mechanics — follows the foreman adaptation"

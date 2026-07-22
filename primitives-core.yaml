@@ -34,7 +34,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [foreman-kit]
     summary: "Maintain the project's session-handoff file so a brand-new session can pick up work cold. Use at session boundaries when the user says \"wrap up\", \"update the handoff\", or runs /handoff."
   - id: board-triage
@@ -44,7 +44,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [exec-desk]
     summary: "This skill should be used when the user asks to \"run board triage\", \"triage the backlog\", \"prioritize the issues\", \"rank the unranked issues\", \"fill in Impac…"
   - id: comms
@@ -55,7 +55,7 @@ primitives:
     disposition: qualified
     requires: [local-mcp]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [exec-desk]
     summary: "Produce Henry's recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout,…"
   - id: github-project-board
@@ -65,7 +65,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: []
     summary: "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma…"
   - id: memory-taxonomy
@@ -76,7 +76,7 @@ primitives:
     disposition: qualified
     requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism; carries the approved v1 defaults and the MEM-xx structure checklist the compliance audit consumes."
   - id: mise-en-place-scaffold
@@ -87,7 +87,7 @@ primitives:
     disposition: qualified
     requires: [cli:cc-project-memory]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "Fill-only mise-en-place scaffold — plans (--plan, default) and creates (--apply) the repo meta-structure the compliance audit flags, from the standards' assets, honoring _meta/mise-en-place.yml variance (--init-manifest writes the template); additive-only, never overwrites, conflicts reported with diffs."
   - id: planning-desk
@@ -97,7 +97,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [exec-desk]
     summary: "Stand up and run a source-grounded planning desk under _meta/plans/ — the workflow for authoring conformant GitHub issue bodies, writing deep build plans, an…"
   - id: private-fork
@@ -107,7 +107,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle."
   - id: readme-value-and-proof
@@ -118,7 +118,7 @@ primitives:
     disposition: qualified
     requires: [cli:capture-console-errors]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "Turn a README into a user-centric pitch backed by real visual proof."
   - id: repo-compliance-audit
@@ -128,7 +128,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "Read-only repo compliance audit — one command prints a pass/gap table (ID | Area | Verdict | Detail) against the repo-meta-structure and memory-taxonomy checklists plus HOOK-01, honoring _meta/mise-en-place.yml variance; reports, never writes or polices."
   - id: repo-meta-structure
@@ -138,7 +138,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."
   - id: context-watermark
@@ -188,7 +188,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [foreman-kit]
     summary: "Read-only recon agent — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to haiku."
   - id: builder
@@ -198,7 +198,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [foreman-kit]
     summary: "Scoped implementation agent working inside an owned file list against explicit acceptance criteria. Defaults to sonnet; dispatch with model:opus for coupled or costly-to-unwind slices."
   - id: reviewer
@@ -208,7 +208,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [foreman-kit]
     summary: "Adversarial, report-only verification agent — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. Use whenever a claim or diff will drive further changes."
   - id: lead
@@ -218,7 +218,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [foreman-kit]
     summary: "Architecture-D chain proxy agent — drives a coupled dependent chain, spawns its own bounded-link workers, and verifies before reporting a proof package. Not for independent parallelizable work."
   - id: session-handoff-surfacer
@@ -248,7 +248,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [code-desk]
     summary: "Expert knowledge of opencode — every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code → opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works."
   - id: pptx-themes
@@ -258,7 +258,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [exec-desk]
     summary: "Create, edit, and review PowerPoint presentations with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml)."
   - id: diagrams
@@ -269,7 +269,7 @@ primitives:
     disposition: grandfathered-pending-use
     requires: [cli:graphviz]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [diagrams]
     summary: "Hub of the diagrams plugin — structural-diagram tool selection, cloud-architecture diagrams with provider icons via Python's diagrams library (Azure first), raw Graphviz dot for dependency graphs and trees, and the SVG+PNG output pipelines for GitHub docs, decks, and briefings."
   - id: mermaid
@@ -279,7 +279,7 @@ primitives:
     origin: authored
     disposition: grandfathered-pending-use
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [diagrams]
     summary: "Mermaid for GitHub-rendered markdown — flowcharts, sequence diagrams for auth flows, ERDs, and state diagrams, with the house rule that node labels carry no parentheses or special characters, light/dark theming, and mermaid-cli rendering to SVG/PNG."
   - id: drawio
@@ -290,7 +290,7 @@ primitives:
     disposition: grandfathered-pending-use
     requires: [cli:drawio]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [diagrams]
     summary: "Read, convert, and headlessly export draw.io / diagrams.net files — the compressed and uncompressed mxGraph XML formats, a stdlib Python decompression recipe, legacy-to-Mermaid conversion, and desktop-app CLI export to PNG/SVG."
   - id: excalidraw
@@ -300,7 +300,7 @@ primitives:
     origin: authored
     disposition: grandfathered-pending-use
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [diagrams]
     summary: "Sketch-style architecture diagrams as .excalidraw files — uses the Excalidraw MCP tools when a session exposes them, otherwise authors the scene JSON directly (schema, arrow binding, labels), with SVG/PNG export guidance."
   - id: obsidian-api-basics
@@ -310,7 +310,7 @@ primitives:
     origin: authored
     disposition: grandfathered-pending-use
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [obsidian-toolkit]
     summary: "Foundational guidance for building Obsidian plugins — plugin lifecycle (onload/onunload), settings and saveData/loadData patterns, vault API operations, command registration, and ribbon icons."
   - id: obsidian-chat-ui
@@ -320,7 +320,7 @@ primitives:
     origin: authored
     disposition: grandfathered-pending-use
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [obsidian-toolkit]
     summary: "Patterns for chat and copilot-style interfaces in Obsidian plugins — ItemView sidebar panels, streaming message rendering, and workspace integration."
   - id: obsidian-cli
@@ -331,7 +331,7 @@ primitives:
     disposition: grandfathered-pending-use
     requires: [cli:obsidian]
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [obsidian-toolkit]
     summary: "The official Obsidian CLI (v1.12+) — interact with vaults, manage files, execute commands, and automate workflows from the terminal."
   - id: obsidian-mcp-server
@@ -341,7 +341,7 @@ primitives:
     origin: authored
     disposition: grandfathered-pending-use
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: [obsidian-toolkit]
     summary: "MCP servers inside Obsidian plugins — Streamable HTTP transport setup and tool patterns that expose vault operations to AI agents."
   - id: owner-signoff
@@ -351,7 +351,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: []
     summary: "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically."
   - id: deep-research
@@ -361,7 +361,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: []
     summary: "Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings."
   - id: dataviz
@@ -371,7 +371,7 @@ primitives:
     origin: authored
     disposition: qualified
     vendor: null
-    targets: [claude-code]
+    targets: [claude-code, opencode]
     plugins: []
     summary: "Design data visualizations - charts, plots, dashboards - that are correct, legible, and honest, consulted before any chart code in any library or medium: data-shape to mark-type heuristic, anti-patterns to refuse (pie overuse, dual axes, truncated bars, rainbow scales, 3D), a brand-neutral colorblind-safe palette with light/dark themes and brand-swap, composition, interaction plus static degradation, and a final validation checklist. Data charts only - structural diagrams belong to diagrams/mermaid, deck theming to pptx-themes."
   - id: update-config

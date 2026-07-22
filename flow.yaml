@@ -70,7 +70,7 @@ nodes:
     paths: [dist]
     generator: scripts/gen_marketplace.py
     guard: build-check
-    note: "Vendor dist lanes (ADR 0008): dist/claude-code — the assembled marketplace surface, lifted to main's root at publish — today; dist/opencode laydown (gen_opencode.py: skills, remapped agents, config fragment, installer, exclusions) planned."
+    note: "Vendor dist lanes (ADR 0008): dist/claude-code — the assembled marketplace surface, lifted to main's root at publish — and dist/opencode, the laydown lane (gen_opencode.py: skills verbatim, remapped agents, config fragment, installer, generated exclusions manifest), published as opencode/ on main."
   - id: repo-docs
     layer: docs
     class: authored
@@ -122,9 +122,9 @@ nodes:
   - id: translation-config
     layer: roster
     class: authored
-    status: planned
+    status: current
     paths: [translation.yaml]
-    note: "Revived capability matrix per primitive type x target: native, transform, render, unsupported — precedent in dropped translate.py, commit 4e8a05b."
+    note: "Capability matrix per primitive type x target (native, transform, render, unsupported) plus model-alias pins and roster-level exclusions with reasons — read by gen_opencode.py; precedent in dropped translate.py, commit 4e8a05b."
 
 edges:
   - from: roster
@@ -198,4 +198,4 @@ edges:
     to: dist-lanes
     kind: generates
     mode: automated
-    status: planned
+    via: scripts/gen_opencode.py
