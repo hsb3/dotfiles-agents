@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-07-21. Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-07-22. Refresh at session boundaries (/handoff). Secret-free._
 
 ## 0 · Orientation
 
@@ -31,6 +31,15 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
 - 2026-07-21 (later session): harness follow-ups delivered — PR #177 (#174 telemetry lane) +
   PR #178 (campaign runner + `weekly-20260721` proof run + PB ingest); briefing
   `_meta/briefings/2026-07-21-weekly-harness-campaign/report.html`.
+- 2026-07-22: **ADR 0008 executed, W1–W4** (owner ruling "proceed as proposed"; old-desk 0014
+  amended in lockstep — 0008 *restores* its §3 clean-main intent). PRs #180 (foreman-kit 0.6.0:
+  new `waves` skill + `.claude/skills/publish-to-main` runbook), #181 (flow.yaml + `make flow`
+  guard + generated `docs/FLOW.md` DAG), #182 (filtered **parented** publish; one-time
+  `reset=orphan` cutover used), #183 (root artifacts → `dist/claude-code/`), #184
+  (`dist/opencode/` laydown lane: `translation.yaml` matrix, targets enum, 24 skills + 4
+  remapped agents + installer + generated exclusions manifest). Three publishes verified:
+  `main` = distributable surface only, append-only ledger (`publish: dev@<sha>` commits),
+  `opencode/` live on main. Suite 157 tests; flow: 17 nodes / 15 edges, 0 planned nodes.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -166,7 +175,16 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
 
 - Source-of-truth rules are in CLAUDE.md (hot-loaded) — not duplicated here.
 - **`main` is publish-only** — never hand-commit/merge there; a CI guard fails PRs into main (that's what
-  invalidated #148). Branch off `dev`, PR into `dev`.
+  invalidated #148). Branch off `dev`, PR into `dev`. Since ADR 0008 (2026-07-22): `main` is a
+  **filtered parented assembly** (never a dev snapshot — verify with tree hashes per the
+  `.claude/skills/publish-to-main` runbook); `publish.yml`'s `reset=orphan` input rewrites main
+  history and must not be used again without an owner ruling.
+- **dev's branch-protection required checks are pinned by CI JOB NAME** — renaming a job in
+  `ci.yml` strands every PR on a check that never reports (cost one blocked merge 2026-07-22).
+  Update the protection setting first if a job must be renamed.
+- **`flow.yaml` is load-bearing**: `make flow` (in `make ci`) fails any PR that adds a top-level
+  path without a declared home, or an automated cycle. New generated artifacts need generator +
+  guard + a flow node; regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
 - Planning/PM for this repo is run from the exec desk (dev-tooling-desk), not in-repo.
 - Comms/decks: the exec-desk `comms` skill uses deck-builder MCP (boardroom theme); `SendUserFile` is absent
   in this env — deliver PDFs via `open`. In-repo deck fallback (proven twice): copy the prior briefing's
