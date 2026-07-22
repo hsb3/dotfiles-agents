@@ -1,0 +1,9 @@
+- [Extender estate cohesion](extender-estate-cohesion.md) — 3-surface estate (dotfiles-agents + desk-standard + dev-tooling-desk); datamodel NOT greenfield (extenders.yaml + committed PocketBase); desk-standard is a rapid-dev co-product not yet distributed
+- [Approve major IA changes](approve-major-ia-changes.md) — Henry signs off on any major information-architecture change (new entities, plane/relation/workflow reframes) before it's finalized or built
+- [Desk-platform research element-model review](desk-platform-research-elementmodel.md) — verified _headcase claims accurate; recurring research gaps = missing claim/citation + experiment/dataset entities
+- [Agent-harness standing permission](agent-harness-standing-permission.md) — commit/push/PR/merge pre-authorized for the harness lane; dev only, never main
+- [harness claude auth (Option Z)](harness-bare-flag-auth.md) — no --bare (it strips Skill tool); apiKeyHelper + fresh CLAUDE_CONFIG_DIR; live runs need `secret get ANTHROPIC_API_KEY`
+- [launchd = bash 3.2](launchd-bash32-scripts.md) — LaunchAgent scripts run under /bin/bash 3.2; verify with /bin/bash + one kickstart, never interactive bash
+- [speak_gemini fallback ignores --save](speak-gemini-fallback-ignores-save.md) — kokoro fallback plays aloud, saves nothing; cloud needs fresh gcloud ADC
+- [Subagent agent-memory litter](subagent-agent-memory-litter.md) — workers may write .claude/agent-memory/ into their cwd; after the memory→.claude/memory rename it's unambiguous litter — sweep the specific stray path, never a whole dir
+- [rg color masking gotcha](rg-color-masking-gotcha.md) — rg default output garbles matched terms in Bash tool; use --color=never for quotable evidence
