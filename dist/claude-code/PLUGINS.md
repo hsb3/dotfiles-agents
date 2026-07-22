@@ -17,7 +17,7 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Kind:** bundle
 - **Version:** 0.2.0
 - **Description:** Bring a software project through the next-release execution loop and a documented repo standard together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.
-- **Ships:** 8 skills — memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, project-memory, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
+- **Ships:** 9 skills — dev-focus, memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, project-memory, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
 - **Install:** `claude plugin install code-desk@dotfiles-agents`
 
 ## dataviz
