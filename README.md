@@ -21,9 +21,7 @@ items ship standalone, never inside a desk bundle. Claude-Code-only; the marketp
 | `primitives-core/` | the single source copy of every primitive (`skills/`, `agents/`, `hooks/`) |
 | `primitives-core.yaml` | the roster — the authoritative manifest of every primitive |
 | `plugins.yaml` | plugin-bundle metadata (name / version / description) |
-| `plugins/` | **generated** — assembled Claude Code plugin bundles (never hand-edited) |
-| `.claude-plugin/marketplace.json` | **generated** — the marketplace root |
-| `PLUGINS.md` | **generated** — inventory of every distributed plugin (kind, version, contents, install command) |
+| `dist/claude-code/` | **generated** — the assembled Claude Code marketplace lane (`plugins/`, `marketplace.json`, `PLUGINS.md`; never hand-edited), lifted to the root of `main` at publish |
 | `hooks/` | the ratified hook-dir layout (`hooks/<name>/hook.py`) |
 | `scripts/` | roster guard + generators, each with a `--check` drift mode |
 | `tests/` | stdlib-only unit tests (zero install) |

@@ -63,14 +63,14 @@ nodes:
     status: current
     paths: [Makefile, tests, .github, .gitignore, flow.yaml]
     note: "Task interface, stdlib unit tests, CI workflows, tracking policy, and this flow manifest itself. make ci is the canonical PR gate."
-  - id: dist-claude-code
+  - id: dist-lanes
     layer: dist
     class: generated
     status: current
-    paths: [plugins, .claude-plugin, PLUGINS.md]
+    paths: [dist]
     generator: scripts/gen_marketplace.py
     guard: build-check
-    note: "Assembled Claude Code marketplace surface, currently at repo root; ADR 0008 plans its move under dist/claude-code with the publish lift keeping main's root shape."
+    note: "Vendor dist lanes (ADR 0008): dist/claude-code — the assembled marketplace surface, lifted to main's root at publish — today; dist/opencode laydown (gen_opencode.py: skills, remapped agents, config fragment, installer, exclusions) planned."
   - id: repo-docs
     layer: docs
     class: authored
@@ -119,14 +119,6 @@ nodes:
     status: current
     paths: []
     note: "Machines installing via claude plugin marketplace add and, planned, the opencode laydown installer."
-  - id: dist-vendor-lanes
-    layer: dist
-    class: generated
-    status: planned
-    paths: [dist]
-    generator: scripts/gen_opencode.py
-    guard: build-check
-    note: "ADR 0008 target home: dist/claude-code plus dist/opencode — the opencode lane is a laydown tree with skills, remapped agents, one config fragment, an installer, and an explicit exclusions manifest; hooks excluded until TS wrapper codegen."
   - id: translation-config
     layer: roster
     class: authored
@@ -136,22 +128,22 @@ nodes:
 
 edges:
   - from: roster
-    to: dist-claude-code
+    to: dist-lanes
     kind: generates
     mode: automated
     via: scripts/gen_marketplace.py
   - from: primitive-bodies
-    to: dist-claude-code
+    to: dist-lanes
     kind: generates
     mode: automated
     via: scripts/gen_marketplace.py
   - from: bundle-metadata
-    to: dist-claude-code
+    to: dist-lanes
     kind: generates
     mode: automated
     via: scripts/gen_marketplace.py
   - from: standalone-catalog
-    to: dist-claude-code
+    to: dist-lanes
     kind: generates
     mode: automated
     via: scripts/gen_standalone.py
@@ -161,7 +153,7 @@ edges:
     mode: automated
     via: scripts/check_identity.py
   - from: gates
-    to: dist-claude-code
+    to: dist-lanes
     kind: gates
     mode: automated
     via: scripts/gen_marketplace.py
@@ -180,7 +172,7 @@ edges:
     kind: reports
     mode: automated
     via: evals/report.py
-  - from: dist-claude-code
+  - from: dist-lanes
     to: publish-main
     kind: publishes
     mode: manual
@@ -198,27 +190,12 @@ edges:
     kind: curates
     mode: manual
   - from: externals
-    to: dist-claude-code
-    kind: generates
-    mode: automated
-    status: planned
-  - from: roster
-    to: dist-vendor-lanes
-    kind: generates
-    mode: automated
-    status: planned
-  - from: primitive-bodies
-    to: dist-vendor-lanes
+    to: dist-lanes
     kind: generates
     mode: automated
     status: planned
   - from: translation-config
-    to: dist-vendor-lanes
+    to: dist-lanes
     kind: generates
     mode: automated
-    status: planned
-  - from: dist-vendor-lanes
-    to: publish-main
-    kind: publishes
-    mode: manual
     status: planned

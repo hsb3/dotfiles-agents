@@ -25,8 +25,8 @@ on `main` any other way — a change is "available" only after this runbook comp
 
 1. Branch off `dev` (`<type>/<short-name>`); source edits go in `primitives-core/` + the
    rosters (`primitives-core.yaml`, `plugins.yaml`) — **never hand-edit the generated
-   artifacts** (`plugins/`, `.claude-plugin/marketplace.json`, `PLUGINS.md`); they are
-   generated. Bump the affected plugin's `version:` in `plugins.yaml`.
+   `dist/` lanes** (`dist/claude-code/`: `plugins/`, `marketplace.json`, `PLUGINS.md`).
+   Bump the affected plugin's `version:` in `plugins.yaml`.
 2. Regenerate and gate locally — the same checks CI runs, so a red here is a red there:
 
    ```sh
@@ -67,7 +67,7 @@ Not done until proven:
 ```sh
 git fetch origin
 git ls-tree --name-only origin/main          # distributable surface ONLY (no workbench dirs)
-git rev-parse origin/dev:plugins origin/main:plugins   # SAME tree hash twice
+git rev-parse origin/dev:dist/claude-code/plugins origin/main:plugins   # SAME tree hash twice
 git log --oneline -1 origin/main             # "publish: dev@<sha>" naming the tip you merged
 ```
 

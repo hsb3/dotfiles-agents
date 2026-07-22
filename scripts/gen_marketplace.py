@@ -4,8 +4,10 @@
 This is the repo's reference generator: it turns the hand-authored inputs — the roster
 (primitives-core.yaml, which records membership via each entry's `plugins:` field), the
 bundle metadata (plugins.yaml), and each bundle's README source
-(primitives-core/bundles/<id>/README.md) — into two generated, committed, drift-guarded
-artifacts:
+(primitives-core/bundles/<id>/README.md) — into generated, committed, drift-guarded
+artifacts under the claude-code dist lane, dist/claude-code/ (ADR 0008; the publish
+workflow lifts this lane to the ROOT of `main`, which is why every internal path below is
+lane-relative):
 
   plugins/<bundle>/.claude-plugin/plugin.json   the CC plugin manifest (name == bundle id)
   plugins/<bundle>/skills/<id>/                 each member skill body, copied verbatim from
@@ -21,7 +23,7 @@ artifacts:
                                                 each source pointing at ./plugins/<bundle>
   PLUGINS.md                                    a generated inventory of every distributed
                                                 plugin (name, kind, version, description,
-                                                contents, install command) at the repo root
+                                                contents, install command) at the lane root
 
 Every distributed plugin (bundle, kit, or standalone skill) must ship its own
 plugins/<id>/README.md — asserted by readme_coverage_problems() as part of --check (issue
@@ -65,10 +67,13 @@ from check_roster import parse_roster  # noqa: E402
 
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
-PLUGINS_DIR = os.path.join(REPO, "plugins")
+# The claude-code dist lane (ADR 0008): all generated marketplace artifacts live under
+# dist/claude-code/ on dev; publish lifts the lane's contents to the root of `main`.
+DIST = os.path.join(REPO, "dist", "claude-code")
+PLUGINS_DIR = os.path.join(DIST, "plugins")
 BUNDLES_DIR = os.path.join(REPO, "primitives-core", "bundles")
-MARKETPLACE = os.path.join(REPO, ".claude-plugin", "marketplace.json")
-PLUGINS_MD = os.path.join(REPO, "PLUGINS.md")
+MARKETPLACE = os.path.join(DIST, ".claude-plugin", "marketplace.json")
+PLUGINS_MD = os.path.join(DIST, "PLUGINS.md")
 
 IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
 
@@ -458,10 +463,11 @@ def check():
 
 
 def regenerate():
-    """Regenerate the committed plugins/ tree and marketplace.json in place."""
+    """Regenerate the committed dist/claude-code/ lane in place."""
     if os.path.isdir(PLUGINS_DIR):
         shutil.rmtree(PLUGINS_DIR)
-    m = build_marketplace(REPO)
+    os.makedirs(DIST, exist_ok=True)
+    m = build_marketplace(DIST)
     return m
 
 
