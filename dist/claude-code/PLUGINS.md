@@ -47,7 +47,7 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 ## exec-desk
 
 - **Kind:** bundle
-- **Version:** 0.1.0
+- **Version:** 0.2.0
 - **Description:** The executive-desk overhead — stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks.
 - **Ships:** 4 skills — board-triage, comms, planning-desk, pptx-themes
 - **Install:** `claude plugin install exec-desk@dotfiles-agents`
