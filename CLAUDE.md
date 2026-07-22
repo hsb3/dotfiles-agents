@@ -11,9 +11,9 @@ It is `check` (roster↔disk drift) + `build-check` (marketplace regen drift) + 
 
 ## Source-of-truth rules
 
-- **`primitives-core/` is the only place a primitive is edited.** `plugins/` and
-  `.claude-plugin/marketplace.json` are **generated** by `scripts/gen_marketplace.py`; never
-  hand-edit them. Change the source, then `make build`.
+- **`primitives-core/` is the only place a primitive is edited.** The `dist/claude-code/`
+  lane (`plugins/`, `marketplace.json`, `PLUGINS.md`) is **generated** by
+  `scripts/gen_marketplace.py`; never hand-edit it. Change the source, then `make build`.
 - **Generated artifacts have a regen script + a `--check` drift guard.** Every generator is
   deterministic (stable ordering, no clocks/random) so `--check` never false-fails. Add new
   generated artifacts the same way; `make ci` must run their `--check`.

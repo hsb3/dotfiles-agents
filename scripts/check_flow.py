@@ -84,9 +84,11 @@ def parse_flow(path):
 
 
 def tracked_top_level():
-    out = subprocess.run(["git", "ls-tree", "--name-only", "HEAD"],
+    # Index, not HEAD: staged adds/moves count immediately, so the guard can run before
+    # the commit that introduces them. In CI a fresh checkout's index == HEAD.
+    out = subprocess.run(["git", "ls-files"],
                          cwd=REPO, capture_output=True, text=True, check=True)
-    return set(p for p in out.stdout.splitlines() if p)
+    return set(p.split("/", 1)[0] for p in out.stdout.splitlines() if p)
 
 
 def validate(nodes, edges, tracked):

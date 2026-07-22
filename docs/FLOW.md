@@ -46,8 +46,7 @@ flowchart TD
     N_gates[gates]
   end
   subgraph L_dist[dist]
-    N_dist_claude_code[dist claude code]
-    N_dist_vendor_lanes[dist vendor lanes planned]
+    N_dist_lanes[dist lanes]
   end
   subgraph L_publish[publish]
     N_publish_main[publish main]
@@ -67,26 +66,23 @@ flowchart TD
   subgraph L_docs[docs]
     N_repo_docs[repo docs]
   end
-  N_roster -->|generates| N_dist_claude_code
-  N_primitive_bodies -->|generates| N_dist_claude_code
-  N_bundle_metadata -->|generates| N_dist_claude_code
-  N_standalone_catalog -->|generates| N_dist_claude_code
+  N_roster -->|generates| N_dist_lanes
+  N_primitive_bodies -->|generates| N_dist_lanes
+  N_bundle_metadata -->|generates| N_dist_lanes
+  N_standalone_catalog -->|generates| N_dist_lanes
   N_gates -->|gates| N_primitive_bodies
-  N_gates -->|gates| N_dist_claude_code
+  N_gates -->|gates| N_dist_lanes
   N_primitive_bodies -->|consumes| N_harness
   N_harness -->|ingests| N_evals
   N_evals -->|reports| N_desk
-  N_dist_claude_code -.->|publishes| N_publish_main
+  N_dist_lanes -.->|publishes| N_publish_main
   N_publish_main -.->|installs| N_consumers
   N_evals -.->|curates| N_roster
   N_evals -.->|curates| N_primitive_bodies
-  N_externals -.->|generates planned| N_dist_claude_code
-  N_roster -.->|generates planned| N_dist_vendor_lanes
-  N_primitive_bodies -.->|generates planned| N_dist_vendor_lanes
-  N_translation_config -.->|generates planned| N_dist_vendor_lanes
-  N_dist_vendor_lanes -.->|publishes planned| N_publish_main
+  N_externals -.->|generates planned| N_dist_lanes
+  N_translation_config -.->|generates planned| N_dist_lanes
   classDef planned stroke-dasharray: 6 4
-  class N_dist_vendor_lanes,N_translation_config planned
+  class N_translation_config planned
 ```
 <!-- FLOW-DAG:END -->
 
@@ -104,7 +100,7 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `externals.yaml` | externals | roster | H | third-party by reference; clone-at-build deferred (#36/#122) |
 | `scripts/` | toolchain | generator | H | generators + every checker + campaign runner |
 | `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
-| `plugins/`, `.claude-plugin/`, `PLUGINS.md` | dist-claude-code | dist | **G** | by `gen_marketplace.py`; guarded by `build-check`; root-squatting until ADR 0008 W3 |
+| `dist/` | dist-lanes | dist | **G** | `dist/claude-code/` marketplace surface by `gen_marketplace.py` (`build-check`), lifted to main's root at publish; `dist/opencode/` laydown planned |
 | `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/` | repo-docs | docs | H | entry docs, SOP, ADRs, this page |
 | `_meta/` | desk | workbench | H | tracked desk (ADR 0006); operations/ content untracked |
 | `harness/` | harness | workbench | H | uv eval project; own CI lane; `results.jsonl` tracked |
@@ -112,7 +108,6 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `.agents/`, `.claude/`, `skills-lock.json` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
 | `logs/` | runtime-logs | runtime | **R** | hook telemetry; must stay untracked |
 | _(branch)_ `main` | publish-main | publish | — | advanced only by the publish workflow |
-| _(planned)_ `dist/` | dist-vendor-lanes | dist | G | ADR 0008: `dist/claude-code/` + `dist/opencode/` |
 | _(planned)_ `translation.yaml` | translation-config | roster | H | capability matrix per primitive type × target |
 
 ## What the guard proves (`make flow`)

@@ -40,14 +40,17 @@ jobs:
       - name: Gate the source tip
         run: make ci
       - name: Assemble the publish tree
-        # Lift map (ADR 0008 W2 — current root layout; W3 switches the sources to
-        # dist/claude-code/ and adds dist/opencode -> opencode/).
+        # Lift map (ADR 0008): the claude-code lane's contents go to the ROOT of main
+        # (the shape consumers resolve, ADR 0007); dist/opencode publishes as opencode/
+        # once the lane exists (W4). Keep this map in sync with flow.yaml's dist node.
         run: |
           set -euo pipefail
           ASM="$(mktemp -d)"
-          cp -R .claude-plugin "$ASM/.claude-plugin"
-          cp -R plugins "$ASM/plugins"
-          cp PLUGINS.md README.md "$ASM/"
+          cp -R dist/claude-code/. "$ASM/"
+          cp README.md "$ASM/"
+          if [ -d dist/opencode ]; then
+            cp -R dist/opencode "$ASM/opencode"
+          fi
           echo "ASM=$ASM" >> "$GITHUB_ENV"
       - name: Commit to main — parented, append-only
         run: |
@@ -71,6 +74,7 @@ jobs:
           fi
           git commit -m "publish: dev@${DEV_SHA}" \
             -m "$(python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); print('\n'.join(p['name']+' '+p['version'] for p in d['plugins']))")"
+          # (marketplace.json is read from the assembled tree — root-level after the lift)
           if [ "${{ github.event.inputs.reset }}" = "orphan" ]; then
             git push --force origin HEAD:refs/heads/main
           else
