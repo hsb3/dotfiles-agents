@@ -404,3 +404,13 @@ primitives:
     targets: [claude-code]
     plugins: []
     summary: "Expert map of Claude Code's extension surfaces for authoring and debugging extenders - skills, subagents, hooks, commands, plugins, marketplaces, MCP servers, and settings/permissions. The map (which surface, which contract, what's idiomatic) complementing the official skill/plugin builders: a surface-selection decision table, each surface's frontmatter/config contract with a minimal example, subagent authoring end to end (scaffold, tool selection, model/tier choice, when-to-use description), cross-surface authoring quality plus a validation checklist, and plugin/marketplace distribution mechanics. Use to pick the right surface for a need, look up a contract, author or debug any extender, or answer how a Claude Code surface works."
+  - id: dev-focus
+    type: skill
+    source: primitives-core/skills/dev-focus
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [code-desk]
+    summary: "Keep a work session scoped and on-track: a mid-session focus check that flags drift from the original task, and a scope triage (the scope hammer) that sorts a task list into MUST/DEFER/CUT with a default bias toward DEFER/CUT. Use when the session has sprawled past its goal and needs re-anchoring, or when a task list needs pruning to what matters this iteration."
