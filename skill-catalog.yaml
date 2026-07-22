@@ -84,3 +84,9 @@ skills:
     depends_on_skills: []
     prerequisites: []
     provenance: authored
+  - id: claude-code-expertise
+    standalone: true
+    clients: [claude-code]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored

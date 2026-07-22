@@ -66,6 +66,7 @@ class Clean(unittest.TestCase):
                 "dataviz",
                 "update-config",
                 "project-memory",
+                "claude-code-expertise",
             ],
         )
 
