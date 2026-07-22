@@ -12,7 +12,7 @@ CI-published (publish-only, ADR 0014). Task interface + source-of-truth rules: s
 
 Both build epics are **DONE and CLOSED**; `make ci` is green. `dev` now also carries the
 extender-db merge (#176), the harness (#169), the #174 telemetry lane (PR #177), and the
-campaign runner (§2c); `main` is CI-published and lags until publish.
+campaign runner (PR #178, §2c); `main` is CI-published and lags until publish.
 - **#111** clean-room rebuild (D1–D8) — merged + **CLOSED** (install-smoke proof recorded on the issue).
 - **#134** desk-set restructure / 0020 lineup (E1–E7) — merged + **CLOSED**, plus #147 (diagrams / obsidian-toolkit / owner-signoff).
 - Multica mirrors **#121** (→#111) and **#135** (→#134) closed to match. **Open PRs: 0.**
@@ -28,6 +28,9 @@ effort from the rebuild epics; do not fold it into dev without Henry's promotion
 - 2026-07-20: #111 install-smoke proof recorded + epics closed (see §1); branch triage → Open PRs 0;
   planning externalized to the exec desk (see §3).
 - 2026-07-21: epic #154 Waves 0–3 executed on `feat/extender-db` (see §2b).
+- 2026-07-21 (later session): harness follow-ups delivered — PR #177 (#174 telemetry lane) +
+  PR #178 (campaign runner + `weekly-20260721` proof run + PB ingest); briefing
+  `_meta/briefings/2026-07-21-weekly-harness-campaign/report.html`.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -75,17 +78,13 @@ gates, data.db commit discipline) first**; below is only what they don't carry.
   SkillOpt + ClosedLoop reference clones live untracked at
   `~/Developer/EVAL_WORKBENCH/{SkillOpt,claude-plugins-closedloop}` (re-housed 2026-07-21
   from `~/developer/tmp`) — kept for M5/#165.
-- **Gotchas:** PocketBase text fields default-cap at 5000 chars (set `max` explicitly);
-  PATCHing a collection with field defs lacking ids drops+recreates columns — schema.py
-  merges by name, never bypass it; a builder proving work on a throwaway PB instance can
-  mask live-schema divergence (EDB-11) — re-run schema+ingest+gates on the live DB yourself;
-  **delta coverage passes MUST use `load_coverage.py --extenders`** (unscoped delta loads
-  forge carried-row provenance — EDB-26, full gotcha list in `evals/PROCEDURES.md`);
-  **stop the PB server before BRANCH SWITCHES, not just commits** — a live server had its
-  tracked data.db checked out from under it (2026-07-21) and SQLite recreated a hollow
-  data.db that blocked switching back; pattern: `pgrep -fl pocketbase` → kill → move the
-  orphan aside → checkout → restart `evals/serve.sh` (orphan preserved that day at
-  `~/.Trash/extender-db-orphan-data.db-20260721`).
+- **Gotchas:** the PB gotcha list (EDB-1 idless-PATCH column drops · EDB-2 5000-char text
+  cap · EDB-11 live-proof mandate · EDB-26 scoped deltas · json first-byte string coercion ·
+  file fields need `create_multipart`) lives in `evals/PROCEDURES.md` — read it, don't
+  re-derive. Handoff-only extra: **stop the PB server before BRANCH SWITCHES, not just
+  commits** — a live server had its tracked data.db checked out from under it (2026-07-21;
+  SQLite recreated a hollow data.db that blocked switching back); pattern:
+  `pgrep -fl pocketbase` → kill → checkout → restart `evals/serve.sh`.
 - Also on this branch: pocketbase-best-practices skill install (`.agents/`,
   `skills-lock.json`, `.claude/skills/` symlink) — desk tooling, not a roster primitive.
 
@@ -103,21 +102,27 @@ extraction checklist). Owner intent: battle-test here, later extract to its own 
 - **Auth for live runs:** `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"` (claude
   invocation uses per-run apiKeyHelper + fresh CLAUDE_CONFIG_DIR — Option Z, handoff-w4 §1; `--bare`
   was dropped deliberately: it strips the Skill tool).
-- **Battle-test outcome:** readme-value-and-proof shows a genuine +1.0 doctrine delta on BOTH
-  harnesses; mermaid's reserved-node-id rule fires but isn't held under prompt pressure (both
-  harnesses); scout case at ceiling for sonnet-4-5. Ledger: 72 rows (48 legacy pre-Skill-fix claude
-  rows are confounded — campaign label `""` vs `skillfix` disambiguates).
-- **CI:** marketplace lanes untouched; new path-filtered `harness-test` lane + stdlib coupling gate
+- **Eval signal (stable across two campaigns — battle-test W3 + `weekly-20260721`):**
+  readme-value-and-proof +1.0 doctrine delta on BOTH harnesses; mermaid's reserved-node-id
+  rule fires but isn't fully held under prompt pressure; scout case at ceiling for
+  sonnet-4-5 (persona never engages). Ledger: 120 rows (48 legacy pre-Skill-fix claude rows
+  confounded — campaign labels `""`/`skillfix`/`weekly-20260721` disambiguate). Weekly
+  results briefing: `_meta/briefings/2026-07-21-weekly-harness-campaign/report.html`.
+- **CI:** marketplace lanes untouched; path-filtered `harness-test` lane + stdlib coupling gate
   in `make ci`. Open follow-ups: #172 (hermeticity/env-pinning bundle), #173 (candidate-quality
-  findings). ~~#174~~ **DONE 2026-07-21 (PR #177, issue CLOSED):** four PB collections
-  (`runs`/`artifacts`/`run_events`/`tool_calls`) live in extender-db via the schema.py lane +
-  `evals/load_harness_runs.py` ingester; 72-trial corpus ingested (decision record + verified
-  counts on #174; runbook = PROCEDURES "ingesting a harness campaign"; blobs in tracked
-  `evals/pb_data/storage/`). **Campaign runner also DONE 2026-07-21** (this branch):
-  `make harness-campaign` (full grid, `weekly-YYYYMMDD` resume label, pinned
-  claude-sonnet-4-5) + weekly launchd agent (Mon 09:00,
-  `com.hsb3.dotfiles-agents.harness-campaign`; install/uninstall/status targets). The
-  scheduled path NEVER auto-ingests into PB (tracked data.db discipline).
+  findings — the weekly campaign data strengthens both cases). ~~#174~~ **DONE 2026-07-21
+  (PR #177, issue CLOSED):** four PB collections (`runs`/`artifacts`/`run_events`/`tool_calls`)
+  via the schema.py lane + `evals/load_harness_runs.py` ingester; both corpora ingested
+  (120 runs / 5,054 events / 1,646 tool_calls / 26 blobs in tracked `pb_data/storage/`);
+  decision record on #174; runbook = PROCEDURES "ingesting a harness campaign".
+- **Campaign runner DONE 2026-07-21 (PR #178):** `make harness-campaign` (full grid,
+  `weekly-YYYYMMDD` resume label, pinned claude-sonnet-4-5) + weekly LaunchAgent
+  **installed and live on this machine** (Mon 09:00, `com.hsb3.dotfiles-agents.harness-campaign`;
+  install/uninstall/status targets; kickstart-once-after-install rule in `harness/README.md`).
+  The scheduled path NEVER auto-ingests into PB — **after each Monday run, a session ingests
+  deliberately** (`load_harness_runs.py --campaign weekly-YYYYMMDD`, per PROCEDURES) and
+  commits data.db+storage with cause. Script is bash-3.2-safe on purpose (launchd resolves
+  /bin/bash — see the script header before restructuring it).
 
 ## 3 · Next up (dotfiles-agents proper)
 
@@ -128,15 +133,11 @@ Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extende
   #139 claude-code-expertise (standalone). Names/homes held pending the estate cohesion review (below).
 - **Sequenced backlog:** #32 (retire hsb3-custom-plugins) · #36/#122 (clone-at-build externals) · #37.
 - **New (filed 2026-07-20):** #149 — standard gap: no `_meta/` slot for secret-free runbooks/reference. Untriaged.
-- ~~**Harness follow-ups — QUEUED FOR NEXT SESSION (Henry's ask, 2026-07-21).**~~
-  **BOTH DELIVERED 2026-07-21** (owner decisions taken in-session: keep-everything retention,
-  PB file-field blobs + tracked `storage/`, launchd scheduler, weekly full grid):
-  1. **Campaign runner** — `scripts/harness_campaign.sh` (`run`/`install`/`uninstall`/`status`)
-     + `make harness-campaign*` targets + weekly LaunchAgent (Mon 09:00). See §2c.
-  2. **#174 PB collections** — delivered via PR #177, issue CLOSED with the decision record.
-     See §2c. The formerly machine-local 72-log corpus is now durable in extender-db.
-  Still open: #172 (hermeticity bundle) · #173 (candidate fixes: mermaid phrasing, harder
-  scout traps). Auth for any live run: `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"`.
+- ~~**Harness follow-ups (Henry's ask, 2026-07-21)**~~ **BOTH DELIVERED 2026-07-21** — PRs
+  #177 + #178, details §2c (owner decisions taken in-session: keep-everything retention,
+  PB file-field blobs + tracked `storage/`, launchd scheduler, weekly full grid).
+  Still open: #172 · #173. Auth for any live run:
+  `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"`.
 - No `gate:*` label carries an open issue — nothing gate-blocked.
 
 ## 4 · CROSS-REPO — the session pivoted to a desk-platform design effort (lives on the desk, NOT here)
