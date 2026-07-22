@@ -136,7 +136,8 @@ extraction checklist). Owner intent: battle-test here, later extract to its own 
 ## 3 · Next up (dotfiles-agents proper)
 
 **PLANNING ROUND DONE + 4 RULINGS EXECUTED (2026-07-22 session).** The `/waves` mise-en-place ran
-to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D3 + O1–O3 remain.
+to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D3 dropped, O1–O3 remain.
+NOTE.md is fully resolved (#188/#189/#190 closed).
 - Plugins already current (foreman-kit **0.6.0**, `waves` live). Pinned **triage issue #192** created
   (the in-repo ranked backlog + waves plan + owner queue); refresh it at boundaries alongside `/handoff`.
 - **NOTE.md fully folded in** (source: `_meta/operations/NOTE.md`, updated with per-item status):
@@ -147,16 +148,16 @@ to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D
     in-repo/transferable (**effective next session**). 9 topic files (old 4 + migrated hidden 5).
   - **D2 #188** bundles — RULED top-level → **PR #195 (merged)**: `primitives-core/bundles`→`bundles/`,
     homed under the `bundle-metadata` flow node; output-invariant (`make build` = zero drift).
-  - **D5** npx-skills rule — RULED global → added to `~/.claude/instructions/tools.md`. **⚠ needs a
-    dotfiles-repo commit** (edited but not committed there — that repo's commit discipline is Henry's).
+  - **D5** npx-skills rule — RULED global → added to `~/.claude/instructions/tools.md`. Henry commits
+    the dotfiles repo separately (live now via the stow symlink regardless).
 - **functionform-asmbl (#191)** — RULED **PARK, don't archive** (product-surface seed); borrow 3
   concepts tracked in **#193** (its `github_sourcing.py` = reference impl for externals-sync #36/#122,
   noted on #36). Read-only clone; nothing modified.
 
-**→ OWNER'S COURT — still open (triage #192 "Decision gaps"):** **D3 #190** docs — name a specific
-target or authorize a general audit (first pass: docs mostly correctly co-located). **O1** extender-db
-children review/close (#155–159 done via `8bcb4e0`). **O2** meta-harness pointer for #165. **O3**
+**→ OWNER'S COURT — still open (triage #192 "Decision gaps"):** **O1** extender-db children
+review/close (#155–159 done via `8bcb4e0`). **O2** meta-harness pointer for #165. **O3**
 forward-skill-wave names/homes (#137/#138/#139, estate-review-gated). Waves 2–5 planned in #192.
+(D3 #190 docs was disregarded 2026-07-22 — closed; docs were already correctly co-located.)
 
 Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extenders-estate/`), tracked via
 `sequence.py`/`reconcile.py` there; the pinned triage issue **#192** is the in-repo ranked view.
@@ -205,6 +206,11 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
 - **dev's branch-protection required checks are pinned by CI JOB NAME** — renaming a job in
   `ci.yml` strands every PR on a check that never reports (cost one blocked merge 2026-07-22).
   Update the protection setting first if a job must be renamed.
+- **PRs into `dev` do NOT auto-close their `Closes #N` issues** — GitHub only auto-closes on merge
+  into the *default* branch (`main`), and this repo PRs into `dev`. **Close issues by hand after
+  merge** (seen 2026-07-22: #188/#189 stayed open despite `Closes` keywords). Same for `flow.yaml`
+  drift after a hand-commit to dev: run `make flow` — deleting/moving a top-level homed path reds
+  `make ci` (that's how 42ccc12/b07a534 reddened dev; PR #187 repaired it).
 - **`flow.yaml` is load-bearing**: `make flow` (in `make ci`) fails any PR that adds a top-level
   path without a declared home, or an automated cycle. New generated artifacts need generator +
   guard + a flow node; regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
