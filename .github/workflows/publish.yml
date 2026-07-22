@@ -51,6 +51,10 @@ jobs:
           if [ -d dist/opencode ]; then
             cp -R dist/opencode "$ASM/opencode"
           fi
+          # dev's .gitignore ships with the publish tree: main has no tracked files to
+          # hide, but an accidental local checkout of main in a dev working directory
+          # would otherwise surface every ignored-on-dev leftover as untracked noise.
+          cp .gitignore "$ASM/.gitignore"
           echo "ASM=$ASM" >> "$GITHUB_ENV"
       - name: Commit to main — parented, append-only
         run: |

@@ -30,6 +30,12 @@ It is `check` (roster↔disk drift) + `build-check` (marketplace regen drift) + 
 Branch off `dev`, PR into `dev`. `main` is CI-published and off-limits (publish-only). Never
 merge PRs or commit to the default branch. Keep changes surgical and match existing style.
 
+**Never check out `main` locally** — publishing is CI-only (`.github/workflows/publish.yml`),
+so a local `main` has no purpose; checking it out turns `dev`'s ignored residue into untracked
+noise (its tree has no `.gitignore`). Inspect the published surface with
+`git show origin/main:<path>`, or `git worktree add ../dotfiles-agents-main origin/main` for a
+full checkout (remove the worktree after).
+
 ## Where things are
 
 - `docs/FLOW.md` + `flow.yaml` — the repo-flow DAG: the home of every part and the edges
