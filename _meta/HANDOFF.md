@@ -135,6 +135,25 @@ extraction checklist). Owner intent: battle-test here, later extract to its own 
 
 ## 3 · Next up (dotfiles-agents proper)
 
+**NEXT SESSION (owner-directed 2026-07-22): a foreman + waves mise-en-place/planning round on
+THIS repo.** In order:
+1. **Update installed plugins first** — the local plugin cache still runs foreman-kit **0.5.0**;
+   the `waves` skill ships in **0.6.0** (published on `main`). Refresh the marketplace/plugin,
+   then `/foreman-kit:waves init` to create the pinned triage issue (this repo has none yet —
+   waves plans against it).
+2. **Fold `_meta/operations/NOTE.md` into the triage** (machine-local, untracked — read it there;
+   secret-free gist): move the `.agents/` pocketbase skill under `.claude/` and drop
+   `skills-lock.json`, plus a standing rule that the `npx skills` CLI never writes into code
+   repos (it claims every skill under `.agents`/`.claude` as its own); the
+   `.claude/agent-memory/` vs native `memory/` + settings-redirect question; whether
+   `bundles/` belongs under `primitives-core/`; docs consolidation into `docs/`. These are
+   flow-DAG-touching moves — plan them as waves, run `make flow` per slice.
+3. **Research `hsb3/functionform-asmbl`** (private; "CAD for AI — manage/version/assemble AI
+   primitives (prompts, skills, configs) into deployable agents"; last pushed 2026-07-05) —
+   Henry's earlier take on the same curate/incubate/distribute-across-harnesses problem this
+   repo now solves with roster + dist lanes. Assess overlap: merge, borrow (its API framing),
+   or retire — BEFORE designing more distribution machinery here.
+
 Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extenders-estate/`), tracked via
 `sequence.py`/`reconcile.py` there — do not freeze a list here.
 - ~~**Close-out:** run #111's install-smoke proof, then close #111/#134 + mirrors #121/#135.~~ **DONE (this session).**
@@ -200,6 +219,9 @@ slice. Nothing folds into the canonical model until Henry signs off (standing di
   commit (`c2133fe`).
 - **Henry signs off on major IA changes before they are finalized/built** (standing directive 2026-07-20;
   memory `approve-major-ia-changes`). Present IA changes as an approval gate, not a done deal.
+- Machine-local leftover: `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored) — a
+  pre-branch-switch backup of a data.db that diverged from the tracked copy. Reconcile or
+  delete next time a session works in `evals/`.
 
 ## 6 · Map
 
