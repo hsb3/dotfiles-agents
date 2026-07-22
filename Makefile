@@ -67,3 +67,14 @@ harness-eval: ## Eval grid: ITEM=<name> [HARNESS=claude] [MODEL=] [CAMPAIGN=] (N
 harness-report: ## Aggregate the harness ledger for a candidate: ITEM=<name> (NOT in ci)
 	@test -n "$(ITEM)" || { echo "usage: make harness-report ITEM=<candidate>"; exit 2; }
 	@uv run --project harness agent-harness "$(ITEM)" --report
+
+# --- weekly harness campaign (launchd) — full grid over cased candidates; live CLIs + keychain
+.PHONY: harness-campaign harness-campaign-install harness-campaign-uninstall harness-campaign-status
+harness-campaign: ## Full-grid eval campaign: cased candidates x claude,opencode x with,baseline x 3 trials (needs live CLIs + keychain; not in ci)
+	@scripts/harness_campaign.sh run
+harness-campaign-install: ## Install the weekly launchd agent (Mon 09:00; kickstart once to approve keychain)
+	@scripts/harness_campaign.sh install
+harness-campaign-uninstall: ## Remove the weekly launchd agent
+	@scripts/harness_campaign.sh uninstall
+harness-campaign-status: ## launchctl state of the weekly agent
+	@scripts/harness_campaign.sh status
