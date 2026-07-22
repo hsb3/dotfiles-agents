@@ -135,8 +135,9 @@ extraction checklist). Owner intent: battle-test here, later extract to its own 
 
 ## 3 · Next up (dotfiles-agents proper)
 
-**PLANNING ROUND DONE + 4 RULINGS EXECUTED (2026-07-22 session).** The `/waves` mise-en-place ran
-to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D3 dropped, O1–O3 remain.
+**PLANNING ROUND DONE + OWNER'S COURT CLEARED (2026-07-22).** The `/waves` mise-en-place ran
+to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D3 dropped, and in a
+later 2026-07-22 session **O1/O2/O3 all ruled + executed** (see the OWNER'S COURT block below).
 NOTE.md is fully resolved (#188/#189/#190 closed).
 - Plugins already current (foreman-kit **0.6.0**, `waves` live). Pinned **triage issue #192** created
   (the in-repo ranked backlog + waves plan + owner queue); refresh it at boundaries alongside `/handoff`.
@@ -154,10 +155,25 @@ NOTE.md is fully resolved (#188/#189/#190 closed).
   concepts tracked in **#193** (its `github_sourcing.py` = reference impl for externals-sync #36/#122,
   noted on #36). Read-only clone; nothing modified.
 
-**→ OWNER'S COURT — still open (triage #192 "Decision gaps"):** **O1** extender-db children
-review/close (#155–159 done via `8bcb4e0`). **O2** meta-harness pointer for #165. **O3**
-forward-skill-wave names/homes (#137/#138/#139, estate-review-gated). Waves 2–5 planned in #192.
+**→ OWNER'S COURT — CLEARED 2026-07-22 (all three ruled + executed):**
+- **O1 DONE** — all 9 functionally-complete extender-db children closed with outcome notes (#155–162, #167).
+  Two carried caveats, closed transparently: **#158** migrate-at-scale (playbook added, but coverage
+  *stays partial* — judge + blind reviewer declined to rate foreman `present`; upgrade-to-covered not
+  ratified) and **#167** (enrichment done; the re-judge is deferred to Wave 4/#164). Epic #154 stays open
+  for #163 (M3) · #164 (M4) · #165 (M5) · #168.
+- **O2 RULED — confirm root `harness/`.** The meta-harness for M5 is the root `harness/` (PR #169),
+  realized in-repo not a separate repo. Recorded via **PR #198 (merged to dev)**: EDB-14 → Resolved,
+  EDB-19 annotated, CHARTER decision 8 corrected in place; **#165 unblocked + retitled** (BLOCKED dropped).
+- **O3 RULED (owner-signoff form, `_meta/signoff/2026-07-22-forward-skill-homes/`):** **#139
+  claude-code-expertise APPROVED — build now as a standalone** (not desk-gated; absorbs subagent-creator).
+  **#137 decision-loop + #138 release-loop HELD** pending the estate/IA review (the desk-standard-vs-here
+  boundary question — see §4). The estate IA approval is what releases #137/#138.
 (D3 #190 docs was disregarded 2026-07-22 — closed; docs were already correctly co-located.)
+
+**Session hygiene note (2026-07-22):** the tracked `.claude/settings.json` had picked up a stray
+`enabledPlugins: {code-desk}` entry (a `claude plugin enable` write) + a stripped trailing newline;
+reverted to keep consumer config clean, and the code-desk enable moved to machine-local
+`.claude/settings.local.json` (gitignored). Plugin enablement is per-machine, not shipped.
 
 Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extenders-estate/`), tracked via
 `sequence.py`/`reconcile.py` there; the pinned triage issue **#192** is the in-repo ranked view.
