@@ -171,6 +171,16 @@ primitives:
     targets: [claude-code]
     plugins: [foreman-kit]
     summary: "Size a substantial task and run the session as a foreman: pick a delegation architecture (A-E), bind slices to the scout/builder/reviewer/lead agents with dispatch-time model tiers, hold the never-delegated floor, and apply findings-backed context-hygiene defaults. Self-contained delegation doctrine."
+  - id: waves
+    type: skill
+    source: primitives-core/skills/waves
+    shelf: core
+    origin: authored
+    disposition: qualified
+    vendor: null
+    targets: [claude-code]
+    plugins: [foreman-kit]
+    summary: "Drive a repo's open-issue backlog to closed through triage, wave planning, and isolated crews: refresh a pinned triage issue (the living, ranked plan), group buildable issues into branch-sized waves, execute via the foreman skill, verify and merge each PR in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated."
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md
