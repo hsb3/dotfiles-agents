@@ -1,11 +1,20 @@
 ---
 name: desk-platform-research-elementmodel
-description: Verification pattern for reviewing the dev-tooling desk-platform element-model spec, esp. its net-new RESEARCH support
-metadata:
+description: "Verification pattern for reviewing the dev-tooling desk-platform element-model spec, esp. its net-new RESEARCH support"
+metadata: 
+  node_type: memory
   type: reference
+  originSessionId: fdbbdcbf-b5ec-488b-9d8d-aa7c232fc398
+  modified: 2026-07-22T19:20:32.614Z
 ---
 
-Reviewing `dev-tooling-desk/_meta/plans/desk-platform/spec-element-model.md` (element model
+> **Correction (2026-07-22):** paths below predate the EXECUTIVE_DESK reorganization;
+> dev-tooling-desk is archived at
+> `~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old`, the desk estate now
+> lives under `~/Documents/EXECUTIVE_DESK/Projects/` (desk-standard-desk,
+> dotfiles-agents-desk, desk-standard-practice, desk-standard-tutorial).
+
+Reviewing `~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old/_meta/plans/desk-platform/spec-element-model.md` (element model
 for a PM/KM platform, three planes input/activity/output, project types software+research).
 Synthesized from `functionform-headcase/packages/obsidian/data/_headcase` (schema.yaml + shared/sops/).
 
