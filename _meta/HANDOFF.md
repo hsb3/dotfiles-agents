@@ -10,270 +10,159 @@ CI-published (publish-only, ADR 0014). Task interface + source-of-truth rules: s
 
 ## 1 · Current standing
 
-Both build epics are **DONE and CLOSED**; `make ci` is green. `dev` now also carries the
-extender-db merge (#176), the harness (#169), the #174 telemetry lane (PR #177), and the
-campaign runner (PR #178, §2c); `main` is CI-published and lags until publish.
-- **#111** clean-room rebuild (D1–D8) — merged + **CLOSED** (install-smoke proof recorded on the issue).
-- **#134** desk-set restructure / 0020 lineup (E1–E7) — merged + **CLOSED**, plus #147 (diagrams / obsidian-toolkit / owner-signoff).
-- Multica mirrors **#121** (→#111) and **#135** (→#134) closed to match. **Open PRs: 0.**
+Both build epics are **DONE and CLOSED**; `make ci` is green (38 primitives: agent=4, hook=4,
+skill=30). `dev` carries the extender-db merge (#176), the harness (#169), the #174 telemetry
+lane (PR #177), the campaign runner (PR #178, §2c), and — as of the 2026-07-22 `/waves` run
+below — 4 more merged PRs (#205, #206, #209, #210). **`main` published 2026-07-22 at
+`dev@0cdca55`** (commit `098e1b7`) — **now lags `dev` by those 4 PRs**; next publish should pick
+them up (see `publish-to-main` skill).
+- **#111** clean-room rebuild and **#134** desk-set restructure — both merged + CLOSED (era detail: git/issues).
+- **Open PRs: 0.**
 
-Live marketplace lineup: code-desk (0.2.0) · exec-desk · foreman-kit · github-project-board · opencode-expertise ·
-pptx-themes · private-fork · project-memory · diagrams · obsidian-toolkit · owner-signoff (+ dataviz ·
-deep-research · update-config standalones). `main` lags until next publish (project-memory not yet published).
+Live marketplace lineup: code-desk (0.2.0) · exec-desk (0.2.0) · foreman-kit (0.6.0) ·
+github-project-board · opencode-expertise · pptx-themes · private-fork · project-memory ·
+diagrams · obsidian-toolkit · owner-signoff · **claude-code-expertise** (new) (+ dataviz ·
+deep-research · update-config standalones). All current on `dev`; `main` lags 4 PRs until next
+publish.
 
-**Also live: the extender-db mini-project, MERGED to dev 2026-07-21 (owner promotion decision)** (§2b) — separate
-effort from the rebuild epics; do not fold it into dev without Henry's promotion decision.
+**Also live: the extender-db mini-project** (§2b) — separate effort from the rebuild epics; do
+not fold it into dev without Henry's promotion decision (already taken 2026-07-21, see §2b).
 
 ## 2 · Recent deliveries (era pointers — blow-by-blow lives in issues/git)
 
-- 2026-07-20: #111 install-smoke proof recorded + epics closed (see §1); branch triage → Open PRs 0;
-  planning externalized to the exec desk (see §3).
-- 2026-07-21: epic #154 Waves 0–3 executed on `feat/extender-db` (see §2b).
-- 2026-07-21 (later session): harness follow-ups delivered — PR #177 (#174 telemetry lane) +
-  PR #178 (campaign runner + `weekly-20260721` proof run + PB ingest); briefing
-  `_meta/briefings/2026-07-21-weekly-harness-campaign/report.html`.
-- 2026-07-22: **ADR 0008 executed, W1–W4** (owner ruling "proceed as proposed"; old-desk 0014
-  amended in lockstep — 0008 *restores* its §3 clean-main intent). PRs #180 (foreman-kit 0.6.0:
-  new `waves` skill + `.claude/skills/publish-to-main` runbook), #181 (flow.yaml + `make flow`
-  guard + generated `docs/FLOW.md` DAG), #182 (filtered **parented** publish; one-time
-  `reset=orphan` cutover used), #183 (root artifacts → `dist/claude-code/`), #184
-  (`dist/opencode/` laydown lane: `translation.yaml` matrix, targets enum, 24 skills + 4
-  remapped agents + installer + generated exclusions manifest). Three publishes verified:
-  `main` = distributable surface only, append-only ledger (`publish: dev@<sha>` commits),
-  `opencode/` live on main. Suite 157 tests; flow: 17 nodes / 15 edges, 0 planned nodes.
-- 2026-07-22 (later session): **main-checkout guard + memory curation + first dotfiles→marketplace
-  migration** — PRs #200 (no-main-checkout PreToolUse hook, publish-tree .gitignore, VSCode branch
-  protection), #201 (memory store curated 9→6 topics; directive → CLAUDE.md; 2 gotchas promoted to
-  global; stale hidden native store deleted), #202 (`project-memory` skill: cc-project-memory +
-  cc-migrate-memory as stdlib skill-wrapper, standalone + code-desk 0.2.0; adversarially reviewed,
-  legacy .gitignore-marker back-compat proven) — all merged; #203 filed (ADR 0015 dangling citation +
-  stale check_hook_layout docstring). **Owner scope ruling:** only the cc-* memory tools migrate for
-  now; workbench hooks (wb#35), cc-hooks/statusline, and MCP-adjacent pools deferred; general CLIs
-  stay in dotfiles permanently.
+- 2026-07-20/21: rebuild epics closed, extender-db epic #154 Waves 0–3 executed, harness
+  follow-ups (#177/#178) delivered. Full detail in git/issue history.
+- 2026-07-22 (early session): ADR 0008 executed (filtered parented publish + `dist/` lift lanes,
+  PRs #180–184); main-checkout guard + memory curation + `project-memory` skill migration
+  (PRs #200–202); published dev → main (`098e1b7`); triage issue **#192** created.
+- 2026-07-22 (owner's court session): D1/D2/D4/D5 + O1/O2/O3 all ruled and executed — memory
+  folder rename (PR #194), bundles→top-level (PR #195), extender-db children reviewed/closed,
+  meta-harness pointer confirmed (PR #198), forward-skill-wave split (#139 approved standalone,
+  #137/#138 held on estate review). Full record: triage #192 + issue comments, not repeated here.
+- **2026-07-22 (this session) — `/waves` run, 4 of 5 planned waves executed:**
+  PR #205 (#139 claude-code-expertise skill) · PR #206 (#149 `_meta/reference/` taxonomy gap +
+  #151 CONTRIBUTING.md + #203 ADR 0015 backfill) · PR #209 (#32 retirement: `dev-focus` skill
+  migrated, python-project-standards dropped per ruling, hsb3-custom-plugins unblocked) · PR #210
+  (#37 planning-desk skill confirmed to subsume ra-platform's commands — **ra-platform's own
+  adoption is staged uncommitted in that separate repo, pending Henry's review/commit + a live
+  smoke test**). W5 (#152 visual-planning) **not shipped** — see §3. Follow-ups filed: #207, #208,
+  #211. Triage #192 refreshed to "Delivery plan v2."
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
-PocketBase DB of all agent extenders + the mental models used to compose/evaluate them
-(inventory ⋈ doctrine via assessments). **Re-housed 2026-07-21 (owner decision): moved from
-`_meta/extender-db/` to root `evals/` — same layout, project name unchanged; pre-move
-briefings/issues cite the old path.** **Self-describing — read
-`evals/_structure/` CHARTER.md (canonical), PLAN.md, OPEN-ITEMS.md, INSIGHTS.md
-(learnings for future docs), `evals/README.md` (operator doc), and
-`evals/PROCEDURES.md` (runbook: script run order, the evaluated-pass pattern,
-gates, data.db commit discipline) first**; below is only what they don't carry.
+PocketBase DB of all agent extenders + the mental models used to compose/evaluate them. **Self-
+describing — read `evals/_structure/CHARTER.md`, `PLAN.md`, `OPEN-ITEMS.md`, `evals/README.md`,
+`evals/PROCEDURES.md` first**; below is only what they don't carry.
 
-- **Promotion: DECIDED + EXECUTED 2026-07-21** — Henry chose merge-to-dev (the charter
-  gate was 4/4). The former `feat/extender-db` branch (through `4e5ecb3` + `fb0e69f`) was
-  merged with dev (which had independently taken the agent-harness, PR #169 @ `7b0bfd1`);
-  the predicted 2-file overlap resolved as planned (.gitignore union; both HANDOFF §2b
-  blocks kept). Extender-db and the harness now share one lane on dev. NOTE: the harness
-  (#169, follow-ups #172–#174) looks like a candidate for the EDB-14/19 "meta-harness
-  pointer" that blocks #165/M5 — Henry confirms, don't assume.
-- **State (2026-07-21): epic #154 Waves 0–3 DONE** (wave map + per-wave DoD in PLAN.md;
-  evidence on the epic's comments; commits `ab3e2e6`→`c7eacc6`). Coverage now
-  **0 gap / 2 partial** over 24 jobs; 8 sub-issues functionally complete (#155–#162,
-  #167) and left open for Henry's review/close; #168 filed (excalidraw residual value).
-  Era pointers, oldest first — full records in PLAN DONE blocks, OPEN-ITEMS resolved log,
-  eval_runs provenance, git: W0 seed → W1 judged pass → W2 hooks → W3 externals → W7
-  provenance → W9 taxonomy+sources → adopt-external roadmap (CHARTER decisions 6–8;
-  harness is REUSED, never built — EDB-14/19) → M1 coverage body (2026-07-20, eval_runs
-  `m1-coverage-*`) → #153 decision batch (A–E accepted, F reversed; DECISIONS-NEEDED.md
-  is the record) → epic waves 0–3 (2026-07-21, eval_runs `w2-coverage-*`).
-- **Findings a next session should know (details in OPEN-ITEMS):** EDB-25 — the three
-  promoted skills are authored ORIGINALS (harness-shipped namesakes have no distributable
-  source). **Honest negative:** migrate-at-scale STAYS partial — judge + blind reviewer
-  independently declined to rate the playbook-bearing foreman `present`; #158's
-  upgrade-to-covered intent was not ratified. typescript-lsp is a declarative LSP config
-  with no invokable surface (EDB-23) — its re-judge is queued for the #164 v2 pilot.
-- **NEXT:** Wave 4 = #164 (M4 judging-criteria v2 + the EDB-23 externals re-judge via
-  `load_coverage.py --extenders`). Then Wave 5 = #163 (M3 curation — unblocked).
-  #165 waits on Henry's meta-harness pointer. Owner court: promotion decision + that
-  pointer + review/close of the 8 done issues.
-- **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds
-  in untracked `_meta/operations/extender-db.env` (env file stayed in `_meta/operations/` —
-  secrets home is policy-bound, only the project moved). `pb_data/data.db` is TRACKED — stop the
-  server before committing (WAL checkpoint) and land the data.db delta in the same commit
-  as its cause. `pb_migrations/` is gitignored on purpose: schema.py is the ONE schema source.
-  SkillOpt + ClosedLoop reference clones live untracked at
-  `~/Developer/EVAL_WORKBENCH/{SkillOpt,claude-plugins-closedloop}` (re-housed 2026-07-21
-  from `~/developer/tmp`) — kept for M5/#165.
-- **Gotchas:** the PB gotcha list (EDB-1 idless-PATCH column drops · EDB-2 5000-char text
-  cap · EDB-11 live-proof mandate · EDB-26 scoped deltas · json first-byte string coercion ·
-  file fields need `create_multipart`) lives in `evals/PROCEDURES.md` — read it, don't
-  re-derive. Handoff-only extra: **stop the PB server before BRANCH SWITCHES, not just
-  commits** — a live server had its tracked data.db checked out from under it (2026-07-21;
-  SQLite recreated a hollow data.db that blocked switching back); pattern:
-  `pgrep -fl pocketbase` → kill → checkout → restart `evals/serve.sh`.
-- Also on this branch: pocketbase-best-practices skill install (`.agents/`,
-  `skills-lock.json`, `.claude/skills/` symlink) — desk tooling, not a roster primitive.
+- **State:** epic #154 Waves 0–3 DONE; O1 (2026-07-22) closed all 9 functionally-complete
+  children (#155–162, #167) with outcome notes. Epic stays open for #163 (M3) · #164 (M4) · #165
+  (M5, unblocked per O2/PR #198) · #166 (M6) · #168.
+- **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds in untracked
+  `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the server before
+  committing (WAL checkpoint) or switching branches (a live server had its tracked data.db
+  checked out from under it once; `pgrep -fl pocketbase` → kill → checkout → restart).
+  `pb_migrations/` is gitignored on purpose: `schema.py` is the ONE schema source.
+- Gotcha list (idless-PATCH column drops, 5000-char text cap, live-proof mandate, scoped deltas,
+  json first-byte coercion, file fields need `create_multipart`) lives in `evals/PROCEDURES.md`.
 
 ## 2c · Agent-harness (delivered 2026-07-21, PR #169 → dev)
 
-Reusable extender-eval harness at root `harness/` (self-contained uv project): drives **Claude Code
-or opencode** headlessly against fixture workspaces with a candidate injected per kind, grades
-two-tier (deterministic `check.py` + pinned-Haiku rubric), appends to the tracked append-only
-ledger `harness/results.jsonl` keyed `campaign|harness|model|candidate|case|config|trial`.
-**Self-describing — read in order:** `_meta/research/agent-harness/DESIGN.md` (signed-off design +
-wave plan) · `handoff-w1/w2/w4.md` (build evidence; w1 §8b auth gotchas) ·
-`battle-test-w3-findings.md` (adversarially verified grid findings) · `runlog-data-shape.md`
-(corpus profile + proposed PocketBase collections for #174) · `harness/README.md` (operator doc +
-extraction checklist). Owner intent: battle-test here, later extract to its own repo.
-- **Auth for live runs:** `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"` (claude
-  invocation uses per-run apiKeyHelper + fresh CLAUDE_CONFIG_DIR — Option Z, handoff-w4 §1; `--bare`
-  was dropped deliberately: it strips the Skill tool).
-- **Eval signal (stable across two campaigns — battle-test W3 + `weekly-20260721`):**
-  readme-value-and-proof +1.0 doctrine delta on BOTH harnesses; mermaid's reserved-node-id
-  rule fires but isn't fully held under prompt pressure; scout case at ceiling for
-  sonnet-4-5 (persona never engages). Ledger: 120 rows (48 legacy pre-Skill-fix claude rows
-  confounded — campaign labels `""`/`skillfix`/`weekly-20260721` disambiguate). Weekly
-  results briefing: `_meta/briefings/2026-07-21-weekly-harness-campaign/report.html`.
-- **CI:** marketplace lanes untouched; path-filtered `harness-test` lane + stdlib coupling gate
-  in `make ci`. Open follow-ups: #172 (hermeticity/env-pinning bundle), #173 (candidate-quality
-  findings — the weekly campaign data strengthens both cases). ~~#174~~ **DONE 2026-07-21
-  (PR #177, issue CLOSED):** four PB collections (`runs`/`artifacts`/`run_events`/`tool_calls`)
-  via the schema.py lane + `evals/load_harness_runs.py` ingester; both corpora ingested
-  (120 runs / 5,054 events / 1,646 tool_calls / 26 blobs in tracked `pb_data/storage/`);
-  decision record on #174; runbook = PROCEDURES "ingesting a harness campaign".
-- **Campaign runner DONE 2026-07-21 (PR #178):** `make harness-campaign` (full grid,
-  `weekly-YYYYMMDD` resume label, pinned claude-sonnet-4-5) + weekly LaunchAgent
-  **installed and live on this machine** (Mon 09:00, `com.hsb3.dotfiles-agents.harness-campaign`;
-  install/uninstall/status targets; kickstart-once-after-install rule in `harness/README.md`).
-  The scheduled path NEVER auto-ingests into PB — **after each Monday run, a session ingests
-  deliberately** (`load_harness_runs.py --campaign weekly-YYYYMMDD`, per PROCEDURES) and
-  commits data.db+storage with cause. Script is bash-3.2-safe on purpose (launchd resolves
-  /bin/bash — see the script header before restructuring it).
+Reusable extender-eval harness at root `harness/` (self-contained uv project): drives Claude Code
+or opencode headlessly, grades two-tier, appends to `harness/results.jsonl`. **Self-describing —
+read `_meta/research/agent-harness/DESIGN.md`, `harness/README.md` first.** Owner intent:
+battle-test here, later extract to its own repo.
+- **Auth for live runs:** `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"` (per-run
+  apiKeyHelper + fresh CLAUDE_CONFIG_DIR — Option Z; `--bare` strips the Skill tool, don't use it).
+- **Campaign runner** (PR #178): `make harness-campaign` + weekly LaunchAgent live on this machine
+  (Mon 09:00). **Never auto-ingests** — after each run, ingest deliberately
+  (`load_harness_runs.py --campaign weekly-YYYYMMDD`) and commit data.db+storage with cause.
+- Open follow-ups: #172 (hermeticity/env-pinning), #173 (candidate-quality findings).
 
 ## 3 · Next up (dotfiles-agents proper)
 
-**PLANNING ROUND DONE + OWNER'S COURT CLEARED (2026-07-22).** The `/waves` mise-en-place ran
-to completion and Henry ruled the owner queue in-session; D1/D2/D4/D5 shipped, D3 dropped, and in a
-later 2026-07-22 session **O1/O2/O3 all ruled + executed** (see the OWNER'S COURT block below).
-NOTE.md is fully resolved (#188/#189/#190 closed).
-- Plugins already current (foreman-kit **0.6.0**, `waves` live). Pinned **triage issue #192** created
-  (the in-repo ranked backlog + waves plan + owner queue); refresh it at boundaries alongside `/handoff`.
-- **NOTE.md fully folded in** (source: `_meta/operations/NOTE.md`, updated with per-item status):
-  - item-a (pocketbase→`.claude/`, drop `skills-lock.json`) — was Henry's 42ccc12/b07a534, which
-    **reddened `make ci`** (deleted `hooks/.gitkeep` + stale flow homes) → repaired **PR #187 (merged)**.
-  - **D1 #189** memory folder — RULED rename+redirect → **PR #194 (merged)**: `.claude/agent-memory`
-    → `.claude/memory` + `autoMemoryDirectory` in tracked `.claude/settings.json`; auto-memory now
-    in-repo/transferable (**effective next session**). 9 topic files (old 4 + migrated hidden 5).
-  - **D2 #188** bundles — RULED top-level → **PR #195 (merged)**: `primitives-core/bundles`→`bundles/`,
-    homed under the `bundle-metadata` flow node; output-invariant (`make build` = zero drift).
-  - **D5** npx-skills rule — RULED global → added to `~/.claude/instructions/tools.md`. Henry commits
-    the dotfiles repo separately (live now via the stow symlink regardless).
-- **functionform-asmbl (#191)** — RULED **PARK, don't archive** (product-surface seed); borrow 3
-  concepts tracked in **#193** (its `github_sourcing.py` = reference impl for externals-sync #36/#122,
-  noted on #36). Read-only clone; nothing modified.
+**Source of truth is the pinned triage issue #192** ("Delivery plan v2", refreshed 2026-07-22) —
+ranked backlog + owner decision queue live there, not duplicated here. Prior planning-round
+detail (D1–D5, O1–O3, the NOTE.md fold-in) is fully executed; see triage #192 history / issue
+comments for the record, not repeated here.
 
-**→ OWNER'S COURT — CLEARED 2026-07-22 (all three ruled + executed):**
-- **O1 DONE** — all 9 functionally-complete extender-db children closed with outcome notes (#155–162, #167).
-  Two carried caveats, closed transparently: **#158** migrate-at-scale (playbook added, but coverage
-  *stays partial* — judge + blind reviewer declined to rate foreman `present`; upgrade-to-covered not
-  ratified) and **#167** (enrichment done; the re-judge is deferred to Wave 4/#164). Epic #154 stays open
-  for #163 (M3) · #164 (M4) · #165 (M5) · #168.
-- **O2 RULED — confirm root `harness/`.** The meta-harness for M5 is the root `harness/` (PR #169),
-  realized in-repo not a separate repo. Recorded via **PR #198 (merged to dev)**: EDB-14 → Resolved,
-  EDB-19 annotated, CHARTER decision 8 corrected in place; **#165 unblocked + retitled** (BLOCKED dropped).
-- **O3 RULED (owner-signoff form, `_meta/signoff/2026-07-22-forward-skill-homes/`):** **#139
-  claude-code-expertise APPROVED — build now as a standalone** (not desk-gated; absorbs subagent-creator).
-  **#137 decision-loop + #138 release-loop HELD** pending the estate/IA review (the desk-standard-vs-here
-  boundary question — see §4). The estate IA approval is what releases #137/#138.
-(D3 #190 docs was disregarded 2026-07-22 — closed; docs were already correctly co-located.)
+**What's actionable right now: nothing dotfiles-agents-proper is unblocked-and-unbuilt** — this
+session's waves run cleared #139/#149/#151/#203/#32/#37. Remaining work is all owner-gated:
 
-**Session hygiene note (2026-07-22):** the tracked `.claude/settings.json` had picked up a stray
-`enabledPlugins: {code-desk}` entry (a `claude plugin enable` write) + a stripped trailing newline;
-reverted to keep consumer config clean, and the code-desk enable moved to machine-local
-`.claude/settings.local.json` (gitignored). Plugin enablement is per-machine, not shipped.
+- **#36/#122/#193 — decisions 1-7** (network-at-build in CI, drop policy, ref-pin format) for the
+  externals clone-at-build mechanism. Unresolved across two sessions now.
+- **#152 visual-planning — deferred, not just gated.** A crew found (Henry independently
+  re-verified) the 3 candidate skills (`hsb3/agent-native-sandbox` `.claude/skills/{visual-plan,
+  visual-recap,visualize-repo}/`) are installed-from-upstream (`agent-native-skill.json` sidecars
+  are the proof), not authored originals — shipping `origin: authored` would violate ADR 0015.
+  `ghcr.io/hsb3/plan-app` also fails the identity lint unconditionally (no container-image
+  exemption). **Henry: "will revisit later, they still need to be tested."** Path forward when
+  revisited: (A) via #36's mechanism once built, (B) genuinely re-author as first-party originals,
+  or (C) an explicit ADR 0015 exception — see the comment trail on #152.
+- **#137/#138** (decision-loop/release-loop skills) — HELD on the desk-platform estate-cohesion
+  IA review (§4), not a same-session call.
+- **ra-platform's `.claude/commands` → planning-desk adoption** — the repo-side is merged (PR
+  #210), but `~/Developer/ra-platform` itself has an **uncommitted** working-tree diff (deletes
+  `.claude/commands/{plan-issue,issue-body}.md`, adds `_meta/plans/_config.md`, enables
+  `exec-desk@dotfiles-agents` in `.claude/settings.json`) staged by the crew and left for Henry to
+  review/commit in that repo's own session, plus a live smoke test.
+- New small follow-ups filed this session: #207 (universal `reference/` taxonomy slot), #208
+  (project-local primitive-authoring skill), #211 (confirm board-reporting coverage).
 
-Backlog lives on the dev-tooling desk (`_meta/plans/dotfiles-agents/` + `extenders-estate/`), tracked via
-`sequence.py`/`reconcile.py` there; the pinned triage issue **#192** is the in-repo ranked view.
-- ~~**Close-out:** run #111's install-smoke proof, then close #111/#134 + mirrors #121/#135.~~ **DONE (this session).**
-- **Forward skill wave (unblocked):** #138 release-loop (code-desk) · #137 decision-loop (exec-desk) ·
-  #139 claude-code-expertise (standalone). Names/homes held pending the estate cohesion review (below).
-- **Sequenced backlog:** #32 (retire hsb3-custom-plugins) · #36/#122 (clone-at-build externals) · #37.
-- **New (filed 2026-07-20):** #149 — standard gap: no `_meta/` slot for secret-free runbooks/reference. Untriaged.
-- ~~**Harness follow-ups (Henry's ask, 2026-07-21)**~~ **BOTH DELIVERED 2026-07-21** — PRs
-  #177 + #178, details §2c (owner decisions taken in-session: keep-everything retention,
-  PB file-field blobs + tracked `storage/`, launchd scheduler, weekly full grid).
-  Still open: #172 · #173. Auth for any live run:
-  `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"`.
-- No `gate:*` label carries an open issue — nothing gate-blocked.
+## 4 · CROSS-REPO — desk-platform design effort (lives on the desk, NOT here)
 
-## 4 · CROSS-REPO — the session pivoted to a desk-platform design effort (lives on the desk, NOT here)
-
-Most of this session designed a **new product** on the dev-tooling desk, not dotfiles-agents. It's a toolkit
-that integrates AI agents against ONE data model + workflows across three planes (**input · activity · output**),
-stored in **PocketBase** (grow deskkit); v1 surface = a Claude Code persona (skills + MCP); files-mirror model
-with held diffs (git-agnostic: fsnotify + go-diff). Design runs in **rounds** — R1 (requirements) + R2 (tech +
-MIT-borrow survey) closed; **R3 (element model) drafted + both adversarial reviews done — awaiting Henry's IA approval.**
-
-State (all on the desk — **path corrected 2026-07-22:** dev-tooling-desk is now archived at
-`~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old/`; the live desks are
-`dotfiles-agents-desk/` and `desk-standard-desk/` under `EXECUTIVE_DESK/Projects/`):
-`.../ARCHIVE/dev-tooling-desk-old/_meta/plans/desk-platform/`
-(`plan.md` = round-by-round index; `spec-element-model.md` = the element proposal + both review findings) and
-`extenders-estate/system-cohesion-and-datamodel.md`. Decks delivered:
-`_meta/briefings/2026-07-20-desk-platform-r3-design/` (R3 design) + `.../2026-07-20-desk-platform-progress/`
-(progress + IA-approval gate).
-
-**OWNER'S COURT → NEXT ACTION:** reviews done, progress deck delivered (no agents running). Waiting on **Henry
-to approve / adjust / veto the 5 major IA changes** — three-plane reframe · new entities goal/source/deliverable ·
-research claim/citation/experiment · software code-PR/bug · registries→entities — and answer 4 open questions
-(goal-vs-OKR · keep workstream tags · research loop · which exec outputs first). **On approval:** fold both
-reviews into the revised final model (fixes in `spec-element-model.md` § "R3 review findings": promote a core
-artifact per type into the spine, define output-plane relations, fix the §3 chain), then R4 = first prototype
-slice. Nothing folds into the canonical model until Henry signs off (standing directive, §5).
+A separate product design effort on the exec desk (NOT dotfiles-agents): a toolkit integrating AI
+agents against one data model across three planes (input · activity · output), PocketBase-backed.
+**R3 (element model) drafted + both adversarial reviews done — awaiting Henry's IA approval.**
+State lives at `~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old/_meta/plans/
+desk-platform/` (`plan.md` = round index; `spec-element-model.md` = the proposal + review
+findings). No change this session — still waiting on Henry to approve/adjust/veto the 5 major IA
+changes + 4 open questions named in `spec-element-model.md`. Nothing folds into the canonical
+model until he signs off (standing directive, §5).
 
 ## 5 · Conventions & gotchas
 
 - Source-of-truth rules are in CLAUDE.md (hot-loaded) — not duplicated here.
-- **`main` is publish-only** — never hand-commit/merge there; a CI guard fails PRs into main (that's what
-  invalidated #148). Branch off `dev`, PR into `dev`. Since ADR 0008 (2026-07-22): `main` is a
-  **filtered parented assembly** (never a dev snapshot — verify with tree hashes per the
-  `.claude/skills/publish-to-main` runbook); `publish.yml`'s `reset=orphan` input rewrites main
-  history and must not be used again without an owner ruling.
+- **`main` is publish-only** — never hand-commit/merge there; a CI guard fails PRs into main.
+  Branch off `dev`, PR into `dev`. `main` is a **filtered parented assembly** (never a dev
+  snapshot — verify with tree hashes per the `publish-to-main` skill runbook).
 - **dev's branch-protection required checks are pinned by CI JOB NAME** — renaming a job in
-  `ci.yml` strands every PR on a check that never reports (cost one blocked merge 2026-07-22).
-  Update the protection setting first if a job must be renamed.
-- **PRs into `dev` do NOT auto-close their `Closes #N` issues** — GitHub only auto-closes on merge
-  into the *default* branch (`main`), and this repo PRs into `dev`. **Close issues by hand after
-  merge** (seen 2026-07-22: #188/#189 stayed open despite `Closes` keywords). Same for `flow.yaml`
-  drift after a hand-commit to dev: run `make flow` — deleting/moving a top-level homed path reds
-  `make ci` (that's how 42ccc12/b07a534 reddened dev; PR #187 repaired it).
+  `ci.yml` strands every PR on a check that never reports. Update the protection setting first.
+- **PRs into `dev` do NOT auto-close their `Closes #N` issues** — auto-close only fires on the
+  *default* branch (`main`). **Close issues by hand after every merge into dev.**
 - **`flow.yaml` is load-bearing**: `make flow` (in `make ci`) fails any PR that adds a top-level
-  path without a declared home, or an automated cycle. New generated artifacts need generator +
-  guard + a flow node; regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
-- Planning/PM for this repo is run from the exec desk (dev-tooling-desk), not in-repo.
-- Comms/decks: the exec-desk `comms` skill uses deck-builder MCP (boardroom theme); `SendUserFile` is absent
-  in this env — deliver PDFs via `open`. In-repo deck fallback (proven twice): copy the prior briefing's
-  `build_deck.py` (python-pptx via `uv run --with python-pptx`, carbon-white theme), export PDF via
-  `soffice --headless --convert-to pdf`, QA-render pages with `pdftoppm` and view them. Audio:
-  `speak_gemini --profile briefing --save x.mp3`, but cloud TTS needs fresh `gcloud auth
-  application-default login` (interactive, Henry-only) and the kokoro fallback IGNORES
-  `--save`/`--no-play` — it just plays aloud.
-- Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — before
-  committing, sweep for stray nested `.claude/` dirs; distill anything valuable first, then delete.
-  Since #194 the tracked store is `.claude/memory/` (repo root), so ANY `.claude/agent-memory/` is
-  litter now — but never whole-dir `git rm` the root `.claude/` (a sweep cost a restore commit
-  `c2133fe` on 2026-07-21).
-- **Never check out `main` locally** (details in CLAUDE.md, hot-loaded). Since #200 a PreToolUse
-  hook denies it in agent sessions and `.git/hooks/post-checkout` (machine-local) warns on manual
-  checkouts; the publish tree now ships a `.gitignore` so an accidental checkout stays quiet.
-- **Henry signs off on major IA changes before they are finalized/built** (standing directive 2026-07-20;
+  path without a declared home. Regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
+- **ADR 0015 (self-authored-only) is now on disk and mechanically enforced**
+  (`scripts/check_provenance.py`) — no `origin: sourced` body may live under `primitives-core/`,
+  full stop; third-party content must go through `externals.yaml` + the clone-at-build mechanism
+  (#36, still unbuilt). This blocked #152 this session — check any future "package an upstream
+  skill" ask against this before scoping a wave.
+- **`isolation: worktree` Agent calls in this repo have repeatedly checked out from a *published*
+  commit instead of `dev`** (5/5 crews this session) — see project memory
+  `worktree-agents-check-out-published-commit`. Every worktree-crew brief must include the
+  self-check (`primitives-core/` missing → `git reset --hard origin/dev`) until root-caused.
+- **Cross-repo crew pattern (new, proven this session):** when a wave's work spans dotfiles-agents
+  + a separate consumer repo (e.g. ra-platform), the crew may read/draft in the other repo but
+  must leave its changes **uncommitted** there — mutating a second repo's git history is reserved
+  to the human, same as `main`. Confirmed working via git worktree isolation; see PR #210.
+- Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — sweep
+  stray nested `.claude/` dirs before committing (never whole-dir `git rm` the root `.claude/`).
+  Tracked store is `.claude/memory/` (repo root) since #194.
+- **Never check out `main` locally** — a PreToolUse hook denies it in agent sessions; a
+  machine-local `post-checkout` hook warns on manual checkouts.
+- **Henry signs off on major IA changes before they are finalized/built** (standing directive;
   memory `approve-major-ia-changes`). Present IA changes as an approval gate, not a done deal.
-- Machine-local leftover: `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored) — a
-  pre-branch-switch backup of a data.db that diverged from the tracked copy. Reconcile or
-  delete next time a session works in `evals/`.
+- Machine-local leftover: `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored) —
+  reconcile or delete next time a session works in `evals/`.
 
 ## 6 · Map
 
 - **Pinned triage issue #192** — `meta: triaged open-issue backlog (living list)`: the in-repo
-  ranked backlog view + the dotfiles-agents-proper waves plan + the owner decision queue. Refresh
-  it (edit the body, never commit) at session boundaries alongside `/handoff`. Three tracks:
-  dotfiles-agents-proper (waves) · extender-db epic #154 (self-manages via `evals/_structure/`) ·
-  agent-harness #172/#173.
-- CLAUDE.md — task interface + rules · docs/decisions/ — ADR mirrors.
-- **Exec desks** (paths corrected 2026-07-22 after the EXECUTIVE_DESK reorg): this repo's desk is
-  `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/`; desk-standard work is
-  `.../desk-standard-desk/`; the former dev-tooling-desk (incl. the desk-platform design + extender
-  census `_knowledge/extenders.yaml`) is archived at `.../ARCHIVE/dev-tooling-desk-old/`.
+  ranked backlog view + delivery plan + owner decision queue. Refresh it (edit the body, never
+  commit) at session boundaries alongside `/handoff`. Three tracks: dotfiles-agents-proper
+  (waves) · extender-db epic #154 (self-manages via `evals/_structure/`) · agent-harness
+  #172/#173.
+- CLAUDE.md — task interface + rules · `.github/CONTRIBUTING.md` (new) — human-facing
+  contribution loop · `docs/decisions/` — ADR mirrors (now includes 0015).
+- **Exec desks:** this repo's desk is `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/`;
+  desk-standard work is `.../desk-standard-desk/`; the former dev-tooling-desk (desk-platform
+  design) is archived at `.../ARCHIVE/dev-tooling-desk-old/`.
