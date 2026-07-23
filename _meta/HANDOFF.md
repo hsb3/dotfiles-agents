@@ -125,11 +125,12 @@ session's waves run cleared #139/#149/#151/#203/#32/#37. Remaining work is all o
   review/commit in that repo's own session, plus a live smoke test.
 - New small follow-ups filed this session: #207 (universal `reference/` taxonomy slot), #208
   (project-local primitive-authoring skill), #211 (confirm board-reporting coverage).
-- **Board repopulation pending owner auth**: the issues-reboot board step needs `project`
-  write scope — run `gh auth refresh -s project`, then remove the ~51 dotfiles-agents items
-  from DEV-TOOLING project #11 (item ids captured during the reboot) and add exactly
-  #36, #152, #154. Desk-side: the four folders copied into the dotfiles-agents-desk repo are
-  left **uncommitted** there for owner review/commit.
+- **Board repopulation DONE** (2026-07-22, after owner granted `project` scope): DEV-TOOLING
+  project #11 now carries exactly #36, #152, #154 from this repo; other repos' 30 items
+  untouched. Gotcha: the project has an **auto-add-sub-issues workflow** — adding epic #154
+  pulled in 14 children (removed again); new sub-issues of #154 will reappear unless that
+  workflow is toggled off in the project settings UI. Desk-side: the four folders copied into
+  the dotfiles-agents-desk repo are still left **uncommitted** there for owner review/commit.
 
 ## 4 · CROSS-REPO — desk-platform design effort (lives on the desk, NOT here)
 
