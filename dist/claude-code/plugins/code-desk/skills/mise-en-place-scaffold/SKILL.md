@@ -11,7 +11,7 @@ description: >-
   merges, edits, deletes, or moves an existing file, never provisions GitHub-side
   objects, and never authors README/CLAUDE.md/AGENTS.md content. Not for measuring
   compliance (repo-compliance-audit) or for questions about what the standard says
-  (repo-meta-structure / memory-taxonomy skills).
+  (repo-meta-structure / project-memory skills).
 ---
 
 # Mise-en-place scaffold
@@ -46,7 +46,7 @@ One code path serves brownfield compliance and new-repo setup — against a fres
    never runs `git add`/`git commit`.
 
 Outside the harness pass `--plugin-root <dir>` pointing at a root that contains
-`skills/repo-meta-structure/` (checklist + assets) and `skills/memory-taxonomy/`.
+`skills/repo-meta-structure/` (checklist + assets) and `skills/project-memory/`.
 
 ## Hard rules
 

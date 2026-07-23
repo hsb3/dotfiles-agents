@@ -19,11 +19,13 @@ them up (see `publish-to-main` skill).
 - **#111** clean-room rebuild and **#134** desk-set restructure — both merged + CLOSED (era detail: git/issues).
 - **Open PRs: 0.**
 
-Live marketplace lineup: code-desk (0.2.0) · exec-desk (0.2.0) · foreman-kit (0.6.0) ·
-github-project-board · opencode-expertise · pptx-themes · private-fork · project-memory ·
-diagrams · obsidian-toolkit · owner-signoff · **claude-code-expertise** (new) (+ dataviz ·
-deep-research · update-config standalones). All current on `dev`; `main` lags 4 PRs until next
-publish.
+Live marketplace lineup (post ADR 0016 recomposition, 2026-07-22): **code-desk (0.3.0)** — the
+sole desk bundle, now including planning-desk, comms, board-triage, pptx-themes (former
+exec-desk, retired) — · foreman-kit (0.6.0) · diagrams · obsidian-toolkit · 11 standalones:
+github-project-board · opencode-expertise · pptx-themes · private-fork · **project-memory**
+(absorbed memory-taxonomy) · owner-signoff · claude-code-expertise · dataviz · deep-research ·
+**claude-code-config** (renamed from update-config) · **tech-eval-research** (new). `main` lags
+`dev` until next publish.
 
 **Also live: the extender-db mini-project** (§2b) — separate effort from the rebuild epics; do
 not fold it into dev without Henry's promotion decision (already taken 2026-07-21, see §2b).
@@ -47,6 +49,22 @@ not fold it into dev without Henry's promotion decision (already taken 2026-07-2
   adoption is staged uncommitted in that separate repo, pending Henry's review/commit + a live
   smoke test**). W5 (#152 visual-planning) **not shipped** — see §3. Follow-ups filed: #207, #208,
   #211. Triage #192 refreshed to "Delivery plan v2."
+- **2026-07-22 (estate-restructure session, branch `feat/estate-restructure`):**
+  (a) **ADR 0016 lineup recomposition** — exec-desk folded into code-desk (0.3.0);
+  opencode-expertise + private-fork standalone-only; memory-taxonomy + project-memory merged
+  into one `project-memory` skill; update-config renamed `claude-code-config`;
+  `tech-eval-research` skill added (authored, standalone). (b) **GitHub issues reboot** —
+  all 99 issues archived to `_meta/_archive/issues-reboot-2026-07-22/`; 18 open issues
+  rewritten to the What/Why/Done-when structure; labels cut 30 → 5 (`type:feat` / `type:fix` /
+  `type:chore` / `decision` / `epic`, ≤3 per issue, declared in `_meta/mise-en-place.yml`);
+  #122 closed as dup of #36; #191 kept open as a standing decision record; issue-form
+  templates added under `.github/ISSUE_TEMPLATE/`. (c) **_meta compliance** — `_archive/` +
+  `plans/` created; briefing decks + signoff package moved to the exec desk (copied
+  uncommitted into `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk`, deleted here);
+  agent-harness wave handoffs archived; HOOK-01 inline-hook gap fixed. (d) **`.claude/plugins/`
+  workbench** — Anthropic's plugin-dev, skill-creator, mcp-server-dev vendored as in-repo
+  file-based plugins via a local `workbench` marketplace in `.claude/settings.json`
+  (local-dev-tooling, never distributed).
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -107,6 +125,11 @@ session's waves run cleared #139/#149/#151/#203/#32/#37. Remaining work is all o
   review/commit in that repo's own session, plus a live smoke test.
 - New small follow-ups filed this session: #207 (universal `reference/` taxonomy slot), #208
   (project-local primitive-authoring skill), #211 (confirm board-reporting coverage).
+- **Board repopulation pending owner auth**: the issues-reboot board step needs `project`
+  write scope — run `gh auth refresh -s project`, then remove the ~51 dotfiles-agents items
+  from DEV-TOOLING project #11 (item ids captured during the reboot) and add exactly
+  #36, #152, #154. Desk-side: the four folders copied into the dotfiles-agents-desk repo are
+  left **uncommitted** there for owner review/commit.
 
 ## 4 · CROSS-REPO — desk-platform design effort (lives on the desk, NOT here)
 

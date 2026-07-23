@@ -1,0 +1,37 @@
+name: Epic
+description: A body of work coordinated across several child issues.
+title: "component: outcome in plain language"
+labels: ["epic"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: The deliverable in plain language; spell out any codename.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem this solves or the value it delivers.
+    validations:
+      required: true
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
+      description: >-
+        Independently verifiable criteria: a command that passes, an artifact that
+        exists.
+    validations:
+      required: true
+  - type: textarea
+    id: children
+    attributes:
+      label: Children
+      description: Task list of child issues.
+      value: |
+        - [ ] #
+    validations:
+      required: true

@@ -19,13 +19,15 @@
 #   prerequisites      advisory cli:/env: needs the installer PRINTS (never rejects)
 #   provenance         must equal the roster `origin` for this id (drift-checked)
 #
-# D4 seeded the mechanism with `private-fork` — a skill that ships BOTH in a bundle and as a
-# one-skill install, proving the standalone mechanism coexists with bundles. Of the five
-# originally standalone-only candidates, the R2-remainder ruling shipped `opencode-expertise`
-# only; `carbon-builder`, `notion-api`, `dlt-pipelines`, and `subagent-creator` do not ship in
-# this rebuild (deferred / superseded — see the epic tracking issue, not a permanent
-# retirement). `github-project-board` joined the catalog at E4 (bundle recomposition, ruling
-# 0020) — it ships standalone-only (no bundle membership).
+# D4 seeded the mechanism with `private-fork` — at the time a skill that shipped BOTH in a
+# bundle and as a one-skill install, proving the standalone mechanism coexists with bundles;
+# the marketplace lineup recomposition (ADR 0016) later dropped it to standalone-only. Of the
+# five originally standalone-only candidates, the R2-remainder ruling shipped `opencode-expertise`
+# only (also since dropped to standalone-only at the same recomposition); `carbon-builder`,
+# `notion-api`, `dlt-pipelines`, and `subagent-creator` do not ship in this rebuild (deferred /
+# superseded — see the epic tracking issue, not a permanent retirement). `github-project-board`
+# joined the catalog at E4 (bundle recomposition, ruling 0020) — it ships standalone-only (no
+# bundle membership).
 
 version: 1
 
@@ -72,7 +74,7 @@ skills:
     depends_on_skills: []
     prerequisites: []
     provenance: authored
-  - id: update-config
+  - id: claude-code-config
     standalone: true
     clients: [claude-code]
     depends_on_skills: []
@@ -85,6 +87,12 @@ skills:
     prerequisites: []
     provenance: authored
   - id: claude-code-expertise
+    standalone: true
+    clients: [claude-code]
+    depends_on_skills: []
+    prerequisites: []
+    provenance: authored
+  - id: tech-eval-research
     standalone: true
     clients: [claude-code]
     depends_on_skills: []

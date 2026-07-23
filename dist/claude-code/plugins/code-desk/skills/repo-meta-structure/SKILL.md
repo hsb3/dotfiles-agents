@@ -44,8 +44,8 @@ mise-en-place scaffold skill), never as a silent exception to this content.
   skill, which copies from this skill's `assets/`.
 - **No naming grammar** — agent/skill/hook naming is owned by the naming-taxonomy standard.
 - **No memory content rules** — `.claude/memory/` placement is layout (here); the memory
-  taxonomy, index format, and promotion rules are the memory-taxonomy standard (packaged as
-  its own sibling skill).
+  taxonomy, index format, and promotion rules are the memory taxonomy standard (packaged as
+  the project-memory skill).
 - **No CI authoring** — the workflow files in `assets/github/workflows/` ship as templates
   copied from the best current instances; what a repo's CI should *do* is out of scope.
 

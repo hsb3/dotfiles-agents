@@ -45,7 +45,7 @@ Usage (from the scaffolded repo root):
 
 Plugin root resolution: $CLAUDE_PLUGIN_ROOT (set by the harness) or --plugin-root. The
 root must contain skills/repo-meta-structure/{references/checklist.md,assets/} and
-skills/memory-taxonomy/references/checklist.md.
+skills/project-memory/references/checklist.md.
 
 Stdlib-only (no pyyaml): tailored manifest reader, same stance as scripts/translate.py
 in dotfiles-agents.
@@ -65,7 +65,7 @@ EXIT_ERROR = 2  # hard error: nothing planned, nothing written
 
 CHECKLIST_RELPATHS = (
     os.path.join("skills", "repo-meta-structure", "references", "checklist.md"),
-    os.path.join("skills", "memory-taxonomy", "references", "checklist.md"),
+    os.path.join("skills", "project-memory", "references", "checklist.md"),
 )
 
 ASSETS_RELPATH = os.path.join("skills", "repo-meta-structure", "assets")

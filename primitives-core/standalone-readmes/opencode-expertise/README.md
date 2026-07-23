@@ -17,4 +17,4 @@ translate or port anything.
 claude plugin install opencode-expertise@dotfiles-agents
 ```
 
-Also ships as a member of the `code-desk` bundle.
+Standalone-only — it does not ship inside any bundle.

@@ -1,0 +1,10 @@
+{
+  "name": "workbench",
+  "owner": { "name": "hsb3" },
+  "description": "In-repo file-based plugins — local dev workbench tools, not distributed",
+  "plugins": [
+    { "name": "plugin-dev", "source": "./plugin-dev", "description": "Anthropic plugin development toolkit (Apache-2.0)" },
+    { "name": "skill-creator", "source": "./skill-creator", "description": "Anthropic skill creation + eval toolkit (Apache-2.0)" },
+    { "name": "mcp-server-dev", "source": "./mcp-server-dev", "description": "Anthropic MCP server development skills (Apache-2.0)" }
+  ]
+}

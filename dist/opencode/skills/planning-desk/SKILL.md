@@ -138,8 +138,8 @@ specifics by writing `_config.md`. Do it in this order.
 
 How this skill *arrives* in a repo, and how to retire a hand-rolled predecessor:
 
-- **Distribution.** The skill ships inside the `exec-desk` bundle from the `dotfiles-agents`
-  marketplace; a consuming repo turns it on with `claude plugin enable exec-desk@dotfiles-agents`
+- **Distribution.** The skill ships inside the `code-desk` bundle from the `dotfiles-agents`
+  marketplace; a consuming repo turns it on with `claude plugin enable code-desk@dotfiles-agents`
   (project scope), and it then auto-loads by its description — no per-repo copy of the SKILL body.
   Only the desk's `_utils/` scripts and `_config.md` live in the consuming repo (they read that
   repo's live `gh` state and disk); the workflow prose travels with the plugin.

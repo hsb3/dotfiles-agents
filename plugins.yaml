@@ -6,11 +6,12 @@
 # scripts/gen_marketplace.py joins the two to assemble each Claude Code bundle under plugins/
 # and regenerate .claude-plugin/marketplace.json.
 #
-# E4/E5/E6 (ruling 0020): the two desk bundles recompose along desk lines. project-workflow
-# renames to code-desk and absorbs repo-standards' six skills (repo-standards retires);
-# exec-desk is new (the executive-desk overhead: planning, comms, board triage, deck themes).
-# github-project-board drops to standalone-only (skill-catalog.yaml). The standalone catalog
-# entries land in D4.
+# Marketplace lineup recomposition (ADR 0016): the two desk bundles fold into one. code-desk
+# (renamed from project-workflow, having already absorbed repo-standards' six skills) now also
+# absorbs the four skills of the former executive-desk bundle (planning-desk, comms,
+# board-triage, pptx-themes — the executive-desk overhead); that bundle retires. github-project-board,
+# opencode-expertise, and private-fork ship standalone-only (skill-catalog.yaml). The standalone
+# catalog entries land in D4.
 #
 # `kind` (issue #144 — PLUGINS.md inventory): a plain-English inventory category, distinct
 # from the standalone catalog's structural "standalone skill" kind — `bundle` for the two
@@ -27,12 +28,8 @@ owner:
 plugins:
   - id: code-desk
     kind: bundle
-    version: "0.2.0"
-    description: "Bring a software project through the next-release execution loop and a documented repo standard together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle."
-  - id: exec-desk
-    kind: bundle
-    version: "0.2.0"
-    description: "The executive-desk overhead — stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks."
+    version: "0.3.0"
+    description: "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks."
   - id: diagrams
     kind: plugin
     version: "0.1.0"
