@@ -6,12 +6,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-main-checkout/hook.py 2>/dev/null || true",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-main-checkout/hook.py",
             "timeout": 10,
             "statusMessage": "Checking for main-branch checkout"
           }
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "workbench": {
+      "source": { "source": "directory", "path": "./.claude/plugins" }
+    }
+  },
+  "enabledPlugins": {
+    "plugin-dev@workbench": true,
+    "skill-creator@workbench": true,
+    "mcp-server-dev@workbench": true
   }
 }

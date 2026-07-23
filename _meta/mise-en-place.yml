@@ -7,9 +7,9 @@
 owner: hsb3
 repo: dotfiles-agents
 default_branch: dev  # this repo integrates on dev; main is publish-only
-gh_issue_labels: []
+gh_issue_labels: ["type:feat", "type:fix", "type:chore", "decision", "epic"]
 gh_milestones: []
-board_title: ""
+board_title: "DEV-TOOLING"
 required_folders:
   # Secret-free durable runbooks / how-to reference whose audience is this desk
   # (machine-specific ops detail) — distinct from operations/ (secrets, untracked),

@@ -8,6 +8,11 @@ throwaway `git worktree add ... origin/main` instead (worktrees use a detached o
 differently-named checkout, so they never trip this guard's exact-token match).
 
 Stdlib-only. Reads the hook JSON on stdin; on a match, emits a PreToolUse deny.
+
+The guard never blocks the Bash tool on its own failure: `main()` swallows any error
+and exits 0 (the error-suppression that used to live in the settings.json command
+string `... 2>/dev/null || true`, folded in-script so the registration is a plain
+script invocation per ADR 0002).
 """
 import json
 import re
@@ -77,4 +82,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Never let a hook failure block or noise the Bash tool: swallow everything and
+    # exit 0 (replaces the former `2>/dev/null || true` on the settings.json command).
+    try:
+        main()
+    except Exception:  # noqa: BLE001 — a guard must fail open, not surface tracebacks
+        pass
