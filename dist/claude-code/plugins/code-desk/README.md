@@ -1,10 +1,10 @@
 # code-desk
 
 Bring a software repo to a documented meta-structure standard and run next-release work
-through it: audit compliance, scaffold what's missing, apply the memory-taxonomy and
-repo-layout standards, turn the README into an honest value-and-proof pitch, operate a
-private fork's upstream review cycle, and reach for opencode reference knowledge whenever an
-extender needs to run in both Claude Code and opencode.
+through it — audit compliance, scaffold what's missing, apply the repo-layout and memory
+standards, turn the README into an honest value-and-proof pitch — and carry the
+executive-desk overhead for running that work end-to-end: a source-grounded planning desk,
+recurring status comms, weekly board triage, and the themed decks those comms ship as.
 
 ## What you get
 
@@ -13,11 +13,13 @@ extender needs to run in both Claude Code and opencode.
 | `repo-compliance-audit` | Read-only. Prints a pass/gap table (`ID \| Area \| Verdict \| Detail`) against the repo-meta-structure and memory-taxonomy standards, plus a `N pass / M gap` summary. Never writes to the repo it audits. |
 | `mise-en-place-scaffold` | Fill-only. `--plan` (default) shows exactly what it would create for the gaps the audit found and writes nothing; `--apply` creates only those items. Never overwrites, edits, or deletes anything that already exists. |
 | `repo-meta-structure` | Reference content: the canonical directory taxonomy, `.claude`/`.github` layout, and gitignore conventions the audit checks against and the scaffold builds from. |
-| `memory-taxonomy` | Reference content: where agent memory should live (global vs. project-level), memory vs. rules vs. skills, and when a fact is worth promoting up a layer. |
-| `project-memory` | Opts a repo into tracked, in-repo auto-memory so its learnings travel with the repo (wires `.claude/memory/` as the memory directory; never overwrites), and recovers memory after a folder move (dry-run by default). Pure Python 3 stdlib. |
+| `project-memory` | The memory taxonomy and the tooling that realizes it — where agent memory lives (global vs. project-level), memory vs. rules vs. skills, and when a fact is worth promoting up a layer, plus opting a repo into tracked, in-repo auto-memory (wires `.claude/memory/` as the memory directory; never overwrites) and recovering memory after a folder move (dry-run by default). Pure Python 3 stdlib. |
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app, not mockups. |
-| `private-fork` | Stands up and operates a private mirror of an upstream open-source repo: remotes, governance tier, a delete-vs-disable rubric for unwanted upstream content, a divergence ledger, and the recurring upstream-review cycle. |
-| `opencode-expertise` | Reference content for opencode's extension surfaces (config, agents, skills, commands, custom tools, plugins, MCP, rules) and the Claude Code → opencode translation mapping — reach for it when an extender needs to run in both harnesses. |
+| `dev-focus` | A mid-session focus check that flags drift from the original task, and a scope triage that sorts a task list into MUST/DEFER/CUT. |
+| `planning-desk` | Stands up a source-grounded planning desk under `_meta/plans/` — write conformant issue bodies and deep build plans, driven through a draft → review → fix → reconcile loop. |
+| `board-triage` | The weekly routine that fills in Impact/Effort/Priority on a GitHub Project (v2) board so its prioritization and roadmap views stay useful instead of drifting into noise. |
+| `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
+| `pptx-themes` | Builds the decks `comms` ships as, with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill. |
 
 ## A worked example
 
@@ -40,9 +42,19 @@ Later: "write me a real README for this"
 → readme-value-and-proof captures live screenshots of the app actually running and
   writes the value-proposition pitch around them — not a description of planned features.
 
-Porting a skill to run under opencode too?
-→ opencode-expertise carries the extension-surface reference and the Claude Code →
-  opencode translation mapping, so the port doesn't start from scratch.
+You: "plan this out"
+→ planning-desk writes a conformant issue body or a deep build plan under _meta/plans/,
+  grounded in cited source, stated as deliverables/criteria/parallelism — never a timeline.
+
+Later: "run board triage"
+→ board-triage exports the board snapshot, finds the un-ranked/blank/stale items, sets
+  Workstream/Impact/Effort/Priority by the standing rubric, and applies only the diffs.
+
+End of week: "produce the weekly planning briefing"
+→ comms assembles the deck from the same sources the planning desk and board already
+  track, to the standard's format — no one-off slide deck from scratch.
+→ pptx-themes renders it: the approved palette, monospaced type, and a visual-QA pass
+  before it ships, instead of the generic pptx skill's defaults.
 ```
 
 ## Honest scope
@@ -50,5 +62,8 @@ Porting a skill to run under opencode too?
 Every skill here is additive or read-only by design — nothing in this bundle merges,
 deletes, or force-overwrites existing content. `mise-en-place-scaffold` reports a conflict
 instead of resolving it when a file already exists but doesn't match the expected shape; a
-human (or a separate, deliberate edit) still makes that call. `opencode-expertise` is
-reference knowledge, not an installer — it does not itself translate or port anything.
+human (or a separate, deliberate edit) still makes that call. The executive-desk skills
+assume a repo, a planning-desk `_meta/plans/` tree, and (for `board-triage`) a GitHub
+Project (v2) board already stood up — they operate on those directly rather than replacing
+them. `pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a
+full authoring replacement for it.

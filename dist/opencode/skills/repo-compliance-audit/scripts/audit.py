@@ -2,7 +2,7 @@
 """Repo compliance audit — read-only pass/gap table against the packaged standards.
 
 The rollout's measuring instrument. Reads the stable-ID checklist rows from the sibling
-standards' reference content (repo-meta-structure + memory-taxonomy checklists), executes
+standards' reference content (repo-meta-structure + project-memory checklists), executes
 each row against the working tree of the invocation root's git toplevel, and prints a
 `ID | Area | Verdict | Detail` table plus a `N pass / M gap` summary.
 
@@ -33,7 +33,7 @@ Usage (from the audited repo root):
 
 Plugin root resolution: $CLAUDE_PLUGIN_ROOT (set by the harness) or --plugin-root.
 The root must contain skills/repo-meta-structure/references/checklist.md and
-skills/memory-taxonomy/references/checklist.md.
+skills/project-memory/references/checklist.md.
 
 Stdlib-only (no pyyaml): the manifest is parsed with a tailored reader, same stance as
 scripts/translate.py in dotfiles-agents.
@@ -52,7 +52,7 @@ EXIT_ERROR = 2  # hard error: no partial table
 
 CHECKLIST_RELPATHS = (
     os.path.join("skills", "repo-meta-structure", "references", "checklist.md"),
-    os.path.join("skills", "memory-taxonomy", "references", "checklist.md"),
+    os.path.join("skills", "project-memory", "references", "checklist.md"),
 )
 
 MANIFEST_RELPATH = os.path.join("_meta", "mise-en-place.yml")

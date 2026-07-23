@@ -40,7 +40,7 @@ else. Adding or changing a check means editing this file, not the audit.
 |---|---|---|---|
 | CLAUDE-01 | `.claude/` | `path-exists: .claude/agents/` | Directory exists |
 | CLAUDE-02 | `.claude/` | `path-exists: .claude/hooks/` | Directory exists |
-| CLAUDE-03 | `.claude/` | `path-exists: .claude/memory/` | Directory exists (index/content rules are `MEM-xx`, owned by the memory-taxonomy standard) |
+| CLAUDE-03 | `.claude/` | `path-exists: .claude/memory/` | Directory exists (index/content rules are `MEM-xx`, owned by the memory taxonomy standard, packaged as the project-memory skill) |
 | CLAUDE-04 | `.claude/` | `path-exists: .claude/rules/` | Directory exists |
 | CLAUDE-05 | `.claude/` | `path-exists: .claude/skills/` | Directory exists |
 | CLAUDE-06 | `.claude/` | `path-exists: .claude/settings.json` | File exists (tracked project policy; must carry anything a headless run depends on) |
@@ -151,8 +151,8 @@ missing field).
 ## Deferred families (owned elsewhere — no orphaned gaps)
 
 - **`MEM-xx` (memory structure)** — tracked `.claude/memory/` with a `MEMORY.md` index and
-  the taxonomy rules: owned by the **memory-taxonomy standard** (its own packaged skill and
-  checklist). Layout presence here is only `CLAUDE-03` / `IGNORE-12`.
+  the taxonomy rules: owned by the **memory taxonomy standard** (packaged as the
+  project-memory skill, with its checklist). Layout presence here is only `CLAUDE-03` / `IGNORE-12`.
 - **`HOOK-xx` (hook packaging)** — hooks as script + config directories, never inline in
   `.claude/settings.json`: the interim `HOOK-01` check (`no-inline-hooks`) is sourced by the
   audit directly from the hooks-as-script-plus-config decision (ADR:

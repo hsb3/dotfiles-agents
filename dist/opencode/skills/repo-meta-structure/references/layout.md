@@ -27,7 +27,7 @@ Desk content is clone-survivable by default; deliberately-local scratch belongs 
 
 | Entry | Note |
 |---|---|
-| `agents/`, `hooks/`, `memory/`, `rules/`, `skills/` | `memory/` is git-tracked (taxonomy and index rules owned by the memory-taxonomy standard); hooks are script + config dirs, never inline in settings (packaging depth owned by the hook-composition standard) |
+| `agents/`, `hooks/`, `memory/`, `rules/`, `skills/` | `memory/` is git-tracked (taxonomy and index rules owned by the memory taxonomy standard, packaged as the project-memory skill); hooks are script + config dirs, never inline in settings (packaging depth owned by the hook-composition standard) |
 | `commands/` | Present-but-discouraged per the skills-over-commands decision — the audit flags command usage as migration debt, not a structural gap |
 | `worktrees/` | Harness-managed agent worktrees; always ignored |
 | `settings.json` | Tracked (project policy) |

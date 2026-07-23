@@ -4,6 +4,14 @@
 
 Every plugin distributed by the `dotfiles-agents` marketplace, generated from `plugins.yaml` + `primitives-core.yaml` (bundles/kits) and `skill-catalog.yaml` (standalone skills).
 
+## claude-code-config
+
+- **Kind:** standalone skill
+- **Version:** 0.0.1
+- **Description:** Configure the Claude Code harness end to end: the settings-file layer (route each change to the correct file by precedence — managed policy vs user vs project vs machine-local), narrowest-scope allow/deny/ask permission rules, automated behaviors implemented as ratified directory-based hooks (config plus script file, never inline shell), env vars, and MCP server registration, then verify every edit for JSON validity and take-effect. Changing an existing setting is one facet of the broader configuration surface this skill covers.
+- **Ships:** 1 skill — claude-code-config
+- **Install:** `claude plugin install claude-code-config@dotfiles-agents`
+
 ## claude-code-expertise
 
 - **Kind:** standalone skill
@@ -15,9 +23,9 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 ## code-desk
 
 - **Kind:** bundle
-- **Version:** 0.2.0
-- **Description:** Bring a software project through the next-release execution loop and a documented repo standard together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory taxonomy/README to standard, and operate a private fork's upstream review cycle.
-- **Ships:** 9 skills — dev-focus, memory-taxonomy, mise-en-place-scaffold, opencode-expertise, private-fork, project-memory, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
+- **Version:** 0.3.0
+- **Description:** Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together — plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.
+- **Ships:** 10 skills — board-triage, comms, dev-focus, mise-en-place-scaffold, planning-desk, pptx-themes, project-memory, readme-value-and-proof, repo-compliance-audit, repo-meta-structure
 - **Install:** `claude plugin install code-desk@dotfiles-agents`
 
 ## dataviz
@@ -43,14 +51,6 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 - **Description:** Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.
 - **Ships:** 4 skills — diagrams, drawio, excalidraw, mermaid
 - **Install:** `claude plugin install diagrams@dotfiles-agents`
-
-## exec-desk
-
-- **Kind:** bundle
-- **Version:** 0.2.0
-- **Description:** The executive-desk overhead — stand up a source-grounded planning desk, produce recurring status comms, keep a GitHub Project board's prioritization fields groomed, and build themed PowerPoint decks.
-- **Ships:** 4 skills — board-triage, comms, planning-desk, pptx-themes
-- **Install:** `claude plugin install exec-desk@dotfiles-agents`
 
 ## foreman-kit
 
@@ -112,14 +112,14 @@ Every plugin distributed by the `dotfiles-agents` marketplace, generated from `p
 
 - **Kind:** standalone skill
 - **Version:** 0.0.1
-- **Description:** Opt a git repo into tracked, in-repo auto-memory and recover a project's memory after its folder moves. project_memory.py wires the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites); migrate_memory.py relocates memory (and optional transcripts) after a move, dry-run by default. Pure Python 3 stdlib.
+- **Description:** The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism — paired with the operational mechanics: project_memory.py opts a git repo into tracked, in-repo auto-memory by wiring the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites), and migrate_memory.py recovers a project's memory (and optional transcripts) after its folder moves, dry-run by default. Pure Python 3 stdlib.
 - **Ships:** 1 skill — project-memory
 - **Install:** `claude plugin install project-memory@dotfiles-agents`
 
-## update-config
+## tech-eval-research
 
 - **Kind:** standalone skill
 - **Version:** 0.0.1
-- **Description:** Configure the Claude Code harness through its settings files: route each change to the correct file by precedence (managed policy vs user vs project vs machine-local), apply narrowest-scope allow/deny/ask permission rules, implement automated behaviors as ratified directory-based hooks (config plus script file, never inline shell), set env vars, register MCP servers, then verify every edit for JSON validity and take-effect.
-- **Ships:** 1 skill — update-config
-- **Install:** `claude plugin install update-config@dotfiles-agents`
+- **Description:** Rigorous, cited, comparative technology evaluation producing a ranked shortlist, a capability comparison matrix, and a primary-source-backed recommendation; use to compare, evaluate, choose, or shortlist technologies, for license/paywall audits, self-hostability and OSS-maturity checks, and build-vs-buy research.
+- **Ships:** 1 skill — tech-eval-research
+- **Install:** `claude plugin install tech-eval-research@dotfiles-agents`

@@ -19,4 +19,4 @@ own `README.md` and in the repo's `externals.yaml` — see the shipped skill bod
 claude plugin install pptx-themes@dotfiles-agents
 ```
 
-Also ships as a member of the `exec-desk` bundle.
+Also ships as a member of the `code-desk` bundle.

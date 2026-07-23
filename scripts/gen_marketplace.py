@@ -90,13 +90,14 @@ MARKETPLACE_SCHEMA = "https://anthropic.com/claude-code/marketplace.schema.json"
 METADATA = {
     "version": "0.3.0",
     "description": (
-        "Two desk bundles — code-desk (slim next-release execution under a documented repo "
-        "standard) and exec-desk (the executive-desk overhead: planning, comms, board "
+        "One desk bundle — code-desk (next-release execution under a documented repo "
+        "standard, now also carrying the executive-desk overhead: planning, comms, board "
         "triage, deck themes) — plus three kits (foreman-kit: tiered delegation agents and "
         "session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: "
-        "Obsidian plugin-dev guidance) and eight standalone one-skill plugins: "
-        "github-project-board, private-fork, opencode-expertise, owner-signoff, "
-        "pptx-themes, deep-research, dataviz, and update-config."
+        "Obsidian plugin-dev guidance) and eleven standalone one-skill plugins: "
+        "claude-code-config, claude-code-expertise, dataviz, deep-research, "
+        "github-project-board, opencode-expertise, owner-signoff, pptx-themes, "
+        "private-fork, project-memory, and tech-eval-research."
     ),
 }
 

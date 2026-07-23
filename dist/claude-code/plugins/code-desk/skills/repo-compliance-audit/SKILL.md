@@ -4,12 +4,12 @@ description: >-
   Run the read-only repo compliance audit — use whenever the ask is "run the compliance
   audit", "audit this repo against the standard", "is this repo conformant", "check this
   repo's structure/layout compliance", or any request for a pass/gap verdict against the
-  repo meta-structure or memory-taxonomy standards. Runs the bundled script from the repo
+  repo meta-structure or project-memory standards. Runs the bundled script from the repo
   root and presents its `ID | Area | Verdict | Detail` table plus `N pass / M gap`
   summary verbatim. Strictly informational: it never writes to the audited repo, never
   fixes gaps (that is the mise-en-place scaffold skill), and defines no checklist content
   of its own (rows come from the sibling standards' checklist files). Not for questions
-  about what the standard says (repo-meta-structure / memory-taxonomy skills) or for
+  about what the standard says (repo-meta-structure / project-memory skills) or for
   scaffolding missing structure.
 ---
 
@@ -29,7 +29,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/repo-compliance-audit/scripts/audit.py"
 The script finds the checklists via `$CLAUDE_PLUGIN_ROOT` automatically; outside the
 harness pass `--plugin-root <dir>` pointing at a root that contains
 `skills/repo-meta-structure/references/checklist.md` and
-`skills/memory-taxonomy/references/checklist.md`.
+`skills/project-memory/references/checklist.md`.
 
 Then **present the table verbatim** (fenced code block), including the summary line.
 Do not re-derive, filter, or re-score rows yourself — the script is the instrument.

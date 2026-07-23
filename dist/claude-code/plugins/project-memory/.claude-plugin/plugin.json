@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Opt a git repo into tracked, in-repo auto-memory and recover a project's memory after its folder moves. project_memory.py wires the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites); migrate_memory.py relocates memory (and optional transcripts) after a move, dry-run by default. Pure Python 3 stdlib.",
+  "description": "The memory taxonomy v1 as consultable reference content \u2014 global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism \u2014 paired with the operational mechanics: project_memory.py opts a git repo into tracked, in-repo auto-memory by wiring the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites), and migrate_memory.py recovers a project's memory (and optional transcripts) after its folder moves, dry-run by default. Pure Python 3 stdlib.",
   "name": "project-memory",
   "version": "0.0.1"
 }

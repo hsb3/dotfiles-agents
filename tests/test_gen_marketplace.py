@@ -106,9 +106,8 @@ class Membership(unittest.TestCase):
         # E3 dedup: no primitive ships in both foreman-kit and a desk bundle.
         members = G.bundle_members(R.parse_roster(R.ROSTER))
         self.assertNotIn("handoff", members.get("code-desk", []))
-        self.assertNotIn("handoff", members.get("exec-desk", []))
-        # E4/E5/E6 recomposition: board-triage moved from project-workflow to exec-desk.
-        self.assertIn("board-triage", members.get("exec-desk", []))
+        # E4/E5/E6 recomposition: the retired desk bundle's board-triage now ships in code-desk.
+        self.assertIn("board-triage", members.get("code-desk", []))
 
 
 class Build(unittest.TestCase):
@@ -123,19 +122,19 @@ class Build(unittest.TestCase):
 
     def test_marketplace_lists_bundles_and_standalone(self):
         names = [p["name"] for p in self.market["plugins"]]
-        # two bundles (code-desk, exec-desk) + three kits (diagrams, foreman-kit,
-        # obsidian-toolkit) + ten standalone skills (claude-code-expertise, dataviz,
+        # one bundle (code-desk) + three kits (diagrams, foreman-kit, obsidian-toolkit) +
+        # eleven standalone skills (claude-code-config, claude-code-expertise, dataviz,
         # deep-research, github-project-board, opencode-expertise, owner-signoff,
-        # pptx-themes, private-fork, project-memory, update-config), sorted by name
+        # pptx-themes, private-fork, project-memory, tech-eval-research), sorted by name
         self.assertEqual(
             names,
             [
+                "claude-code-config",
                 "claude-code-expertise",
                 "code-desk",
                 "dataviz",
                 "deep-research",
                 "diagrams",
-                "exec-desk",
                 "foreman-kit",
                 "github-project-board",
                 "obsidian-toolkit",
@@ -144,7 +143,7 @@ class Build(unittest.TestCase):
                 "pptx-themes",
                 "private-fork",
                 "project-memory",
-                "update-config",
+                "tech-eval-research",
             ],
         )
         self.assertEqual(self.market["name"], "dotfiles-agents")
@@ -165,7 +164,7 @@ class Build(unittest.TestCase):
 
     def test_skill_body_is_byte_identical_to_source(self):
         built = os.path.join(
-            self.tmp, "plugins", "exec-desk", "skills", "board-triage"
+            self.tmp, "plugins", "code-desk", "skills", "board-triage"
         )
         src = os.path.join(G.REPO, "primitives-core", "skills", "board-triage")
         self.assertTrue(G._identical(src, built))
@@ -204,7 +203,6 @@ class HookAssembly(unittest.TestCase):
             self.assertIn(hid, fk)
         # E3 dedup: hooks no longer ship in a desk bundle.
         self.assertEqual(hooks.get("code-desk", []), [])
-        self.assertEqual(hooks.get("exec-desk", []), [])
 
     def test_hook_body_assembled_byte_identical(self):
         built = os.path.join(self.fk_hooks, "context-watermark")
@@ -255,7 +253,6 @@ class AgentAssembly(unittest.TestCase):
             self.assertIn(aid, fk)
         # seed-agent removed: no agents ship in a desk bundle.
         self.assertEqual(agents.get("code-desk", []), [])
-        self.assertEqual(agents.get("exec-desk", []), [])
 
     def test_agent_body_assembled_byte_identical(self):
         built = os.path.join(self.fk_agents, "scout.md")
@@ -392,12 +389,6 @@ class BundleReadmeAssembly(unittest.TestCase):
         self.assertTrue(os.path.isfile(built))
         self.assertTrue(G._identical(src, built))
 
-    def test_exec_desk_readme_byte_identical_to_source(self):
-        built = os.path.join(self.tmp, "plugins", "exec-desk", "README.md")
-        src = os.path.join(G.BUNDLES_DIR, "exec-desk", "README.md")
-        self.assertTrue(os.path.isfile(built))
-        self.assertTrue(G._identical(src, built))
-
     def test_missing_readme_source_is_tolerated(self):
         # A bundle with no bundles/<id>/README.md ships without one --
         # the copy step must be a no-op, never a hard failure.
@@ -437,9 +428,9 @@ class StandaloneAssembly(unittest.TestCase):
         self.assertEqual(by_name["private-fork"]["source"], "./plugins/private-fork")
 
     def test_standalone_coexists_with_bundle(self):
-        # private-fork ships BOTH as a standalone plugin and inside the code-desk bundle.
+        # project-memory ships BOTH as a standalone plugin and inside the code-desk bundle.
         bundle_skill = os.path.join(
-            self.tmp, "plugins", "code-desk", "skills", "private-fork"
+            self.tmp, "plugins", "code-desk", "skills", "project-memory"
         )
         self.assertTrue(os.path.isdir(bundle_skill))
 
@@ -475,12 +466,11 @@ class PluginsMd(unittest.TestCase):
             self.assertIn(f"## {entry['name']}", self.md)
 
     def test_kind_bundle_vs_plugin_vs_standalone(self):
-        # code-desk/exec-desk are desk bundles; foreman-kit is a kit (plugin), not a desk
-        # bundle; the four one-skill wrappers are standalone skills (skill-catalog.yaml).
+        # code-desk is the sole desk bundle; foreman-kit is a kit (plugin), not a desk
+        # bundle; the one-skill wrappers are standalone skills (skill-catalog.yaml).
         by_section = self.md.split("## ")
         sections = {s.split("\n", 1)[0]: s for s in by_section[1:]}
         self.assertIn("**Kind:** bundle", sections["code-desk"])
-        self.assertIn("**Kind:** bundle", sections["exec-desk"])
         self.assertIn("**Kind:** plugin", sections["foreman-kit"])
         self.assertIn("**Kind:** standalone skill", sections["private-fork"])
 
@@ -526,7 +516,7 @@ class ReadmeCoverage(unittest.TestCase):
     def test_clean_tree_has_no_coverage_problems(self):
         self.assertEqual(G.readme_coverage_problems(self.tmp, self.market), [])
 
-    def test_all_seven_plugins_ship_a_readme(self):
+    def test_all_plugins_ship_a_readme(self):
         for entry in self.market["plugins"]:
             readme = os.path.join(self.tmp, "plugins", entry["name"], "README.md")
             self.assertTrue(os.path.isfile(readme), f"missing {readme}")

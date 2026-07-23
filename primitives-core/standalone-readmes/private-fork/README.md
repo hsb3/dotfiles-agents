@@ -18,4 +18,4 @@ ordinary contribute-back GitHub fork whose changes are destined for upstream PRs
 claude plugin install private-fork@dotfiles-agents
 ```
 
-Also ships as a member of the `code-desk` bundle.
+Standalone-only — it does not ship inside any bundle.

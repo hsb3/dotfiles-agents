@@ -64,9 +64,10 @@ class Clean(unittest.TestCase):
                 "owner-signoff",
                 "deep-research",
                 "dataviz",
-                "update-config",
+                "claude-code-config",
                 "project-memory",
                 "claude-code-expertise",
+                "tech-eval-research",
             ],
         )
 
