@@ -63,16 +63,18 @@ STATE_DIR = _env_path("CONTEXT_WATERMARK_STATE_DIR", STATE_DIR_DEFAULT)
 
 
 def _resolve_log_path(cwd):
-    """CONTEXT_WATERMARK_LOG_PATH override, else <cwd>/logs/context-watermark.jsonl.
+    """CONTEXT_WATERMARK_LOG_PATH override, else <project-root>/logs/context-watermark.jsonl.
 
-    cwd-relative (not a hardcoded machine path), matching the surfacer and
-    telemetry hooks' convention, so the hook stays portable across any
-    project that installs this plugin.
+    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
+    commands), matching the surfacer and telemetry hooks' convention, so the
+    hook stays portable across any project that installs this plugin. The
+    payload cwd is a last resort only — anchoring on cwd scatters stray
+    logs/ dirs into whatever subdirectory an agent happens to be running in.
     """
     override = os.environ.get("CONTEXT_WATERMARK_LOG_PATH")
     if override:
         return override
-    base = cwd or os.getcwd()
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
     return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
 
 
