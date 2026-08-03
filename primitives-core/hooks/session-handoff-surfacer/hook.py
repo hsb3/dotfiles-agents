@@ -75,16 +75,18 @@ HEAD_LINES = _env_int("HANDOFF_SURFACER_HEAD_LINES", HEAD_LINES_DEFAULT)
 
 
 def _resolve_log_path(cwd):
-    """HANDOFF_SURFACER_LOG_PATH override, else <cwd>/logs/handoff-surfacer.jsonl.
+    """HANDOFF_SURFACER_LOG_PATH override, else <project-root>/logs/handoff-surfacer.jsonl.
 
-    Kept cwd-relative (not a hardcoded machine path) so the hook is portable
-    across any project that installs the foreman-kit plugin, not just this
-    one — matching scripts/log_dispatch.py's override convention.
+    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
+    commands), so the hook is portable across any project that installs the
+    foreman-kit plugin, not just this one. The payload cwd is a last resort
+    only — anchoring on cwd scatters stray logs/ dirs into whatever
+    subdirectory an agent happens to be running in.
     """
     override = os.environ.get("HANDOFF_SURFACER_LOG_PATH")
     if override:
         return override
-    base = cwd or os.getcwd()
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
     return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
 
 
@@ -201,8 +203,7 @@ def main():
         # Fail-open: never break session start on our own error.
         try:
             _log(
-                os.environ.get("HANDOFF_SURFACER_LOG_PATH")
-                or os.path.join(os.getcwd(), "logs", LOG_FILENAME_DEFAULT),
+                _resolve_log_path(None),
                 {
                     "session_id": None,
                     "source": None,

@@ -58,16 +58,18 @@ TAIL_BYTES = _env_int("SUBAGENT_TELEMETRY_TAIL_BYTES", TAIL_BYTES_DEFAULT)
 
 
 def _resolve_log_path(cwd):
-    """SUBAGENT_TELEMETRY_LOG_PATH override, else <cwd>/logs/delegation.jsonl.
+    """SUBAGENT_TELEMETRY_LOG_PATH override, else <project-root>/logs/delegation.jsonl.
 
-    cwd-relative (not a hardcoded machine path), matching
-    scripts/log_dispatch.py's env-overridable-path convention, so the hook
-    stays portable across any project that installs the foreman-kit plugin.
+    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
+    commands), so the hook stays portable across any project that installs
+    the foreman-kit plugin. The payload cwd is a last resort only — anchoring
+    on cwd scatters stray logs/ dirs into whatever subdirectory an agent
+    happens to be running in.
     """
     override = os.environ.get("SUBAGENT_TELEMETRY_LOG_PATH")
     if override:
         return override
-    base = cwd or os.getcwd()
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
     return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
 
 
@@ -201,7 +203,7 @@ def main():
     except Exception as e:
         # Fail-open: never break the subagent-stop flow on our own error.
         try:
-            log_path = os.path.join(os.getcwd(), "logs", LOG_FILENAME_DEFAULT)
+            log_path = _resolve_log_path(None)
             _append_row(log_path, {
                 "session_id": None,
                 "agent_id": None,

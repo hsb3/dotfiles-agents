@@ -63,16 +63,18 @@ FRESHNESS_MINUTES = _env_int(
 
 
 def _resolve_log_path(cwd):
-    """HANDOFF_GUARD_LOG_PATH override, else <cwd>/logs/handoff-guard.jsonl.
+    """HANDOFF_GUARD_LOG_PATH override, else <project-root>/logs/handoff-guard.jsonl.
 
-    cwd-relative (not a hardcoded machine path), matching the surfacer and
-    telemetry hooks' convention, so the hook stays portable across any
-    project that installs this plugin.
+    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
+    commands), matching the surfacer and telemetry hooks' convention, so the
+    hook stays portable across any project that installs this plugin. The
+    payload cwd is a last resort only — anchoring on cwd scatters stray
+    logs/ dirs into whatever subdirectory an agent happens to be running in.
     """
     override = os.environ.get("HANDOFF_GUARD_LOG_PATH")
     if override:
         return override
-    base = cwd or os.getcwd()
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
     return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
 
 
