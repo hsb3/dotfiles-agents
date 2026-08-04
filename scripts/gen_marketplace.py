@@ -4,7 +4,8 @@
 This is the repo's reference generator: it turns the hand-authored inputs — the roster
 (primitives-core.yaml, which records membership via each entry's `plugins:` field), the
 bundle metadata (plugins.yaml), and each bundle's README source
-(bundles/<id>/README.md) — into generated, committed, drift-guarded
+(plugins/<id>/README.md, in the symlink-assembly tree per ADR 0017) — into generated,
+committed, drift-guarded
 artifacts under the claude-code dist lane, dist/claude-code/ (ADR 0008; the publish
 workflow lifts this lane to the ROOT of `main`, which is why every internal path below is
 lane-relative):
@@ -35,8 +36,8 @@ A Claude Code marketplace installs a *plugin*, and a plugin is a directory holdi
 `.claude-plugin/plugin.json` plus its skills. A bundle is a curated subset of the roster's
 skills, so it cannot point straight at primitives-core (which holds every skill); the subset
 is assembled here. The skill BODY still lives once in primitives-core/skills/<id>/, and a
-bundle's README source lives once in bundles/<id>/README.md — the assembled
-copies under plugins/ are generated output and are never hand-edited.
+bundle's README source lives once in the root plugins/<id>/README.md assembly (ADR 0017) —
+the assembled copies under dist are generated output and are never hand-edited.
 
 Deterministic and stdlib-only (stable ordering, no clocks/random), so a `--check` run never
 false-fails. Two modes:
@@ -71,7 +72,7 @@ PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
 # dist/claude-code/ on dev; publish lifts the lane's contents to the root of `main`.
 DIST = os.path.join(REPO, "dist", "claude-code")
 PLUGINS_DIR = os.path.join(DIST, "plugins")
-BUNDLES_DIR = os.path.join(REPO, "bundles")
+BUNDLES_DIR = os.path.join(REPO, "plugins")  # bundle README sources live in the symlink-assembly tree (ADR 0017)
 MARKETPLACE = os.path.join(DIST, ".claude-plugin", "marketplace.json")
 PLUGINS_MD = os.path.join(DIST, "PLUGINS.md")
 
@@ -241,9 +242,9 @@ def build_hooks_manifest(hook_ids, src_by_id):
 
 
 def _copy_bundle_readme(bundle, proot):
-    """Copy bundles/<bundle>/README.md -> <proot>/README.md if the source
-    exists. Additive only: a bundle with no README source ships without one — this must
-    never fail the build."""
+    """Copy plugins/<bundle>/README.md (the symlink-assembly tree, ADR 0017) ->
+    <proot>/README.md if the source exists. Additive only: a bundle with no README source
+    ships without one — this must never fail the build."""
     src = os.path.join(BUNDLES_DIR, bundle, "README.md")
     if os.path.isfile(src):
         shutil.copy2(src, os.path.join(proot, "README.md"))

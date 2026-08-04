@@ -3,10 +3,10 @@ id: TASK-1
 title: >-
   ADR: pointer-based marketplace architecture (one repo, symlink plugins, no
   tracked dist)
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 01:46'
+updated_date: '2026-08-04 01:52'
 labels:
   - refactor
 milestone: m-0
@@ -24,7 +24,7 @@ Formalize the 2026-08-03 restructure rulings as an ADR in docs/decisions/: plugi
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 ADR drafted in docs/decisions/ and approved by owner
+- [x] #1 ADR drafted in docs/decisions/ and approved by owner
 - [x] #2 Covers: symlink mechanism + install-time materialization, one-repo two-target ruling, tripwires for a future repo split
 - [x] #3 Names the publish-model and evals/harness-extraction decisions as linked open decisions
 <!-- AC:END -->

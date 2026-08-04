@@ -6,13 +6,14 @@ skill only through data surfaces (the roster's `requires:`, a repo's own config)
 into a primitive body. This is the vendored, in-repo successor to the archived workbench
 `scripts/promote_check.py` H2/H5 checks — no cross-repo import at runtime.
 
-Scope = the shipped primitive bodies under `primitives-core/{skills,agents,hooks}/`, plus each
-bundle's README source under `bundles/<id>/README.md` and each standalone
-wrapper's README source under `primitives-core/standalone-readmes/<id>/README.md` — both are
-copied verbatim into the installed plugin (`plugins/<id>/README.md`), so they ship to a user
-the same as a skill body and are in scope for the same reason. The marketplace/plugin
-`owner`/`author` metadata is the *sanctioned* data surface for authorship and is deliberately
-out of scope (that is where identity is allowed to live). Repo-internal docs that never leave
+Scope = the shipped primitive bodies under `primitives-core/{skills,agents,hooks}/`, plus the
+symlink-assembly tree `plugins/` (ADR 0017): bundle READMEs are regular files there, and each
+standalone wrapper's README travels with its skill (`primitives-core/skills/<id>/README.md`,
+symlinked to the plugin root) — all of it ships to a user the same as a skill body and is in
+scope for the same reason. Within `plugins/`, `.claude-plugin/` metadata is skipped (the
+marketplace/plugin `owner`/`author` metadata is the *sanctioned* data surface for authorship —
+that is where identity is allowed to live), and symlinks are skipped (their targets are
+already scanned at source). Repo-internal docs that never leave
 the source tree (root README, CONTRIBUTING, ADRs, _meta) do not ship to a user and are not
 scanned here.
 
@@ -44,8 +45,7 @@ SCAN_ROOTS = (
     os.path.join(REPO, "primitives-core", "skills"),
     os.path.join(REPO, "primitives-core", "agents"),
     os.path.join(REPO, "primitives-core", "hooks"),
-    os.path.join(REPO, "bundles"),
-    os.path.join(REPO, "primitives-core", "standalone-readmes"),
+    os.path.join(REPO, "plugins"),
 )
 TEXT_EXT = (".md", ".json", ".sh", ".py", ".js", ".ts", ".yaml", ".yml", ".toml", ".txt")
 
@@ -189,8 +189,13 @@ def main():
         if not os.path.isdir(root):
             continue
         for dirpath, _dirs, files in os.walk(root):
+            # plugin metadata (.claude-plugin/plugin.json) is the sanctioned identity
+            # surface; symlinked bodies are scanned once, at their source
+            _dirs[:] = [d for d in _dirs if d != ".claude-plugin"]
             for f in sorted(files):
                 fp = os.path.join(dirpath, f)
+                if os.path.islink(fp):
+                    continue
                 rel = os.path.relpath(fp, REPO)
                 src = _owning_source(rel)
                 requires = req_by_src.get(src, set()) if src else set()

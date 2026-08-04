@@ -47,6 +47,7 @@ flowchart TD
   end
   subgraph L_dist[dist]
     N_dist_lanes[dist lanes]
+    N_plugin_assemblies[plugin assemblies]
   end
   subgraph L_publish[publish]
     N_publish_main[publish main]
@@ -72,6 +73,8 @@ flowchart TD
   N_bundle_metadata -->|generates| N_dist_lanes
   N_standalone_catalog -->|generates| N_dist_lanes
   N_gates -->|gates| N_primitive_bodies
+  N_primitive_bodies -.->|consumes| N_plugin_assemblies
+  N_gates -->|gates| N_plugin_assemblies
   N_gates -->|gates| N_dist_lanes
   N_primitive_bodies -->|consumes| N_harness
   N_harness -->|ingests| N_evals

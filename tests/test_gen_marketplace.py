@@ -535,7 +535,7 @@ class ReadmeCoverage(unittest.TestCase):
         # `make build-check` / `make ci` lane) must report the gap, and restoring the source
         # must make it green again.
         src = os.path.join(
-            G.REPO, "primitives-core", "standalone-readmes", "private-fork", "README.md"
+            G.REPO, "primitives-core", "skills", "private-fork", "README.md"
         )
         with open(src, encoding="utf-8") as fh:
             saved = fh.read()

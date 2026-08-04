@@ -26,7 +26,7 @@ nodes:
     class: authored
     status: current
     paths: [primitives-core, hooks]
-    note: "Single source copy of every primitive: skills, agents, hooks, and standalone README sources. hooks/ is the empty ratified-layout placeholder. (Bundle README sources moved to the top-level bundles/ node.)"
+    note: "Single source copy of every primitive: skills, agents, hooks. A skill's README travels with it (primitives-core/skills/<id>/README.md, ADR 0017). hooks/ is the empty ratified-layout placeholder."
   - id: roster
     layer: roster
     class: authored
@@ -37,8 +37,8 @@ nodes:
     layer: roster
     class: authored
     status: current
-    paths: [plugins.yaml, bundles]
-    note: "Bundle membership + metadata (plugins.yaml: id, kind, version, description per distributed plugin) and each bundle's value/proof README source (bundles/<id>/README.md). Bundle configs are assemblies, not primitives — homed here, not under primitives-core."
+    paths: [plugins.yaml]
+    note: "Bundle membership + metadata (plugins.yaml: id, kind, version, description per distributed plugin). Bundle value/proof READMEs live in the symlink-assembly tree (plugins/<id>/README.md, ADR 0017). Retires with the dist lanes (task-3)."
   - id: standalone-catalog
     layer: roster
     class: authored
@@ -125,6 +125,12 @@ nodes:
     status: current
     paths: [backlog]
     note: "Backlog.md task system — THE task-management surface (decision-1, 2026-08-03): tasks, drafts, decisions, milestones. GitHub issues are bug-report intake only; a reported bug gets a backlog task when planned."
+  - id: plugin-assemblies
+    layer: dist
+    class: authored
+    status: current
+    paths: [plugins, .claude-plugin]
+    note: "Pointer-based marketplace surface (ADR 0017): plugins/<id>/ as hand-authored thin symlink assemblies over primitives-core/ (plugin.json + hooks.json regular files; skills/agents/hooks as in-repo symlinks; bundle READMEs regular, standalone READMEs symlinked to the skill's README) plus the root .claude-plugin/marketplace.json listing each plugin by relative source. Claude Code dereferences at install; guarded by scripts/check_symlinks.py (make symlinks). Replaces the dist lanes when task-3 retires them."
   - id: translation-config
     layer: roster
     class: authored
@@ -158,6 +164,15 @@ edges:
     kind: gates
     mode: automated
     via: scripts/check_identity.py
+  - from: primitive-bodies
+    to: plugin-assemblies
+    kind: consumes
+    mode: manual
+  - from: gates
+    to: plugin-assemblies
+    kind: gates
+    mode: automated
+    via: scripts/check_symlinks.py
   - from: gates
     to: dist-lanes
     kind: gates

@@ -1,0 +1,56 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff-freshness-guard/hook.py\"",
+            "statusMessage": "Checking handoff freshness...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/session-handoff-surfacer/hook.py\"",
+            "statusMessage": "Checking for a project handoff...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-telemetry/hook.py\"",
+            "statusMessage": "Recording delegation telemetry...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "CONTEXT_WATERMARK_HARD=100000 CONTEXT_WATERMARK_SOFT=70000 python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
+            "statusMessage": "Checking context watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}
