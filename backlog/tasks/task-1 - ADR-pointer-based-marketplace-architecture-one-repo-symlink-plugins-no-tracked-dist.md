@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 01:42'
+updated_date: '2026-08-04 01:46'
 labels:
   - refactor
 milestone: m-0
@@ -25,6 +25,12 @@ Formalize the 2026-08-03 restructure rulings as an ADR in docs/decisions/: plugi
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 ADR drafted in docs/decisions/ and approved by owner
-- [ ] #2 Covers: symlink mechanism + install-time materialization, one-repo two-target ruling, tripwires for a future repo split
-- [ ] #3 Names the publish-model and evals/harness-extraction decisions as linked open decisions
+- [x] #2 Covers: symlink mechanism + install-time materialization, one-repo two-target ruling, tripwires for a future repo split
+- [x] #3 Names the publish-model and evals/harness-extraction decisions as linked open decisions
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+ADR drafted as docs/decisions/0017-pointer-based-marketplace.md, PR #227 into dev (2026-08-03). Includes the owner's README ruling (readmes travel with skills; standalone-readmes/ dissolves — also folded into task-2 scope/AC). ADR 0008 marked Superseded-by-0017 (flow guard survives). AC #1 completes when the owner merges #227.
+<!-- SECTION:NOTES:END -->
