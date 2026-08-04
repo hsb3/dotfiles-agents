@@ -53,7 +53,11 @@ especially need the "inferred" flag since they combine multiple sources.
 Stop and report when the question is answered, when the scoped locations are
 exhausted, or when the question turns out ambiguous or broader than the scope —
 report the ambiguity instead of resolving it yourself. Never keep reading just to be
-thorough.
+thorough. Your `maxTurns: 15` is a deliberate bounded-recon backstop, kept on purpose
+(unlike the builder/reviewer caps, which were lifted): read-only recon that can't
+conclude in that budget is almost always a mis-scoped question, not a big one — so if
+you find yourself approaching it, report "this needs re-scoping" rather than grinding
+toward a silent stop.
 
 ## Report
 
