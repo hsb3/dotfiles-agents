@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor catalog build build-check test smoke ci harness-coupling flow
+.PHONY: help check identity provenance hook-layout floor catalog build build-check test smoke ci harness-coupling flow symlinks
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,9 @@ harness-coupling: ## No-repo-coupling gate for harness/ (stdlib-only; extraction
 flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclicity, doc DAG)
 	@python3 scripts/check_flow.py
 
+symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1
+	@python3 scripts/check_symlinks.py
+
 test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check "tests pass"
 	@python3 -m unittest discover -s tests -t . -q
 
@@ -46,7 +49,7 @@ smoke: ## Loadability smoke: install the bundles into a live Claude Code session
 # is required CI on every PR into dev; check (roster drift) + build-check (marketplace drift) +
 # catalog (standalone eligibility/drift) guard the generated artifacts; harness-coupling keeps
 # harness/ extraction-clean (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout catalog build-check harness-coupling flow test ## All gates: floor + drift guards
+ci: check identity provenance hook-layout catalog build-check symlinks harness-coupling flow test ## All gates: floor + drift guards
 
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).

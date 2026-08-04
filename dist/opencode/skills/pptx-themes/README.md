@@ -1,8 +1,14 @@
 # pptx-themes
 
-A composed PowerPoint skill: an authored theme layer — semantic theme tokens, curated color
-palettes, monospaced typography, and a visual-QA workflow — on top of Anthropic's `pptx`
-production skill.
+Create, edit, and review PowerPoint presentations with a curated theme layer — semantic
+theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow —
+composed over Anthropic's vendored `pptx` skill for the underlying `.pptx` machinery.
+
+## When it triggers
+
+Use it for any deck, slide, presentation, or `.pptx` task. Where this skill and the base
+`pptx` skill disagree on colors or fonts, this skill wins — it overrides the generic
+palette/font suggestions with the curated theme system.
 
 ## What it is
 
@@ -26,3 +32,11 @@ reference in the repo's `externals.yaml` (`id: pptx`).
 
 Do not edit `base/` — update the pin instead (a new ref, re-vendored verbatim). The authored
 theme layer is what this repo maintains.
+
+## Install
+
+```
+claude plugin install pptx-themes@dotfiles-agents
+```
+
+Also ships as a member of the `code-desk` bundle.

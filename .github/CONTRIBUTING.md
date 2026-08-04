@@ -12,8 +12,10 @@ in [`../CLAUDE.md`](../CLAUDE.md) and [`../primitives-core/README.md`](../primit
    (publish is `.github/workflows/publish.yml`, never a local checkout). Never commit to or merge
    into the default branch.
 2. **Edit `primitives-core/` only.** It is the single canonical source copy of every primitive.
-   The `dist/` lanes (`dist/claude-code/`, `dist/opencode/`), `plugins/`, and
-   `.claude-plugin/marketplace.json` are **generated** — never hand-edit them.
+   `plugins/<id>/` are thin symlink assemblies over it (ADR 0017) — hand-authored
+   `plugin.json`/`hooks.json`/bundle READMEs, symlinks for everything else; the root
+   `.claude-plugin/marketplace.json` lists each plugin. The `dist/` lanes (`dist/claude-code/`,
+   `dist/opencode/`) are **generated** — never hand-edit them (they retire with task-3).
 3. **Regenerate:** `make build` rewrites the `dist/` lanes deterministically from source.
 4. **Gate locally:** `make ci` (see below) must be fully green.
 5. **Open a PR into `dev`.** CI re-runs `make ci` on every PR into `dev`.
@@ -54,7 +56,7 @@ and the assembler read it. Every entry carries the full schema (fields and value
 | Command | Enforces |
 |---|---|
 | `make check` | **Roster ↔ disk drift** — every roster `source` exists; schema + provenance shape valid; no orphaned bodies. |
-| `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,hooks}` + standalone READMEs). Root docs, this file, ADRs, and `_meta/` are exempt (they don't ship). |
+| `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, ADRs, and `_meta/` are exempt (they don't ship). |
 | `make provenance` | **Provenance** — every `primitives-core/` body is `origin: authored`; every `externals.yaml` entry has non-null `upstream` + `ref` (ADR 0015 / ADR 0003). |
 | `make hook-layout` | **Hook layout** — hooks use the ratified `hooks/<name>/hook.py` dir layout, never flat handlers or inline-in-settings. |
 | `make catalog` | **Skill-catalog** — standalone-skill eligibility, drift, and one-skill-wrapper byte-identity. |

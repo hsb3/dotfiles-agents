@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.",
+  "name": "code-desk",
+  "version": "0.3.0"
+}

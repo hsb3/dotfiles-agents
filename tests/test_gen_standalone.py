@@ -71,10 +71,11 @@ class ComposedSkill(unittest.TestCase):
 
 
 class WrapperReadme(unittest.TestCase):
-    """Issue #144 (D2): each wrapper ships a plugin-root README.md, copied verbatim from
-    primitives-core/standalone-readmes/<id>/README.md — additive-only, mirroring
-    gen_marketplace._copy_bundle_readme, and sitting OUTSIDE skills/ (never compared by the
-    byte-identity invariant, which only ever inspects skills/<id>/)."""
+    """Issue #144 (D2) + ADR 0017 §4: each wrapper ships a plugin-root README.md, copied
+    verbatim from primitives-core/skills/<id>/README.md — additive-only, mirroring
+    gen_marketplace._copy_bundle_readme. The README travels with its skill, so the same file
+    also rides inside skills/<id>/ via the verbatim skill copy (and stays byte-identical to
+    source there, per the byte-identity invariant)."""
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="gen-standalone-readme-")
@@ -89,19 +90,19 @@ class WrapperReadme(unittest.TestCase):
             self.assertTrue(os.path.isfile(readme), f"missing {readme}")
 
     def test_readme_byte_identical_to_source(self):
-        src = os.path.join(G.STANDALONE_README_DIR, "private-fork", "README.md")
+        src = os.path.join(G.SKILLS_DIR, "private-fork", "README.md")
         built = os.path.join(self.tmp, "private-fork", "README.md")
         with open(src, encoding="utf-8") as fa, open(built, encoding="utf-8") as fb:
             self.assertEqual(fa.read(), fb.read())
 
-    def test_readme_sits_outside_skills_subtree(self):
-        # The wrapper root README must NOT be inside skills/<id>/ — that subtree is exactly
-        # what verify_wrappers's byte-identity check compares against primitives-core source.
-        self.assertFalse(
-            os.path.isfile(
-                os.path.join(self.tmp, "private-fork", "skills", "private-fork", "README.md")
-            )
-        )
+    def test_readme_travels_with_the_skill(self):
+        # ADR 0017 §4: the README lives in the skill source dir, so the verbatim skill copy
+        # carries it inside skills/<id>/ too — and both copies match.
+        root_copy = os.path.join(self.tmp, "private-fork", "README.md")
+        in_skill = os.path.join(self.tmp, "private-fork", "skills", "private-fork", "README.md")
+        self.assertTrue(os.path.isfile(in_skill))
+        with open(root_copy, encoding="utf-8") as fa, open(in_skill, encoding="utf-8") as fb:
+            self.assertEqual(fa.read(), fb.read())
 
     def test_missing_readme_source_is_tolerated(self):
         # Additive-only, like gen_marketplace._copy_bundle_readme: no source -> no README, not
