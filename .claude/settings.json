@@ -22,6 +22,11 @@
   "enabledPlugins": {
     "plugin-dev@workbench": true,
     "skill-creator@workbench": true,
-    "mcp-server-dev@workbench": true
+    "mcp-server-dev@workbench": false,
+    "code-desk@dotfiles-agents": false,
+    "dataviz@dotfiles-agents": false,
+    "diagrams@dotfiles-agents": false,
+    "pptx-themes@dotfiles-agents": false,
+    "github-project-board@dotfiles-agents": false
   }
 }

@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-07-22. Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-03. Refresh at session boundaries (/handoff). Secret-free._
 
 ## 0 · Orientation
 
@@ -10,14 +10,21 @@ CI-published (publish-only, ADR 0014). Task interface + source-of-truth rules: s
 
 ## 1 · Current standing
 
-Both build epics are **DONE and CLOSED**; `make ci` is green (38 primitives: agent=4, hook=4,
-skill=30). `dev` carries the extender-db merge (#176), the harness (#169), the #174 telemetry
-lane (PR #177), the campaign runner (PR #178, §2c), and — as of the 2026-07-22 `/waves` run
-below — 4 more merged PRs (#205, #206, #209, #210). **`main` published 2026-07-22 at
-`dev@0cdca55`** (commit `098e1b7`) — **now lags `dev` by those 4 PRs**; next publish should pick
-them up (see `publish-to-main` skill).
-- **#111** clean-room rebuild and **#134** desk-set restructure — both merged + CLOSED (era detail: git/issues).
-- **Open PRs: 0.**
+`make ci` green (38 primitives: agent=4, hook=4, skill=30). Two big 2026-08-03 rulings now
+govern everything:
+
+1. **Task system = Backlog.md** (`backlog/` tree; backlog decision-1). GitHub issues are
+   bug-report intake ONLY — 22 issues migrated + closed, triage issue #192 closed/unpinned,
+   3 bug reports open (#172/#215/#222 ↔ work items task-22/23/24). PR #225 (merged
+   2026-08-03) carries the `backlog/` tree + flow node; PR #226 the session closeout.
+2. **Architecture: one repo, pointer-based distribution** (backlog decision-2). Verified
+   against plugin docs + a live PoC: plugins become symlink assemblies over
+   `primitives-core/`, root `.claude-plugin/marketplace.json`, NO tracked dist; opencode
+   generates at install time. Planned as tasks 1–9 (milestone m-0); **task-1 (the ADR) is
+   the critical path** — the dist/generator/publish machinery stays as-is until it lands.
+
+`main` published 2026-07-22 at `dev@0cdca55` — lags `dev` (incl. the merged hook fix
+PR #224); publish model itself is under revision (task-5), so publishing now is optional.
 
 Live marketplace lineup (post ADR 0016 recomposition, 2026-07-22): **code-desk (0.3.0)** — the
 sole desk bundle, now including planning-desk, comms, board-triage, pptx-themes (former
@@ -30,41 +37,17 @@ github-project-board · opencode-expertise · pptx-themes · private-fork · **p
 **Also live: the extender-db mini-project** (§2b) — separate effort from the rebuild epics; do
 not fold it into dev without Henry's promotion decision (already taken 2026-07-21, see §2b).
 
-## 2 · Recent deliveries (era pointers — blow-by-blow lives in issues/git)
+## 2 · Recent deliveries (era pointers — blow-by-blow lives in PRs/issues/git)
 
-- 2026-07-20/21: rebuild epics closed, extender-db epic #154 Waves 0–3 executed, harness
-  follow-ups (#177/#178) delivered. Full detail in git/issue history.
-- 2026-07-22 (early session): ADR 0008 executed (filtered parented publish + `dist/` lift lanes,
-  PRs #180–184); main-checkout guard + memory curation + `project-memory` skill migration
-  (PRs #200–202); published dev → main (`098e1b7`); triage issue **#192** created.
-- 2026-07-22 (owner's court session): D1/D2/D4/D5 + O1/O2/O3 all ruled and executed — memory
-  folder rename (PR #194), bundles→top-level (PR #195), extender-db children reviewed/closed,
-  meta-harness pointer confirmed (PR #198), forward-skill-wave split (#139 approved standalone,
-  #137/#138 held on estate review). Full record: triage #192 + issue comments, not repeated here.
-- **2026-07-22 (this session) — `/waves` run, 4 of 5 planned waves executed:**
-  PR #205 (#139 claude-code-expertise skill) · PR #206 (#149 `_meta/reference/` taxonomy gap +
-  #151 CONTRIBUTING.md + #203 ADR 0015 backfill) · PR #209 (#32 retirement: `dev-focus` skill
-  migrated, python-project-standards dropped per ruling, hsb3-custom-plugins unblocked) · PR #210
-  (#37 planning-desk skill confirmed to subsume ra-platform's commands — **ra-platform's own
-  adoption is staged uncommitted in that separate repo, pending Henry's review/commit + a live
-  smoke test**). W5 (#152 visual-planning) **not shipped** — see §3. Follow-ups filed: #207, #208,
-  #211. Triage #192 refreshed to "Delivery plan v2."
-- **2026-07-22 (estate-restructure session, branch `feat/estate-restructure`):**
-  (a) **ADR 0016 lineup recomposition** — exec-desk folded into code-desk (0.3.0);
-  opencode-expertise + private-fork standalone-only; memory-taxonomy + project-memory merged
-  into one `project-memory` skill; update-config renamed `claude-code-config`;
-  `tech-eval-research` skill added (authored, standalone). (b) **GitHub issues reboot** —
-  all 99 issues archived to `_meta/_archive/issues-reboot-2026-07-22/`; 18 open issues
-  rewritten to the What/Why/Done-when structure; labels cut 30 → 5 (`type:feat` / `type:fix` /
-  `type:chore` / `decision` / `epic`, ≤3 per issue, declared in `_meta/mise-en-place.yml`);
-  #122 closed as dup of #36; #191 kept open as a standing decision record; issue-form
-  templates added under `.github/ISSUE_TEMPLATE/`. (c) **_meta compliance** — `_archive/` +
-  `plans/` created; briefing decks + signoff package moved to the exec desk (copied
-  uncommitted into `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk`, deleted here);
-  agent-harness wave handoffs archived; HOOK-01 inline-hook gap fixed. (d) **`.claude/plugins/`
-  workbench** — Anthropic's plugin-dev, skill-creator, mcp-server-dev vendored as in-repo
-  file-based plugins via a local `workbench` marketplace in `.claude/settings.json`
-  (local-dev-tooling, never distributed).
+- 2026-07-20/21: rebuild epics closed; extender-db Waves 0–3; harness + campaign runner.
+- 2026-07-22: ADR 0008 publish lanes (PRs #180–184) · owner's-court rulings executed ·
+  `/waves` run (PRs #205/#206/#209/#210; ra-platform adoption left staged uncommitted in
+  that repo for owner review) · estate restructure (ADR 0016 lineup, 99-issue reboot,
+  `_meta` compliance, `.claude/plugins/` workbench) — PRs #212–214.
+- **2026-08-03 (this session):** hook logs/ CWD-scatter bug fixed (#223, PR #224, merged) ·
+  triage #192 refreshed, then superseded same-day · architecture review (DAG audit, docs
+  verification, live symlink PoC) → decisions 1+2 ruled · Backlog.md migration executed
+  (PR #225) · project settings pruned to dev-relevant plugins.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -72,9 +55,9 @@ PocketBase DB of all agent extenders + the mental models used to compose/evaluat
 describing — read `evals/_structure/CHARTER.md`, `PLAN.md`, `OPEN-ITEMS.md`, `evals/README.md`,
 `evals/PROCEDURES.md` first**; below is only what they don't carry.
 
-- **State:** epic #154 Waves 0–3 DONE; O1 (2026-07-22) closed all 9 functionally-complete
-  children (#155–162, #167) with outcome notes. Epic stays open for #163 (M3) · #164 (M4) · #165
-  (M5, unblocked per O2/PR #198) · #166 (M6) · #168.
+- **State:** Waves 0–3 DONE (9 children closed 2026-07-22 with outcome notes). Remaining
+  M3–M6 + excalidraw follow-up now live as backlog task-21 + subtasks 21.1–21.5 (M6 gated
+  on M4+M5); note task-6 may re-home the whole family if evals/ extracts.
 - **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds in untracked
   `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the server before
   committing (WAL checkpoint) or switching branches (a live server had its tracked data.db
@@ -94,43 +77,26 @@ battle-test here, later extract to its own repo.
 - **Campaign runner** (PR #178): `make harness-campaign` + weekly LaunchAgent live on this machine
   (Mon 09:00). **Never auto-ingests** — after each run, ingest deliberately
   (`load_harness_runs.py --campaign weekly-YYYYMMDD`) and commit data.db+storage with cause.
-- Open follow-ups: #172 (hermeticity/env-pinning), #173 (candidate-quality findings).
+- Open follow-up: bug #172 / task-22 (hermeticity/env-pinning).
 
-## 3 · Next up (dotfiles-agents proper)
+## 3 · Next up
 
-**Source of truth is the pinned triage issue #192** ("Delivery plan v2", refreshed 2026-07-22) —
-ranked backlog + owner decision queue live there, not duplicated here. Prior planning-round
-detail (D1–D5, O1–O3, the NOTE.md fold-in) is fully executed; see triage #192 history / issue
-comments for the record, not repeated here.
+**Source of truth is the backlog** (`backlog board` / `backlog task list --plain`) — ranked
+work, drafts (owner-parked #137/#138/#152), decisions, and the m-0 refactor milestone all
+live there, not duplicated here.
 
-**What's actionable right now: nothing dotfiles-agents-proper is unblocked-and-unbuilt** — this
-session's waves run cleared #139/#149/#151/#203/#32/#37. Remaining work is all owner-gated:
-
-- **#36/#122/#193 — decisions 1-7** (network-at-build in CI, drop policy, ref-pin format) for the
-  externals clone-at-build mechanism. Unresolved across two sessions now.
-- **#152 visual-planning — deferred, not just gated.** A crew found (Henry independently
-  re-verified) the 3 candidate skills (`hsb3/agent-native-sandbox` `.claude/skills/{visual-plan,
-  visual-recap,visualize-repo}/`) are installed-from-upstream (`agent-native-skill.json` sidecars
-  are the proof), not authored originals — shipping `origin: authored` would violate ADR 0015.
-  `ghcr.io/hsb3/plan-app` also fails the identity lint unconditionally (no container-image
-  exemption). **Henry: "will revisit later, they still need to be tested."** Path forward when
-  revisited: (A) via #36's mechanism once built, (B) genuinely re-author as first-party originals,
-  or (C) an explicit ADR 0015 exception — see the comment trail on #152.
-- **#137/#138** (decision-loop/release-loop skills) — HELD on the desk-platform estate-cohesion
-  IA review (§4), not a same-session call.
-- **ra-platform's `.claude/commands` → planning-desk adoption** — the repo-side is merged (PR
-  #210), but `~/Developer/ra-platform` itself has an **uncommitted** working-tree diff (deletes
-  `.claude/commands/{plan-issue,issue-body}.md`, adds `_meta/plans/_config.md`, enables
-  `exec-desk@dotfiles-agents` in `.claude/settings.json`) staged by the crew and left for Henry to
-  review/commit in that repo's own session, plus a live smoke test.
-- New small follow-ups filed this session: #207 (universal `reference/` taxonomy slot), #208
-  (project-local primitive-authoring skill), #211 (confirm board-reporting coverage).
-- **Board repopulation DONE** (2026-07-22, after owner granted `project` scope): DEV-TOOLING
-  project #11 now carries exactly #36, #152, #154 from this repo; other repos' 30 items
-  untouched. Gotcha: the project has an **auto-add-sub-issues workflow** — adding epic #154
-  pulled in 14 children (removed again); new sub-issues of #154 will reappear unless that
-  workflow is toggled off in the project settings UI. Desk-side: the four folders copied into
-  the dotfiles-agents-desk repo are still left **uncommitted** there for owner review/commit.
+- **Critical path: merge PR #225, then task-1 (the pointer-architecture ADR, owner-approval
+  gate).** Tasks 2–9 hang off it. Owner offered a draft; not started.
+- Buildable independent of the ADR: task-24 (builder maxTurns stall — High), task-23 (waves
+  template), task-13 (250k-token spike, telemetry ledger now exists).
+- Decisions embedded in tasks, owner's court: task-5 (publish model), task-6 (evals/harness
+  extraction), task-10 (externals decisions 1–7), task-15 (handoff-override mechanism).
+- Cross-repo residue for owner: ra-platform's planning-desk adoption still **uncommitted**
+  in `~/Developer/ra-platform` (staged 2026-07-22, needs review/commit + live smoke test);
+  the four desk folders in dotfiles-agents-desk likewise uncommitted.
+- DEV-TOOLING board #11 carried #36/#152/#154, now all closed on GH — board is stale;
+  board's future is wrapped into task-16. Gotcha (if touched): the project auto-adds
+  sub-issues unless that workflow is toggled off in the UI.
 
 ## 4 · CROSS-REPO — desk-platform design effort (lives on the desk, NOT here)
 
@@ -152,7 +118,14 @@ model until he signs off (standing directive, §5).
 - **dev's branch-protection required checks are pinned by CI JOB NAME** — renaming a job in
   `ci.yml` strands every PR on a check that never reports. Update the protection setting first.
 - **PRs into `dev` do NOT auto-close their `Closes #N` issues** — auto-close only fires on the
-  *default* branch (`main`). **Close issues by hand after every merge into dev.**
+  *default* branch (`main`). **Close bug issues by hand after every merge into dev.**
+- **Backlog.md specifics:** subtasks get dotted IDs (`task-21.1`), so `--depends-on` a subtask
+  must use the dotted form; `auto_commit: false` — backlog CLI writes are committed by the
+  session like any file edit; `make flow` requires a claimed top-level path to be *tracked*
+  (stage `backlog/` before the check passes).
+- **Project settings disable product plugins for dev sessions** (code-desk, dataviz, diagrams,
+  pptx-themes, github-project-board, mcp-server-dev) — editing their source never needs them
+  enabled; flip the entry in `.claude/settings.json` temporarily if a session must *run* one.
 - **`flow.yaml` is load-bearing**: `make flow` (in `make ci`) fails any PR that adds a top-level
   path without a declared home. Regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
 - **ADR 0015 (self-authored-only) is now on disk and mechanically enforced**
@@ -180,11 +153,11 @@ model until he signs off (standing directive, §5).
 
 ## 6 · Map
 
-- **Pinned triage issue #192** — `meta: triaged open-issue backlog (living list)`: the in-repo
-  ranked backlog view + delivery plan + owner decision queue. Refresh it (edit the body, never
-  commit) at session boundaries alongside `/handoff`. Three tracks: dotfiles-agents-proper
-  (waves) · extender-db epic #154 (self-manages via `evals/_structure/`) · agent-harness
-  #172/#173.
+- **`backlog/` — THE task system** (decision-1): tasks, drafts, decisions, milestone m-0.
+  `backlog board` for the live view; `backlog task list --plain` for agents. GH issues =
+  bug intake only. The waves/pinned-triage loop no longer applies to this repo (its
+  backlog-aware successor is part of task-8). Extender-db family: task-21.x (self-manages
+  via `evals/_structure/`); harness: task-22.
 - CLAUDE.md — task interface + rules · `.github/CONTRIBUTING.md` (new) — human-facing
   contribution loop · `docs/decisions/` — ADR mirrors (now includes 0015).
 - **Exec desks:** this repo's desk is `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/`;
