@@ -48,3 +48,6 @@ harness/campaign-logs/
 .claude/*.lock
 .claude/**/.DS_Store
 # <<< cc-project-memory (managed) <<<
+
+# machine-local agent auto-memory (redirect target differs per machine; tracked store is .claude/memory/)
+.claude/agent-memory/
