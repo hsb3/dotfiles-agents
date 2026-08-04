@@ -1,1 +1,5 @@
-blank_issues_enabled: true
+# GitHub issues are BUG-REPORT INTAKE ONLY (backlog decision-1, 2026-08-03).
+# Planned work, features, and epics live in the Backlog.md tree (backlog/) —
+# a reported bug gets a backlog task when it is planned, and the issue is
+# closed by hand after the fix merges into dev (auto-close only fires on main).
+blank_issues_enabled: false

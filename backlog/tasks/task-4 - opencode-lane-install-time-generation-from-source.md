@@ -1,10 +1,10 @@
 ---
 id: TASK-4
 title: 'opencode lane: install-time generation from source'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 02:18'
+updated_date: '2026-08-04 02:19'
 labels:
   - refactor
   - opencode
