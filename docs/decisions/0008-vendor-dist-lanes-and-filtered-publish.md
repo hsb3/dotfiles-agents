@@ -1,12 +1,20 @@
 ---
 title: "Vendor dist lanes, filtered append-only publish, and the flow manifest"
 type: decision
-status: Accepted
+status: Superseded-by-0017
 created: 2026-07-22
 summary: distribution grows a second vendor (opencode) — generated dist trees move under dist/<target>/, main becomes a filtered parented assembly of the dist lanes instead of a whole-tree force push, and flow.yaml + check_flow.py become the standing structural guard.
 ---
 
 # 0008 · Vendor dist lanes, filtered append-only publish, and the flow manifest
+
+> **Superseded by [0017](0017-pointer-based-marketplace.md) (2026-08-03):** the dist-lane
+> design (Decisions 1–3 — tracked `dist/<target>/` trees, the filtered lift-and-assemble
+> publish payload, the roster-enum residency) is replaced by pointer-based distribution.
+> Decision 4 (`flow.yaml` + `check_flow.py` as the standing structural guard) **remains in
+> force** (task-7 revisits its scope). The publish *governance* (dev integrates, main
+> publishes) was never this ADR's to change and stays with ADR 0007; the publish payload
+> under the new architecture is open as backlog task-5.
 
 _Owner-ruled 2026-07-22 ("proceed as proposed"). Old-desk ADR 0014 carries a matching
 amendment (same date): its §3 already specified `main` as "rebuilt clean — marketplace file
