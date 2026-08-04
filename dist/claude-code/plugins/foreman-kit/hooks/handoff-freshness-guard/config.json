@@ -1,6 +1,0 @@
-{
-  "event": "PreCompact",
-  "matcher": "*",
-  "timeout": 10,
-  "statusMessage": "Checking handoff freshness..."
-}

@@ -1,10 +1,10 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor catalog build build-check test smoke ci harness-coupling flow symlinks
+.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-check: ## Roster <-> disk drift guard (schema + provenance)
+check: ## Roster <-> disk drift guard (provenance-manifest schema, ADR 0017)
 	@python3 scripts/check_roster.py
 
 identity: ## Entry-gate floor: identity-neutrality lint (no name/org/repo/issue in shipped bodies)
@@ -18,18 +18,6 @@ hook-layout: ## Entry-gate floor: hooks use the ratified hooks/<name>/hook.py la
 
 floor: identity test provenance hook-layout ## The Tier-1 entry-gate machine floor (required on PRs into dev)
 
-build: ## Regenerate the dist lanes (dist/claude-code/ + dist/opencode/) from source
-	@python3 scripts/gen_marketplace.py
-	@python3 scripts/gen_opencode.py
-
-build-check: ## Verify the committed dist lanes match source (regen drift guards)
-	@python3 scripts/gen_marketplace.py --check
-	@python3 scripts/gen_opencode.py --check
-
-catalog: ## Standalone skill-catalog eligibility/drift + one-skill wrapper invariants
-	@python3 scripts/check_skill_catalog.py
-	@python3 scripts/gen_standalone.py --check
-
 harness-coupling: ## No-repo-coupling gate for harness/ (stdlib-only; extraction guard, DESIGN §5)
 	@python3 scripts/check_harness_coupling.py
 
@@ -42,14 +30,11 @@ symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; m
 test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check "tests pass"
 	@python3 -m unittest discover -s tests -t . -q
 
-smoke: ## Loadability smoke: install the bundles into a live Claude Code session (opt-in, NOT in ci)
-	@echo "smoke is opt-in and lands with the bundle-install proof (D2/D3); not part of ci"
-
 # All gates. The Tier-1 entry-gate machine floor (identity · tests · provenance · hook-layout)
-# is required CI on every PR into dev; check (roster drift) + build-check (marketplace drift) +
-# catalog (standalone eligibility/drift) guard the generated artifacts; harness-coupling keeps
-# harness/ extraction-clean (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout catalog build-check symlinks harness-coupling flow test ## All gates: floor + drift guards
+# is required CI on every PR into dev; check (roster drift) + symlinks (assembly lint, ADR 0017)
+# guard the distribution surface; harness-coupling keeps harness/ extraction-clean
+# (stdlib-only — it must not need uv, so it lives in ci not harness-test).
+ci: check identity provenance hook-layout symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
 
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).

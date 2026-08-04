@@ -1,30 +1,21 @@
-# primitives-core.yaml — THE ROSTER
+# primitives-core.yaml — THE ROSTER (provenance manifest)
 #
-# Authoritative manifest of every primitive. Manifest-over-filename-sort: the marketplace
-# assembler and the roster<->disk drift guard read this file, not a directory listing.
+# Authoritative manifest of every primitive, slimmed to provenance per ADR 0017: the
+# drift guard (scripts/check_roster.py) reads this file, not a directory listing, and the
+# provenance gate (scripts/check_provenance.py, ADR 0015) enforces the self-authored-only
+# rule against it. Plugin MEMBERSHIP is no longer a roster field — membership is the
+# symlink assemblies under plugins/<id>/ (guarded by scripts/check_symlinks.py).
 #
 # Entry schema (see primitives-core/README.md):
-#   id · type · source · shelf{core|toggle} · origin{authored|sourced} ·
-#   disposition{qualified|grandfathered-pending-use|demoted|untriaged} · vendor · targets[] ·
-#   plugins[] · summary · requires[] (optional; absent = no needs) — capability words
-#   {hooks|local-mcp|hosted-mcp} plus dependency declarations cli:<kebab> (a binary/app that
-#   must be installed) and env:<kebab> (machine state, e.g. env:dotfiles) — issue #79
+#   id · type{skill|agent|mcp|hook} · source · origin{authored|sourced} ·
+#   disposition{qualified|grandfathered-pending-use|demoted|untriaged} · targets[] ·
+#   requires[] (optional; absent = no needs) — capability words {hooks|local-mcp|hosted-mcp}
+#   plus dependency declarations cli:<kebab> (a binary/app that must be installed) and
+#   env:<kebab> (machine state, e.g. env:dotfiles) — issue #79
 # origin is provenance (authored here vs sourced from upstream) and is immutable per entry;
 # origin: sourced entries must carry non-null `upstream:` and `ref:` fields (enforced by
-# scripts/check_roster.py). This is a Claude-Code-only distribution, so targets carry
-# `claude-code` alone; the multi-vendor translation surface was dropped at the rebuild.
-#
-# The bundle lineup (marketplace recomposition, ADR 0016): code-desk (10 skills: next-release
-# execution + repo-standards hygiene, with the executive-desk overhead folded in — planning-desk,
-# comms, board-triage, pptx-themes) + the standalone foreman-kit (foreman + handoff skills, 4
-# agents scout/builder/reviewer/lead, 4 hooks). The former executive-desk bundle is retired
-# (folded into code-desk); project-workflow and repo-standards retired earlier as bundle names
-# (superseded by code-desk). opencode-expertise and private-fork dropped to standalone-only
-# alongside github-project-board. Desk skill bodies ported from dev-legacy and
-# identity-neutralized at D6;
-# foreman-kit ported from the foreman-kit v0.5.0 upstream at E2/E3 and is the sole home of the
-# handoff skill plus the four delegation hooks (context-watermark, handoff-freshness-guard,
-# session-handoff-surfacer, subagent-telemetry).
+# scripts/check_roster.py). targets selects runtimes: claude-code installs the symlink
+# assemblies natively; opencode is generated at install time (gen_opencode.py, task-4).
 
 version: 1
 
@@ -32,387 +23,235 @@ primitives:
   - id: handoff
     type: skill
     source: primitives-core/skills/handoff
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [foreman-kit]
-    summary: "Maintain the project's session-handoff file so a brand-new session can pick up work cold. Use at session boundaries when the user says \"wrap up\", \"update the handoff\", or runs /handoff."
   - id: board-triage
     type: skill
     source: primitives-core/skills/board-triage
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "This skill should be used when the user asks to \"run board triage\", \"triage the backlog\", \"prioritize the issues\", \"rank the unranked issues\", \"fill in Impac…"
   - id: comms
     type: skill
     source: primitives-core/skills/comms
-    shelf: core
     origin: authored
     disposition: qualified
     requires: [local-mcp]
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "Produce Henry's recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout,…"
   - id: github-project-board
     type: skill
     source: primitives-core/skills/github-project-board
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: []
-    summary: "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma…"
   - id: mise-en-place-scaffold
     type: skill
     source: primitives-core/skills/mise-en-place-scaffold
-    shelf: core
     origin: authored
     disposition: qualified
     requires: [cli:cc-project-memory]
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "Fill-only mise-en-place scaffold — plans (--plan, default) and creates (--apply) the repo meta-structure the compliance audit flags, from the standards' assets, honoring _meta/mise-en-place.yml variance (--init-manifest writes the template); additive-only, never overwrites, conflicts reported with diffs."
   - id: project-memory
     type: skill
     source: primitives-core/skills/project-memory
-    shelf: core
     origin: authored
     disposition: qualified
     requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
-    vendor: null
     targets: [claude-code]
-    plugins: [code-desk]
-    summary: "The memory taxonomy v1 as consultable reference content — global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism — paired with the operational mechanics: project_memory.py opts a git repo into tracked, in-repo auto-memory by wiring the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites), and migrate_memory.py recovers a project's memory (and optional transcripts) after its folder moves, dry-run by default. Pure Python 3 stdlib."
   - id: planning-desk
     type: skill
     source: primitives-core/skills/planning-desk
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "Stand up and run a source-grounded planning desk under _meta/plans/ — the workflow for authoring conformant GitHub issue bodies, writing deep build plans, an…"
   - id: private-fork
     type: skill
     source: primitives-core/skills/private-fork
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: []
-    summary: "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle."
   - id: readme-value-and-proof
     type: skill
     source: primitives-core/skills/readme-value-and-proof
-    shelf: core
     origin: authored
     disposition: qualified
     requires: [cli:capture-console-errors]
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "Turn a README into a user-centric pitch backed by real visual proof."
   - id: repo-compliance-audit
     type: skill
     source: primitives-core/skills/repo-compliance-audit
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "Read-only repo compliance audit — one command prints a pass/gap table (ID | Area | Verdict | Detail) against the repo-meta-structure and project-memory checklists plus HOOK-01, honoring _meta/mise-en-place.yml variance; reports, never writes or polices."
   - id: repo-meta-structure
     type: skill
     source: primitives-core/skills/repo-meta-structure
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "The canonical repo meta-structure standard as consultable reference content — `_meta/` taxonomy, `.claude/` and `.github/` layout, gitignore conventions, planning-doc frontmatter, and communication-package intake; the one source the compliance audit checks against and the mise-en-place scaffold produces from."
   - id: context-watermark
     type: hook
     source: primitives-core/hooks/context-watermark
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [foreman-kit]
-    summary: "UserPromptSubmit nudge hook: warns when session context crosses the soft/hard token watermarks and nudges toward /handoff + /clear (or /compact). Ships the operating line soft=70k/hard=100k; fails open, never blocks a prompt."
   - id: handoff-freshness-guard
     type: hook
     source: primitives-core/hooks/handoff-freshness-guard
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [foreman-kit]
-    summary: "PreCompact nudge hook: blocks a manual /compact when the project's HANDOFF.md is stale/missing (run /handoff first); never blocks auto-compaction — fails open with non-blocking guidance instead."
   - id: foreman
     type: skill
     source: primitives-core/skills/foreman
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [foreman-kit]
-    summary: "Size a substantial task and run the session as a foreman: pick a delegation architecture (A-E), bind slices to the scout/builder/reviewer/lead agents with dispatch-time model tiers, hold the never-delegated floor, and apply findings-backed context-hygiene defaults. Self-contained delegation doctrine."
   - id: waves
     type: skill
     source: primitives-core/skills/waves
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [foreman-kit]
-    summary: "Drive a repo's open-issue backlog to closed through triage, wave planning, and isolated crews: refresh a pinned triage issue (the living, ranked plan), group buildable issues into branch-sized waves, execute via the foreman skill, verify and merge each PR in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated."
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [foreman-kit]
-    summary: "Read-only recon agent — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to haiku."
   - id: builder
     type: agent
     source: primitives-core/agents/builder.md
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [foreman-kit]
-    summary: "Scoped implementation agent working inside an owned file list against explicit acceptance criteria. Defaults to sonnet; dispatch with model:opus for coupled or costly-to-unwind slices."
   - id: reviewer
     type: agent
     source: primitives-core/agents/reviewer.md
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [foreman-kit]
-    summary: "Adversarial, report-only verification agent — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. Use whenever a claim or diff will drive further changes."
   - id: lead
     type: agent
     source: primitives-core/agents/lead.md
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [foreman-kit]
-    summary: "Architecture-D chain proxy agent — drives a coupled dependent chain, spawns its own bounded-link workers, and verifies before reporting a proof package. Not for independent parallelizable work."
   - id: session-handoff-surfacer
     type: hook
     source: primitives-core/hooks/session-handoff-surfacer
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [foreman-kit]
-    summary: "SessionStart hook: on a genuine cold start (startup or clear), surfaces an existing project handoff as a pointer + capped head excerpt so a fresh session picks up prior work. Silent no-op on resume/compact and when no handoff exists; fails open."
   - id: subagent-telemetry
     type: hook
     source: primitives-core/hooks/subagent-telemetry
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [foreman-kit]
-    summary: "SubagentStop hook: appends one JSONL row per delegation (agent_id, agent_type, model, ctx_tokens) to a local ledger so tier usage can be measured offline. Silent — no stdout, never blocks; reads model/usage from the subagent's own transcript."
   - id: opencode-expertise
     type: skill
     source: primitives-core/skills/opencode-expertise
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: []
-    summary: "Expert knowledge of opencode — every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code → opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works."
   - id: pptx-themes
     type: skill
     source: primitives-core/skills/pptx-themes
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [code-desk]
-    summary: "Create, edit, and review PowerPoint presentations with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml)."
   - id: diagrams
     type: skill
     source: primitives-core/skills/diagrams
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
     requires: [cli:graphviz]
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [diagrams]
-    summary: "Hub of the diagrams plugin — structural-diagram tool selection, cloud-architecture diagrams with provider icons via Python's diagrams library (Azure first), raw Graphviz dot for dependency graphs and trees, and the SVG+PNG output pipelines for GitHub docs, decks, and briefings."
   - id: mermaid
     type: skill
     source: primitives-core/skills/mermaid
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [diagrams]
-    summary: "Mermaid for GitHub-rendered markdown — flowcharts, sequence diagrams for auth flows, ERDs, and state diagrams, with the house rule that node labels carry no parentheses or special characters, light/dark theming, and mermaid-cli rendering to SVG/PNG."
   - id: drawio
     type: skill
     source: primitives-core/skills/drawio
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
     requires: [cli:drawio]
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [diagrams]
-    summary: "Read, convert, and headlessly export draw.io / diagrams.net files — the compressed and uncompressed mxGraph XML formats, a stdlib Python decompression recipe, legacy-to-Mermaid conversion, and desktop-app CLI export to PNG/SVG."
   - id: excalidraw
     type: skill
     source: primitives-core/skills/excalidraw
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [diagrams]
-    summary: "Sketch-style architecture diagrams as .excalidraw files — uses the Excalidraw MCP tools when a session exposes them, otherwise authors the scene JSON directly (schema, arrow binding, labels), with SVG/PNG export guidance."
   - id: obsidian-api-basics
     type: skill
     source: primitives-core/skills/obsidian-api-basics
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [obsidian-toolkit]
-    summary: "Foundational guidance for building Obsidian plugins — plugin lifecycle (onload/onunload), settings and saveData/loadData patterns, vault API operations, command registration, and ribbon icons."
   - id: obsidian-chat-ui
     type: skill
     source: primitives-core/skills/obsidian-chat-ui
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [obsidian-toolkit]
-    summary: "Patterns for chat and copilot-style interfaces in Obsidian plugins — ItemView sidebar panels, streaming message rendering, and workspace integration."
   - id: obsidian-cli
     type: skill
     source: primitives-core/skills/obsidian-cli
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
     requires: [cli:obsidian]
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [obsidian-toolkit]
-    summary: "The official Obsidian CLI (v1.12+) — interact with vaults, manage files, execute commands, and automate workflows from the terminal."
   - id: obsidian-mcp-server
     type: skill
     source: primitives-core/skills/obsidian-mcp-server
-    shelf: toggle
     origin: authored
     disposition: grandfathered-pending-use
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: [obsidian-toolkit]
-    summary: "MCP servers inside Obsidian plugins — Streamable HTTP transport setup and tool patterns that expose vault operations to AI agents."
   - id: owner-signoff
     type: skill
     source: primitives-core/skills/owner-signoff
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: []
-    summary: "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically."
   - id: deep-research
     type: skill
     source: primitives-core/skills/deep-research
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: []
-    summary: "Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings."
   - id: tech-eval-research
     type: skill
     source: primitives-core/skills/tech-eval-research
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: []
-    summary: "Rigorous, cited, comparative technology evaluation producing a ranked shortlist, a capability comparison matrix, and a primary-source-backed recommendation; use to compare, evaluate, choose, or shortlist technologies, for license/paywall audits, self-hostability and OSS-maturity checks, and build-vs-buy research."
   - id: dataviz
     type: skill
     source: primitives-core/skills/dataviz
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code, opencode]
-    plugins: []
-    summary: "Design data visualizations - charts, plots, dashboards - that are correct, legible, and honest, consulted before any chart code in any library or medium: data-shape to mark-type heuristic, anti-patterns to refuse (pie overuse, dual axes, truncated bars, rainbow scales, 3D), a brand-neutral colorblind-safe palette with light/dark themes and brand-swap, composition, interaction plus static degradation, and a final validation checklist. Data charts only - structural diagrams belong to diagrams/mermaid, deck theming to pptx-themes."
   - id: claude-code-config
     type: skill
     source: primitives-core/skills/claude-code-config
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: []
-    summary: "Configure the Claude Code harness end to end: the settings-file layer (route each change to the correct file by precedence — managed policy vs user vs project vs machine-local), narrowest-scope allow/deny/ask permission rules, automated behaviors implemented as ratified directory-based hooks (config plus script file, never inline shell), env vars, and MCP server registration, then verify every edit for JSON validity and take-effect. Changing an existing setting is one facet of the broader configuration surface this skill covers."
   - id: claude-code-expertise
     type: skill
     source: primitives-core/skills/claude-code-expertise
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: []
-    summary: "Expert map of Claude Code's extension surfaces for authoring and debugging extenders - skills, subagents, hooks, commands, plugins, marketplaces, MCP servers, and settings/permissions. The map (which surface, which contract, what's idiomatic) complementing the official skill/plugin builders: a surface-selection decision table, each surface's frontmatter/config contract with a minimal example, subagent authoring end to end (scaffold, tool selection, model/tier choice, when-to-use description), cross-surface authoring quality plus a validation checklist, and plugin/marketplace distribution mechanics. Use to pick the right surface for a need, look up a contract, author or debug any extender, or answer how a Claude Code surface works."
   - id: dev-focus
     type: skill
     source: primitives-core/skills/dev-focus
-    shelf: core
     origin: authored
     disposition: qualified
-    vendor: null
     targets: [claude-code]
-    plugins: [code-desk]
-    summary: "Keep a work session scoped and on-track: a mid-session focus check that flags drift from the original task, and a scope triage (the scope hammer) that sorts a task list into MUST/DEFER/CUT with a default bias toward DEFER/CUT. Use when the session has sprawled past its goal and needs re-anchoring, or when a task list needs pruning to what matters this iteration."

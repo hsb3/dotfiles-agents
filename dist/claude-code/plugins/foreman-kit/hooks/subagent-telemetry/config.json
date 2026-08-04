@@ -1,6 +1,0 @@
-{
-  "event": "SubagentStop",
-  "matcher": "*",
-  "timeout": 10,
-  "statusMessage": "Recording delegation telemetry..."
-}

@@ -6,23 +6,24 @@ plugin bundles. Clean-room rebuild to the 0007 lineup — Claude-Code-only, fres
 ## Task interface
 
 `make ci` is canonical (`make help` lists targets). CI runs `make ci` on every PR into `dev`.
-It is `check` (roster↔disk drift) + `build-check` (marketplace regen drift) + `test`
-(stdlib-only unit tests).
+It is the entry-gate floor (identity · tests · provenance · hook-layout) + `check`
+(roster↔disk, provenance manifest) + `symlinks` (assembly lint, ADR 0017) + `flow`.
 
 ## Source-of-truth rules
 
 - **`primitives-core/` is the only place a primitive is edited.** Root `plugins/<id>/` are
   hand-authored thin symlink assemblies over it (ADR 0017: `plugin.json`/`hooks.json`/bundle
   READMEs regular files, everything else symlinked; root `.claude-plugin/marketplace.json`
-  lists them; `make symlinks` lints). The `dist/` lanes are **generated** by
-  `scripts/gen_marketplace.py`/`gen_opencode.py`; never hand-edit them. Change the source,
-  then `make build` (dist retires with task-3).
-- **Generated artifacts have a regen script + a `--check` drift guard.** Every generator is
-  deterministic (stable ordering, no clocks/random) so `--check` never false-fails. Add new
-  generated artifacts the same way; `make ci` must run their `--check`.
-- **`primitives-core.yaml` (the roster) is the manifest** — the drift guard and the assembler
-  read it, not a directory listing. Every roster entry needs the full schema
+  lists them; `make symlinks` lints). **Nothing generated is tracked** — the dist lanes and
+  their generators retired with task-3; `gen_opencode.py` + `translation.yaml` remain for
+  install-time opencode generation (task-4).
+- **If something must be generated, it is generated at install/run time, never tracked**
+  (ADR 0017). A tracked artifact needing a regen step is a design smell now; any generator
+  kept (e.g. `gen_opencode.py`) stays deterministic (stable ordering, no clocks/random).
+- **`primitives-core.yaml` (the roster) is the provenance manifest** — the drift guard reads
+  it, not a directory listing. Schema: id/type/source/origin/disposition/targets/requires
   (see `primitives-core/README.md`); `origin: sourced` requires non-null `upstream` + `ref`.
+  Plugin membership is NOT a roster field — membership is the symlink assemblies.
 - **`primitives-core/` is self-authored only** (ADR 0015). Third-party items are recorded by
   reference in `externals.yaml`, never copied in.
 - **Tests are stdlib-only** (`python3 -m unittest`) — zero install is an invariant. Fixtures

@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.",
-  "name": "obsidian-toolkit",
-  "version": "0.1.0"
-}

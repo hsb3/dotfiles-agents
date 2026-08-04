@@ -5,8 +5,9 @@
 What it loads:
   1. extenders + files   - every roster skill/agent/hook: parsed frontmatter (hooks carry
                            none), entrypoint body, full file inventory with content + sha256.
-  2. distributions       - plugins.yaml bundles/plugins + skill-catalog.yaml standalones,
-                           with a members relation resolved against the roster.
+  2. distributions       - the pointer-based marketplace surface (ADR 0017): every plugin
+                           in the root .claude-plugin/marketplace.json, with a members
+                           relation resolved from its plugins/<id>/ symlink assembly.
   3. frontmatter_dimensions - one row per (kind, key): spec-known keys get their
                            requirement level; unknown observed keys land as `custom`.
   4. frameworks + framework_elements - seeded mental models (see FRAMEWORKS below).
@@ -25,6 +26,7 @@ What it loads:
 
 import ast
 import hashlib
+import json
 import os
 import re
 import sys
@@ -35,12 +37,11 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from check_roster import parse_roster  # noqa: E402
-from gen_marketplace import parse_plugins_yaml  # noqa: E402
 from pb import PB, esc  # noqa: E402
 
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
-PLUGINS_YAML = os.path.join(REPO, "plugins.yaml")
-CATALOG = os.path.join(REPO, "skill-catalog.yaml")
+MARKETPLACE = os.path.join(REPO, ".claude-plugin", "marketplace.json")
+PLUGINS_DIR = os.path.join(REPO, "plugins")
 EXTERNALS = os.path.join(REPO, "externals.yaml")
 
 LANG_BY_EXT = {
@@ -497,19 +498,9 @@ def scan_files(abs_source, entry_file):
     return out
 
 
-def parse_catalog_ids(path):
-    ids = []
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            m = re.match(r"^  - id:\s*(\S+)", line)
-            if m:
-                ids.append(m.group(1))
-    return ids
-
-
 def parse_externals(path):
     """Parse externals.yaml's `externals:` list into dicts. Tailored line parser (see
-    parse_roster / parse_plugins_yaml) — no pyyaml, controlled flat-key format only."""
+    parse_roster) — no pyyaml, controlled flat-key format only."""
     entries, cur = [], None
     in_list = False
     with open(path, encoding="utf-8") as fh:
@@ -647,25 +638,40 @@ def ingest_extenders(pb):
     return ext_ids, ext_meta
 
 
+def _assembly_members(plugin_id):
+    """Member primitive slugs of one plugins/<id>/ symlink assembly (ADR 0017): the symlink
+    names under skills/, agents/ (.md stripped), and hooks/ — membership IS the assembly."""
+    members = []
+    proot = os.path.join(PLUGINS_DIR, plugin_id)
+    for sub in ("skills", "agents", "hooks"):
+        d = os.path.join(proot, sub)
+        if not os.path.isdir(d):
+            continue
+        for name in sorted(os.listdir(d)):
+            if os.path.islink(os.path.join(d, name)):
+                members.append(name[:-3] if name.endswith(".md") else name)
+    return members
+
+
 def ingest_distributions(pb, ext_ids, ext_meta):
-    _owner, plugins = parse_plugins_yaml(PLUGINS_YAML)
-    for p in plugins:
-        members = [ext_ids[rid] for rid, m in ext_meta.items() if p["id"] in m["plugins"]]
-        pb.upsert("distributions", f"slug='{esc(p['id'])}'", {
-            "slug": p["id"], "kind": p["kind"] if p["kind"] in ("bundle", "plugin") else "plugin",
-            "version": p.get("version", ""), "description": p.get("description", ""),
+    """Distribution rows from the pointer surface (ADR 0017): the root marketplace.json
+    lists every plugin; membership comes from its symlink assembly. A one-skill assembly
+    whose sole member is its own id is a standalone; everything else is a bundle. (The
+    pre-0017 plugins.yaml/skill-catalog.yaml kinds and `<id>-standalone` rows are
+    superseded; re-ingest reshapes existing rows accordingly.)"""
+    with open(MARKETPLACE, encoding="utf-8") as fh:
+        market = json.load(fh)
+    for entry in market.get("plugins", []):
+        pid = entry["name"]
+        member_slugs = _assembly_members(pid)
+        members = [ext_ids[s] for s in member_slugs if s in ext_ids]
+        kind = "standalone" if member_slugs == [pid] else "bundle"
+        pb.upsert("distributions", f"slug='{esc(pid)}'", {
+            "slug": pid, "kind": kind,
+            "version": entry.get("version", ""), "description": entry.get("description", ""),
             "members": members,
         })
-        print(f"distribution: {p['id']} ({len(members)} members)")
-    for sid in parse_catalog_ids(CATALOG):
-        if sid not in ext_ids:
-            continue
-        pb.upsert("distributions", f"slug='{esc(sid)}-standalone'", {
-            "slug": f"{sid}-standalone", "kind": "standalone",
-            "version": "", "description": f"One-skill standalone install of {sid} (skill-catalog.yaml).",
-            "members": [ext_ids[sid]],
-        })
-        print(f"distribution: {sid}-standalone")
+        print(f"distribution: {pid} ({len(members)} members)")
 
 
 def ingest_sources(pb):

@@ -20,13 +20,9 @@ def _entry(**over):
         "id": "fixture",
         "type": "skill",
         "source": "primitives-core/skills/fixture",
-        "shelf": "core",
         "origin": "authored",
         "disposition": "untriaged",
-        "vendor": "null",
         "targets": "[claude-code]",
-        "plugins": "[]",
-        "summary": '"ok"',
     }
     e.update(over)
     return e

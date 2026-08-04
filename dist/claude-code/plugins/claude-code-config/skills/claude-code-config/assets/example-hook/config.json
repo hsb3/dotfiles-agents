@@ -1,6 +1,0 @@
-{
-  "event": "PreToolUse",
-  "matcher": "Bash",
-  "timeout": 10,
-  "statusMessage": "Logging Bash command..."
-}

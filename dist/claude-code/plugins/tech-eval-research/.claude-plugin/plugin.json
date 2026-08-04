@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Rigorous, cited, comparative technology evaluation producing a ranked shortlist, a capability comparison matrix, and a primary-source-backed recommendation; use to compare, evaluate, choose, or shortlist technologies, for license/paywall audits, self-hostability and OSS-maturity checks, and build-vs-buy research.",
-  "name": "tech-eval-research",
-  "version": "0.0.1"
-}
