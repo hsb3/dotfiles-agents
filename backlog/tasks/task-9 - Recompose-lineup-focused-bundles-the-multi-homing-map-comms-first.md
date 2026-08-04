@@ -4,16 +4,18 @@ title: 'Recompose lineup: focused bundles + the multi-homing map (comms first)'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:42'
+updated_date: '2026-08-04 02:55'
 labels:
   - refactor
   - decision
+milestone: m-0
 dependencies:
   - TASK-2
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/221'
 priority: medium
 type: feature
-ordinal: 9000
+ordinal: 600
 ---
 
 ## Description
@@ -28,3 +30,9 @@ Migrated from GH #221. Under the symlink architecture a standalone is a director
 - [ ] #2 comms installable without code-desk
 - [ ] #3 Disposition recorded per code-desk skill
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Owner 2026-08-04: comms-first direction approved IN PRINCIPLE, but gated on a design pass — session drafts the ADR-0017 bundle-composition extension + per-code-desk-skill dispositions for owner ratify BEFORE any build. Ruling not yet final (AC#1 pending the ratified ADR).
+<!-- SECTION:NOTES:END -->

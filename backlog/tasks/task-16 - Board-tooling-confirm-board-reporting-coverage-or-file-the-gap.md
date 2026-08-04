@@ -11,7 +11,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/211'
 priority: low
 type: chore
-ordinal: 16000
+ordinal: 1600
 ---
 
 ## Description

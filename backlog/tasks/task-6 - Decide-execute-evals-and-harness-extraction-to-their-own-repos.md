@@ -4,14 +4,15 @@ title: Decide + execute evals/ and harness/ extraction to their own repos
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:42'
+updated_date: '2026-08-04 02:55'
 labels:
   - refactor
   - decision
 milestone: m-0
 dependencies: []
-priority: medium
+priority: low
 type: task
-ordinal: 6000
+ordinal: 1450
 ---
 
 ## Description
@@ -25,3 +26,9 @@ evals/ tracked data.db is 16MB of the repo's 29MB; consumers clone the marketpla
 - [ ] #1 Ruling recorded
 - [ ] #2 Extracted repos own their history; this repo keeps consume-pointers only
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Owner ruling 2026-08-04 (decision-5): extract BOTH eventually (harness first, then evals) — but DEFERRED. 'Not yet; dev is my workbench; we'll move after things mature.' Parked at Low; no scheduling this cycle.
+<!-- SECTION:NOTES:END -->

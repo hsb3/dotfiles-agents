@@ -11,7 +11,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/193'
 priority: low
 type: feature
-ordinal: 17000
+ordinal: 1700
 ---
 
 ## Description

@@ -12,7 +12,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/208'
 priority: low
 type: feature
-ordinal: 19000
+ordinal: 1900
 ---
 
 ## Description

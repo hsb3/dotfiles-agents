@@ -11,7 +11,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/172'
 priority: medium
 type: bug
-ordinal: 27000
+ordinal: 1400
 ---
 
 ## Description
