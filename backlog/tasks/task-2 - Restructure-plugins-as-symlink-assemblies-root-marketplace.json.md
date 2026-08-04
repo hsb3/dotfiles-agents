@@ -1,10 +1,10 @@
 ---
 id: TASK-2
 title: 'Restructure: plugins/ as symlink assemblies + root marketplace.json'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 02:02'
+updated_date: '2026-08-04 02:03'
 labels:
   - refactor
 milestone: m-0

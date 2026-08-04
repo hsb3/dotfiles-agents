@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Roster <-> disk drift guard (issue #5).
 
-Verifies that primitives-core.yaml (the roster) and primitives-core/ on disk agree:
+Verifies that primitives-core.yaml (the roster, slimmed to a provenance manifest per
+ADR 0017) and primitives-core/ on disk agree:
   - every roster entry's `source` exists on disk
   - every primitive on disk (skill dir, agent .md, hook handler .sh, mcp .json) has a roster entry
-  - basic schema: required fields present, type ∈ {skill,agent,mcp,hook}, shelf ∈ {core,toggle},
+  - basic schema: required fields present, type ∈ {skill,agent,mcp,hook},
     origin ∈ {authored,sourced}, disposition ∈ {qualified,grandfathered-pending-use,demoted,untriaged}
   - `requires` (optional) is a list of {hooks,local-mcp,hosted-mcp} capability words plus
     dependency declarations `cli:<kebab>` (a binary/app that must be installed) and
@@ -26,9 +27,8 @@ ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PC = os.path.join(REPO, "primitives-core")
 
 TYPES = {"skill", "agent", "mcp", "hook"}
-SHELVES = {"core", "toggle"}
-# The vendor-lane enum (ADR 0008): a `targets:` value selects which dist lane(s) a primitive
-# ships to. gen_marketplace reads claude-code membership; gen_opencode reads opencode.
+# The runtime enum (ADR 0017): claude-code installs the symlink assemblies natively;
+# opencode is generated at install time by gen_opencode.py (task-4).
 TARGETS = {"claude-code", "opencode"}
 ORIGINS = {"authored", "sourced"}
 DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged"}
@@ -40,11 +40,9 @@ REQUIRED = (
     "id",
     "type",
     "source",
-    "shelf",
     "origin",
     "disposition",
     "targets",
-    "plugins",
 )
 
 
@@ -132,8 +130,6 @@ def check_entry_schema(e, problems):
     t = e.get("type")
     if t not in TYPES:
         problems.append(f"[{eid}] bad type: {t!r}")
-    if e.get("shelf") not in SHELVES:
-        problems.append(f"[{eid}] bad shelf: {e.get('shelf')!r}")
     if "origin" in e and e.get("origin") not in ORIGINS:
         problems.append(
             f"[{eid}] bad origin: {e.get('origin')!r} (must be one of {sorted(ORIGINS)})"

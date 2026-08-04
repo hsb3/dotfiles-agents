@@ -32,19 +32,7 @@ nodes:
     class: authored
     status: current
     paths: [primitives-core.yaml]
-    note: "THE ROSTER — authoritative membership manifest; targets field selects vendor lanes; disposition is the owner-curated verdict field."
-  - id: bundle-metadata
-    layer: roster
-    class: authored
-    status: current
-    paths: [plugins.yaml]
-    note: "Bundle membership + metadata (plugins.yaml: id, kind, version, description per distributed plugin). Bundle value/proof READMEs live in the symlink-assembly tree (plugins/<id>/README.md, ADR 0017). Retires with the dist lanes (task-3)."
-  - id: standalone-catalog
-    layer: roster
-    class: authored
-    status: current
-    paths: [skill-catalog.yaml]
-    note: "Thin roster projection listing skills cleared to ship as one-skill plugins."
+    note: "THE ROSTER — provenance manifest (ADR 0017: id/type/source/origin/disposition/targets/requires); plugin membership lives in the symlink assemblies, not here. disposition is the owner-curated verdict field."
   - id: externals
     layer: roster
     class: authored
@@ -56,21 +44,13 @@ nodes:
     class: authored
     status: current
     paths: [scripts]
-    note: "Generators plus every floor and drift checker plus the weekly campaign runner. The via field on edges names the specific script."
+    note: "Every floor and assembly checker, gen_opencode.py (dormant until its install-time rework, task-4), and the weekly campaign runner. The via field on edges names the specific script."
   - id: gates
     layer: gate
     class: authored
     status: current
     paths: [Makefile, tests, .github, .gitignore, flow.yaml]
     note: "Task interface, stdlib unit tests, CI workflows, tracking policy, and this flow manifest itself. make ci is the canonical PR gate."
-  - id: dist-lanes
-    layer: dist
-    class: generated
-    status: current
-    paths: [dist]
-    generator: scripts/gen_marketplace.py
-    guard: build-check
-    note: "Vendor dist lanes (ADR 0008): dist/claude-code — the assembled marketplace surface, lifted to main's root at publish — and dist/opencode, the laydown lane (gen_opencode.py: skills verbatim, remapped agents, config fragment, installer, generated exclusions manifest), published as opencode/ on main."
   - id: repo-docs
     layer: docs
     class: authored
@@ -112,7 +92,7 @@ nodes:
     class: virtual
     status: current
     paths: []
-    note: "The published main branch — the surface consumers resolve. Advanced only by the publish workflow: a filtered parented assembly of the distributable surface, append-only per ADR 0008; the workbench never publishes."
+    note: "The published main branch — the surface consumers currently resolve. The publish workflow still assembles from the retired dist lanes, so a dispatch now fails loudly at assembly; what publishing means under ADR 0017 is the open task-5 decision. The workbench never publishes."
   - id: consumers
     layer: consumer
     class: virtual
@@ -130,7 +110,7 @@ nodes:
     class: authored
     status: current
     paths: [plugins, .claude-plugin]
-    note: "Pointer-based marketplace surface (ADR 0017): plugins/<id>/ as hand-authored thin symlink assemblies over primitives-core/ (plugin.json + hooks.json regular files; skills/agents/hooks as in-repo symlinks; bundle READMEs regular, standalone READMEs symlinked to the skill's README) plus the root .claude-plugin/marketplace.json listing each plugin by relative source. Claude Code dereferences at install; guarded by scripts/check_symlinks.py (make symlinks). Replaces the dist lanes when task-3 retires them."
+    note: "Pointer-based marketplace surface (ADR 0017): plugins/<id>/ as hand-authored thin symlink assemblies over primitives-core/ (plugin.json + hooks.json regular files; skills/agents/hooks as in-repo symlinks; bundle READMEs regular, standalone READMEs symlinked to the skill's README) plus the root .claude-plugin/marketplace.json listing each plugin by relative source. Claude Code dereferences at install; guarded by scripts/check_symlinks.py (make symlinks). Replaced the dist lanes (task-3)."
   - id: translation-config
     layer: roster
     class: authored
@@ -139,26 +119,6 @@ nodes:
     note: "Capability matrix per primitive type x target (native, transform, render, unsupported) plus model-alias pins and roster-level exclusions with reasons — read by gen_opencode.py; precedent in dropped translate.py, commit 4e8a05b."
 
 edges:
-  - from: roster
-    to: dist-lanes
-    kind: generates
-    mode: automated
-    via: scripts/gen_marketplace.py
-  - from: primitive-bodies
-    to: dist-lanes
-    kind: generates
-    mode: automated
-    via: scripts/gen_marketplace.py
-  - from: bundle-metadata
-    to: dist-lanes
-    kind: generates
-    mode: automated
-    via: scripts/gen_marketplace.py
-  - from: standalone-catalog
-    to: dist-lanes
-    kind: generates
-    mode: automated
-    via: scripts/gen_standalone.py
   - from: gates
     to: primitive-bodies
     kind: gates
@@ -173,11 +133,6 @@ edges:
     kind: gates
     mode: automated
     via: scripts/check_symlinks.py
-  - from: gates
-    to: dist-lanes
-    kind: gates
-    mode: automated
-    via: scripts/gen_marketplace.py
   - from: primitive-bodies
     to: harness
     kind: consumes
@@ -193,11 +148,6 @@ edges:
     kind: reports
     mode: automated
     via: evals/report.py
-  - from: dist-lanes
-    to: publish-main
-    kind: publishes
-    mode: manual
-    via: .github/workflows/publish.yml
   - from: publish-main
     to: consumers
     kind: installs
@@ -210,13 +160,3 @@ edges:
     to: primitive-bodies
     kind: curates
     mode: manual
-  - from: externals
-    to: dist-lanes
-    kind: generates
-    mode: automated
-    status: planned
-  - from: translation-config
-    to: dist-lanes
-    kind: generates
-    mode: automated
-    via: scripts/gen_opencode.py

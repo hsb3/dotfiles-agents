@@ -23,12 +23,10 @@ Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`
 | `primitives-core/` | the single source copy of every primitive (`skills/`, `agents/`, `hooks/`); a skill's README travels with it (`skills/<id>/README.md`) |
 | `plugins/` | thin symlink assemblies (ADR 0017): one dir per plugin, hand-authored `plugin.json`/`hooks.json`/bundle README, everything else symlinked into `primitives-core/` |
 | `.claude-plugin/marketplace.json` | the marketplace root manifest — each plugin listed by relative `./plugins/<id>` source |
-| `primitives-core.yaml` | the roster — the authoritative manifest of every primitive |
-| `plugins.yaml` | plugin-bundle metadata (name / version / description); retires with the dist lanes (task-3) |
-| `dist/claude-code/` | **generated** — the assembled Claude Code marketplace lane (`plugins/`, `marketplace.json`, `PLUGINS.md`; never hand-edited), lifted to the root of `main` at publish; retires under ADR 0017 (task-3) |
-| `dist/opencode/` | **generated** — the opencode laydown lane (skills verbatim, remapped agents, installer, exclusions manifest), published as `opencode/` on `main` |
+| `primitives-core.yaml` | the roster — provenance manifest of every primitive (ADR 0017: membership lives in the assemblies, not here) |
+| `translation.yaml` | the opencode capability matrix, read by `scripts/gen_opencode.py` at install time (task-4) |
 | `hooks/` | the ratified hook-dir layout (`hooks/<name>/hook.py`) |
-| `scripts/` | roster guard + generators, each with a `--check` drift mode |
+| `scripts/` | floor + assembly guards and `gen_opencode.py` |
 | `tests/` | stdlib-only unit tests (zero install) |
 | `docs/decisions/` | in-repo ADR mirrors |
 | `flow.yaml` + `docs/FLOW.md` | the repo-flow DAG — the home of every part, machine-checked by `make flow` |
@@ -39,15 +37,14 @@ Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`
 
 | Target | Does |
 |---|---|
-| `make check` | roster ↔ disk drift guard (schema + provenance) |
-| `make build` | regenerate the dist lanes from source |
-| `make build-check` | verify the committed dist lanes match source (drift guard) |
+| `make check` | roster ↔ disk drift guard (provenance-manifest schema) |
 | `make symlinks` | symlink-assembly lint (ADR 0017): `plugins/` links resolve in-repo; marketplace ↔ assemblies 1:1 |
 | `make test` | run the unit tests |
-| `make ci` | all gates: floor + drift guards + symlink lint |
+| `make ci` | all gates: floor + assembly/flow guards |
 
-**Generated artifacts are never hand-edited.** Change a primitive under `primitives-core/`,
-then `make build`; `make ci` fails if a committed generated file drifts from its source.
+**Nothing generated is tracked** (ADR 0017). Change a primitive under `primitives-core/` and
+it is live everywhere it ships — the assemblies are pointers, and `make ci` fails if a link
+breaks or an assembly and the marketplace manifest disagree.
 
 ## Governance
 

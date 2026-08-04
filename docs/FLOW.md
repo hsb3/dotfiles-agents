@@ -31,8 +31,6 @@ steps) or planned (the one remaining planned edge: externals clone-at-build, #36
 flowchart TD
   subgraph L_roster[roster]
     N_roster[roster]
-    N_bundle_metadata[bundle metadata]
-    N_standalone_catalog[standalone catalog]
     N_externals[externals]
     N_translation_config[translation config]
   end
@@ -46,7 +44,6 @@ flowchart TD
     N_gates[gates]
   end
   subgraph L_dist[dist]
-    N_dist_lanes[dist lanes]
     N_plugin_assemblies[plugin assemblies]
   end
   subgraph L_publish[publish]
@@ -68,23 +65,15 @@ flowchart TD
   subgraph L_docs[docs]
     N_repo_docs[repo docs]
   end
-  N_roster -->|generates| N_dist_lanes
-  N_primitive_bodies -->|generates| N_dist_lanes
-  N_bundle_metadata -->|generates| N_dist_lanes
-  N_standalone_catalog -->|generates| N_dist_lanes
   N_gates -->|gates| N_primitive_bodies
   N_primitive_bodies -.->|consumes| N_plugin_assemblies
   N_gates -->|gates| N_plugin_assemblies
-  N_gates -->|gates| N_dist_lanes
   N_primitive_bodies -->|consumes| N_harness
   N_harness -->|ingests| N_evals
   N_evals -->|reports| N_desk
-  N_dist_lanes -.->|publishes| N_publish_main
   N_publish_main -.->|installs| N_consumers
   N_evals -.->|curates| N_roster
   N_evals -.->|curates| N_primitive_bodies
-  N_externals -.->|generates planned| N_dist_lanes
-  N_translation_config -->|generates| N_dist_lanes
   classDef planned stroke-dasharray: 6 4
 ```
 <!-- FLOW-DAG:END -->

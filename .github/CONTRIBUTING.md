@@ -1,8 +1,9 @@
 # Contributing
 
 This marketplace ships **primitives** (skills, agents, hooks) authored in `primitives-core/`,
-listed in the `primitives-core.yaml` roster, and assembled into the distributed `dist/` lanes by
-`make build`. This page is the single entry point for landing a change; the canonical rules live
+listed in the `primitives-core.yaml` roster, and distributed as thin symlink assemblies under
+`plugins/<id>/` (ADR 0017 — no build step; nothing generated is tracked). This page is the
+single entry point for landing a change; the canonical rules live
 in [`../CLAUDE.md`](../CLAUDE.md) and [`../primitives-core/README.md`](../primitives-core/README.md)
 (source-of-truth — this page links, it does not restate them).
 
@@ -14,16 +15,15 @@ in [`../CLAUDE.md`](../CLAUDE.md) and [`../primitives-core/README.md`](../primit
 2. **Edit `primitives-core/` only.** It is the single canonical source copy of every primitive.
    `plugins/<id>/` are thin symlink assemblies over it (ADR 0017) — hand-authored
    `plugin.json`/`hooks.json`/bundle READMEs, symlinks for everything else; the root
-   `.claude-plugin/marketplace.json` lists each plugin. The `dist/` lanes (`dist/claude-code/`,
-   `dist/opencode/`) are **generated** — never hand-edit them (they retire with task-3).
-3. **Regenerate:** `make build` rewrites the `dist/` lanes deterministically from source.
-4. **Gate locally:** `make ci` (see below) must be fully green.
-5. **Open a PR into `dev`.** CI re-runs `make ci` on every PR into `dev`.
+   `.claude-plugin/marketplace.json` lists each plugin. An edit at source is live everywhere
+   the primitive ships — there is no build step. (Shipping a primitive in another plugin =
+   one more symlink in that assembly + nothing else.)
+3. **Gate locally:** `make ci` (see below) must be fully green.
+4. **Open a PR into `dev`.** CI re-runs `make ci` on every PR into `dev`.
 
 ```bash
 git switch -c my-change dev
 # …edit under primitives-core/ , update primitives-core.yaml if adding/removing a primitive…
-make build      # regenerate the dist lanes from source
 make ci         # run the full gate; must be green
 git push -u origin my-change
 gh pr create --base dev
@@ -33,11 +33,12 @@ gh pr create --base dev
 
 ## The roster (`primitives-core.yaml`)
 
-The roster — not a directory listing — is the authoritative membership manifest; the drift guard
-and the assembler read it. Every entry carries the full schema (fields and values in
-[`../primitives-core/README.md`](../primitives-core/README.md#roster-entry-schema)):
-`id`, `type`, `source` (must exist on disk), `shelf`, `origin`, `disposition`, `targets`,
-`plugins`, `requires`.
+The roster — not a directory listing — is the provenance manifest (ADR 0017); the drift guard
+reads it. Every entry carries the schema (fields and values in
+[`../primitives-core/README.md`](../primitives-core/README.md#roster-entry-schema-provenance-manifest-adr-0017)):
+`id`, `type`, `source` (must exist on disk), `origin`, `disposition`, `targets`, `requires`.
+Plugin **membership** is not a roster field — membership is the symlink assemblies under
+`plugins/<id>/`.
 
 - **`origin: authored | sourced`** is provenance and is immutable per entry.
   `primitives-core/` holds **self-authored** bodies only — every entry sourced from under
@@ -55,12 +56,11 @@ and the assembler read it. Every entry carries the full schema (fields and value
 
 | Command | Enforces |
 |---|---|
-| `make check` | **Roster ↔ disk drift** — every roster `source` exists; schema + provenance shape valid; no orphaned bodies. |
+| `make check` | **Roster ↔ disk drift** — every roster `source` exists; provenance-manifest schema valid; no orphaned bodies. |
 | `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, ADRs, and `_meta/` are exempt (they don't ship). |
 | `make provenance` | **Provenance** — every `primitives-core/` body is `origin: authored`; every `externals.yaml` entry has non-null `upstream` + `ref` (ADR 0015 / ADR 0003). |
 | `make hook-layout` | **Hook layout** — hooks use the ratified `hooks/<name>/hook.py` dir layout, never flat handlers or inline-in-settings. |
-| `make catalog` | **Skill-catalog** — standalone-skill eligibility, drift, and one-skill-wrapper byte-identity. |
-| `make build-check` | **Marketplace regen drift** — the committed `dist/` lanes match a fresh regen from source (run `make build` if this fails). |
+| `make symlinks` | **Symlink-assembly lint** (ADR 0017) — every link under `plugins/` resolves in-repo; the root marketplace manifest and the assemblies match 1:1. |
 | `make harness-coupling` | `harness/` imports only itself + stdlib (no repo coupling). |
 | `make flow` | **Repo-flow DAG** — every tracked top-level path is homed in `flow.yaml`; a new top-level path must claim a node there. |
 | `make test` | **Unit tests** — `python3 -m unittest`, **stdlib-only** (zero install is an invariant; fixtures live under `tests/`, never under `primitives-core/`). |
@@ -71,7 +71,7 @@ that nest under an already-homed path (e.g. under `primitives-core/`, `docs/`, `
 
 ## Generated artifacts
 
-Every generated artifact has a deterministic generator **and** a `--check` drift guard, so the
-committed copy can never silently diverge from source. Never hand-edit a generated file — change
-the source under `primitives-core/`, then `make build`. Add new generated artifacts the same way,
-and wire their `--check` into `make ci`.
+Nothing generated is tracked (ADR 0017). If something must be generated (e.g. the opencode
+laydown via `gen_opencode.py` + `translation.yaml`), it is generated at install/run time by
+a deterministic generator — never committed. A tracked artifact that needs a regen step is a
+design smell; raise it before adding one.
