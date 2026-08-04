@@ -44,7 +44,7 @@ nodes:
     class: authored
     status: current
     paths: [scripts]
-    note: "Every floor and assembly checker, gen_opencode.py (dormant until its install-time rework, task-4), and the weekly campaign runner. The via field on edges names the specific script."
+    note: "Every floor and assembly checker, the install-time opencode lane (gen_opencode.py + install_opencode.sh), and the weekly campaign runner. The via field on edges names the specific script."
   - id: gates
     layer: gate
     class: authored
@@ -98,7 +98,7 @@ nodes:
     class: virtual
     status: current
     paths: []
-    note: "Machines installing via claude plugin marketplace add and, planned, the opencode laydown installer."
+    note: "Machines installing via claude plugin marketplace add (the pointer surface) and the opencode laydown installer (scripts/install_opencode.sh, generating at install time per ADR 0017)."
   - id: backlog
     layer: workbench
     class: authored
@@ -152,6 +152,11 @@ edges:
     to: consumers
     kind: installs
     mode: manual
+  - from: primitive-bodies
+    to: consumers
+    kind: installs
+    mode: manual
+    via: scripts/install_opencode.sh
   - from: evals
     to: roster
     kind: curates

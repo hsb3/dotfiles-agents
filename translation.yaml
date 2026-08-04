@@ -10,7 +10,7 @@
 #
 # `exclusions` are ROSTER-LEVEL opt-outs with reasons — primitives whose targets stay
 # [claude-code] even though their type is mechanically translatable. The generated
-# dist/opencode/README.md surfaces every exclusion (matrix + roster): no silent caps.
+# The generated laydown README surfaces every exclusion (matrix + roster): no silent caps.
 # `model_aliases` pin the bare model aliases our agent frontmatter uses to the
 # provider-prefixed refs opencode requires.
 

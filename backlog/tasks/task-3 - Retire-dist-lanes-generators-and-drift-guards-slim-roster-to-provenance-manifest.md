@@ -3,10 +3,10 @@ id: TASK-3
 title: >-
   Retire dist lanes, generators, and drift guards; slim roster to provenance
   manifest
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 02:12'
+updated_date: '2026-08-04 02:13'
 labels:
   - refactor
 milestone: m-0

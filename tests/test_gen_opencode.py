@@ -1,8 +1,9 @@
-"""gen_opencode unit tests (ADR 0008 W4).
+"""gen_opencode unit tests (install-time laydown, ADR 0017).
 
 Covers the agent frontmatter transform (the real mapping rules, not just shape), the
-opencode skill-name/description validators, the exclusion-vs-roster conflict guard, and
-build determinism against the real roster (two temp builds must be byte-identical).
+opencode skill-name/description validators, the exclusion-vs-roster conflict guard,
+build determinism against the real roster (two temp builds must be byte-identical),
+and the --out CLI contract (builds a full laydown; refuses a non-empty target).
 """
 
 import os
@@ -101,6 +102,33 @@ class TestExclusionConflict(unittest.TestCase):
         }]
         problems = G.build(d, entries, translation)
         self.assertTrue(any("resolve the disagreement" in p for p in problems))
+
+
+class TestOutMode(unittest.TestCase):
+    """The install-time CLI contract (ADR 0017): --out builds the laydown, never clobbers."""
+
+    def test_out_builds_full_laydown(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        out = os.path.join(d, "lane")
+        self.assertEqual(G.main(["--out", out]), 0)
+        for expected in ("install.sh", "opencode.jsonc", "README.md", "skills", "agents"):
+            self.assertTrue(os.path.exists(os.path.join(out, expected)), expected)
+        self.assertTrue(os.access(os.path.join(out, "install.sh"), os.X_OK))
+
+    def test_out_refuses_non_empty_dir(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        with open(os.path.join(d, "occupied.txt"), "w") as fh:
+            fh.write("x")
+        self.assertEqual(G.main(["--out", d]), 1)
+
+    def test_agent_color_is_dropped(self):
+        # opencode 1.18 rejects CC named colors at config load (verified live) — the
+        # transform must not emit `color:` at all.
+        out = G.transform_agent(CC_AGENT, ALIASES)
+        fm, _ = G.split_frontmatter(out)
+        self.assertNotIn("color", fm)
 
 
 class TestDeterminism(unittest.TestCase):

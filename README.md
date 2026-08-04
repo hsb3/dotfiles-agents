@@ -13,8 +13,21 @@ and eleven standalone one-skill plugins (**claude-code-config**, **claude-code-e
 **dataviz**, **deep-research**, **github-project-board**, **opencode-expertise**,
 **owner-signoff**, **pptx-themes**, **private-fork**, **project-memory**,
 **tech-eval-research**). Cross-desk items ship standalone, never inside a desk bundle.
-Claude-Code-only; the marketplace resolves by name as `<plugin>@dotfiles-agents`
-(consumers install from `main`, the published branch).
+One source tree serves both runtimes (ADR 0017): the marketplace resolves by name as
+`<plugin>@dotfiles-agents` for Claude Code, and opencode installs by laydown.
+
+## Install
+
+```sh
+# Claude Code — add the repo as a marketplace, install plugins by name
+claude plugin marketplace add hsb3/dotfiles-agents
+claude plugin install code-desk@dotfiles-agents
+
+# opencode — generated at install time from the same source tree
+git clone https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
+scripts/install_opencode.sh --global            # ~/.config/opencode/{skills,agents}/
+scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents}/
+```
 
 ## Layout
 
