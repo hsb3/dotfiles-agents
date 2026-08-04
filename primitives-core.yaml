@@ -114,6 +114,24 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: rubric-panel
+    type: skill
+    source: primitives-core/skills/rubric-panel
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+  - id: deletion-pass
+    type: skill
+    source: primitives-core/skills/deletion-pass
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
+  - id: layer-cycle
+    type: skill
+    source: primitives-core/skills/layer-cycle
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md

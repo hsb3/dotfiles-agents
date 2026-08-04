@@ -174,9 +174,12 @@ breach. The scout remains deliberately Bash-less (hard read-only guarantee).
 
 **Other per-invocation knobs** (set on the Agent call, not in the definitions):
 `isolation: worktree` when parallel workers genuinely must mutate the same files (disjoint
-file scopes are cheaper — prefer them); `maxTurns` as a per-wave cap tighter than the
-definitions' backstops (scout 15 · builder 50 · reviewer 30). Continue an existing worker with
-SendMessage instead of re-briefing — a re-brief discards the context already paid for.
+file scopes are cheaper — prefer them); `maxTurns` as a *deliberate* per-wave cap when a
+specific wave needs one — the definitions no longer impose an arbitrary turn backstop on
+builder or reviewer (they self-regulate by scope and escalate an oversized slice loudly
+instead of stalling silently at a clock); only scout keeps a 15-turn bounded-recon backstop.
+Continue an existing worker with SendMessage instead of re-briefing — a re-brief discards the
+context already paid for.
 
 ## The foreman floor — never delegated
 
