@@ -14,28 +14,20 @@ broken-by-design). Task interface + source-of-truth rules: see CLAUDE.md (hot-lo
 ## 1 · Current standing
 
 `make ci` green — 95 tests (38 primitives: agent=4, hook=4, skill=30). **The ADR 0017
-pointer refactor EXECUTED 2026-08-03/04** (owner authorized merge-and-continue): tasks 1–4 +
-7–8 of milestone m-0 are DONE via PRs #227–#231, all squash-merged into dev.
+pointer refactor EXECUTED 2026-08-03/04** (owner authorized merge-and-continue): m-0 tasks
+1–4 + 7–8 DONE via PRs #227–#231 (squash-merged; blow-by-blow lives there). Net state:
 
-- **ADR 0017** (docs/decisions/) formalizes decision-2; ADR 0008's dist-lane design is
-  `Superseded-by-0017` (its flow-guard decision survives; ruled with task-7).
-- **plugins/<id>/ = 15 thin symlink assemblies** (51 links) over `primitives-core/`;
-  `make symlinks` (check_symlinks.py) lints in ci. Byte-identity vs the old dist output and
-  live path-marketplace installs (bundle + standalone) were verified before retirement.
-- **READMEs travel with their skill** (owner ruling 2026-08-03): `standalone-readmes/` and
-  `bundles/` are GONE; skill READMEs live at `primitives-core/skills/<id>/README.md`
-  (plugin-root README = one more symlink); bundle READMEs hand-authored at
-  `plugins/<id>/README.md`. pptx-themes' consumer README was MERGED with its in-skill
-  attribution README (Anthropic license content preserved — don't split them again).
-- **Retired:** `dist/` (530 files), gen_marketplace.py, gen_standalone.py,
-  check_skill_catalog.py, plugins.yaml, skill-catalog.yaml, make build/build-check/catalog.
-  The roster is now a PROVENANCE MANIFEST (id/type/source/origin/disposition/targets/
-  requires — membership lives in the assemblies). check_roster.py was slimmed in place, not
-  deleted: its parse_roster serves check_identity/check_provenance/gen_opencode/evals.
-- **opencode lane is install-time:** `gen_opencode.py --out DIR` + the
-  `scripts/install_opencode.sh` wrapper. Round-trip verified against live opencode 1.18.11
-  (23/23 skills, 4/4 agents discovered). Live fix: CC `color:` is dropped in the agent
-  transform (opencode hard-fails on named colors).
+- **ADR 0017** formalizes decision-2; ADR 0008's dist-lane design `Superseded-by-0017`
+  (flow guard survives, ruled with task-7). Mechanics are in CLAUDE.md (hot-loaded).
+- 15 symlink assemblies + root marketplace.json, linted by `make symlinks`; verified by
+  byte-identity vs the old dist AND live path-marketplace installs before retirement.
+- READMEs travel with their skill (`standalone-readmes/` + `bundles/` gone); retired:
+  `dist/` (530 files), gen_marketplace/gen_standalone/check_skill_catalog, plugins.yaml,
+  skill-catalog.yaml. Roster = provenance manifest; check_roster.py slimmed in place (its
+  parse_roster serves check_identity/check_provenance/gen_opencode/evals).
+- opencode is install-time (`scripts/install_opencode.sh`); round-trip verified vs live
+  opencode 1.18.11 (23/23 skills, 4/4 agents). Live fix: agent `color:` dropped in the
+  transform — opencode hard-fails on CC named colors.
 
 `main` still holds the pre-0017 dist-lifted assembly (published 2026-07-22 at
 `dev@0cdca55`). **publish.yml now fails loudly at assembly if dispatched** (dist is gone) —
@@ -109,6 +101,10 @@ live there, not duplicated here.
   template), task-25 (waves backlog-aware mode — new), task-13 (250k-token spike),
   task-15 (handoff-override), task-10 (externals — decisions 1–7 are owner's, mechanism is
   buildable after).
+- Note: consumers pointed at `main` still get the pre-0017 dist assembly — functional, just
+  frozen at 2026-07-22 until task-5 rules how the pointer surface publishes.
+- Parked observation (task-4 notes): opencode discovers `pptx-themes/base/SKILL.md` (the
+  vendored Anthropic base) as its own skill — curation call for the task-21 family.
 - Cross-repo residue for owner: ra-platform's planning-desk adoption still **uncommitted**
   in `~/Developer/ra-platform` (staged 2026-07-22, needs review/commit + live smoke test);
   the four desk folders in dotfiles-agents-desk likewise uncommitted.
@@ -130,11 +126,10 @@ model until he signs off (standing directive, §5).
 ## 5 · Conventions & gotchas
 
 - Source-of-truth rules are in CLAUDE.md (hot-loaded) — not duplicated here.
-- **Post-0017 mechanics:** there is NO build step. Adding a primitive to a plugin = one
-  symlink in its assembly; a new plugin = a `plugins/<id>/` dir + a hand-authored entry in
-  the root `.claude-plugin/marketplace.json` (+ plugin.json); `make symlinks` must stay
-  green. Skill READMEs live IN the skill dir. plugin.json/hooks.json/versions are
-  hand-maintained now — bump versions by hand when content changes materially.
+- **Post-0017 mechanics CLAUDE.md doesn't spell out:** a NEW plugin = a `plugins/<id>/` dir
+  + a hand-authored entry in the root marketplace.json; plugin versions are hand-maintained
+  now — bump when content changes materially. pptx-themes' skill README carries the
+  Anthropic attribution for its vendored `base/` — never split or drop that section.
 - **ci.yml job names are frozen** (branch-protection pin): the drift-guards job still reads
   "drift guards (roster · marketplace · catalog)" though it now runs
   `make check symlinks flow` — renaming it strands PRs; change the protection setting first.
@@ -143,12 +138,9 @@ model until he signs off (standing directive, §5).
   snapshot — verify with tree hashes per the `publish-to-main` skill runbook).
 - **dev's branch-protection required checks are pinned by CI JOB NAME** — renaming a job in
   `ci.yml` strands every PR on a check that never reports. Update the protection setting first.
-- **PRs into `dev` do NOT auto-close their `Closes #N` issues** — auto-close only fires on the
-  *default* branch (`main`). **Close bug issues by hand after every merge into dev.**
-- **Backlog.md specifics:** subtasks get dotted IDs (`task-21.1`), so `--depends-on` a subtask
-  must use the dotted form; `auto_commit: false` — backlog CLI writes are committed by the
-  session like any file edit; `make flow` requires a claimed top-level path to be *tracked*
-  (stage `backlog/` before the check passes).
+- **Backlog.md specifics CLAUDE.md doesn't carry:** subtasks get dotted IDs (`task-21.1`) —
+  `--depends-on` a subtask must use the dotted form; `make flow` requires a claimed top-level
+  path to be *tracked* (stage new dirs before the check passes).
 - **Project settings disable product plugins for dev sessions** (code-desk, dataviz, diagrams,
   pptx-themes, github-project-board, mcp-server-dev) — editing their source never needs them
   enabled; flip the entry in `.claude/settings.json` temporarily if a session must *run* one.
@@ -170,8 +162,6 @@ model until he signs off (standing directive, §5).
 - Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — sweep
   stray nested `.claude/` dirs before committing (never whole-dir `git rm` the root `.claude/`).
   Tracked store is `.claude/memory/` (repo root) since #194.
-- **Never check out `main` locally** — a PreToolUse hook denies it in agent sessions; a
-  machine-local `post-checkout` hook warns on manual checkouts.
 - **Henry signs off on major IA changes before they are finalized/built** (standing directive;
   memory `approve-major-ia-changes`). Present IA changes as an approval gate, not a done deal.
 - Machine-local leftover: `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored) —
