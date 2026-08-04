@@ -34,7 +34,7 @@ numbering has intentional gaps: **0004** and **0005** existed pre-rebuild but ar
 | [0003](0003-externals-tracked-not-vendored.md) | Externals tracked-and-cloned (upstream + pinned ref), never vendored | Accepted | CANON 11/16; backfill #40 |
 | [0006](0006-meta-tracked-by-default.md) | `_meta/` tracked by default; targeted ignores only (operations/, caches, litter) | Accepted | #99 owner ruling 2026-07-13 |
 | [0007](0007-distribution-restructure-dev-main.md) | Distribution restructure: `dev` integrates, `main` publishes — build on `dev`, never `main` | Accepted | DEV-31/#115; mirrors old-desk ADR 0014 |
-| [0008](0008-vendor-dist-lanes-and-filtered-publish.md) | Vendor dist lanes under `dist/`, filtered append-only publish, flow.yaml as standing structural guard | Accepted | opencode lane planning; owner ruling 2026-07-22; restores old-desk 0014 §3 |
+| [0008](0008-vendor-dist-lanes-and-filtered-publish.md) | Vendor dist lanes under `dist/`, filtered append-only publish, flow.yaml as standing structural guard | Superseded-by-0017 (flow guard survives) | opencode lane planning; owner ruling 2026-07-22; restores old-desk 0014 §3 |
 | [0015](0015-self-authored-primitives-only.md) | `primitives-core/` is self-authored only; third-party material by reference in `externals.yaml`, never vendored | Accepted | mirrors the old-desk composition decision (0005·0007); backfilled 2026-07-22 per #203 |
 
 The jump from 0008 to 0015 is the same verbatim-number preservation as the 0004/0005 gaps:
@@ -52,3 +52,10 @@ intervening old-desk numbers (0009–0014) have no in-repo mirror.
 
 Both remain readable at their original path on `dev-legacy` if a future UI or cross-vendor
 surface needs to re-open them.
+
+## Native (decided in this repo, post-rebuild)
+
+| ADR | Decision | Status | Raised by |
+|---|---|---|---|
+| [0016](0016-marketplace-lineup-recomposition.md) | Marketplace lineup recomposition — exec-desk folded into code-desk; 15 named plugins | Accepted | estate-restructure rebuild; owner ruling 2026-07-22 |
+| [0017](0017-pointer-based-marketplace.md) | Pointer-based marketplace: symlink plugin assemblies, no tracked dist; READMEs travel with their skill | Accepted | backlog decision-2; owner ruling 2026-08-03; task-1 |

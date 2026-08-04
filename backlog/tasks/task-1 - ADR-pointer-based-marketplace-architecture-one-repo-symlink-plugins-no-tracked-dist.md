@@ -3,9 +3,10 @@ id: TASK-1
 title: >-
   ADR: pointer-based marketplace architecture (one repo, symlink plugins, no
   tracked dist)
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-08-04 00:41'
+updated_date: '2026-08-04 01:42'
 labels:
   - refactor
 milestone: m-0
