@@ -75,3 +75,12 @@ Nothing generated is tracked (ADR 0017). If something must be generated (e.g. th
 laydown via `gen_opencode.py` + `translation.yaml`), it is generated at install/run time by
 a deterministic generator — never committed. A tracked artifact that needs a regen step is a
 design smell; raise it before adding one.
+
+## Where work is tracked
+
+**Backlog.md is the task system** (backlog decision-1): planned work, drafts, decisions, and
+milestones live in the `backlog/` tree (`backlog board` for the live view). **GitHub issues
+are bug-report intake only** — the bug template is the only one offered. A reported bug gets
+a backlog task when it is planned; after the fix merges into `dev`, close the issue by hand
+(a `Closes #N` in a PR into `dev` does NOT auto-close — auto-close fires only on the default
+branch).

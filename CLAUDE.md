@@ -29,6 +29,15 @@ It is the entry-gate floor (identity · tests · provenance · hook-layout) + `c
 - **Tests are stdlib-only** (`python3 -m unittest`) — zero install is an invariant. Fixtures
   live under `tests/` tempdirs, never under `primitives-core/` (the roster guard flags orphans).
 
+## Task system
+
+**Backlog.md is the task system** (backlog decision-1): tasks, drafts, decisions, and
+milestones live in `backlog/` — `backlog board` for the live view, `backlog task list
+--plain` for agents. **GitHub issues are bug-report intake only**; a reported bug gets a
+backlog task when planned. PRs into `dev` never auto-close issues (auto-close fires only on
+the default branch) — close bug issues by hand after the fix merges. The backlog CLI runs
+with `auto_commit: false`; commit its file writes like any other edit.
+
 ## Governance
 
 Contributor SOP (the human-facing distillation of this digest): [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md).
