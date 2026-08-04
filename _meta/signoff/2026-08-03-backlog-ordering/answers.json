@@ -1,0 +1,33 @@
+{
+  "submitted_at": "2026-08-04T02:51:50.710Z",
+  "items": {
+    "A": {
+      "choice": "ff-gate",
+      "notes": ""
+    },
+    "B": {
+      "choice": "both",
+      "notes": "not yet.  they don't travel to main. for now dev is my workbench.  we'll move after things mature a bit."
+    },
+    "C": {
+      "choice": "design-pass",
+      "notes": ""
+    },
+    "D": {
+      "choice": "memo",
+      "notes": "it might just be simpler to keep a pinned, vendored copy in the repo..."
+    },
+    "E": {
+      "choice": "foreman",
+      "notes": ""
+    },
+    "F": {
+      "choice": "epics",
+      "notes": ""
+    },
+    "Z": {
+      "choice": null,
+      "notes": ""
+    }
+  }
+}

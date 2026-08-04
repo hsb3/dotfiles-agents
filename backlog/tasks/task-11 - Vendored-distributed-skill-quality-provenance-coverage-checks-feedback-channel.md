@@ -6,15 +6,17 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-04 02:54'
 labels:
   - quality
+  - externals
 dependencies:
   - TASK-10
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/218'
 priority: medium
 type: feature
-ordinal: 11000
+ordinal: 800
 ---
 
 ## Description

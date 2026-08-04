@@ -12,7 +12,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/220'
 priority: high
 type: feature
-ordinal: 15000
+ordinal: 200
 ---
 
 ## Description

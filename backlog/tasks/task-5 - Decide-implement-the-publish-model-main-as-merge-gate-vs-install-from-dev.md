@@ -4,15 +4,16 @@ title: Decide + implement the publish model (main as merge gate vs install-from-
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:42'
+updated_date: '2026-08-04 02:55'
 labels:
   - refactor
   - decision
 milestone: m-0
 dependencies:
   - TASK-3
-priority: medium
+priority: high
 type: task
-ordinal: 5000
+ordinal: 500
 ---
 
 ## Description
@@ -26,3 +27,9 @@ With no tracked dist, publishing no longer needs the filtered parented assembly.
 - [ ] #1 Ruling recorded (backlog decision + ADR cross-ref)
 - [ ] #2 Publish workflow and guards match the ruling
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Owner ruling 2026-08-04 (decision-4): main = plain fast-forward release gate; retire the filtered-assembly build + guards. Constraint: evals/ and harness/ do NOT publish to main. Now unblocked + High.
+<!-- SECTION:NOTES:END -->

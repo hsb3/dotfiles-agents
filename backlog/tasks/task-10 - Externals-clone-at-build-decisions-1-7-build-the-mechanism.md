@@ -4,6 +4,7 @@ title: 'Externals clone-at-build: decisions 1-7 + build the mechanism'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-04 02:55'
 labels:
   - decision
   - externals
@@ -15,7 +16,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/36'
 priority: high
 type: feature
-ordinal: 10000
+ordinal: 700
 ---
 
 ## Description

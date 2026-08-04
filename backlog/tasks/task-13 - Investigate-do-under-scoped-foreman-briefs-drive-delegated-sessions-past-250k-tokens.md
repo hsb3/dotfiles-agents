@@ -13,7 +13,7 @@ references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/217'
 priority: medium
 type: spike
-ordinal: 13000
+ordinal: 300
 ---
 
 ## Description
