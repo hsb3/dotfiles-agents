@@ -119,6 +119,12 @@ nodes:
     status: current
     paths: []
     note: "Machines installing via claude plugin marketplace add and, planned, the opencode laydown installer."
+  - id: backlog
+    layer: workbench
+    class: authored
+    status: current
+    paths: [backlog]
+    note: "Backlog.md task system — THE task-management surface (decision-1, 2026-08-03): tasks, drafts, decisions, milestones. GitHub issues are bug-report intake only; a reported bug gets a backlog task when planned."
   - id: translation-config
     layer: roster
     class: authored
