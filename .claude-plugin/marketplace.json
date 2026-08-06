@@ -124,7 +124,7 @@
       "description": "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically.",
       "name": "owner-signoff",
       "source": "./plugins/owner-signoff",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {
@@ -160,7 +160,7 @@
       "description": "The canonical repo meta-structure standard \u2014 consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
       "name": "repo-meta-structure",
       "source": "./plugins/repo-meta-structure",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {
