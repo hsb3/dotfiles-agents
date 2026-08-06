@@ -72,11 +72,19 @@ Open sub-questions for whoever takes it:
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Not started. Prerequisite worth knowing before step 3's verification: as of
-2026-08-06 no foreman-kit skill loads into a session even though the plugin is
-enabled and its hooks run — a fresh `claude -p` in two separate projects reports
-`foreman`, `waves`, `handoff`, `rubric-panel`, `deletion-pass`, and `layer-cycle`
-all unavailable, while `dataviz` from the same marketplace is available. Reported
-as a bug per decision-1. Whatever homes `lab-setup` inherits that problem, so
-AC#2's "wired" is only demonstrable once the loading defect is understood.
+Not started.
+
+Correction to this card's first note (2026-08-06): it claimed foreman-kit's skills
+do not load and cited issue #244 as a blocker on AC#2's verification. That was
+wrong and #244 is closed as invalid. The probes behind it ran from project paths
+with no install record; `claude plugin list` aggregates records from *other*
+paths and reported "enabled" anyway. Re-probed from `~/Developer/dotfiles-agents`,
+which does have the record: all six foreman-kit skills and all four tiered agents
+(scout, builder, reviewer, lead) load. See
+`.claude/memory/plugin-enablement-needs-per-project-install.md`.
+
+The practical consequence for step 3: verifying `lab-setup` loads "from a fresh
+session in an unrelated project" means installing the host plugin for that
+project path first (`claude plugin install <id>@dotfiles-agents --scope local`)
+and starting a new session — an `enabledPlugins` flag alone proves nothing.
 <!-- SECTION:NOTES:END -->
