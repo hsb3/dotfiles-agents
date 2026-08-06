@@ -30,8 +30,8 @@ GH issue queue: **zero open**. **m-0 is 4/5 done** — its last box was reworded
 assessed by someone who didn't write it. That assessment has not been done yet.
 
 **Promotion landed 2026-08-06: [PR #245](https://github.com/hsb3/dotfiles-agents/pull/245)
-(branch `docs/handoff-session-5`) merged into `dev`, publish dispatched to `main` the same
-day.** The PR carried the full session-5 tree — the handoff refresh, the backlog restructure
+(branch `docs/handoff-session-5`) merged into `dev` (4769dff), published to `main` the same
+day (tip `publish: dev@4769dff`, surface verified).** The PR carried the full session-5 tree — the handoff refresh, the backlog restructure
 and `_meta` removal, the owner sign-off execution, and the release bumps — and its green CI
 run was the gate for the whole session's work (`ci.yml` fires on `pull_request` only; earlier
 session-5 commits had gone straight to `dev`).
@@ -74,12 +74,12 @@ not fold it into dev without Henry's promotion decision (already taken 2026-07-2
 - 2026-08-06 (session 4): publish repaired (#237) + vendoring rule (#238) + waves triage fix
   (#240, closed #215) + harness isolation (#241, closed #172; residuals → task-27) +
   decision-7 board standard (#242, owner sign-off); decision-4 amended; two publishes.
-- **2026-08-06 (session 5, this one): m-0 build-out — task-10 + task-9 shipped, comms freed.**
-  Externals mechanism built; lineup recomposed to 19 plugins / marketplace 0.4.0; **comms lost
-  its `requires: [local-mcp]`** — it now ships `scripts/render_deck.py`, a stdlib-only renderer
-  (validate → self-contained HTML → headless-Chrome PDF) covering all 17 deck block types,
-  proven against 22 real decks / 256 slides across three repos. Repo suite 95 → 145 tests.
-  Filed task-28 (README-symlink gate gap). Six commits went **straight to dev** — see §1.
+- **2026-08-06 (session 5): m-0 build-out, owner sign-off, promotion.** task-10 + task-9
+  shipped; comms freed of `requires: [local-mcp]` by a stdlib deck renderer proven on 22 real
+  decks; suite 95 → 145 tests; filed task-28. Ten-item owner sign-off executed → decision-8
+  (`_meta` removed entirely, backlog absorbs docs/); adversarial pre-release review caught a
+  blocking audit defect (fixed, gotcha in §5); 19-plugin lineup published (#245); scoping
+  drafts 004/005 landed (#246).
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -124,16 +124,20 @@ live there, not duplicated here.
     and `pptx-themes` had changed content but unchanged versions, so the version-keyed consumer
     cache would have made the publish a silent no-op. Bumped on #245 (code-desk 0.4.0,
     pptx-themes 0.0.2). **Re-run that check whenever content lands** — the method is in §5.
-  - **The `publish-to-main` skill's step-3 verify command is STALE**: it compares
-    `origin/dev:dist/claude-code/plugins` against `origin/main:plugins`, but `dist/` was retired
-    in #229, so that tree-hash check cannot run as written. Worth a fix on the skill.
 - **m-0's last box** (reworded 2026-08-06, §1) is the milestone's remaining work: a cold-read
   assessment of every open card — verifiable acceptance criteria, judged by someone who didn't
   write the card.
 - **task-15 (handoff-location override, High) — half resolved 2026-08-06:** META-06 was
   amended with owner sign-off to accept the hooks' precedence trio, so this repo's handoff
   location is standard-conformant; the `handoff` skill's "never relocate" rule stands as an
-  owner override. Residual scope: the per-project override config feature itself.
+  owner override. The residual scope is now **draft-005** (below).
+- **Two scoping drafts landed 2026-08-06 (#246), both owner-requested:** **draft-004**
+  (extender-component information architecture: scannable dependencies / assumptions /
+  defaults; must settle storage, closed vocabulary, drift guard, query surface, migration
+  cost before any build) and **draft-005** (per-project settings overrides for shipped
+  skills/hooks via the Claude Code settings convention; formal dep on task-15; covers the
+  three hard-coded `_meta/` locations: handoff path, comms briefings, sign-off batch dir).
+  Promoting draft-004 into its decision is the natural next scoping move.
 - Buildable, no ruling needed: task-25 (waves backlog-aware),
   task-13 (250k-token spike), task-14 (coord-branch protocol), task-27 (harness residuals),
   task-28 (README-symlink gate), task-29 (promote `lab-setup` from the EVALS workbench).
@@ -196,15 +200,20 @@ Nothing folds into the canonical model until he signs off. Full state:
   `claude plugin install <id>@<marketplace> --scope local` from inside the repo, **then restart
   the session** — `/reload-skills` does not pick up a newly installed plugin. Full detail in
   project memory `plugin-enablement-needs-per-project-install`.
-- **A sign-off item that contradicts a prior ruling must SAY SO in the item.** Session 5's
-  design pass recommended keeping comms bundled — silently reversing the owner's own
-  comms-first direction and the task's AC — and it was approved as a preselected default. The
-  approval was worthless because the form never surfaced the conflict. (Trail removed with
-  `_meta` 2026-08-06; in git history.)
-- **Scope a rewrite from the real corpus, not the in-repo samples.** The comms renderer was
-  first sized off this repo's 2 sample decks (6 block types) and would have refused real
-  briefings using `steps`/`table`/`timeline`. A census over `_meta/briefings/` in three repos
-  found 17 types in use. Same shape of error as the point above: a confident guess, unverified.
+- **A sign-off item that contradicts a prior ruling must SAY SO in the item.** A session-5 form
+  preselected a recommendation that silently reversed the owner's own comms-first direction, and
+  it was approved as a default. An approval is only real when the conflict is surfaced in the item.
+- **Scope a rewrite from the real corpus, not the in-repo samples.** The comms renderer sized off
+  2 sample decks (6 block types) would have refused real briefings; a census across three repos
+  found 17 types in use. Same error shape as above: a confident guess, unverified.
+- **The checklist↔audit contract is a CLOSED type vocabulary, and `make ci` never runs the
+  compliance audit.** A checklist row using a new check type hard-breaks the shipped audit for
+  every repo while every local gate stays green; exactly this shipped 2026-08-06 until an
+  adversarial review caught it (`path-exists-any` + `gitignore-tracks-any` added to `audit.py`;
+  IGNORE-05 had separately become a placeholder that could never fail). A new TYPE is an
+  audit-script change; prove checklist edits with a real `audit.py` run. Known residue:
+  IGNORE-01 still probes `_meta/operations/`, and a stale ignore probe can mask a
+  secrets-tracking miss if the taxonomy is ever re-pointed.
 - **`main` is publish-only** — never hand-commit/merge there; a CI guard fails PRs into main.
   Branch off `dev`, PR into `dev`. `main` is a **filtered parented assembly** (never a dev
   snapshot — verify with tree hashes per the `publish-to-main` skill runbook).
