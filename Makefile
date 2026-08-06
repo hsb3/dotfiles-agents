@@ -27,6 +27,11 @@ flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclici
 symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1
 	@python3 scripts/check_symlinks.py
 
+members: ## Print each plugin's members, derived live from the symlink assemblies
+	@for p in plugins/*/; do id=$$(basename "$$p"); echo "$$id:"; \
+	  find "$$p" -maxdepth 3 -type l -exec readlink {} \; \
+	  | sed -e 's|.*primitives-core/|  |' | grep -v 'README.md' | sort -u; done
+
 test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check "tests pass"
 	@python3 -m unittest discover -s tests -t . -q
 
