@@ -4,10 +4,11 @@ _Cold-start bridge. Last updated: 2026-08-06 (session 5). Refresh at session bou
 
 _**This file lives at `.claude/HANDOFF.md`** (moved from `_meta/` 2026-08-06, owner's call).
 The handoff hooks resolve it because `.claude/HANDOFF.md` is the third entry in their
-`CANDIDATE_PATHS` and the two higher-precedence paths are absent — no override needed. Two
-consequences: this repo now fails its own published **META-06** check (which mandates
-`_meta/HANDOFF.md`), and the `handoff` skill's own "never relocate one" rule was deliberately
-overridden. Both belong to **task-15**'s scope — see §3._
+`CANDIDATE_PATHS` and the two higher-precedence paths are absent — no override needed.
+**META-06 was amended 2026-08-06** to accept the precedence trio (owner sign-off;
+recorded in decision-8), so this location is standard-conformant;
+the `handoff` skill's "never relocate one" rule stands overridden by the owner. Task-15's
+residual scope is the per-project override feature — see §3._
 
 ## 0 · Orientation
 
@@ -24,31 +25,24 @@ contradicted its own evals/harness exclusion. Publish with
 ## 1 · Current standing
 
 `make ci` green — 145 repo tests + 139 harness tests (41 primitives: agent=4, hook=4, skill=33).
-GH issue queue: **zero open**. **m-0 is 4/5 done** — its last box ("board conforms to
-decision-7") cites a decision the owner deleted on 2026-08-06 (§5); the box awaits the
-owner's disposition.
+GH issue queue: **zero open**. **m-0 is 4/5 done** — its last box was reworded 2026-08-06
+(owner sign-off) to: every open card is cold-readable with verifiable acceptance criteria,
+assessed by someone who didn't write it. That assessment has not been done yet.
 
-**⚠ The promotion is staged but NOT landed. Live work sits on an open PR, not on `dev`.**
-
-**[PR #245](https://github.com/hsb3/dotfiles-agents/pull/245) — branch `docs/handoff-session-5`,
-OPEN + mergeable + CI green, deliberately unmerged** (more changes were requested before
-merge). It carries two commits and doubles as the promotion staging area:
-
-1. this handoff refresh;
-2. **release bumps — `code-desk` 0.3.0 → 0.4.0, `pptx-themes` 0.0.1 → 0.0.2.**
-
-Why the PR exists at all: `ci.yml` fires on `pull_request` ONLY, and session 5's six commits
-were pushed straight to `dev`, so none had ever been through CI (local `make ci` was the only
-proof). This PR's tree contains all of them, so **its green run is the CI gate for the whole
-session's work.** Anything added before merge must keep it green.
+**Promotion landed 2026-08-06: [PR #245](https://github.com/hsb3/dotfiles-agents/pull/245)
+(branch `docs/handoff-session-5`) merged into `dev`, publish dispatched to `main` the same
+day.** The PR carried the full session-5 tree — the handoff refresh, the backlog restructure
+and `_meta` removal, the owner sign-off execution, and the release bumps — and its green CI
+run was the gate for the whole session's work (`ci.yml` fires on `pull_request` only; earlier
+session-5 commits had gone straight to `dev`).
 
 Standing:
 
 - **ADR 0017 pointer refactor DONE** (m-0 tasks 1–4, 7, 8; PRs #227–#231) — symlink assemblies,
   `dist/`+generators retired, roster = provenance manifest, opencode install-time. Mechanics
   are in CLAUDE.md (hot-loaded); don't restate them here.
-- **m-0 owner's-court rulings all cleared** (decisions 4/5/6 on 2026-08-04, decision-7 board
-  standard 2026-08-06; sign-off trails under `_meta/signoff/`). Tasks 5, 9, 10 are Done — the
+- **m-0 owner's-court rulings all cleared** (decisions 4/5/6 on 2026-08-04; sign-off trails
+  removed with `_meta` 2026-08-06 — git history keeps them). Tasks 5, 9, 10 are Done — the
   live residue is **task-6**: extract `evals/` + `harness/` eventually, but **deferred** by
   decision-5 (dev is the workbench; neither ever publishes to main). Parked at Low.
 - **Two mechanisms this repo now enforces that a cold session should not re-derive:**
@@ -56,16 +50,15 @@ Standing:
   machine-checked) and **dual-homing** (one `primitives-core/` source, symlinked into both a
   bundle and a standalone plugin — installing both loads the skill once).
 
-**`main` is STALE by design-in-progress**: `publish: dev@a7d87ac` still ships the **15-plugin
-0.3.0** lineup. dev carries **19 plugins / 0.4.0**. Promotion is pending the CI gate above —
-it is the next real deliverable, not a background chore. The publish surface is only
-`plugins/` + marketplace.json + README, so backlog/harness/test churn never needs a republish;
-this time the surface genuinely changed (4 new plugin dirs + marketplace rewrite).
-
-Live-on-main lineup (15): code-desk 0.3.0 · foreman-kit 0.7.1 · diagrams · obsidian-toolkit ·
-11 standalones. **Unpublished additions on dev (4):** comms · mise-en-place-scaffold ·
-readme-value-and-proof · repo-meta-structure — each a standalone assembly over a skill that
-also stays in code-desk (dual-home; one source, two symlinks, loads once).
+`main` ships the **19-plugin lineup** (published 2026-08-06). Bumps this session: code-desk
+0.4.0 · foreman-kit 0.7.2 · diagrams 0.1.1 · obsidian-toolkit 0.1.1 · repo-meta-structure
+0.0.2 · owner-signoff 0.0.2 · pptx-themes 0.0.2. The four standalones added this cycle
+(comms · mise-en-place-scaffold · readme-value-and-proof · repo-meta-structure) are now
+published; each dual-homes a skill that also stays in code-desk (one source, two symlinks,
+loads once). Verify the published surface with `git ls-tree --name-only origin/main`; the tip
+commit message reads `publish: dev@<sha>`. The publish surface is only `plugins/` +
+marketplace.json + README, so backlog/harness/test churn never needs a republish; this cycle
+the surface genuinely changed (4 new plugin dirs + marketplace rewrite).
 
 **Also live: the extender-db mini-project** (§2b) — separate effort from the rebuild epics; do
 not fold it into dev without Henry's promotion decision (already taken 2026-07-21, see §2b).
@@ -99,13 +92,13 @@ excalidraw are task-21.x (M6 gated on M4+M5); task-6 may re-home the family if `
   checkpoint) or switching branches — a live server once had its tracked data.db checked out
   from under it (`pgrep -fl pocketbase` → kill → checkout → restart). `pb_migrations/` is
   gitignored on purpose: `schema.py` is the ONE schema source. Server: `evals/serve.sh`
-  (admin UI 127.0.0.1:8090/_/), creds in untracked `_meta/operations/extender-db.env`.
+  (admin UI 127.0.0.1:8090/_/), creds in untracked `.claude/operations/extender-db.env`.
 
 ## 2c · Agent-harness (delivered 2026-07-21, PR #169 → dev)
 
 Reusable extender-eval harness at root `harness/` (self-contained uv project): drives Claude Code
 or opencode headlessly, grades two-tier, appends to `harness/results.jsonl`. **Self-describing —
-read `_meta/research/agent-harness/DESIGN.md`, `harness/README.md` first.** Owner intent:
+read `harness/docs/DESIGN.md`, `harness/README.md` first.** Owner intent:
 battle-test here, later extract to its own repo.
 - **Auth for live runs:** `export ANTHROPIC_API_KEY="$(secret get ANTHROPIC_API_KEY)"` (per-run
   apiKeyHelper + fresh CLAUDE_CONFIG_DIR — Option Z; `--bare` strips the Skill tool, don't use it).
@@ -122,33 +115,31 @@ battle-test here, later extract to its own repo.
 work, drafts (owner-parked #137/#138/#152), decisions, and the m-0 refactor milestone all
 live there, not duplicated here.
 
-- **PROMOTION is the live thread**, staged on PR #245 (§1). Remaining order: (1) land whatever
-  further changes are in flight, keeping #245 green; (2) merge #245 into `dev`; (3)
+- **PROMOTION is DONE** (#245 merged, publish dispatched, both 2026-08-06 — §1). The next one
+  repeats the same order: (1) PR into `dev`, keeping it green; (2) merge; (3)
   `gh workflow run publish.yml --ref dev -f confirm=publish`; (4) verify — `git ls-tree
   --name-only origin/main` shows the distributable surface only, and the tip commit reads
   `publish: dev@<sha>` naming the merged tip.
-  - **Pre-flight already run, and it caught a real defect**: `code-desk` and `pptx-themes` had
-    changed content but unchanged versions, so the version-keyed consumer cache would have made
-    the publish a silent no-op. Bumped on #245 (code-desk 0.4.0, pptx-themes 0.0.2). **Re-run
-    that check if more content lands** — the method is in §5.
+  - **Run the version pre-flight every time; this cycle it caught a real defect**: `code-desk`
+    and `pptx-themes` had changed content but unchanged versions, so the version-keyed consumer
+    cache would have made the publish a silent no-op. Bumped on #245 (code-desk 0.4.0,
+    pptx-themes 0.0.2). **Re-run that check whenever content lands** — the method is in §5.
   - **The `publish-to-main` skill's step-3 verify command is STALE**: it compares
     `origin/dev:dist/claude-code/plugins` against `origin/main:plugins`, but `dist/` was retired
     in #229, so that tree-hash check cannot run as written. Worth a fix on the skill.
-- m-0's last box still cites **decision-7, deleted 2026-08-06** (owner reversal, §5) — the
-  owner disposes of the box (re-anchor its criterion or drop it).
-- **task-15 (handoff-location override, High) just got its motivating case.** The handoff was
-  relocated to `.claude/HANDOFF.md` on 2026-08-06, which works only because that path happens
-  to be third in the hooks' hardcoded trio. Two loose ends it should close: (a) META-06 in the
-  published `repo-meta-structure` checklist still mandates `_meta/HANDOFF.md`, so this repo
-  fails its own audit — decide whether the standard should accept the precedence trio or
-  whether `_meta/` stays the taxonomy's answer; (b) the `handoff` skill says "never relocate an
-  existing handoff", which the owner overrode here. Neither was changed unilaterally — a
-  published-standard edit is an IA call needing sign-off.
+- **m-0's last box** (reworded 2026-08-06, §1) is the milestone's remaining work: a cold-read
+  assessment of every open card — verifiable acceptance criteria, judged by someone who didn't
+  write the card.
+- **task-15 (handoff-location override, High) — half resolved 2026-08-06:** META-06 was
+  amended with owner sign-off to accept the hooks' precedence trio, so this repo's handoff
+  location is standard-conformant; the `handoff` skill's "never relocate" rule stands as an
+  owner override. Residual scope: the per-project override config feature itself.
 - Buildable, no ruling needed: task-25 (waves backlog-aware),
   task-13 (250k-token spike), task-14 (coord-branch protocol), task-27 (harness residuals),
   task-28 (README-symlink gate), task-29 (promote `lab-setup` from the EVALS workbench).
-- **Open investigation (owner-staged):** `_meta/plans/plugin-skills-not-loading/issue-body.md`
-  — foreman-kit skills not reaching sessions. Cross-reference before filing: project memory
+- **Open investigation (owner-staged):** foreman-kit skills not reaching sessions. The staged
+  issue body was removed with `_meta` (2026-08-06) — recover it from git history
+  (`_meta/plans/plugin-skills-not-loading/issue-body.md`) before filing. Cross-reference: project memory
   `plugin-enablement-needs-per-project-install` found that install records are keyed on
   `projectPath`, and the staged repro runs from `~/Developer`, not a path with a foreman-kit
   install record. Same root cause is a live hypothesis, NOT confirmed — the report notes hooks
@@ -208,8 +199,8 @@ Nothing folds into the canonical model until he signs off. Full state:
 - **A sign-off item that contradicts a prior ruling must SAY SO in the item.** Session 5's
   design pass recommended keeping comms bundled — silently reversing the owner's own
   comms-first direction and the task's AC — and it was approved as a preselected default. The
-  approval was worthless because the form never surfaced the conflict. Trail + standing lesson:
-  `_meta/plans/task-9-lineup/design-pass.md`.
+  approval was worthless because the form never surfaced the conflict. (Trail removed with
+  `_meta` 2026-08-06; in git history.)
 - **Scope a rewrite from the real corpus, not the in-repo samples.** The comms renderer was
   first sized off this repo's 2 sample decks (6 block types) and would have refused real
   briefings using `steps`/`table`/`timeline`. A census over `_meta/briefings/` in three repos
