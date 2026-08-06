@@ -125,6 +125,20 @@ def _log(log_path, record):
 # Activation file (tolerant hand parser — stdlib only, no PyYAML)
 # ---------------------------------------------------------------------------
 
+def _emit(obj):
+    """Print the hook's one JSON object without letting a closed stdout turn
+    into a nonzero exit: flush inside the guard, and on a broken pipe point
+    fd 1 at devnull so the interpreter's shutdown flush has nothing to do."""
+    try:
+        print(json.dumps(obj))
+        sys.stdout.flush()
+    except BrokenPipeError:
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+        except Exception:
+            pass
+
+
 def _unquote(value):
     """Strip surrounding quotes and any trailing YAML comment.
 
@@ -337,7 +351,7 @@ def main():
         denied = mode == STRICT
 
         if denied:
-            print(json.dumps({
+            _emit({
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
                     "permissionDecision": "deny",
@@ -345,7 +359,7 @@ def main():
                         path=rel_posix, pattern=pattern,
                     ),
                 },
-            }))
+            })
 
         # Only matches are logged — one row per would-be or actual denial, never
         # one per edit. In advisory mode a row is a would-be denial: the evidence
@@ -363,14 +377,19 @@ def main():
 
     except Exception as e:
         try:
-            if not isinstance(payload, dict):
-                payload = {}
-            _log(log_path or _resolve_log_path(_resolve_project_dir(payload.get("cwd"))), {
-                "session_id": payload.get("session_id"),
-                "denied": False,
-                "error": "{0}: {1}".format(type(e).__name__, e),
-                "traceback": traceback.format_exc(limit=3),
-            })
+            # log_path is resolved only after the activation file armed the hook
+            # and a pattern matched. A project that never activated custody must
+            # stay byte-for-byte untouched, so pre-activation failures are not
+            # logged anywhere.
+            if log_path:
+                if not isinstance(payload, dict):
+                    payload = {}
+                _log(log_path, {
+                    "session_id": payload.get("session_id"),
+                    "denied": False,
+                    "error": "{0}: {1}".format(type(e).__name__, e),
+                    "traceback": traceback.format_exc(limit=3),
+                })
         except Exception:
             pass
         sys.exit(0)

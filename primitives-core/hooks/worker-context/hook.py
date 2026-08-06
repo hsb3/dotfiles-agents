@@ -189,6 +189,20 @@ def _load_mode(project_dir):
         return OFF
 
 
+def _emit(obj):
+    """Print the hook's one JSON object without letting a closed stdout turn
+    into a nonzero exit: flush inside the guard, and on a broken pipe point
+    fd 1 at devnull so the interpreter's shutdown flush has nothing to do."""
+    try:
+        print(json.dumps(obj))
+        sys.stdout.flush()
+    except BrokenPipeError:
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+        except Exception:
+            pass
+
+
 def main():
     try:
         payload = json.loads(sys.stdin.read())
@@ -199,12 +213,12 @@ def main():
         if mode not in ACTIVE_MODES:
             sys.exit(0)
 
-        print(json.dumps({
+        _emit({
             "hookSpecificOutput": {
                 "hookEventName": "SubagentStart",
                 "additionalContext": _covenant(mode),
             },
-        }))
+        })
         sys.exit(0)
 
     except Exception:

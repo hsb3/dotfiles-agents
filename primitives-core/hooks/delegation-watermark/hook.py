@@ -116,6 +116,20 @@ def _log(log_path, record):
         pass
 
 
+def _emit(obj):
+    """Print the hook's one JSON object without letting a closed stdout turn
+    into a nonzero exit: flush inside the guard, and on a broken pipe point
+    fd 1 at devnull so the interpreter's shutdown flush has nothing to do."""
+    try:
+        print(json.dumps(obj))
+        sys.stdout.flush()
+    except BrokenPipeError:
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+        except Exception:
+            pass
+
+
 def _state_path(session_id):
     return os.path.join(STATE_DIR, f"{session_id}.json")
 
@@ -263,7 +277,7 @@ def main():
                     + " — re-size or name the floor item."
                 ),
             }
-            print(json.dumps(out))
+            _emit(out)
             _save_state(session_id, {"last_fire_at_streak": streak})
 
         _log(log_path, {
