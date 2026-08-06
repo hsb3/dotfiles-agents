@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "One desk bundle \u2014 code-desk (next-release execution under a documented repo standard, now also carrying the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and fifteen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, github-project-board, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
+    "description": "One desk bundle \u2014 code-desk (next-release execution under a documented repo standard, now also carrying the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and sixteen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
     "version": "0.4.0"
   },
   "name": "dotfiles-agents",
@@ -88,6 +88,15 @@
       "description": "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into ma\u2026",
       "name": "github-project-board",
       "source": "./plugins/github-project-board",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Configure iTerm2 and exploit the features that distinguish it from other terminal emulators. Covers the preferences model (iTerm2 rewrites its plist from memory on quit, so scripted `defaults write` calls made while it runs are silently clobbered \u2014 plus the two guard idioms that silently invert: `pgrep -x iTerm2` never matches the full executable path, and `ps | grep -q` returns 141 under pipefail), dynamic profiles and their duplicate-GUID and cannot-self-default edges, tracking the whole configuration in a dotfiles repo via a custom prefs folder, shell integration and its utilities, the five-UTI macOS default-terminal binding and why duti exits 0 on bindings LaunchServices discarded, and a power-feature catalog for triggers, captured output, status bar, hotkey window, badges, and tmux -CC integration.",
+      "name": "iterm2",
+      "source": "./plugins/iterm2",
       "version": "0.0.1"
     },
     {
