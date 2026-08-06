@@ -70,7 +70,7 @@
       "description": "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "author": {
@@ -79,7 +79,7 @@
       "description": "A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout \u00b7 builder \u00b7 reviewer \u00b7 lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, a waves skill that drives an issue backlog to closed through a pinned triage issue + wave-planned isolated crews, and four hooks \u2014 context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage. Now also carries the review-cycle trio distilled from the inventory lab: rubric-panel (persona-diverse judge panel scoring against an anchored rubric), deletion-pass (simplify a module to irreducible against its contract), and layer-cycle (create-evaluate-refine orchestration until convergence).",
       "name": "foreman-kit",
       "source": "./plugins/foreman-kit",
-      "version": "0.7.1"
+      "version": "0.7.2"
     },
     {
       "author": {
@@ -106,7 +106,7 @@
       "description": "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.",
       "name": "obsidian-toolkit",
       "source": "./plugins/obsidian-toolkit",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "author": {
