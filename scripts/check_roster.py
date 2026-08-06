@@ -97,7 +97,9 @@ def disk_primitives():
     ag = os.path.join(PC, "agents")
     if os.path.isdir(ag):
         for f in os.listdir(ag):
-            if f.endswith(".md"):
+            # agents/README.md documents the family (per-item README convention),
+            # not a primitive — same exemption check_identity.py applies.
+            if f.endswith(".md") and f.lower() != "readme.md":
                 found.add(("agent", f"primitives-core/agents/{f}"))
     # Ratified hook-dir layout: each hooks/<name>/ carrying a hook.py is one hook primitive
     # (source = the dir, like a skill). Must stay consistent with scripts/check_hook_layout.py,
