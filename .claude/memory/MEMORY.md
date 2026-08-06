@@ -10,3 +10,4 @@
 - [launchd = bash 3.2](launchd-bash32-scripts.md) — LaunchAgent scripts run under /bin/bash 3.2; verify with /bin/bash + one kickstart, never interactive bash
 - [Subagent agent-memory litter](subagent-agent-memory-litter.md) — workers may write .claude/agent-memory/ into their cwd; after the memory→.claude/memory rename it's unambiguous litter — sweep the specific stray path, never a whole dir
 - [Worktree agents check out published commit](worktree-agents-check-out-published-commit.md) — isolation:worktree crews in this repo may land on a published-surface commit, not dev; briefs must instruct a self-check + `git reset --hard origin/dev`
+- [No unguarded counts in prose](no-unguarded-counts-in-prose.md) — owner rule 2026-08-06: a count in prose or repo metadata needs a gate that checks it, else phrase it so growth can't falsify it
