@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-06 (session 7). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-06 (session 8). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, and the two higher-precedence paths are absent, so the hooks resolve it with
@@ -14,32 +14,34 @@ rule stands overridden by the owner. Task-15's residual scope is the per-project
 already hot-loaded into your context — don't re-read them here.** This file carries only what
 CLAUDE.md can't: live state, decisions and their whys, and the gotchas that bite.
 
-The one orientation fact CLAUDE.md doesn't spell out: **publishing works, but the GitHub
-Actions path is currently unusable.** See §1 and the fallback in §5.
+The one orientation fact CLAUDE.md doesn't spell out: **the GitHub Actions outage declared
+2026-08-06 is resolved** — the publish workflow ran clean end-to-end (both the gate and the
+push) on the next two dispatches. See §1.
 
 ## 1 · Current standing
 
-- **`dev` tip `3fd5370`**, `make ci` green, 197 tests (145 repo + 41 catalog guard + harness).
-- **`main` tip `22af059` = `publish: dev@3fd5370`**, 20-plugin lineup, published 2026-08-06 by
-  the **local-worktree fallback** (§5), not the workflow. Parent chain intact (append-only).
-- **GitHub Actions is in a declared MAJOR OUTAGE** (githubstatus.com, Actions + Pages), since
-  ~16:00 on 2026-08-06. No workflow run is created for new PRs at all. Runs from earlier in the
-  outage show the signature: a job `cancelled` with `steps=0` after sitting 15–18 minutes,
-  surfacing as a top-level "failure" that is **not** a test failure — check each job's
-  `conclusion` via `gh api .../actions/runs/<id>/jobs`, never the run summary.
-- **PRs #251 and #253 were merged with `--admin`** on the owner's explicit instruction, gated on
-  local `make ci` only. Local `make ci` is a strict superset of CI (CI runs `make floor` and
-  `make check symlinks flow`). **If Actions returns, re-run the checks on `dev` before trusting
-  the green.**
-- GH issue queue: **one open — #250** (see §3). **m-0 is 4/5**; its last box (every open card
-  cold-readable with verifiable acceptance criteria, assessed by someone who didn't write it)
-  is still unassessed.
-- **`feat/atelier` awaits the operator** (worktree `.claude/worktrees/atelier`, branched off
-  dev@b35bade). It renames foreman-kit → **atelier** (git mv, both manifests, catalog row,
-  live prose; version 0.8.0), lands the lab-01 doctrine rewrite (#252), three new hooks
-  (delegation-watermark, config-custody, worker-context — the per-project custody model,
-  off by default via `.claude/atelier.local.md`), and 26 hook behavior tests. `make ci`
-  green on the branch. **Operator checklist after merge + publish**, in order:
+- **`dev` tip `2f24203`** (`Feat/atelier`, #260), `make ci` green, 230 tests.
+- **`main` tip `410726d` = `publish: dev@2f24203`**, 20-plugin lineup, published 2026-08-06 by
+  **the `publish.yml` workflow** (confirmed working again — see below), not the fallback.
+  Parent chain intact (append-only).
+- **GitHub Actions outage (declared ~16:00 on 2026-08-06) is resolved**, confirmed same day: two
+  `workflow_dispatch` runs of `publish.yml` (one no-op, one live) both completed normally in
+  13–18s with no `cancelled`/`steps=0` signature. The local-worktree fallback in §5 stays
+  documented for the next outage but is not the active path.
+- **PRs #251 and #253 were merged with `--admin`** during the outage, gated on local `make ci`
+  only. Local `make ci` is a strict superset of CI (CI runs `make floor` and
+  `make check symlinks flow`). Actions is back, so this is historical — new PRs should get a
+  real CI run again; if one doesn't fire, re-check outage status before assuming `--admin`.
+- GH issue queue: **five open — #250, #252, #254, #255, #256** (see §3 — #252 is very likely
+  closeable, the other four are not touched by #260). **m-0 is 4/5**; its last box (every open
+  card cold-readable with verifiable acceptance criteria, assessed by someone who didn't write
+  it) is still unassessed.
+- **`feat/atelier` (#260) merged and published.** Renamed foreman-kit → **atelier** (git mv,
+  both manifests, catalog row, live prose; version 0.8.0), landed the lab-01 doctrine rewrite
+  (#252 — see §3 for what it covers), added three new hooks (delegation-watermark,
+  config-custody, worker-context — the per-project custody model, off by default via
+  `.claude/atelier.local.md`), and 26 hook behavior tests. **Operator checklist, now actionable**
+  (merge + publish both done):
   1. Per project that had foreman-kit installed (re-read `~/.claude/plugins/`
      `installed_plugins.json` — at branch time: dotfiles-agents, EVALS/lab-01-package-inventory,
      pb-task-tracker, plus a user-scope record): `claude plugin uninstall
@@ -47,7 +49,7 @@ Actions path is currently unusable.** See §1 and the fallback in §5.
      project — an enabledPlugins flag alone proves nothing (memory:
      plugin-enablement-needs-per-project-install).
   2. Flip each project's own `enabledPlugins` key to `atelier@dotfiles-agents` (this repo's is
-     already done on the branch).
+     already done).
   3. Delete `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/` once no record references it.
   4. Rename any `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (effort override
      moved there; the file now also carries `enforce:`/`protected:` — see the foreman skill's
@@ -75,6 +77,11 @@ and a standalone — installing both loads the skill once).
   rides `make check`). Repaired en route: a mid-word-truncated description, two disagreeing
   manifests, a wrong dual-homing count, an 11-byte-stub link, internal codenames in the picker.
   Repo About box set. Published to `main`. Backlog closeout in #253.
+- 2026-08-06 (s8): **Actions outage resolved**; confirmed via a live `publish.yml` dispatch,
+  then again publishing #260. **`feat/atelier` (#260) merged and published** — foreman-kit
+  renamed to atelier 0.8.0, lab-01 doctrine rewrite (#252), delegation-watermark +
+  config-custody + worker-context hooks. Verified against the open foreman-kit issues (§3):
+  #252 substantially closed by the PR; #250, #254, #255, #256 are not touched by it.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -106,15 +113,37 @@ later extract.
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`) — ranked
 work, drafts, and decisions live there, not duplicated here.
 
-- **Issue #250 — foreman-kit telemetry — is the owner's stated next-session pickup.** Three
-  reproduced defects: `agent_type` empty in 122/134 ledger rows; `model` records the *parent
-  session's* model (60/60 rows in one session said Opus while sonnet builders ran); `ctx_tokens`
-  tracks the parent's growing context; and row count ran ~10× the delegation count. Net: the kit
-  cannot measure its own delegation behavior. The issue also carries six hypotheses for why a
-  foreman-led session still retains delegable labor — **fix the telemetry first, because none of
-  the hypotheses are measurable until it records the delegation.** Also filed there: four
-  concurrent foreman-kit installs across three scopes with 0.7.1 and 0.7.2 both enabled at
-  `local` — a live candidate root cause for the skills-not-reaching-sessions investigation.
+- **Issue #250 — atelier (was foreman-kit) delegation telemetry — still open, #260 did not fix
+  it.** Checked directly: `#260` only renamed `foreman-kit` → `atelier` inside
+  `subagent-telemetry/hook.py` and its README — the D1/D2 defects are untouched (`agent_type`
+  empty in most ledger rows; `model`/`ctx_tokens` record the *parent* session's, not the
+  subagent's; row count runs ~10× the delegation count). The new `references/tier-cutoff.md`
+  (shipped in #260) even says outright its own protocol needs "the delegation ledger once it
+  records the subagent's own model and usage rather than the parent's" — i.e. the kit's newest
+  doc names #250 as its own blocker. **#252's Appendix B has the concrete fix already scoped**:
+  read the sibling `subagents/agent-<agent_id>.meta.json` Claude Code writes next to every
+  transcript (has `agentType`, dispatch-override `model`, `spawnDepth`) instead of the parent
+  session's fields, and drop ledger rows with no matching `subagents/` entry (fixes the ~10×
+  inflation in the same move). D3 (concurrent installs) is now forced through the atelier
+  operator checklist above; D4 (`/reload-plugins` misreporting `0 skills`) is still unverified.
+- **Issue #252 — lab-01 findings into doctrine — very likely closeable.** Diffed #260 against
+  every one of #252's eight findings: F1 (TDD-by-default) landed in `builder.md`; F2 (proved-red
+  gate, config read-only) landed in `builder.md` + the new `config-custody` hook; F3 (bounded
+  constraints) in the brief template; F4 (output differential) in `SKILL.md` evidence ranking;
+  F5 (calibrated panel / cross-slice review) in `reviewer.md`; F6 (contract-amendment floor item)
+  in `SKILL.md`; F7 (work-list-sizing doctrine **and** the delegation-watermark hook) both
+  shipped; F8 (tier-cutoff protocol) shipped as `references/tier-cutoff.md`, which explicitly
+  downgrades the kit's tier-default claim to `[untested]` — meeting F8's own alternate
+  done-when. Nothing found unaddressed. Close pending owner sign-off (comments/closes on
+  pre-existing issues aren't auto-authorized).
+- **Issues #254, #255, #256 — field observations from `pb-task-tracker`, none touched by #260.**
+  #254: a `reviewer` dispatch wrote `.claude/agent-memory/foreman-kit-reviewer/` into the target
+  repo despite a report-only, no-scratch-files brief — grepped `worker-context`/`config-custody`
+  and the agent bodies for "agent-memory", zero hits. #255: `scout`'s hard Bash-less guarantee
+  collides with CLI-mediated repos (e.g. this repo's own Backlog.md CRITICAL_INSTRUCTION) — no
+  diff to `scout.md` at all in #260. #256: `layer-cycle` mandates a full rubric-panel every
+  cycle with no sizing rule, which overcosts small diffs — only `layer-cycle/README.md`'s
+  foreman-kit→atelier rename touched that skill.
 - **New from s7:** **TASK-032** (High — no gate ties published bytes to a version bump; edit one
   dual-homed skill body and every plugin shipping it changes while CI stays green),
   **TASK-033** (Low, sequenced behind Claude Code per owner direction — the opencode installer's
@@ -141,9 +170,10 @@ Unchanged since 2026-08-04.
 
 ## 5 · Conventions & gotchas
 
-- **Publish fallback — now the proven path, used twice (2026-08-06, sessions 6 and 7).** When
-  Actions is down, reproduce `publish.yml` by hand in scratch worktrees so the real tree never
-  touches `main`:
+- **Publish fallback — proven twice (2026-08-06, sessions 6 and 7), dormant since the outage
+  resolved in session 8.** Kept documented for the next outage, not the active path — session 8
+  published twice through the real `publish.yml` workflow instead. When Actions is down again,
+  reproduce `publish.yml` by hand in scratch worktrees so the real tree never touches `main`:
   1. `git worktree add <scratch>/dev-publish origin/dev --detach` → `make ci` (the gate).
   2. **Version pre-flight** — diff each plugin's dereferenced bytes against `origin/main` **in
      both directions** (a one-way pass once missed a newly-added file), pruning `__pycache__`
