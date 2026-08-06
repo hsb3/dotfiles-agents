@@ -2,7 +2,7 @@
 
 _Governance rule. Provenance: backlog decision-6 (externals materialization =
 pinned-vendored-copy) + owner ruling 2026-08-04. This rule defines the **minimum bar** that
-gates the `origin: vendored` provenance class; the [ADR 0015](decisions/0015-self-authored-primitives-only.md)
+gates the `origin: vendored` provenance class; the [ADR 0015](../decisions/0015-self-authored-primitives-only.md)
 amendment and `scripts/check_provenance.py` enforcement are built under backlog task-10 and
 cite this document._
 

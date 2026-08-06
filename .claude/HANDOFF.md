@@ -51,7 +51,7 @@ Standing:
   live residue is **task-6**: extract `evals/` + `harness/` eventually, but **deferred** by
   decision-5 (dev is the workbench; neither ever publishes to main). Parked at Low.
 - **Two mechanisms this repo now enforces that a cold session should not re-derive:**
-  `origin: vendored` (third-party in-tree only under `docs/vendoring-rule.md`, contract
+  `origin: vendored` (third-party in-tree only under `backlog/docs/vendoring-rule.md`, contract
   machine-checked) and **dual-homing** (one `primitives-core/` source, symlinked into both a
   bundle and a standalone plugin — installing both loads the skill once).
 
@@ -226,7 +226,7 @@ Nothing folds into the canonical model until he signs off. Full state:
   path without a declared home. Regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
 - **ADR 0015 (self-authored-only) is mechanically enforced** (`scripts/check_provenance.py`);
   third-party content goes through `externals.yaml` reference-only or the vendoring exception
-  gated by `docs/vendoring-rule.md` (decision-6; enforcement arm = task-10's build). Check any
+  gated by `backlog/docs/vendoring-rule.md` (decision-6; enforcement arm = task-10's build). Check any
   "package an upstream skill" ask against the rule doc before scoping.
 - **`isolation: worktree` Agent calls in this repo have repeatedly checked out from a *published*
   commit instead of `dev`** (5/5 crews this session) — see project memory
@@ -249,6 +249,7 @@ Nothing folds into the canonical model until he signs off. Full state:
   --plain` for agents. GH issues are bug intake only. The waves/pinned-triage loop no longer
   applies here; its backlog-aware successor is task-25.
 - Docs: CLAUDE.md (rules) · `.github/CONTRIBUTING.md` (human contribution loop) ·
-  `docs/decisions/` (ADR mirrors) · `docs/vendoring-rule.md` (gates `origin: vendored`).
+  `backlog/decisions/` (ADR mirrors + backlog rulings) · `backlog/docs/vendoring-rule.md`
+  (gates `origin: vendored`).
 - **Exec desks:** `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/` (this repo);
   `.../desk-standard-desk/`; `.../ARCHIVE/dev-tooling-desk-old/` (desk-platform design).

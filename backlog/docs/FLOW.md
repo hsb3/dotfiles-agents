@@ -5,7 +5,7 @@ publishes where, and where the eval loop re-enters through the owner. Status: ac
 (2026-07-22). Machine form: `flow.yaml`, enforced by `make flow` (in `make ci`)._
 
 Other docs carry the pieces — `README.md` the layout and build-interface tables, `CLAUDE.md`
-the source-of-truth rules, `docs/CONTRIBUTING.md` the entry-gate SOP, the ADRs the whys.
+the source-of-truth rules, `backlog/docs/CONTRIBUTING.md` the extender-dev SOP, the ADRs the whys.
 This page carries the one thing none of them draw: the **edges**, in one graph, kept honest
 by a drift guard.
 
@@ -86,7 +86,7 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 
 | Path | Node | Layer | Class | Notes |
 |---|---|---|---|---|
-| `primitives-core/`, `hooks/` | primitive-bodies | source | H | the single source copy of every primitive body |
+| `primitives-core/` | primitive-bodies | source | H | the single source copy of every primitive body |
 | `primitives-core.yaml` | roster | roster | H | authoritative membership; `targets` selects vendor lanes; `disposition` is owner-curated |
 | `plugins.yaml` | bundle-metadata | roster | H | bundle id · kind · version · description |
 | `skill-catalog.yaml` | standalone-catalog | roster | H | skills cleared to ship one-at-a-time |
@@ -94,7 +94,7 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `scripts/` | toolchain | generator | H | generators + every checker + campaign runner |
 | `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
 | `dist/` | dist-lanes | dist | **G** | `dist/claude-code/` marketplace surface (`gen_marketplace.py`) lifted to main's root at publish; `dist/opencode/` laydown lane (`gen_opencode.py`) published as `opencode/`; both under `build-check` |
-| `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/` | repo-docs | docs | H | entry docs, SOP, ADRs, this page |
+| `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page now live under `backlog/`) |
 | `_meta/` | desk | workbench | H | tracked desk (ADR 0006); operations/ content untracked |
 | `harness/` | harness | workbench | H | uv eval project; own CI lane; `results.jsonl` tracked |
 | `evals/` | evals | workbench | H | extender-db projection — never a source of truth |

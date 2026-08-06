@@ -5,6 +5,12 @@ why, and what it affects — so a choice made once isn't silently re-litigated._
 
 Status: active
 
+> **2026-08-06:** this directory moved from `docs/decisions/` into the backlog (the task
+> system, decision-1) and now holds both series side by side: the numbered ADR mirrors
+> (`NNNN-*.md`, conventions below) and the backlog-native rulings (`decision-N - *.md`,
+> hand-edited per decision-7). One home for every decision; the ADR conventions below
+> apply to the `NNNN` series only.
+
 ## Convention
 
 - One file per decision: **`NNNN-kebab-title.md`** (zero-padded, sequential). Start from
