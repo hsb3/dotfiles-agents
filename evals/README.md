@@ -25,7 +25,7 @@ python3 evals/schema.py    # create/update collections (idempotent)
 python3 evals/ingest.py    # scan repo + seed frameworks (idempotent upserts)
 ```
 
-Configuration resolves from env vars first, then `_meta/operations/extender-db.env`
+Configuration resolves from env vars first, then `.claude/operations/extender-db.env`
 (untracked), then defaults: `PB_DATA_DIR` (data directory; default
 `evals/pb_data`), `PB_URL` (default `http://127.0.0.1:8090`),
 `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` (superuser, no default). PocketBase itself only

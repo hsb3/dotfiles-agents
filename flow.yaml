@@ -57,18 +57,12 @@ nodes:
     status: current
     paths: [README.md, AGENTS.md, CLAUDE.md]
     note: "Entry docs at the repo root. The ADR mirrors, dev SOP, vendoring rule, and this flow's rendered form moved under backlog/ (2026-08-06); the contributor SOP stays at .github/CONTRIBUTING.md (gates node)."
-  - id: desk
-    layer: workbench
-    class: authored
-    status: current
-    paths: [_meta]
-    note: "Tracked working desk per ADR 0006: briefings, plans, research, sign-off trails; operations content stays untracked. The handoff moved to .claude/HANDOFF.md on 2026-08-06."
   - id: harness
     layer: workbench
     class: authored
     status: current
     paths: [harness]
-    note: "Self-contained uv eval project; runs candidates injected from primitives-core sources; appends tracked results.jsonl; own CI lane, never in make ci."
+    note: "Self-contained uv eval project; runs candidates injected from primitives-core sources; appends tracked results.jsonl; own CI lane, never in make ci. Design docs travel with it (harness/docs/, ex _meta/research)."
   - id: evals
     layer: workbench
     class: authored
@@ -80,7 +74,7 @@ nodes:
     class: authored
     status: current
     paths: [.claude, .vscode]
-    note: "Project-local session tooling: under .claude/, HANDOFF.md (the cold-start bridge, moved from _meta/ on 2026-08-06 — third path in the handoff hooks' precedence list), the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — repo path differs per machine); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
+    note: "Project-local session tooling: under .claude/, HANDOFF.md (the cold-start bridge — third path in the handoff hooks' precedence list), the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the untracked secrets home (.claude/operations/, decision-8 — ex _meta/operations), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime
@@ -92,7 +86,7 @@ nodes:
     class: virtual
     status: current
     paths: []
-    note: "The published main branch — the surface consumers currently resolve. The publish workflow still assembles from the retired dist lanes, so a dispatch now fails loudly at assembly; what publishing means under ADR 0017 is the open task-5 decision. The workbench never publishes."
+    note: "The published main branch — the surface consumers resolve. publish.yml (repaired 2026-08-06, PR #237) assembles a filtered parented commit from dev — plugins/ + .claude-plugin/ + README only, per decision-4 as amended; dispatched manually with confirm=publish. The workbench never publishes."
   - id: consumers
     layer: consumer
     class: virtual
@@ -143,11 +137,6 @@ edges:
     kind: ingests
     mode: automated
     via: evals/load_harness_runs.py
-  - from: evals
-    to: desk
-    kind: reports
-    mode: automated
-    via: evals/report.py
   - from: publish-main
     to: consumers
     kind: installs

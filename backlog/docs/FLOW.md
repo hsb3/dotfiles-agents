@@ -5,7 +5,7 @@ publishes where, and where the eval loop re-enters through the owner. Status: ac
 (2026-07-22). Machine form: `flow.yaml`, enforced by `make flow` (in `make ci`)._
 
 Other docs carry the pieces — `README.md` the layout and build-interface tables, `CLAUDE.md`
-the source-of-truth rules, `backlog/docs/CONTRIBUTING.md` the extender-dev SOP, the ADRs the whys.
+the source-of-truth rules, `backlog/docs/extender-dev-sop.md` the extender-dev SOP, the ADRs the whys.
 This page carries the one thing none of them draw: the **edges**, in one graph, kept honest
 by a drift guard.
 
@@ -16,8 +16,8 @@ bundle metadata, standalone catalog, externals) are assembled by the **toolchain
 **generated dist artifacts** (today: the Claude Code marketplace tree at the repo root),
 **gated** by `make ci`, and **published** dev → main by the manual publish workflow, where
 **consumers** install from. In parallel, the **workbench loop** runs candidates from the
-sources through the agent **harness**, ingests results into **evals** (the extender-db
-projection), and reports to the **desk** — and its findings re-enter the flow only through
+sources through the agent **harness** and ingests results into **evals** (the extender-db
+projection) — and its findings re-enter the flow only through
 the **owner's manual curation** of the roster and sources. That manual pass is the single
 sanctioned cycle in the graph; every automated path is acyclic and the checker proves it.
 
@@ -53,7 +53,6 @@ flowchart TD
     N_consumers[consumers]
   end
   subgraph L_workbench[workbench]
-    N_desk[desk]
     N_harness[harness]
     N_evals[evals]
     N_local_dev_tooling[local dev tooling]
@@ -70,7 +69,6 @@ flowchart TD
   N_gates -->|gates| N_plugin_assemblies
   N_primitive_bodies -->|consumes| N_harness
   N_harness -->|ingests| N_evals
-  N_evals -->|reports| N_desk
   N_publish_main -.->|installs| N_consumers
   N_primitive_bodies -.->|installs| N_consumers
   N_evals -.->|curates| N_roster
@@ -95,7 +93,6 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
 | `dist/` | dist-lanes | dist | **G** | `dist/claude-code/` marketplace surface (`gen_marketplace.py`) lifted to main's root at publish; `dist/opencode/` laydown lane (`gen_opencode.py`) published as `opencode/`; both under `build-check` |
 | `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page now live under `backlog/`) |
-| `_meta/` | desk | workbench | H | tracked desk (ADR 0006); operations/ content untracked |
 | `harness/` | harness | workbench | H | uv eval project; own CI lane; `results.jsonl` tracked |
 | `evals/` | evals | workbench | H | extender-db projection — never a source of truth |
 | `.agents/`, `.claude/`, `skills-lock.json` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
@@ -122,6 +119,6 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 
 The workbench is deliberately **not** in the publish path: `make ci` never runs the harness
 or evals, and nothing in `evals/` writes back to the roster. Battle-test evidence flows
-`primitive-bodies → harness → evals → desk`, and returns to the flow only as the owner's
+`primitive-bodies → harness → evals`, and returns to the flow only as the owner's
 re-triage of `disposition:` and body edits — the two dashed `curates` edges. If an automated
 writer to the roster is ever proposed, it must argue with the acyclicity check first.

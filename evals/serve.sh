@@ -4,7 +4,7 @@
 # PocketBase has no native env var for the data directory — it is set only via the
 # --dir flag (its one env-native setting is the encryption key, --encryptionEnv).
 # This wrapper is the env-var surface: values resolve from the environment first,
-# then _meta/operations/extender-db.env, then defaults.
+# then .claude/operations/extender-db.env, then defaults.
 #
 #   PB_DATA_DIR  data directory            (default: <this dir>/pb_data)
 #   PB_URL       serve address, host:port taken from it  (default: http://127.0.0.1:8090)
@@ -16,7 +16,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HERE")"
-ENV_FILE="$REPO/_meta/operations/extender-db.env"
+ENV_FILE="$REPO/.claude/operations/extender-db.env"
 
 if [ -f "$ENV_FILE" ]; then
   while IFS='=' read -r k v; do
