@@ -77,7 +77,8 @@ Both symlinks point to the same source; a session with either plugin (or both) l
 | repo-compliance-audit | ✔ | ✗ | ✗ | Desk-specific queries |
 | repo-meta-structure | ✔ | ✔ | ✔ | Orthogonal; reusable |
 
-**Dual-homes (new standalones):** mise-en-place-scaffold, pptx-themes, readme-value-and-proof, repo-meta-structure (4 new plugins)
+**Dual-homes:** mise-en-place-scaffold, pptx-themes, readme-value-and-proof, repo-meta-structure
+(4 skills; 3 new plugin dirs — `pptx-themes` already shipped standalone under ADR 0016)
 
 **Stays in code-desk only:** board-triage, comms, dev-focus, planning-desk, project-memory, repo-compliance-audit (6 + rubric-panel)
 
@@ -87,7 +88,10 @@ Both symlinks point to the same source; a session with either plugin (or both) l
 
 If this design is ratified:
 
-- [ ] Create 4 new plugin directories under `plugins/`: mise-en-place-scaffold, pptx-themes, readme-value-and-proof, repo-meta-structure
+- [ ] Create 3 new plugin directories under `plugins/`: mise-en-place-scaffold, readme-value-and-proof, repo-meta-structure
+      _(corrected 2026-08-06 at build time: `pptx-themes` was already a standalone plugin in
+      the ADR 0016 lineup, so it needs no new directory — only its code-desk symlink, which
+      already exists. 4 skills dual-home; 3 new dirs.)_
 - [ ] Each new plugin: `plugin.json` + symlink from source + standalone README
 - [ ] Update code-desk/README.md to document dual-home arrangement + which skills are standalone
 - [ ] Add symlinks in code-desk/skills/ pointing to the 4 dual-home skills

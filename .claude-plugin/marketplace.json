@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "One desk bundle \u2014 code-desk (next-release execution under a documented repo standard, now also carrying the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and eleven standalone one-skill plugins: claude-code-config, claude-code-expertise, dataviz, deep-research, github-project-board, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, and tech-eval-research.",
-    "version": "0.3.0"
+    "description": "One desk bundle \u2014 code-desk (next-release execution under a documented repo standard, now also carrying the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and fourteen standalone one-skill plugins: claude-code-config, claude-code-expertise, dataviz, deep-research, github-project-board, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
+    "version": "0.4.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -85,6 +85,15 @@
       "author": {
         "name": "Henry S. Burden III"
       },
+      "description": "Fill-only repo scaffold against the packaged standards \u2014 use whenever the ask is \"scaffold this repo\", \"run mise-en-place\", \"fill the audit gaps\", \"set up a new repo to the standard\", or any request to create the missing meta-structure the compliance audit flags. Additive-only: it NEVER overwrites, merges, edits, deletes, or moves an existing file.",
+      "name": "mise-en-place-scaffold",
+      "source": "./plugins/mise-en-place-scaffold",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
       "description": "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.",
       "name": "obsidian-toolkit",
       "source": "./plugins/obsidian-toolkit",
@@ -124,6 +133,24 @@
       "description": "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.",
       "name": "private-fork",
       "source": "./plugins/private-fork",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Turn a README into a user-centric pitch backed by real visual proof. Use when asked to write/refresh a README with a value proposition, capture app screenshots for docs, add \"visual proof\" of a UI/feature, or explain \"what someone gets\" from a project. Captures live screenshots from the running app (not mockups), writes an honest motivation + value prop + roadmap, and embeds the shots.",
+      "name": "readme-value-and-proof",
+      "source": "./plugins/readme-value-and-proof",
+      "version": "0.0.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "The canonical repo meta-structure standard — consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
+      "name": "repo-meta-structure",
+      "source": "./plugins/repo-meta-structure",
       "version": "0.0.1"
     },
     {

@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Turn a README into a user-centric pitch backed by real visual proof. Use when asked to write/refresh a README with a value proposition, capture app screenshots for docs, add \"visual proof\" of a UI/feature, or explain \"what someone gets\" from a project. Captures live screenshots from the running app (not mockups), writes an honest motivation + value prop + roadmap, and embeds the shots.",
+  "name": "readme-value-and-proof",
+  "version": "0.0.1"
+}

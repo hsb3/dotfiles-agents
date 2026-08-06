@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Fill-only repo scaffold against the packaged standards — use whenever the ask is \"scaffold this repo\", \"run mise-en-place\", \"fill the audit gaps\", \"set up a new repo to the standard\", or any request to create the missing meta-structure the compliance audit flags. Runs the bundled script from the repo root: `--plan` (default) prints planned creations, conflicts, and non-mechanical items per checklist ID and writes nothing; `--apply` creates only the planned items; `--init-manifest` writes the commented `_meta/mise-en-place.yml` variance template. Additive-only: it NEVER overwrites, merges, edits, deletes, or moves an existing file.",
+  "name": "mise-en-place-scaffold",
+  "version": "0.0.1"
+}

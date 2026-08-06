@@ -1,0 +1,25 @@
+{
+  "submitted_at": "2026-08-06T06:30:04.674Z",
+  "items": {
+    "A": {
+      "choice": "approved",
+      "notes": ""
+    },
+    "B": {
+      "choice": "approve",
+      "notes": ""
+    },
+    "C": {
+      "choice": "approve",
+      "notes": ""
+    },
+    "D": {
+      "choice": "approve",
+      "notes": ""
+    },
+    "Z": {
+      "choice": null,
+      "notes": ""
+    }
+  }
+}
