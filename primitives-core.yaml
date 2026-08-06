@@ -270,6 +270,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: iterm2
+    type: skill
+    source: primitives-core/skills/iterm2
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
   - id: dev-focus
     type: skill
     source: primitives-core/skills/dev-focus
