@@ -73,8 +73,10 @@ rules, in priority order:
    queue, not ad hoc.
 
 **Write the plan into the triage issue body as "Delivery plan vN" before launching** — a table
-of `wave | branch | issues resolved | gate`, plus the owner decision queue. The plan must survive
-compaction and be visible to the owner without asking the session.
+of `wave | branch | issues resolved | gate`, plus the owner decision queue. It goes in the
+**Delivery history** block at the bottom of the body: expanded while `PLANNED`, collapsed into
+`<details>` on `EXECUTED` — never above the open sections. The plan must survive compaction and
+be visible to the owner without asking the session.
 
 ## Phase 3 — Launch (foreman executes)
 
@@ -115,7 +117,10 @@ For each wave, as crews report back — the session, personally:
 
 - File issues for every deferred item and new finding from the run.
 - **Update the triage issue**: mark the delivery plan **EXECUTED** with the actual PR table,
-  refresh the ranking and date. Collapse prior executed plans to one-line pointers.
+  refresh the ranking and date — then **move the plan below the open sections** into the
+  delivery-history block and collapse it in `<details>`. Position is the reader's only
+  done/outstanding cue; an executed plan left on top reads as current standing. Collapse
+  prior executed plans to one-line pointers.
 - **Present the owner decision queue as one batch**, not a dribble — options + a
   recommendation per item. For a multi-item queue, use the **owner-signoff** skill if
   installed (local HTML form; answers land in `_meta/signoff/<date>-<topic>/`); record
@@ -137,16 +142,24 @@ by editing this issue (no repo commits). Excludes itself and dependabot PRs._
 
 **Last refreshed: YYYY-MM-DD** · N open issues at refresh time
 
-## Delivery plan vN — PLANNED | EXECUTED YYYY-MM-DD
-| Wave | Branch | PR | Resolves | Gate |
-
 ## Now — actionable, unblocked
+| # | Title | State | Blocked by |
+
 ## Milestone — what actually remains
 ## Backlog — no milestone
 ## On hold — parked by owner ruling, don't pick up
 ## Decision gaps — the owner queue
 
+# Delivery history — shipped, provenance only
+
+## Delivery plan vN — PLANNED | EXECUTED YYYY-MM-DD
+| Wave | Branch | PR | Resolves | Gate |
+
 ## Maintenance protocol
+- **Open work leads; executed plans sit last, collapsed.** Never let an EXECUTED plan sit above
+  the open backlog — position is the only done/outstanding cue a reader gets.
+- **Every issue from the inventory appears exactly once** in the open-work sections above, with
+  its state explicit — outstanding-or-not must be answerable at a glance, never inferred.
 - Refresh at session boundaries alongside the handoff pass, or whenever issues change in bulk —
   a stale ranked view is worse than none.
 - Regenerate the inventory (gh issue list …), re-rank, edit this body, bump the refresh date.
