@@ -3,11 +3,11 @@ id: TASK-031
 title: >-
   Marketplace front door: make the 20 plugins discoverable from the default
   branch
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-08-06 18:41'
-updated_date: '2026-08-06 19:17'
+updated_date: '2026-08-06 19:56'
 labels:
   - docs
   - marketplace
@@ -155,19 +155,19 @@ Set the repo description and topics (`gh repo edit hsb3/dotfiles-agents --descri
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 README.md opens with what-this-is, install, and a task-oriented chooser before any contributor content
-- [ ] #2 README.md contains a catalog table with exactly one row per plugin in .claude-plugin/marketplace.json (20 today), each row linking to plugins/<id>/README.md
-- [ ] #3 Every relative link in README.md resolves to a path present in the published surface (plugins/, .claude-plugin/, README.md) — verified against origin/main's tree, not just dev's
-- [ ] #4 Contributor/build content is a short section that links to dev-branch paths with absolute branch-qualified URLs instead of documenting paths absent from main
-- [ ] #5 github-project-board's description is a complete sentence in both plugin.json and marketplace.json, and no plugin description ends in a truncation ellipsis
-- [ ] #6 plugin.json and marketplace.json descriptions match for all 20 plugins, and marketplace.json metadata.description states the current bundle/standalone counts
-- [ ] #7 scripts/check_catalog.py fails on: a plugin missing from the catalog table, a catalog row for an unknown plugin, a README link that does not resolve in the published surface, a plugin.json/marketplace.json description mismatch, and a truncated description
-- [ ] #8 check_catalog.py runs inside `make check` (no new CI job name) and tests/test_check_catalog.py covers each failure mode plus the passing shape with stdlib unittest and tempdir fixtures
-- [ ] #9 Version bumped in both plugin.json and marketplace.json for every plugin whose published content changed
-- [ ] #10 The GitHub repo description and topics are set (or a proposed wording is recorded for the owner's approval)
-- [ ] #11 make ci green
-- [ ] #12 The opencode install block in README.md runs end to end against a fresh clone of the default branch — verified by running it, not by reading it
-- [ ] #13 No undefined internal vocabulary or bare internal identifiers (ADR numbers, task IDs, backlog/ or .claude/ paths) remain on the consumer surface without a resolvable link or a plain-English gloss
+- [x] #1 README.md opens with what-this-is, install, and a task-oriented chooser before any contributor content
+- [x] #2 README.md contains a catalog table with exactly one row per plugin in .claude-plugin/marketplace.json (20 today), each row linking to plugins/<id>/README.md
+- [x] #3 Every relative link in README.md resolves to a path present in the published surface (plugins/, .claude-plugin/, README.md) — verified against origin/main's tree, not just dev's
+- [x] #4 Contributor/build content is a short section that links to dev-branch paths with absolute branch-qualified URLs instead of documenting paths absent from main
+- [x] #5 github-project-board's description is a complete sentence in both plugin.json and marketplace.json, and no plugin description ends in a truncation ellipsis
+- [x] #6 plugin.json and marketplace.json descriptions match for all 20 plugins, and marketplace.json metadata.description states the current bundle/standalone counts
+- [x] #7 scripts/check_catalog.py fails on: a plugin missing from the catalog table, a catalog row for an unknown plugin, a README link that does not resolve in the published surface, a plugin.json/marketplace.json description mismatch, and a truncated description
+- [x] #8 check_catalog.py runs inside `make check` (no new CI job name) and tests/test_check_catalog.py covers each failure mode plus the passing shape with stdlib unittest and tempdir fixtures
+- [x] #9 Version bumped in both plugin.json and marketplace.json for every plugin whose published content changed
+- [x] #10 The GitHub repo description and topics are set (or a proposed wording is recorded for the owner's approval)
+- [x] #11 make ci green
+- [x] #12 The opencode install block in README.md runs end to end against a fresh clone of the default branch — verified by running it, not by reading it
+- [x] #13 No undefined internal vocabulary or bare internal identifiers (ADR numbers, task IDs, backlog/ or .claude/ paths) remain on the consumer surface without a resolvable link or a plain-English gloss
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -196,6 +196,34 @@ Set the repo description and topics (`gh repo edit hsb3/dotfiles-agents --descri
   - topics: `claude-code`, `claude-code-plugins`, `agent-skills`, `ai-agents`, `developer-tools`, `opencode`
 
 **Findings routed out of scope, filed rather than absorbed:** TASK-032 (no gate ties published bytes to a version bump — the highest-cost uncaught mode in the repo, reproduced) and TASK-033 (the opencode laydown ships 25 of 34 skills and zero hooks, and the installer's cleanup trap deletes the exclusions record before the user can read it). TASK-031 adds only a one-sentence README disclosure for the latter; the fix belongs to TASK-033.
+
+**Shipped to PR #251 (into `dev`) 2026-08-06.** Commit `1b44e21`. Not merged — that is the owner's call, and `main` is publish-only regardless.
+
+**CI could not verify it: GitHub Actions is in a declared major outage** (githubstatus.com reports `major_outage` for Actions and Pages). No workflow run was created for the PR head at all, and the four runs before it show the outage signature — a job `cancelled` with `steps=0` after sitting 15-18 minutes, which surfaces as a top-level "failure" that is not a real test failure. PR state is MERGEABLE / BLOCKED because required checks cannot report.
+
+Local proof stands in for it and is a superset: CI runs `make floor` and `make check symlinks flow`; local `make ci` runs `check identity provenance hook-layout symlinks harness-coupling flow test` — every CI target plus the full suite. Exit 0 at the committed tree, 197 tests (145 repo + 41 catalog guard + harness). **Re-run `gh pr checks 251` once Actions recovers; do not merge on the strength of the local run alone.**
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Rebuilt the marketplace front door and put a drift guard under it. Merged to `dev` via PR #251 (merge commit `9d19964`, work commit `1b44e21`).
+
+**What changed.** `README.md` is consumer-first: lede, install, a goal-shaped chooser ("I want to… → install X"), the full 20-row catalog linking each plugin's own page, then a short contributor section pointing at `dev` with absolute URLs. The Layout, Build-interface, and Governance sections — which documented `primitives-core/`, `scripts/`, `tests/`, `flow.yaml`, and `make ci`, none of which exist on the published branch — are gone. The opencode clone is pinned to `--branch dev` (the installer is not on `main`, so the documented command could not run) and discloses that its laydown is a subset.
+
+`scripts/check_catalog.py` (new, rides `make check`, no new CI job name) enforces six checks: catalog coverage 1:1 with the manifest; each row's kind/blurb/contents against the assembly on disk; published-surface link resolution across inline, reference-style, and HTML forms; description **and** version parity between each `plugin.json` and its `marketplace.json` entry; `metadata.description`'s stated counts and enumerated names; and description quality. It parses the README as it renders, so a catalog fenced or commented out fails loudly. 41 tests.
+
+Repairs found en route: `github-project-board`'s description was truncated mid-word in both manifests; `mise-en-place-scaffold`'s manifests disagreed; `code-desk` claimed five dual-homed skills when disk says six; the contributor link pointed at an 11-byte stub; `foreman-kit`'s 956-char description carried internal codenames; two plugin pages had no install command. Six plugins version-bumped in both manifests.
+
+**How it was verified.** Three independent reviewers (visitor, maintainer, adversarial) scored the branch against the contract. The guard as first written passed on every one of these broken states, each reproduced against the real README: all 20 Kind labels flipped, all blurbs blanked, all Contents fabricated, the whole catalog commented out or fenced, dev-only paths returned as reference-style or HTML links, a description truncated mid-word without an ellipsis, and a version mismatch between manifests. It was hardened until all eight fail red, then the reproductions were replayed against a copy of the real repo (baseline green → each red → baseline green). Final sweep on merged `dev`: 20 catalog rows with none missing or unknown, 32 relative links all present in `git ls-tree -r origin/main`, zero description or version parity failures, zero truncated descriptions, `make ci` exit 0.
+
+AC #13's grep surfaces `.claude/` in `project-memory` and `repo-meta-structure`'s READMEs; those skills are *about* those paths, so it is their subject matter, glossed in place, not an unresolvable internal reference.
+
+**Merged during a GitHub Actions major outage**, on the owner's explicit instruction, with an admin override — required checks could not report because no workflow run was created. Local `make ci` is a superset of CI (CI runs `make floor` and `make check symlinks flow`) and exited 0 at the merged tree.
+
+**Not done here, filed instead:** TASK-032 (no gate ties published bytes to a version bump), TASK-033 (the opencode installer deletes its own exclusions record), TASK-034 (agent definitions are Claude-Code-native). GitHub issue #250 covers foreman-kit's telemetry recording the parent session instead of the delegation.
+
+**Still pending:** none of this reaches a consumer until `main` is published, which needs Actions back or the local-worktree fallback.
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 <!-- SECTION:DESCRIPTION:END -->
