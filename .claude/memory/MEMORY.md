@@ -1,5 +1,9 @@
+- [Backlog.md is the task system](backlog-md-task-management.md) — tasks live in Backlog.md; GH issues are bug intake only
+- [Backlog CLI rewrites sibling tasks](backlog-cli-rewrites-sibling-tasks.md) — a backlog write can overwrite task files you didn't touch from its index; diff all task files before committing (rule now also in CLAUDE.md/decision-7)
+- [make ci ✗-line is a passing test](make-ci-refusal-line-is-a-passing-test.md) — the "✗ opencode laydown — refusing…" line is a passing test's own output; judge make ci by exit code, not ✗ glyphs
+- [Plugin enablement needs a per-project install](plugin-enablement-needs-per-project-install.md) — `enabledPlugins: true` is inert without an install record for this projectPath; `claude plugin list` reports other projects' records
 - [Extender estate cohesion](extender-estate-cohesion.md) — 3-surface estate (dotfiles-agents + desk-standard + dev-tooling-desk); datamodel NOT greenfield (extenders.yaml + committed PocketBase); desk-standard is a rapid-dev co-product not yet distributed
-- [Desk-platform research element-model review](desk-platform-research-elementmodel.md) — verified _headcase claims accurate; recurring research gaps = missing claim/citation + experiment/dataset entities
+- [Desk-platform research element-model review](desk-platform-research-elementmodel.md) — verified \_headcase claims accurate; recurring research gaps = missing claim/citation + experiment/dataset entities
 - [Agent-harness standing permission](agent-harness-standing-permission.md) — commit/push/PR/merge pre-authorized for the harness lane; dev only, never main
 - [harness claude auth (Option Z)](harness-bare-flag-auth.md) — no --bare (it strips Skill tool); apiKeyHelper + fresh CLAUDE_CONFIG_DIR; live runs need `secret get ANTHROPIC_API_KEY`
 - [launchd = bash 3.2](launchd-bash32-scripts.md) — LaunchAgent scripts run under /bin/bash 3.2; verify with /bin/bash + one kickstart, never interactive bash
