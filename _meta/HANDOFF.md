@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-03. Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-06. Refresh at session boundaries (/handoff). Secret-free._
 
 ## 0 · Orientation
 
@@ -8,23 +8,24 @@ dotfiles-agents is a marketplace of coding-agent extenders serving TWO runtimes 
 source tree (ADR 0017): Claude Code installs the hand-authored symlink assemblies under
 `plugins/<id>/` (root `.claude-plugin/marketplace.json`) natively; opencode is generated at
 install time (`scripts/install_opencode.sh`). **Nothing generated is tracked.** `dev` =
-source, `main` = CI-published (publish-only). The publish model is now **ruled** (decision-4:
-`main` = plain fast-forward release gate) but not yet **built** — `publish.yml` still fails at
-the retired dist assembly until task-5's build lands (PR #237 may be that fix, owner-held). Task
+source, `main` = CI-published (publish-only). **Publishing WORKS** (fixed 2026-08-06, PR #237):
+the release gate is the filtered parented assembly — decision-4 was amended to ratify it (its
+original "plain fast-forward" wording violated its own evals/harness exclusion). Publish =
+`gh workflow run publish.yml --ref dev -f confirm=publish` per the publish-to-main skill. Task
 interface + source-of-truth rules: see CLAUDE.md (hot-loaded).
 
 ## 1 · Current standing
 
-`make ci` green — 95 tests (41 primitives: agent=4, hook=4, skill=33). Two milestones stand
-essentially complete:
+`make ci` green — 95 repo tests + 139 harness tests (41 primitives: agent=4, hook=4, skill=33).
+GH issue queue: **zero open** (both bugs fixed + closed 2026-08-06). Standing:
 
 - **ADR 0017 pointer refactor DONE** (m-0 tasks 1–4, 7, 8; PRs #227–#231). 15 symlink
   assemblies + root marketplace.json (`make symlinks`); `dist/` + generators retired; roster =
   provenance manifest; opencode is install-time. Mechanics live in CLAUDE.md (hot-loaded).
 - **m-0 owner's-court rulings CLEARED 2026-08-04** (decisions 4/5/6, via an owner-signoff form
   — trail in `_meta/signoff/2026-08-03-backlog-ordering/`):
-  - **task-5 publish** = `main` as fast-forward release gate (decision-4). Ruled → **build
-    pending** (High).
+  - **task-5 publish** = DONE 2026-08-06: decision-4 amended (assembly-gate ratified, owner
+    sign-off), publish.yml fixed (#237), proven by two publishes.
   - **task-6 extraction** = extract evals/+harness/ eventually but **deferred** — dev is the
     workbench; they never publish to main (decision-5). Parked (Low).
   - **task-9 lineup** = comms-first approved **in principle**, gated on a design pass I still
@@ -33,16 +34,17 @@ essentially complete:
     supersedes #36/ADR 0003; drop the 4 plugin externals, only pptx stays vendored; new
     `origin: vendored` class + narrow ADR 0015 amendment. Memo:
     `_meta/plans/externals-clone-vs-vendor/memo.md`. Build **unblocked** (task-26 done).
-- **task-24 fixed** (#233 merged, GH #222 closed): builder/reviewer `maxTurns` caps lifted
-  (scope-not-clock doctrine); scout's 15-turn read-only backstop kept.
-- **task-26 done** (PR #238 open): the vendoring rule — `docs/vendoring-rule.md`.
+- **Board repaired to decision-7** (2026-08-06, PR #242, owner sign-off in
+  `_meta/signoff/2026-08-06-backlog-standards/`): minimum task-definition standard ruled; 8
+  stub cards rewritten from their closed GH issues; stale statuses flipped (5, 22, 23, 24, 26
+  all Done); m-0 gained a checkable definition of done (2/5 ticked).
 
-`main` still holds the pre-0017 dist-lifted assembly (published 2026-07-22 at `dev@0cdca55`)
-until task-5's publish build lands.
+`main` is current: `publish: dev@a7d87ac` (2026-08-06), foreman-kit **0.7.1** live. The
+publish surface is only `plugins/` + marketplace.json + README — backlog/harness merges since
+don't need a re-publish.
 
 Live marketplace lineup (ADR 0016, 15 plugins): **code-desk (0.3.0)** ·
-**foreman-kit (0.7.0** — gained the review-cycle trio rubric-panel/deletion-pass/layer-cycle,
-#235**)** · diagrams · obsidian-toolkit · 11 standalones (claude-code-config ·
+**foreman-kit (0.7.1** — review-cycle trio #235; waves triage-ordering fix #240**)** · diagrams · obsidian-toolkit · 11 standalones (claude-code-config ·
 claude-code-expertise · dataviz · deep-research · github-project-board · opencode-expertise ·
 owner-signoff · pptx-themes · private-fork · project-memory · tech-eval-research).
 
@@ -60,11 +62,14 @@ not fold it into dev without Henry's promotion decision (already taken 2026-07-2
   decisions 1+2 ruled · Backlog.md migration (PR #225) · settings prune + closeout (#226).
 - 2026-08-03/04 (session 2): ADR 0017 refactor executed end-to-end (PRs #227–#231) — symlink
   assemblies, dist/generator retirement, opencode install-time lane, governance sweep.
-- **2026-08-04 (session 3, this one): m-0 rulings + externals design.** Owner-signoff form →
-  decisions 4/5/6 ruled (publish ff-gate · extraction deferred · externals vendored-copy);
-  backlog reordered foreman-first + regrouped into epics (#234). task-24 foreman `maxTurns`
-  fix (#233, closed #222). task-10 externals memo + ruling (#236). task-26 vendoring rule
-  (#238, open). foreman-kit trio v0.7.0 merged by owner (#235).
+- 2026-08-04 (session 3): m-0 rulings via owner-signoff form → decisions 4/5/6; backlog
+  regrouped (#234); task-24 maxTurns fix (#233); externals memo + ruling (#236); vendoring
+  rule drafted (#238); foreman-kit trio v0.7.0 (#235).
+- **2026-08-06 (session 4, this one): publish repaired + bugs cleared + board standard.**
+  #237 publish fix + #238 vendoring rule merged; two publishes (main current, foreman-kit
+  0.7.1). Waves triage bug fixed (#240, closed #215). Harness isolation fixed lead-driven
+  (#241, closed #172; suite 102→139 tests; residuals → task-27). decision-7 task standard +
+  full board repair (#242, owner sign-off). decision-4 amended (assembly-gate ratified).
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -94,7 +99,12 @@ battle-test here, later extract to its own repo.
 - **Campaign runner** (PR #178): `make harness-campaign` + weekly LaunchAgent live on this machine
   (Mon 09:00). **Never auto-ingests** — after each run, ingest deliberately
   (`load_harness_runs.py --campaign weekly-YYYYMMDD`) and commit data.db+storage with cause.
-- Open follow-up: bug #172 / task-22 (hermeticity/env-pinning).
+- **Isolation fixed 2026-08-06** (#241, task-22): claude runner now truly isolated (throwaway
+  HOME/config, `--setting-sources ""`, loud failure over silent host-config fallback);
+  preconditions recorded in ledger + log header; `--keep-workspaces`; flat `agents/<name>.md`
+  resolves in-package. Residuals in task-27: scratch-ledger/--dry-run mode (evidence runs
+  append to tracked results.jsonl — restore from HEAD if you smoke-test), vision-grader
+  assertion recording.
 
 ## 3 · Next up
 
@@ -102,21 +112,12 @@ battle-test here, later extract to its own repo.
 work, drafts (owner-parked #137/#138/#152), decisions, and the m-0 refactor milestone all
 live there, not duplicated here.
 
-- **m-0 owner's court is CLEARED** (decisions 4/5/6). What remains in m-0 is now BUILD work:
-  - **task-10 externals build** (High, unblocked by task-26): amend ADR 0015 + `origin:
-    vendored` class + `check_provenance` vendored arm + drop the 4 plugin externals +
-    reclassify `pptx-themes/base` + optional `make externals-drift`. Then task-11 sits on it.
-  - **task-5 publish build** (High): rework `publish.yml` to the ff-gate model + retire the
-    assembly guards (PR #237 may already do this — reconcile, don't duplicate).
-  - **task-9 design pass** (mine, owed): ADR bundle-composition extension + per-code-desk-skill
-    dispositions for owner ratify before any build.
-  - task-6 (extraction) parked at Low.
-- Buildable, no ruling needed: task-23 (waves triage template), task-25 (waves backlog-aware),
-  task-13 (250k-token spike), task-15 (handoff-override), task-14 (coord-branch protocol).
-- **Merge PR #238** (task-26 vendoring rule) — then task-10's build is fully unblocked.
-- **File a bug task for the backlog CLI** (see gotcha below) before trusting `backlog task edit`.
-- Consumers on `main` still get the pre-0017 dist assembly — frozen at 2026-07-22 until the
-  task-5 publish build lands.
+- m-0 remaining (its DoD now lives in the milestone file): **task-10 externals build** (High,
+  unblocked — ACs enumerate the full scope) → task-11 sits on it; **task-9 design pass**
+  (session-owed): ADR bundle-composition extension + code-desk dispositions for owner ratify
+  BEFORE build; board-conformance box ticks itself as cards stay clean.
+- Buildable, no ruling needed: task-15 (handoff-override, High), task-25 (waves backlog-aware),
+  task-13 (250k-token spike), task-14 (coord-branch protocol), task-27 (harness residuals).
 - Cross-repo residue for owner: ra-platform's planning-desk adoption still **uncommitted**
   in `~/Developer/ra-platform` (staged 2026-07-22, needs review/commit + live smoke test);
   the four desk folders in dotfiles-agents-desk likewise uncommitted.
@@ -138,13 +139,8 @@ model until he signs off (standing directive, §5).
 ## 5 · Conventions & gotchas
 
 - Source-of-truth rules are in CLAUDE.md (hot-loaded) — not duplicated here.
-- **⚠ The Backlog.md CLI rewrites task files you did NOT touch** (2026-08-04). A single
-  `backlog task create`/`edit` re-materialized task-9/10/11/12 from a stale cross-session
-  index, injecting another branch's uncommitted task-state (foreman-kit trio proof notes) into
-  unrelated tasks. Nothing corrupt reached a commit, but it cost real cleanup. Until this is
-  root-caused (file a bug task): after ANY `backlog task` write, `git diff` **all** task files
-  and `git restore --source=origin/dev` any that changed unexpectedly; for precise edits, use a
-  text editor, not the CLI. Cross-check `origin/dev` if a PR merged mid-session.
+- The backlog-CLI hand-edit-only rule is now IN CLAUDE.md + decision-7 (the CLI rewrote
+  sibling task files from a stale index, 2026-08-04) — read-only CLI use (`list`/`board`) fine.
 - **Post-0017 mechanics CLAUDE.md doesn't spell out:** a NEW plugin = a `plugins/<id>/` dir
   + a hand-authored entry in the root marketplace.json; plugin versions are hand-maintained
   now — bump when content changes materially. pptx-themes' skill README carries the
@@ -165,11 +161,10 @@ model until he signs off (standing directive, §5).
   enabled; flip the entry in `.claude/settings.json` temporarily if a session must *run* one.
 - **`flow.yaml` is load-bearing**: `make flow` (in `make ci`) fails any PR that adds a top-level
   path without a declared home. Regenerate the FLOW.md DAG with `scripts/check_flow.py --write-doc`.
-- **ADR 0015 (self-authored-only) is now on disk and mechanically enforced**
-  (`scripts/check_provenance.py`) — no `origin: sourced` body may live under `primitives-core/`,
-  full stop; third-party content must go through `externals.yaml` + the clone-at-build mechanism
-  (#36, still unbuilt). This blocked #152 this session — check any future "package an upstream
-  skill" ask against this before scoping a wave.
+- **ADR 0015 (self-authored-only) is mechanically enforced** (`scripts/check_provenance.py`);
+  third-party content goes through `externals.yaml` reference-only or the vendoring exception
+  gated by `docs/vendoring-rule.md` (decision-6; enforcement arm = task-10's build). Check any
+  "package an upstream skill" ask against the rule doc before scoping.
 - **`isolation: worktree` Agent calls in this repo have repeatedly checked out from a *published*
   commit instead of `dev`** (5/5 crews this session) — see project memory
   `worktree-agents-check-out-published-commit`. Every worktree-crew brief must include the
@@ -191,7 +186,7 @@ model until he signs off (standing directive, §5).
 - **`backlog/` — THE task system** (decision-1): tasks, drafts, decisions, milestone m-0.
   `backlog board` for the live view; `backlog task list --plain` for agents. GH issues =
   bug intake only. The waves/pinned-triage loop no longer applies to this repo (its
-  backlog-aware successor is part of task-8). Extender-db family: task-21.x (self-manages
+  backlog-aware successor is task-25). Extender-db family: task-21.x (self-manages
   via `evals/_structure/`); harness: task-22.
 - CLAUDE.md — task interface + rules · `.github/CONTRIBUTING.md` (new) — human-facing
   contribution loop · `docs/decisions/` — ADR mirrors (now includes 0015).
