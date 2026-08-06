@@ -18,7 +18,7 @@ Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 | | `render_deck.py` (bundled script) | pptx-themes (skill) |
 | --- | --- | --- |
-| Source | `slides.json` (block types: heading / subtitle / bullets / columns / stat / callout / divider) | `deck.js` (pptxgenjs) + `package.json` |
+| Source | `slides.json` (17 block types: heading / subtitle / lead / bullets / columns / stat / callout / divider / table / steps / timeline / matrix / quote / code / image / svg / chart) | `deck.js` (pptxgenjs) + `package.json` |
 | Theme | the script's built-in boardroom styling | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
 | Output | `.html` + `.pdf` (+ `.mp3` if an audio MCP is available) | `.pptx` + `.pdf` |
 | Strengths | fast, structured, validated, linkifies bare #refs, zero install | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
@@ -26,7 +26,9 @@ Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 `render_deck.py` is stdlib-only Python and ships inside this skill, so the self-comms need no
 MCP server. PDF export shells out to headless Chrome; if Chrome is absent, render `--html`
-and print from any browser — the HTML is fully self-contained (styles inlined, no network).
+and print from any browser — the HTML is fully self-contained (styles inlined, images
+base64-embedded, no network). Verified against every existing deck under `_meta/briefings/`
+across three repos (22 decks / 256 slides) at the time it replaced the MCP path.
 
 For pptx-themes decks, invoke the **`pptx-themes` skill** - it owns the approved palette, semantic
 theme tokens, typography, and the visual-QA workflow. Available token themes: `actuarial-signal`,

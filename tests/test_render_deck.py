@@ -47,7 +47,7 @@ class Validate(unittest.TestCase):
         self.assertTrue(any("layout" in p for p in problems))
 
     def test_unsupported_block_type_is_an_error_not_a_silent_drop(self):
-        problems = rd.validate([slide({"type": "timeline", "milestones": []})])
+        problems = rd.validate([slide({"type": "sparkline", "data": []})])
         self.assertEqual(len(problems), 1)
         self.assertIn("unsupported block type", problems[0])
 
@@ -161,6 +161,140 @@ class RenderHtml(unittest.TestCase):
         out = rd.render_html(deck)
         self.assertEqual(out.count('class="col"'), 2)
         self.assertIn("<h2>L</h2>", out)
+
+
+class RichBlocks(unittest.TestCase):
+    """The eight block types added after a census of the real decks in _meta/briefings/."""
+
+    def test_table_validates_and_renders(self):
+        b = {"type": "table", "head": ["A", "B"], "rows": [["1", "2"], ["3", "4"]]}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        out = rd.render_html([slide(b)])
+        self.assertEqual(out.count("<th>"), 2)
+        self.assertEqual(out.count("<td>"), 4)
+
+    def test_ragged_table_row_pads_rather_than_truncates(self):
+        b = {"type": "table", "head": ["A", "B", "C"], "rows": [["1"]]}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        self.assertEqual(rd.render_html([slide(b)]).count("<td>"), 3)
+
+    def test_overwide_table_row_is_rejected(self):
+        b = {"type": "table", "head": ["A"], "rows": [["1", "2"]]}
+        problems = rd.validate([slide(b)])
+        self.assertTrue(any("cells but head has" in p for p in problems))
+
+    def test_steps_render_as_ordered_list(self):
+        b = {"type": "steps", "steps": [{"title": "One", "detail": "d"}, {"title": "Two"}]}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        out = rd.render_html([slide(b)])
+        self.assertIn('<ol class="steps">', out)
+        self.assertEqual(out.count("<li>"), 2)
+
+    def test_step_without_title_rejected(self):
+        problems = rd.validate([slide({"type": "steps", "steps": [{"detail": "x"}]})])
+        self.assertTrue(any("needs a 'title'" in p for p in problems))
+
+    def test_timeline_renders(self):
+        b = {"type": "timeline", "milestones": [{"label": "Q1", "title": "Kickoff"}]}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        self.assertIn('class="timeline"', rd.render_html([slide(b)]))
+
+    def test_matrix_renders_quadrants_and_axes(self):
+        b = {
+            "type": "matrix",
+            "xAxis": ["low", "high"],
+            "yAxis": ["small", "big"],
+            "quadrants": [{"title": "TL", "items": ["a"]}, {"title": "TR"}],
+        }
+        self.assertEqual(rd.validate([slide(b)]), [])
+        out = rd.render_html([slide(b)])
+        self.assertEqual(out.count('class="quad"'), 2)
+        self.assertIn("axis-x", out)
+
+    def test_matrix_rejects_more_than_four_quadrants(self):
+        b = {"type": "matrix", "quadrants": [{}] * 5}
+        self.assertTrue(any("at most 4" in p for p in rd.validate([slide(b)])))
+
+    def test_matrix_axis_must_be_a_pair(self):
+        b = {"type": "matrix", "quadrants": [{}], "xAxis": ["only-one"]}
+        self.assertTrue(any("[start, end] pair" in p for p in rd.validate([slide(b)])))
+
+    def test_code_block_escapes_its_body(self):
+        b = {"type": "code", "lang": "py", "code": "print('<hi>')"}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        out = rd.render_html([slide(b)])
+        self.assertIn("&lt;hi&gt;", out)
+        self.assertIn('data-lang="py"', out)
+
+    def test_svg_embeds_verbatim(self):
+        b = {"type": "svg", "svg": "<svg><circle r='2'/></svg>"}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        self.assertIn("<circle r='2'/>", rd.render_html([slide(b)]))
+
+    def test_remote_image_passes_through(self):
+        b = {"type": "image", "src": "https://example.com/a.png", "alt": "x"}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        self.assertIn("https://example.com/a.png", rd.render_html([slide(b)]))
+
+    def test_missing_local_image_is_an_error(self):
+        b = {"type": "image", "src": "nope.png"}
+        with self.assertRaises(rd.DeckError):
+            rd.render_html([slide(b)], base_dir="/definitely/not/here")
+
+    def test_local_image_inlines_as_data_uri(self):
+        import base64
+        import tempfile
+
+        png = base64.b64decode(
+            b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "dot.png"), "wb") as fh:
+                fh.write(png)
+            out = rd.render_html([slide({"type": "image", "src": "dot.png"})], base_dir=tmp)
+        self.assertIn("data:image/png;base64,", out)
+
+    def test_each_chart_kind_renders_svg(self):
+        for kind in ("bar", "line", "donut"):
+            with self.subTest(kind=kind):
+                b = {"type": "chart", "kind": kind, "data": [3, 1, 2], "labels": ["a", "b", "c"]}
+                self.assertEqual(rd.validate([slide(b)]), [])
+                out = rd.render_html([slide(b)])
+                self.assertIn("<svg", out)
+                self.assertIn('class="chart"', out)
+
+    def test_chart_rejects_unknown_kind_and_non_numeric_data(self):
+        self.assertTrue(any("chart kind" in p for p in rd.validate(
+            [slide({"type": "chart", "kind": "pie", "data": [1]})])))
+        self.assertTrue(any("must be all numbers" in p for p in rd.validate(
+            [slide({"type": "chart", "kind": "bar", "data": ["1"]})])))
+
+    def test_chart_data_of_all_zeros_does_not_divide_by_zero(self):
+        b = {"type": "chart", "kind": "donut", "data": [0, 0]}
+        self.assertIn("<svg", rd.render_html([slide(b)]))
+
+    def test_quote_renders_with_attribution(self):
+        b = {"type": "quote", "text": "Ship it", "attribution": "someone"}
+        self.assertEqual(rd.validate([slide(b)]), [])
+        out = rd.render_html([slide(b)])
+        self.assertIn("<blockquote>", out)
+        self.assertIn("someone", out)
+
+    def test_renderer_covers_the_whole_upstream_schema(self):
+        """Guards against a schema type being dropped: every documented block must render."""
+        upstream = {
+            "heading", "lead", "subtitle", "bullets", "code", "table", "image", "svg",
+            "chart", "callout", "stat", "quote", "divider", "matrix", "timeline", "steps",
+            "columns",
+        }
+        self.assertEqual(upstream - rd.SUPPORTED_BLOCKS, set())
+
+
+class KickerPlacement(unittest.TestCase):
+    def test_kicker_sits_inside_the_body_so_center_layout_groups_it(self):
+        out = rd.render_html([slide({"type": "heading", "text": "T"}, kicker="K", layout="center")])
+        body_start = out.index('<div class="body">')
+        self.assertLess(body_start, out.index('class="kicker"'))
 
 
 class PdfGuards(unittest.TestCase):
