@@ -41,6 +41,31 @@ noise (its tree has no `.gitignore`). Inspect the published surface with
 `git show origin/main:<path>`, or `git worktree add ../dotfiles-agents-main origin/main` for a
 full checkout (remove the worktree after).
 
+### Branch hygiene
+
+**Merge or abandon a branch within the session that opened it.** Work parked on an unmerged
+branch is invisible to every later session and is silently destroyed if the branch is deleted —
+on 2026-08-06 deleting one such branch reverted a closed task to To Do while its shipped code
+stayed live. Delete the branch immediately after merge (`--delete-branch`, or a separate
+`git push origin --delete` if the working tree is dirty, since the flag switches branches).
+
+**Before deleting any branch, check what it carries:** `git rev-list --count origin/dev..<branch>`.
+Nonzero means unmerged commits — diff each changed file against `dev` before concluding the work
+is superseded. A branch can show unmerged commits and still be redundant (renamed paths,
+deliberately deleted files, an amended successor), so count alone decides nothing.
+
+**The handoff rides one long-lived branch, `chore/handoff`.** At a session boundary:
+
+```sh
+git fetch origin && git checkout chore/handoff && git merge --ff-only origin/dev
+```
+
+`--ff-only` **refuses** if the branch still carries an unparked handoff update — that refusal is
+the point, and it is the tripwire for the failure above. Write the update, PR into `dev`, merge
+before the session ends, and leave the branch in place for next time.
+
+`dev-legacy` is a deliberate pre-restructure archive — never delete it.
+
 <!-- BACKLOG.MD GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.48.0 -->
 
