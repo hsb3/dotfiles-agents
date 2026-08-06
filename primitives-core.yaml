@@ -288,3 +288,15 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: config-custody
+    type: hook
+    source: primitives-core/hooks/config-custody
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+  - id: worker-context
+    type: hook
+    source: primitives-core/hooks/worker-context
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]

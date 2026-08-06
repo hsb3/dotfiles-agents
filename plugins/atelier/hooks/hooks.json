@@ -26,12 +26,38 @@
         "matcher": "*"
       }
     ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/config-custody/hook.py\"",
+            "statusMessage": "Checking config custody...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit"
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/session-handoff-surfacer/hook.py\"",
             "statusMessage": "Checking for a project handoff...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-context/hook.py\"",
+            "statusMessage": "Briefing worker on the delegation covenant...",
             "timeout": 10,
             "type": "command"
           }
