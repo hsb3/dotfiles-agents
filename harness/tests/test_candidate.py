@@ -8,7 +8,7 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from agent_harness.candidate import detect_kind  # noqa: E402
+from agent_harness.candidate import detect_kind, resolved_candidate_dir  # noqa: E402
 
 
 def _write(path, content):
@@ -52,6 +52,60 @@ class TestDetectKind(unittest.TestCase):
         _write(os.path.join(p, "SKILL.md"), "---\nname: sp\n---\nbody")
         _write(os.path.join(p, ".claude-plugin", "plugin.json"), "{}")
         self.assertEqual(detect_kind(p), "skill")
+
+
+class TestResolvedCandidateDir(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def test_dir_is_passed_through_unchanged_no_copy(self):
+        p = os.path.join(self.tmp, "a")
+        os.makedirs(p)
+        _write(os.path.join(p, "AGENTS.md"), "---\ndescription: d\n---\nprompt")
+        with resolved_candidate_dir(p) as resolved:
+            self.assertEqual(resolved, p)
+            self.assertEqual(detect_kind(resolved), "agent")
+        # Passthrough dir is untouched (not removed) after the context exits.
+        self.assertTrue(os.path.isdir(p))
+        self.assertTrue(os.path.isfile(os.path.join(p, "AGENTS.md")))
+
+    def test_flat_md_file_is_staged_into_a_new_dir_and_cleaned_up(self):
+        md = os.path.join(self.tmp, "solo-agent.md")
+        _write(md, "---\nname: solo-agent\n---\nprompt")
+        with resolved_candidate_dir(md) as staged:
+            self.assertNotEqual(staged, self.tmp)
+            self.assertTrue(os.path.isdir(staged))
+            staged_file = os.path.join(staged, "solo-agent.md")
+            self.assertTrue(os.path.isfile(staged_file))
+            with open(staged_file, encoding="utf-8") as fh:
+                self.assertIn("name: solo-agent", fh.read())
+            self.assertEqual(detect_kind(staged), "agent")
+        # Cleaned up after normal exit; original file untouched.
+        self.assertFalse(os.path.exists(staged))
+        self.assertTrue(os.path.isfile(md))
+
+    def test_flat_md_staged_dir_cleaned_up_on_exception(self):
+        md = os.path.join(self.tmp, "solo-agent.md")
+        _write(md, "---\nname: solo-agent\n---\nprompt")
+        staged_holder = {}
+        with self.assertRaises(RuntimeError):
+            with resolved_candidate_dir(md) as staged:
+                staged_holder["path"] = staged
+                raise RuntimeError("boom")
+        self.assertFalse(os.path.exists(staged_holder["path"]))
+
+    def test_nonexistent_path_raises_file_not_found(self):
+        with self.assertRaises(FileNotFoundError):
+            with resolved_candidate_dir(os.path.join(self.tmp, "nope")):
+                pass  # pragma: no cover
+
+    def test_non_md_file_raises_value_error(self):
+        f = os.path.join(self.tmp, "notes.txt")
+        _write(f, "not markdown")
+        with self.assertRaises(ValueError):
+            with resolved_candidate_dir(f):
+                pass  # pragma: no cover
 
 
 if __name__ == "__main__":

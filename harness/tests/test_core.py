@@ -1,10 +1,13 @@
-"""Run core — timeout path, unsupported skip, workspace lifecycle, subprocess.
+"""Run core — timeout path, unsupported skip, workspace lifecycle, subprocess,
+preconditions recording (task-22 gap 2), --keep-workspaces (task-22 gap 3).
 
 The timeout and skip tests use stub adapters (no live CLI): a stub that invokes
 `sleep` proves a hung child is killed and produces an error row, and a stub whose
 injection is unsupported proves the explicit skip row (no subprocess runs).
 """
 
+import glob
+import json
 import os
 import shutil
 import sys
@@ -15,7 +18,10 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from agent_harness import preconditions as preconditions_mod  # noqa: E402
 from agent_harness.adapters.base import Adapter, Injection, NormalizedRecord  # noqa: E402
+from agent_harness.adapters.claude import ClaudeAdapter  # noqa: E402
+from agent_harness.adapters.opencode import OpencodeAdapter  # noqa: E402
 from agent_harness.core import _run_subprocess, run_trial  # noqa: E402
 
 
@@ -222,6 +228,156 @@ class TestWorkspaceLifecycle(CoreTestBase):
         )
         self.assertEqual(skip["campaign"], "skillfix")
         self.assertIsNone(skip["log_path"])
+
+
+class TestKeepWorkspacesOnDisk(CoreTestBase):
+    """--keep-workspaces (cli.py:79-83, core.py:219-221 pre-existing behavior):
+    a passing trial's workspace survives on disk WITH the flag and is actually
+    removed from disk WITHOUT it (not just a None/not-None row field check —
+    strengthens test_core.py:166-190 with a real filesystem assertion)."""
+
+    def _run_with_spy(self, keep_workspaces):
+        import unittest.mock as mock
+
+        captured = {}
+        orig_mkdtemp = tempfile.mkdtemp
+
+        def spy_mkdtemp(*a, **kw):
+            path = orig_mkdtemp(*a, **kw)
+            captured["tmp"] = path
+            return path
+
+        adapter = _CmdAdapter(["true"])
+        case = self._case()
+        with mock.patch("tempfile.mkdtemp", side_effect=spy_mkdtemp):
+            row = run_trial(
+                adapter, "cand", "skill", "/x", case, "with", 0,
+                self._args(keep_workspaces=keep_workspaces),
+            )
+        return row, captured["tmp"]
+
+    def test_workspace_survives_on_disk_with_keep_workspaces(self):
+        row, tmp = self._run_with_spy(keep_workspaces=True)
+        self.addCleanup(shutil.rmtree, tmp, True)
+        self.assertTrue(row["passed"])
+        self.assertIsNotNone(row["workspace"])
+        self.assertTrue(os.path.isdir(tmp), "run tmpdir was removed despite --keep-workspaces")
+        self.assertTrue(os.path.isdir(row["workspace"]))
+
+    def test_workspace_removed_without_keep_workspaces(self):
+        row, tmp = self._run_with_spy(keep_workspaces=False)
+        self.assertTrue(row["passed"])
+        self.assertIsNone(row["workspace"])
+        self.assertFalse(os.path.exists(tmp), "run tmpdir survived without --keep-workspaces")
+
+
+class TestPreconditionsRecording(CoreTestBase):
+    """Runtime self-installs / environment preconditions reach the trial record
+    (task-22 gap 2): the row's ``preconditions`` field and the per-trial log
+    file's leading ``#`` comment line."""
+
+    def test_row_carries_preconditions_with_self_install_detected(self):
+        adapter = _CmdAdapter(["/bin/echo", "npx playwright install chromium"])
+        case = self._case()
+        row = run_trial(adapter, "cand", "skill", "/x", case, "with", 0, self._args())
+        self.assertIn("preconditions", row)
+        precond = row["preconditions"]
+        self.assertEqual(precond["harness"], "stub-cmd")
+        self.assertEqual(precond["model"], "default")
+        self.assertIn("self_installs", precond)
+        self.assertTrue(
+            any("playwright install" in s for s in precond["self_installs"]),
+            precond["self_installs"],
+        )
+
+    def test_skip_row_is_schema_complete_with_preconditions(self):
+        skip = run_trial(
+            _UnsupportedAdapter(), "cand", "weird", "/x", self._case(), "with", 0,
+            self._args(),
+        )
+        from agent_harness.core import ROW_FIELDS
+
+        self.assertEqual(set(skip), set(ROW_FIELDS))
+        self.assertIn("preconditions", skip)
+        self.assertIsNotNone(skip["preconditions"])
+        self.assertEqual(skip["preconditions"]["self_installs"], [])
+        self.assertEqual(skip["preconditions"]["harness"], "stub-unsup")
+
+    def test_log_file_on_disk_starts_with_preconditions_header(self):
+        adapter = _CmdAdapter(["/bin/echo", "npm install foo"])
+        case = self._case()
+        args = self._args(keep_workspaces=True)
+        run_trial(adapter, "cand", "skill", "/x", case, "with", 0, args)
+        logs = glob.glob(os.path.join(args.runs_dir, "*.log"))
+        self.assertEqual(len(logs), 1)
+        with open(logs[0], encoding="utf-8") as fh:
+            first_line = fh.readline()
+        self.assertTrue(first_line.startswith("# preconditions: "))
+        payload = json.loads(first_line[len("# preconditions: "):])
+        self.assertIn("self_installs", payload)
+        self.assertTrue(any("npm install" in s for s in payload["self_installs"]))
+
+    def test_row_fields_and_row_keys_stay_in_sync(self):
+        from agent_harness.core import ROW_FIELDS
+
+        adapter = _CmdAdapter(["true"])
+        row = run_trial(adapter, "cand", "skill", "/x", self._case(), "with", 0, self._args())
+        self.assertEqual(set(row), set(ROW_FIELDS))
+        self.assertIn("preconditions", ROW_FIELDS)
+
+
+class TestPreconditionsHeaderLogParseTolerance(unittest.TestCase):
+    """A `# preconditions: {...json...}` header line ahead of the raw transcript
+    must not break either adapter's `parse_log` (both skip non-JSON lines:
+    claude.py:185-189, opencode.py:300-309) — assert real events still fold."""
+
+    def test_claude_parse_log_tolerates_preconditions_header(self):
+        precond = {"harness": "claude", "self_installs": ["npm install foo"]}
+        header = preconditions_mod.render_header(precond)
+        events = [
+            json.dumps({
+                "type": "system", "subtype": "init",
+                "plugins": [{"name": "eval-x"}], "plugin_errors": [],
+            }),
+            json.dumps({
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {}}]},
+            }),
+            json.dumps({
+                "type": "result", "result": "done", "total_cost_usd": 0.1,
+                "duration_ms": 10, "num_turns": 1, "usage": {"input_tokens": 5},
+            }),
+        ]
+        raw = header + "\n" + "\n".join(events)
+        rec = ClaudeAdapter().parse_log(raw)
+        self.assertEqual(rec.result, "done")
+        self.assertTrue(rec.skill_used)
+        self.assertEqual([p["name"] for p in rec.plugins], ["eval-x"])
+        self.assertEqual(rec.input_tokens, 5)
+
+    def test_opencode_parse_log_tolerates_preconditions_header(self):
+        precond = {"harness": "opencode", "self_installs": []}
+        header = preconditions_mod.render_header(precond)
+
+        def _ev(etype, part, ts):
+            return json.dumps(
+                {"type": etype, "timestamp": ts, "sessionID": "s", "part": part}
+            )
+
+        events = [
+            _ev("step_start", {"type": "step-start"}, 1000),
+            _ev("tool_use", {"type": "tool", "tool": "write"}, 1200),
+            _ev(
+                "step_finish",
+                {"type": "step-finish", "reason": "stop", "cost": 0.02},
+                1500,
+            ),
+        ]
+        raw = header + "\n" + "\n".join(events)
+        rec = OpencodeAdapter().parse_log(raw)
+        self.assertEqual(rec.tool_names, ["write"])
+        self.assertAlmostEqual(rec.cost_usd, 0.02)
+        self.assertEqual(rec.num_turns, 1)
 
 
 if __name__ == "__main__":

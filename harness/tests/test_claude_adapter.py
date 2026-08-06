@@ -26,6 +26,14 @@ def _write(path, content):
         fh.write(content)
 
 
+def _restore_env(key, previous):
+    """Put an os.environ key back exactly as it was (absent stays absent)."""
+    if previous is None:
+        os.environ.pop(key, None)
+    else:
+        os.environ[key] = previous
+
+
 class TestInjection(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -155,13 +163,101 @@ class TestInvocation(unittest.TestCase):
         )
         self.assertEqual(out.stdout, "sk-test-123")
 
+    def test_isolation_contract(self):
+        # task-22 gap 1: one place asserting the whole isolation contract on the
+        # CONSTRUCTED env+argv (no subprocess). Every layer the CLI can load host
+        # state from must be closed: throwaway HOME, throwaway config roots, no
+        # settings-file sources, no foreign MCP config, no bleed env vars.
+        bleed = {
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "CLAUDE_PLUGIN_ROOT": "/host/plugins",
+            "CLAUDE_CONFIG_DIR": "/host/.claude",
+            "XDG_CONFIG_HOME": "/host/.config",
+            "ANTHROPIC_API_KEY": "sk-test-contract",
+        }
+        for key, val in bleed.items():
+            self.addCleanup(_restore_env, key, os.environ.get(key))
+            os.environ[key] = val
+
+        argv, env = self.a.invocation(
+            "p", self.ws, None, Injection(["--plugin-dir", "/p"])
+        )
+
+        # 1. Throwaway HOME inside the run tmp (cleaned up with it), never the user's.
+        self.assertTrue(env["HOME"].startswith(self.tmp + os.sep))
+        self.assertNotEqual(
+            os.path.realpath(env["HOME"]), os.path.realpath(os.environ["HOME"])
+        )
+        self.assertTrue(os.path.isdir(env["HOME"]))
+        # 2. HOME-adjacent + claude config roots point inside the throwaway tree.
+        self.assertTrue(env["XDG_CONFIG_HOME"].startswith(env["HOME"] + os.sep))
+        self.assertTrue(os.path.isdir(env["XDG_CONFIG_HOME"]))
+        self.assertTrue(env["CLAUDE_CONFIG_DIR"].startswith(self.tmp + os.sep))
+        self.assertTrue(os.path.isdir(env["CLAUDE_CONFIG_DIR"]))
+        # 3. No user/project/local settings files, no foreign MCP servers.
+        self.assertEqual(argv[argv.index("--setting-sources") + 1], "")
+        self.assertIn("--strict-mcp-config", argv)
+        # 4. --settings still carries an executable apiKeyHelper (auth survives the
+        #    empty setting-sources list; probe: apiKeySource == apiKeyHelper).
+        helper = json.loads(argv[argv.index("--settings") + 1])["apiKeyHelper"]
+        self.assertTrue(os.path.isfile(helper))
+        self.assertTrue(os.access(helper, os.X_OK))
+        # 5. Bleed vars are gone / overwritten even though os.environ had them.
+        for key in ClaudeAdapter.CONFIG_BLEED_ENV:
+            if key in ("CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME"):
+                self.assertNotEqual(env[key], bleed[key])  # replaced, not inherited
+            else:
+                self.assertNotIn(key, env)
+        # 6. PATH + the API key must NOT be scrubbed (CLI lookup + helper input).
+        self.assertEqual(env.get("PATH"), os.environ.get("PATH"))
+        self.assertEqual(env["ANTHROPIC_API_KEY"], "sk-test-contract")
+
     def test_non_writable_run_dir_falls_back(self):
-        # A bare stub workspace (parent not writable) must not crash — the argv
-        # still surfaces Skill; isolation is simply skipped.
-        argv, env = self.a.invocation("p", "/ws", None, Injection())
+        # A stub workspace whose parent is not writable must not crash — and must
+        # NOT degrade to the host config either (that hole was the task-22 gap).
+        # The adapter falls back to a private temp isolation root instead.
+        ro = os.path.join(self.tmp, "ro")
+        os.makedirs(ro)
+        os.chmod(ro, 0o500)
+        self.addCleanup(os.chmod, ro, 0o700)
+
+        argv, env = self.a.invocation("p", os.path.join(ro, "ws"), None, Injection())
+
         self.assertIn("Skill", self._allowed(argv))
-        self.assertNotIn("--settings", argv)
-        self.assertNotIn("CLAUDE_CONFIG_DIR", env)
+        self.assertIn("--settings", argv)
+        helper = json.loads(argv[argv.index("--settings") + 1])["apiKeyHelper"]
+        self.assertTrue(os.access(helper, os.X_OK))
+        self.assertTrue(os.path.isdir(env["CLAUDE_CONFIG_DIR"]))
+        self.assertTrue(os.path.isdir(env["HOME"]))
+        self.assertNotEqual(
+            os.path.realpath(env["HOME"]), os.path.realpath(os.environ["HOME"])
+        )
+        self.assertFalse(env["HOME"].startswith(ro + os.sep))  # not the dead run dir
+        self.assertTrue(env["XDG_CONFIG_HOME"].startswith(env["HOME"] + os.sep))
+        self.assertEqual(argv[argv.index("--setting-sources") + 1], "")
+
+    def test_unbuildable_isolation_raises_rather_than_inheriting(self):
+        # Last resort: if even the temp root cannot be made, the adapter refuses to
+        # run instead of silently handing the trial the operator's real config.
+        ro = os.path.join(self.tmp, "ro2")
+        os.makedirs(ro)
+        os.chmod(ro, 0o500)
+        self.addCleanup(os.chmod, ro, 0o700)
+
+        class _NoTemp:
+            @staticmethod
+            def mkdtemp(*_a, **_kw):
+                raise OSError("no temp dir")
+
+        orig = claude_mod.tempfile
+        claude_mod.tempfile = _NoTemp
+        try:
+            with self.assertRaises(RuntimeError) as ctx:
+                self.a.invocation("p", os.path.join(ro, "ws"), None, Injection())
+        finally:
+            claude_mod.tempfile = orig
+        self.assertIn("isolated", str(ctx.exception))
 
     def test_no_model_omits_flag(self):
         argv, _env = self.a.invocation("p", self.ws, None, Injection())

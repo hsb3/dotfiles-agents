@@ -21,6 +21,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 
+from . import preconditions
 from .adapters.base import Injection, NormalizedRecord
 from .cases import load_cases
 from .grading import run_check, run_grader, trial_passed
@@ -43,7 +44,7 @@ ROW_FIELDS = (
     "kind", "grader_model", "passed", "checks", "grades", "skill_used", "tool_names",
     "plugin_errors", "exit_code", "error", "cost_usd", "duration_ms", "num_turns",
     "input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens",
-    "workspace", "log_path", "cli_version",
+    "workspace", "log_path", "cli_version", "preconditions",
 )
 
 
@@ -53,6 +54,7 @@ class ProcResult:
     raw: str
     timed_out: bool
     error: Optional[str]
+    preconditions: Optional[dict] = None
 
 
 def _coerce_text(value):
@@ -63,11 +65,20 @@ def _coerce_text(value):
     return value
 
 
-def _run_subprocess(argv, cwd, env, timeout, log_path) -> ProcResult:
+def _run_subprocess(argv, cwd, env, timeout, log_path, precondition_env=None) -> ProcResult:
     """Run `argv` list-form (never shell), stdin closed, with a hard timeout.
 
     Captures stdout to `log_path` and returns a ProcResult. A timeout produces
     ``returncode=-1`` + an ``error`` string (a row, never a crash — DESIGN §3).
+
+    ``precondition_env`` (optional) is the env-fact dict from
+    ``preconditions.env_preconditions`` *without* self-installs yet — this
+    function detects self-installs from the captured stdout, merges them in, and
+    (when a log is written) prepends the result as a single ``#``-prefixed
+    comment line ahead of the raw transcript so both adapters' `parse_log`
+    (which skip non-JSON lines) still fold the real events. The merged dict is
+    returned via ``ProcResult.preconditions`` so the caller can put the exact
+    same data in the ledger row (no drift between log header and row).
     """
     stderr = ""
     error = None
@@ -95,16 +106,22 @@ def _run_subprocess(argv, cwd, env, timeout, log_path) -> ProcResult:
         stderr = _coerce_text(exc.stderr)
         returncode, timed_out = -1, True
         error = f"timeout after {timeout}s"
+    full_preconditions = None
+    if precondition_env is not None:
+        full_preconditions = dict(precondition_env)
+        full_preconditions["self_installs"] = preconditions.detect_self_installs(stdout)
     if log_path:
         try:
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
             with open(log_path, "w", encoding="utf-8") as fh:
+                if full_preconditions is not None:
+                    fh.write(preconditions.render_header(full_preconditions) + "\n")
                 fh.write(stdout)
         except OSError:
             pass
     if error is None and returncode != 0:
         error = (stderr or "")[-2000:] or f"exit {returncode}"
-    return ProcResult(returncode, stdout, timed_out, error)
+    return ProcResult(returncode, stdout, timed_out, error, full_preconditions)
 
 
 def _log_path(runs_dir, *parts):
@@ -129,7 +146,7 @@ def _portable_log_path(log_path):
 def _build_row(
     *, ts, campaign, harness, model, candidate, case_id, config, trial, kind,
     grader_model, passed, checks, grades, record: NormalizedRecord, error,
-    workspace, log_path,
+    workspace, log_path, preconditions: Optional[dict] = None,
 ):
     """Assemble the full DESIGN §7 row schema (cli_version filled by caller)."""
     return {
@@ -161,6 +178,7 @@ def _build_row(
         "workspace": workspace,
         "log_path": _portable_log_path(log_path),
         "cli_version": None,
+        "preconditions": preconditions,
     }
 
 
@@ -184,23 +202,28 @@ def run_trial(adapter, candidate, kind, candidate_dir, case, config, trial, args
     else:
         injection = Injection([], [], True)  # baseline = injection omitted
 
+    env_precond = preconditions.env_preconditions(adapter, args)
+
     # supported=False => explicit skip row, never a silent no-op (DESIGN §3).
     if not injection.supported:
         shutil.rmtree(tmp, ignore_errors=True)
+        skip_precond = dict(env_precond, self_installs=[])
         return _build_row(
             ts=ts, campaign=campaign, harness=adapter.name, model=model,
             candidate=candidate, case_id=case["id"], config=config, trial=trial,
             kind=kind, grader_model=None, passed=None, checks=[], grades=[],
             record=NormalizedRecord(),
             error=f"unsupported: {adapter.name} cannot host kind={kind}",
-            workspace=None, log_path=None,
+            workspace=None, log_path=None, preconditions=skip_precond,
         )
 
     argv, env = adapter.invocation(case["prompt"], ws, args.model, injection)
     log_path = _log_path(
         args.runs_dir, adapter.name, candidate, case["id"], config, trial
     )
-    proc = _run_subprocess(argv, ws, env, args.timeout, log_path)
+    proc = _run_subprocess(
+        argv, ws, env, args.timeout, log_path, precondition_env=env_precond
+    )
     record = adapter.parse_log(proc.raw)
     record.exit_code = proc.returncode
     record.error = proc.error
@@ -226,6 +249,7 @@ def run_trial(adapter, candidate, kind, candidate_dir, case, config, trial, args
         kind=kind, grader_model=args.grader_model if assertions else None,
         passed=passed, checks=checks, grades=grades, record=record,
         error=record.error, workspace=(ws if keep else None), log_path=log_path,
+        preconditions=proc.preconditions,
     )
 
 
@@ -235,23 +259,10 @@ def _preconditions_note(adapter, args):
     Cases can be environment-contingent (e.g. a candidate self-installs Playwright
     at runtime — a blocked npm would collapse the pass path). We can't fully
     control that yet, but we record the observable preconditions so a later reader
-    knows what environment produced the rows."""
-    campaign = getattr(args, "campaign", "") or ""
-    keys_present = [
-        k for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY")
-        if os.environ.get(k)
-    ]
-    parts = [
-        f"harness={adapter.name}",
-        f"cli={adapter.cli_version()}",
-        f"campaign={campaign or '(none)'}",
-        f"model={args.model or 'default'}",
-        f"grader={getattr(args, 'grader_model', '?')}",
-        f"timeout={getattr(args, 'timeout', '?')}s",
-        f"auth_env={','.join(keys_present) or '(none)'}",
-        "network=assumed-available",
-    ]
-    return "preconditions: " + " · ".join(parts)
+    knows what environment produced the rows. Renders from
+    `preconditions.env_preconditions` so the console line and the data recorded
+    per-trial (row + log header) can't drift apart (task-22 gap 2)."""
+    return preconditions.render_note(preconditions.env_preconditions(adapter, args))
 
 
 def run_candidate(adapter, candidate, kind, candidate_dir, args):
