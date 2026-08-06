@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "DELEGATION_WATERMARK_SOFT=\"${DELEGATION_WATERMARK_SOFT:-25}\" DELEGATION_WATERMARK_REFIRE_EVERY=\"${DELEGATION_WATERMARK_REFIRE_EVERY:-15}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/delegation-watermark/hook.py\"",
+            "statusMessage": "Checking delegation watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash"
+      }
+    ],
     "PreCompact": [
       {
         "hooks": [

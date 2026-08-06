@@ -282,3 +282,9 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: delegation-watermark
+    type: hook
+    source: primitives-core/hooks/delegation-watermark
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]

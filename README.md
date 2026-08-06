@@ -46,7 +46,7 @@ behind.
 |---|---|---|---|
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows. | 10 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
-| [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 6 skills · 4 agents · 4 hooks |
+| [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 6 skills · 4 agents · 5 hooks |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
 | [`claude-code-config`](plugins/claude-code-config/README.md) | standalone | Settings, permissions, hooks, env vars, and MCP servers routed to the right file by precedence, with a take-effect check. | 1 skill |
 | [`claude-code-expertise`](plugins/claude-code-expertise/README.md) | standalone | Map of Claude Code's extension surfaces: which one fits a need, what its contract is, and how to debug it. | 1 skill |
