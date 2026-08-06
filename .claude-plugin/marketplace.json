@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "One desk bundle \u2014 code-desk (next-release execution under a documented repo standard, now also carrying the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and fourteen standalone one-skill plugins: claude-code-config, claude-code-expertise, dataviz, deep-research, github-project-board, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
+    "description": "One desk bundle \u2014 code-desk (next-release execution under a documented repo standard, now also carrying the executive-desk overhead: planning, comms, board triage, deck themes) \u2014 plus three kits (foreman-kit: tiered delegation agents and session-discipline hooks; diagrams: structural diagrams; obsidian-toolkit: Obsidian plugin-dev guidance) and fifteen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, github-project-board, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
     "version": "0.4.0"
   },
   "name": "dotfiles-agents",
@@ -35,6 +35,15 @@
       "name": "code-desk",
       "source": "./plugins/code-desk",
       "version": "0.3.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a \"briefing\", \"status deck\", \"status readout\", \"board deck\", or \"comms package\". Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.",
+      "name": "comms",
+      "source": "./plugins/comms",
+      "version": "0.0.1"
     },
     {
       "author": {

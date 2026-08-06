@@ -1,7 +1,7 @@
 ---
 id: TASK-9
 title: 'Recompose lineup: focused bundles + the multi-homing map (comms first)'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-04 00:42'
 updated_date: '2026-08-04 02:55'
@@ -27,7 +27,7 @@ Migrated from GH #221. Under the symlink architecture a standalone is a director
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Bundle-composition principle ratified
-- [ ] #2 comms installable without code-desk
+- [x] #2 comms installable without code-desk
 - [x] #3 Disposition recorded per code-desk skill
 <!-- AC:END -->
 
@@ -54,8 +54,15 @@ against `pptx-themes`, which is now itself standalone-installable, and its `requ
 [local-mcp]` is unchanged by which assembly ships it. Nothing mechanical blocks a `comms`
 standalone.
 
-**Next:** re-put the `comms` disposition to the owner as an explicit either/or — split it
-standalone as originally directed (AC#2 met, one more plugin dir + marketplace entry), or
-deliberately supersede AC#2 with a recorded reason. Do not close this task on the current
-approval.
+**Resolved same day.** Owner re-ruled: split comms standalone, as originally directed. Built
+— `plugins/comms/` + marketplace entry + a `primitives-core/skills/comms/README.md` symlinked
+into the assembly. AC#2 now genuinely met. Grounding that the first pass skipped: comms'
+`local-mcp` requirement is the deck-builder MCP (external to every bundle), and its declared
+siblings are `pptx-themes` (standalone) and `handoff` (foreman-kit, never in code-desk) — so
+bundle membership never satisfied its dependencies. Correction trail in the design pass.
+
+**Final shape:** 5 dual-homing skills (comms, mise-en-place-scaffold, pptx-themes,
+readme-value-and-proof, repo-meta-structure); 5 bundle-only (repo-compliance-audit,
+project-memory, dev-focus, planning-desk, board-triage). Lineup 15 → 19 plugins; marketplace
+0.3.0 → 0.4.0.
 <!-- SECTION:NOTES:END -->

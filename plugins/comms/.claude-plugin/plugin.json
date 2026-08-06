@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a \"briefing\", \"status deck\", \"status readout\", \"board deck\", or \"comms package\". Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.",
+  "name": "comms",
+  "version": "0.0.1"
+}

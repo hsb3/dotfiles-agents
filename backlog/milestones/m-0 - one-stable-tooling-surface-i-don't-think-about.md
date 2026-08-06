@@ -10,6 +10,6 @@ The marketplace runs itself: source edits land on dev, gates catch drift, publis
 Done when (checkable):
 - [x] Publish model ruled and working — decision-4 as amended 2026-08-06; publish.yml proven (runs 31072280501, 31072514265)
 - [x] Extraction question ruled — decision-5 (both, deferred; dev is the workbench)
-- [ ] Externals compliant — task-10 Done (roster clean under amended ADR 0015)
-- [ ] Lineup recomposed — task-9 Done (bundle-composition principle ratified, comms standalone)
+- [x] Externals compliant — task-10 Done 2026-08-06 (roster clean under amended ADR 0015; `origin: vendored` class + contract enforced)
+- [x] Lineup recomposed — task-9 Done 2026-08-06 (bundle-composition principle ratified; comms standalone; 15 → 19 plugins)
 - [ ] Board conforms to decision-7 (every open card passes the standard)

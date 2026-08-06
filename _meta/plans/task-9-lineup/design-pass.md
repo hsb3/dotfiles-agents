@@ -67,7 +67,7 @@ Both symlinks point to the same source; a session with either plugin (or both) l
 | Skill | Stay in code-desk? | New standalone? | Dual-home? | Notes |
 |-------|---|---|---|---|
 | board-triage | ✔ | ✗ | ✗ | Core desk surface; too coupled |
-| comms | ✔ | ✗ | ✗ | Requires local-mcp; desk-coupled |
+| comms | ✔ | ✔ | ✔ | **Corrected 2026-08-06 — see note below** |
 | dev-focus | ✔ | ✗ | ✗ | Desk-specific workflow |
 | mise-en-place-scaffold | ✔ | ✔ | ✔ | Reusable, convenient in desk |
 | planning-desk | ✔ | ✗ | ✗ | Core desk surface |
@@ -77,8 +77,30 @@ Both symlinks point to the same source; a session with either plugin (or both) l
 | repo-compliance-audit | ✔ | ✗ | ✗ | Desk-specific queries |
 | repo-meta-structure | ✔ | ✔ | ✔ | Orthogonal; reusable |
 
-**Dual-homes:** mise-en-place-scaffold, pptx-themes, readme-value-and-proof, repo-meta-structure
-(4 skills; 3 new plugin dirs — `pptx-themes` already shipped standalone under ADR 0016)
+**Dual-homes:** comms, mise-en-place-scaffold, pptx-themes, readme-value-and-proof,
+repo-meta-structure (5 skills; 4 new plugin dirs — `pptx-themes` already shipped standalone
+under ADR 0016)
+
+### Correction, 2026-08-06 — the comms disposition was wrong
+
+This document originally ruled `comms` bundle-only on the reasoning "requires local-mcp;
+desk-coupled". **That was an error, and it silently reversed the owner's 2026-08-04
+comms-first direction and task-9's AC#2.** It went into the sign-off form as a preselected
+default without the conflict being flagged, so the resulting approval did not represent an
+informed reversal. Owner re-ruled 2026-08-06: **split comms standalone**, as originally
+directed.
+
+The original reasoning does not survive contact with the skill:
+
+- `requires: [local-mcp]` is the **deck-builder MCP server** — external to every bundle.
+  Bundle membership never provided it.
+- comms' own SKILL.md says it composes with `pptx-themes` (now standalone-installable) and
+  `handoff` — and `handoff` ships in **foreman-kit, not code-desk**. So code-desk membership
+  never satisfied comms' declared dependencies either.
+
+Standing lesson for future design passes: when a recommendation contradicts a prior owner
+ruling or a task's stated AC, say so **in the sign-off item itself**. A preselected default
+that quietly inverts an earlier decision is not a real approval.
 
 **Stays in code-desk only:** board-triage, comms, dev-focus, planning-desk, project-memory, repo-compliance-audit (6 + rubric-panel)
 

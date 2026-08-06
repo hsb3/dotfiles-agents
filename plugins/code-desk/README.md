@@ -23,8 +23,8 @@ recurring status comms, weekly board triage, and the themed decks those comms sh
 
 ## Also installable on their own
 
-Four of these skills are useful outside the desk and ship as standalone plugins too —
-`mise-en-place-scaffold`, `readme-value-and-proof`, `repo-meta-structure`, and
+Five of these skills are useful outside the desk and ship as standalone plugins too —
+`comms`, `mise-en-place-scaffold`, `readme-value-and-proof`, `repo-meta-structure`, and
 `pptx-themes`. Install one directly when you want it without the rest of the bundle:
 
 ```
@@ -32,10 +32,9 @@ claude plugin install repo-meta-structure@dotfiles-agents
 ```
 
 Each is the same skill, not a copy: the bundle and the standalone plugin both point at one
-source. Installing both is harmless — the skill still loads once. The remaining six skills
-(`repo-compliance-audit`, `project-memory`, `dev-focus`, `planning-desk`, `board-triage`,
-`comms`) stay bundle-only; they assume the desk's other pieces and don't stand alone
-cleanly.
+source. Installing both is harmless — the skill still loads once. The remaining five skills
+(`repo-compliance-audit`, `project-memory`, `dev-focus`, `planning-desk`, `board-triage`)
+stay bundle-only; they assume the desk's other pieces and don't stand alone cleanly.
 
 ## A worked example
 
