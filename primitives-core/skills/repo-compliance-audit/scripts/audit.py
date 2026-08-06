@@ -24,8 +24,9 @@ Properties (by construction):
 Checklist row contract (owned by the standards): markdown tables with columns
 `ID | Area | Check | Pass condition`; the Check cell is a backtick-wrapped
 `<check-type>: <argument>` drawn from a closed vocabulary:
-  path-exists · gitignore-tracks · gitignore-ignores · frontmatter-has ·
-  flag-if-present · index-links-resolve  (+ no-inline-hooks, script-side, HOOK-01 only)
+  path-exists · path-exists-any · gitignore-tracks · gitignore-tracks-any ·
+  gitignore-ignores · frontmatter-has · flag-if-present · index-links-resolve
+  (+ no-inline-hooks, script-side, HOOK-01 only)
 New check *types* are a change to this script; new check *rows* belong in a standard.
 
 Usage (from the audited repo root):
@@ -288,6 +289,16 @@ def check_path_exists(repo, arg):
     return (PASS, arg) if ok else (GAP, f"missing file: {arg}")
 
 
+def check_path_exists_any(repo, arg):
+    """A precedence list: ` · `-separated candidates, any one of which satisfies the row."""
+    candidates = [c.strip() for c in arg.split(" · ") if c.strip()]
+    for candidate in candidates:
+        verdict, _ = check_path_exists(repo, candidate)
+        if verdict == PASS:
+            return PASS, candidate
+    return GAP, "missing at every candidate: " + " · ".join(candidates)
+
+
 def check_flag_if_present(repo, arg, debt):
     present = os.path.exists(os.path.join(repo, arg))
     if not present:
@@ -312,6 +323,15 @@ def check_gitignore(repo, arg, want_ignored):
         if not ignored
         else (GAP, f"probe is ignored: {arg} — expected tracked but an ignore rule matches")
     )
+
+
+def check_gitignore_tracks_any(repo, arg):
+    """A precedence list: the first ` · `-separated candidate that EXISTS is the one probed."""
+    candidates = [c.strip() for c in arg.split(" · ") if c.strip()]
+    for candidate in candidates:
+        if os.path.exists(os.path.join(repo, candidate)):
+            return check_gitignore(repo, candidate, False)
+    return GAP, "no candidate exists to probe: " + " · ".join(candidates)
 
 
 def plans_scope(repo):
@@ -453,7 +473,11 @@ def check_no_inline_hooks(repo, arg):
 
 DISPATCH = {
     "path-exists": lambda repo, row: check_path_exists(repo, row["arg"]),
+    "path-exists-any": lambda repo, row: check_path_exists_any(repo, row["arg"]),
     "gitignore-tracks": lambda repo, row: check_gitignore(repo, row["arg"], False),
+    "gitignore-tracks-any": lambda repo, row: check_gitignore_tracks_any(
+        repo, row["arg"]
+    ),
     "gitignore-ignores": lambda repo, row: check_gitignore(repo, row["arg"], True),
     "frontmatter-has": lambda repo, row: check_frontmatter_has(repo, row["arg"]),
     "flag-if-present": lambda repo, row: check_flag_if_present(
