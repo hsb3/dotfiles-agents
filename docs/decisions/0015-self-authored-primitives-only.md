@@ -35,26 +35,34 @@ it does not re-host other people's.
 
 ## Decision
 
-**`primitives-core/` holds self-authored primitives only.** Every roster entry whose `source`
-lives under `primitives-core/` must be `origin: authored`. Third-party material is recorded by
-reference in [`../../externals.yaml`](../../externals.yaml) (non-null `upstream` + `ref`) and
-never copied into the source tree.
+**`primitives-core/` holds self-authored primitives, with a narrow vendoring exception.**
+Every roster entry whose `source` lives under `primitives-core/` must be `origin: authored`
+or `origin: vendored`. Third-party material is normally recorded by reference in
+[`../../externals.yaml`](../../externals.yaml) (non-null `upstream` + `ref`) and never copied
+into the source tree.
+
+**Exception:** `origin: vendored` entries — third-party bodies committed into the tree with
+full provenance record — are permitted only where a human can answer yes to all four criteria
+in [`../vendoring-rule.md`](../vendoring-rule.md) (composition, in-tree necessity, pinnable +
+attributable, contract-ready). This rule defines the minimum bar and two sanctioned scenarios.
 
 `scripts/check_provenance.py` enforces this as a machine floor (`make provenance`, in
-`make ci`): invariant (1) is the placement rule above; invariant (2) is the externals-intent
-rule (every `externals.yaml` entry carries `upstream` + `ref`). The
-`origin: sourced ⇒ non-null upstream+ref` roster rule is enforced separately by
-`check_roster.py`.
+`make ci`): invariant (1) is the placement rule above (no `origin: sourced` under
+primitives-core); invariant (2) is the externals-intent rule (every `externals.yaml` entry
+carries `upstream` + `ref`); invariant (3) enforces the vendored contract (every `origin:
+vendored` entry carries `LICENSE`, non-null upstream + immutable ref). The `origin: sourced
+⇒ non-null upstream+ref` roster rule is enforced separately by `check_roster.py`.
 
 ## Consequences
 
-- A third-party body may never be pasted under `primitives-core/`; it is referenced in
+- A third-party body may be vendored under `primitives-core/` only if it meets the four
+  criteria in [`../vendoring-rule.md`](../vendoring-rule.md); otherwise it is referenced in
   `externals.yaml` instead. Promotion of an external into first-party status means
   **re-authoring** it as an original for the same job (`origin: authored`, no upstream), not
   copying the shipped body — see the eval promotions executed under #155–#157.
-- The provenance check is a required PR gate; a `sourced` body under `primitives-core/` fails
-  `make ci`.
-- Grandfathered in-roster `sourced` copies (pre-dating the rule) are the sole exception and
+- The provenance check is a required PR gate; a `sourced` body under `primitives-core/`, or a
+  `vendored` body missing its license/upstream/ref/attribution, fails `make ci`.
+- Grandfathered in-roster `sourced` copies (pre-dating the rule) are an exception and
   carry explicit `origin: sourced` + `upstream`/`ref` — see
   [ADR 0003](0003-externals-tracked-not-vendored.md).
 

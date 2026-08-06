@@ -16,17 +16,25 @@
   },
   "extraKnownMarketplaces": {
     "workbench": {
-      "source": { "source": "directory", "path": "./.claude/plugins" }
+      "source": {
+        "source": "directory",
+        "path": "./.claude/plugins"
+      }
     }
   },
   "enabledPlugins": {
     "plugin-dev@workbench": true,
     "skill-creator@workbench": true,
-    "mcp-server-dev@workbench": false,
+    "mcp-server-dev@workbench": true,
+    "foreman-kit@dotfiles-agents": true,
+    "owner-signoff@dotfiles-agents": true,
     "code-desk@dotfiles-agents": false,
     "dataviz@dotfiles-agents": false,
     "diagrams@dotfiles-agents": false,
     "pptx-themes@dotfiles-agents": false,
     "github-project-board@dotfiles-agents": false
+  },
+  "worktree": {
+    "bgIsolation": "none"
   }
 }

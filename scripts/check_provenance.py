@@ -3,16 +3,18 @@
 
 Enforces the composition + provenance invariants of the rebuild (ADR 0015 / desk 0005·0007):
 
-  1. `primitives-core` is self-authored ONLY. Every roster entry whose `source` lives under
-     `primitives-core/` must be `origin: authored`. An `origin: sourced` body under
-     `primitives-core/` is a third-party copy — the exact "wholesale passthrough" the
-     composition principle forbids; sourced material is referenced in `externals.yaml`, never
-     vendored into the source tree.
+  1. `primitives-core` is self-authored (origin: authored) or vendored (origin: vendored) ONLY.
+     An `origin: sourced` body under `primitives-core/` is a third-party copy — the exact
+     "wholesale passthrough" the composition principle forbids; sourced material is referenced
+     in `externals.yaml`, never vendored into the source tree.
   2. Externals are by reference with recorded intent: every `externals.yaml` entry carries a
      non-null `upstream` + `ref`.
+  3. Vendored entries carry the full contract: LICENSE + non-null upstream + immutable ref
+     (commit SHA, never branch/tag) + attribution in README (enforced per docs/vendoring-rule.md).
 
 The `origin: sourced ⇒ non-null upstream+ref` roster rule is already enforced by
-`check_roster.py`; this check owns the *placement* invariant (1) and the externals intent (2).
+`check_roster.py`; this check owns placement invariant (1), externals intent (2), and the
+vendored contract (3).
 
 Externals-entry intent enforcement (2) was gated behind `ENFORCE_EXTERNALS_INTENT` while
 D5/DEV-34 was pending Henry's J5 ruling (so `externals.yaml` didn't exist and couldn't carry
@@ -97,9 +99,40 @@ def externals_intent_violations(entries):
     return problems
 
 
+def vendored_contract_violations(roster):
+    """(3) Every origin: vendored entry carries LICENSE + non-null upstream + immutable ref."""
+    problems = []
+    for e in roster:
+        if e.get("origin") != "vendored":
+            continue
+        eid = e.get("id", "<no-id>")
+        src = (e.get("source") or "").strip()
+        if not src.startswith(PRIMITIVES_CORE_PREFIX):
+            continue
+        # Check upstream + ref exist and are not null
+        upstream = (e.get("upstream") or "").strip()
+        ref = (e.get("ref") or "").strip()
+        if not upstream or upstream in ("null", "~", "None"):
+            problems.append(f"[{eid}] origin: vendored missing/null `upstream`")
+        if not ref or ref in ("null", "~", "None"):
+            problems.append(f"[{eid}] origin: vendored missing/null `ref` (must be immutable commit SHA)")
+        # Check LICENSE file exists in the vendored dir
+        src_path = os.path.join(REPO, src)
+        license_variants = [
+            os.path.join(src_path, "LICENSE"),
+            os.path.join(src_path, "LICENSE.txt"),
+        ]
+        if not any(os.path.isfile(p) for p in license_variants):
+            problems.append(
+                f"[{eid}] origin: vendored missing LICENSE (LICENSE or LICENSE.txt must be present in {src})"
+            )
+    return problems
+
+
 def main():
     roster = parse_roster(ROSTER)
     problems = authored_placement_violations(roster)
+    problems.extend(vendored_contract_violations(roster))
 
     externals = parse_externals(EXTERNALS)
     intent_problems = externals_intent_violations(externals)
@@ -119,7 +152,10 @@ def main():
         return 1
     n_pc = sum(1 for e in roster if (e.get("source") or "").startswith(PRIMITIVES_CORE_PREFIX))
     ext_state = f"{len(externals)} externals (intent enforcement {'ON' if ENFORCE_EXTERNALS_INTENT else 'gated on D5'})"
-    print(f"✓ provenance clean — {n_pc} primitives-core bodies all authored; {ext_state}")
+    n_vendored = sum(1 for e in roster if e.get("origin") == "vendored")
+    print(
+        f"✓ provenance clean — {n_pc} primitives-core bodies ({n_vendored} vendored); {ext_state}"
+    )
     return 0
 
 

@@ -6,11 +6,12 @@ ADR 0017) and primitives-core/ on disk agree:
   - every roster entry's `source` exists on disk
   - every primitive on disk (skill dir, agent .md, hook handler .sh, mcp .json) has a roster entry
   - basic schema: required fields present, type ∈ {skill,agent,mcp,hook},
-    origin ∈ {authored,sourced}, disposition ∈ {qualified,grandfathered-pending-use,demoted,untriaged}
+    origin ∈ {authored,sourced,vendored}, disposition ∈ {qualified,grandfathered-pending-use,demoted,untriaged,orphaned}
   - `requires` (optional) is a list of {hooks,local-mcp,hosted-mcp} capability words plus
     dependency declarations `cli:<kebab>` (a binary/app that must be installed) and
     `env:<kebab>` (machine state, e.g. env:dotfiles) — issue #79
-  - provenance: every `origin: sourced` entry carries non-null `upstream` and `ref`
+  - provenance: every `origin: sourced` or `origin: vendored` entry carries non-null
+    `upstream` and `ref`
 
 Stdlib-only (a tailored line parser for the roster's controlled format — no pyyaml), so it runs
 in CI with zero install. Exit 0 = clean; exit 1 = drift (prints every problem).
@@ -30,8 +31,8 @@ TYPES = {"skill", "agent", "mcp", "hook"}
 # The runtime enum (ADR 0017): claude-code installs the symlink assemblies natively;
 # opencode is generated at install time by gen_opencode.py (task-4).
 TARGETS = {"claude-code", "opencode"}
-ORIGINS = {"authored", "sourced"}
-DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged"}
+ORIGINS = {"authored", "sourced", "vendored"}
+DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged", "orphaned"}
 CAPABILITIES = {"hooks", "local-mcp", "hosted-mcp"}
 # Dependency declarations (issue #79): cli:<kebab> = a binary/app the primitive invokes;
 # env:<kebab> = machine state it assumes (e.g. env:dotfiles). Deploy tooling reads these.
@@ -156,11 +157,13 @@ def check_entry_schema(e, problems):
                 f"[{eid}] unknown requires entry: {sorted(unknown)} "
                 f"(must be one of {sorted(CAPABILITIES)} or cli:<kebab> / env:<kebab>)"
             )
-    if e.get("origin") == "sourced":
+    if e.get("origin") in ("sourced", "vendored"):
         for k in ("upstream", "ref"):
             v = e.get(k, "").strip()
             if not v or v == "null":
-                problems.append(f"[{eid}] origin: sourced requires non-null `{k}`")
+                problems.append(
+                    f"[{eid}] origin: {e.get('origin')} requires non-null `{k}`"
+                )
 
 
 def main():

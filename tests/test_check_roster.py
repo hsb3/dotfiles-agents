@@ -38,8 +38,8 @@ class Constants(unittest.TestCase):
     def test_mcp_is_a_valid_type(self):
         self.assertIn("mcp", C.TYPES)
 
-    def test_origin_enum_is_authored_sourced(self):
-        self.assertEqual(C.ORIGINS, {"authored", "sourced"})
+    def test_origin_enum_includes_vendored(self):
+        self.assertEqual(C.ORIGINS, {"authored", "sourced", "vendored"})
 
     def test_disposition_is_required(self):
         self.assertIn("disposition", C.REQUIRED)

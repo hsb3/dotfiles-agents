@@ -30,34 +30,6 @@
 version: 1
 
 externals:
-  - id: frontend-design
-    kind: plugin
-    upstream: https://github.com/anthropics/claude-plugins-official
-    path: plugins/frontend-design
-    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
-    provides: "Auto-triggering skill for frontend build or restyle work; Claude invokes it unasked. Guides aesthetic direction: builds a token system (4-6 named hex colors, 2+ paired typefaces, an ASCII-wireframed layout, one signature element), then implements production code with bold, context-specific choices, avoiding the three common AI-generic looks (cream/serif, near-black/neon-accent, broadsheet). Also shapes UI copy register (active voice, plain verbs). Does NOT cover backend logic, component architecture, or accessibility beyond a stated floor (responsive, keyboard focus, reduced motion) — design judgment layered onto code Claude already writes, not a separate build step."
-    targets: [claude-code]
-  - id: code-simplifier
-    kind: plugin
-    upstream: https://github.com/anthropics/claude-plugins-official
-    path: plugins/code-simplifier
-    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
-    provides: "Autonomous subagent that reviews code recently modified in the current session, right after it's written, and rewrites it for clarity, consistency, and maintainability: reduces nesting, removes redundant abstractions and obvious comments, replaces nested ternaries with switch/if-else, applies the project's CLAUDE.md conventions — preserving exact functionality and output. Runs proactively, unasked; scoped to touched code only, not a full-repo audit, unless told otherwise. Does NOT change behavior, add features, fix bugs, write tests, or review untouched files — a post-hoc polish pass, not a generator or correctness reviewer."
-    targets: [claude-code]
-  - id: typescript-lsp
-    kind: plugin
-    upstream: https://github.com/anthropics/claude-plugins-official
-    path: plugins/typescript-lsp
-    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
-    provides: "Registers `typescript-language-server` (stdio) as Claude Code's LSP backend for .ts/.tsx/.js/.jsx/.mts/.cts/.mjs/.cjs files via the plugin's `lspServers` config — no SKILL.md, agent, or command; nothing to invoke. Gives Claude background code intelligence — go-to-definition, find-references, live type/syntax diagnostics — automatically while those files are open or edited. Requires the language server installed separately (`npm install -g typescript-language-server typescript`); this plugin ships only the registration, not the binary. Navigation/diagnostics only: does NOT write, refactor, review, or plan code, run builds/tests/lint, or support any language besides TS/JS."
-    targets: [claude-code]
-  - id: skill-creator
-    kind: plugin
-    upstream: https://github.com/anthropics/claude-plugins-official
-    path: plugins/skill-creator
-    ref: ded0c09c1ff6003a16d52fc28eae33ed55e4eb87
-    provides: "Skill for authoring and iterating Claude Code skills end to end: interviews the user to scope a new skill, drafts SKILL.md (name/description/body) and test prompts, runs the skill against them, and uses bundled analyzer/comparator/grader subagents plus scripts (run_eval.py, aggregate_benchmark.py, generate_report.py) to produce qualitative and variance-analyzed quantitative eval results, viewable in a bundled HTML review viewer, for the user to judge. Also tunes a skill's description for triggering accuracy (improve_description.py) and packages it for distribution (package_skill.py). Does NOT create other extender kinds (agents, commands, plugins) or evaluate non-skill tooling."
-    targets: [claude-code]
   - id: pptx
     kind: skill
     upstream: https://github.com/anthropics/skills
