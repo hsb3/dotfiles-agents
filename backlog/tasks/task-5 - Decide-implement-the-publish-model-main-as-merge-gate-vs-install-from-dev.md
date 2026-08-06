@@ -1,10 +1,10 @@
 ---
 id: TASK-5
 title: Decide + implement the publish model (main as merge gate vs install-from-dev)
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-04 00:42'
-updated_date: '2026-08-04 02:55'
+updated_date: '2026-08-06'
 labels:
   - refactor
   - decision
@@ -24,12 +24,14 @@ With no tracked dist, publishing no longer needs the filtered parented assembly.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Ruling recorded (backlog decision + ADR cross-ref)
-- [ ] #2 Publish workflow and guards match the ruling
+- [x] #1 Ruling recorded (backlog decision + ADR cross-ref)
+- [x] #2 Publish workflow and guards match the ruling
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
 Owner ruling 2026-08-04 (decision-4): main = plain fast-forward release gate; retire the filtered-assembly build + guards. Constraint: evals/ and harness/ do NOT publish to main. Now unblocked + High.
+
+Closed 2026-08-06: decision-4 amended (owner sign-off item C) — the plain-fast-forward wording was unbuildable against its own evals/harness exclusion; the ratified model is the filtered parented assembly repaired in PR #237 (assembles the live ADR-0017 symlink assemblies to main's root). Proven by publish runs 31072280501 and 31072514265 (main at `publish: dev@4559679` then `publish: dev@a7d87ac`, foreman-kit 0.7.1 live). The publish-to-main skill runbook was reconciled in the same PR.
 <!-- SECTION:NOTES:END -->
