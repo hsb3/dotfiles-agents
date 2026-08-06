@@ -61,5 +61,8 @@ full checkout (remove the worktree after).
 - `docs/FLOW.md` + `flow.yaml` — the repo-flow DAG: the home of every part and the edges
   between them, enforced by `make flow`. A new top-level path must claim a home there.
 - `docs/decisions/` — ADR mirrors (the dev/main rule).
-- `_meta/HANDOFF.md` — current build state and the rebuild deliverable map (D1–D8).
+- `.claude/HANDOFF.md` — current build state and the rebuild deliverable map (D1–D8). Moved
+  here from `_meta/` 2026-08-06; it is the third path in the handoff hooks' precedence list,
+  so they resolve it with no override. Note this repo therefore fails its own published
+  META-06 check (which mandates `_meta/HANDOFF.md`) — see task-15.
 - `_meta/` is a tracked working desk; `_meta/operations/` is the only untracked part (secrets).

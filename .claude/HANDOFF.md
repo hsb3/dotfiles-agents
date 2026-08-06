@@ -2,17 +2,24 @@
 
 _Cold-start bridge. Last updated: 2026-08-06 (session 5). Refresh at session boundaries (/handoff). Secret-free._
 
+_**This file lives at `.claude/HANDOFF.md`** (moved from `_meta/` 2026-08-06, owner's call).
+The handoff hooks resolve it because `.claude/HANDOFF.md` is the third entry in their
+`CANDIDATE_PATHS` and the two higher-precedence paths are absent — no override needed. Two
+consequences: this repo now fails its own published **META-06** check (which mandates
+`_meta/HANDOFF.md`), and the `handoff` skill's own "never relocate one" rule was deliberately
+overridden. Both belong to **task-15**'s scope — see §3._
+
 ## 0 · Orientation
 
-dotfiles-agents is a marketplace of coding-agent extenders serving TWO runtimes from one
-source tree (ADR 0017): Claude Code installs the hand-authored symlink assemblies under
-`plugins/<id>/` (root `.claude-plugin/marketplace.json`) natively; opencode is generated at
-install time (`scripts/install_opencode.sh`). **Nothing generated is tracked.** `dev` =
-source, `main` = CI-published (publish-only). **Publishing WORKS** (fixed 2026-08-06, PR #237):
-the release gate is the filtered parented assembly — decision-4 was amended to ratify it (its
-original "plain fast-forward" wording violated its own evals/harness exclusion). Publish =
-`gh workflow run publish.yml --ref dev -f confirm=publish` per the publish-to-main skill. Task
-interface + source-of-truth rules: see CLAUDE.md (hot-loaded).
+**What this repo is, the task interface, and every source-of-truth rule live in CLAUDE.md,
+which is hot-loaded into your context already — don't re-read them here.** This file carries
+only what CLAUDE.md can't: live state, decisions and their whys, and the gotchas that bite.
+
+The one orientation fact CLAUDE.md doesn't spell out: **publishing works** (repaired
+2026-08-06, PR #237). `main` is a *filtered parented assembly*, never a snapshot of `dev` —
+decision-4 was amended to ratify that, because its original "plain fast-forward" wording
+contradicted its own evals/harness exclusion. Publish with
+`gh workflow run publish.yml --ref dev -f confirm=publish` (publish-to-main skill).
 
 ## 1 · Current standing
 
@@ -20,12 +27,21 @@ interface + source-of-truth rules: see CLAUDE.md (hot-loaded).
 GH issue queue: **zero open**. **m-0 is 4/5 done** — only "board conforms to decision-7" is
 open, and it wants an assessor who did NOT write the cards.
 
-**⚠ dev is 7 commits ahead of the published main and NONE of them has been through CI.**
-`ci.yml` triggers on `pull_request` only, and session 5's work was committed straight to `dev`
-instead of via a branch+PR (a deviation from CLAUDE.md's own SDLC rule). Verification so far is
-local `make ci` only. The fix is in flight: the PR carrying this handoff runs `make ci` over a
-tree containing all of it — **that green run is the pre-promotion gate.** Do not promote before
-it reports. Standing:
+**⚠ The promotion is staged but NOT landed. Live work sits on an open PR, not on `dev`.**
+
+**[PR #245](https://github.com/hsb3/dotfiles-agents/pull/245) — branch `docs/handoff-session-5`,
+OPEN + mergeable + CI green, deliberately unmerged** (more changes were requested before
+merge). It carries two commits and doubles as the promotion staging area:
+
+1. this handoff refresh;
+2. **release bumps — `code-desk` 0.3.0 → 0.4.0, `pptx-themes` 0.0.1 → 0.0.2.**
+
+Why the PR exists at all: `ci.yml` fires on `pull_request` ONLY, and session 5's six commits
+were pushed straight to `dev`, so none had ever been through CI (local `make ci` was the only
+proof). This PR's tree contains all of them, so **its green run is the CI gate for the whole
+session's work.** Anything added before merge must keep it green.
+
+Standing:
 
 - **ADR 0017 pointer refactor DONE** (m-0 tasks 1–4, 7, 8; PRs #227–#231) — symlink assemblies,
   `dist/`+generators retired, roster = provenance manifest, opencode install-time. Mechanics
@@ -73,20 +89,16 @@ not fold it into dev without Henry's promotion decision (already taken 2026-07-2
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
-PocketBase DB of all agent extenders + the mental models used to compose/evaluate them. **Self-
-describing — read `evals/_structure/CHARTER.md`, `PLAN.md`, `OPEN-ITEMS.md`, `evals/README.md`,
-`evals/PROCEDURES.md` first**; below is only what they don't carry.
+PocketBase DB of all agent extenders + the models used to compose/evaluate them. **Self-
+describing — read `evals/_structure/CHARTER.md`, `evals/README.md`, `evals/PROCEDURES.md`
+first** (the PocketBase gotcha list lives there, not here). Waves 0–3 DONE; remaining M3–M6 +
+excalidraw are task-21.x (M6 gated on M4+M5); task-6 may re-home the family if `evals/` extracts.
 
-- **State:** Waves 0–3 DONE (9 children closed 2026-07-22 with outcome notes). Remaining
-  M3–M6 + excalidraw follow-up now live as backlog task-21 + subtasks 21.1–21.5 (M6 gated
-  on M4+M5); note task-6 may re-home the whole family if evals/ extracts.
-- **Operational:** server `evals/serve.sh` (admin UI 127.0.0.1:8090/_/); creds in untracked
-  `_meta/operations/extender-db.env`. `pb_data/data.db` is TRACKED — stop the server before
-  committing (WAL checkpoint) or switching branches (a live server had its tracked data.db
-  checked out from under it once; `pgrep -fl pocketbase` → kill → checkout → restart).
-  `pb_migrations/` is gitignored on purpose: `schema.py` is the ONE schema source.
-- Gotcha list (idless-PATCH column drops, 5000-char text cap, live-proof mandate, scoped deltas,
-  json first-byte coercion, file fields need `create_multipart`) lives in `evals/PROCEDURES.md`.
+- **The one that bites:** `pb_data/data.db` is TRACKED. Stop the server before committing (WAL
+  checkpoint) or switching branches — a live server once had its tracked data.db checked out
+  from under it (`pgrep -fl pocketbase` → kill → checkout → restart). `pb_migrations/` is
+  gitignored on purpose: `schema.py` is the ONE schema source. Server: `evals/serve.sh`
+  (admin UI 127.0.0.1:8090/_/), creds in untracked `_meta/operations/extender-db.env`.
 
 ## 2c · Agent-harness (delivered 2026-07-21, PR #169 → dev)
 
@@ -109,15 +121,30 @@ battle-test here, later extract to its own repo.
 work, drafts (owner-parked #137/#138/#152), decisions, and the m-0 refactor milestone all
 live there, not duplicated here.
 
-- **PROMOTION is the live thread.** Order: (1) the handoff PR's CI goes green — that is the
-  only CI coverage this work has; (2) review the 4 new plugin dirs as a *published surface*
-  (they ship to consumers, unlike backlog/test churn); (3) `publish-to-main` skill runbook →
-  `gh workflow run publish.yml --ref dev -f confirm=publish`; (4) verify main lands on 19
-  plugins / 0.4.0 and spot-check one new standalone installs.
+- **PROMOTION is the live thread**, staged on PR #245 (§1). Remaining order: (1) land whatever
+  further changes are in flight, keeping #245 green; (2) merge #245 into `dev`; (3)
+  `gh workflow run publish.yml --ref dev -f confirm=publish`; (4) verify — `git ls-tree
+  --name-only origin/main` shows the distributable surface only, and the tip commit reads
+  `publish: dev@<sha>` naming the merged tip.
+  - **Pre-flight already run, and it caught a real defect**: `code-desk` and `pptx-themes` had
+    changed content but unchanged versions, so the version-keyed consumer cache would have made
+    the publish a silent no-op. Bumped on #245 (code-desk 0.4.0, pptx-themes 0.0.2). **Re-run
+    that check if more content lands** — the method is in §5.
+  - **The `publish-to-main` skill's step-3 verify command is STALE**: it compares
+    `origin/dev:dist/claude-code/plugins` against `origin/main:plugins`, but `dist/` was retired
+    in #229, so that tree-hash check cannot run as written. Worth a fix on the skill.
 - m-0's last box — **board conforms to decision-7** — is deliberately NOT self-certified:
   session 5 edited tasks 9, 10, 28 and the milestone, so it needs an assessor who did not
   write them.
-- Buildable, no ruling needed: task-15 (handoff-override, High), task-25 (waves backlog-aware),
+- **task-15 (handoff-location override, High) just got its motivating case.** The handoff was
+  relocated to `.claude/HANDOFF.md` on 2026-08-06, which works only because that path happens
+  to be third in the hooks' hardcoded trio. Two loose ends it should close: (a) META-06 in the
+  published `repo-meta-structure` checklist still mandates `_meta/HANDOFF.md`, so this repo
+  fails its own audit — decide whether the standard should accept the precedence trio or
+  whether `_meta/` stays the taxonomy's answer; (b) the `handoff` skill says "never relocate an
+  existing handoff", which the owner overrode here. Neither was changed unilaterally — a
+  published-standard edit is an IA call needing sign-off.
+- Buildable, no ruling needed: task-25 (waves backlog-aware),
   task-13 (250k-token spike), task-14 (coord-branch protocol), task-27 (harness residuals),
   task-28 (README-symlink gate), task-29 (promote `lab-setup` from the EVALS workbench).
 - **Open investigation (owner-staged):** `_meta/plans/plugin-skills-not-loading/issue-body.md`
@@ -135,20 +162,19 @@ live there, not duplicated here.
 
 ## 4 · CROSS-REPO — desk-platform design effort (lives on the desk, NOT here)
 
-A separate product design effort on the exec desk (NOT dotfiles-agents): a toolkit integrating AI
-agents against one data model across three planes (input · activity · output), PocketBase-backed.
-**R3 (element model) drafted + both adversarial reviews done — awaiting Henry's IA approval.**
-State lives at `~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old/_meta/plans/
-desk-platform/` (`plan.md` = round index; `spec-element-model.md` = the proposal + review
-findings). No change this session — still waiting on Henry to approve/adjust/veto the 5 major IA
-changes + 4 open questions named in `spec-element-model.md`. Nothing folds into the canonical
-model until he signs off (standing directive, §5).
+A separate design effort on the exec desk, **not this repo** — an agent toolkit over one data
+model across three planes, PocketBase-backed. **Parked on Henry's IA approval** (R3 element
+model + both adversarial reviews done; 5 IA changes + 4 open questions await his ruling).
+Nothing folds into the canonical model until he signs off. Full state:
+`~/Documents/EXECUTIVE_DESK/Projects/ARCHIVE/dev-tooling-desk-old/_meta/plans/desk-platform/`
+(`plan.md` = round index, `spec-element-model.md` = proposal + findings). Unchanged since
+2026-08-04.
 
 ## 5 · Conventions & gotchas
 
-- Source-of-truth rules are in CLAUDE.md (hot-loaded) — not duplicated here.
-- The backlog-CLI hand-edit-only rule is now IN CLAUDE.md + decision-7 (the CLI rewrote
-  sibling task files from a stale index, 2026-08-04) — read-only CLI use (`list`/`board`) fine.
+- Source-of-truth rules live in CLAUDE.md (hot-loaded), including the backlog-CLI
+  hand-edit-only rule. The WHY it doesn't carry: the CLI rewrote sibling task files from a
+  stale index (2026-08-04). Read-only CLI use (`list`/`board`) is fine.
 - **Post-0017 mechanics CLAUDE.md doesn't spell out:** a NEW plugin = a `plugins/<id>/` dir
   + a hand-authored entry in the root marketplace.json; plugin versions are hand-maintained
   now — bump when content changes materially. pptx-themes' skill README carries the
@@ -156,6 +182,19 @@ model until he signs off (standing directive, §5).
 - **`ci.yml` fires on `pull_request` ONLY.** A commit pushed straight to `dev` gets zero CI —
   no run, no red, no signal. This bit session 5 (six commits, local `make ci` the only proof).
   Branch + PR is not a style preference here; it is the only path that runs the gates.
+- **A version bump IS the release step — and version fields lie.** Consumers cache by version,
+  so changed content under an unchanged version never reaches an installed machine. Never trust
+  the `version:` fields to tell you what changed; diff the bytes, **in both directions** (a
+  first pass that only compared files present on `main` missed a newly-*added* file and cleared
+  a plugin that had in fact changed):
+  ```sh
+  # for each published plugin: main's assembled bytes vs dev's dereferenced assembly
+  git show origin/main:plugins/<id>/<file>   # vs  cat $(realpath plugins/<id>/<file>)
+  git ls-tree -r --name-only origin/main | grep ^plugins/   # set-diff BOTH ways vs dev
+  ```
+  Bump in BOTH `plugins/<id>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.
+  When editing those files programmatically, keep `ensure_ascii=True` — the tracked files store
+  unicode escaped, and `False` silently reformats every em-dash line into the diff.
 - **CI job names are frozen** — dev's branch-protection required checks are pinned by job NAME,
   so renaming one in `ci.yml` strands every PR on a check that never reports (change the
   protection setting first). This is why the drift-guards job still reads "drift guards
@@ -196,23 +235,20 @@ model until he signs off (standing directive, §5).
 - **Never mutate a second repo's git history** — read/draft in a consumer repo (ra-platform,
   functionform-headcase, …) but leave changes **uncommitted** there; committing is the human's,
   same as `main`. Session 5 followed this when testing the deck renderer against real briefings.
-- Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — sweep
-  stray nested `.claude/` dirs before committing (never whole-dir `git rm` the root `.claude/`).
-  Tracked store is `.claude/memory/` (repo root) since #194.
+- Worker agents drop `.claude/agent-memory/` into whatever dir they worked in — sweep stray
+  NESTED `.claude/` dirs before committing, never whole-dir `git rm` the root one (which now
+  also holds HANDOFF.md). Tracked memory store is `.claude/memory/` since #194.
 - **Henry signs off on major IA changes before they are finalized/built** (standing directive;
   memory `approve-major-ia-changes`). Present IA changes as an approval gate, not a done deal.
-- Machine-local leftover: `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored) —
-  reconcile or delete next time a session works in `evals/`.
+- Stale local file to reconcile or delete when next in `evals/`:
+  `evals/pb_data/data.db.local-backup-2026-07-21` (gitignored).
 
 ## 6 · Map
 
-- **`backlog/` — THE task system** (decision-1): tasks, drafts, decisions, milestone m-0.
-  `backlog board` for the live view; `backlog task list --plain` for agents. GH issues =
-  bug intake only. The waves/pinned-triage loop no longer applies to this repo (its
-  backlog-aware successor is task-25). Extender-db family: task-21.x (self-manages
-  via `evals/_structure/`); harness: task-22.
-- CLAUDE.md — task interface + rules · `.github/CONTRIBUTING.md` (new) — human-facing
-  contribution loop · `docs/decisions/` — ADR mirrors (now includes 0015).
-- **Exec desks:** this repo's desk is `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/`;
-  desk-standard work is `.../desk-standard-desk/`; the former dev-tooling-desk (desk-platform
-  design) is archived at `.../ARCHIVE/dev-tooling-desk-old/`.
+- **`backlog/` is THE task system** (decision-1) — `backlog board` live, `backlog task list
+  --plain` for agents. GH issues are bug intake only. The waves/pinned-triage loop no longer
+  applies here; its backlog-aware successor is task-25.
+- Docs: CLAUDE.md (rules) · `.github/CONTRIBUTING.md` (human contribution loop) ·
+  `docs/decisions/` (ADR mirrors) · `docs/vendoring-rule.md` (gates `origin: vendored`).
+- **Exec desks:** `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/` (this repo);
+  `.../desk-standard-desk/`; `.../ARCHIVE/dev-tooling-desk-old/` (desk-platform design).

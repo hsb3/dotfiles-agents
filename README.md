@@ -62,5 +62,5 @@ breaks or an assembly and the marketplace manifest disagree.
 ## Governance
 
 `dev` is the source branch; every change lands via PR into `dev`. `main` is CI-published
-(publish-only). See `docs/decisions/` for the dev/main rule and `_meta/HANDOFF.md` for the
+(publish-only). See `docs/decisions/` for the dev/main rule and `.claude/HANDOFF.md` for the
 current build state.

@@ -62,7 +62,7 @@ nodes:
     class: authored
     status: current
     paths: [_meta]
-    note: "Tracked working desk per ADR 0006: handoff, briefings, research; operations content stays untracked."
+    note: "Tracked working desk per ADR 0006: briefings, plans, research, sign-off trails; operations content stays untracked. The handoff moved to .claude/HANDOFF.md on 2026-08-06."
   - id: harness
     layer: workbench
     class: authored
@@ -80,7 +80,7 @@ nodes:
     class: authored
     status: current
     paths: [.claude, .vscode]
-    note: "Project-local session tooling: under .claude/, the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — repo path differs per machine); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
+    note: "Project-local session tooling: under .claude/, HANDOFF.md (the cold-start bridge, moved from _meta/ on 2026-08-06 — third path in the handoff hooks' precedence list), the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — repo path differs per machine); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime
