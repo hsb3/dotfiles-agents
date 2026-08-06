@@ -1,8 +1,9 @@
 """CLI entrypoint — ``agent-harness`` (also ``python -m agent_harness``).
 
 One call shape (DESIGN §1): run(harness, model, candidate, case, config) → rows.
-The candidate *directory* is passed as a path at runtime (``--candidate-dir``);
-the harness never reads repo files outside ``harness/`` (coupling rule §5).
+The candidate — a directory, or a flat agent ``.md`` file — is passed as a
+path at runtime (``--candidate-dir``); the harness never reads repo files
+outside ``harness/`` (coupling rule §5).
 
 Exit codes: 0 ok · 1 preflight/loadability fail · 2 bad args/candidate ·
 3 unknown harness.
@@ -11,11 +12,11 @@ Exit codes: 0 ok · 1 preflight/loadability fail · 2 bad args/candidate ·
 from __future__ import annotations
 
 import argparse
-import os
+import contextlib
 import sys
 
 from .adapters import UnknownHarness, get_adapter, list_adapters
-from .candidate import detect_kind
+from .candidate import detect_kind, resolved_candidate_dir
 from .core import (
     DEFAULT_CASES_DIR,
     DEFAULT_RESULTS,
@@ -38,7 +39,10 @@ def _parser():
     ap.add_argument("candidate", help="candidate name (ledger + cases/<name>/ key)")
     ap.add_argument(
         "--candidate-dir",
-        help="path to the extender dir to inject (required unless --report)",
+        help=(
+            "path to the extender to inject — a directory, or a flat agent "
+            ".md file (required unless --report)"
+        ),
     )
     ap.add_argument(
         "--harness",
@@ -124,49 +128,62 @@ def main(argv=None):
     if not args.candidate_dir:
         print("--candidate-dir is required (path to the extender to inject)", file=sys.stderr)
         return 2
-    if not os.path.isdir(args.candidate_dir):
-        print(f"no such candidate dir: {args.candidate_dir}", file=sys.stderr)
+    # Only the resolver call itself is guarded — cleanup of the staged dir
+    # must still cover the whole run, but FileNotFoundError/ValueError raised
+    # *inside* the run (e.g. from grading, case loading) must propagate rather
+    # than be misreported as a candidate-arg error.
+    stack = contextlib.ExitStack()
+    try:
+        candidate_dir = stack.enter_context(resolved_candidate_dir(args.candidate_dir))
+    except FileNotFoundError:
+        print(f"no such candidate path: {args.candidate_dir}", file=sys.stderr)
         return 2
-    kind = detect_kind(args.candidate_dir)
-    if kind is None:
-        print(
-            f"{args.candidate_dir}: not recognizable as skill / agent / plugin",
-            file=sys.stderr,
-        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
 
-    single = len(cells) == 1
-    ran_any = False
-    smoke_all_ok = True
-    for harness, model in cells:
-        adapter = adapters[harness]
-        pf = adapter.preflight()
-        if pf != "ok":
-            reason = (
-                "not on PATH — install it or run in the devcontainer"
-                if pf == "missing"
-                else "not authenticated — configure credentials"
+    with stack:
+        kind = detect_kind(candidate_dir)
+        if kind is None:
+            print(
+                f"{args.candidate_dir}: not recognizable as skill / agent / plugin",
+                file=sys.stderr,
             )
-            print(f"{adapter.name} CLI {reason}", file=sys.stderr)
-            # One cell: preserve the exit-1 contract. Grid: skip this harness,
-            # let the reachable cells still run (no silent whole-run abort).
-            if single:
-                return 1
-            continue
-        args.model = model
-        if args.smoke:
-            ok = smoke(adapter, args.candidate, kind, args.candidate_dir, args)
-            ran_any = True
-            smoke_all_ok = smoke_all_ok and ok
-            if single:
-                return 0 if ok else 1
-        else:
-            run_candidate(adapter, args.candidate, kind, args.candidate_dir, args)
-            ran_any = True
+            return 2
 
-    if args.smoke:
-        return 0 if (ran_any and smoke_all_ok) else 1
-    return 0 if ran_any else 1
+        single = len(cells) == 1
+        ran_any = False
+        smoke_all_ok = True
+        for harness, model in cells:
+            adapter = adapters[harness]
+            pf = adapter.preflight()
+            if pf != "ok":
+                reason = (
+                    "not on PATH — install it or run in the devcontainer"
+                    if pf == "missing"
+                    else "not authenticated — configure credentials"
+                )
+                print(f"{adapter.name} CLI {reason}", file=sys.stderr)
+                # One cell: preserve the exit-1 contract. Grid: skip this
+                # harness, let the reachable cells still run (no silent
+                # whole-run abort).
+                if single:
+                    return 1
+                continue
+            args.model = model
+            if args.smoke:
+                ok = smoke(adapter, args.candidate, kind, candidate_dir, args)
+                ran_any = True
+                smoke_all_ok = smoke_all_ok and ok
+                if single:
+                    return 0 if ok else 1
+            else:
+                run_candidate(adapter, args.candidate, kind, candidate_dir, args)
+                ran_any = True
+
+        if args.smoke:
+            return 0 if (ran_any and smoke_all_ok) else 1
+        return 0 if ran_any else 1
 
 
 if __name__ == "__main__":  # pragma: no cover

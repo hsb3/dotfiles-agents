@@ -42,20 +42,15 @@ ci: check identity provenance hook-layout symlinks harness-coupling flow test ##
 harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
 	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q
 
-harness-eval: ## Eval grid: ITEM=<name> [HARNESS=claude] [MODEL=] [CAMPAIGN=] (NOT in ci). Resolves skill dirs AND flat agents/<name>.md (auto-staged)
+harness-eval: ## Eval grid: ITEM=<name> [HARNESS=claude] [MODEL=] [CAMPAIGN=] (NOT in ci). Resolves skill/plugin dirs AND flat agents/<name>.md
 	@test -n "$(ITEM)" || { echo "usage: make harness-eval ITEM=<candidate> [HARNESS=claude] [MODEL=<model>] [CAMPAIGN=<label>]"; exit 2; }
 	@dir=$$(find primitives-core -mindepth 2 -maxdepth 2 -type d -name "$(ITEM)" | head -1); \
-	  stage=""; \
 	  if [ -z "$$dir" ] && [ -f "primitives-core/agents/$(ITEM).md" ]; then \
-	    stage=$$(mktemp -d); cp "primitives-core/agents/$(ITEM).md" "$$stage/"; dir="$$stage"; \
-	    echo "staged agent candidate '$(ITEM)' from primitives-core/agents/$(ITEM).md -> $$dir"; \
+	    dir="primitives-core/agents/$(ITEM).md"; \
 	  fi; \
 	  test -n "$$dir" || { echo "no primitive named '$(ITEM)' under primitives-core/ (need a skill dir or agents/$(ITEM).md)"; exit 2; }; \
 	  uv run --project harness agent-harness "$(ITEM)" --candidate-dir "$$dir" \
-	    --harness "$(or $(HARNESS),claude)" $(if $(MODEL),--model "$(MODEL)") $(if $(CAMPAIGN),--campaign "$(CAMPAIGN)"); \
-	  status=$$?; \
-	  if [ -n "$$stage" ]; then rm -rf "$$stage"; fi; \
-	  exit $$status
+	    --harness "$(or $(HARNESS),claude)" $(if $(MODEL),--model "$(MODEL)") $(if $(CAMPAIGN),--campaign "$(CAMPAIGN)")
 
 harness-report: ## Aggregate the harness ledger for a candidate: ITEM=<name> (NOT in ci)
 	@test -n "$(ITEM)" || { echo "usage: make harness-report ITEM=<candidate>"; exit 2; }
