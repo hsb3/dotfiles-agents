@@ -62,7 +62,7 @@ def _resolve_log_path(cwd):
 
     The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
     commands), so the hook stays portable across any project that installs
-    the foreman-kit plugin. The payload cwd is a last resort only — anchoring
+    the atelier plugin. The payload cwd is a last resort only — anchoring
     on cwd scatters stray logs/ dirs into whatever subdirectory an agent
     happens to be running in.
     """

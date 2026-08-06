@@ -1,4 +1,4 @@
-# foreman-kit
+# atelier
 
 A context-and-cost optimization kit for multi-agent work: size a task, pick a delegation
 architecture, dispatch to the right model tier, and keep every session clearable instead of
@@ -29,7 +29,7 @@ lab.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
 ## A worked example

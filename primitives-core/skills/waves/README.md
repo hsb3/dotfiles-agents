@@ -14,8 +14,8 @@ triage issue in a repo that lacks one. Requires a GitHub repo with issues.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the foreman-kit bundle (not standalone) — composes the foreman skill for each
+Ships in the atelier bundle (not standalone) — composes the foreman skill for each
 wave's delegation architecture and the handoff skill to close the session.

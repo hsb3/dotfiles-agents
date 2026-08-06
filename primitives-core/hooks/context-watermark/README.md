@@ -19,7 +19,7 @@ Fires on every `UserPromptSubmit`, immediately on a fresh crossing, then at most
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships only in the foreman-kit bundle, alongside the handoff skill it nudges toward.
+Ships only in the atelier bundle, alongside the handoff skill it nudges toward.

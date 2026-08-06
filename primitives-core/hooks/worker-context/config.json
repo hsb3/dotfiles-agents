@@ -1,0 +1,6 @@
+{
+  "event": "SubagentStart",
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Briefing worker on the delegation covenant..."
+}

@@ -26,7 +26,7 @@
     "plugin-dev@workbench": true,
     "skill-creator@workbench": true,
     "mcp-server-dev@workbench": true,
-    "foreman-kit@dotfiles-agents": true,
+    "atelier@dotfiles-agents": true,
     "owner-signoff@dotfiles-agents": true,
     "code-desk@dotfiles-agents": false,
     "dataviz@dotfiles-agents": false,

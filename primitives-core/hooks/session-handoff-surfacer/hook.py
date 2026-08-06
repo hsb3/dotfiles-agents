@@ -79,7 +79,7 @@ def _resolve_log_path(cwd):
 
     The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
     commands), so the hook is portable across any project that installs the
-    foreman-kit plugin, not just this one. The payload cwd is a last resort
+    atelier plugin, not just this one. The payload cwd is a last resort
     only — anchoring on cwd scatters stray logs/ dirs into whatever
     subdirectory an agent happens to be running in.
     """
@@ -186,7 +186,7 @@ def main():
             },
             # Visible to the USER in the TUI — evidence the hook fired
             # (additionalContext is only ever seen by the model).
-            "systemMessage": f"foreman-kit: surfaced project handoff ({relpath}).",
+            "systemMessage": f"atelier: surfaced project handoff ({relpath}).",
         }
         print(json.dumps(out))
 

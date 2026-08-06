@@ -3,78 +3,77 @@ name: foreman
 description: >
   This skill should be used when a session takes on a substantial task and must decide how to
   split it across agents: a feature build, refactor, migration, audit, multi-file fix, or anything
-  estimated at more than ~30 minutes of agent work — even when the user never says "foreman" or
-  "delegate". Also use when the user asks "how to split work across agents", mentions crews / teams
-  / subagents, worries about token cost on a big job, or wants to size a job, pick a delegation
-  architecture, choose model tiers, or reserve work for the main session. Provides the two-level
-  effort calibration (standard for an Opus-led session, deep for Fable-led), the decision
-  matrix (five architectures), a model×task cheat-sheet bound to this plugin's agents, the
-  never-delegated floor, brief templates, and the findings-backed context-hygiene defaults.
+  past ~30 minutes of agent work — even when the user never says "foreman" or
+  "delegate", and even when the work arrived as a goal ("clean this up", "get it published")
+  rather than as a list of slices. Also use when the user asks "how to split work across agents",
+  mentions crews / teams / subagents, worries about token cost on a big job, or wants to size a
+  job, pick a delegation architecture, choose model tiers, or reserve work for the main session —
+  and when a session notices it has been reading, editing, and running commands itself for a
+  long stretch without delegating. Provides the effort calibration, the five
+  architectures, the pre-dispatch preconditions, the model cheat-sheet, the never-delegated floor
+  and its ceiling, the brief rules, and the context-hygiene defaults.
 ---
 
 # Foreman
 
-Run the current session as a foreman: size the job, pick a delegation architecture, set the
-definition of done, delegate the labor, and personally verify the result. The premium session's
-tokens are the scarce resource — spend them on decomposition, judgment, and verification, not on
-file-reading or bounded edits.
+Run the session as a foreman: size the job, pick an architecture, set the definition of done,
+delegate the labor, verify the result personally. Premium session tokens buy decomposition,
+judgment, and verification. They do not buy file-reading or bounded edits.
 
-This skill is self-contained: it bundles the delegation doctrine and the context-management
-defaults. No other skill needs to be installed for it to work.
+Self-contained: usable without any other skill; `rubric-panel`, `layer-cycle`, and `handoff`
+extend it where named below.
+
+**Provenance tags.** `[lab]` was measured in the inventory lab (three controlled experiments ×
+three languages, anchored-rubric panels). `[cost]` comes from measured delegation-cost and
+context-economics findings. `[untested]` is reasoning that has never been measured — change those
+first when evidence arrives, and never defend one as if it were a finding. The map from rule to
+measurement is `references/provenance.md`.
 
 ## The economic premise
 
-Premium output tokens are for decomposition, judgment, and verification — reading files,
-scraping logs, and making bounded edits are the *cheapest* work and must be pushed down to cheaper
-agents. But delegation is not free: every brief written, report read, and check performed carries
-overhead (briefing cost, hallway losses, verification). For a small job that overhead exceeds the
-labor. **Sizing a job honestly — including "too small to delegate, just do it" — is the first
-foreman skill.** Do not ceremonialize a three-tool-call task into a crew.
+Reading files, scraping logs, and making bounded edits are the cheapest work and belong on cheaper
+agents. But delegation is not free: every brief written, report read, and check performed costs
+briefing overhead, hallway losses, and verification. For a small job that overhead exceeds the
+labor. **Sizing a job honestly, including "too small to delegate, just do it", is the first
+foreman skill.** Never ceremonialize a three-tool-call task into a crew.
 
 ## Step 0 — Determine the effort level
 
-The kit runs at one of two effort levels, calibrated to which model sits in the session's
-lead seat. **The model choice IS the effort signal** — derive the default from the model this
-session runs on; no configuration needed:
+The model in the session's lead seat IS the effort signal.
 
 | Session model | Level | Meaning |
 | --- | --- | --- |
 | Opus or below | `standard` | The default — everyday foreman work |
 | Fable | `deep` | A problem hard enough to justify a Fable lead |
 
-Overrides, highest wins: (1) the user says so in conversation; (2) an `effort: standard`
-or `effort: deep` key in the YAML frontmatter of `.claude/foreman-kit.local.md` in the
-project (check for it; absence is normal). State the level in effect when proposing an
-architecture.
+Overrides, highest wins: the user says so; or an `effort:` key in the frontmatter of
+`.claude/atelier.local.md` (check for it; absence is normal). State the level in effect when
+proposing an architecture.
 
-**At `standard` (Opus-led)** the rest of this skill applies as written — its defaults are
-already calibrated for an Opus session. One correction to old habit: a spawned `lead` is the
-*same tier* as the session, so architecture D buys **context absorption** (management
-chatter stays out of the session's ever-growing, re-read prefix), not tier arbitrage —
-still worth it for long chains, but not a reflex.
+At **`deep`**, the session's tokens cost ~2× Opus and Fable measures at ~80–100k tokens just to get
+grounded plus ~50–100k to lead — past the context watermark before real work starts `[cost]`. So:
+**never self-ground** (dispatch it, read the report, not the tree); **prefer D/E at the
+moderately-complex fork**, inverting standard's tiebreak; **verify in layers by default**, a
+`reviewer` on every plan-changing claim; **override builders to opus** more liberally.
 
-**At `deep` (Fable-led)** the session's tokens cost ~2× Opus, and the measured overhead of
-Fable leading directly is ~80–100k tokens just to get grounded plus ~50–100k more to lead —
-past the 70k watermark before real work starts. So:
+## Step 1 — Size the job on three axes
 
-- **Never self-ground.** Dispatch the grounding — an opus `lead` or a scout wave reads the
-  repo and reports back; the session reads the report, not the tree. Fable reading files is
-  the single largest avoidable spend at this level.
-- **Prefer D/E at the moderately-complex fork** (inverts standard's cheaper-architecture
-  tiebreak — the per-token premium justifies the extra delegation layer).
-- **Layered verification by default** — a `reviewer` pass on every plan-changing claim, not
-  only the high-impact ones.
-- **More liberal `model: opus` overrides on builders** for coupled or costly-to-unwind
-  slices.
+- **Complexity** — `trivial` → `bounded` (well-specified) → `coupled` (step N needs step N-1) →
+  `architectural` (many unknowns).
+- **Parallelizability** — disjoint file ownership, or a dependent chain?
+- **Work-list** — do the slices already exist, or must they be discovered?
 
-## Step 1 — Size the job on two axes
+The third axis is the one sessions skip, and skipping it is the documented way a foreman ends up
+doing the work itself. Work that arrives pre-sliced ("build this in three languages", "fix these
+five issues") can be briefed immediately. Work that arrives as a goal ("restructure the repo",
+"get this published") has no slices at t=0, so the default path is to discover them by hand — and
+that is where the retained labor lands. In the lab's own record, every session whose work arrived
+pre-sliced delegated heavily; every session whose work arrived as a goal delegated **nothing**
+across 11+ hours and 278 self-performed tool calls `[lab]`.
 
-Classify before touching files:
-
-- **Complexity** — how much judgment: `trivial` → `bounded` (well-specified) → `coupled`
-  (step N needs step N-1) → `architectural` (many unknowns).
-- **Parallelizability** — can it split into slices with **disjoint file ownership**, or is it a
-  **dependent chain** where each step consumes the previous step's output?
+**When the work-list does not exist yet, discovery is the first delegation.** Dispatch scouts
+(architecture B), then size and slice from their report. Do not fix while inventorying: a defect
+found during recon goes on the punch list, not into the working tree `[untested]`.
 
 ## Step 2 — Pick the architecture
 
@@ -83,176 +82,159 @@ Classify before touching files:
 | Trivial / conversational | **A. Direct** — just do it | All of it (overhead > labor) |
 | Simple but token-heavy (searches, inventories, log reduction) | **B. Scouts** — parallel read-only agents | Ask, judge answers |
 | Moderately complex, **parallelizable** | **C. Flat fan-out** — brief N scoped workers directly | Plan, DoD, slice, reconcile, validate |
-| Moderately complex, **coupled** (not parallelizable) | **D. Lead-driven team** — one `lead` drives the chain as proxy | Brief, escalations, final validation |
-| Highly complex / architectural | **E. Phased crews** — audit → build → verify waves | Deep planning, design calls, every gate |
+| Moderately complex, **coupled** | **D. Lead-driven team** — one `lead` drives the chain as proxy | Brief, escalations, final validation |
+| Highly complex / architectural | **E. Phased crews** — audit → fold-back → build → verify | Deep planning, design calls, every gate |
 
-**The moderately-complex fork (C vs D):** parallelizable → **C**; coupled → **D**. When genuinely
-torn, **prefer the cheaper architecture and keep the DoD strict** — a strict DoD exposes an
-under-powered crew fast, while an over-powered crew silently burns budget. (At `deep` effort
-this tiebreak inverts — see Step 0.)
+Full playbooks, including what choosing wrong looks like in each: **`references/architectures.md`**.
 
-### Architecture playbooks
+**B is not only a destination.** When Step 1 says the slices are unknown, B is the mandatory first
+phase of C, D, and E, not an alternative to them.
 
-**A. Direct.** The task fits in a few tool calls, or the validation itself needs delicate
-judgment. Do it. Sign you chose wrong: three files deep in mechanical edits — stop and re-slice.
+**The C-vs-D fork:** parallelizable → C; coupled → D. When genuinely torn, prefer the cheaper
+architecture and keep the DoD strict — a strict DoD exposes an under-powered crew fast, while an
+over-powered crew silently burns budget. (At `deep` effort this inverts.) `[untested]`
 
-**B. Scouts.** Fan out read-only `scout` agents for anything where the value is the conclusion,
-not the traversal. The scout defaults to haiku; override the dispatch model to sonnet only when
-the question needs real cross-file synthesis. Ask for concise evidence: `path:line`, commands
-run, uncertainties, stop conditions hit.
+## Step 3 — Satisfy three preconditions before the first dispatch
 
-**C. Flat fan-out** (parallelizable builds — the session is its own lead):
-1. Write the plan — deliverables, DoD per slice, and the **parallelism map**. Externalize it (a
-   plan doc / task list) so it survives compaction.
-2. **One slice = one owner = disjoint file scope.** Shared files get a *serialized chain*, not
-   parallel writers. State file ownership in every brief.
-3. Pick a model per slice at dispatch: `builder` on its sonnet default for bounded
-   well-specified edits; `builder` with `model: opus` for slices where being wrong is expensive.
-   For audit-and-fix sweeps, split by role — `scout` agents read everything and report
-   violations, `builder` fixers touch only violators. Paying edit-tier rates for read-only
-   scanning is the most common silent overspend.
-4. Require a **handoff note per worker**: what changed, why, the verification commands the
-   worker ran **with their actual output** (workers have shell — make the brief demand proof,
-   not claims), what was deferred, what other slices must know.
-5. Budget **ONE serial reconciliation pass** — parallel work always leaves drift (stale tests,
-   rename fallout). Give the punch list to a single agent; do not fan out cleanup.
-6. The session validates against the DoD and runs the gates itself.
+All three are cheap to write and expensive to retrofit `[lab]`.
 
-**Named playbook — migrate-at-scale.** The recurring C shape of one mechanical transform
-repeated across many sites (a rename, an API-signature change, a codemod) has its own
-dispatchable playbook: discovering and slicing the site inventory, a mechanical-transform brief
-template for cheap-model workers, what stays with the foreman (transform spec, site inventory,
-odd-site judgment calls), and the grep-zero + full-suite + no-silent-caps gates that close it out.
-See **`references/migrate-at-scale.md`**.
-
-**D. Lead-driven team** (coupled work — a dependent chain implement → wire → test → fix):
-Spawn **one `lead`** as the session's proxy. Give it the full brief (see
-`references/lead-brief.md`): objective, DoD verbatim, constraints, worker-model guidance, evidence
-format, stop/escalation conditions. The lead decomposes the chain, does judgment-heavy links
-itself, and spawns its own `builder` workers (sonnet default, opus override) for bounded links,
-steering a spawned worker onward via its own SendMessage rather than re-briefing. The lead is the
-**first-pass checker** — it verifies each worker's output before building the next link, and
-assembles a **proof-of-completion package** (per-DoD-criterion evidence, commands + actual output).
-While the team runs, the session answers escalations only — **use SendMessage to continue the
-lead's context, never re-brief** (a re-brief discards the accumulated context that is most of what
-the Opus lead cost). When the lead reports done, the session **spot-checks, then validates**: the
-lead catches worker errors cheaply; the session catches the lead's blind spots (classic failure: a
-plausible proof package for a subtly-wrong mechanism). This is **layered verification** on purpose.
-
-Why a lead at all: management traffic compounds. Every brief and report in the main session lands
-in the ever-growing prefix and is re-read (at cache rates) every subsequent turn. The lead absorbs
-that chatter into a disposable Opus-priced context and hands back one package.
-
-**E. Phased crews** (architectural work with unknowns): hard phase boundaries — **audit**
-(findings reports only, no code changes) → **build** (C owners, or D leads for coupled subsystems)
-→ **verify** (adversarial checks on high-impact claims, then gates). Stay deeply engaged at every
-boundary: read findings, make design calls, re-slice.
+1. **A definition of done, as independently verifiable criteria** — a command that passes, a grep
+   that returns zero, an artifact that exists. Never "works well". **Include the error paths and
+   the empty case**: unspecified edge cases are exactly where independent implementations diverge,
+   and every divergence the lab's cross-implementation diffing surfaced traced to a case the
+   contract never named.
+2. **A gate that exists and has been proved red.** The DoD's command must actually fail when the
+   work is wrong. A gate that cannot fail is decoration. Break something deliberately once, watch
+   it fail, restore, then dispatch against it.
+3. **An ownership map separating owned source from read-only config.** The gate belongs to the
+   foreman. A worker that can edit the coverage threshold, the lint config, or the test that
+   defines its own acceptance criteria can satisfy any brief. Workers are told: an unsatisfiable
+   gate is an escalation, never a config edit. Where the project has activation on, make the map
+   machine-readable — list the read-only config under `protected:` in `.claude/atelier.local.md`,
+   and the `config-custody` hook enforces it (`references/activation.md`) `[untested]`.
 
 ## Model × task cheat-sheet
-
-Bind every delegated slice to the plugin's concrete agents:
 
 | Agent | Default model | Override at dispatch | Use for |
 | --- | --- | --- | --- |
 | `scout` | haiku (`effort: low`) | `model: sonnet` for cross-file synthesis | Read-only audit, convention check, presence/absence, log reduction, reconciliation |
 | `builder` | sonnet | `model: opus` for judgment-heavy slices | Scoped edits, test writing, refactors — through coupled, costly-to-unwind slices |
-| `reviewer` | opus | — (verification is where the premium pays) | Independent first-pass review of a high-impact claim or diff |
-| `lead` | opus | — | Architecture-D chain proxy: drives a coupled chain, spawns its own builders, verifies |
-| **the session** | **Foreman** (Opus at `standard` / Fable at `deep`) | — | The floor below — **never a spawned agent** |
+| `reviewer` | opus | — (verification is where the premium pays) | Independent re-derivation of a high-impact claim or diff |
+| `lead` | opus | — | Architecture-D chain proxy: drives a coupled chain, spawns builders, verifies |
+| **the session** | Foreman (Opus at `standard`, Fable at `deep`) | — | The floor below — **never a spawned agent** |
 
-**The tier decision is a dispatch-time decision, not an agent choice.** Default every scout to
-haiku and every builder to sonnet; pass `model: sonnet`/`model: opus` on the Agent call only
-when the slice demonstrably needs the judgment (this is also the H8 A/B mechanism). The
-per-invocation `model` parameter overrides the definition's default.
+**Tier is a dispatch-time decision, not an agent choice.** Default every scout to haiku and every
+builder to sonnet; pass `model:` on the Agent call only when the slice demonstrably needs the
+judgment. **These defaults are `[untested]`** — the lab that produced this kit dispatched opus for
+every model-bearing call and never exercised the cheaper tiers, so the cutoff between "sonnet is
+fine" and "needs opus" has never been measured. `references/tier-cutoff.md` is the protocol for
+measuring it; run it before defending the defaults.
 
-**What the roles can actually do (v0.4.0):** builder/reviewer/lead have full shell (Bash) —
-briefs should require them to run their own verification commands and paste output. Read-only
-git (`status`/`diff`/`log`/`show`) is allowed to every shell-bearing agent; **mutating git
-(commit/push/rebase/reset/checkout) is reserved to the session** by prompt-level policy — the
-tool layer no longer blocks it, so treat any worker git mutation in a diff as a protocol
-breach. The scout remains deliberately Bash-less (hard read-only guarantee).
-
-**Other per-invocation knobs** (set on the Agent call, not in the definitions):
-`isolation: worktree` when parallel workers genuinely must mutate the same files (disjoint
-file scopes are cheaper — prefer them); `maxTurns` as a *deliberate* per-wave cap when a
-specific wave needs one — the definitions no longer impose an arbitrary turn backstop on
-builder or reviewer (they self-regulate by scope and escalate an oversized slice loudly
-instead of stalling silently at a clock); only scout keeps a 15-turn bounded-recon backstop.
-Continue an existing worker with SendMessage instead of re-briefing — a re-brief discards the
-context already paid for.
+Per-invocation knobs (`isolation: worktree`, `maxTurns`, SendMessage continuation), agent shell
+capabilities, and the git policy are in **`references/dispatch-knobs.md`**.
 
 ## The foreman floor — never delegated
 
-Whatever the architecture — and at either effort level — these stay with the session,
-because they are exactly where its judgment premium pays and where the responsibility
-ultimately lands:
-
-1. **Decomposition & architecture choice** — the slicing IS the plan; a bad slice can't be fixed
-   downstream.
-2. **Definition of done** — written BEFORE any delegation, as independently verifiable criteria
-   (a command that passes, a grep that returns zero, an artifact that exists), **never "works
-   well"**.
-3. **Judging conflicting / high-impact reports** — subagent findings are **hypotheses**; anything
-   that changes the plan gets **re-derived from the cited source** (use `reviewer` for an
-   independent re-derivation).
-4. **Final validation** — run the hard gates yourself (test suite, lint, end-to-end proof) before
-   telling the user it's done. A lead's proof package is evidence, not verdict.
+1. **Decomposition and architecture choice** — the slicing IS the plan; a bad slice cannot be
+   fixed downstream.
+2. **Definition of done** — written before any delegation (Step 3).
+3. **Judging conflicting or high-impact reports** — subagent findings are **hypotheses**. Anything
+   that changes the plan gets re-derived from the cited source; dispatch a `reviewer` to do the
+   re-derivation, and judge what it returns here.
+4. **Final validation** — run the hard gates personally before telling the user it is done. A
+   lead's proof package is evidence, not verdict.
 5. **User-facing synthesis** — the user hears one coherent account from the session they hired.
+6. **Contract amendment** — when a finding shows the DoD itself was incomplete, only this level
+   edits it `[lab]`. Evaluation is a layer in the loop, not a verdict on it: in the lab, error-path
+   quality stayed low in every round — the rubric floor under +test-first, tied for it under the
+   rig — and moved only once judged findings were folded back into the spec. Gates enforce what they
+   measure; they cannot invent a missing clause. Expect each amendment to surface the next layer
+   of ambiguity — a contract is never finished, only converged-for-now.
 
-**Proof of completion, not reports of completion.** Rank evidence:
-**a loud gate > an independently re-derived check > a lead's proof package > a worker's
-self-report.** If any wave bounded its coverage (top-N, sampling, skipped cases), surface that to
-the user and the backlog — **silent caps read as full coverage.**
+## The ceiling — delegate these even though they feel like judgment
 
-## Briefs are handoff packets
+A floor with no ceiling is not a constraint; every item above stretches to cover almost any inline
+action. These are the stretches, named so they can be refused `[untested]`:
 
-Every delegated prompt — worker or lead — is written for an agent with **zero chat context**.
-Required fields:
+- **Grounding recon.** "I need to understand the repo before I can brief anyone" is true, and is
+  not a reason to read the tree personally. Dispatch it; read the report.
+- **Probe and fixture writing.** Adversarial inputs, test fixtures, and throwaway scripts that
+  prove a guard works are bounded and verifiable. Builder work.
+- **The bounded fix discovered mid-flight.** Individually faster to do inline; collectively where
+  most retained labor goes. Punch list, then one agent.
+- **Re-derivation.** Independently checking a worker's claim is the `reviewer`'s whole job. Judging
+  its verdict is floor item 3; performing the check is not.
 
-- **Repo path** (absolute) and environment / working commands.
-- **Exact objective** — what must exist when done, and why (enough to make good calls).
-- **In / out of scope, WITH file ownership** — which files this agent owns; what is report-only.
-- **Evidence format** to return.
-- **Verification commands** to run.
-- **Stop conditions** — "if the code doesn't match this brief, or a command fails after a
-  reasonable retry, stop and report — don't improvise."
+**The check is a streak, not a ratio.** A lifetime ratio stays high even in healthy sessions,
+because the foreman's own gate runs are floor work: the lab's actively-delegating sessions
+measured ~7–19 delegable calls per dispatch (12.5:1 overall). What separates them from the
+sessions that delegated nothing is the unbroken run: mid-fan-out solo runs clustered around 10–25
+calls, the longer stretches (36–69) were grounding or closing work done by hand, and the
+zero-delegation sessions ran 80–103 without a single dispatch `[lab]`. **A run of ~25 delegable
+calls with no delegation is the line** — calibrated between the clusters, not measured
+`[untested]`. Past it on a C/D/E job, stop and either dispatch the remaining work-list or name
+which floor item this stretch is. The `delegation-watermark` hook counts the run and says so
+without being asked.
 
-For architecture D, fill the full lead template in **`references/lead-brief.md`**. Ambiguity in a
-brief is the session silently delegating a decision it was supposed to make.
+## Briefs
 
-## Context hygiene — the findings layer
+Every delegated prompt is written for an agent with **zero chat context**. Required fields, the
+worker template, and the three rules that make briefs hold up are in **`references/briefs.md`**.
+Read it before writing the first brief of a wave.
 
-These operating defaults come from measured delegation-cost findings and are
-what make this a foreman *kit*, not just delegation doctrine. The plugin's **`context-watermark`**
-(UserPromptSubmit) and **`handoff-freshness-guard`** (PreCompact) hooks plus the bundled **handoff**
-skill are the enforcement layer — this skill is the judgment layer that decides *when*.
+The rule worth stating here, because it governs every prompt this kit emits: **every constraint
+gets a budget, a stop condition, or a machine check.** An instruction an agent cannot tell it has
+satisfied gets maximized, not satisfied. Measured: an unbounded "define constants at the top" rule
+produced a ~90-line wall of mostly single-use constants, costing that solution its worst dimension
+score, unanimously, on its round's panel `[lab]`. The other two rules are test-first by default
+with the observed failure as evidence (the largest single quality lever the lab measured), and the
+negative list of what a worker must never be told (cycle budgets, scores, sibling work).
 
-- **Trigger `/handoff` at a self-chosen boundary in the 60–80k band.** The pure-economics optimum
-  is ~40–60k tokens; the buffer to ~60–80k buys boundary quality (nudge resolves at a natural task
-  boundary, not mid-flight). The `context-watermark` hook nudges at a **soft ~70k / hard ~100k
-  absolute-token** watermark — **absolute tokens, not percent of window** (percent-of-1M
-  thresholds are inert; the shipped ~967k auto-compact default effectively never fires).
-- **Prefer handoff + `/clear` over `/compact`.** A fresh session reading the handoff restarts at
-  ~10–20k context; a compaction summary is similar but less curated, and carries a hidden model-side
-  re-read tax.
-- **Treat any ≥10-minute idle as a handoff + `/clear` point** — the session-break (TTL) tax makes
-  long gaps both expensive and a natural externalization boundary.
+## Verification
+
+Rank evidence: **a loud gate > an output differential across independent producers > an
+independently re-derived check > a lead's proof package > a worker's self-report** `[lab]`. If any
+wave bounded its coverage (top-N, sampling, skipped cases), surface that to the user and the
+backlog — **silent caps read as full coverage.**
+
+Two techniques carry most of the weight, both in **`references/verification.md`**: the
+**differential** (where two agents produce artifacts that should agree observably, the
+reconciliation is a diff of their outputs, and a disagreement is usually a contract defect rather
+than an implementation defect) and the **panel escalation** (a judgment-shaped claim needs three
+personas scoring against written anchors with disagreement surfaced rather than averaged — the
+`rubric-panel` skill implements it; `layer-cycle` drives the create → evaluate → refine loop it
+feeds).
+
+## Context hygiene
+
+Operating defaults from measured findings `[cost]`. The `context-watermark` (UserPromptSubmit),
+`delegation-watermark` (PostToolUse), and `handoff-freshness-guard` (PreCompact) hooks plus the
+`handoff` skill are the enforcement layer; this skill decides when.
+
+- **Trigger `/handoff` at a self-chosen boundary in the 60–80k band.** The economics optimum is
+  ~40–60k; the buffer buys boundary quality. `context-watermark` nudges on **absolute tokens**
+  (~70k soft, ~100k hard) because percent-of-window thresholds are inert against the ~967k
+  auto-compact default.
+- **Prefer handoff + `/clear` over `/compact`** — a fresh session reading the handoff restarts at
+  ~10–20k; a compaction summary is similar in size, less curated, and carries a re-read tax.
+- **Treat any ≥10-minute idle as a handoff point** — the session-break tax makes long gaps both
+  expensive and a natural externalization boundary.
 - **Clear after messy debugging, even below threshold** — visible prior errors raise future error
-  rates (self-conditioning), independent of context length.
-- **Downtier to cheaper models on demonstrably simple work.** Sonnet held Opus-grade quality at
-  ~half the cost on Exercism-grade tasks. **Caveat:** there is no difficulty-cutoff finder yet —
-  gate aggressive downtiering to *clearly* simple tasks, and keep a **strict DoD** so an
-  under-powered crew fails loudly and fast.
-
-## Credit
-
-The delegation doctrine derives from an upstream delegation-foreman skill, re-homed here
-self-contained. The context-management defaults (thresholds, handoff-over-compact, the ≥10-min
-rule, downtiering) come from measured findings on delegation cost and context economics.
+  rates independent of context length.
+- **Downtier on demonstrably simple work**, gated to clearly simple tasks and paired with a strict
+  DoD so an under-powered crew fails loudly and fast. The cutoff itself is unmeasured; see
+  `references/tier-cutoff.md`.
 
 ## Additional resources
 
-- **`references/lead-brief.md`** — the fill-in-the-blanks architecture-D lead-agent brief template.
-- **`references/migrate-at-scale.md`** — the named architecture-C playbook for fanning a
-  mechanical transform out across many sites (site inventory, worker brief template,
-  reconciliation, gates, when not to fan out).
+- **`references/architectures.md`** — the five playbooks in full.
+- **`references/briefs.md`** — required fields, the worker template, the three brief rules.
+- **`references/verification.md`** — evidence ranking, the differential, the panel escalation,
+  aiming verification where the stack is weak.
+- **`references/lead-brief.md`** — the fill-in-the-blanks architecture-D lead brief.
+- **`references/migrate-at-scale.md`** — one mechanical transform across many sites.
+- **`references/tier-cutoff.md`** — the protocol for measuring where cheap tiers stop being enough.
+- **`references/dispatch-knobs.md`** — `isolation`, `maxTurns`, SendMessage, the git policy.
+- **`references/activation.md`** — per-project enforcement: `.claude/atelier.local.md`, the
+  `enforce` modes, the `protected:` map, and the worker covenant.
+- **`references/provenance.md`** — which rule came from which measurement, and which are untested.

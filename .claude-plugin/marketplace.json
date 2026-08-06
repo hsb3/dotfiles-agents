@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "20 plugins: four multi-skill bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), foreman-kit (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance) \u2014 and sixteen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
+    "description": "20 plugins: four multi-skill bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance) \u2014 and sixteen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
     "version": "0.4.1"
   },
   "name": "dotfiles-agents",
@@ -76,10 +76,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Run a long session as a foreman: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, lead). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, and log delegation tier usage.",
-      "name": "foreman-kit",
-      "source": "./plugins/foreman-kit",
-      "version": "0.7.3"
+      "description": "Run a long session as a foreman: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, lead). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, brief workers on the delegation covenant, and hold protected config in custody per project.",
+      "name": "atelier",
+      "source": "./plugins/atelier",
+      "version": "0.8.0"
     },
     {
       "author": {

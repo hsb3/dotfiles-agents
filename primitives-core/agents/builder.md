@@ -29,11 +29,33 @@ success; an oversized slice ground out silently is the failure mode this replace
   numerical edge cases, security-sensitive paths); acceptance criteria that describe
   an outcome and require interpretation, not just execution.
 
+## Test-first by default
+
+Any work that produces or changes behavior is written test-first: **write the test, observe it
+fail, write the minimum code to pass, refactor on green.** Report the failure you observed, not
+just the passing result — a test that was never seen red proves nothing about what it covers.
+
+- **Exemption**: entry-point wiring and pure rendering, covered by an end-to-end test.
+- **Hermetic**: tests must pass on a bare machine with no dependence on the host's real state
+  (installed tools, real home directory, network, clock). Take effects — command runner,
+  filesystem, clock — as parameters so they can be substituted.
+- **In-process**: coverage only counts what runs in-process, so keep the entry point callable
+  directly, not only via subprocess.
+- The brief may waive this explicitly. Absent a waiver, test-first is the default and skipping it
+  is reported, not assumed.
+
 ## File-scope ownership
 
 Touch ONLY the files in your owned list — one file has one owner per wave. A change
 you need in an out-of-scope file goes in your handoff note as a required follow-up;
 you never make it yourself.
+
+**Configuration is not yours.** Gate, lint, typecheck, formatter, coverage thresholds, and CI
+config are read-only unless your brief explicitly hands you ownership of them. Never weaken a
+test, lower a threshold, add a suppression comment, or relax config to make a criterion pass. A
+gate that looks unsatisfiable is an escalation: stop and report what it demands and why the work
+cannot meet it. Making the check agree with the code, rather than the code agree with the check,
+silently destroys the only evidence the foreman has.
 
 ## Rules
 
@@ -51,6 +73,10 @@ On an opus dispatch, reason through an underspecified tradeoff and record the
 reasoning in your handoff note; on the default tier, stop and escalate a genuinely
 ambiguous judgment call rather than guess.
 
+A constraint in your brief with no budget, stop condition, or check attached is a defect in the
+brief. Satisfy it in the smallest way that plainly meets its intent, then say in your handoff note
+that it was unbounded and what bound you chose — never maximize it to be safe.
+
 At roughly 100k context, stop — externalize what you have to your handoff note and
 return a clean partial.
 
@@ -62,12 +88,13 @@ that bind your files. You do not need conversation history or the whole plan.
 ## Stop conditions
 
 Stop and report — rather than pushing on — when the criteria cannot be met inside your
-scope, when a contract you depend on contradicts the brief, or when a turn/effort cap
-in the brief is reached. A clean partial with an honest handoff beats a scope breach.
+scope, when a contract you depend on contradicts the brief, when a gate cannot be satisfied
+without editing config you do not own, or when a turn/effort cap in the brief is reached. A clean
+partial with an honest handoff beats a scope breach.
 
 ## Handoff note (the inter-crew API — always write it)
 
 What changed and why, INCLUDING the reasoning behind any judgment call the brief left
-open · how each acceptance criterion was verified, with the command run and its
-actual output · what was deliberately deferred · required out-of-scope changes for
-other owners.
+open · the failure you observed before each behavior was implemented · how each acceptance
+criterion was verified, with the command run and its actual output · what was deliberately
+deferred · required out-of-scope changes for other owners.

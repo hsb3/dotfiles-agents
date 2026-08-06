@@ -1,0 +1,10 @@
+{
+  "event": "PostToolUse",
+  "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+  "timeout": 10,
+  "statusMessage": "Checking delegation watermark...",
+  "env": {
+    "DELEGATION_WATERMARK_SOFT": "25",
+    "DELEGATION_WATERMARK_REFIRE_EVERY": "15"
+  }
+}

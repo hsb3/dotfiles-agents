@@ -13,8 +13,8 @@ deletion-pass for the refine step, dispatching each as a discrete worker brief.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the foreman-kit bundle (not standalone) — pairs with rubric-panel and deletion-pass,
+Ships in the atelier bundle (not standalone) — pairs with rubric-panel and deletion-pass,
 both also in the bundle.

@@ -34,6 +34,26 @@ Actions path is currently unusable.** See §1 and the fallback in §5.
 - GH issue queue: **one open — #250** (see §3). **m-0 is 4/5**; its last box (every open card
   cold-readable with verifiable acceptance criteria, assessed by someone who didn't write it)
   is still unassessed.
+- **`feat/atelier` awaits the operator** (worktree `.claude/worktrees/atelier`, branched off
+  dev@b35bade). It renames foreman-kit → **atelier** (git mv, both manifests, catalog row,
+  live prose; version 0.8.0), lands the lab-01 doctrine rewrite (#252), three new hooks
+  (delegation-watermark, config-custody, worker-context — the per-project custody model,
+  off by default via `.claude/atelier.local.md`), and 26 hook behavior tests. `make ci`
+  green on the branch. **Operator checklist after merge + publish**, in order:
+  1. Per project that had foreman-kit installed (re-read `~/.claude/plugins/`
+     `installed_plugins.json` — at branch time: dotfiles-agents, EVALS/lab-01-package-inventory,
+     pb-task-tracker, plus a user-scope record): `claude plugin uninstall
+     foreman-kit@dotfiles-agents`, then `claude plugin install atelier@dotfiles-agents` in that
+     project — an enabledPlugins flag alone proves nothing (memory:
+     plugin-enablement-needs-per-project-install).
+  2. Flip each project's own `enabledPlugins` key to `atelier@dotfiles-agents` (this repo's is
+     already done on the branch).
+  3. Delete `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/` once no record references it.
+  4. Rename any `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (effort override
+     moved there; the file now also carries `enforce:`/`protected:` — see the foreman skill's
+     `references/activation.md`).
+  5. The ~50 remaining `foreman-kit` mentions (backlog, decisions, memory, evals data shapes,
+     this file's history) are deliberate history — do not rewrite them.
 
 Standing mechanisms a cold session should not re-derive: **ADR 0017 pointer refactor is DONE**
 (symlink assemblies, `dist/` retired, roster = provenance manifest, opencode install-time);

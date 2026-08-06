@@ -1,6 +1,6 @@
 # agents
 
-Four delegation roles dispatched by the foreman-kit skills for scoped work: a
+Four delegation roles dispatched by the atelier skills for scoped work: a
 read-only scout for recon, a builder for scoped implementation, an adversarial
 reviewer for verification, and a lead that drives coupled chains too dependent to
 flatten into parallel briefs. The model below is each role's default — the dispatcher
@@ -16,5 +16,5 @@ overrides it per call when a slice's difficulty warrants a different tier.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
