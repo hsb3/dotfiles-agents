@@ -3,10 +3,11 @@ id: TASK-21.3
 title: 'M5: first with/without skill benchmark via the harness'
 status: To Do
 assignee: []
-updated_date: '2026-08-06'
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-06 21:33'
 labels:
-  - extender-db
+  - evals
+milestone: m-3
 dependencies:
   - TASK-21.2
   - TASK-22

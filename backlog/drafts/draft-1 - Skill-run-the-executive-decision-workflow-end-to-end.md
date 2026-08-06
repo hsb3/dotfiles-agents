@@ -4,8 +4,9 @@ title: 'Skill: run the executive decision workflow end-to-end'
 status: Draft
 assignee: []
 created_date: '2026-08-04 00:44'
+updated_date: '2026-08-06 21:31'
 labels:
-  - decision
+  - primitives
   - on-hold
 dependencies: []
 references:

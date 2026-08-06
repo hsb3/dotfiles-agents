@@ -4,9 +4,9 @@ title: 'flow.yaml: shrink or retire enforcement after restructure'
 status: Done
 assignee: []
 created_date: '2026-08-04 00:42'
-updated_date: '2026-08-04 02:19'
+updated_date: '2026-08-06 21:31'
 labels:
-  - refactor
+  - gates
 milestone: m-0
 dependencies:
   - TASK-3

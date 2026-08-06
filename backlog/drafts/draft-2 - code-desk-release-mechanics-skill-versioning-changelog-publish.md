@@ -4,8 +4,9 @@ title: 'code-desk: release-mechanics skill (versioning, changelog, publish)'
 status: Draft
 assignee: []
 created_date: '2026-08-04 00:44'
+updated_date: '2026-08-06 21:31'
 labels:
-  - decision
+  - primitives
   - on-hold
 dependencies: []
 references:

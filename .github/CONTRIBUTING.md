@@ -63,6 +63,7 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 | `make symlinks` | **Symlink-assembly lint** (ADR 0017) — every link under `plugins/` resolves in-repo; the root marketplace manifest and the assemblies match 1:1. |
 | `make harness-coupling` | `harness/` imports only itself + stdlib (no repo coupling). |
 | `make flow` | **Repo-flow DAG** — every tracked top-level path is homed in `flow.yaml`; a new top-level path must claim a node there. |
+| `make backlog-labels` | **Backlog label vocabulary** — every card carries exactly one area label and at most one signal label, all drawn from the closed set in `backlog/config.yml`. Backlog.md validates types and statuses but accepts any label, so this supplies the missing check. |
 | `make test` | **Unit tests** — `python3 -m unittest`, **stdlib-only** (zero install is an invariant; fixtures live under `tests/`, never under `primitives-core/`). |
 
 Adding a whole new top-level path also needs a home in `flow.yaml` (the `make flow` guard). Files
@@ -84,3 +85,10 @@ are bug-report intake only** — the bug template is the only one offered. A rep
 a backlog task when it is planned; after the fix merges into `dev`, close the issue by hand
 (a `Closes #N` in a PR into `dev` does NOT auto-close — auto-close fires only on the default
 branch).
+
+Cards move `To Do → Up Next → In Progress → Done`. `Up Next` is the committed queue — what
+you have actually picked, not everything filed. Each card carries one `type`, one `priority`,
+exactly one **area** label (`primitives` `assembly` `distribution` `gates` `harness` `evals`
+`governance`), at most one **signal** label (`decision`, `on-hold`), and one milestone.
+Milestones are stated outcomes rather than buckets, so they can be closed. Full rules and the
+reason the label gate exists: [`AGENTS.md`](../AGENTS.md) → "Backlog card metadata".

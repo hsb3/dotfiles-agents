@@ -4,10 +4,9 @@ title: 'Externals: build the pinned-vendored-copy mechanism (decision-6)'
 status: Done
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-06'
+updated_date: '2026-08-06 21:31'
 labels:
-  - decision
-  - externals
+  - distribution
 milestone: m-0
 dependencies:
   - TASK-2

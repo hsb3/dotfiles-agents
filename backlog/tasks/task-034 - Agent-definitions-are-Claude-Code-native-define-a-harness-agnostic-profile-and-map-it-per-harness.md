@@ -6,11 +6,11 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-06 19:30'
+updated_date: '2026-08-06 21:33'
 labels:
-  - architecture
-  - primitives-core
   - distribution
   - decision
+milestone: m-1
 dependencies: []
 references:
   - primitives-core/agents/scout.md

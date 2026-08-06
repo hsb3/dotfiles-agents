@@ -4,9 +4,9 @@ title: 'foreman-kit: lift arbitrary maxTurns cap on builder (silent mid-work sta
 status: Done
 assignee: []
 created_date: '2026-08-04 00:44'
-updated_date: '2026-08-06'
+updated_date: '2026-08-06 21:31'
 labels:
-  - foreman-kit
+  - primitives
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/222'

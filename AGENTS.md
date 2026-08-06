@@ -66,6 +66,46 @@ before the session ends, and leave the branch in place for next time.
 
 `dev-legacy` is a deliberate pre-restructure archive — never delete it.
 
+### Backlog card metadata
+
+Four fields, each carrying one axis and no other. Overlap is what made them useless before.
+
+| Field | Axis | Rule |
+| --- | --- | --- |
+| `type` | what kind of change | one of `bug feature task chore docs spike`; validated by Backlog.md |
+| `priority` | how urgent | High / Medium / Low |
+| `label` | **where** the work lands | **exactly one** area + **at most one** signal — never more |
+| `milestone` | **which outcome** it serves | one of the active outcome milestones |
+
+Areas: `primitives` `assembly` `distribution` `gates` `harness` `evals` `governance`.
+Signals: `decision` (blocked on or produces an owner ruling), `on-hold` (parked on purpose).
+The two signals are mutually exclusive. A card that seems to need two areas is two cards.
+
+**`make backlog-labels` enforces this, because Backlog.md does not.** The tool validates
+`types` and `statuses` against `backlog/config.yml` but silently accepts *any* label —
+`-l whatever` just works, and the config's `labels:` list is only an autocomplete hint.
+That gap is how the backlog reached 17 ad-hoc labels, 12 of them used exactly once, while
+the two labels config actually declared went unused. Adding a label means adding it to
+`backlog/config.yml` **and** to `AREAS`/`SIGNALS` in `scripts/check_backlog_labels.py`;
+the gate cross-checks the two and goes red if either side drifts alone.
+
+**Statuses are `To Do → Up Next → In Progress → Done`.** `Up Next` is the committed queue:
+work that is picked, not merely filed. Promoting a card into it is a scheduling decision,
+so leave it to the owner unless asked. Statuses cannot be set via `backlog config set` —
+the CLI refuses and directs you to edit `backlog/config.yml` directly, which is sanctioned
+(the "never edit directly" rule covers task/draft/document/decision/milestone markdown,
+not the project config).
+
+**Milestones are outcomes, not buckets** — each states a condition the repo reaches, so it
+can actually be closed. A milestone whose tasks are all Done auto-reports as completed;
+archive it, and if its body still carries an unchecked commitment, convert that into a task
+first rather than letting it disappear with the milestone.
+
+**Gotcha: `backlog task list -m` matches milestone *titles*, not IDs.** `-m m-1` returns
+"No tasks found" with no error even when six tasks carry `milestone: m-1`; `-m "Measured"`
+(any distinctive substring of the title) works. Assignment via `task edit -m m-1` does take
+the ID, so the two commands disagree. Trust `backlog milestone list` for the counts.
+
 <!-- BACKLOG.MD GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.48.0 -->
 

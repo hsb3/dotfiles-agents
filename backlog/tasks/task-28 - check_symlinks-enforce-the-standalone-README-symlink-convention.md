@@ -4,10 +4,10 @@ title: 'check_symlinks: enforce the standalone-README symlink convention'
 status: To Do
 assignee: []
 created_date: '2026-08-06'
-updated_date: '2026-08-06'
+updated_date: '2026-08-06 21:33'
 labels:
   - gates
-  - tech-debt
+milestone: m-1
 dependencies:
   - TASK-9
 priority: medium

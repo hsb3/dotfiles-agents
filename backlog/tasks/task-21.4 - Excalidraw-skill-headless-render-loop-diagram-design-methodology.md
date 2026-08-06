@@ -3,11 +3,11 @@ id: TASK-21.4
 title: 'Excalidraw skill: headless render loop + diagram-design methodology'
 status: To Do
 assignee: []
-updated_date: '2026-08-06'
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-06 21:33'
 labels:
-  - extender-db
-  - skills
+  - primitives
+milestone: m-3
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/168'

@@ -6,9 +6,8 @@ title: >-
 status: Done
 assignee: []
 created_date: '2026-08-04 00:42'
-updated_date: '2026-08-04 02:20'
+updated_date: '2026-08-06 21:31'
 labels:
-  - refactor
   - governance
 dependencies: []
 priority: medium

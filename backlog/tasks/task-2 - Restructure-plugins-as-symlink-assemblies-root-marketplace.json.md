@@ -4,9 +4,9 @@ title: 'Restructure: plugins/ as symlink assemblies + root marketplace.json'
 status: Done
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 02:03'
+updated_date: '2026-08-06 21:31'
 labels:
-  - refactor
+  - assembly
 milestone: m-0
 dependencies:
   - TASK-1

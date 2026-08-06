@@ -6,10 +6,10 @@ title: >-
 status: Draft
 assignee: []
 created_date: '2026-08-06 15:01'
+updated_date: '2026-08-06 21:31'
 labels:
+  - evals
   - decision
-  - skills
-  - extender-db
 dependencies: []
 type: spike
 ---

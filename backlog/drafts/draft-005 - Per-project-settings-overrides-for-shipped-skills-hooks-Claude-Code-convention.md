@@ -6,9 +6,9 @@ title: >-
 status: Draft
 assignee: []
 created_date: '2026-08-06 15:01'
+updated_date: '2026-08-06 21:31'
 labels:
-  - skills
-  - foreman-kit
+  - primitives
   - decision
 dependencies:
   - TASK-15

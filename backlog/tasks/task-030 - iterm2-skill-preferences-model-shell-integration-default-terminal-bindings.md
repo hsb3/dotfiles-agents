@@ -4,8 +4,9 @@ title: 'iterm2 skill: preferences model, shell integration, default-terminal bin
 status: Done
 assignee: []
 created_date: '2026-08-06 16:02'
-updated_date: '2026-08-06 20:14'
-labels: []
+updated_date: '2026-08-06 21:31'
+labels:
+  - primitives
 dependencies: []
 priority: medium
 type: feature

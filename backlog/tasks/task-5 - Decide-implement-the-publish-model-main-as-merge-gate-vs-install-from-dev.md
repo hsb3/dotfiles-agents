@@ -4,9 +4,9 @@ title: Decide + implement the publish model (main as merge gate vs install-from-
 status: Done
 assignee: []
 created_date: '2026-08-04 00:42'
-updated_date: '2026-08-06'
+updated_date: '2026-08-06 21:31'
 labels:
-  - refactor
+  - distribution
   - decision
 milestone: m-0
 dependencies:

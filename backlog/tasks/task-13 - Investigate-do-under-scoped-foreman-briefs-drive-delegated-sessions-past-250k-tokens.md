@@ -6,8 +6,10 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-06 21:33'
 labels:
-  - foreman-kit
+  - evals
+milestone: m-2
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/217'
