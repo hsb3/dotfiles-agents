@@ -1,9 +1,10 @@
 ---
 id: TASK-030
 title: 'iterm2 skill: preferences model, shell integration, default-terminal bindings'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-06 16:02'
+updated_date: '2026-08-06 17:07'
 labels: []
 dependencies: []
 priority: medium
@@ -26,9 +27,15 @@ References cover configuration (prefs keys, dynamic profiles, custom prefs folde
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 SKILL.md exists at primitives-core/skills/iterm2 with a trigger-rich description
-- [ ] #2 References cover configuration, shell integration, default-terminal bindings, and the feature catalog
-- [ ] #3 Thin symlink assembly at plugins/iterm2 per ADR 0017, listed in marketplace.json
-- [ ] #4 Roster entry present in primitives-core.yaml
-- [ ] #5 make ci passes
+- [x] #1 SKILL.md exists at primitives-core/skills/iterm2 with a trigger-rich description
+- [x] #2 References cover configuration, shell integration, default-terminal bindings, and the feature catalog
+- [x] #3 Thin symlink assembly at plugins/iterm2 per ADR 0017, listed in marketplace.json
+- [x] #4 Roster entry present in primitives-core.yaml
+- [x] #5 make ci passes
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+iterm2 skill shipped: SKILL.md + 4 references (configuration, shell-integration, default-terminal, features) at primitives-core/skills/iterm2; thin symlink assembly at plugins/iterm2 (ADR 0017) listed in marketplace.json; roster entry in primitives-core.yaml. Verified via make ci (exit 0) on dev tip e8cf954. Merged via PR #248, published to main (commit 19f1df5, publish: dev@e8cf954) via local publish workaround during a GitHub Actions outage.
+<!-- SECTION:FINAL_SUMMARY:END -->

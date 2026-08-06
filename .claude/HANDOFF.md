@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-06 (session 5). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-06 (session 6). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** (moved from `_meta/` 2026-08-06, owner's call).
 The handoff hooks resolve it because `.claude/HANDOFF.md` is the third entry in their
@@ -20,45 +20,36 @@ The one orientation fact CLAUDE.md doesn't spell out: **publishing works** (repa
 2026-08-06, PR #237). `main` is a *filtered parented assembly*, never a snapshot of `dev` —
 decision-4 was amended to ratify that, because its original "plain fast-forward" wording
 contradicted its own evals/harness exclusion. Publish with
-`gh workflow run publish.yml --ref dev -f confirm=publish` (publish-to-main skill).
+`gh workflow run publish.yml --ref dev -f confirm=publish` (publish-to-main skill) — **if the
+run sits `queued` with zero steps and gets auto-cancelled (GH Actions runner outage, first hit
+2026-08-06), the local-worktree fallback in §5 reproduces the same steps by hand.**
 
 ## 1 · Current standing
 
-`make ci` green — 145 repo tests + 139 harness tests (41 primitives: agent=4, hook=4, skill=33).
-GH issue queue: **zero open**. **m-0 is 4/5 done** — its last box was reworded 2026-08-06
-(owner sign-off) to: every open card is cold-readable with verifiable acceptance criteria,
-assessed by someone who didn't write it. That assessment has not been done yet.
+`make ci` green on `dev` tip `e8cf954` — 145 repo tests + 139 harness tests (42 primitives:
+agent=4, hook=4, skill=34). GH issue queue: **zero open**. **m-0 is 4/5 done** — its last box
+(every open card cold-readable with verifiable acceptance criteria, assessed by someone who
+didn't write it) is still unassessed.
 
-**Promotion landed 2026-08-06: [PR #245](https://github.com/hsb3/dotfiles-agents/pull/245)
-(branch `docs/handoff-session-5`) merged into `dev` (4769dff), published to `main` the same
-day (tip `publish: dev@4769dff`, surface verified).** The PR carried the full session-5 tree — the handoff refresh, the backlog restructure
-and `_meta` removal, the owner sign-off execution, and the release bumps — and its green CI
-run was the gate for the whole session's work (`ci.yml` fires on `pull_request` only; earlier
-session-5 commits had gone straight to `dev`).
+**`main` is current: tip `publish: dev@e8cf954` (commit `19f1df5`), 20-plugin lineup**
+(+iterm2, task-030). Published 2026-08-06 via the **local fallback** (§5), not the GH Actions
+workflow — the dispatched run sat `queued` with zero steps for 15 min and was auto-cancelled
+(runner-capacity outage, not a job failure). Verify any publish with `git ls-tree --name-only
+origin/main` (distributable surface only: `plugins/` + `marketplace.json` + `README`) plus the
+tip commit message (`publish: dev@<sha>`).
 
 Standing:
 
 - **ADR 0017 pointer refactor DONE** (m-0 tasks 1–4, 7, 8; PRs #227–#231) — symlink assemblies,
   `dist/`+generators retired, roster = provenance manifest, opencode install-time. Mechanics
   are in CLAUDE.md (hot-loaded); don't restate them here.
-- **m-0 owner's-court rulings all cleared** (decisions 4/5/6 on 2026-08-04; sign-off trails
-  removed with `_meta` 2026-08-06 — git history keeps them). Tasks 5, 9, 10 are Done — the
-  live residue is **task-6**: extract `evals/` + `harness/` eventually, but **deferred** by
-  decision-5 (dev is the workbench; neither ever publishes to main). Parked at Low.
+- **m-0 owner's-court rulings all cleared** (decisions 4/5/6 on 2026-08-04). Tasks 5, 9, 10 are
+  Done — the live residue is **task-6**: extract `evals/` + `harness/` eventually, but
+  **deferred** by decision-5 (dev is the workbench; neither ever publishes to main). Parked at Low.
 - **Two mechanisms this repo now enforces that a cold session should not re-derive:**
   `origin: vendored` (third-party in-tree only under `backlog/docs/vendoring-rule.md`, contract
   machine-checked) and **dual-homing** (one `primitives-core/` source, symlinked into both a
   bundle and a standalone plugin — installing both loads the skill once).
-
-`main` ships the **19-plugin lineup** (published 2026-08-06). Bumps this session: code-desk
-0.4.0 · foreman-kit 0.7.2 · diagrams 0.1.1 · obsidian-toolkit 0.1.1 · repo-meta-structure
-0.0.2 · owner-signoff 0.0.2 · pptx-themes 0.0.2. The four standalones added this cycle
-(comms · mise-en-place-scaffold · readme-value-and-proof · repo-meta-structure) are now
-published; each dual-homes a skill that also stays in code-desk (one source, two symlinks,
-loads once). Verify the published surface with `git ls-tree --name-only origin/main`; the tip
-commit message reads `publish: dev@<sha>`. The publish surface is only `plugins/` +
-marketplace.json + README, so backlog/harness/test churn never needs a republish; this cycle
-the surface genuinely changed (4 new plugin dirs + marketplace rewrite).
 
 **Also live: the extender-db mini-project** (§2b) — separate effort from the rebuild epics; do
 not fold it into dev without Henry's promotion decision (already taken 2026-07-21, see §2b).
@@ -80,6 +71,11 @@ not fold it into dev without Henry's promotion decision (already taken 2026-07-2
   (`_meta` removed entirely, backlog absorbs docs/); adversarial pre-release review caught a
   blocking audit defect (fixed, gotcha in §5); 19-plugin lineup published (#245); scoping
   drafts 004/005 landed (#246).
+- **2026-08-06 (session 6): task-030 (iterm2 skill) shipped and published.** SKILL.md + 4
+  references (configuration, shell integration, default-terminal, features), symlink assembly,
+  roster entry; merged to `dev` via #248, task-030 closed. GH Actions publish run stalled and
+  was auto-cancelled (runner outage) — `main` published via the local-worktree fallback (§5),
+  its first real use. Handoff/backlog audit on `chore/handoff-backlog-refresh`.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -115,15 +111,11 @@ battle-test here, later extract to its own repo.
 work, drafts (owner-parked #137/#138/#152), decisions, and the m-0 refactor milestone all
 live there, not duplicated here.
 
-- **PROMOTION is DONE** (#245 merged, publish dispatched, both 2026-08-06 — §1). The next one
-  repeats the same order: (1) PR into `dev`, keeping it green; (2) merge; (3)
-  `gh workflow run publish.yml --ref dev -f confirm=publish`; (4) verify — `git ls-tree
-  --name-only origin/main` shows the distributable surface only, and the tip commit reads
-  `publish: dev@<sha>` naming the merged tip.
-  - **Run the version pre-flight every time; this cycle it caught a real defect**: `code-desk`
-    and `pptx-themes` had changed content but unchanged versions, so the version-keyed consumer
-    cache would have made the publish a silent no-op. Bumped on #245 (code-desk 0.4.0,
-    pptx-themes 0.0.2). **Re-run that check whenever content lands** — the method is in §5.
+- **PROMOTION is DONE** (#248 merged, `main` published locally, both 2026-08-06 — §1).
+  Standard order: (1) PR into `dev`, keeping it green; (2) merge; (3) `gh workflow run
+  publish.yml --ref dev -f confirm=publish` (or the §5 local fallback if it stalls); (4) verify
+  per §1. The version pre-flight that guards against a silent no-op publish (changed content,
+  unchanged version) is in §5 — run it whenever content lands.
 - **m-0's last box** (reworded 2026-08-06, §1) is the milestone's remaining work: a cold-read
   assessment of every open card — verifiable acceptance criteria, judged by someone who didn't
   write the card.
@@ -167,6 +159,19 @@ Nothing folds into the canonical model until he signs off. Full state:
 
 ## 5 · Conventions & gotchas
 
+- **Publish has a local fallback for GH Actions outages** (first used 2026-08-06, session 6):
+  when the dispatched run sits `queued` with zero steps and gets auto-cancelled
+  (runner-capacity outage — check each job's `conclusion` via `gh api .../actions/runs/<id>/jobs`,
+  not just the run summary, since the top-level conclusion reads "failure"), reproduce
+  `publish.yml` by hand in scratch worktrees so the real working tree never touches `main`:
+  1. `git worktree add <scratch>/dev-publish origin/dev --detach` → `make ci` (the gate).
+  2. Assemble: `cp -RL plugins`, `.claude-plugin/marketplace.json`, `README.md`, `.gitignore`
+     into a tempdir (dereferences the ADR-0017 symlinks — same lift map as the workflow).
+  3. `git worktree add <scratch>/main-publish origin/main --detach` →
+     `git checkout -B publish-tree origin/main` → wipe (`git rm -rfq . && git clean -fdq`) →
+     copy the assembled tree in → `git add -A` → commit as `publish: dev@<short-sha>` (body =
+     plugin name/version list) → `git push origin HEAD:refs/heads/main`.
+  4. Verify per §1, then `git worktree remove --force` both scratch dirs.
 - **Backlog writes go through the `backlog` CLI / MCP tools** (owner ruling 2026-08-06).
   The 2026-08-04 sibling-rewrite incident behind the old hand-edit-only rule was a
   concurrent-session race, not a CLI defect; decision-7 was deleted outright at the
@@ -195,10 +200,8 @@ Nothing folds into the canonical model until he signs off. Full state:
   so renaming one in `ci.yml` strands every PR on a check that never reports (change the
   protection setting first). This is why the drift-guards job still reads "drift guards
   (roster · marketplace · catalog)" while actually running `make check symlinks flow`.
-- **A plugin needs an install record for THIS `projectPath`, not just `enabledPlugins: true`.**
-  `claude plugin list` happily reports another project's record as "enabled". Fix:
-  `claude plugin install <id>@<marketplace> --scope local` from inside the repo, **then restart
-  the session** — `/reload-skills` does not pick up a newly installed plugin. Full detail in
+- **A plugin needs an install record for THIS `projectPath`, not just `enabledPlugins: true`**
+  (`claude plugin list` reports other projects' records as "enabled") — full detail + fix in
   project memory `plugin-enablement-needs-per-project-install`.
 - **A sign-off item that contradicts a prior ruling must SAY SO in the item.** A session-5 form
   preselected a recommendation that silently reversed the owner's own comms-first direction, and
@@ -214,9 +217,8 @@ Nothing folds into the canonical model until he signs off. Full state:
   audit-script change; prove checklist edits with a real `audit.py` run. Known residue:
   IGNORE-01 still probes `_meta/operations/`, and a stale ignore probe can mask a
   secrets-tracking miss if the taxonomy is ever re-pointed.
-- **`main` is publish-only** — never hand-commit/merge there; a CI guard fails PRs into main.
-  Branch off `dev`, PR into `dev`. `main` is a **filtered parented assembly** (never a dev
-  snapshot — verify with tree hashes per the `publish-to-main` skill runbook).
+- **`main` is a filtered parented assembly, never a `dev` snapshot** (CLAUDE.md covers the
+  publish-only rule itself) — verify with tree hashes per the `publish-to-main` skill runbook.
 - **Backlog.md specifics CLAUDE.md doesn't carry:** subtasks get dotted IDs (`task-21.1`) —
   `--depends-on` a subtask must use the dotted form; `make flow` requires a claimed top-level
   path to be *tracked* (stage new dirs before the check passes).
