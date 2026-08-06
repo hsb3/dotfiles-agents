@@ -2,16 +2,16 @@
 
 A context-and-cost optimization kit for multi-agent work: size a task, pick a delegation
 architecture, dispatch to the right model tier, and keep every session clearable instead of
-letting context quietly run out. Six skills, four hooks, and four agents across model tiers,
-all wired to the same handoff file and the same session-discipline loop — including the
-review-cycle trio (rubric-panel · deletion-pass · layer-cycle) distilled from a controlled
-agent-development lab.
+letting context quietly run out. Skills, hooks, and agents across model tiers, all wired to
+the same handoff file and the same session-discipline loop — including the review-cycle trio
+(rubric-panel · deletion-pass · layer-cycle) distilled from a controlled agent-development
+lab.
 
 ## What you get
 
 | Primitive | Type | What it does |
 |---|---|---|
-| `foreman` | skill | Size a substantial task and run the session as a foreman: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration — standard for an Opus-led session, deep for a Fable-led one. |
+| `foreman` | skill | Size a substantial task and run the session as a foreman: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration keyed to the model in the session's lead seat: standard by default, deep when a top-tier model leads. |
 | `handoff` | skill | Maintain the project's session-handoff file so a brand-new session can pick up work cold — the externalization pass that makes a session clearable. |
 | `waves` | skill | Drive a repo's issue backlog to closed with near-zero owner input: refresh a pinned triage issue (the living, ranked plan), group buildable issues into branch-sized waves, launch isolated crews via `foreman`, verify and merge each PR in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. |
 | `rubric-panel` | skill | Score one or more code artifacts against an anchored rubric with a persona-diverse judge panel (whole-field calibration, contested-spread flagging); outputs dimension scores plus findings classified as defect / noise / spec-hole / undeclared-commitment. |
@@ -25,6 +25,12 @@ agent-development lab.
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
 | `subagent-telemetry` | hook (`SubagentStop`) | Appends one row per delegation (agent id, agent type, model, context tokens) to a local ledger, so tier usage can be measured offline. Silent — no stdout, never blocks. |
+
+## Install
+
+```
+claude plugin install foreman-kit@dotfiles-agents
+```
 
 ## A worked example
 

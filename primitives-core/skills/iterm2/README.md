@@ -24,3 +24,12 @@ iTerm2 has two properties that defeat naive automation, and both fail *silently*
 
 The skill front-loads both, then routes to references for configuration, shell integration, the
 default-terminal UTI bindings, and the feature catalog.
+
+## Install
+
+```
+claude plugin install iterm2@dotfiles-agents
+```
+
+Standalone-only — it does not ship inside any bundle. macOS only; the shell-integration and
+default-terminal paths assume iTerm2 is installed locally.

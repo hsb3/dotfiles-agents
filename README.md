@@ -1,65 +1,97 @@
 # dotfiles-agents
 
-A Claude Code marketplace of proven coding-agent extenders, assembled from a single canonical
-source (`primitives-core/`) into installable plugin bundles.
-
-The lineup is organized around desk sets: one desk bundle — **code-desk** (next-release
-execution under a documented repo standard, now also carrying the executive-desk overhead:
-planning, comms, board triage, deck themes) — plus three kits — **foreman-kit** (tiered
-delegation agents and session-discipline hooks, enabled on every desk), **diagrams**
-(structural diagrams: Mermaid, Python cloud-architecture diagrams, draw.io, Excalidraw,
-Graphviz), and **obsidian-toolkit** (Obsidian plugin-dev guidance and vault automation) —
-and eleven standalone one-skill plugins (**claude-code-config**, **claude-code-expertise**,
-**dataviz**, **deep-research**, **github-project-board**, **opencode-expertise**,
-**owner-signoff**, **pptx-themes**, **private-fork**, **project-memory**,
-**tech-eval-research**). Cross-desk items ship standalone, never inside a desk bundle.
-One source tree serves both runtimes (ADR 0017): the marketplace resolves by name as
-`<plugin>@dotfiles-agents` for Claude Code, and opencode installs by laydown.
+A Claude Code plugin marketplace of coding-agent extenders (skills, agents, and hooks),
+installed by name. Everything is authored in this repo unless it says otherwise:
+`pptx-themes` layers a curated theme system over Anthropic's `pptx` skill, vendored verbatim
+with its license. Every bundle closes with an "Honest scope" section stating what it does
+not do.
 
 ## Install
 
 ```sh
-# Claude Code — add the repo as a marketplace, install plugins by name
+# Claude Code — add the marketplace once, then install plugins by name
 claude plugin marketplace add hsb3/dotfiles-agents
-claude plugin install code-desk@dotfiles-agents
+claude plugin install foreman-kit@dotfiles-agents
 
-# opencode — generated at install time from the same source tree
-git clone https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
+# opencode — generated at install time from the source branch
+git clone --branch dev https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
 scripts/install_opencode.sh --global            # ~/.config/opencode/{skills,agents}/
 scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents}/
 ```
 
-## Layout
+The opencode clone is pinned to `dev` because the installer lives on the source branch, not
+the published one. That laydown is a subset of the catalog: skills and agents travel, hooks
+do not (opencode has no equivalent event surface), and skills rostered Claude-Code-only stay
+behind.
 
-| Path | What |
+## Start here
+
+| I want to… | Install |
 |---|---|
-| `primitives-core/` | the single source copy of every primitive (`skills/`, `agents/`, `hooks/`); a skill's README travels with it (`skills/<id>/README.md`) |
-| `plugins/` | thin symlink assemblies (ADR 0017): one dir per plugin, hand-authored `plugin.json`/`hooks.json`/bundle README, everything else symlinked into `primitives-core/` |
-| `.claude-plugin/marketplace.json` | the marketplace root manifest — each plugin listed by relative `./plugins/<id>` source |
-| `primitives-core.yaml` | the roster — provenance manifest of every primitive (ADR 0017: membership lives in the assemblies, not here) |
-| `translation.yaml` | the opencode capability matrix, read by `scripts/gen_opencode.py` at install time (task-4) |
-| `scripts/` | floor + assembly guards and `gen_opencode.py` |
-| `tests/` | stdlib-only unit tests (zero install) |
-| `backlog/decisions/` | decisions: the in-repo ADR mirrors + backlog-native rulings |
-| `flow.yaml` + `backlog/docs/FLOW.md` | the repo-flow DAG — the home of every part, machine-checked by `make flow` |
+| Delegate work across subagents and keep long sessions from running out of context | [`foreman-kit`](plugins/foreman-kit/README.md) |
+| Bring a repo up to a documented structure standard, then plan and report the work through it | [`code-desk`](plugins/code-desk/README.md) |
+| Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
+| Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
+| Get a researched, cited answer instead of one web lookup | [`deep-research`](plugins/deep-research/README.md) |
+| Choose between competing tools and defend the choice with primary sources | [`tech-eval-research`](plugins/tech-eval-research/README.md) |
+| Fix a permission, hook, or setting that is not taking effect | [`claude-code-config`](plugins/claude-code-config/README.md) |
+| Author or debug a Claude Code skill, hook, or agent | [`claude-code-expertise`](plugins/claude-code-expertise/README.md) |
+| Make a chart that is legible and honest rather than merely colorful | [`dataviz`](plugins/dataviz/README.md) |
+| Ship a status briefing or board readout on a recurring cadence | [`comms`](plugins/comms/README.md) |
+| Get a batch of decisions from a human without a wall of chat questions | [`owner-signoff`](plugins/owner-signoff/README.md) |
 
-## Build interface
+## Catalog
 
-`make ci` is the task interface (CI runs it on every PR). See `make help`.
+| Plugin | Kind | What it does | Contents |
+|---|---|---|---|
+| [`code-desk`](plugins/code-desk/README.md) | bundle | Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows. | 10 skills |
+| [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
+| [`foreman-kit`](plugins/foreman-kit/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 6 skills · 4 agents · 4 hooks |
+| [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
+| [`claude-code-config`](plugins/claude-code-config/README.md) | standalone | Settings, permissions, hooks, env vars, and MCP servers routed to the right file by precedence, with a take-effect check. | 1 skill |
+| [`claude-code-expertise`](plugins/claude-code-expertise/README.md) | standalone | Map of Claude Code's extension surfaces: which one fits a need, what its contract is, and how to debug it. | 1 skill |
+| [`comms`](plugins/comms/README.md) | standalone | Recurring status deliverables (morning briefing, wrap-up, weekly plan, board readout) shipped as a deck, to one standard. | 1 skill |
+| [`dataviz`](plugins/dataviz/README.md) | standalone | Chart design rules to consult before writing chart code: mark selection, anti-patterns to refuse, colorblind-safe palette. | 1 skill |
+| [`deep-research`](plugins/deep-research/README.md) | standalone | Multi-source investigation ending in a cited report: load-bearing claims must survive an attempted refutation before being asserted. | 1 skill |
+| [`github-project-board`](plugins/github-project-board/README.md) | standalone | Stand up and operate one GitHub Project (v2) board: fields, views, dependencies, and the weekly triage cadence. | 1 skill |
+| [`iterm2`](plugins/iterm2/README.md) | standalone | Configure iTerm2 past its silent failures: preferences model, dynamic profiles, shell integration, default-terminal binding. | 1 skill |
+| [`mise-en-place-scaffold`](plugins/mise-en-place-scaffold/README.md) | standalone | Create the repo structure a compliance audit found missing; additive only, plans before it applies, never overwrites. | 1 skill |
+| [`opencode-expertise`](plugins/opencode-expertise/README.md) | standalone | Reference for opencode's extension surfaces and how each Claude Code equivalent translates onto them. | 1 skill |
+| [`owner-signoff`](plugins/owner-signoff/README.md) | standalone | Put a batch of decisions in a local browser form instead of a wall of chat questions; answers land back in the session. | 1 skill |
+| [`pptx-themes`](plugins/pptx-themes/README.md) | standalone | PowerPoint decks with a curated theme layer (semantic tokens, approved palettes, visual QA) over Anthropic's pptx skill. | 1 skill |
+| [`private-fork`](plugins/private-fork/README.md) | standalone | Run a private mirror of an upstream repo: remotes, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. | 1 skill |
+| [`project-memory`](plugins/project-memory/README.md) | standalone | Move a project's agent memory into the repo so it travels with a clone, and recover it after the folder is moved. | 1 skill |
+| [`readme-value-and-proof`](plugins/readme-value-and-proof/README.md) | standalone | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. | 1 skill |
+| [`repo-meta-structure`](plugins/repo-meta-structure/README.md) | standalone | The repo layout standard as reference content: directory taxonomy, `.claude` and `.github` layout, checks, and templates. | 1 skill |
+| [`tech-eval-research`](plugins/tech-eval-research/README.md) | standalone | Comparative technology evaluation: ranked shortlist, capability matrix, and a recommendation built from primary sources. | 1 skill |
 
-| Target | Does |
-|---|---|
-| `make check` | roster ↔ disk drift guard (provenance-manifest schema) |
-| `make symlinks` | symlink-assembly lint (ADR 0017): `plugins/` links resolve in-repo; marketplace ↔ assemblies 1:1 |
-| `make test` | run the unit tests |
-| `make ci` | all gates: floor + assembly/flow guards |
+## Bundles and standalones
 
-**Nothing generated is tracked** (ADR 0017). Change a primitive under `primitives-core/` and
-it is live everywhere it ships — the assemblies are pointers, and `make ci` fails if a link
-breaks or an assembly and the marketplace manifest disagree.
+A **bundle** groups skills used together on one kind of work, so they toggle as a unit — the
+code desk's audit reads the same standard its scaffold writes from. A **standalone** is a
+single skill that stands on its own; install it when you want that one capability without
+the rest.
 
-## Governance
+Cross-desk items ship standalone and never inside a bundle. `dataviz`, `deep-research`, and
+`claude-code-config` apply to any kind of work, so folding them into a desk would tie an
+unrelated toggle to them.
 
-`dev` is the source branch; every change lands via PR into `dev`. `main` is CI-published
-(publish-only). See `backlog/decisions/` for the dev/main rule and `.claude/HANDOFF.md` for the
-current build state.
+Some skills are dual-homed: they ship both inside `code-desk` and as standalone plugins, and
+[the bundle's README](plugins/code-desk/README.md) lists which. Each is one source symlinked
+into both assemblies, not a copy, so the bundle and the standalone ship identical bytes.
+
+## How this repo is built
+
+`dev` is the source branch. `main` is publish-only, built by CI, and carries the `plugins/`
+tree, `.claude-plugin/marketplace.json`, and this page (plus a `.gitignore`).
+
+Everything else lives on `dev`: the source tree, the guards that check it, and the
+contribution loop.
+
+- [`primitives-core/`](https://github.com/hsb3/dotfiles-agents/tree/dev/primitives-core) —
+  the one place a skill, agent, or hook is edited. The plugin directories are thin
+  assemblies of links over it, so a fix lands everywhere the primitive ships.
+- [Agent instructions](https://github.com/hsb3/dotfiles-agents/blob/dev/AGENTS.md): the
+  source-of-truth rules and the build interface.
+- [Contributor guide](https://github.com/hsb3/dotfiles-agents/blob/dev/.github/CONTRIBUTING.md):
+  branch off `dev`, PR into `dev`, and the checks that run.

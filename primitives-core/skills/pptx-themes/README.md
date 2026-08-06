@@ -27,8 +27,7 @@ The `base/` directory is the **Anthropic `pptx` skill**, vendored verbatim:
 - License: see `base/LICENSE.txt` (© Anthropic, PBC) — retained unchanged.
 
 The original files (including `base/SKILL.md`, `base/scripts/`, and `base/LICENSE.txt`) are kept
-in place and unmodified to satisfy the attribution obligation. The vendoring is also recorded by
-reference in the repo's `externals.yaml` (`id: pptx`).
+in place and unmodified to satisfy the attribution obligation.
 
 Do not edit `base/` — update the pin instead (a new ref, re-vendored verbatim). The authored
 theme layer is what this repo maintains.
