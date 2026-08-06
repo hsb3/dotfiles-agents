@@ -36,7 +36,10 @@ milestones live in `backlog/` — `backlog board` for the live view, `backlog ta
 --plain` for agents. **GitHub issues are bug-report intake only**; a reported bug gets a
 backlog task when planned. PRs into `dev` never auto-close issues (auto-close fires only on
 the default branch) — close bug issues by hand after the fix merges. The backlog CLI runs
-with `auto_commit: false`; commit its file writes like any other edit.
+with `auto_commit: false`; commit its file writes like any other edit. Task cards meet the
+decision-7 minimum standard (cold-readable description, verifiable ACs, resolving
+references, status truth); edit task files by hand, not via the CLI's write commands, and
+repair any non-conforming card in the PR that touches it.
 
 ## Governance
 

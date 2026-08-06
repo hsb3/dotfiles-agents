@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-04 02:54'
+updated_date: '2026-08-06'
 labels:
   - quality
   - externals
@@ -28,6 +28,6 @@ Migrated from GH #218. Motivating case: PocketBase skill shipped a false single-
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 Registry coverage incl. PocketBase skill (or explicit disposition)
-- [ ] #2 Quality-check step documented and wired
+- [ ] #2 Quality-check step documented and wired into make ci or a named make target
 - [ ] #3 Feedback pointer ships in all distributed skills
 <!-- AC:END -->
