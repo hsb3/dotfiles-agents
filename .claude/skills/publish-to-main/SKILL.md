@@ -14,8 +14,9 @@ description: >
 `dev` integrates; `main` is the published distributable surface consumers install from
 (ADR 0007 governance; ADR 0008 payload). The publish workflow
 (`.github/workflows/publish.yml`) **assembles a filtered tree** from `dev` — the Claude Code
-marketplace shape at the root (per the lift map in the workflow; `dist/opencode/` publishes
-as `opencode/` once the lane exists) — and commits it to `main` **with the previous main as
+marketplace shape at the root (per the lift map in the workflow: the `plugins/` symlink
+assemblies dereferenced, plus the root `marketplace.json`; opencode is an install-time
+laydown since #230 and publishes no lane) — and commits it to `main` **with the previous main as
 parent**: append-only, one commit per publish recording the source `dev` SHA and plugin
 versions. The workbench (`harness/`, `evals/`, `_meta/`, `.claude/`, `.agents/`) never
 publishes. A `pr-target-guard` workflow hard-fails any PR that targets `main`. Nothing lands
@@ -23,14 +24,15 @@ on `main` any other way — a change is "available" only after this runbook comp
 
 ## 1. Land the change on dev
 
-1. Branch off `dev` (`<type>/<short-name>`); source edits go in `primitives-core/` + the
-   rosters (`primitives-core.yaml`, `plugins.yaml`) — **never hand-edit the generated
-   `dist/` lanes** (`dist/claude-code/`: `plugins/`, `marketplace.json`, `PLUGINS.md`).
-   Bump the affected plugin's `version:` in `plugins.yaml`.
-2. Regenerate and gate locally — the same checks CI runs, so a red here is a red there:
+1. Branch off `dev` (`<type>/<short-name>`); source edits go in `primitives-core/`, the
+   roster (`primitives-core.yaml`), and the symlink assemblies under `plugins/`
+   (ADR 0017 — the assemblies ARE the marketplace; the `dist/` lanes were retired
+   in #229). Bump the affected plugin's `version:` in BOTH
+   `plugins/<id>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` —
+   the version-keyed consumer cache makes the bump the release step.
+2. Gate locally — the same checks CI runs, so a red here is a red there:
 
    ```sh
-   make build   # regenerate the marketplace artifacts from source
    make ci      # all gates: floor (identity · tests · provenance · hook-layout) + drift guards + flow
    ```
 

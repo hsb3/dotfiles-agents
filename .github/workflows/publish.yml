@@ -40,17 +40,17 @@ jobs:
       - name: Gate the source tip
         run: make ci
       - name: Assemble the publish tree
-        # Lift map (ADR 0008): the claude-code lane's contents go to the ROOT of main
-        # (the shape consumers resolve, ADR 0007); dist/opencode publishes as opencode/
-        # once the lane exists (W4). Keep this map in sync with flow.yaml's dist node.
+        # Lift map (ADR 0008, updated after #229 retired the dist lanes): the live
+        # symlink assemblies (ADR 0017) ARE the marketplace — dereference them to the
+        # ROOT of main (the shape consumers resolve, ADR 0007). opencode is an
+        # install-time laydown since #230 and no longer publishes a lane.
         run: |
           set -euo pipefail
           ASM="$(mktemp -d)"
-          cp -R dist/claude-code/. "$ASM/"
+          cp -RL plugins "$ASM/plugins"
+          mkdir -p "$ASM/.claude-plugin"
+          cp .claude-plugin/marketplace.json "$ASM/.claude-plugin/marketplace.json"
           cp README.md "$ASM/"
-          if [ -d dist/opencode ]; then
-            cp -R dist/opencode "$ASM/opencode"
-          fi
           # dev's .gitignore ships with the publish tree: main has no tracked files to
           # hide, but an accidental local checkout of main in a dev working directory
           # would otherwise surface every ignored-on-dev leftover as untracked noise.
