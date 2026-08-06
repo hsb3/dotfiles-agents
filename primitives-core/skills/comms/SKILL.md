@@ -1,6 +1,6 @@
 ---
 name: comms
-description: Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a "briefing", "status deck", "status readout", "board deck", or "comms package". Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.
+description: Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a "briefing", "status deck", "status readout", "board deck", or "comms package". Self-comms render through a bundled stdlib-Python script (no MCP server needed). Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.
 ---
 
 # Comms
@@ -17,16 +17,16 @@ comm type has a self-contained playbook + a real worked example in **`examples/<
 
 | If you want | Comm type | Toolchain | Audio | Playbook |
 | --- | --- | --- | --- | --- |
-| the decision for today | morning briefing | deck-builder | yes (2-3 min) | `examples/morning-briefing/playbook.md` |
-| to close today, tee up tomorrow | end-of-day wrap-up | deck-builder (light) | optional | `examples/end-of-day-wrapup/playbook.md` |
-| the week's plan + where we stand | weekly planning briefing | deck-builder | yes (3-4 min) | `examples/weekly-planning/playbook.md` |
+| the decision for today | morning briefing | `render_deck.py` | yes (2-3 min) | `examples/morning-briefing/playbook.md` |
+| to close today, tee up tomorrow | end-of-day wrap-up | `render_deck.py` (light) | optional | `examples/end-of-day-wrapup/playbook.md` |
+| the week's plan + where we stand | weekly planning briefing | `render_deck.py` | yes (3-4 min) | `examples/weekly-planning/playbook.md` |
 | a board status readout + the ask | advisor board readout | pptx-themes | optional | `examples/advisor-board-readout/playbook.md` |
 | what a client gets + why to trust it | client product overview | pptx-themes | optional | `examples/client-product-overview/playbook.md` |
 
 The split is by **audience and stakes**: the three self-comms are fast, decision-first, and
-use the deck-builder MCP; the two external comms are polished, hand-laid, and use the
-**pptx-themes** skill. Audience drives toolchain, theme, voice, and how honest framing is
-phrased.
+render through **`scripts/render_deck.py`** (bundled, stdlib-only Python - no MCP server); the
+two external comms are polished, hand-laid, and use the **pptx-themes** skill. Audience drives
+toolchain, theme, voice, and how honest framing is phrased.
 
 ## Workflow
 
@@ -36,10 +36,10 @@ phrased.
    `<owner>/<repo>`, handoff file, gates), the toolchain pipeline, voice baseline, and gotchas.
 3. **Gather current state** per the playbook - accuracy is the whole job (handoff + live counts
    + git log for internal comms; charter + product thesis for external comms).
-4. **Author** the source (`slides.json` for deck-builder, `deck.js` for pptx-themes) to the
+4. **Author** the source (`slides.json` for `render_deck.py`, `deck.js` for pptx-themes) to the
    playbook's structure, mirroring the sample.
-5. **Build**: validate + export (deck-builder) or render + visual-QA (pptx-themes); narrate +
-   export audio if the comm calls for it.
+5. **Build**: `render_deck.py --validate` then `--pdf` (self-comms), or render + visual-QA
+   (pptx-themes); narrate + export audio if the comm calls for it.
 6. **Write `sources.md`** - claim-by-claim provenance; the board / registry is the live truth.
 7. **Deliver** with `SendUserFile` so it opens in a viewer, not the terminal.
 

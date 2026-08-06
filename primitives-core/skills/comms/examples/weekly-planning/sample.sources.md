@@ -47,7 +47,7 @@ no-timelines convention).
 
 ## Artifacts in this folder
 
-- `slides.json` — deck-builder Slide[] (11 slides, boardroom theme)
+- `slides.json` — render_deck.py Slide[] (11 slides, boardroom styling)
 - `weekly-plan-briefing.pdf` — exported deck (autofit applied, repo-linkified #refs)
 - `executive-brief.mp3` — quick executive brief (~3:54, briefing style)
 - `sources.md` — this file

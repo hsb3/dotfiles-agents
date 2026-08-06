@@ -39,7 +39,6 @@ primitives:
     source: primitives-core/skills/comms
     origin: authored
     disposition: qualified
-    requires: [local-mcp]
     targets: [claude-code, opencode]
   - id: github-project-board
     type: skill

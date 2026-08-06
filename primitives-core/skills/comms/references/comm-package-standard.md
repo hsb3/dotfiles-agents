@@ -16,13 +16,17 @@ Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 ## Two toolchains
 
-| | deck-builder (MCP) | pptx-themes (skill) |
+| | `render_deck.py` (bundled script) | pptx-themes (skill) |
 | --- | --- | --- |
-| Source | `slides.json` (block types: heading / subtitle / bullets / columns / stat) | `deck.js` (pptxgenjs) + `package.json` |
-| Theme | `boardroom` (deck-builder theme arg) | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
-| Output | `.pdf` + `.mp3` | `.pptx` + `.pdf` |
-| Strengths | fast, structured, validated, linkifies bare #refs, audio companion | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
+| Source | `slides.json` (block types: heading / subtitle / bullets / columns / stat / callout / divider) | `deck.js` (pptxgenjs) + `package.json` |
+| Theme | the script's built-in boardroom styling | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
+| Output | `.html` + `.pdf` (+ `.mp3` if an audio MCP is available) | `.pptx` + `.pdf` |
+| Strengths | fast, structured, validated, linkifies bare #refs, zero install | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
 | Use for | internal, frequent, decision-first (morning, EOD, weekly) | external, high-stakes (advisor board, client overview) |
+
+`render_deck.py` is stdlib-only Python and ships inside this skill, so the self-comms need no
+MCP server. PDF export shells out to headless Chrome; if Chrome is absent, render `--html`
+and print from any browser — the HTML is fully self-contained (styles inlined, no network).
 
 For pptx-themes decks, invoke the **`pptx-themes` skill** - it owns the approved palette, semantic
 theme tokens, typography, and the visual-QA workflow. Available token themes: `actuarial-signal`,
@@ -45,7 +49,7 @@ The skill is global; outputs are per-project. Each deliverable is a dated folder
 
 ```
 <project>/_meta/briefings/<YYYY-MM-DD>-<slug>/
-  slides.json | deck.js (+ package.json)   # source: deck-builder OR pptx-themes
+  slides.json | deck.js (+ package.json)   # source: render_deck.py OR pptx-themes
   <name>.pdf                                # exported deck (always)
   <name>.pptx                               # pptx-themes only
   <name>.mp3                                # audio, if the playbook calls for it
@@ -75,16 +79,29 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 
 ## Shared pipeline
 
-**deck-builder path** (morning, EOD, weekly):
+**script path** (morning, EOD, weekly):
 
 1. Gather current state - accuracy is the whole job (handoff + live counts + git log; see playbook).
-2. Author `slides.json` to the playbook's structure (`boardroom` theme), mirroring the sample.
-3. Validate: `mcp__deck-builder__validate_slides` with `overflow:true`. Schema errors must be
-   zero; wordy-bullet / non-action-title warnings are a nudge to tighten the lead slides.
-4. Export PDF: `mcp__deck-builder__export_pdf` with `theme:"boardroom"`, `repo:"<owner>/<repo>"`
-   (the resolved slug - linkifies bare #refs), `autofit:true`, `out:` the folder path.
-5. Narrate (if audio): `mcp__audio__narrate` from a written source in the SAME order as the
-   deck; review the refined script for accuracy.
+2. Author `slides.json` to the playbook's structure, mirroring the sample.
+3. Validate:
+
+   ```
+   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/render_deck.py" slides.json --validate
+   ```
+
+   Schema errors must be zero. An unsupported block type is a hard error, never a silent
+   drop - a status deck that quietly loses content is worse than one that fails to build.
+4. Export:
+
+   ```
+   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/render_deck.py" slides.json \
+     --pdf <name>.pdf --repo "<owner>/<repo>" --title "<deck title>"
+   ```
+
+   `--repo` is the resolved slug and linkifies bare `#refs`. Add `--html <name>.html` to keep
+   the browser-openable copy alongside the PDF.
+5. Narrate (if audio, and an audio MCP is available): `mcp__audio__narrate` from a written
+   source in the SAME order as the deck; review the refined script for accuracy.
 6. Export audio: `mcp__audio__export_audio` -> `<name>.mp3`.
 7. Write `sources.md` (provenance per claim + "board is the live source of truth").
 8. Deliver: `SendUserFile` the PDF (and MP3).
@@ -103,8 +120,13 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
   (`DEADLINE_EXCEEDED` / connection dropped); it usually succeeds on a later retry. The OpenAI
   fallback needs `OPENAI_API_KEY`, often unset. If audio is blocked, ship the deck + the written
   script and note the block in `sources.md`; don't loop on retries.
-- **`autofit:true`** on deck-builder export silently shrinks any overflowing slide to fit (0.7
-  floor); prefer trimming content so it isn't needed, but the flag is the safety net.
+- **There is no autofit.** `render_deck.py` renders slides as authored; content that exceeds a
+  1280x720 slide is clipped rather than silently shrunk. Trim the slide instead - overflow is
+  a signal the slide is doing too much. Check by opening the `--html` output before shipping.
+- **Chrome must exit on its own terms.** The exporter polls for the finished PDF and then
+  reaps the Chrome process group it started (headless Chrome routinely writes the file and
+  then never exits). It cannot touch a desktop Chrome you have open - the child runs in its
+  own session.
 - **Prettier table-cell trap** (only matters if a `.md` gets committed): no unicode width chars
   (em-dash, middle-dot, arrows, ellipsis) or literal `|` inside markdown table cells - use ASCII
   (`-`, `to`, `vs`). Prose and JSON and code blocks are fine.

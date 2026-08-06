@@ -4,7 +4,7 @@ _Weekly planning playbook. Shared machinery: `references/comm-package-standard.m
 
 Weekly (Friday), audience the owner. **The one job: name the week's single converging objective,
 then the parallel lanes and owner-gated decisions that reach it.** A hybrid artifact - it fuses
-a status look-back with the forward plan. Toolchain deck-builder (`boardroom`); audio companion
+a status look-back with the forward plan. Toolchain `render_deck.py`; audio companion
 (~3-4 min, "executive brief"). Folder slug `-weekly-plan`.
 
 ## The one rule

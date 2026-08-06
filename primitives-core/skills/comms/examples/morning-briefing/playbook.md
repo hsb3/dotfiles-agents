@@ -3,7 +3,7 @@ _Morning briefing playbook. Shared machinery: `references/comm-package-standard.
 # Morning briefing
 
 Daily AM, audience the owner. **The one job: the decision he has to make today, in the first 30
-seconds.** Toolchain deck-builder (`boardroom`); audio companion (~2-3 min). Folder slug
+seconds.** Toolchain `render_deck.py`; audio companion (~2-3 min). Folder slug
 `-morning-status`.
 
 ## The one rule

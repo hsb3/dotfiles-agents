@@ -16,7 +16,7 @@ Audience and stakes pick the toolchain, theme, and voice:
 
 | Audience | Comm type | Toolchain |
 |---|---|---|
-| You | morning briefing · end-of-day wrap-up · weekly planning | deck-builder MCP, fast and decision-first |
+| You | morning briefing · end-of-day wrap-up · weekly planning | `scripts/render_deck.py`, fast and decision-first |
 | External | advisor board readout · client product overview | `pptx-themes`, polished and hand-laid |
 
 Each type has a self-contained playbook and a real worked example under `examples/<type>/`;
@@ -31,10 +31,14 @@ is the live truth, not the deck.
 
 ## What it needs
 
-The deck-builder MCP server for the three self-comms. Composes with two sibling skills without
-replacing them: `pptx-themes` for external decks, and `handoff` (ships in `foreman-kit`) for
-the end-of-day wrap-up. Install those alongside it if you want the full set — none of them
-arrive by way of this plugin.
+**Nothing, for the three self-comms.** `scripts/render_deck.py` is stdlib-only Python bundled
+with the skill: it validates `slides.json`, renders a self-contained HTML document, and prints
+a PDF through headless Chrome. Without Chrome, render the HTML and print from any browser.
+
+Composes with two sibling skills without replacing them: `pptx-themes` for the external decks,
+and `handoff` (ships in `foreman-kit`) for the end-of-day wrap-up. Install those alongside it
+if you want the full set — neither arrives by way of this plugin. Audio companions use an
+audio MCP server when one is available and are skipped when it isn't.
 
 ## Install
 
