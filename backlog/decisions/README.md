@@ -38,7 +38,7 @@ numbering has intentional gaps: **0004** and **0005** existed pre-rebuild but ar
 | [0001](0001-skills-over-commands.md) | Skills over commands: command intent folds into skills or retires | Accepted | CANON 3; backfill #40 |
 | [0002](0002-hooks-as-script-plus-config.md) | Hooks as script + config, never inline in settings.json | Accepted | dotfiles convention + gate H4; backfill #40 |
 | [0003](0003-externals-tracked-not-vendored.md) | Externals tracked-and-cloned (upstream + pinned ref), never vendored | Accepted | CANON 11/16; backfill #40 |
-| [0006](0006-meta-tracked-by-default.md) | `_meta/` tracked by default; targeted ignores only (operations/, caches, litter) | Accepted | #99 owner ruling 2026-07-13 |
+| [0006](0006-meta-tracked-by-default.md) | `_meta/` tracked by default; targeted ignores only (operations/, caches, litter) | Superseded-by-decision-8 | #99 owner ruling 2026-07-13 |
 | [0007](0007-distribution-restructure-dev-main.md) | Distribution restructure: `dev` integrates, `main` publishes — build on `dev`, never `main` | Accepted | DEV-31/#115; mirrors old-desk ADR 0014 |
 | [0008](0008-vendor-dist-lanes-and-filtered-publish.md) | Vendor dist lanes under `dist/`, filtered append-only publish, flow.yaml as standing structural guard | Superseded-by-0017 (flow guard survives) | opencode lane planning; owner ruling 2026-07-22; restores old-desk 0014 §3 |
 | [0015](0015-self-authored-primitives-only.md) | `primitives-core/` is self-authored only; third-party material by reference in `externals.yaml`, never vendored | Accepted | mirrors the old-desk composition decision (0005·0007); backfilled 2026-07-22 per #203 |

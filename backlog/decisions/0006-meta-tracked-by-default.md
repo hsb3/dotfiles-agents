@@ -1,7 +1,7 @@
 ---
 title: "_meta/ is tracked by default; targeted ignores only"
 type: decision
-status: Accepted
+status: Superseded-by-decision-8 (2026-08-06 — _meta/ removed entirely; secrets home is .claude/operations/)
 created: 2026-07-13
 summary: Replace the _meta/ broad-ignore + negation gitignore policy with track-by-default; only operations/ content, caches, and OS litter stay ignored.
 ---

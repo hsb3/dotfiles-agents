@@ -18,7 +18,7 @@ marketplace shape at the root (per the lift map in the workflow: the `plugins/` 
 assemblies dereferenced, plus the root `marketplace.json`; opencode is an install-time
 laydown since #230 and publishes no lane) — and commits it to `main` **with the previous main as
 parent**: append-only, one commit per publish recording the source `dev` SHA and plugin
-versions. The workbench (`harness/`, `evals/`, `_meta/`, `.claude/`, `.agents/`) never
+versions. The workbench (`harness/`, `evals/`, `backlog/`, `.claude/`) never
 publishes. A `pr-target-guard` workflow hard-fails any PR that targets `main`. Nothing lands
 on `main` any other way — a change is "available" only after this runbook completes.
 
