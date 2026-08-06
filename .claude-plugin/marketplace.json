@@ -34,7 +34,7 @@
       "description": "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
       "author": {
@@ -133,7 +133,7 @@
       "description": "Create, edit, and review PowerPoint presentations with a curated theme layer \u2014 semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow \u2014 composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml).",
       "name": "pptx-themes",
       "source": "./plugins/pptx-themes",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {
@@ -157,7 +157,7 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "The canonical repo meta-structure standard — consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
+      "description": "The canonical repo meta-structure standard \u2014 consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
       "name": "repo-meta-structure",
       "source": "./plugins/repo-meta-structure",
       "version": "0.0.1"

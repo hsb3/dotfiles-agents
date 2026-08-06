@@ -4,5 +4,5 @@
   },
   "description": "Create, edit, and review PowerPoint presentations with a curated theme layer \u2014 semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow \u2014 composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml).",
   "name": "pptx-themes",
-  "version": "0.0.1"
+  "version": "0.0.2"
 }
