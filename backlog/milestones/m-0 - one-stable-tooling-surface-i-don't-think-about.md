@@ -12,4 +12,4 @@ Done when (checkable):
 - [x] Extraction question ruled — decision-5 (both, deferred; dev is the workbench)
 - [x] Externals compliant — task-10 Done 2026-08-06 (roster clean under amended ADR 0015; `origin: vendored` class + contract enforced)
 - [x] Lineup recomposed — task-9 Done 2026-08-06 (bundle-composition principle ratified; comms standalone; 15 → 19 plugins)
-- [ ] Board conforms to decision-7 (every open card passes the standard)
+- [ ] Every open card is cold-readable with verifiable acceptance criteria, assessed by someone who didn't write it

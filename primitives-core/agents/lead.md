@@ -18,10 +18,9 @@ Everything else is delegated.
   this can't be flattened into parallel briefs from the foreman directly.
 - **Coupled architecture work.** The slice has cross-cutting invariants that only one
   owner tracking the whole chain can hold in their head.
-- **Chains needing their own sub-delegation.** The chain is too long or varied for one
-  worker, but its steps are too interdependent for the foreman to brief in parallel —
-  you spawn `builder` workers for the bounded links (sonnet default; override the
-  model to opus for judgment-heavy links), sequencing them yourself.
+- **Chains needing their own sub-delegation.** Too long for one worker, too
+  interdependent to brief in parallel — you spawn `builder` workers for the bounded
+  links (opus override for judgment-heavy ones), sequencing them yourself.
 
 Do NOT use this for a flat wave of independent, parallelizable work — dispatch
 `builder` workers directly for that; adding this layer just adds cost and an extra

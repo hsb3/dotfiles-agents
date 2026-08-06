@@ -18,7 +18,7 @@ marketplace shape at the root (per the lift map in the workflow: the `plugins/` 
 assemblies dereferenced, plus the root `marketplace.json`; opencode is an install-time
 laydown since #230 and publishes no lane) — and commits it to `main` **with the previous main as
 parent**: append-only, one commit per publish recording the source `dev` SHA and plugin
-versions. The workbench (`harness/`, `evals/`, `_meta/`, `.claude/`, `.agents/`) never
+versions. The workbench (`harness/`, `evals/`, `backlog/`, `.claude/`) never
 publishes. A `pr-target-guard` workflow hard-fails any PR that targets `main`. Nothing lands
 on `main` any other way — a change is "available" only after this runbook completes.
 
@@ -69,11 +69,13 @@ Not done until proven:
 ```sh
 git fetch origin
 git ls-tree --name-only origin/main          # distributable surface ONLY (no workbench dirs)
-git rev-parse origin/dev:dist/claude-code/plugins origin/main:plugins   # SAME tree hash twice
 git log --oneline -1 origin/main             # "publish: dev@<sha>" naming the tip you merged
 ```
 
-Optionally confirm the consumer surface: the changed plugin's `version` appears in
+No tree-hash equality with dev exists — the workflow dereferences the symlink
+assemblies, so published `plugins/` are regular files while dev's are symlinks
+(the `dist/` lanes that once allowed a rev-parse compare retired in #229). Instead
+confirm the consumer surface: the changed plugin's `version` appears in
 `.claude-plugin/marketplace.json` at `origin/main`.
 
 ## Gotchas

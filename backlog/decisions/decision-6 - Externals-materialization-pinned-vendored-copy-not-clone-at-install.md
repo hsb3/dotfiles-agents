@@ -13,8 +13,8 @@ sign-off note pointed at vendoring ("might just be simpler to keep a pinned, ven
 the repo"). A decisions memo weighed both, canonicalised the scattered "decisions 1–7," and
 found a working vendored precedent already in-tree (`pptx-themes/base/` — a verbatim,
 LICENSE-carrying copy of the Anthropic pptx skill that escapes ADR 0015 only via a roster-entry
-loophole). Full analysis: `_meta/plans/externals-clone-vs-vendor/memo.md`. Owner ruled
-2026-08-03.
+loophole). Full analysis: `_meta/plans/externals-clone-vs-vendor/memo.md` (removed with
+`_meta` 2026-08-06; in git history). Owner ruled 2026-08-03.
 
 ## Decision
 

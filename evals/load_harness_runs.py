@@ -5,7 +5,7 @@ logs under `harness/runs/*.log` into `runs`, `run_events`, `tool_calls`, and
 `artifacts`. Claude logs are stream-json (one event per line, separate
 assistant/tool_use + user/tool_result events); opencode logs are JSONL with a single
 fused `tool_use` event carrying call+result. Both normalize to the shared event model
-in `_meta/research/agent-harness/runlog-data-shape.md` (the design of record).
+in `harness/docs/runlog-data-shape.md` (the design of record).
 
 The loader is standalone (never imports from `harness/`): it re-derives the 7-field
 resume key (`campaign|harness|model|candidate|case|config|trial`) locally.

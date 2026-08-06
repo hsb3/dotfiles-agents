@@ -1,5 +1,6 @@
 - [Backlog.md is the task system](backlog-md-task-management.md) — tasks live in Backlog.md; GH issues are bug intake only
-- [Backlog CLI rewrites sibling tasks](backlog-cli-rewrites-sibling-tasks.md) — a backlog write can overwrite task files you didn't touch from its index; diff all task files before committing (rule now also in CLAUDE.md/decision-7)
+- [Backlog CLI is the write path](backlog-cli-is-the-write-path.md) — owner ruling 2026-08-06: task writes go through the CLI/MCP tools; the 2026-08-04 sibling-rewrite was a concurrent-session race; decision-7 deleted, no supersession trail
+- [Use subagents for labor](feedback-use-subagents-for-labor.md) — owner correction 2026-08-06: delegate edit chains/sweeps/verification to subagents; the session keeps only the foreman floor
 - [make ci ✗-line is a passing test](make-ci-refusal-line-is-a-passing-test.md) — the "✗ opencode laydown — refusing…" line is a passing test's own output; judge make ci by exit code, not ✗ glyphs
 - [Plugin enablement needs a per-project install](plugin-enablement-needs-per-project-install.md) — `enabledPlugins: true` is inert without an install record for this projectPath; `claude plugin list` reports other projects' records
 - [Extender estate cohesion](extender-estate-cohesion.md) — 3-surface estate (dotfiles-agents + desk-standard + dev-tooling-desk); datamodel NOT greenfield (extenders.yaml + committed PocketBase); desk-standard is a rapid-dev co-product not yet distributed

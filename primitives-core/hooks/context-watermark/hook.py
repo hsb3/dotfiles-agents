@@ -32,8 +32,8 @@ import traceback
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
-SOFT_DEFAULT = 100_000
-HARD_DEFAULT = 140_000
+SOFT_DEFAULT = 70_000
+HARD_DEFAULT = 100_000
 TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB
 REFIRE_EVERY_DEFAULT = 5  # prompts, while still above a tier
 STATE_DIR_DEFAULT = "/tmp/context-watermark"

@@ -5,7 +5,7 @@ against a fixture workspace with a candidate extender injected, grade the outcom
 append one ledger row._
 
 Status: active — Wave 4 (hardening + reuse-readiness). Design of record:
-`../_meta/research/agent-harness/DESIGN.md`.
+`docs/DESIGN.md`.
 
 ## What it is
 

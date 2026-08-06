@@ -2,7 +2,8 @@
 
 The **machine-consumable surface** of the standard. The repo-compliance-audit skill reads
 these rows and executes them; zero checklist items for this standard are defined anywhere
-else. Adding or changing a check means editing this file, not the audit.
+else. Adding or changing a check *row* means editing this file, not the audit; a new check
+*type* is a change to the audit script itself (which says so when it meets one).
 
 **Contract:**
 
@@ -10,12 +11,17 @@ else. Adding or changing a check means editing this file, not the audit.
   contract** — they never change, even if the skill is renamed. Rows may be added; IDs are
   never reused.
 - The Check column is `<check-type>: <argument>`, with `<check-type>` drawn from a closed
-  vocabulary: `path-exists`, `gitignore-tracks`, `gitignore-ignores`, `frontmatter-has`,
-  `no-inline-hooks`, `flag-if-present`. New check *types* are an audit-script change; new
-  check *rows* belong here.
+  vocabulary: `path-exists`, `path-exists-any`, `gitignore-tracks`, `gitignore-tracks-any`,
+  `gitignore-ignores`, `frontmatter-has`, `no-inline-hooks`, `flag-if-present`. New check
+  *types* are an audit-script change; new check *rows* belong here.
+- `path-exists-any` takes a ` · `-separated precedence list of candidate paths; any one of
+  them existing is the pass (trailing `/` still means "directory", as in `path-exists`).
 - `gitignore-tracks` / `gitignore-ignores` arguments are probe paths evaluated with
   `git check-ignore` (tracks = exit 1 / not ignored; ignores = exit 0 / ignored). Probe
   paths need not exist on disk.
+- `gitignore-tracks-any` takes the same ` · `-separated precedence list: the **first candidate
+  that exists** is the one probed with `gitignore-tracks`. No candidate existing is a gap —
+  there is nothing to probe, so the row must not pass by default.
 - `flag-if-present` rows are inverted: the path being **absent** is the pass. Rows marked
   *(migration debt)* are reported with migration-debt wording, distinct from a structural gap.
 - Per-repo variance declared in `_meta/mise-en-place.yml` (e.g. `required_folders`,
@@ -31,7 +37,7 @@ else. Adding or changing a check means editing this file, not the audit.
 | META-03 | `_meta/` | `path-exists: _meta/plans/` | Directory exists |
 | META-04 | `_meta/` | `path-exists: _meta/operations/` | Directory exists |
 | META-05 | `_meta/` | `path-exists: _meta/research/` | Directory exists |
-| META-06 | `_meta/` | `path-exists: _meta/HANDOFF.md` | File exists |
+| META-06 | `_meta/` | `path-exists-any: _meta/HANDOFF.md · HANDOFF.md · .claude/HANDOFF.md` | Handoff exists at one of the handoff hooks' three precedence paths |
 | META-07 | `_meta/` | `path-exists: _meta/README.md` | File exists (states the `_meta/` taxonomy) |
 
 ## `.claude/` layout
@@ -44,7 +50,7 @@ else. Adding or changing a check means editing this file, not the audit.
 | CLAUDE-04 | `.claude/` | `path-exists: .claude/rules/` | Directory exists |
 | CLAUDE-05 | `.claude/` | `path-exists: .claude/skills/` | Directory exists |
 | CLAUDE-06 | `.claude/` | `path-exists: .claude/settings.json` | File exists (tracked project policy; must carry anything a headless run depends on) |
-| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per the skills-over-commands decision (ADR: `dotfiles-agents/docs/decisions/0001-skills-over-commands.md`) *(migration debt)* |
+| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per the skills-over-commands decision (ADR: `dotfiles-agents/backlog/decisions/0001-skills-over-commands.md`) *(migration debt)* |
 
 ## `.github/` template set
 
@@ -90,9 +96,9 @@ rule) — the scaffold never creates it; the other four rows are template-backed
 |---|---|---|---|
 | DOCS-01 | `docs/` | `path-exists: docs/README.md` | Orientation page: what docs/ holds, the docs-vs-`_meta/` boundary |
 | DOCS-02 | `docs/` | `path-exists: docs/CHARTER.md` | Canonical page with an explicit precedence rule (authored, never scaffolded) |
-| DOCS-03 | `docs/` | `path-exists: docs/decisions/` | ADR directory exists |
-| DOCS-04 | `docs/` | `path-exists: docs/decisions/README.md` | ADR convention (append-only, supersede-vs-correct) + index |
-| DOCS-05 | `docs/` | `path-exists: docs/decisions/0000-template.md` | ADR template exists |
+| DOCS-03 | `docs/` | `path-exists-any: docs/decisions/ · backlog/decisions/` | ADR directory exists (`backlog/decisions/` is the sanctioned home when Backlog.md is the task system) |
+| DOCS-04 | `docs/` | `path-exists-any: docs/decisions/README.md · backlog/decisions/README.md` | ADR convention (append-only, supersede-vs-correct) + index |
+| DOCS-05 | `docs/` | `path-exists-any: docs/decisions/0000-template.md · backlog/decisions/0000-template.md` | ADR template exists |
 
 ## `.gitignore` semantics
 
@@ -105,7 +111,7 @@ ignore behavior, not a byte-match against the template.
 | IGNORE-02 | gitignore | `gitignore-tracks: _meta/plans/probe.md` | Not ignored (`_meta/` is tracked by default; no negation needed) |
 | IGNORE-03 | gitignore | `gitignore-tracks: _meta/plans/inbox/probe.md` | Not ignored (nested intake tracked by default) |
 | IGNORE-04 | gitignore | `gitignore-tracks: _meta/README.md` | Not ignored |
-| IGNORE-05 | gitignore | `gitignore-tracks: _meta/HANDOFF.md` | Not ignored |
+| IGNORE-05 | gitignore | `gitignore-tracks-any: _meta/HANDOFF.md · HANDOFF.md · .claude/HANDOFF.md` | The handoff file (whichever META-06 precedence path it lives at) is not ignored |
 | IGNORE-06 | gitignore | `gitignore-tracks: _meta/mise-en-place.yml` | Not ignored (manifest survives clones and worktrees) |
 | IGNORE-07 | gitignore | `gitignore-ignores: .env` | Ignored |
 | IGNORE-08 | gitignore | `gitignore-tracks: .env.example` | Not ignored (`!.env*.example`) |
@@ -156,6 +162,6 @@ missing field).
 - **`HOOK-xx` (hook packaging)** — hooks as script + config directories, never inline in
   `.claude/settings.json`: the interim `HOOK-01` check (`no-inline-hooks`) is sourced by the
   audit directly from the hooks-as-script-plus-config decision (ADR:
-  `dotfiles-agents/docs/decisions/0002-hooks-as-script-plus-config.md`); the full family
+  `dotfiles-agents/backlog/decisions/0002-hooks-as-script-plus-config.md`); the full family
   arrives with the deferred hook-composition standard.
 - **Naming-grammar conformance** — arrives with the naming-taxonomy standard.

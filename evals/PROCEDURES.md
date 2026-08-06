@@ -2,7 +2,7 @@
 
 _Operator runbook: which script to run when, and the step-by-step procedures for the
 recurring operations. Written 2026-07-20 from the W1 and M1 passes while the context was
-hot. Secret-free (credentials live in `_meta/operations/extender-db.env`)._
+hot. Secret-free (credentials live in `.claude/operations/extender-db.env`)._
 Status: active
 
 ## The scripts, in dependency order
@@ -13,7 +13,7 @@ no shell, which makes the no-DB-access discipline structural, not just briefed).
 
 | Order | Script | Reads | Writes | Run when |
 |---|---|---|---|---|
-| 0 | `serve.sh` | env / `_meta/operations/extender-db.env` | — | First. Server + admin UI on :8090. Other scripts need it up. |
+| 0 | `serve.sh` | env / `.claude/operations/extender-db.env` | — | First. Server + admin UI on :8090. Other scripts need it up. |
 | 1 | `schema.py` | its own collection specs | all collections (merge-by-name, ids preserved) | After any schema change; safe anytime. **Always before any loader.** |
 | 2 | `ingest.py` | repo (`primitives-core/`, rosters, `externals.yaml`) | inventory collections + framework seeds + `mechanical-v1` assessments | After any catalog change. Never touches non-mechanical assessors or `job_coverage`/`relationships`. |
 | 3 | `load_eval_run.py` | a manifest JSON (run metadata + prompt/response files) | `eval_runs`, `eval_responses` | **Before** loading any judged/coverage assessments — their loader input needs the run id it creates. |

@@ -34,7 +34,7 @@
       "description": "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
       "author": {
@@ -70,7 +70,7 @@
       "description": "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "author": {
@@ -79,7 +79,7 @@
       "description": "A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout \u00b7 builder \u00b7 reviewer \u00b7 lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, a waves skill that drives an issue backlog to closed through a pinned triage issue + wave-planned isolated crews, and four hooks \u2014 context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage. Now also carries the review-cycle trio distilled from the inventory lab: rubric-panel (persona-diverse judge panel scoring against an anchored rubric), deletion-pass (simplify a module to irreducible against its contract), and layer-cycle (create-evaluate-refine orchestration until convergence).",
       "name": "foreman-kit",
       "source": "./plugins/foreman-kit",
-      "version": "0.7.1"
+      "version": "0.7.2"
     },
     {
       "author": {
@@ -106,7 +106,7 @@
       "description": "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.",
       "name": "obsidian-toolkit",
       "source": "./plugins/obsidian-toolkit",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "author": {
@@ -124,7 +124,7 @@
       "description": "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically.",
       "name": "owner-signoff",
       "source": "./plugins/owner-signoff",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {
@@ -133,7 +133,7 @@
       "description": "Create, edit, and review PowerPoint presentations with a curated theme layer \u2014 semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow \u2014 composed over Anthropic's vendored pptx base skill (base/, verbatim; recorded in externals.yaml).",
       "name": "pptx-themes",
       "source": "./plugins/pptx-themes",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {
@@ -157,10 +157,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "The canonical repo meta-structure standard — consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
+      "description": "The canonical repo meta-structure standard \u2014 consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
       "name": "repo-meta-structure",
       "source": "./plugins/repo-meta-structure",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {

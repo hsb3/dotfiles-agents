@@ -5,11 +5,11 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 7cd91ebc-af47-437b-8eec-c3a53e5836ad
-  modified: 2026-07-21T17:58:00.173Z
+  modified: 2026-08-06T14:06:27.146Z
 ---
 
 On 2026-07-21, during the agent-harness build (branch `feat/agent-harness`, design at
-`_meta/research/agent-harness/DESIGN.md`), Henry granted standing permission: "permission
+`harness/docs/DESIGN.md`), Henry granted standing permission: "permission
 granted to push, commit, create pr and merge."
 
 **Why:** the harness build runs in waves with foreman-verified gates; per-action asking would

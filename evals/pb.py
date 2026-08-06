@@ -1,7 +1,7 @@
 """Minimal PocketBase REST client (stdlib-only) shared by schema.py and ingest.py.
 
 Auth resolution order: PB_URL / PB_ADMIN_EMAIL / PB_ADMIN_PASSWORD env vars, then
-_meta/operations/extender-db.env (KEY=VALUE lines, untracked). Fails loudly if absent.
+.claude/operations/extender-db.env (KEY=VALUE lines, untracked). Fails loudly if absent.
 """
 
 import json
@@ -13,7 +13,7 @@ import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
-ENV_FILE = os.path.join(REPO, "_meta", "operations", "extender-db.env")
+ENV_FILE = os.path.join(REPO, ".claude", "operations", "extender-db.env")
 
 
 def _load_env():

@@ -4,6 +4,7 @@ title: 'foreman-kit: per-project override for the handoff-file location'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-06 14:13'
 labels:
   - foreman-kit
   - decision
@@ -26,3 +27,13 @@ Migrated from GH #220. The hardcoded trio (_meta/HANDOFF.md / HANDOFF.md / .clau
 - [ ] #1 Override mechanism ruled and implemented in surfacer + freshness-guard + SKILL.md
 - [ ] #2 Standard trio unchanged when override absent
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: session 2026-08-06
+created: 2026-08-06 14:13
+---
+META-06 half of this task resolved 2026-08-06 (owner sign-off, recorded in decision-8): the published repo-meta-structure checklist now accepts the handoff hooks' precedence trio (_meta/HANDOFF.md, HANDOFF.md, .claude/HANDOFF.md), and DOCS-03..05 accept backlog/decisions/ as the ADR home. This repo's .claude/HANDOFF.md location is now standard-conformant. Residual scope of this task: the per-project handoff-location override feature in foreman-kit itself.
+---
+<!-- COMMENTS:END -->

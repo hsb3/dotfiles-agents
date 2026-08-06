@@ -38,11 +38,10 @@ scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents
 | `.claude-plugin/marketplace.json` | the marketplace root manifest — each plugin listed by relative `./plugins/<id>` source |
 | `primitives-core.yaml` | the roster — provenance manifest of every primitive (ADR 0017: membership lives in the assemblies, not here) |
 | `translation.yaml` | the opencode capability matrix, read by `scripts/gen_opencode.py` at install time (task-4) |
-| `hooks/` | the ratified hook-dir layout (`hooks/<name>/hook.py`) |
 | `scripts/` | floor + assembly guards and `gen_opencode.py` |
 | `tests/` | stdlib-only unit tests (zero install) |
-| `docs/decisions/` | in-repo ADR mirrors |
-| `flow.yaml` + `docs/FLOW.md` | the repo-flow DAG — the home of every part, machine-checked by `make flow` |
+| `backlog/decisions/` | decisions: the in-repo ADR mirrors + backlog-native rulings |
+| `flow.yaml` + `backlog/docs/FLOW.md` | the repo-flow DAG — the home of every part, machine-checked by `make flow` |
 
 ## Build interface
 
@@ -62,5 +61,5 @@ breaks or an assembly and the marketplace manifest disagree.
 ## Governance
 
 `dev` is the source branch; every change lands via PR into `dev`. `main` is CI-published
-(publish-only). See `docs/decisions/` for the dev/main rule and `_meta/HANDOFF.md` for the
+(publish-only). See `backlog/decisions/` for the dev/main rule and `.claude/HANDOFF.md` for the
 current build state.

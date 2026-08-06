@@ -1,6 +1,10 @@
 ---
 name: layer-cycle
-description: Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion, translating panel findings into scoped fix briefs. Use when asked to "run the cycle", take a module through review and refinement, or iterate a module against a contract. Companions: rubric-panel (evaluate), deletion-pass (refine).
+description: >-
+  Drive a module through create → evaluate → refine cycles until convergence or budget
+  exhaustion, translating panel findings into scoped fix briefs. Use when asked to "run the
+  cycle", take a module through review and refinement, or iterate a module against a
+  contract. Companions — rubric-panel (evaluate), deletion-pass (refine).
 ---
 
 # Layer cycle

@@ -14,7 +14,7 @@ scope for the same reason. Within `plugins/`, `.claude-plugin/` metadata is skip
 marketplace/plugin `owner`/`author` metadata is the *sanctioned* data surface for authorship —
 that is where identity is allowed to live), and symlinks are skipped (their targets are
 already scanned at source). Repo-internal docs that never leave
-the source tree (root README, CONTRIBUTING, ADRs, _meta) do not ship to a user and are not
+the source tree (root README, CONTRIBUTING, ADRs) do not ship to a user and are not
 scanned here.
 
 Folded in from the D1-dropped `validate` lane (per the desk's R5 ruling), so that intent is

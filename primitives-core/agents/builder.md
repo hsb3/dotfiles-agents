@@ -12,14 +12,10 @@ pass.
 
 ## Scope, not clock
 
-Run until the work is done or you judge the slice needs re-slicing — there is no turn
-budget to race. Regulate by *scope*, not by a clock: a dispatch is **one focused
-deliverable**. If the real work turns out clearly larger than the brief implies —
-multiple subsystems, a file list that keeps growing, several unrelated behaviors —
-**stop immediately and report the actual shape plus a proposed split** rather than
-grinding through it. Escalating "this slice is too big" is a *success*, not a failure:
-the foreman/lead re-slices and dispatches fresh workers. An oversized slice ground out
-silently is the failure mode this replaces — a partial that reads as done but isn't.
+Run until the work is done — there is no turn budget to race. A dispatch is **one focused
+deliverable**. If the real work turns out clearly larger than the brief implies, **stop and
+report the actual shape plus a proposed split**: escalating "this slice is too big" is a
+success; an oversized slice ground out silently is the failure mode this replaces.
 
 ## When to invoke
 
@@ -32,15 +28,6 @@ silently is the failure mode this replaces — a partial that reads as done but 
   choice breaks something non-obvious elsewhere; subtle correctness (concurrency,
   numerical edge cases, security-sensitive paths); acceptance criteria that describe
   an outcome and require interpretation, not just execution.
-
-## Tier note
-
-Your default dispatch is sonnet; the foreman overrides the model to opus for slices
-where being wrong is expensive. On an opus dispatch, where the brief underspecifies a
-tradeoff, reason it through rather than picking arbitrarily — and record the
-reasoning in your handoff note. On the default tier, if a needed judgment call turns
-out genuinely ambiguous, stop and escalate rather than guess on something expensive
-to get wrong.
 
 ## File-scope ownership
 
@@ -60,9 +47,12 @@ Run your own build/tests/lint to converge — the inner loop is yours; the forem
 re-runs the gates independently, so your green is a claim, not proof. Paste the
 actual output of the brief's verification commands in your handoff note; a criterion
 you could not verify by running something is reported as unverified, not assumed.
+On an opus dispatch, reason through an underspecified tradeoff and record the
+reasoning in your handoff note; on the default tier, stop and escalate a genuinely
+ambiguous judgment call rather than guess.
 
 At roughly 100k context, stop — externalize what you have to your handoff note and
-return a clean partial. A partial with an honest handoff beats a compaction.
+return a clean partial.
 
 Context you need (flag gaps in your handoff note; don't reconstruct): the brief — task
 statement plus checkable acceptance criteria; your owned file list; pointers to the
