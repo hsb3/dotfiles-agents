@@ -1,0 +1,180 @@
+"""Tests for primitives-core/hooks/config-custody/hook.py.
+
+Runs the hook as a subprocess (its real invocation shape: JSON on stdin, a
+JSON line on stdout only on deny, env-configured knobs) against a
+hand-written .claude/atelier.local.md activation file. Stdlib-only; fixtures
+build into a tempdir per test, and the environment passed to the subprocess
+is built from scratch with only PATH inherited.
+"""
+
+import itertools
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+
+HOOK_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "primitives-core", "hooks",
+    "config-custody", "hook.py",
+)
+
+_SEQ = itertools.count()
+
+
+def _session_id():
+    return f"custody-session-{next(_SEQ)}"
+
+
+def _last_log_row(log_path):
+    with open(log_path, encoding="utf-8") as fh:
+        lines = [ln for ln in fh.read().splitlines() if ln.strip()]
+    return json.loads(lines[-1])
+
+
+class ConfigCustodyTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.cwd = os.path.join(self.tmp.name, "cwd")
+        os.makedirs(self.cwd, exist_ok=True)
+        self.log_path = os.path.join(self.tmp.name, "logs", "config-custody.jsonl")
+
+    # -- fixtures ------------------------------------------------------
+
+    def _write_activation(self, mode=None, patterns=None, raw_text=None, project_dir=None):
+        project_dir = project_dir or self.cwd
+        claude_dir = os.path.join(project_dir, ".claude")
+        os.makedirs(claude_dir, exist_ok=True)
+        path = os.path.join(claude_dir, "atelier.local.md")
+        if raw_text is None:
+            lines = ["---"]
+            if mode is not None:
+                lines.append("enforce: {0}".format(mode))
+            if patterns:
+                lines.append("protected:")
+                lines.extend("  - {0}".format(p) for p in patterns)
+            lines.append("---")
+            raw_text = "\n".join(lines) + "\n"
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(raw_text)
+        return path
+
+    def _payload(self, file_path=None, notebook_path=None, agent_id="agent-1",
+                 cwd=None, tool_name="Edit", session_id=None):
+        tool_input = {}
+        if file_path is not None:
+            tool_input["file_path"] = file_path
+        if notebook_path is not None:
+            tool_input["notebook_path"] = notebook_path
+        payload = {
+            "session_id": session_id or _session_id(),
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+            "cwd": self.cwd if cwd is None else cwd,
+        }
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+            payload["agent_type"] = "builder"
+        return payload
+
+    def _run_hook(self, payload, set_log_env=True, log_path=None, stdin_text=None):
+        env = {"PATH": os.environ.get("PATH", "")}
+        if set_log_env:
+            env["ATELIER_CUSTODY_LOG_PATH"] = log_path if log_path is not None else self.log_path
+        stdin_text = json.dumps(payload) if stdin_text is None else stdin_text
+        return subprocess.run(
+            [sys.executable, HOOK_PATH],
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=30,
+        )
+
+    def _assert_denied(self, result):
+        self.assertEqual(result.returncode, 0)
+        hso = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertEqual(hso["permissionDecision"], "deny")
+        return hso
+
+    def _assert_silent(self, result):
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+
+    # -- tests -----------------------------------------------------------
+
+    def test_strict_subagent_protected_path_denies(self):
+        self._write_activation(mode="strict", patterns=["Makefile"])
+        hso = self._assert_denied(self._run_hook(self._payload(file_path="Makefile")))
+        self.assertIn("protected pattern 'Makefile'", hso["permissionDecisionReason"])
+
+    def test_strict_main_session_never_restricted(self):
+        self._write_activation(mode="strict", patterns=["Makefile"])
+        payload = self._payload(file_path="Makefile", agent_id=None)
+        self._assert_silent(self._run_hook(payload))
+
+    def test_advisory_logs_without_denying(self):
+        self._write_activation(mode="advisory", patterns=["Makefile"])
+        log_path = os.path.join(self.tmp.name, "logs", "advisory.jsonl")
+        self._assert_silent(self._run_hook(self._payload(file_path="Makefile"), log_path=log_path))
+        row = _last_log_row(log_path)
+        self.assertFalse(row["denied"])
+        self.assertEqual(row["mode"], "advisory")
+
+    def test_off_and_absent_activation_are_both_silent(self):
+        # (a) explicit enforce: off
+        self._write_activation(mode="off", patterns=["Makefile"])
+        self._assert_silent(self._run_hook(self._payload(file_path="Makefile")))
+
+        # (b) activation file absent entirely (fresh project dir)
+        bare_cwd = os.path.join(self.tmp.name, "bare")
+        os.makedirs(bare_cwd, exist_ok=True)
+        payload = self._payload(file_path="Makefile", cwd=bare_cwd)
+        self._assert_silent(self._run_hook(payload))
+
+    def test_garbage_activation_file_fails_open(self):
+        self._write_activation(raw_text="not even yaml, just noise\n")
+        self._assert_silent(self._run_hook(self._payload(file_path="Makefile")))
+
+    def test_glob_star_crosses_separators(self):
+        self._write_activation(mode="strict", patterns=["configs/*"])
+        payload = self._payload(file_path="configs/deep/nested/app.yaml")
+        self._assert_denied(self._run_hook(payload))
+
+    def test_absolute_path_vs_relative_pattern_and_outside_project(self):
+        self._write_activation(mode="strict", patterns=["Makefile"])
+        abs_path = os.path.join(self.cwd, "Makefile")
+        self._assert_denied(self._run_hook(self._payload(file_path=abs_path)))
+        self._assert_silent(self._run_hook(self._payload(file_path="/etc/hosts")))
+
+    def test_notebook_edit_notebook_path_protected(self):
+        self._write_activation(mode="strict", patterns=["notebooks/*"])
+        payload = self._payload(
+            notebook_path="notebooks/analysis.ipynb", tool_name="NotebookEdit",
+        )
+        self._assert_denied(self._run_hook(payload))
+
+    def test_malformed_stdin_fails_open(self):
+        result = self._run_hook(None, set_log_env=False, stdin_text="not json")
+        self._assert_silent(result)
+
+    def test_no_stray_writes_outside_configured_log_path(self):
+        activation_path = self._write_activation(mode="strict", patterns=["Makefile"])
+        result = self._run_hook(self._payload(file_path="Makefile"), set_log_env=False)
+        self._assert_denied(result)
+
+        found = set()
+        for root, _dirs, files in os.walk(self.cwd):
+            for name in files:
+                found.add(os.path.relpath(os.path.join(root, name), self.cwd))
+        expected = {
+            os.path.relpath(activation_path, self.cwd),
+            os.path.join("logs", "config-custody.jsonl"),
+        }
+        self.assertEqual(found, expected)
+
+
+if __name__ == "__main__":
+    unittest.main()
