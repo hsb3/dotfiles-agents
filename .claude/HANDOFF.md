@@ -135,7 +135,9 @@ Unchanged since 2026-08-04.
      → commit `publish: dev@<short-sha>` (body = plugin name/version list) →
      `git push origin HEAD:refs/heads/main`.
   5. Verify: `git ls-tree --name-only origin/main` is distributable-only, tip reads
-     `publish: dev@<sha>`. Then `git worktree remove --force` both.
+     `publish: dev@<sha>`. Then `git worktree remove --force` both, and delete the leftover
+     local `publish-tree` branch the fallback creates (`git branch -D publish-tree`) — it
+     reappears every run and otherwise reads as a branch carrying unmerged work.
   The shipped `.gitignore` is what keeps `__pycache__` out of the published tree — don't drop it.
 - **`main` is a filtered parented assembly, never a snapshot of `dev`** — never diff the two
   whole-tree; the published `plugins/` are dereferenced regular files where dev's are symlinks.
@@ -150,11 +152,12 @@ Unchanged since 2026-08-04.
 - **`make ci`'s `✗ opencode laydown — refusing…` line is a passing test's own output.** Judge by
   exit code, never by ✗ glyphs.
 - **Don't trust `logs/delegation.jsonl`** until #250 is fixed — it records the parent session.
-- **`gh pr merge --delete-branch` fails if the working tree is dirty** (it switches branches).
-  Commit or stash first, or merge without the flag and delete the branch separately.
-- **Deleting an unmerged branch reverts whatever backlog state it carried.** Removing
-  `chore/handoff-backlog-refresh` on 2026-08-06 reverted task-030 to To Do even though the
-  iterm2 skill was long since shipped and published. Check the backlog after deleting a branch.
+- **Branch hygiene now lives in CLAUDE.md** (merge-or-abandon within the session, check
+  `git rev-list --count origin/dev..<branch>` before deleting, and the `chore/handoff`
+  `--ff-only` loop). Two things that bit on 2026-08-06 and are the reason it is written down:
+  deleting the unmerged `chore/handoff-backlog-refresh` reverted task-030 to To Do while the
+  iterm2 skill stayed shipped and published, and `gh pr merge --delete-branch` fails outright
+  on a dirty working tree because it switches branches.
 - **Backlog writes go through the `backlog` CLI / MCP tools** (owner ruling). Avoid two sessions
   writing the backlog at once.
 - **Backlog.md specifics:** subtasks get dotted IDs (`task-21.1`) and `--depends-on` needs the
