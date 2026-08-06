@@ -4,11 +4,10 @@ title: 'waves skill: backlog-aware mode for Backlog.md-managed projects'
 status: To Do
 assignee: []
 created_date: '2026-08-04 02:20'
-updated_date: '2026-08-06'
+updated_date: '2026-08-06 21:33'
 labels:
-  - product
-  - foreman-kit
-  - waves
+  - primitives
+milestone: m-2
 dependencies: []
 priority: medium
 type: feature

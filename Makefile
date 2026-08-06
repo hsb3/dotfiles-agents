@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks
+.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks backlog-labels
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -28,6 +28,9 @@ flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclici
 symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1
 	@python3 scripts/check_symlinks.py
 
+backlog-labels: ## Backlog label vocabulary: closed two-axis set, exactly one area + at most one signal per card
+	@python3 scripts/check_backlog_labels.py
+
 members: ## Print each plugin's members, derived live from the symlink assemblies
 	@for p in plugins/*/; do id=$$(basename "$$p"); echo "$$id:"; \
 	  find "$$p" -maxdepth 3 -type l -exec readlink {} \; \
@@ -39,8 +42,10 @@ test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check 
 # All gates. The Tier-1 entry-gate machine floor (identity · tests · provenance · hook-layout)
 # is required CI on every PR into dev; check (roster drift) + symlinks (assembly lint, ADR 0017)
 # guard the distribution surface; harness-coupling keeps harness/ extraction-clean
-# (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
+# (stdlib-only — it must not need uv, so it lives in ci not harness-test); backlog-labels
+# supplies the label validation Backlog.md itself does not do (it enforces types/statuses
+# but silently accepts any label).
+ci: check identity provenance hook-layout symlinks harness-coupling flow backlog-labels test ## All gates: floor + assembly/flow guards
 
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).

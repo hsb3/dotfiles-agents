@@ -4,11 +4,11 @@ title: Decide + execute evals/ and harness/ extraction to their own repos
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:42'
-updated_date: '2026-08-04 02:55'
+updated_date: '2026-08-06 21:33'
 labels:
-  - refactor
+  - governance
   - decision
-milestone: m-0
+milestone: m-3
 dependencies: []
 priority: low
 type: task

@@ -4,10 +4,11 @@ title: 'foreman-kit: per-project override for the handoff-file location'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-06 14:13'
+updated_date: '2026-08-06 21:33'
 labels:
-  - foreman-kit
+  - primitives
   - decision
+milestone: m-2
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/220'

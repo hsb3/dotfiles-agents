@@ -3,10 +3,11 @@ id: TASK-21.2
 title: 'M4: formalize the judge + rubric scoring pattern'
 status: To Do
 assignee: []
-updated_date: '2026-08-06'
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-06 21:33'
 labels:
-  - extender-db
+  - evals
+milestone: m-3
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/164'

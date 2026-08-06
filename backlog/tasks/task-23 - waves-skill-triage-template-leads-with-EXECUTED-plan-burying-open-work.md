@@ -4,10 +4,9 @@ title: 'waves skill: triage template leads with EXECUTED plan, burying open work
 status: Done
 assignee: []
 created_date: '2026-08-04 00:44'
-updated_date: '2026-08-06'
+updated_date: '2026-08-06 21:31'
 labels:
-  - foreman-kit
-  - waves
+  - primitives
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/215'

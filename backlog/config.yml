@@ -1,10 +1,30 @@
 project_name: "dotfiles-agents"
 default_status: "To Do"
-statuses: ["To Do", "In Progress", "Done"]
-# Area labels: work on the harness/ and evals/ workbenches is tracked in this same
-# backlog — label such tasks/decisions/docs with the area so boards can filter by it.
-# Unlabeled items are core-repo work (primitives, assemblies, gates, docs).
-labels: ["harness", "evals"]
+statuses: ["To Do", "Up Next", "In Progress", "Done"]
+# Labels are a closed vocabulary, enforced by `make backlog-labels` (see scripts/
+# check_backlog_labels.py). Two axes, and only two:
+#   area   — where the work lands. EXACTLY ONE per task. Never zero, never two.
+#   signal — a scheduling fact `type` and `status` cannot express. AT MOST ONE.
+# So every task carries one or two labels, never more. A task that seems to need two
+# areas is two tasks. `decision` and `on-hold` are mutually exclusive: a card parked
+# on purpose is not simultaneously the thing you are waiting on a ruling for.
+# Anything else (component names, plugin names, "tech-debt") belongs in the title or
+# is already carried by `type`. Adding a label means adding it here first.
+labels:
+  # area
+  - primitives    # primitives-core/ sources: skills, agents, hooks, commands
+  - assembly      # plugins/, marketplace.json, bundle composition, the lineup
+  - distribution  # publish, opencode laydown, install scripts, externals
+  - gates         # Makefile, CI workflows, checks, flow.yaml
+  - harness       # harness/ workbench
+  - evals         # evals/ workbench, benchmarks, the extender database
+  - governance    # ADRs, SOPs, backlog conventions, repo docs
+  # signal
+  - decision      # blocked on, or produces, an owner ruling
+  - on-hold       # parked on purpose; not a candidate for Up Next
+# Types are validated by Backlog.md itself. `enhancement` is dropped: it never had a
+# use and split hairs with `feature`.
+types: ["bug", "feature", "task", "chore", "docs", "spike"]
 definition_of_done: []
 date_format: yyyy-mm-dd
 max_column_width: 20

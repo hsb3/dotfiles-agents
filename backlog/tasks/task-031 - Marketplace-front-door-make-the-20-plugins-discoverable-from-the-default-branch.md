@@ -7,11 +7,9 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-08-06 18:41'
-updated_date: '2026-08-06 19:56'
+updated_date: '2026-08-06 21:31'
 labels:
-  - docs
-  - marketplace
-  - gates
+  - assembly
 dependencies: []
 references:
   - README.md

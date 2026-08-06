@@ -6,10 +6,10 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-06 19:17'
-updated_date: '2026-08-06 19:20'
+updated_date: '2026-08-06 21:33'
 labels:
-  - opencode
-  - install
+  - distribution
+milestone: m-1
 dependencies: []
 references:
   - scripts/install_opencode.sh

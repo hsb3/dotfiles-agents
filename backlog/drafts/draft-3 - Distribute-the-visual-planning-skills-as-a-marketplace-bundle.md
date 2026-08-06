@@ -4,8 +4,9 @@ title: Distribute the visual-planning skills as a marketplace bundle
 status: Draft
 assignee: []
 created_date: '2026-08-04 00:44'
+updated_date: '2026-08-06 21:31'
 labels:
-  - decision
+  - assembly
   - on-hold
 dependencies: []
 references:

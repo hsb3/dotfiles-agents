@@ -6,9 +6,9 @@ title: >-
 status: Done
 assignee: []
 created_date: '2026-08-04 03:28'
-updated_date: '2026-08-04'
+updated_date: '2026-08-06 21:31'
 labels:
-  - externals
+  - governance
   - decision
 milestone: m-0
 dependencies: []

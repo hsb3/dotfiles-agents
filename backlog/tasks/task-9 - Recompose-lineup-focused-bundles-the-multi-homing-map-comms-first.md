@@ -4,9 +4,9 @@ title: 'Recompose lineup: focused bundles + the multi-homing map (comms first)'
 status: Done
 assignee: []
 created_date: '2026-08-04 00:42'
-updated_date: '2026-08-04 02:55'
+updated_date: '2026-08-06 21:31'
 labels:
-  - refactor
+  - assembly
   - decision
 milestone: m-0
 dependencies:

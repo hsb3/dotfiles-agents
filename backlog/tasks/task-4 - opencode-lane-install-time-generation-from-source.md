@@ -4,10 +4,9 @@ title: 'opencode lane: install-time generation from source'
 status: Done
 assignee: []
 created_date: '2026-08-04 00:41'
-updated_date: '2026-08-04 02:19'
+updated_date: '2026-08-06 21:31'
 labels:
-  - refactor
-  - opencode
+  - distribution
 milestone: m-0
 dependencies:
   - TASK-2

@@ -4,8 +4,10 @@ title: 'Harness: scratch-ledger/--dry-run mode + vision-grader assertion recordi
 status: To Do
 assignee: []
 created_date: '2026-08-06'
+updated_date: '2026-08-06 21:33'
 labels:
   - harness
+milestone: m-3
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/172'

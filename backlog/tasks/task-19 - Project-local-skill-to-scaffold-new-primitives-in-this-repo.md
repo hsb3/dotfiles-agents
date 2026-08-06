@@ -4,8 +4,10 @@ title: Project-local skill to scaffold new primitives in this repo
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
+updated_date: '2026-08-06 21:33'
 labels:
-  - skills
+  - primitives
+milestone: m-2
 dependencies:
   - TASK-2
 references:
