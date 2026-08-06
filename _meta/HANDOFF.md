@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-06. Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-06 (session 5). Refresh at session boundaries (/handoff). Secret-free._
 
 ## 0 · Orientation
 
@@ -16,60 +16,60 @@ interface + source-of-truth rules: see CLAUDE.md (hot-loaded).
 
 ## 1 · Current standing
 
-`make ci` green — 95 repo tests + 139 harness tests (41 primitives: agent=4, hook=4, skill=33).
-GH issue queue: **zero open** (both bugs fixed + closed 2026-08-06). Standing:
+`make ci` green — 145 repo tests + 139 harness tests (41 primitives: agent=4, hook=4, skill=33).
+GH issue queue: **zero open**. **m-0 is 4/5 done** — only "board conforms to decision-7" is
+open, and it wants an assessor who did NOT write the cards.
 
-- **ADR 0017 pointer refactor DONE** (m-0 tasks 1–4, 7, 8; PRs #227–#231). 15 symlink
-  assemblies + root marketplace.json (`make symlinks`); `dist/` + generators retired; roster =
-  provenance manifest; opencode is install-time. Mechanics live in CLAUDE.md (hot-loaded).
-- **m-0 owner's-court rulings CLEARED 2026-08-04** (decisions 4/5/6, via an owner-signoff form
-  — trail in `_meta/signoff/2026-08-03-backlog-ordering/`):
-  - **task-5 publish** = DONE 2026-08-06: decision-4 amended (assembly-gate ratified, owner
-    sign-off), publish.yml fixed (#237), proven by two publishes.
-  - **task-6 extraction** = extract evals/+harness/ eventually but **deferred** — dev is the
-    workbench; they never publish to main (decision-5). Parked (Low).
-  - **task-9 lineup** = comms-first approved **in principle**, gated on a design pass I still
-    owe (ADR bundle-composition extension + code-desk dispositions).
-  - **task-10 externals** = **pinned-vendored-copy**, not clone-at-install (decision-6);
-    supersedes #36/ADR 0003; drop the 4 plugin externals, only pptx stays vendored; new
-    `origin: vendored` class + narrow ADR 0015 amendment. Memo:
-    `_meta/plans/externals-clone-vs-vendor/memo.md`. Build **unblocked** (task-26 done).
-- **Board repaired to decision-7** (2026-08-06, PR #242, owner sign-off in
-  `_meta/signoff/2026-08-06-backlog-standards/`): minimum task-definition standard ruled; 8
-  stub cards rewritten from their closed GH issues; stale statuses flipped (5, 22, 23, 24, 26
-  all Done); m-0 gained a checkable definition of done (2/5 ticked).
+**⚠ dev is 7 commits ahead of the published main and NONE of them has been through CI.**
+`ci.yml` triggers on `pull_request` only, and session 5's work was committed straight to `dev`
+instead of via a branch+PR (a deviation from CLAUDE.md's own SDLC rule). Verification so far is
+local `make ci` only. The fix is in flight: the PR carrying this handoff runs `make ci` over a
+tree containing all of it — **that green run is the pre-promotion gate.** Do not promote before
+it reports. Standing:
 
-`main` is current: `publish: dev@a7d87ac` (2026-08-06), foreman-kit **0.7.1** live. The
-publish surface is only `plugins/` + marketplace.json + README — backlog/harness merges since
-don't need a re-publish.
+- **ADR 0017 pointer refactor DONE** (m-0 tasks 1–4, 7, 8; PRs #227–#231) — symlink assemblies,
+  `dist/`+generators retired, roster = provenance manifest, opencode install-time. Mechanics
+  are in CLAUDE.md (hot-loaded); don't restate them here.
+- **m-0 owner's-court rulings all cleared** (decisions 4/5/6 on 2026-08-04, decision-7 board
+  standard 2026-08-06; sign-off trails under `_meta/signoff/`). Tasks 5, 9, 10 are Done — the
+  live residue is **task-6**: extract `evals/` + `harness/` eventually, but **deferred** by
+  decision-5 (dev is the workbench; neither ever publishes to main). Parked at Low.
+- **Two mechanisms this repo now enforces that a cold session should not re-derive:**
+  `origin: vendored` (third-party in-tree only under `docs/vendoring-rule.md`, contract
+  machine-checked) and **dual-homing** (one `primitives-core/` source, symlinked into both a
+  bundle and a standalone plugin — installing both loads the skill once).
 
-Live marketplace lineup (ADR 0016, 15 plugins): **code-desk (0.3.0)** ·
-**foreman-kit (0.7.1** — review-cycle trio #235; waves triage-ordering fix #240**)** · diagrams · obsidian-toolkit · 11 standalones (claude-code-config ·
-claude-code-expertise · dataviz · deep-research · github-project-board · opencode-expertise ·
-owner-signoff · pptx-themes · private-fork · project-memory · tech-eval-research).
+**`main` is STALE by design-in-progress**: `publish: dev@a7d87ac` still ships the **15-plugin
+0.3.0** lineup. dev carries **19 plugins / 0.4.0**. Promotion is pending the CI gate above —
+it is the next real deliverable, not a background chore. The publish surface is only
+`plugins/` + marketplace.json + README, so backlog/harness/test churn never needs a republish;
+this time the surface genuinely changed (4 new plugin dirs + marketplace rewrite).
+
+Live-on-main lineup (15): code-desk 0.3.0 · foreman-kit 0.7.1 · diagrams · obsidian-toolkit ·
+11 standalones. **Unpublished additions on dev (4):** comms · mise-en-place-scaffold ·
+readme-value-and-proof · repo-meta-structure — each a standalone assembly over a skill that
+also stays in code-desk (dual-home; one source, two symlinks, loads once).
 
 **Also live: the extender-db mini-project** (§2b) — separate effort from the rebuild epics; do
 not fold it into dev without Henry's promotion decision (already taken 2026-07-21, see §2b).
 
 ## 2 · Recent deliveries (era pointers — blow-by-blow lives in PRs/issues/git)
 
-- 2026-07-20/21: rebuild epics closed; extender-db Waves 0–3; harness + campaign runner.
-- 2026-07-22: ADR 0008 publish lanes (PRs #180–184) · owner's-court rulings executed ·
-  `/waves` run (PRs #205/#206/#209/#210; ra-platform adoption left staged uncommitted in
-  that repo for owner review) · estate restructure (ADR 0016 lineup, 99-issue reboot,
-  `_meta` compliance, `.claude/plugins/` workbench) — PRs #212–214.
-- 2026-08-03 (session 1): hook logs/ CWD-scatter fix (#223/PR #224) · architecture review →
-  decisions 1+2 ruled · Backlog.md migration (PR #225) · settings prune + closeout (#226).
-- 2026-08-03/04 (session 2): ADR 0017 refactor executed end-to-end (PRs #227–#231) — symlink
-  assemblies, dist/generator retirement, opencode install-time lane, governance sweep.
-- 2026-08-04 (session 3): m-0 rulings via owner-signoff form → decisions 4/5/6; backlog
-  regrouped (#234); task-24 maxTurns fix (#233); externals memo + ruling (#236); vendoring
-  rule drafted (#238); foreman-kit trio v0.7.0 (#235).
-- **2026-08-06 (session 4, this one): publish repaired + bugs cleared + board standard.**
-  #237 publish fix + #238 vendoring rule merged; two publishes (main current, foreman-kit
-  0.7.1). Waves triage bug fixed (#240, closed #215). Harness isolation fixed lead-driven
-  (#241, closed #172; suite 102→139 tests; residuals → task-27). decision-7 task standard +
-  full board repair (#242, owner sign-off). decision-4 amended (assembly-gate ratified).
+- 2026-07-20/22: rebuild epics closed; extender-db Waves 0–3; harness + campaign runner;
+  ADR 0008 publish lanes (#180–184); `/waves` run (#205/#206/#209/#210); estate restructure
+  to the ADR 0016 lineup (#212–214).
+- 2026-08-03/04 (sessions 1–3): decisions 1+2 ruled; Backlog.md migration (#225); **ADR 0017
+  refactor end-to-end** (#227–#231); m-0 rulings → decisions 4/5/6 (#236); vendoring rule
+  drafted (#238); foreman-kit trio v0.7.0 (#235); task-24 maxTurns fix (#233).
+- 2026-08-06 (session 4): publish repaired (#237) + vendoring rule (#238) + waves triage fix
+  (#240, closed #215) + harness isolation (#241, closed #172; residuals → task-27) +
+  decision-7 board standard (#242, owner sign-off); decision-4 amended; two publishes.
+- **2026-08-06 (session 5, this one): m-0 build-out — task-10 + task-9 shipped, comms freed.**
+  Externals mechanism built; lineup recomposed to 19 plugins / marketplace 0.4.0; **comms lost
+  its `requires: [local-mcp]`** — it now ships `scripts/render_deck.py`, a stdlib-only renderer
+  (validate → self-contained HTML → headless-Chrome PDF) covering all 17 deck block types,
+  proven against 22 real decks / 256 slides across three repos. Repo suite 95 → 145 tests.
+  Filed task-28 (README-symlink gate gap). Six commits went **straight to dev** — see §1.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -99,12 +99,9 @@ battle-test here, later extract to its own repo.
 - **Campaign runner** (PR #178): `make harness-campaign` + weekly LaunchAgent live on this machine
   (Mon 09:00). **Never auto-ingests** — after each run, ingest deliberately
   (`load_harness_runs.py --campaign weekly-YYYYMMDD`) and commit data.db+storage with cause.
-- **Isolation fixed 2026-08-06** (#241, task-22): claude runner now truly isolated (throwaway
-  HOME/config, `--setting-sources ""`, loud failure over silent host-config fallback);
-  preconditions recorded in ledger + log header; `--keep-workspaces`; flat `agents/<name>.md`
-  resolves in-package. Residuals in task-27: scratch-ledger/--dry-run mode (evidence runs
-  append to tracked results.jsonl — restore from HEAD if you smoke-test), vision-grader
-  assertion recording.
+- Isolation fixed 2026-08-06 (#241, task-22) — runner is genuinely isolated now. **Residuals in
+  task-27**, one of which bites: there is no dry-run, so a smoke test **appends to the tracked
+  `results.jsonl`** — restore from HEAD afterwards.
 
 ## 3 · Next up
 
@@ -112,12 +109,23 @@ battle-test here, later extract to its own repo.
 work, drafts (owner-parked #137/#138/#152), decisions, and the m-0 refactor milestone all
 live there, not duplicated here.
 
-- m-0 remaining (its DoD now lives in the milestone file): **task-10 externals build** (High,
-  unblocked — ACs enumerate the full scope) → task-11 sits on it; **task-9 design pass**
-  (session-owed): ADR bundle-composition extension + code-desk dispositions for owner ratify
-  BEFORE build; board-conformance box ticks itself as cards stay clean.
+- **PROMOTION is the live thread.** Order: (1) the handoff PR's CI goes green — that is the
+  only CI coverage this work has; (2) review the 4 new plugin dirs as a *published surface*
+  (they ship to consumers, unlike backlog/test churn); (3) `publish-to-main` skill runbook →
+  `gh workflow run publish.yml --ref dev -f confirm=publish`; (4) verify main lands on 19
+  plugins / 0.4.0 and spot-check one new standalone installs.
+- m-0's last box — **board conforms to decision-7** — is deliberately NOT self-certified:
+  session 5 edited tasks 9, 10, 28 and the milestone, so it needs an assessor who did not
+  write them.
 - Buildable, no ruling needed: task-15 (handoff-override, High), task-25 (waves backlog-aware),
-  task-13 (250k-token spike), task-14 (coord-branch protocol), task-27 (harness residuals).
+  task-13 (250k-token spike), task-14 (coord-branch protocol), task-27 (harness residuals),
+  task-28 (README-symlink gate), task-29 (promote `lab-setup` from the EVALS workbench).
+- **Open investigation (owner-staged):** `_meta/plans/plugin-skills-not-loading/issue-body.md`
+  — foreman-kit skills not reaching sessions. Cross-reference before filing: project memory
+  `plugin-enablement-needs-per-project-install` found that install records are keyed on
+  `projectPath`, and the staged repro runs from `~/Developer`, not a path with a foreman-kit
+  install record. Same root cause is a live hypothesis, NOT confirmed — the report notes hooks
+  *are* running there, which that theory doesn't obviously explain. Check before filing.
 - Cross-repo residue for owner: ra-platform's planning-desk adoption still **uncommitted**
   in `~/Developer/ra-platform` (staged 2026-07-22, needs review/commit + live smoke test);
   the four desk folders in dotfiles-agents-desk likewise uncommitted.
@@ -145,14 +153,30 @@ model until he signs off (standing directive, §5).
   + a hand-authored entry in the root marketplace.json; plugin versions are hand-maintained
   now — bump when content changes materially. pptx-themes' skill README carries the
   Anthropic attribution for its vendored `base/` — never split or drop that section.
-- **ci.yml job names are frozen** (branch-protection pin): the drift-guards job still reads
-  "drift guards (roster · marketplace · catalog)" though it now runs
-  `make check symlinks flow` — renaming it strands PRs; change the protection setting first.
+- **`ci.yml` fires on `pull_request` ONLY.** A commit pushed straight to `dev` gets zero CI —
+  no run, no red, no signal. This bit session 5 (six commits, local `make ci` the only proof).
+  Branch + PR is not a style preference here; it is the only path that runs the gates.
+- **CI job names are frozen** — dev's branch-protection required checks are pinned by job NAME,
+  so renaming one in `ci.yml` strands every PR on a check that never reports (change the
+  protection setting first). This is why the drift-guards job still reads "drift guards
+  (roster · marketplace · catalog)" while actually running `make check symlinks flow`.
+- **A plugin needs an install record for THIS `projectPath`, not just `enabledPlugins: true`.**
+  `claude plugin list` happily reports another project's record as "enabled". Fix:
+  `claude plugin install <id>@<marketplace> --scope local` from inside the repo, **then restart
+  the session** — `/reload-skills` does not pick up a newly installed plugin. Full detail in
+  project memory `plugin-enablement-needs-per-project-install`.
+- **A sign-off item that contradicts a prior ruling must SAY SO in the item.** Session 5's
+  design pass recommended keeping comms bundled — silently reversing the owner's own
+  comms-first direction and the task's AC — and it was approved as a preselected default. The
+  approval was worthless because the form never surfaced the conflict. Trail + standing lesson:
+  `_meta/plans/task-9-lineup/design-pass.md`.
+- **Scope a rewrite from the real corpus, not the in-repo samples.** The comms renderer was
+  first sized off this repo's 2 sample decks (6 block types) and would have refused real
+  briefings using `steps`/`table`/`timeline`. A census over `_meta/briefings/` in three repos
+  found 17 types in use. Same shape of error as the point above: a confident guess, unverified.
 - **`main` is publish-only** — never hand-commit/merge there; a CI guard fails PRs into main.
   Branch off `dev`, PR into `dev`. `main` is a **filtered parented assembly** (never a dev
   snapshot — verify with tree hashes per the `publish-to-main` skill runbook).
-- **dev's branch-protection required checks are pinned by CI JOB NAME** — renaming a job in
-  `ci.yml` strands every PR on a check that never reports. Update the protection setting first.
 - **Backlog.md specifics CLAUDE.md doesn't carry:** subtasks get dotted IDs (`task-21.1`) —
   `--depends-on` a subtask must use the dotted form; `make flow` requires a claimed top-level
   path to be *tracked* (stage new dirs before the check passes).
@@ -169,10 +193,9 @@ model until he signs off (standing directive, §5).
   commit instead of `dev`** (5/5 crews this session) — see project memory
   `worktree-agents-check-out-published-commit`. Every worktree-crew brief must include the
   self-check (`primitives-core/` missing → `git reset --hard origin/dev`) until root-caused.
-- **Cross-repo crew pattern (new, proven this session):** when a wave's work spans dotfiles-agents
-  + a separate consumer repo (e.g. ra-platform), the crew may read/draft in the other repo but
-  must leave its changes **uncommitted** there — mutating a second repo's git history is reserved
-  to the human, same as `main`. Confirmed working via git worktree isolation; see PR #210.
+- **Never mutate a second repo's git history** — read/draft in a consumer repo (ra-platform,
+  functionform-headcase, …) but leave changes **uncommitted** there; committing is the human's,
+  same as `main`. Session 5 followed this when testing the deck renderer against real briefings.
 - Worker agents can drop `.claude/agent-memory/` into whatever directory they worked in — sweep
   stray nested `.claude/` dirs before committing (never whole-dir `git rm` the root `.claude/`).
   Tracked store is `.claude/memory/` (repo root) since #194.
