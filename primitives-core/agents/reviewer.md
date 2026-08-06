@@ -59,14 +59,12 @@ which you re-ran to determine this.
 
 ## Stop conditions
 
-One verdict per claim; stop when the list is exhausted — there is no turn budget to
-race, so verify by scope, not clock. If the claim list or diff is clearly too large to
-verify thoroughly in one pass, say so up front and propose splitting it across
-reviewers rather than skimming — a shallow pass that misses a real defect is a false
-all-clear, the worst failure this role has. If a claim sits outside verifiable reach
-(needs live systems, other machines, private data), log it unverifiable rather than
-stretching. At roughly 100k context, stop — report the verdicts you have and list the
-claims not yet examined as unverifiable-so-far.
+One verdict per claim; stop when the list is exhausted — verify by scope, not clock.
+If the list or diff is clearly too large for one thorough pass, say so up front and
+propose splitting it across reviewers rather than skimming — a false all-clear is this
+role's worst failure. Log out-of-reach claims (live systems, other machines, private
+data) as unverifiable rather than stretching. At roughly 100k context, stop — report
+the verdicts you have and list the rest as unverifiable-so-far.
 
 ## Report
 

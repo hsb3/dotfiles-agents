@@ -11,8 +11,8 @@ Fires on every `UserPromptSubmit`, immediately on a fresh crossing, then at most
 
 ## Configuration
 
-- `CONTEXT_WATERMARK_SOFT` — default 100,000 tokens; shipped wiring sets 70,000.
-- `CONTEXT_WATERMARK_HARD` — default 140,000 tokens; shipped wiring sets 100,000.
+- `CONTEXT_WATERMARK_SOFT` — shipped wiring defaults to 70,000 tokens; your environment wins.
+- `CONTEXT_WATERMARK_HARD` — shipped wiring defaults to 100,000 tokens; your environment wins.
 - Untouched by wiring: `CONTEXT_WATERMARK_TAIL_BYTES`, `CONTEXT_WATERMARK_REFIRE_EVERY`,
   `CONTEXT_WATERMARK_STATE_DIR`, `CONTEXT_WATERMARK_LOG_PATH`.
 
