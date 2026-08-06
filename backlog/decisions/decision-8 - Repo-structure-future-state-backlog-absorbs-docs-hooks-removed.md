@@ -49,5 +49,3 @@ put as historical record until individually promoted or archived.
   citations by design.
 - `backlog/docs/FLOW.md`'s hand-authored homes table was already stale from before this
   move (it still lists retired pre-0017 surfaces); its refresh belongs to task-7.
-- The backlog CLI's injected guidance ("never edit markdown files directly") conflicts
-  with decision-7's hand-edit rule; decision-7 stands.

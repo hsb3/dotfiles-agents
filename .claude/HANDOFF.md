@@ -24,8 +24,9 @@ contradicted its own evals/harness exclusion. Publish with
 ## 1 · Current standing
 
 `make ci` green — 145 repo tests + 139 harness tests (41 primitives: agent=4, hook=4, skill=33).
-GH issue queue: **zero open**. **m-0 is 4/5 done** — only "board conforms to decision-7" is
-open, and it wants an assessor who did NOT write the cards.
+GH issue queue: **zero open**. **m-0 is 4/5 done** — its last box ("board conforms to
+decision-7") cites a decision the owner deleted on 2026-08-06 (§5); the box awaits the
+owner's disposition.
 
 **⚠ The promotion is staged but NOT landed. Live work sits on an open PR, not on `dev`.**
 
@@ -133,9 +134,8 @@ live there, not duplicated here.
   - **The `publish-to-main` skill's step-3 verify command is STALE**: it compares
     `origin/dev:dist/claude-code/plugins` against `origin/main:plugins`, but `dist/` was retired
     in #229, so that tree-hash check cannot run as written. Worth a fix on the skill.
-- m-0's last box — **board conforms to decision-7** — is deliberately NOT self-certified:
-  session 5 edited tasks 9, 10, 28 and the milestone, so it needs an assessor who did not
-  write them.
+- m-0's last box still cites **decision-7, deleted 2026-08-06** (owner reversal, §5) — the
+  owner disposes of the box (re-anchor its criterion or drop it).
 - **task-15 (handoff-location override, High) just got its motivating case.** The handoff was
   relocated to `.claude/HANDOFF.md` on 2026-08-06, which works only because that path happens
   to be third in the hooks' hardcoded trio. Two loose ends it should close: (a) META-06 in the
@@ -172,9 +172,10 @@ Nothing folds into the canonical model until he signs off. Full state:
 
 ## 5 · Conventions & gotchas
 
-- Source-of-truth rules live in CLAUDE.md (hot-loaded), including the backlog-CLI
-  hand-edit-only rule. The WHY it doesn't carry: the CLI rewrote sibling task files from a
-  stale index (2026-08-04). Read-only CLI use (`list`/`board`) is fine.
+- **Backlog writes go through the `backlog` CLI / MCP tools** (owner ruling 2026-08-06).
+  The 2026-08-04 sibling-rewrite incident behind the old hand-edit-only rule was a
+  concurrent-session race, not a CLI defect; decision-7 was deleted outright at the
+  owner's direction (no supersession trail). Avoid two sessions writing the backlog at once.
 - **Post-0017 mechanics CLAUDE.md doesn't spell out:** a NEW plugin = a `plugins/<id>/` dir
   + a hand-authored entry in the root marketplace.json; plugin versions are hand-maintained
   now — bump when content changes materially. pptx-themes' skill README carries the
