@@ -13,8 +13,8 @@ to strip noise the prior pass introduced.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the foreman-kit bundle (not standalone) — layer-cycle invokes it as the refine step
+Ships in the atelier bundle (not standalone) — layer-cycle invokes it as the refine step
 after rubric-panel evaluates.

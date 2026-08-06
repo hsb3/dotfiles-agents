@@ -15,8 +15,8 @@ tier or a delegation architecture.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the foreman-kit bundle (not standalone) — it is the delegation doctrine the
+Ships in the atelier bundle (not standalone) — it is the delegation doctrine the
 bundle's other skills (layer-cycle, waves) build on.

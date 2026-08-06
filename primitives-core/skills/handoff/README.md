@@ -14,8 +14,8 @@ file in a project that lacks one. It updates `_meta/HANDOFF.md` (or `HANDOFF.md`
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the foreman-kit bundle (not standalone) — it closes the session that the foreman
+Ships in the atelier bundle (not standalone) — it closes the session that the foreman
 skill runs and the waves skill drives across a backlog.

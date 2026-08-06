@@ -9,7 +9,7 @@ Purpose: make every session **clearable** by externalizing all load-bearing stat
 file a cold session can read in under ~10k tokens. The handoff is the bridge for NEW
 sessions (not resumes) - write for a reader with zero context.
 
-This skill is the **produce** edge of foreman-kit's handoff loop; its enforcement partners are
+This skill is the **produce** edge of atelier's handoff loop; its enforcement partners are
 three co-homed hooks that read or gate on the SAME file it writes: `context-watermark` (nudges
 "run /handoff, then /clear or /compact" once context crosses the soft/hard watermark),
 `handoff-freshness-guard` (blocks a manual `/compact` when the handoff is missing or stale), and
@@ -20,7 +20,7 @@ load-bearing, not cosmetic.
 ## File location
 
 **Precedence contract - must match the hooks exactly.** The candidate list below is the same
-one, in the same order, that foreman-kit's `handoff-freshness-guard` and
+one, in the same order, that atelier's `handoff-freshness-guard` and
 `session-handoff-surfacer` hooks check: `_meta/HANDOFF.md` → `HANDOFF.md` → `.claude/HANDOFF.md`.
 Do not reorder or add a path here without changing the hooks' `CANDIDATE_PATHS` in lockstep - a
 mismatch means the hooks act on a different file than this skill writes.

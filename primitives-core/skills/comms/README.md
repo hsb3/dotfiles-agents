@@ -36,7 +36,7 @@ with the skill: it validates `slides.json`, renders a self-contained HTML docume
 a PDF through headless Chrome. Without Chrome, render the HTML and print from any browser.
 
 Composes with two sibling skills without replacing them: `pptx-themes` for the external decks,
-and `handoff` (ships in `foreman-kit`) for the end-of-day wrap-up. Install those alongside it
+and `handoff` (ships in `atelier`) for the end-of-day wrap-up. Install those alongside it
 if you want the full set — neither arrives by way of this plugin. Audio companions use an
 audio MCP server when one is available and are skipped when it isn't.
 

@@ -19,7 +19,7 @@ Env-overridable; shipped wiring leaves both at hook.py's built-in defaults:
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships only in the foreman-kit bundle, alongside the handoff skill it enforces.
+Ships only in the atelier bundle, alongside the handoff skill it enforces.

@@ -310,7 +310,7 @@ def main():
                 out = {
                     "additionalContext": message,
                     "systemMessage": (
-                        f"foreman-kit: context ~{round(ctx_tokens / 1000)}k tokens — "
+                        f"atelier: context ~{round(ctx_tokens / 1000)}k tokens — "
                         f"{tier} watermark crossed; nudging /handoff + /clear."
                     ),
                 }

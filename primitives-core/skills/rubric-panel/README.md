@@ -13,8 +13,8 @@ and contract; each finding must cite concrete code.
 ## Install
 
 ```
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the foreman-kit bundle (not standalone) — layer-cycle invokes it as the evaluate
+Ships in the atelier bundle (not standalone) — layer-cycle invokes it as the evaluate
 step, ahead of deletion-pass's refine step.

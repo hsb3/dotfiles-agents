@@ -11,7 +11,7 @@ not do.
 ```sh
 # Claude Code — add the marketplace once, then install plugins by name
 claude plugin marketplace add hsb3/dotfiles-agents
-claude plugin install foreman-kit@dotfiles-agents
+claude plugin install atelier@dotfiles-agents
 
 # opencode — generated at install time from the source branch
 git clone --branch dev https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
@@ -28,7 +28,7 @@ behind.
 
 | I want to… | Install |
 |---|---|
-| Delegate work across subagents and keep long sessions from running out of context | [`foreman-kit`](plugins/foreman-kit/README.md) |
+| Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
 | Bring a repo up to a documented structure standard, then plan and report the work through it | [`code-desk`](plugins/code-desk/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
@@ -46,7 +46,7 @@ behind.
 |---|---|---|---|
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows. | 10 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
-| [`foreman-kit`](plugins/foreman-kit/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 6 skills · 4 agents · 4 hooks |
+| [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 6 skills · 4 agents · 4 hooks |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
 | [`claude-code-config`](plugins/claude-code-config/README.md) | standalone | Settings, permissions, hooks, env vars, and MCP servers routed to the right file by precedence, with a take-effect check. | 1 skill |
 | [`claude-code-expertise`](plugins/claude-code-expertise/README.md) | standalone | Map of Claude Code's extension surfaces: which one fits a need, what its contract is, and how to debug it. | 1 skill |

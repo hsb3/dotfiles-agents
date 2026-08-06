@@ -43,7 +43,7 @@ session runs on; no configuration needed:
 | Fable | `deep` | A problem hard enough to justify a Fable lead |
 
 Overrides, highest wins: (1) the user says so in conversation; (2) an `effort: standard`
-or `effort: deep` key in the YAML frontmatter of `.claude/foreman-kit.local.md` in the
+or `effort: deep` key in the YAML frontmatter of `.claude/atelier.local.md` in the
 project (check for it; absence is normal). State the level in effect when proposing an
 architecture.
 
