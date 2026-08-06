@@ -4,5 +4,5 @@
   },
   "description": "A context-and-cost optimization kit for multi-agent work: tiered delegation agents (scout \u00b7 builder \u00b7 reviewer \u00b7 lead across model tiers), a self-contained foreman orchestration skill with a two-level effort calibration (standard for Opus-led sessions, deep for Fable-led), the handoff skill, a waves skill that drives an issue backlog to closed through a pinned triage issue + wave-planned isolated crews, and four hooks \u2014 context-watermark and handoff-freshness-guard enforce handoff-then-clear over compact at ~70k/100k-token watermarks, session-handoff-surfacer surfaces the handoff on cold start, and subagent-telemetry records per-delegation tier usage. Now also carries the review-cycle trio distilled from the inventory lab: rubric-panel (persona-diverse judge panel scoring against an anchored rubric), deletion-pass (simplify a module to irreducible against its contract), and layer-cycle (create-evaluate-refine orchestration until convergence).",
   "name": "foreman-kit",
-  "version": "0.7.0"
+  "version": "0.7.1"
 }
