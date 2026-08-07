@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-07 (session 10). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-07 (session 11). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, with the two higher-precedence paths absent, so the hooks resolve it with no
@@ -15,29 +15,29 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `25590ce`** · **`main` `20923c9` = `publish: dev@25590ce`** · **6 plugins** ·
-  `make ci` green · **391 tests** · zero open GH issues · no worktrees.
-- **BREAKING, published 2026-08-07 — the marketplace went from 22 entries to 6.** All
-  seventeen one-skill plugins retired into one aggregate, **`solo-skills`** (30 skills); the five
-  bundles are untouched. **Per-skill installation no longer exists** and cannot be restored by any
-  aggregate — see §5. Seventeen install records now dangle with no alias or redirect. Migration is
-  manual per project: uninstall the old id, `claude plugin install solo-skills@dotfiles-agents`.
-  `mise-en-place-scaffold` is the exception — not in `solo-skills`, works only inside `code-desk`.
-- **BREAKING, published 2026-08-07 (earlier) — the delegation vocabulary was renamed.** Skill
-  `atelier:foreman` → **`atelier:delegation`**; agent `lead` → **`manager`**. Anything using the
-  old ids fails silently: saved aliases, another repo's briefs, a stored command. The doctrine now
-  names three **layers** — strategy (role `strategist`, the session itself, never spawnable),
-  management (`manager`), execution (`scout`/`builder`/`reviewer`) — and **three layers is the
-  default for non-trivial work**, inverting guidance that had called the middle layer avoidable cost.
-- **Operator checklist.** This project was migrated on 2026-08-07 (marketplace removed and
-  re-added; `atelier`, `diagrams`, `plugin-feedback` installed). **Other projects still need both
-  migrations**: per project, uninstall `foreman-kit` and any retired one-skill ids, install
-  `atelier` + `solo-skills` **in that project** (an `enabledPlugins` flag alone proves nothing —
-  memory: `plugin-enablement-needs-per-project-install`); delete the stale
-  `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`; rename any
-  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (it now also carries `handoff:` —
-  schema in the delegation skill's `references/activation.md`). Remaining `foreman` mentions in
-  `backlog/`, decisions, and memory are deliberate history — **do not rewrite them**.
+- **`dev` `b67bbf3`** · **`main` `20923c9` = `publish: dev@25590ce`** · **6 plugins** ·
+  `make ci` green · **413 tests** · zero open GH issues · no worktrees.
+- **`dev` is AHEAD of `main` by one shipped feature — publishing is the open action.** `atelier`
+  is bumped to **0.11.0** on `dev` for the new `worktree-isolation` hook (#286, TASK-050), and
+  consumers cache by version, so until `publish.yml` is dispatched nobody has it. Use the
+  `publish-to-main` skill; nothing else on `dev` is unpublished.
+- **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** (1) The marketplace went
+  22 entries → 6: all seventeen one-skill plugins retired into one aggregate, **`solo-skills`**
+  (30 skills), the five bundles untouched. **Per-skill installation no longer exists** and no
+  aggregate can restore it (§5); `mise-en-place-scaffold` is the exception, living only inside
+  `code-desk`. (2) The delegation vocabulary: skill `atelier:foreman` → **`atelier:delegation`**,
+  agent `lead` → **`manager`**. Doctrine now names three **layers** — strategy (role `strategist`,
+  the session itself, never spawnable), management (`manager`), execution
+  (`scout`/`builder`/`reviewer`) — and **three layers is the default for non-trivial work**,
+  inverting guidance that had called the middle layer avoidable cost.
+- **Operator checklist — this project is migrated, OTHER projects are not.** Per project: remove
+  and re-add the marketplace (not just uninstall — §5), uninstall `foreman-kit` and any retired
+  one-skill ids, install `atelier` + `solo-skills` **in that project** (an `enabledPlugins` flag
+  alone proves nothing — memory: `plugin-enablement-needs-per-project-install`), delete the stale
+  `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`, and rename any
+  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema, now including `handoff:` and
+  `isolate:`, in the delegation skill's `references/activation.md`). Remaining `foreman` mentions
+  in `backlog/`, decisions, and memory are deliberate history — **do not rewrite them**.
 
 Standing mechanisms not to re-derive: **ADR 0017** (symlink assemblies, `dist/` retired, roster =
 provenance manifest, opencode generated at install time); **`origin: vendored`** (third-party
@@ -51,16 +51,15 @@ in-tree only under `backlog/docs/vendoring-rule.md`, machine-checked); **dual-ho
   end-to-end**; decisions 4/5/6; vendoring rule.
 - 2026-08-06: publish repaired; harness isolation; decision-8; iterm2 skill; **marketplace front
   door rebuilt**; **foreman-kit renamed to atelier** with the lab-01 doctrine rewrite.
-- 2026-08-07 (s9): **backlog sweep + delegation layers.** 15 cards closed, 6 filed, issue queue
-  emptied, published twice. Landed the delegation-ledger fix (#250), a **version-bump gate**,
-  a rewritten `scout`, a `handoff:` override, **`plugin-feedback`**, and the **three-layer
-  rewrite** (TASK-045).
+- 2026-08-07 (s9): **backlog sweep + delegation layers.** 15 cards closed, issue queue emptied,
+  published twice; delegation-ledger fix (#250), **version-bump gate**, rewritten `scout`,
+  `handoff:` override, **`plugin-feedback`**, **three-layer rewrite** (TASK-045).
 - 2026-08-07 (s10): **the marketplace restructure** (TASK-043, #276/#277) — 22 entries → 6,
-  `solo-skills` built and published, with a derived membership gate
-  (`scripts/check_solo_skills.py`, 16 tests). Two live defects removed on the way: the
-  `mise-en-place-scaffold` standalone had **never worked**, and a `repo-meta-structure` doc path
-  dangled in the standalone shipping at the time. TASK-049 (Codex) committed after sitting
-  untracked on disk.
+  `solo-skills` published behind a derived membership gate (`scripts/check_solo_skills.py`). Two
+  live defects removed on the way, including a standalone that had **never worked**.
+- 2026-08-07 (s11): **`worktree-isolation`** (TASK-050, #286) — atelier's 8th hook, a `PreToolUse`
+  rewrite on the `Agent` tool giving writing workers their own worktree, opt-in via `isolate:`.
+  Root-caused the "worktree crews land on a published commit" gotcha (§5). **Not yet published.**
 
 **Sub-projects, both self-describing — read their own docs first.** `evals/` (PocketBase extender
 DB): `evals/README.md`, `_structure/CHARTER.md`, `PROCEDURES.md`. Waves 0–3 done; M3–M6 are
@@ -74,8 +73,9 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-**No single obvious start-here.** TASK-043 closed, and nothing inherited its priority — pick by
-appetite from "buildable now" below.
+**Start here: publish.** `dev` carries a merged, gated, unpublished feature (`atelier` 0.11.0, the
+`worktree-isolation` hook). Run the `publish-to-main` skill. After that there is no single obvious
+next — pick by appetite from "buildable now" below.
 
 **TASK-29 is now unblocked, but its ruling needs reinterpreting.** The owner ruled it should get a
 "standalone home"; standalone plugins no longer exist. The faithful reading is that `lab-setup`
@@ -83,29 +83,24 @@ joins `solo-skills` **if the membership gate says it qualifies** — run
 `python3 scripts/check_solo_skills.py --report` against it rather than deciding by eye. If it does
 not qualify, the ruling has no valid target and needs a fresh one.
 
-**Nothing else is blocked on the owner** — every question asked on 2026-08-07 was ruled.
-Recorded on their cards and ready to implement without re-asking: TASK-034 (decide now, build
-later; adopt `strategist` as the primary profile name), TASK-033 (split — TASK-044 holds the open
-hooks-to-opencode question), TASK-12 (its own skill).
+**Nothing is blocked on the owner** — every question asked on 2026-08-07 was ruled, and the rulings
+sit on the cards (TASK-034, TASK-033, TASK-12). Read the card, do not re-ask.
 
-**Buildable now:** TASK-042 (trim `surfaces.md` — the de-duplication behind three shipped defects),
-TASK-041, TASK-047, TASK-033's mechanical half, TASK-25 (now has criteria drafted for review),
-TASK-18, TASK-19, TASK-27, TASK-046. **TASK-13 is unblocked but wait** — it reads the delegation
-ledger, whose pre-2026-08-07 history is unusable, so let post-fix rows accumulate first.
-**TASK-049** (Codex as a repo coding agent) is filed and scoped but declares a dependency on
-TASK-034, so settle that profile decision first.
-
+**Buildable now** is most of To Do; the cards carry their own scope. Only the sequencing judgment
+is worth keeping here: **TASK-042** (trim `surfaces.md`) is the highest-leverage, being the
+de-duplication behind three shipped defects; **TASK-049** waits on TASK-034's profile decision;
+**TASK-13** is unblocked but should wait for post-2026-08-07 ledger rows to accumulate.
 **Needs a live billed run:** TASK-21.3, TASK-21.5. **Needs the PocketBase server:** TASK-21.1,
-TASK-21.2, TASK-21.4 (only these three are independently startable).
+TASK-21.2, TASK-21.4.
 
-**TASK-035 residue:** the cold-read audit is done and every failing card is named, but its first
-two criteria stay unchecked because several cards still need rewriting. The recurring authoring
-defect to watch: **criteria phrased "Either X… or Y…"**, which defers the decision into the
-criterion and makes it unverifiable until someone rules.
+**TASK-035 residue:** the cold-read audit is done and every failing card named, but two criteria
+stay unchecked pending card rewrites. Authoring defect to watch: **criteria phrased "Either X… or
+Y…"** defer the decision into the criterion and are unverifiable until someone rules.
 
 **Never observed live:** nobody has confirmed `SubagentStart` fires with `plugin-feedback`
 installed. If the event were unhonored the worker tier is silently inert and every test still
-passes, since they assert only on stdout. One live dispatch closes it.
+passes, since they assert only on stdout. **This is now cheap to close** — use the headless probe
+recipe in §5 rather than waiting for an organic dispatch.
 
 **Cross-repo, the owner's call:** ra-platform's planning-desk adoption is uncommitted in
 `~/Developer/ra-platform`; the four desk folders in dotfiles-agents-desk likewise.
@@ -119,17 +114,13 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
 
 **Publishing**
 
-- **A plugin is the UNIT OF INSTALLATION, and a marketplace's granularity is also the plugin.**
-  There is no way to install one skill out of a plugin, so no aggregate can offer per-skill
-  installs — the one-skill plugins *were* that mechanism and retiring them is what removed it.
-  What makes the trade cheap is progressive disclosure: the model reads each skill's one-line
-  description to decide activation and loads a body only when it fires, so carrying 30 skills
-  costs 30 descriptions, not 30 bodies. **Do not accept a request to make a plugin's skills
-  "individually installable"** — correct the premise instead.
-- **Retiring an entry breaks a consumer's existing marketplace registration, not just the
-  plugin.** Observed live 2026-08-07: installing from the stale registration reported
-  "8 errors during load"; removing the marketplace and re-adding it cleared them. So the
-  migration is remove-and-re-add the marketplace, not merely uninstall the dead ids.
+- **A plugin is the UNIT OF INSTALLATION**, and so is a marketplace's granularity. No aggregate can
+  offer per-skill installs. What makes that cheap is progressive disclosure — 30 skills cost 30
+  one-line descriptions, not 30 bodies. **Do not accept a request to make a plugin's skills
+  "individually installable"**; correct the premise instead.
+- **Retiring an entry breaks a consumer's marketplace registration, not just the plugin.** Observed
+  2026-08-07: a stale registration reported "8 errors during load" until the marketplace was
+  removed and re-added. Migration is remove-and-re-add, not merely uninstall the dead ids.
 - **`main` is a filtered, parented assembly, never a snapshot of `dev`.** Never whole-tree diff
   them: published `plugins/` are dereferenced regular files where dev's are symlinks.
 - **A version bump IS the release step.** Consumers cache by version. Bump in BOTH
@@ -146,11 +137,20 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
 
 **CI and gates**
 
-- **`ci.yml` fires on `pull_request` ONLY.** A commit pushed straight to `dev` gets zero CI.
+- **`ci.yml` fires on `pull_request` ONLY.** A commit pushed straight to `dev` gets zero CI. The
+  owner waived the PR step for **docs/memory/handoff-only** commits on 2026-08-07 ("commit directly
+  to dev"); that waiver does not extend to code, which still needs a PR so the gates actually run.
 - **CI job names are frozen** — branch protection pins required checks by NAME, so a new gate must
   ride an existing job.
 - **`make ci`'s `✗ opencode laydown — refusing…` line is a passing test's own output.** Judge by
   exit code, never by ✗ glyphs.
+- **PROBE the harness instead of reasoning about it.** A hook or agent behavior in question is
+  answered in one round-trip by a headless run in a throwaway git repo:
+  `printf '<prompt>' | claude -p --settings <f> --model haiku --permission-mode acceptEdits
+  --allowedTools "Agent,Bash,Read"`, where `<f>` registers the real hook.py (or a stdin logger).
+  The prompt must arrive on **stdin** — a positional prompt errors out; `--settings` merges over
+  the normal config, so existing auth is reused. For schemas and error strings the docs omit,
+  grep `strings ~/.local/share/claude/versions/<v>`. Settled TASK-050's whole contract pre-code.
 - **`Closes #N` does nothing here.** GitHub auto-closes only on the *default* branch and PRs merge
   into `dev`. Close issues explicitly, or a shipped fix leaves its issue open.
 - **The checklist↔audit contract is a CLOSED type vocabulary, and `make ci` never runs the
@@ -158,16 +158,13 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   `audit.py` run. Residue: IGNORE-01 still probes `_meta/operations/`.
 - **`flow.yaml` is load-bearing** — `make flow` fails any PR adding an unhomed top-level path.
   Regenerate the doc with `scripts/check_flow.py --write-doc`.
-- **DERIVE a set, never consume a recorded one.** TASK-043's card carried a carefully-built
-  inventory of 27 eligible skills and said not to redo it. Writing the gate first and letting it
-  derive membership found the real answer was 30: three skills had been excluded by a group
-  generalization ("the atelier skills dispatch named agents") that was true of two of them and
-  never checked against the other three. A recorded inventory is a hypothesis; a gate that
-  re-derives it is the proof. Applies to any card whose notes hand you a list.
-- **`check_symlinks`' standalone README rule now has ZERO real subjects** and is kept as a
-  forward guard, with the reason in its module docstring. Note *why* that had to be decided
-  deliberately: the rule is exercised entirely by synthetic fixtures, so it stays green whether or
-  not any plugin satisfies it — **a gate passing tells you nothing about whether it has subjects.**
+- **DERIVE a set, never consume a recorded one.** TASK-043's card handed over an inventory of 27
+  eligible skills and said not to redo it; a gate that re-derived membership found 30, three having
+  been dropped by a group generalization nobody checked per-item. A recorded inventory is a
+  hypothesis. Applies to any card whose notes hand you a list.
+- **A gate passing tells you nothing about whether it has subjects.** `check_symlinks`' standalone
+  README rule now has zero real subjects and is exercised only by synthetic fixtures, so it stays
+  green either way; it is kept deliberately as a forward guard (reason in its module docstring).
 
 **Agents and delegation**
 
@@ -179,62 +176,65 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   default until TASK-046 settles it. **Do not defend one as a measurement, or discard one as a
   guess** — both gut the tag's purpose.
 - **An agent's `memory:` frontmatter key makes the RUNTIME create a directory** before the agent
-  acts (`memory: project` → `<cwd>/.claude/agent-memory/<agentType>/`). The enum has no `off`
-  value, so omitting the key is the only disable — no prose in an agent body can stop the `mkdir`.
-  No atelier agent sets it as of 2026-08-07, so a fresh one means some other definition carries it.
-- **`scout` is no longer Bash-less.** It still cannot write files (`Edit`/`Write` absent — that half
-  is structural), but shell authority is prompt-enforced: a brief must name the exact read-only
-  commands it grants. Its `maxTurns` cap is gone, so scout briefs may budget honestly.
-- **A skill can name an agent that does not exist and nothing catches it** (TASK-047:
-  `board-triage` documents a `board-analyst` "(this plugin)" that is in no roster). Check agent
-  names against the roster by hand until a gate exists. **TASK-047 now gates real distribution:**
-  that phantom agent is one of the two reasons `board-triage` is excluded from `solo-skills`, so
-  fixing it changes what ships.
+  acts (`memory: project` → `<cwd>/.claude/agent-memory/<agentType>/`). The enum has no `off`, so
+  omitting the key is the only disable — no prose in an agent body stops the `mkdir`. No atelier
+  agent sets it as of 2026-08-07, so a fresh dir means some other definition carries it.
+- **`scout` is no longer Bash-less.** It still cannot write (`Edit`/`Write` absent — structural),
+  but shell authority is prompt-enforced: a brief must name the exact read-only commands it grants.
+  Its `maxTurns` cap is gone, so scout briefs may budget honestly.
+- **A skill can name an agent that does not exist and nothing catches it** — TASK-047's
+  `board-triage` documents a `board-analyst` that is in no roster, which is one of the two reasons
+  it is excluded from `solo-skills`. Check agent names against the roster by hand until a gate
+  exists; fixing this one changes what ships.
 - **Prefer disjoint file ownership over worktrees.** Session 9 ran ~15 concurrent workers on one
   tree with zero collisions, purely by giving each an owned file list and forbidding `make`/git.
-  `isolation: worktree` calls here have repeatedly checked out a *published* commit instead of
-  `dev` — any worktree brief needs the self-check (`primitives-core/` missing → `git reset --hard
-  origin/dev`).
-- **Adversarially review a new plugin before merging.** On `plugin-feedback` it found that
-  third-party reports would file into this repo silently, and mutation-tested two tests that could
-  not fail — one passed while the stray file it checked for sat on disk.
-- **`logs/delegation.jsonl` is trustworthy from 2026-08-07 on, its history is not** — pre-fix rows
-  recorded the parent session at ~9x inflation, and rows before the rename say `lead` where later
-  ones say `manager`, so an analysis spanning that boundary reads one agent as two. Truncate or
-  archive before any tier analysis. Gitignored, so this costs no gate.
-- **`/reload-plugins` misreports skills as `0`** — observed twice on 2026-08-07
-  ("8 plugins · 0 skills · 11 agents · 7 hooks", then "3 plugins · 0 skills · 11 agents · 9 hooks"
-  with `diagrams`' four skills demonstrably loaded). This is #250's D4, now confirmed by
-  repetition. Trust the skill list, not the count.
+- **A worktree cannot see uncommitted work — structural, not a bug.** It is a clean checkout of a
+  ref, so modified and untracked files in the parent do not exist inside it (probed: "No such file
+  or directory" for a file sitting right there). Hence `worktree-isolation` never isolates
+  `scout`/`reviewer`/`Explore`/`Plan`/`fork` even when listed — isolating a reviewer aims it at a
+  tree missing the diff it was sent to read. Same trap for a builder: commit first, or leave that
+  dispatch un-isolated.
+- **The "worktree crews land on a published commit" mystery is SOLVED, and the fix is unapplied.**
+  Cause: the `worktreeBaseRef` setting (`fresh` default | `head`); `fresh` branches from
+  `origin/<default-branch>`, which here is publish-only `main`. **This repo has not set it**, so
+  every worktree brief still needs the self-check (`primitives-core/` missing → `git fetch origin
+  && git reset --hard origin/dev`) until `"worktreeBaseRef": "head"` lands in settings.json. Also
+  governs `--worktree` and `EnterWorktree`.
+- **Forcing isolation: two levers.** A `PreToolUse` hook matching tool name `Agent` (not `Task`)
+  rewrites the dispatch via `hookSpecificOutput.updatedInput` (PreToolUse-only); agent frontmatter
+  also takes `isolation:`, resolving as `explicit param ?? frontmatter`. Frontmatter was rejected
+  for atelier because it ships always-on to every consumer. Forcing it outside a git repo is a hard
+  error, and the Agent `cwd` param is mutually exclusive with it.
+- **Adversarially review a new plugin before merging.** On `plugin-feedback` it caught third-party
+  reports filing into this repo silently, plus two tests that could not fail.
+- **`logs/delegation.jsonl` is trustworthy from 2026-08-07 on, its history is not** — earlier rows
+  inflate the parent session ~9x and say `lead` where later ones say `manager`, so an analysis
+  spanning that boundary reads one agent as two. Truncate before any tier analysis.
+- **`/reload-plugins` misreports skills as `0`** (#250's D4, seen twice on 2026-08-07 with skills
+  demonstrably loaded). Trust the skill list, not the count.
 
 **Repo hygiene**
 
-- **A stale worktree can hide finished work indefinitely.** One sat for a day holding ~100
-  uncommitted lines of documentation while the shipped README described 4 of 7 hooks; `git status`
-  in the main tree stayed clean and the branch read as merged. **Run `git worktree list` at session
-  start** and check each one's status before assuming a branch is disposable.
+- **A stale worktree can hide finished work indefinitely** — one sat a day holding ~100 uncommitted
+  lines while the main tree's `git status` stayed clean and the branch read as merged. **Run
+  `git worktree list` at session start** before assuming a branch is disposable.
 - Worker agents may drop `.claude/agent-memory/` into their working dir — sweep the specific stray
-  path, **never** whole-dir `git rm` the root `.claude/` (it holds this file and the tracked memory).
-- **Stranded agent-memory is TASK-048**, a one-time migration rather than a standing hazard: the
-  `memory:` frontmatter key that created those directories is gone from every agent, so the pile is
-  finite. Two of the three files carry real verification lessons and are candidates for promotion
-  into `.claude/memory/`; the card says to judge each on the store's bar rather than promoting both
-  by default.
+  path, **never** whole-dir `git rm` the root `.claude/` (it holds this file and the tracked
+  memory). The pile is finite (TASK-048): the `memory:` key that created it is gone from every agent.
 - **Never mutate a second repo's git history** — read/draft in a consumer repo, leave it uncommitted.
 - **No unguarded counts in prose or metadata** (owner rule) — a count needs a gate that reads it, or
   phrase it so growth cannot falsify it.
 - **A new plugin** = a `plugins/<id>/` dir + a hand-authored root marketplace.json entry.
   pptx-themes' skill README carries the Anthropic attribution for its vendored `base/` — never split
   or drop that section.
-- **Project settings no longer name any `@dotfiles-agents` plugin** (2026-08-07). Enablement now
-  lives entirely in per-project install records; `.claude/settings.json`'s `enabledPlugins` lists
-  only the three `@workbench` dev plugins. Editing a product plugin's source never needs it
-  enabled, so leave this alone unless you want to *run* one.
+- **Project settings no longer name any `@dotfiles-agents` plugin** (2026-08-07) — enablement lives
+  entirely in per-project install records, and `enabledPlugins` lists only the three `@workbench`
+  dev plugins. Editing a product plugin's source never needs it enabled; leave this alone unless
+  you want to *run* one.
 - **Removing a marketplace via `/plugin` DELETES every one of its entries from the project's
-  tracked `enabledPlugins`.** Observed 2026-08-07: a remove-and-re-add wiped `atelier: true`,
-  `owner-signoff: true`, and five deliberate `…: false` entries in one go. Worth knowing before
-  you do it elsewhere — but the owner ruled the resulting state correct here and the entries were
-  deliberately not reinstated, so **do not "restore" them.**
+  tracked `enabledPlugins`** (observed 2026-08-07, seven entries wiped in one go). The owner ruled
+  the resulting state correct here, so **do not "restore" them** — just know it before doing it
+  elsewhere.
 - **The owner signs off on major IA changes before they are built.** Present them as an approval
   gate, not a done deal.
 - Backlog specifics beyond CLAUDE.md: `--depends-on` needs the dotted subtask form (`task-21.1`);
