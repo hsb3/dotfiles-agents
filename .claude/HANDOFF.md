@@ -20,9 +20,23 @@ push) on the next two dispatches. See §1.
 
 ## 1 · Current standing
 
-- **`dev` tip `5f3a2b2`**, `make ci` green, **375 tests** (was 230 two sessions ago).
-- **`main` tip `cb2333b` = `publish: dev@5f3a2b2`**, **22-plugin** lineup, published 2026-08-07
+- **`dev` tip `c9e28ae`**, `make ci` green, **375 tests** (was 230 two sessions ago).
+- **`main` tip `a3b81c4` = `publish: dev@d08a346`**, **22-plugin** lineup, published 2026-08-07
   by the `publish.yml` workflow. Parent chain intact (append-only).
+- **BREAKING FOR CONSUMERS, published 2026-08-07 — the delegation vocabulary was renamed.**
+  The skill `atelier:foreman` is now **`atelier:delegation`**; the agent `lead` is now
+  **`manager`**. Anything invoking the old ids breaks silently: your own aliases, another
+  repo's briefs, a saved command. The doctrine now names three **layers** — strategy
+  (role `strategist`, the session itself, never spawnable), management (`manager`), execution
+  (`scout`/`builder`/`reviewer`) — and **three layers is the default for non-trivial work**,
+  inverting guidance that had called the middle layer avoidable cost. Note the vocabulary
+  split that makes this readable: **"layer" is the org structure, "tier" is the model**
+  (haiku/sonnet/opus). Do not mix them; the whole point of the rename was removing that
+  ambiguity.
+- **`make ci` is NOT the whole gate any more.** `scripts/check_version_bump.py` runs CI-only
+  (it needs network to reach `origin/main`). It caught a real defect on its very first live PR:
+  a cross-reference edit to `planning-desk` changed `code-desk`'s published bytes while only
+  `atelier` had been bumped. **Run it by hand before assuming a green `make ci` means a green PR.**
 - **The GH issue queue is EMPTY.** All four that were open (#250, #254, #255, #256) were fixed
   and closed 2026-08-07; #252 had been closed earlier. **Note the trap that hid this before:**
   `Closes #N` in a PR body does **nothing** here, because GitHub only auto-closes on the
@@ -81,6 +95,14 @@ and a standalone — installing both loads the skill once).
   rides `make check`). Repaired en route: a mid-word-truncated description, two disagreeing
   manifests, a wrong dual-homing count, an 11-byte-stub link, internal codenames in the picker.
   Repo About box set. Published to `main`. Backlog closeout in #253.
+- 2026-08-07 (s9b): **atelier delegation layers** (#270, TASK-045). Owner's critique was that
+  the strategy/management/execution layers were used everywhere and defined nowhere. Now each
+  layer states its own irreducible work, the context it needs **and must not be given**, and its
+  prohibitions, with a discriminator table and a "which layer am I on" resolver. Renames:
+  skill `foreman`→`delegation`, agent `lead`→`manager`, strategy role = `strategist` (chosen so
+  the harness-agnostic profile work, TASK-034, inherits a name instead of churning one). Also
+  filed: TASK-046 (measure the three-layer claim), TASK-047 (`board-triage` names a
+  `board-analyst` agent that does not exist).
 - 2026-08-07 (s9): **full backlog sweep** — 13 cards closed, 4 filed, GH issue queue emptied,
   two PRs (#266, #267) plus closeouts (#268), published as `dev@5f3a2b2`. Highlights, each with
   a captured red run: the delegation ledger now records subagents not the parent (#250, verified
@@ -133,20 +155,28 @@ later extract.
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`) — ranked
 work, drafts, and decisions live there, not duplicated here.
 
+**The one card with analysis done and build waiting — start here:**
+
+- **TASK-043 — one plugin holding every standalone-capable skill.** The owner ruled 2026-08-07:
+  *"instead of single-skill plugins, create a plug-in that has all skills that can stand on their
+  own (don't require hooks, agents, ...)."* That is the **replacing** reading — the per-skill
+  plugins retire. **Do not redo the inventory**; it is on the card: **27 skills eligible, 3 not**
+  (`board-triage`, `mise-en-place-scaffold`, `repo-compliance-audit`, each with a cited reason),
+  plus the atelier skills, which dispatch named agents by definition.
+  Three things decide the build's shape, all recorded on the card:
+  1. **Eligibility cannot be read from metadata.** None of the three ineligible skills was caught
+     by the roster's `requires:` field — two hardcode a sibling's path inside a bundled Python
+     script. A membership gate has to read bodies and scripts.
+  2. `marketplace.json`'s `metadata.description` enumerates all seventeen standalone plugins **by
+     name**, and the catalog guard verifies those names. It goes red until rewritten.
+  3. **`check_symlinks`' standalone branch loses every subject** and can never fire again. It
+     shipped the same day (TASK-28). Retire it, or keep it with a stated reason.
+  Accepted cost, already ruled: retiring a marketplace entry dangles every existing install
+  record, and this marketplace has no alias mechanism, so it fails silently on the next refresh.
+
 **Blocked on the owner, and nothing else is:**
 
-- **TASK-043 — needs a ruling before any build.** The owner asked for "a plugin that
-  distributes all skills that can stand on their own", alongside ruling that lab-setup ships
-  standalone. Those read two ways and cost very differently. *Additive*: the existing one-skill
-  plugins stay and this is an aggregate convenience install — cheap, reversible, but every
-  standalone skill becomes dual-homed. *Replacing*: the aggregate becomes the shape and the
-  per-skill plugins retire — a breaking marketplace change across most entries, dangling every
-  install record, with no alias mechanism in this marketplace's shape. Both readings are written
-  out on the card. **Do not start TASK-043 or the lab-setup move until this is settled.**
-  Second open question on the same card: "can stand on their own" needs a mechanical definition.
-  `check_symlinks` now encodes a standalone rule, but that describes an *assembly*, not a skill's
-  self-sufficiency — a skill referencing a sibling by path is not standalone-capable however it
-  is packaged.
+- *(nothing — every open question the owner was asked on 2026-08-07 has been ruled.)*
 
 **Rulings taken 2026-08-07 and recorded on their cards — implement without re-asking:**
 TASK-032 (gate rides the existing drift-guards CI job — **done**), TASK-15 (`.claude/atelier.local.md`
@@ -245,6 +275,23 @@ Unchanged since 2026-08-04.
   itself: it found that reports about third-party plugins would be filed into *this* repo
   silently, and mutation-tested two tests that could not fail — one of which passed while the
   stray file it checked for sat on disk. A builder's self-report is a hypothesis.
+- **A dual-homed edit needs a bump on EVERY plugin that ships it, not just the obvious one.**
+  Editing one cross-reference in `planning-desk` changed `code-desk`'s published bytes while only
+  `atelier` was bumped. `make members` shows which plugins ship a given primitive — check it
+  before bumping, and run `scripts/check_version_bump.py` locally.
+- **"Layer" and "tier" are different things and must stay that way.** Layer = the org structure
+  (strategy / management / execution). Tier = the model (haiku / sonnet / opus), which is the
+  entire subject of `references/tier-cutoff.md`. Collapsing them re-creates the exact ambiguity
+  the 2026-08-07 rename removed.
+- **The `[field]` provenance tag exists now** — observed in practice by the owner, not yet
+  reproduced under measurement. It outranks `[untested]` reasoning and never outranks `[lab]` or
+  `[cost]`. It carries the three-layer default until TASK-046 settles it. **Do not defend a
+  `[field]` rule as a measurement, and do not discard one as a guess** — both failures gut the
+  point of the tag.
+- **A skill can name an agent that does not exist and nothing catches it** (TASK-047:
+  `board-triage` documents a `board-analyst` agent "(this plugin)" that is in no roster and no
+  assembly). Until a gate exists, check agent names against the roster by hand when touching a
+  skill that dispatches.
 - **`ls` is aliased to `eza`** in this shell; `ls <dir>` fails on the `--icons` flag. Use
   `/bin/ls` in scripted checks.
 - **`logs/delegation.jsonl` is trustworthy from 2026-08-07 onward, but its history is not.**
