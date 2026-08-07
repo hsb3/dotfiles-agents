@@ -28,6 +28,7 @@ lab.
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
 | `subagent-telemetry` | hook (`SubagentStop`) | Appends one row per delegation (agent id, agent type, model, context tokens) to a local ledger, so tier usage can be measured offline. Silent — no stdout, never blocks. |
 | `worker-context` | hook (`SubagentStart`) | Injects the delegation covenant into every subagent, so the rules a worker is judged by arrive with the worker instead of depending on the dispatching session restating them in each brief. Inert until a project activates it. |
+| `worktree-isolation` | hook (`PreToolUse`) | Rewrites a dispatch so a **writing** worker gets its own git worktree instead of sharing the session's checkout. Read-only roles are left alone on purpose — a worktree cannot see uncommitted work. Never denies; inert until a project sets `isolate:`. |
 
 ## Install
 
@@ -80,6 +81,7 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - .github/workflows/*
   - "*.config.js"
   - configs/*
+isolate: writers      # off (default when absent) | writers | a list of agent types
 ---
 
 # Why these paths
@@ -93,6 +95,7 @@ this project's gate is drawn where it is.
 | `effort` | `delegation` skill | Forces `standard` or `deep` rather than inferring the level from the session's strategist model. You saying so in the session still outranks it. |
 | `enforce` | `worker-context`, `config-custody` hooks | Arms the enforcement layer. Absent, `off`, an unrecognized value, or an unparseable file all mean off. |
 | `protected` | `config-custody` hook | fnmatch globs naming the config that defines acceptance. Also accepts the inline form `protected: ["Makefile", "configs/*"]`. `*` crosses `/`, so `configs/*` covers the whole subtree — if you want direct children only, name them. |
+| `isolate` | `worktree-isolation` hook | Gives writing workers their own git worktree. `writers` covers `builder`, `manager`, `general-purpose`; a list (block or inline) names your own set. `scout`, `reviewer`, `Explore`, `Plan`, and `fork` are never isolated, even if listed — a worktree cannot see uncommitted work, which is exactly what a reviewer was sent to read. |
 
 What each `enforce` level actually does:
 
@@ -108,8 +111,15 @@ strategist keeps ownership of config and git and lifting a pattern is always ava
 have blocked, so you graduate on evidence instead of turning enforcement on blind. To stand the
 whole thing down, set `off` or delete the file.
 
-**No restart needed.** The skill and both hooks re-read this file per call, so an edit to
-`enforce:` or `protected:` applies to the very next tool call.
+`isolate:` is a separate axis and does not need `enforce:` — a project can isolate writers without
+arming custody, or the reverse. Two things worth knowing before turning it on: an isolated worker
+cannot see the session's uncommitted changes (commit first, or leave that worker un-isolated), and
+a new worktree branches from `origin/<default-branch>` unless the project sets
+`"worktreeBaseRef": "head"` in settings.json. Where the default branch is a publish-only surface,
+`head` is the setting that hands workers the branch you are actually on.
+
+**No restart needed.** The skill and the hooks re-read this file per call, so an edit to
+`enforce:`, `protected:`, or `isolate:` applies to the very next tool call.
 
 It is a local file, so ignore it:
 

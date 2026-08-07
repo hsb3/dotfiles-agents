@@ -37,6 +37,17 @@
           }
         ],
         "matcher": "Edit|Write|MultiEdit|NotebookEdit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-isolation/hook.py\"",
+            "statusMessage": "Checking worker isolation...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Agent"
       }
     ],
     "SessionStart": [

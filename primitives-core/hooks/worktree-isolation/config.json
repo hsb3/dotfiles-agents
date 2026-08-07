@@ -1,0 +1,6 @@
+{
+  "event": "PreToolUse",
+  "matcher": "Agent",
+  "timeout": 10,
+  "statusMessage": "Checking worker isolation..."
+}
