@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-07 (session 12). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-07 (session 13). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, with the two higher-precedence paths absent, so the hooks resolve it with no
@@ -15,26 +15,31 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `8ea83ba`** · **`main` `a3b904e` = `publish: dev@8ea83ba`** · **6 plugins** ·
-  `make ci` green · **413 tests** · zero open GH issues · no worktrees.
-- **`dev` and `main` are IN SYNC — nothing unpublished.** `atelier` **0.11.0** (the
-  `worktree-isolation` hook, #286, TASK-050) published 2026-08-07 (session 12) via
-  `publish-to-main`; consumers pick it up on their next plugin update.
+- **`dev` `4801d3c`** · **`main` `a3b904e` = `publish: dev@8ea83ba`** · **6 plugins** ·
+  `make ci` green · **438 tests** · **7 open GH issues** · no worktrees.
+- **`dev` is TWO COMMITS AHEAD OF THE LAST PUBLISH — the diagram work is unpublished.**
+  Session 13 landed TASK-051 (#288) and bumped all six plugins; consumers see none of it until
+  a `publish-to-main` run. That publish is the obvious next action.
+- **The 7 open issues arrived from OTHER PROJECTS via `plugin-feedback`, not from work here** —
+  4 from `pb-task-tracker`, 3 from an agent session, all 2026-08-07 05:34–05:56Z. Six are
+  atelier delegation-doctrine gaps; **#282 is a live shipped defect** (plugin-feedback's
+  feature-request path cannot file out of the box: it defaults to label `type:feature`, this
+  repo has `type:feat`). None has a backlog card yet — triage is open work.
 - **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** (1) The marketplace went
-  22 entries → 6: all seventeen one-skill plugins retired into one aggregate, **`solo-skills`**
-  (30 skills), the five bundles untouched. **Per-skill installation no longer exists** and no
-  aggregate can restore it (§5); `mise-en-place-scaffold` is the exception, living only inside
-  `code-desk`. (2) The delegation vocabulary: skill `atelier:foreman` → **`atelier:delegation`**,
-  agent `lead` → **`manager`**. Doctrine now names three **layers** — strategy (role `strategist`,
-  the session itself, never spawnable), management (`manager`), execution
-  (`scout`/`builder`/`reviewer`) — and **three layers is the default for non-trivial work**,
-  inverting guidance that had called the middle layer avoidable cost.
+  22 entries → 6: all seventeen one-skill plugins retired into one aggregate, **`solo-skills`**,
+  the five bundles untouched. **Per-skill installation no longer exists** and no aggregate can
+  restore it (§5); `mise-en-place-scaffold` is the exception, living only inside `code-desk`.
+  (2) The delegation vocabulary: skill `atelier:foreman` → **`atelier:delegation`**, agent
+  `lead` → **`manager`**. Doctrine names three **layers** — strategy (the session itself, never
+  spawnable), management (`manager`), execution (`scout`/`builder`/`reviewer`) — and **three
+  layers is the default for non-trivial work**, inverting guidance that had called the middle
+  layer avoidable cost.
 - **Operator checklist — this project is migrated, OTHER projects are not.** Per project: remove
   and re-add the marketplace (not just uninstall — §5), uninstall `foreman-kit` and any retired
   one-skill ids, install `atelier` + `solo-skills` **in that project** (an `enabledPlugins` flag
   alone proves nothing — memory: `plugin-enablement-needs-per-project-install`), delete the stale
   `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`, and rename any
-  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema, now including `handoff:` and
+  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema, including `handoff:` and
   `isolate:`, in the delegation skill's `references/activation.md`). Remaining `foreman` mentions
   in `backlog/`, decisions, and memory are deliberate history — **do not rewrite them**.
 
@@ -50,17 +55,15 @@ in-tree only under `backlog/docs/vendoring-rule.md`, machine-checked); **dual-ho
   end-to-end**; decisions 4/5/6; vendoring rule.
 - 2026-08-06: publish repaired; harness isolation; decision-8; iterm2 skill; **marketplace front
   door rebuilt**; **foreman-kit renamed to atelier** with the lab-01 doctrine rewrite.
-- 2026-08-07 (s9): **backlog sweep + delegation layers.** 15 cards closed, issue queue emptied,
-  published twice; delegation-ledger fix (#250), **version-bump gate**, rewritten `scout`,
-  `handoff:` override, **`plugin-feedback`**, **three-layer rewrite** (TASK-045).
-- 2026-08-07 (s10): **the marketplace restructure** (TASK-043, #276/#277) — 22 entries → 6,
-  `solo-skills` published behind a derived membership gate (`scripts/check_solo_skills.py`). Two
-  live defects removed on the way, including a standalone that had **never worked**.
-- 2026-08-07 (s11): **`worktree-isolation`** (TASK-050, #286) — atelier's 8th hook, a `PreToolUse`
-  rewrite on the `Agent` tool giving writing workers their own worktree, opt-in via `isolate:`.
-  Root-caused the "worktree crews land on a published commit" gotcha (§5).
-- 2026-08-07 (s12): published `dev@8ea83ba` to `main` (`worktree-isolation` / atelier 0.11.0 now
-  live for consumers). No other changes landed.
+- 2026-08-07 (s9–s12): **backlog sweep, the marketplace restructure, and worktree isolation.**
+  15 cards closed and the issue queue emptied; **version-bump gate**; **`plugin-feedback`**;
+  **three-layer rewrite** (TASK-045); **22 marketplace entries → 6** with `solo-skills` behind a
+  derived membership gate (TASK-043, #276/#277); **`worktree-isolation`** (TASK-050, #286);
+  published twice, ending at `dev@8ea83ba`. Every durable gotcha from these is in §5.
+- 2026-08-07 (s13): **plugin-README diagrams** (TASK-051, #288) — a standard
+  (`backlog/docs/readme-diagram-standard.md`), a gate (`scripts/check_plugin_diagrams.py`, in
+  `make check`), and one Mermaid diagram backfilled into all six plugin READMEs. Six version
+  bumps, **unpublished**. Measured a tool gotcha on the way (§5).
 
 **Sub-projects, both self-describing — read their own docs first.** `evals/` (PocketBase extender
 DB): `evals/README.md`, `_structure/CHARTER.md`, `PROCEDURES.md`. Waves 0–3 done; M3–M6 are
@@ -74,8 +77,10 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-`dev` and `main` are in sync (nothing unpublished) — no single obvious next; pick by appetite
-from "buildable now" below.
+**Two things are actually queued.** (1) **Publish** — `dev` carries the diagram work and six
+version bumps that no consumer has (`publish-to-main`). (2) **Triage the 7 GH issues** — none
+has a backlog card, and #282 is a live defect in a shipped plugin, so it is the one with a
+user waiting on it.
 
 **TASK-29 is now unblocked, but its ruling needs reinterpreting.** The owner ruled it should get a
 "standalone home"; standalone plugins no longer exist. The faithful reading is that `lab-setup`
@@ -91,16 +96,14 @@ is worth keeping here: **TASK-042** (trim `surfaces.md`) is the highest-leverage
 de-duplication behind three shipped defects; **TASK-049** waits on TASK-034's profile decision;
 **TASK-13** is unblocked but should wait for post-2026-08-07 ledger rows to accumulate.
 **Needs a live billed run:** TASK-21.3, TASK-21.5. **Needs the PocketBase server:** TASK-21.1,
-TASK-21.2, TASK-21.4.
+TASK-21.2, TASK-21.4. **TASK-035 residue:** two criteria stay unchecked pending card rewrites.
 
-**TASK-035 residue:** the cold-read audit is done and every failing card named, but two criteria
-stay unchecked pending card rewrites. Authoring defect to watch: **criteria phrased "Either X… or
-Y…"** defer the decision into the criterion and are unverifiable until someone rules.
-
-**Never observed live:** nobody has confirmed `SubagentStart` fires with `plugin-feedback`
-installed. If the event were unhonored the worker tier is silently inert and every test still
-passes, since they assert only on stdout. **This is now cheap to close** — use the headless probe
-recipe in §5 rather than waiting for an organic dispatch.
+**`plugin-feedback` is PROVEN IN THE FIELD at the session tier** — the 7 open issues are
+unprompted reports from two other projects, so the `SessionStart` hook, the reporter, and the
+repo resolution all work end to end. **The `SubagentStart` worker tier is still unconfirmed**;
+if that event were unhonored the tier is silently inert and every test still passes (they assert
+only on stdout). Close it with the headless probe recipe in §5 rather than waiting for an
+organic dispatch.
 
 **Cross-repo, the owner's call:** ra-platform's planning-desk adoption is uncommitted in
 `~/Developer/ra-platform`; the four desk folders in dotfiles-agents-desk likewise.
@@ -124,8 +127,11 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
 - **`main` is a filtered, parented assembly, never a snapshot of `dev`.** Never whole-tree diff
   them: published `plugins/` are dereferenced regular files where dev's are symlinks.
 - **A version bump IS the release step.** Consumers cache by version. Bump in BOTH
-  `plugins/<id>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`; keep
-  `ensure_ascii=True` when editing them programmatically.
+  `plugins/<id>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`. **Do it with a
+  targeted string replace, not a load-and-redump** — the two files disagree on unicode
+  (`marketplace.json` stores escapes, atelier's `plugin.json` stores raw), so a
+  `json.dump(ensure_ascii=True)` rewrite silently re-encodes a description line nobody asked to
+  touch. Read the diff either way.
 - **A dual-homed edit needs a bump on EVERY plugin shipping it.** Editing one cross-reference in
   `planning-desk` changed `code-desk`'s bytes while only `atelier` was bumped. `make members` maps
   primitive → plugins.
@@ -194,12 +200,12 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   `scout`/`reviewer`/`Explore`/`Plan`/`fork` even when listed — isolating a reviewer aims it at a
   tree missing the diff it was sent to read. Same trap for a builder: commit first, or leave that
   dispatch un-isolated.
-- **The "worktree crews land on a published commit" mystery is SOLVED, and the fix is unapplied.**
+- **The "worktree crews land on a published commit" mystery is SOLVED and the fix IS APPLIED.**
   Cause: the `worktreeBaseRef` setting (`fresh` default | `head`); `fresh` branches from
-  `origin/<default-branch>`, which here is publish-only `main`. **This repo has not set it**, so
-  every worktree brief still needs the self-check (`primitives-core/` missing → `git fetch origin
-  && git reset --hard origin/dev`) until `"worktreeBaseRef": "head"` lands in settings.json. Also
-  governs `--worktree` and `EnterWorktree`.
+  `origin/<default-branch>`, which here is publish-only `main`. `.claude/settings.json` has set
+  `"worktreeBaseRef": "head"` since `8ea83ba` (session 11) — **worktree briefs no longer need the
+  `primitives-core/`-missing self-check.** (The three prior handoffs said otherwise; corrected
+  2026-08-07 s13 after reading settings.json.) Also governs `--worktree` and `EnterWorktree`.
 - **Forcing isolation: two levers.** A `PreToolUse` hook matching tool name `Agent` (not `Task`)
   rewrites the dispatch via `hookSpecificOutput.updatedInput` (PreToolUse-only); agent frontmatter
   also takes `isolation:`, resolving as `explicit param ?? frontmatter`. Frontmatter was rejected
@@ -212,6 +218,23 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   spanning that boundary reads one agent as two. Truncate before any tier analysis.
 - **`/reload-plugins` misreports skills as `0`** (#250's D4, seen twice on 2026-08-07 with skills
   demonstrably loaded). Trust the skill list, not the count.
+- **The GH issue queue fills with ZERO activity in this repo.** `plugin-feedback` is installed in
+  other projects, so their sessions file here asynchronously — 7 arrived on 2026-08-07 while
+  nobody was working in this tree, and session 12's handoff asserted "zero open GH issues" ~20
+  minutes after four of them landed. **Re-read `gh issue list` at session start; never carry an
+  issue count forward from the handoff.** This is the "no unguarded counts" rule biting the
+  handoff itself.
+
+**Docs and diagrams**
+
+- **Every `plugins/<id>/README.md` must carry a Mermaid diagram** under `## How it fits together`
+  — standard in `backlog/docs/readme-diagram-standard.md`, enforced by `make check`. The rule
+  that matters is editorial, not mechanical: *draw the trigger and the flow, never the inventory*.
+- **`mermaid-cli` EXITS 0 WHEN THE RENDER FAILS** and writes no file — measured 2026-08-07 on a
+  `(` in a label and on `load --> end`. The same diagrams render blank on GitHub with no error,
+  so neither `$?` nor reading the source will tell you. Assert `test -s out.svg`, and for shipped
+  diagrams confirm every label reached the SVG. Full entry: memory
+  `mermaid-cli-exits-zero-on-failure`.
 
 **Repo hygiene**
 
@@ -220,7 +243,9 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   `git worktree list` at session start** before assuming a branch is disposable.
 - Worker agents may drop `.claude/agent-memory/` into their working dir — sweep the specific stray
   path, **never** whole-dir `git rm` the root `.claude/` (it holds this file and the tracked
-  memory). The pile is finite (TASK-048): the `memory:` key that created it is gone from every agent.
+  memory). The pile is finite (TASK-048): the `memory:` key that created it is gone from every
+  agent. **Still present and untracked as of s13:** `.claude/agent-memory/foreman-kit-reviewer/`
+  (3 files) — pre-rename residue, harmless, and TASK-048's to remove.
 - **Never mutate a second repo's git history** — read/draft in a consumer repo, leave it uncommitted.
 - **No unguarded counts in prose or metadata** (owner rule) — a count needs a gate that reads it, or
   phrase it so growth cannot falsify it.
@@ -235,16 +260,14 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   tracked `enabledPlugins`** (observed 2026-08-07, seven entries wiped in one go). The owner ruled
   the resulting state correct here, so **do not "restore" them** — just know it before doing it
   elsewhere.
-- **The owner signs off on major IA changes before they are built.** Present them as an approval
-  gate, not a done deal.
 - Backlog specifics beyond CLAUDE.md: `--depends-on` needs the dotted subtask form (`task-21.1`);
   `make flow` requires a claimed top-level path to be *tracked*; avoid two sessions writing the
   backlog at once.
 
 ## 6 · Map
 
-- **`backlog/` is THE task system** (decision-1) — GH issues are bug intake only.
-- Docs: CLAUDE.md (rules) · `.github/CONTRIBUTING.md` (human loop) · `backlog/decisions/` (ADR
-  mirrors + rulings) · `backlog/docs/vendoring-rule.md`.
+- Docs: CLAUDE.md (rules, hot-loaded) · `.github/CONTRIBUTING.md` (human loop) ·
+  `backlog/decisions/` (ADR mirrors + rulings) · `backlog/docs/` (`vendoring-rule.md`,
+  `readme-diagram-standard.md`, `FLOW.md`).
 - **Exec desks:** `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/` (this repo);
   `.../desk-standard-desk/`; `.../ARCHIVE/dev-tooling-desk-old/` (desk-platform design).
