@@ -1,16 +1,21 @@
-# Lead-agent brief template (architecture D)
+# Manager brief template (the management layer, architecture D)
 
 Guiding principle: **Fill every section. A section you can't fill is a decision you haven't made
-yet — make it before delegating, because the lead will otherwise make it for you, invisibly.**
+yet — make it before delegating, because the manager will otherwise make it for you, invisibly.**
 
-Spawn one `lead` agent with the brief below. Send follow-ups and escalation answers to the
-SAME lead via SendMessage — never re-brief (a re-brief discards the accumulated context that is
-most of what the Opus lead cost).
+Spawn one `manager` agent with the brief below. Send follow-ups and escalation answers to the
+SAME manager via SendMessage, never re-brief (a re-brief discards the accumulated context that is
+most of what the manager cost, and absorbing that context is the whole reason the layer exists).
+
+What goes in this brief is the management layer's whole context: the objective, the DoD verbatim,
+the constraints, and the stop conditions. What stays out is the user's conversation, the plan
+beyond this chain, and any sibling wave.
 
 ```
-You are the LEAD agent for a coupled build. You act as the main session's proxy: you decompose,
-delegate bounded links to your own worker agents, verify every worker's output before building on
-it, and return a proof-of-completion package. You do the judgment-heavy links yourself.
+You are the MANAGER for a coupled build: the management layer between the session and the
+workers. You decompose, delegate bounded links to your own worker agents, verify every worker's
+output before building on it, and return a proof-of-completion package. You do the
+judgment-heavy links yourself.
 
 ## Objective
 <one paragraph: what must exist when you're done, and why — enough context to make good calls>
@@ -25,17 +30,21 @@ it, and return a proof-of-completion package. You do the judgment-heavy links yo
 2. <...>
 Each criterion needs evidence in your final package: the command you ran and its actual output.
 "Works well" is not a criterion — every line must be checkable by a command, grep, or artifact.
+You may not amend this list. A criterion that turns out to be unverifiable as written is an
+escalation, not an edit.
 
 ## Scope
 - Files / dirs you own: <...>
 - Out of scope (report, don't touch): <...>
+- READ-ONLY config (gate, lint, typecheck, coverage, CI): <...>
 
 ## Workers
 Spawn `builder` agents for bounded links. Model guidance (per-dispatch `model` override):
 - the sonnet default for well-specified edits, test writing, mechanical refactors
 - `model: opus` for links where a wrong choice is expensive to unwind
 Verify each worker's output against its sub-brief BEFORE building the next link on it. Their
-reports are hypotheses, not facts.
+reports are hypotheses, not facts. Do not pass a worker your own brief, the wider plan, or
+another worker's output as context — each one gets its slice and nothing more.
 
 ## Evidence format (your final message)
 1. Per-DoD-criterion: evidence (command + actual output, file:line, diff summary)
@@ -53,10 +62,13 @@ reads as full coverage.
 Stop, state what you found, and wait for instructions.
 ```
 
-## Notes for the foreman
+## Notes for the strategist
 
 - When the package comes back: **spot-check one or two criteria independently, then run the repo
-  gates yourself.** Accept nothing on the package's say-so alone. The lead catches worker errors
-  cheaply; the session catches the lead's blind spots — that layering is the point.
+  gates yourself.** Accept nothing on the package's say-so alone. The manager catches worker errors
+  cheaply; the session catches the manager's blind spots, and that layering is the point.
 - For an independent re-derivation of a high-impact claim, spawn a `reviewer` rather than
-  trusting the lead's own check.
+  trusting the manager's own check.
+- Read the package, not the chain. If you find yourself asking the manager for its workers' raw
+  output, the material is climbing into the context that never resets, which is exactly the cost
+  the layer was added to avoid.

@@ -6,15 +6,16 @@ this one watches how much labor it is **retaining**.
 `PostToolUse` on edit and shell tools. It scans the session transcript, counts delegable tool
 calls (`Read`, `Grep`, `Glob`, `Bash`, `Edit`, `Write`, `MultiEdit`, `NotebookEdit`) in an unbroken
 run with no `Task`/`Agent` dispatch, and once that run crosses the watermark it injects a nudge
-naming the number and asking the session to either dispatch the remainder or say which foreman
-floor item this stretch is.
+naming the number and asking the session to either dispatch the remainder or say which strategy
+layer floor item this stretch is.
 
 Observational only: it never blocks, never edits, and fails open on every error path.
 
 ## Why
 
-The source lab's finding F7, the work-list trigger gap. A foreman that never delegates looks, from
-the inside, exactly like a foreman doing careful work; the failure is only visible in aggregate.
+The source lab's finding F7, the work-list trigger gap. A strategist that never delegates looks,
+from the inside, exactly like a strategist doing careful work; the failure is only visible in
+aggregate.
 Transcript
 reconstruction of the lab that produced this kit found sessions that ran 6+ hours with 93
 self-performed tool calls and zero dispatches, and the operator noticed from the outside, not the
@@ -34,7 +35,7 @@ Measured on the source lab's real transcripts, which is where the default came f
 `SOFT=25` sits above the typical mid-fan-out run (median ~18 across the delegating sessions' 14
 runs) and below every zero-delegation session (80–103). It also fires on the longer solo stretches
 inside delegating sessions (36–69 observed) — deliberately: those stretches were grounding and
-closing work done by hand, the retained-labor shapes the foreman skill's ceiling names, and the
+closing work done by hand, the retained-labor shapes the delegation skill's ceiling names, and the
 nudge is answerable by naming a floor item. `REFIRE_EVERY=15` means a session that keeps going
 gets reminded roughly every 15 calls rather than on every call.
 

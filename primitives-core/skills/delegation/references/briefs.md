@@ -3,6 +3,11 @@
 A brief is written for an agent with **zero chat context**. Ambiguity in a brief is the session
 silently delegating a decision it was supposed to make.
 
+This file covers the **execution layer** — `scout`, `builder`, `reviewer`. The brief is that
+layer's entire context, and rule 3 below is the boundary on what may not enter it. For the
+**management layer**, use `manager-brief.md` instead: a manager gets the DoD verbatim and the stop
+conditions, and it writes its own workers' briefs to this file's rules.
+
 ## Required fields
 
 - **Repo path** (absolute) and the environment or working commands.
@@ -67,8 +72,11 @@ In any brief that produces or changes behavior:
 
 Information asymmetry is deliberate, and it held up across every round of the lab: workers who
 could not see sibling solutions, prior rounds, or the cycle budget produced honest, scoped work.
-Field-level problems were caught by the orchestrator's verification layers (gates, output diffs,
-judge panels) — never by a worker self-report, which was structurally unable to see them.
+Field-level problems were caught by the layers above (gates, output diffs, judge panels) — never
+by a worker self-report, which was structurally unable to see them.
+
+This is the execution layer's context boundary, and it is load-bearing twice over: it keeps
+workers honest, and it is why the differential and the panel mean anything at all.
 
 Never put these in a worker brief:
 

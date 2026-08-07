@@ -1,7 +1,7 @@
 # subagent-telemetry
 
 Appends one JSONL row per delegation (agent ID, agent type, model, context tokens) to
-a local ledger, so a foreman session's own tier usage can be measured offline — data
+a local ledger, so a strategist session's own tier usage can be measured offline — data
 that lives only in each subagent's own transcript, not the parent's. Purely
 observational: never blocks, never injects context, prints nothing on success.
 

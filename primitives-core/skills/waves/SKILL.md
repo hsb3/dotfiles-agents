@@ -3,12 +3,12 @@ name: waves
 description: >
   Drive a repo's open-issue backlog to closed through triage, wave planning, and isolated agent
   crews — the full loop: refresh a pinned triage issue, group buildable issues into branch-sized
-  waves, launch worktree-isolated teams via the foreman skill, verify and merge each PR in order,
+  waves, launch worktree-isolated teams via the delegation skill, verify and merge each PR in order,
   reconcile, and externalize. Use when the user says "work through the waves", "launch isolated
   teams to resolve/close the issues", "run the backlog", "triage and execute", points at the
   pinned triage issue, or asks to plan development branches around open issues. Use "/waves init"
   to create the pinned triage issue in a repo that lacks one. Requires a GitHub repo with issues;
-  composes the foreman skill (execution) and the handoff skill (boundaries).
+  composes the delegation skill (execution) and the handoff skill (boundaries).
 ---
 
 # Waves
@@ -18,7 +18,7 @@ issue, refresh the triage, plan issues into waves, launch isolated crews, person
 merge each wave, reconcile, and externalize — so the owner's only inputs are the launch prompt
 and the decisions that are genuinely theirs.
 
-This skill is the *campaign* layer. The **foreman** skill governs each wave's delegation
+This skill is the *campaign* layer. The **delegation** skill governs each wave's delegation
 architecture; the **handoff** skill closes the session. Waves adds what neither has: the pinned
 triage issue as the living plan, the wave-shaping rules, the merge queue, and the
 end-of-run externalization contract.
@@ -78,10 +78,10 @@ of `wave | branch | issues resolved | gate`, plus the owner decision queue. It g
 `<details>` on `EXECUTED` — never above the open sections. The plan must survive compaction and
 be visible to the owner without asking the session.
 
-## Phase 3 — Launch (foreman executes)
+## Phase 3 — Launch (delegation executes)
 
-Invoke the **foreman** skill for architecture and briefs. The shape that has worked: one
-worktree-isolated crew per parallel wave — typically a `lead` (with its own builders) for
+Invoke the **delegation** skill for architecture and briefs. The shape that has worked: one
+worktree-isolated crew per parallel wave — typically a `manager` (with its own builders) for
 coupled waves, flat `builder` fan-out for bounded ones. Non-negotiables regardless of
 architecture:
 
@@ -175,6 +175,6 @@ not by search.
 A session with this skill should need no more than:
 
 > review handoff and the triage issue · update the triage · launch isolated teams to
-> resolve/close all issues as planned, leveraging the foreman skill
+> resolve/close all issues as planned, leveraging the delegation skill
 
 Everything else above is what that sentence expands to.

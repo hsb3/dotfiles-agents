@@ -42,7 +42,7 @@ model_aliases:
 exclusions:
   - id: update-config
     reason: "body configures Claude Code settings.json / hook wiring — harness-specific, not portable content"
-  - id: foreman
+  - id: delegation
     reason: "delegation doctrine bound to Claude Code dispatch mechanics (Agent tool, per-dispatch model/effort knobs) — needs an opencode adaptation pass"
   - id: rubric-panel
     reason: "spawns parallel persona judge agents — bound to Claude Code dispatch mechanics; needs an opencode adaptation pass"

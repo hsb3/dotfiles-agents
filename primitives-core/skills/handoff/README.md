@@ -17,5 +17,5 @@ file in a project that lacks one. It updates `_meta/HANDOFF.md` (or `HANDOFF.md`
 claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — it closes the session that the foreman
+Ships in the atelier bundle (not standalone) — it closes the session that the delegation
 skill runs and the waves skill drives across a backlog.
