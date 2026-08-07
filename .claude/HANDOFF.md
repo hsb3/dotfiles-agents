@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-07 (session 11). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-07 (session 12). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, with the two higher-precedence paths absent, so the hooks resolve it with no
@@ -15,12 +15,11 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `b67bbf3`** · **`main` `20923c9` = `publish: dev@25590ce`** · **6 plugins** ·
+- **`dev` `8ea83ba`** · **`main` `a3b904e` = `publish: dev@8ea83ba`** · **6 plugins** ·
   `make ci` green · **413 tests** · zero open GH issues · no worktrees.
-- **`dev` is AHEAD of `main` by one shipped feature — publishing is the open action.** `atelier`
-  is bumped to **0.11.0** on `dev` for the new `worktree-isolation` hook (#286, TASK-050), and
-  consumers cache by version, so until `publish.yml` is dispatched nobody has it. Use the
-  `publish-to-main` skill; nothing else on `dev` is unpublished.
+- **`dev` and `main` are IN SYNC — nothing unpublished.** `atelier` **0.11.0** (the
+  `worktree-isolation` hook, #286, TASK-050) published 2026-08-07 (session 12) via
+  `publish-to-main`; consumers pick it up on their next plugin update.
 - **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** (1) The marketplace went
   22 entries → 6: all seventeen one-skill plugins retired into one aggregate, **`solo-skills`**
   (30 skills), the five bundles untouched. **Per-skill installation no longer exists** and no
@@ -59,7 +58,9 @@ in-tree only under `backlog/docs/vendoring-rule.md`, machine-checked); **dual-ho
   live defects removed on the way, including a standalone that had **never worked**.
 - 2026-08-07 (s11): **`worktree-isolation`** (TASK-050, #286) — atelier's 8th hook, a `PreToolUse`
   rewrite on the `Agent` tool giving writing workers their own worktree, opt-in via `isolate:`.
-  Root-caused the "worktree crews land on a published commit" gotcha (§5). **Not yet published.**
+  Root-caused the "worktree crews land on a published commit" gotcha (§5).
+- 2026-08-07 (s12): published `dev@8ea83ba` to `main` (`worktree-isolation` / atelier 0.11.0 now
+  live for consumers). No other changes landed.
 
 **Sub-projects, both self-describing — read their own docs first.** `evals/` (PocketBase extender
 DB): `evals/README.md`, `_structure/CHARTER.md`, `PROCEDURES.md`. Waves 0–3 done; M3–M6 are
@@ -73,9 +74,8 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-**Start here: publish.** `dev` carries a merged, gated, unpublished feature (`atelier` 0.11.0, the
-`worktree-isolation` hook). Run the `publish-to-main` skill. After that there is no single obvious
-next — pick by appetite from "buildable now" below.
+`dev` and `main` are in sync (nothing unpublished) — no single obvious next; pick by appetite
+from "buildable now" below.
 
 **TASK-29 is now unblocked, but its ruling needs reinterpreting.** The owner ruled it should get a
 "standalone home"; standalone plugins no longer exist. The faithful reading is that `lab-setup`
