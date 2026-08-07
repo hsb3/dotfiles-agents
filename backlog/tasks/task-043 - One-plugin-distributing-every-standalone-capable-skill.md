@@ -1,11 +1,11 @@
 ---
 id: TASK-043
 title: One plugin distributing every standalone-capable skill
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-08-07 01:10'
-updated_date: '2026-08-07 03:25'
+updated_date: '2026-08-07 03:37'
 labels:
   - assembly
 milestone: m-1
@@ -35,11 +35,11 @@ Also to determine once the reading is fixed: what 'can stand on their own' means
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The owner has ruled between the additive and replacing readings, and the ruling is recorded before any file changes
-- [ ] #2 'Standalone-capable' is defined as a checkable property of the skill (no sibling-skill references by path or wikilink), not as a description of its current packaging
-- [ ] #3 A gate enforces that every skill in the new plugin meets that property, so membership cannot silently drift
+- [x] #1 The owner has ruled between the additive and replacing readings, and the ruling is recorded before any file changes
+- [x] #2 'Standalone-capable' is defined as a checkable property of the skill (no sibling-skill references by path or wikilink), not as a description of its current packaging
+- [x] #3 A gate enforces that every skill in the new plugin meets that property, so membership cannot silently drift
 - [ ] #4 If the additive reading wins, dual-homing is verified: installing both the aggregate and an individual plugin loads the skill once
-- [ ] #5 make ci is green and the catalog guard's counts and names match the new lineup
+- [x] #5 make ci is green and the catalog guard's counts and names match the new lineup
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -126,4 +126,39 @@ FINDING that changes one detail of the plan — mise-en-place-scaffold is the se
 
 CORRECTION to the card's Hazard B as previously written: check_symlinks' standalone branch is exercised entirely by synthetic fixtures in tests/test_check_symlinks.py, which build their own alpha/beta plugin dirs in tempdirs. It therefore stays green with zero real subjects, and the test suite will not force the retire-or-keep decision either way. That is why the decision had to be made deliberately rather than discovered by a red gate.
 ---
+
+author: @claude
+created: 2026-08-07 03:36
+---
+BUILT 2026-08-07 (session 10). PR #276 into dev. make ci exit 0, 391 tests (16 new), version-bump gate clean by hand.
+
+AC#4 is left UNCHECKED deliberately, not overlooked. Its condition — 'if the additive reading wins' — did not occur; the replacing reading won. Dual-homing is nonetheless in play, since 11 of the 30 members also ship inside a bundle, and it rests on the standing mechanism (one primitives-core source symlinked into two assemblies, ADR 0017) rather than on anything verified fresh here. What WAS verified is structural: check_symlinks confirms all 67 links resolve in-repo and that assemblies and marketplace entries match 1:1. The runtime claim that installing both homes loads the skill once was NOT re-tested live in this session. Flagging rather than checking, because the difference between 'the mechanism is established' and 'I proved it again today' is exactly what an unchecked box should preserve.
+
+MEMBERSHIP IS 30, NOT THE 27 ON THIS CARD. The gate derives it, and derivation disagreed with the recorded inventory in three places. Recording them because the inventory note above is now partly wrong and a later reader will otherwise trust it:
+- deletion-pass, layer-cycle, rubric-panel: the card excluded all five atelier skills as a group, 'by inspection', for dispatching this repo's named agents. True of delegation and waves; FALSE of the other three, which dispatch generic briefs and judges — the same basis on which the card itself ruled deep-research eligible. An unverified group generalization, and the reason the gate had to derive rather than consume the list.
+- opencode-expertise: eligible, but it trips the agent rule on 'scout', which is opencode's OWN built-in subagent listed beside build/plan/general/explore. Handled as a documented exemption keyed (skill, agent) with its reason, not by weakening the rule for all 35 skills. The exemption list is itself checked: one that stops suppressing anything is reported stale.
+- repo-meta-structure: had a genuine sibling path (references/layout.md pointing into skills/mise-en-place-scaffold/). It was a doc pointer rather than a runtime need, and it DANGLED in the standalone plugin shipping today. Fixed at the source by naming the skill without the path, which makes the content true in both of its homes.
+
+SECOND LIVE DEFECT REMOVED. mise-en-place-scaffold's standalone plugin has never worked. Proven, not inferred: running its own scaffold.py against its own plugin root gives 'scaffold error: checklist file missing ... broken plugin install; refusing to scaffold against a partial checklist'. Its plugin root carries only its own skill, never the two siblings whose checklists it resolves. It is not eligible for solo-skills and keeps working inside code-desk, so retiring the entry is a straight repair.
+
+GATE DESIGN, since AC#3 turns on it. Three rules, each applied where that class of dependency actually appears: sibling path or wikilink in prose (SKILL.md + references/); sibling id anywhere in bundled code (scripts/); roster-agent id in backticks, bare or namespaced. The split matters — a prose mention of another skill is a cross-reference, but an id inside a script is a dependency, and scaffold.py proves the point by composing its path with os.path.join so that no substring search for 'skills/<id>' would ever find it. The gate runs BOTH directions: an ineligible member is red, and so is an eligible non-member, so the plugin's claim to carry every standalone-capable skill cannot quietly rot. Rides the existing symlinks target so no new CI check name is pinned.
+
+The two load-bearing tests were mutation-tested rather than assumed: disabling the bundled-code rule, and disabling the absent-from-solo-skills direction, each turned exactly one test red.
+---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Shipped as PR #276 (squash-merged into dev as d54c5fd). The seventeen single-skill plugins are retired into one aggregate, solo-skills, carrying the 30 skills that stand on their own; the marketplace goes from 22 entries to 6, with the five bundles untouched.
+
+The owner's framing was corrected before anything was built. 'A plug-in that allows each skill to be individually installed' is not buildable: a plugin is the unit of installation and a marketplace's granularity is also the plugin, so the seventeen one-skill plugins WERE the per-skill install mechanism and retiring them is what removes it. The owner confirmed the trade with that understood. Progressive disclosure is what makes it cheap — carrying the set costs a set of one-line descriptions, not a set of skill bodies — and both READMEs say so rather than implying a granularity that no longer exists.
+
+Membership is derived by scripts/check_solo_skills.py rather than curated, because eligibility cannot be read from metadata: no ineligible skill is caught by the roster's requires: field, and two compose their sibling paths with os.path.join so no substring search finds them. The gate runs both directions, so neither an ineligible member nor an eligible non-member can pass. Deriving it disagreed with this card's own recorded inventory in three places, all corrected on the card.
+
+Two live defects removed as a side effect: mise-en-place-scaffold's standalone plugin, which never worked and was proven broken by running its own script against its own plugin root, and a repo-meta-structure doc path that dangled in the standalone shipping today.
+
+AC#4 is intentionally unchecked — its 'if the additive reading wins' condition never occurred, and while dual-homing is in play for 11 members, the runtime claim was not re-verified live this session.
+
+NOT YET PUBLISHED. This is breaking for consumers: seventeen install records dangle with no alias or redirect, and the failure is silent on the next refresh. Publishing to main is a separate, owner-gated step.
+<!-- SECTION:FINAL_SUMMARY:END -->
