@@ -81,7 +81,13 @@ and a standalone — installing both loads the skill once).
   then again publishing #260. **`feat/atelier` (#260) merged and published** — foreman-kit
   renamed to atelier 0.8.0, lab-01 doctrine rewrite (#252), delegation-watermark +
   config-custody + worker-context hooks. Verified against the open foreman-kit issues (§3):
-  #252 substantially closed by the PR; #250, #254, #255, #256 are not touched by it.
+  #252 substantially closed by the PR (closed on GH with the finding-by-finding check); #250,
+  #254, #255, #256 filed as backlog tasks TASK-036/037/038/039 (still open). Found and fixed a
+  real bug while filing them: `check_flow.py` mis-parsed any tracked path with non-ASCII bytes
+  (git's default path quoting corrupted the top-level-segment split) — `git ls-files -z` fix +
+  5 regression tests, PR #263. TASK-040 filed (are `claude-code-config`/`claude-code-expertise`
+  one plugin's worth of overlap?). Designed and scoped **TASK-11.01** (plugin-feedback hooks —
+  see §3) at the owner's request, but did not build it — refreshing context first by design.
 
 ## 2b · Extender-db mini-project (merged to dev 2026-07-21)
 
@@ -144,6 +150,22 @@ work, drafts, and decisions live there, not duplicated here.
   diff to `scout.md` at all in #260. #256: `layer-cycle` mandates a full rubric-panel every
   cycle with no sizing rule, which overcosts small diffs — only `layer-cycle/README.md`'s
   foreman-kit→atelier rename touched that skill.
+- **New from s8: TASK-11.01, scoped and ready to build — plugin-feedback hooks.** Owner's framing:
+  worker/session agents keep hitting minor plugin defects (see #250/#254/#255/#256) with no
+  consistent way to report them; wants a standalone plugin, not a skill, so a `SessionStart` +
+  `SubagentStart` hook pair injects the reporting instructions directly (inline text, same shape
+  as `worker-context`'s covenant — no separate skill to go read) plus a companion script that
+  wraps `gh issue create` with a fixed template. **Placement is decided, not open**: it must ship
+  as its **own** plugin, never dual-homed into existing ones — verified against
+  code.claude.com/docs/en/hooks ("Hook handler fields"): hook dedup is scoped to settings-file
+  layers only ("if you define the same handler in more than one settings file, it runs once");
+  a plugin's or skill's copy stays separate. Dual-homing would fire the reminder once *per*
+  dotfiles-agents plugin a consumer has installed, not once. Full design, the exact doc quote,
+  and the bug-vs-feature gating logic are in TASK-11.01 (subtask of TASK-11). One thing still
+  unconfirmed: TASK-11.01 notes its bug-vs-feature tier split is this session's own read of the
+  owner's "level 1 or 2 agent" framing, not ratified doctrine — worth a quick confirm before the
+  hook text ships. Owner intent for this session: capture the design, then refresh context before
+  starting the build — so a cold session should read TASK-11.01 in full before writing any code.
 - **New from s7:** **TASK-032** (High — no gate ties published bytes to a version bump; edit one
   dual-homed skill body and every plugin shipping it changes while CI stays green),
   **TASK-033** (Low, sequenced behind Claude Code per owner direction — the opencode installer's
