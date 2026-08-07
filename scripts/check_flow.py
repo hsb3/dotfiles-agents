@@ -86,9 +86,13 @@ def parse_flow(path):
 def tracked_top_level():
     # Index, not HEAD: staged adds/moves count immediately, so the guard can run before
     # the commit that introduces them. In CI a fresh checkout's index == HEAD.
-    out = subprocess.run(["git", "ls-files"],
+    # -z: NUL-delimited output with paths emitted as raw bytes, never quoted/escaped.
+    # Without -z, git applies its default quoting to any path containing non-ASCII or
+    # other "unusual" bytes (wraps in double quotes, octal-escapes the bytes), which
+    # would otherwise corrupt the split below (e.g. a leading `"` on the top-level name).
+    out = subprocess.run(["git", "ls-files", "-z"],
                          cwd=REPO, capture_output=True, text=True, check=True)
-    return set(p.split("/", 1)[0] for p in out.stdout.splitlines() if p)
+    return set(p.split("/", 1)[0] for p in out.stdout.split("\0") if p)
 
 
 def validate(nodes, edges, tracked):
