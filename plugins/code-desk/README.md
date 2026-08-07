@@ -6,6 +6,31 @@ standards, turn the README into an honest value-and-proof pitch — and carry th
 executive-desk overhead for running that work end-to-end: a source-grounded planning desk,
 recurring status comms, weekly board triage, and the themed decks those comms ship as.
 
+## How it fits together
+
+The audit and the scaffold are a tight loop you run until the gaps close; everything after
+it is the release loop that loop unlocks. Dashed edges are reference content the other
+skills read rather than steps you run.
+
+```mermaid
+flowchart TD
+    Repo[A software repo] --> Audit[repo-compliance-audit prints pass and gap]
+    Audit --> Scaf[mise-en-place-scaffold fills only the gaps]
+    Scaf --> Audit
+    Scaf --> RM[readme-value-and-proof writes the honest pitch]
+    RM --> Plan[planning-desk writes issue bodies and build plans]
+    Plan --> Build[Next release work]
+    Build --> Focus[dev-focus flags drift and triages scope]
+    Focus --> Build
+    Build --> Board[board-triage ranks the board weekly]
+    Board --> Comms[comms assembles the recurring deck]
+    Comms --> PPT[pptx-themes renders it to the house theme]
+    PPT --> Plan
+
+    Std[repo-meta-structure and project-memory supply the standard] -.-> Audit
+    Std -.-> Scaf
+```
+
 ## What you get
 
 | Skill | What it does |

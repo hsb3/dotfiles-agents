@@ -8,6 +8,25 @@ Membership is derived rather than curated. `scripts/check_solo_skills.py` re-rea
 skill body and every bundled script on each run and works out which ones qualify, so this
 plugin cannot quietly fall behind the collection or admit a skill that grew a dependency.
 
+## How it fits together
+
+Too many skills to draw, and a box per skill would only be the table below. What the table
+cannot show is the rule that decides what is here at all — one question, asked of every skill
+on every run:
+
+```mermaid
+flowchart TD
+    Skill[A skill in this collection] --> Q{Needs an agent, a hook, or a sibling skill}
+    Q -->|no| Solo[Ships in solo-skills]
+    Q -->|dispatches agents, reads the covenant hooks| At[Ships in atelier]
+    Q -->|assumes the desk's other pieces| CD[Ships in code-desk]
+    Solo --> Gate[The membership gate re-derives this on every run]
+    Gate --> Skill
+```
+
+Because the answer is derived rather than recorded, a skill that grows a dependency leaves
+this plugin on its own, and one that sheds a dependency joins it.
+
 ## What you get
 
 **Harness and environment**

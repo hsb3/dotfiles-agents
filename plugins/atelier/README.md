@@ -7,6 +7,36 @@ the same handoff file and the same session-discipline loop — including the rev
 (rubric-panel · deletion-pass · layer-cycle) distilled from a controlled agent-development
 lab.
 
+## How it fits together
+
+One loop. `delegation` routes the work, the agents do it, and each hook fires at a fixed
+point around them — then the context watermark hands the session to `handoff` and the loop
+starts again cold. Dashed edges are the hooks watching a step, not steps of their own.
+
+```mermaid
+flowchart TD
+    Cold[A session starts cold] --> Surf[session-handoff-surfacer greets it with the handoff]
+    Surf --> Work[You bring a substantial task]
+    Work --> Del[delegation sizes it and picks an architecture]
+    Del --> Mgr[manager owns the wave]
+    Mgr --> Workers[scout and builder and reviewer]
+    Workers --> Done[Verified work comes back]
+    Done --> Ctx{Context past the watermark}
+    Ctx -->|no| Work
+    Ctx -->|yes| Hand[handoff externalizes the state]
+    Hand --> Cold
+
+    Work -.->|keeping the labor| DW[delegation-watermark nudges]
+    Mgr -.->|every dispatch| WC[worker-context injects the covenant]
+    Workers -.->|every write| CC[config-custody and worktree-isolation]
+    Workers -.->|every finish| Tel[subagent-telemetry logs the row]
+    Ctx -.->|raised by| CW[context-watermark]
+    Hand -.->|stale handoff| FG[handoff-freshness-guard blocks the compact]
+```
+
+The review-cycle trio sits inside that `manager` box: `layer-cycle` drives a module through
+create, evaluate, and refine, calling `rubric-panel` to score and `deletion-pass` to cut.
+
 ## What you get
 
 | Primitive | Type | What it does |

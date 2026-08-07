@@ -4,6 +4,24 @@ Structural diagrams for repo docs, decks, and architecture briefings — one too
 picks the right tool for the job and feeds consistent SVG+PNG output pipelines with
 light/dark-friendly styling.
 
+## How it fits together
+
+Picking the tool is the actual problem, so that is what the picture draws. The `diagrams`
+skill is the hub that routes you; whichever tool you land on, the output pipeline is shared.
+
+```mermaid
+flowchart LR
+    Q[What are you drawing] --> Hub[diagrams routes the choice]
+    Hub -->|Lives in markdown GitHub renders| MM[mermaid]
+    Hub -->|Cloud architecture with provider icons| PY[diagrams: python library and graphviz]
+    Hub -->|Hand-drawn whiteboard look| EX[excalidraw]
+    Hub -->|An existing file to read or convert| DW[drawio]
+    MM --> Out[Shared SVG and PNG output pipeline]
+    PY --> Out
+    EX --> Out
+    DW --> Out
+```
+
 ## What you get
 
 | Skill | What it does |

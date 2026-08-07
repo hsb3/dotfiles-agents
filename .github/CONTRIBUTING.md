@@ -56,7 +56,7 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 
 | Command | Enforces |
 |---|---|
-| `make check` | **Roster ↔ disk drift** — every roster `source` exists; provenance-manifest schema valid; no orphaned bodies. |
+| `make check` | **Roster ↔ disk drift** — every roster `source` exists; provenance-manifest schema valid; no orphaned bodies. Also the consumer-catalog guard and the **plugin-README diagram** guard (see below). |
 | `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, ADRs, and `backlog/` are exempt (they don't ship). |
 | `make provenance` | **Provenance** — every `primitives-core/` body is `origin: authored`; every `externals.yaml` entry has non-null `upstream` + `ref` (ADR 0015 / ADR 0003). |
 | `make hook-layout` | **Hook layout** — hooks use the ratified `hooks/<name>/hook.py` dir layout, never flat handlers or inline-in-settings. |
@@ -69,6 +69,23 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 Adding a whole new top-level path also needs a home in `flow.yaml` (the `make flow` guard). Files
 that nest under an already-homed path (e.g. under `primitives-core/`, `backlog/`,
 `.github/`) need no flow change.
+
+## Plugin READMEs
+
+Each `plugins/<id>/README.md` is hand-authored (bundle READMEs are regular files, not
+symlinks) and **must carry a Mermaid diagram** under a `## How it fits together` heading,
+placed before the section that enumerates the plugin's pieces. The rule for what it must
+show — draw the trigger and the flow, never the inventory — plus the format, placement, and
+constraints are in
+[`../backlog/docs/readme-diagram-standard.md`](../backlog/docs/readme-diagram-standard.md).
+`make check` enforces the mechanical parts.
+
+Render any diagram you write before trusting it — a house-rule violation renders blank on
+GitHub with no error:
+
+```bash
+npx -y @mermaid-js/mermaid-cli -i diagram.mmd -o /tmp/out.svg
+```
 
 ## Generated artifacts
 
