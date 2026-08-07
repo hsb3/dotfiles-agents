@@ -12,3 +12,4 @@
 - [Worktree agents check out published commit](worktree-agents-check-out-published-commit.md) — root-caused to `worktreeBaseRef: fresh` branching from origin/main; fix is `"head"`, and a worktree never sees uncommitted work
 - [Forcing subagent worktree isolation](atelier-worktree-isolation-hook.md) — two levers: PreToolUse `updatedInput` on the `Agent` tool, or an `isolation` agent-frontmatter key; atelier ships the hook, opt-in via `isolate:`
 - [No unguarded counts in prose](no-unguarded-counts-in-prose.md) — owner rule 2026-08-06: a count in prose or repo metadata needs a gate that checks it, else phrase it so growth can't falsify it
+- [mermaid-cli exits 0 on failure](mermaid-cli-exits-zero-on-failure.md) — a failed render returns 0 and writes no file; assert `test -s out.svg`, never `$?`; broken diagrams also render blank on GitHub silently
