@@ -223,7 +223,13 @@ Unchanged since 2026-08-04.
   when editing those files programmatically.
 - **`make ci`'s `✗ opencode laydown — refusing…` line is a passing test's own output.** Judge by
   exit code, never by ✗ glyphs.
-- **Don't trust `logs/delegation.jsonl`** until #250 is fixed — it records the parent session.
+- **`logs/delegation.jsonl` is trustworthy from 2026-08-07 onward, but its history is not.**
+  The parent-session defect (#250) is fixed: rows now source `agent_type`/`model` from the
+  subagent's own `subagents/agent-<id>.meta.json` sidecar and `ctx_tokens` from its transcript,
+  and a prospective row with no matching sidecar is dropped. Pre-fix rows recorded the parent and
+  ran ~9x inflated, so **truncate or archive the file before any tier analysis** — pre- and
+  post-fix rows are not comparable, and the history is not salvageable (the subagent identity was
+  never captured). The file is gitignored, so this costs no gate.
 - **Branch hygiene now lives in CLAUDE.md** (merge-or-abandon within the session, check
   `git rev-list --count origin/dev..<branch>` before deleting, and the `chore/handoff`
   `--ff-only` loop). Two things that bit on 2026-08-06 and are the reason it is written down:

@@ -6,27 +6,41 @@ Appends one JSONL row per delegation (agent_id, agent_type, model,
 ctx_tokens) to a local ledger so the plugin's own tier usage can be measured
 offline (by a sibling analysis script, e.g. delegation_stats.py) — data that
 is not otherwise derivable from the parent transcript alone, since a
-subagent's model and token usage live only in the SUBAGENT's own transcript.
+subagent's type, model and token usage live only in the SUBAGENT's own
+sidecar + transcript.
 
 Purely observational: never blocks, never injects context, never prints
-anything on success (telemetry is silent).
+anything (telemetry is silent).
 
 Doc sources verified against:
   https://code.claude.com/docs/en/hooks
   https://code.claude.com/docs/en/hooks-guide
 
+On-disk layout this hook reads (verified against real files under
+~/.claude/projects, 2026-08):
+
+  <projects>/<slug>/<session_id>.jsonl                            parent transcript
+  <projects>/<slug>/<session_id>/subagents/agent-<id>.meta.json   sidecar
+  <projects>/<slug>/<session_id>/subagents/agent-<id>.jsonl       subagent transcript
+
+Sidecar keys observed: agentType (always), description, toolUseId,
+spawnDepth, model (only when the dispatch overrode the model), parentAgentId,
+worktreePath, worktreeBranch, name, isFork. There is NO token/usage data on
+the sidecar, so ctx_tokens comes from the subagent's own transcript tail.
+
 Contract (SubagentStop):
-  - stdin JSON fields consumed: session_id, transcript_path (the SUBAGENT's
-    own transcript), cwd, hook_event_name, agent_id, agent_type,
-    last_assistant_message, permission_mode.
-  - There is NO model field in the SubagentStop payload itself — model and
-    token usage are read from the subagent's transcript tail (reusing
-    context-watermark/hook.py's tail-read + usage-parsing approach), where
-    the model lives on the same assistant message as the usage block
-    (typically `message.model`).
+  - stdin JSON fields consumed: session_id, transcript_path, cwd, agent_id,
+    agent_type.
+  - `transcript_path` is the PARENT session's transcript, not the subagent's
+    (observed: two sibling delegations reported byte-identical usage). Reading
+    model/ctx_tokens off it describes the foreman, not the delegation — so it
+    is used only to locate the sibling `subagents/` directory.
+  - A prospective row is DROPPED unless a matching sidecar exists and yields
+    an agent_type. SubagentStop also fires for agents that never get a
+    `subagents/` entry; writing those inflated the ledger ~10x.
   - stdout: NOTHING, ever (telemetry must not surface to the user/agent).
   - exit 0 always; fail-open on any internal error (missing/unreadable
-    transcript, malformed stdin, etc).
+    sidecar or transcript, malformed stdin, etc) by writing no row at all.
 
 This file must have ZERO third-party dependencies (Python 3 stdlib only).
 """
@@ -42,6 +56,10 @@ import traceback
 
 TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB — same window as context-watermark
 LOG_FILENAME_DEFAULT = "delegation.jsonl"
+SUBAGENTS_DIRNAME = "subagents"
+AGENT_FILE_PREFIX = "agent-"
+SIDECAR_SUFFIX = ".meta.json"
+TRANSCRIPT_SUFFIX = ".jsonl"
 
 
 def _env_int(name, default):
@@ -55,6 +73,14 @@ def _env_int(name, default):
 
 
 TAIL_BYTES = _env_int("SUBAGENT_TELEMETRY_TAIL_BYTES", TAIL_BYTES_DEFAULT)
+
+
+def _debug_enabled():
+    """Diagnostics are opt-in: an unconditional error row would inflate a
+    ledger whose row count is the thing being measured."""
+    return os.environ.get("SUBAGENT_TELEMETRY_DEBUG", "").strip().lower() not in (
+        "", "0", "false", "no",
+    )
 
 
 def _resolve_log_path(cwd):
@@ -87,6 +113,59 @@ def _append_row(log_path, record):
     except Exception:
         # Logging must never break the hook.
         pass
+
+
+# ---------------------------------------------------------------------------
+# Locating the delegation's own records
+# ---------------------------------------------------------------------------
+
+def _subagents_dir(transcript_path):
+    """Candidate `subagents/` directory for the payload's transcript path.
+
+    Two shapes are handled: the parent transcript `<session_id>.jsonl`, whose
+    subagents live in the sibling directory `<session_id>/subagents/`; and a
+    path that already points inside a `subagents/` directory (a nested
+    delegation), in which case that directory is the answer. Returns None when
+    no candidate exists on disk.
+    """
+    if not transcript_path:
+        return None
+    parent = os.path.dirname(transcript_path)
+    if os.path.basename(parent) == SUBAGENTS_DIRNAME and os.path.isdir(parent):
+        return parent
+    candidate = os.path.join(os.path.splitext(transcript_path)[0], SUBAGENTS_DIRNAME)
+    return candidate if os.path.isdir(candidate) else None
+
+
+def _agent_key(agent_id):
+    """Bare agent id usable as a filename component, or None.
+
+    Observed payloads carry the id unprefixed ("a31412cbc7cdb39e8") while the
+    files carry an "agent-" prefix; a prefixed id is accepted too. basename()
+    is what keeps a hostile or malformed id from escaping the subagents dir.
+    """
+    if not isinstance(agent_id, str):
+        return None
+    key = os.path.basename(agent_id.strip())
+    if key.startswith(AGENT_FILE_PREFIX):
+        key = key[len(AGENT_FILE_PREFIX):]
+    if not key or key in (".", ".."):
+        return None
+    return key
+
+
+def _read_sidecar(path):
+    """Parsed sidecar dict, or None if absent/unreadable/malformed/not an object."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+    except Exception:
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
+def _clean_str(value):
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
 
 # ---------------------------------------------------------------------------
@@ -172,49 +251,83 @@ def _read_model_and_ctx_tokens(transcript_path):
 
 
 # ---------------------------------------------------------------------------
+# Row construction
+# ---------------------------------------------------------------------------
+
+def _build_row(payload):
+    """The ledger row for this SubagentStop, or None if it is not a delegation
+    we can describe (in which case nothing is written at all).
+
+    Every field is sourced from the delegation's own records: agent_type and
+    any model override from its sidecar, model/ctx_tokens from its own
+    transcript. The parent transcript contributes only the directory to look in.
+    """
+    key = _agent_key(payload.get("agent_id"))
+    if key is None:
+        return None
+
+    subagents_dir = _subagents_dir(payload.get("transcript_path"))
+    if subagents_dir is None:
+        return None
+
+    meta = _read_sidecar(
+        os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
+    )
+    if meta is None:
+        return None
+
+    agent_type = _clean_str(meta.get("agentType")) or _clean_str(payload.get("agent_type"))
+    if agent_type is None:
+        # A row with no agent type is the defect this hook exists to fix.
+        return None
+
+    transcript_model, ctx_tokens = _read_model_and_ctx_tokens(
+        os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + TRANSCRIPT_SUFFIX)
+    )
+    # A sidecar `model` is the dispatch-time override — the delegation decision
+    # itself — so it outranks whatever the transcript happens to name.
+    model = _clean_str(meta.get("model")) or transcript_model
+
+    return {
+        "session_id": payload.get("session_id", "unknown"),
+        "agent_id": key,
+        "agent_type": agent_type,
+        "model": model,
+        "ctx_tokens": ctx_tokens,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main():
     try:
-        raw_stdin = sys.stdin.read()
-        payload = json.loads(raw_stdin)
+        payload = json.loads(sys.stdin.read())
+        if not isinstance(payload, dict):
+            sys.exit(0)
 
-        session_id = payload.get("session_id", "unknown")
-        cwd = payload.get("cwd") or os.getcwd()
-        agent_id = payload.get("agent_id")
-        agent_type = payload.get("agent_type")
-        transcript_path = payload.get("transcript_path")
-
-        model, ctx_tokens = _read_model_and_ctx_tokens(transcript_path)
-
-        log_path = _resolve_log_path(cwd)
-        _append_row(log_path, {
-            "session_id": session_id,
-            "agent_id": agent_id,
-            "agent_type": agent_type,
-            "model": model,
-            "ctx_tokens": ctx_tokens,
-        })
+        row = _build_row(payload)
+        if row is not None:
+            _append_row(_resolve_log_path(payload.get("cwd")), row)
 
         # Telemetry is silent: no stdout, ever.
         sys.exit(0)
 
+    except SystemExit:
+        raise
     except Exception as e:
-        # Fail-open: never break the subagent-stop flow on our own error.
-        try:
-            log_path = _resolve_log_path(None)
-            _append_row(log_path, {
-                "session_id": None,
-                "agent_id": None,
-                "agent_type": None,
-                "model": None,
-                "ctx_tokens": None,
-                "error": f"{type(e).__name__}: {e}",
-                "traceback": traceback.format_exc(limit=3),
-            })
-        except Exception:
-            pass
+        # Fail-open: never break the subagent-stop flow on our own error, and
+        # never leave a partial row behind. Diagnostics only under an explicit
+        # opt-in, so the ledger's row count stays equal to the delegation count.
+        if _debug_enabled():
+            try:
+                _append_row(_resolve_log_path(None), {
+                    "error": "{0}: {1}".format(type(e).__name__, e),
+                    "traceback": traceback.format_exc(limit=3),
+                })
+            except Exception:
+                pass
         sys.exit(0)
 
 

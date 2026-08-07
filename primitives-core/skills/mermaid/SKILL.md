@@ -143,8 +143,19 @@ npx -y @mermaid-js/mermaid-cli -i arch.mmd -o diagrams/01-arch.png -s 2 -b white
 | Symptom | Cause | Fix |
 |---|---|---|
 | Diagram silently blank on GitHub | Special character in a label | Apply the house rule — strip `()` and friends |
-| `Syntax error in text` | Reserved word as bare node id (`end`, `class`) | Rename the id (`fin`, `cls`) |
+| `Syntax error in text` | Reserved word as bare node id — `end`, `class`, or any other Mermaid keyword | Give it a distinct id and put the reserved word in the label instead (see "Reserved words as node ids" below) |
 | Edge label breaks parse | `|` label containing special chars | Plain words only in edge labels |
 | Renders in IDE, not on GitHub | Newer syntax than GitHub's Mermaid version | Stick to the core types above; avoid bleeding-edge features |
 | Subgraph arrows ignored | Edge declared inside wrong subgraph scope | Declare nodes in subgraphs, edges at top level |
 | Unreadable on dark mode | Hardcoded light fills | Remove styles or use `theme: neutral` |
+
+### Reserved words as node ids
+
+Mermaid reserves words like `end`, `class`, `subgraph`, `state`, and `click` for its own grammar; a bare node id matching one breaks the parser. The rule is easy to lose exactly when it matters: if the user's own domain vocabulary supplies a stage, entity, or state called `end` or `class`, the instinct is to use that name verbatim as the id — that instinct is the trap, not an exception to the rule.
+
+Give the node its own id and keep the domain term as the label:
+
+- WRONG: `load --> end`
+- RIGHT: `load --> fin[end]`
+
+`fin` is an arbitrary id; `[end]` keeps the real stage name visible in the rendered diagram. The same pattern applies to any other keyword: `class` becomes `cls[class]`, `state` becomes `st[state]`.

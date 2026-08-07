@@ -2,7 +2,7 @@
 name: layer-cycle
 description: >-
   Drive a module through create → evaluate → refine cycles until convergence or budget
-  exhaustion, translating panel findings into scoped fix briefs. Use when asked to "run the
+  exhaustion, translating findings into scoped fix briefs. Use when asked to "run the
   cycle", take a module through review and refinement, or iterate a module against a
   contract. Companions — rubric-panel (evaluate), deletion-pass (refine).
 ---
@@ -22,8 +22,19 @@ flow up, intentions flow down, nothing else crosses levels.
 ## Process, per cycle
 
 1. Verify the gate. Red → dispatch a fix brief before anything else.
-2. **Evaluate**: invoke rubric-panel (optionally /code-review for deeper
-   defect hunting).
+2. **Evaluate** — size the check to the diff, not the process:
+   - **Trivial** (~10 changed lines or fewer, confined to one file, no
+     interface change) → spot-check it yourself against the contract;
+     confirm the fix addresses an observed-red case. No agent dispatch.
+   - **Bounded** (up to ~50 changed lines, or a few files touched with
+     no new public interface) → dispatch a single adversarial
+     reviewer: re-derive the contract, re-run the gate, then attack
+     the diff for a residual defect.
+   - **Module-scale or contested** (a new module, a public
+     interface/contract change, or a prior cycle's judge spread > 1.5)
+     → invoke rubric-panel (optionally /code-review for deeper defect
+     hunting). This is the panel's reserved case, not the every-cycle
+     default.
 3. **Triage** findings by type:
    - `defect` → L2 fix brief: contract citation + the failing case,
      encoded as a test first (red observed) before the fix.
@@ -36,7 +47,8 @@ flow up, intentions flow down, nothing else crosses levels.
 4. **Refine**: dispatch briefs — fixes first, then deletion-pass, then
    optional hardening (adversarial inputs beyond what the contract
    names).
-5. Re-verify gate + golden behavior; record the cycle's scores and diff.
+5. Re-verify gate + golden behavior; record the cycle's outcome
+   (rubric scores, when a panel ran) and diff.
 
 ## Stop conditions
 

@@ -35,8 +35,9 @@ can prevent the skill from loading.
 ## 2. Hooks — deterministic code on a lifecycle event
 
 Hooks are the only surface that runs **without the model choosing to**. Configure them in
-`settings.json` under a `hooks` block, keyed by event, with a matcher and a command. Prefer a
-committed handler *script* over inline shell so the logic is testable and reviewable.
+`settings.json` under a `hooks` block, keyed by event, with a matcher and a command. Use a
+committed handler *script*, never inline shell — this is non-negotiable, not a style preference,
+so the logic stays testable and reviewable.
 
 Events (by lifecycle): `PreToolUse`, `PostToolUse` (fire around a tool call; `PreToolUse` can
 block) · `UserPromptSubmit` (before a prompt is processed) · `Notification` · `Stop`,
@@ -51,7 +52,7 @@ block) · `UserPromptSubmit` (before a prompt is processed) · `Notification` ·
       {
         "matcher": "Bash",                       // tool name / pattern this rule applies to
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/guard-bash/hook.py" }
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash/hook.py\"" }
         ]
       }
     ]
@@ -60,11 +61,13 @@ block) · `UserPromptSubmit` (before a prompt is processed) · `Notification` ·
 ```
 
 Hook I/O contract: the handler receives the event payload as JSON on **stdin** and signals
-outcome via **exit code** (a non-zero exit on `PreToolUse` blocks the tool; stderr is surfaced)
-and/or a JSON object on **stdout** for structured control. Keep handlers fast and side-effect
-aware — they run inline on the lifecycle.
+outcome via **exit code** — `0` is success; `2` is a **blocking** error (stderr is fed back to
+the agent and the action is blocked, where the event supports blocking); any other non-zero is a
+**non-blocking** error (surfaced to the user, but the action proceeds) — and/or a JSON object on
+**stdout** for structured control. Keep handlers fast and side-effect aware — they run inline on
+the lifecycle.
 
-Idiomatic layout: a **hook directory** — `hooks/<name>/` holding the handler (e.g. `hook.py`)
+Required layout: a **hook directory** — `hooks/<name>/` holding the handler (e.g. `hook.py`)
 plus any config — rather than raw shell embedded in `settings.json`. A directory is versionable,
 unit-testable, and portable into a plugin (a plugin ships hooks the same way; see
 `distribution.md`). Keep handlers dependency-light so they run anywhere.

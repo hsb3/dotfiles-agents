@@ -1,10 +1,11 @@
 ---
 id: TASK-036
 title: 'atelier: delegation ledger records the parent session, not the delegation'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-08-06 23:49'
-updated_date: '2026-08-06 23:59'
+updated_date: '2026-08-07 00:44'
 labels:
   - primitives
 milestone: m-2

@@ -1,10 +1,11 @@
 ---
 id: TASK-28
 title: 'check_symlinks: enforce the standalone-README symlink convention'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-08-06'
-updated_date: '2026-08-06 21:33'
+updated_date: '2026-08-07 00:44'
 labels:
   - gates
 milestone: m-1
