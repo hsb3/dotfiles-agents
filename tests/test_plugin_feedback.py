@@ -23,10 +23,15 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOKS = os.path.join(REPO, "primitives-core", "hooks")
 SESSION_HOOK = os.path.join(HOOKS, "plugin-feedback-session", "hook.py")
 WORKER_HOOK = os.path.join(HOOKS, "plugin-feedback-worker", "hook.py")
+PLUGIN_MANIFEST = os.path.join(
+    REPO, "plugins", "plugin-feedback", ".claude-plugin", "plugin.json"
+)
 
 sys.path.insert(0, os.path.join(HOOKS, "plugin-feedback-session"))
+sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 import report_issue as R  # noqa: E402
+import check_identity as IDENT  # noqa: E402
 
 _SEQ = itertools.count()
 
@@ -64,7 +69,12 @@ class _HookTestBase:
     def _run_hook(self, stdin_text=None, env=None, devnull=False):
         child_env = {"PATH": os.environ.get("PATH", "")}
         child_env.update(env or {})
-        kwargs = dict(capture_output=True, text=True, env=child_env, timeout=30)
+        # cwd is the tempdir on purpose: `_assert_wrote_nothing` walks it, and a child
+        # left in the runner's own directory would make that assertion vacuous — it
+        # would look for strays somewhere the hook was never running.
+        kwargs = dict(
+            capture_output=True, text=True, env=child_env, timeout=30, cwd=self.cwd
+        )
         if devnull:
             kwargs["stdin"] = subprocess.DEVNULL
         else:
@@ -134,6 +144,14 @@ class _HookTestBase:
         )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout.strip(), "")
+
+    def test_offer_is_scoped_to_this_marketplace(self):
+        """The reporter files into the marketplace it shipped from, so the offer must
+        say so. Promising `any installed plugin` sends a report about someone else's
+        plugin into this marketplace's tracker, which is the destination bug."""
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertIn("marketplace", context.lower())
+        self.assertNotIn("any installed plugin", context.lower())
 
     def test_injected_text_is_a_short_pointer(self):
         """The card's rule: the hook text points at the reporter, it does not inline
@@ -210,6 +228,14 @@ class WorkerHookTests(_HookTestBase, unittest.TestCase):
 class RepoResolutionTests(unittest.TestCase):
     """The target repo is data, never a literal baked into a shipped body."""
 
+    # Shapes a repo literal takes. `github.com/` alone missed the scp form
+    # (`git@github.com:owner/name.git`) and every non-GitHub forge, so a hardcoded
+    # remote passed the guard the plugin's identity-neutrality claim rests on.
+    FORGE_LITERALS = (
+        "github.com/", "github.com:", "gitlab.com", "bitbucket.org", "codeberg.org",
+        "git.sr.ht", "git@",
+    )
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -225,10 +251,41 @@ class RepoResolutionTests(unittest.TestCase):
             json.dump(manifest, fh, ensure_ascii=True)
         return root
 
+    def _shipped_slug(self):
+        """`owner/name` this plugin actually ships as, read from its manifest.
+
+        The manifest is the sanctioned place for authorship (check_identity skips
+        `.claude-plugin/` for exactly that reason), which makes it the right source
+        for `what must NOT appear in the reporter` — it follows a rename instead of
+        needing one more literal kept in step by hand.
+        """
+        with open(PLUGIN_MANIFEST, encoding="utf-8") as fh:
+            slug = R.normalize_repo(json.load(fh).get("repository"))
+        self.assertIsNotNone(slug, "plugin manifest carries no resolvable repository")
+        return slug
+
     def test_no_repo_literal_in_the_source(self):
+        """Three independent nets, none of them a second hand-kept token list:
+        check_identity's own IDENTITY tokens (the owner handle among them), the forge
+        shapes that lint does not model, and this plugin's own shipped slug."""
         with open(R.__file__, encoding="utf-8") as fh:
             source = fh.read()
-        self.assertNotIn("github.com/", source)
+
+        for rx, why in IDENT.IDENTITY:
+            with self.subTest(token=why):
+                self.assertIsNone(
+                    rx.search(source), "reporter source carries {0}".format(why)
+                )
+
+        for literal in self.FORGE_LITERALS:
+            with self.subTest(literal=literal):
+                self.assertNotIn(literal, source)
+
+        slug = self._shipped_slug()
+        owner, name = slug.split("/", 1)
+        for token in (slug, owner, name):
+            with self.subTest(token=token):
+                self.assertNotIn(token, source)
 
     def test_env_var_wins(self):
         root = self._plugin_root("https://github.com/acme/from-manifest")
@@ -388,11 +445,20 @@ class MainTests(unittest.TestCase):
         "--contract", "The README promises the covenant under strict.",
     ]
 
+    def setUp(self):
+        # An empty plugin root, pinned: without it the manifest fallback resolves
+        # against this checkout, and the unresolvable-repo test would silently flip
+        # from asserting a refusal to asserting a filing the day someone adds a
+        # `primitives-core/.claude-plugin/plugin.json`.
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
     def _main(self, argv, env=None, runner=None, today="2026-08-07"):
         out = io.StringIO()
         runner = runner if runner is not None else _FakeRunner()
         env = dict(env or {})
         env.setdefault(R.REPO_ENV, "acme/widgets")
+        env.setdefault("CLAUDE_PLUGIN_ROOT", self.tmp.name)
         code = R.main(argv, env=env, runner=runner, today=today, out=out)
         return code, out.getvalue(), runner
 
@@ -405,12 +471,52 @@ class MainTests(unittest.TestCase):
         self.assertIn("acme/widgets", argv)
         self.assertIn(R.DEFAULT_LABELS[R.KIND_BUG], argv)
 
+    def test_filing_names_the_target_repo_before_it_files(self):
+        """Where the issue lands is the one thing a reporter must never keep to
+        itself: the destination is resolved from data the caller cannot see, so it
+        is printed, with its provenance, before `gh` is reached."""
+        code, out, _runner = self._main(self.BUG_ARGS)
+        self.assertEqual(code, 0)
+        self.assertIn("acme/widgets", out)
+        self.assertIn(R.REPO_ENV, out)
+        self.assertIn("marketplace", out.lower())
+
     def test_draft_prints_the_body_and_files_nothing(self):
         code, out, runner = self._main(self.BUG_ARGS + ["--draft"])
         self.assertEqual(code, 0)
         self.assertEqual(runner.calls, [])
         self.assertIn("atelier: covenant never injected", out)
         self.assertIn("## What happens", out)
+
+    def test_draft_names_the_target_repo_and_its_provenance(self):
+        _code, out, _runner = self._main(self.BUG_ARGS + ["--draft"])
+        self.assertIn("acme/widgets", out)
+        self.assertIn(R.REPO_ENV, out)
+        self.assertIn("marketplace", out.lower())
+
+    def test_manifest_resolved_target_names_the_manifest(self):
+        """The provenance half of the same line: with no env override the target came
+        from this plugin's manifest, and saying so is what lets a reader catch a
+        report about someone else's plugin heading into the wrong tracker."""
+        root = os.path.join(self.tmp.name, "plugin")
+        meta = os.path.join(root, ".claude-plugin")
+        os.makedirs(meta, exist_ok=True)
+        with open(os.path.join(meta, "plugin.json"), "w", encoding="utf-8") as fh:
+            json.dump({"name": "demo", "repository": "acme/from-manifest"}, fh)
+        _code, out, _runner = self._main(
+            self.BUG_ARGS + ["--draft"], env={R.REPO_ENV: "", "CLAUDE_PLUGIN_ROOT": root}
+        )
+        self.assertIn("acme/from-manifest", out)
+        self.assertIn("manifest", out)
+
+    def test_severity_defaults_to_the_least_severe(self):
+        """An agent that never considered severity must not file a `major`. An
+        under-marked report costs a maintainer one upgrade at read time; a queue where
+        everything arrives `major` carries no priority signal at all."""
+        self.assertEqual(R.DEFAULT_SEVERITY, R.SEVERITIES[-1])
+        self.assertEqual(R.DEFAULT_SEVERITY, "minor")
+        _code, out, _runner = self._main(self.BUG_ARGS + ["--draft"])
+        self.assertIn("**Severity:** minor", out)
 
     def test_date_defaults_to_the_injected_clock(self):
         _code, out, _runner = self._main(self.BUG_ARGS + ["--draft"], today="2026-01-02")

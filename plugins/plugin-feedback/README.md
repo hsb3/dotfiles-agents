@@ -24,6 +24,23 @@ claude plugin install plugin-feedback@dotfiles-agents
 Both hooks inject a short pointer, not the template. The template lives in the reporter,
 `hooks/plugin-feedback-session/report_issue.py`, which both hooks name by absolute path.
 
+## What it reports on: this marketplace's plugins
+
+**Issues go to the marketplace this reporter shipped from, never to the repo of the plugin
+being reported.** The target is read from *this* plugin's manifest (or
+`PLUGIN_FEEDBACK_REPO`), so it is fixed at install time and does not vary by which plugin
+you are reporting on. A defect in a plugin you installed from somewhere else belongs in
+that project's own tracker — filing it here just puts it in front of maintainers who
+cannot fix it. Both hooks scope their offer accordingly.
+
+The destination is never silent: the reporter prints the resolved repo and where it came
+from before it files, and `--draft` prints the same line. Read it before you file.
+
+```
+Repo:  acme/widgets (from this plugin's own manifest)
+Scope: this reporter files into the marketplace it shipped from, not the reported plugin's own repo
+```
+
 ## The tier rule
 
 A **bug** may be filed by anyone, worker included, because the bar is objective: *observed
@@ -49,11 +66,15 @@ Add `--draft` to print the report instead of filing it. `feature` swaps `--contr
 `--limitation`. Everything else (project, date, severity, workaround, suggested fix) has a
 default or is optional; `--help` lists them.
 
+`--severity` defaults to `minor`, the least severe of `blocker`/`major`/`minor`. Raise it
+deliberately: an unconsidered report costs a maintainer one upgrade at read time, while a
+queue where everything arrives `major` carries no priority signal at all.
+
 ## Configuration
 
 | Env var | Default | Meaning |
 |---|---|---|
-| `PLUGIN_FEEDBACK_REPO` | the reporting plugin's manifest `repository` | Where issues are filed, as `owner/name` |
+| `PLUGIN_FEEDBACK_REPO` | this plugin's manifest `repository` | Where every issue is filed, as `owner/name` — one destination, not per reported plugin |
 | `PLUGIN_FEEDBACK_LABEL_BUG` | `type:fix` | Label applied to a bug |
 | `PLUGIN_FEEDBACK_LABEL_FEATURE` | `type:feature` | Label applied to a feature request |
 | `PLUGIN_FEEDBACK_DISABLED` | unset | Any non-empty value stands both reminders down |
@@ -64,6 +85,7 @@ reporter refuses and names the variable rather than guessing a target.
 ## Honest scope
 
 It does not triage, deduplicate, or search for an existing report before filing, and it does
-not judge whether a report is worth filing. It has no opinion on the receiving repo's
-workflow beyond one label. It cannot make a session notice a defect it did not notice; it
-only makes reporting one cheap once it has.
+not judge whether a report is worth filing. It does not route a report to the repo of the
+plugin it is about — one marketplace, one destination. It has no opinion on the receiving
+repo's workflow beyond one label. It cannot make a session notice a defect it did not
+notice; it only makes reporting one cheap once it has.

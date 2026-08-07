@@ -2,11 +2,15 @@
 """
 plugin-feedback-session — SessionStart hook.
 
-Tells the primary session that a defect it notices in an installed plugin is
-reportable, and points at the reporter that files it to a fixed template. Without
+Tells the primary session that a defect it notices in a plugin from this marketplace
+is reportable, and points at the reporter that files it to a fixed template. Without
 this, the knowledge that reports are welcome lives in a CLAUDE.md a session can
 forget to read — and a plugin cannot ship anything into a consumer's CLAUDE.md at
 all, which is the whole reason this arrives as injected context instead.
+
+The offer is scoped to this marketplace because the reporter's destination is: it
+resolves the target from the reporting plugin's own manifest, so a report about a
+plugin from anywhere else would land in the wrong project's tracker.
 
 The primary session may file EITHER kind: a bug or a feature request. The tier split
 is the companion hook's business (plugin-feedback-worker, SubagentStart), which tells
@@ -56,12 +60,17 @@ REPORTER_DIR = "plugin-feedback-session"
 REPORTER_FILE = "report_issue.py"
 REPORTER_FALLBACK = "${CLAUDE_PLUGIN_ROOT}/hooks/" + REPORTER_DIR + "/" + REPORTER_FILE
 
+# Scoped to this marketplace on purpose. The reporter resolves its target from the
+# REPORTING plugin's manifest, so an offer covering "any installed plugin" would send a
+# report about someone else's plugin into this marketplace's tracker.
 REMINDER = (
-    "plugin-feedback: a defect you hit in any installed plugin is reportable from this "
-    "session, and you may file either kind — a bug (observed behavior contradicts the "
-    "plugin's own stated contract) or a feature request (a why tied to a limitation you "
-    "actually hit, never a nice-to-have). File it with `python3 {reporter} --help`, which "
-    "fixes the template and the label; do not free-hand a `gh issue create`."
+    "plugin-feedback: a plugin from this marketplace that misbehaves is reportable from "
+    "this session — issues go to this marketplace's own repo, so a defect in a plugin from "
+    "anywhere else belongs in that project's tracker. You may file either kind: a bug "
+    "(observed behavior contradicts the plugin's own stated contract) or a feature request "
+    "(a why tied to a limitation you actually hit, never a nice-to-have). Run `python3 "
+    "{reporter} --help`; it fixes the template and names the target repo before filing, so "
+    "never free-hand a `gh issue create`."
 )
 
 

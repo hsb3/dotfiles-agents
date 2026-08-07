@@ -1,9 +1,13 @@
 # plugin-feedback-session
 
-Tells the primary session that a defect it hits in an installed plugin is reportable, and
-points at the reporter that files it to a fixed template. The primary session may file
-either kind: a bug or a feature request. A plugin cannot ship a line into a consumer's
-CLAUDE.md, so the reminder arrives as injected context instead.
+Tells the primary session that a defect it hits in a plugin **from this marketplace** is
+reportable, and points at the reporter that files it to a fixed template. The primary
+session may file either kind: a bug or a feature request. A plugin cannot ship a line into
+a consumer's CLAUDE.md, so the reminder arrives as injected context instead.
+
+The offer stops at this marketplace's own plugins because that is where the reporter files
+(it reads the reporting plugin's manifest for the target). A defect in a plugin from
+somewhere else belongs in that project's own tracker.
 
 Carries the reporter, `report_issue.py`, which the companion hook
 (`plugin-feedback-worker`) points at too.

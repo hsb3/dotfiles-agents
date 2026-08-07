@@ -29,6 +29,16 @@ Contract (SessionStart):
   - exit 0 always; fail-open on any internal error (no stdout, just a
     best-effort log line).
 
+Per-project override: a `handoff:` key in `.claude/atelier.local.md` names
+the project's handoff file, taking full precedence over the standard
+candidate search below (found or not — an override that names a file that
+does not yet exist means "no handoff", not "fall back to the trio"). Absent,
+unparseable, or out-of-project-root overrides leave the standard search
+untouched. The activation-file parser here is intentionally a duplicate of
+config-custody/worker-context's, not an import: each hook directory is
+copied and symlinked on its own (ADR 0017), so a cross-hook import would
+break the moment one hook is installed without the other.
+
 This file must have ZERO third-party dependencies (Python 3 stdlib only).
 """
 
@@ -45,7 +55,8 @@ import traceback
 HEAD_LINES_DEFAULT = 15
 LOG_FILENAME_DEFAULT = "handoff-surfacer.jsonl"
 
-# Same discovery precedence as handoff-freshness-guard/hook.py.
+# Same discovery precedence as handoff-freshness-guard/hook.py. Used only
+# when no valid `handoff:` override is active (see _find_handoff).
 CANDIDATE_PATHS = [
     "_meta/HANDOFF.md",
     "HANDOFF.md",
@@ -54,6 +65,135 @@ CANDIDATE_PATHS = [
 
 # Sources that count as a genuine cold start.
 SURFACE_SOURCES = {"startup", "clear"}
+
+# ---------------------------------------------------------------------------
+# Per-project override (.claude/atelier.local.md `handoff:` key)
+# ---------------------------------------------------------------------------
+
+ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
+HANDOFF_KEY = "handoff"
+
+# A frontmatter block is a few dozen lines; anything larger is not an
+# activation file and reading it into a hook that runs on every session
+# start is not worth it.
+ACTIVATION_MAX_BYTES = 256 * 1024
+
+
+def _resolve_project_dir(cwd):
+    """CLAUDE_PROJECT_DIR env anchor first, else the resolved payload cwd —
+    same anchor config-custody/worker-context use to locate
+    .claude/atelier.local.md, and the same one this hook's own log path
+    already prefers (see _resolve_log_path)."""
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
+    try:
+        return os.path.abspath(base)
+    except Exception:
+        return cwd
+
+
+def _resolve_activation_path(project_dir):
+    override = os.environ.get("ATELIER_ACTIVATION_FILE")
+    if override:
+        return override
+    return os.path.join(project_dir, ACTIVATION_RELPATH)
+
+
+def _unquote(value):
+    """Strip surrounding quotes and any trailing YAML comment.
+
+    Quote handling comes first: `handoff: "docs/HANDOFF.md"  # note` must
+    yield `docs/HANDOFF.md`, while a quoted path is allowed to contain a `#`.
+    """
+    value = value.strip()
+    if value[:1] in ("'", '"'):
+        quote = value[0]
+        close = value.find(quote, 1)
+        return value[1:close] if close != -1 else value[1:]
+    hash_at = value.find(" #")
+    if hash_at != -1:
+        value = value[:hash_at].rstrip()
+    return value
+
+
+def _parse_handoff_override(text):
+    """Return the `handoff:` key's value from a YAML frontmatter block, or
+    None if absent/blank/unparseable.
+
+    Deliberately narrow (mirrors worker-context's `enforce`-only parser):
+    understands one scalar key, on an unindented top-level line, and
+    ignores everything else. Anything it cannot make sense of — no fences,
+    no closing fence — returns None, so a malformed activation file behaves
+    exactly as if the key were absent (fall back to the standard search).
+    """
+    lines = text.splitlines()
+
+    start = None
+    for index, line in enumerate(lines):
+        stripped = line.lstrip("﻿").strip()
+        if not stripped:
+            continue
+        if stripped == "---":
+            start = index + 1
+        break  # the first non-blank line must be the opening fence
+    if start is None:
+        return None
+
+    end = None
+    for index in range(start, len(lines)):
+        if lines[index].strip() in ("---", "..."):
+            end = index
+            break
+    if end is None:
+        return None
+
+    value = None
+    for line in lines[start:end]:
+        if not line.strip() or line[:1].isspace() or line.strip().startswith("#"):
+            continue
+        item = line.strip()
+        colon = item.find(":")
+        if colon == -1:
+            continue
+        if item[:colon].strip().lower() == HANDOFF_KEY:
+            value = _unquote(item[colon + 1:])
+    return value or None
+
+
+def _load_handoff_override(project_dir):
+    """Read the activation file. Any trouble at all -> None (no override)."""
+    path = _resolve_activation_path(project_dir)
+    try:
+        if os.path.getsize(path) > ACTIVATION_MAX_BYTES:
+            return None
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            text = fh.read(ACTIVATION_MAX_BYTES)
+    except Exception:
+        return None
+    try:
+        return _parse_handoff_override(text)
+    except Exception:
+        return None
+
+
+def _resolve_override_path(value, project_dir):
+    """Validated absolute path for an override value, confined to
+    project_dir, or None when value is blank or escapes the project root.
+
+    An escaping value is treated as if no override were set (same fail-open
+    posture as an absent key) — this hook must never read outside its
+    project's jurisdiction on an untrusted or misconfigured path.
+    """
+    if not value:
+        return None
+    try:
+        abs_path = value if os.path.isabs(value) else os.path.join(project_dir, value)
+        abs_path = os.path.normpath(abs_path)
+        relpath = os.path.relpath(abs_path, project_dir)
+    except Exception:
+        return None
+    if relpath.split(os.sep)[0] == "..":
+        return None
+    return abs_path
 
 
 def _env_int(name, default):
@@ -111,8 +251,22 @@ def _log(log_path, record):
 # ---------------------------------------------------------------------------
 
 def _find_handoff(cwd):
-    """Return (path, relpath) for the first candidate that exists under cwd,
-    else (None, None). Checked in the documented precedence order."""
+    """Return (path, relpath) for the active handoff file, else (None, None).
+
+    A valid, in-project-root `handoff:` override in .claude/atelier.local.md
+    is authoritative — found or not, it is the only location checked, and
+    the standard candidate search below never runs. Absent, unparseable, or
+    out-of-root overrides fall back unchanged to the documented precedence
+    order.
+    """
+    project_dir = _resolve_project_dir(cwd)
+    override_path = _resolve_override_path(_load_handoff_override(project_dir), project_dir)
+    if override_path is not None:
+        if os.path.isfile(override_path):
+            relpath = os.path.relpath(override_path, project_dir).replace(os.sep, "/")
+            return override_path, relpath
+        return None, None
+
     for rel in CANDIDATE_PATHS:
         path = os.path.join(cwd, rel)
         if os.path.isfile(path):

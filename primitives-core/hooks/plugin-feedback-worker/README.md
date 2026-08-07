@@ -1,11 +1,15 @@
 # plugin-feedback-worker
 
-Gives every dispatched worker the tier rule for reporting a plugin defect, so the rule
-arrives with the worker instead of depending on the dispatching session restating it in
-each brief. A worker MAY file a bug directly — the bar is objective, *observed behavior
-contradicts the plugin's own stated contract*. A worker MUST NOT file a feature request:
-the why has to be tied to a real limitation, which is its dispatcher's judgment call, so
-the worker drafts one with `--draft` and hands it up.
+Gives every dispatched worker the tier rule for reporting a defect in a plugin **from this
+marketplace**, so the rule arrives with the worker instead of depending on the dispatching
+session restating it in each brief. A worker MAY file a bug directly — the bar is objective,
+*observed behavior contradicts the plugin's own stated contract*. A worker MUST NOT file a
+feature request: the why has to be tied to a real limitation, which is its dispatcher's
+judgment call, so the worker drafts one with `--draft` and hands it up.
+
+A defect in a plugin from another marketplace does not go through this reporter at all: it
+files into the marketplace it shipped from, so that report belongs in that project's own
+tracker.
 
 Its companion is `plugin-feedback-session`, which tells the primary session it may file
 either kind, and which carries the reporter both hooks point at.

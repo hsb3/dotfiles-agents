@@ -21,10 +21,10 @@ before merging.
 
 ## `maxTurns`
 
-A **deliberate** per-wave cap, not a default backstop. The builder and reviewer definitions impose
-no turn limit: they self-regulate by scope and escalate an oversized slice loudly rather than
-stalling silently at a clock. Only `scout` keeps a 15-turn bounded-recon backstop, because recon
-that has not concluded in 15 turns has usually misunderstood the question.
+A **deliberate** per-wave cap, not a default backstop. None of the builder, reviewer, or scout
+definitions impose a turn limit: each self-regulates by scope and escalates loudly — an oversized
+slice for builder/reviewer, an unanswerable or over-broad question for scout — rather than
+stalling silently at a clock.
 
 Set `maxTurns` when a specific wave has a reason (a known-small transform where a long run means
 something went wrong). An arbitrary cap on open-ended work produces silent partial results, which
@@ -41,9 +41,14 @@ whose value is precisely the chain context it has absorbed.
 
 - `builder`, `reviewer`, and `lead` have full shell. Briefs should require them to run their own
   verification commands and paste the actual output.
-- `scout` is deliberately Bash-less, which is what makes its read-only guarantee structural rather
-  than promised.
-- **Read-only git** (`status`, `diff`, `log`, `show`) is allowed to every shell-bearing agent.
+- `scout` has Bash but no `Edit`, `Write`, or `NotebookEdit` — it cannot write a file, and that half
+  of its read-only guarantee is structural (the tools are absent). Shell *authority* is not
+  structural: scout's default posture is no shell, and a brief must name the exact read-only
+  command(s) it grants — no substitutes, no ungranted flags. Granting scout a command is a real
+  decision with a real cost; grant reads only, and only what the brief needs answered.
+- **Read-only git** (`status`, `diff`, `log`, `show`) is allowed to every full-shell agent
+  (`builder`, `reviewer`, `lead`); a brief may grant scout a specific read-only git command the same
+  way it grants any other read.
 - **Mutating git** (`commit`, `push`, `rebase`, `reset`, `checkout`, `stash`, `tag`) is reserved to
   the session. This is prompt-level policy, not a tool-layer block, so it can be violated. Treat
   any worker git mutation found in a diff as a protocol breach and check what else that agent did.

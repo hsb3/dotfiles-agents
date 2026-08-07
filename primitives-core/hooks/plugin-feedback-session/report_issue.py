@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """report_issue.py — the plugin-feedback reporter.
 
-Files a defect report about an installed plugin as one consistently shaped issue,
+Files a defect report about a plugin from this marketplace as one consistently shaped issue,
 so an agent that noticed something mid-task does not free-hand a `gh issue create`
 and land a malformed title, an ad-hoc body, or the wrong label.
 
@@ -18,6 +18,13 @@ Tier rule (ratified doctrine, carried by the two companion hooks):
 
 `--draft` prints the report and files nothing, so the draft path needs neither the
 network nor a resolved target repo.
+
+Scope: this reporter files into the marketplace it shipped from, NOT into the repo of
+the plugin being reported. It resolves the target from the REPORTING plugin's manifest,
+so a report about a plugin from somewhere else would land in the wrong tracker — that
+report belongs in that project's own. Both hooks scope their offer the same way, and
+the resolved target is printed with its provenance before anything is filed, so the
+destination is never something the caller has to infer.
 
 The target repo is DATA, never a literal in this file: `PLUGIN_FEEDBACK_REPO` wins,
 otherwise it is read from the reporting plugin's own manifest
@@ -51,7 +58,10 @@ KIND_FEATURE = "feature"
 KINDS = (KIND_BUG, KIND_FEATURE)
 
 SEVERITIES = ("blocker", "major", "minor")
-DEFAULT_SEVERITY = "major"
+# Least severe on purpose: a filer who never thought about severity must not claim
+# urgency it has not earned. An under-marked report costs one upgrade at read time; a
+# queue where every report arrives `major` carries no priority signal at all.
+DEFAULT_SEVERITY = SEVERITIES[-1]
 
 # Env surfaces. The repo variable is the documented escape hatch for a marketplace
 # whose plugins do not carry a `repository` in their manifest.
@@ -65,6 +75,14 @@ DEFAULT_LABELS = {KIND_BUG: "type:fix", KIND_FEATURE: "type:feature"}
 NO_FIX = "None offered."
 NO_REPRO = "Not captured."
 NO_WORKAROUND = "None known."
+
+# Printed on both output paths. The boundary is the reporter's, not the reported
+# plugin's: a defect in a plugin from another marketplace belongs in that project's
+# own tracker, and this line is what lets a reader catch it heading the wrong way.
+SCOPE_NOTE = (
+    "this reporter files into the marketplace it shipped from, not the reported "
+    "plugin's own repo"
+)
 
 SEGMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -98,7 +116,9 @@ def normalize_repo(value):
         v = v[:-4]
     v = v.rstrip("/")
     if ":" in v and "//" not in v:
-        v = v.split(":", 1)[1]  # scp-style: git@host:owner/name
+        # scp-style remote, <user>@<host>:owner/name — the placeholder stays bracketed
+        # so no line in this file has the shape of a real remote (the tests ban it).
+        v = v.split(":", 1)[1]
     v = v.split("://", 1)[-1]  # drop any scheme
     parts = [p for p in v.split("/") if p]
     if len(parts) < 2:
@@ -137,6 +157,25 @@ def resolve_repo(env, plugin_root=None):
         return normalize_repo(override)
     root = plugin_root or env.get("CLAUDE_PLUGIN_ROOT") or _default_plugin_root()
     return _manifest_repo(root)
+
+
+def target_origin(env):
+    """Which surface the target repo came from, in words a reader can act on."""
+    if (env.get(REPO_ENV) or "").strip():
+        return REPO_ENV
+    return "this plugin's own manifest"
+
+
+def describe_target(repo, env):
+    """`owner/name (from <surface>)` — the destination, spelled out, never implicit.
+
+    Both output paths print this before anything leaves the machine: the target is
+    resolved from data the caller cannot see, and a report about a plugin from another
+    marketplace resolving here is exactly the mistake this line makes visible.
+    """
+    if not repo:
+        return "unresolved (set {0} to owner/name)".format(REPO_ENV)
+    return "{0} (from {1})".format(repo, target_origin(env))
 
 
 def resolve_label(kind, env, override=None):
@@ -209,13 +248,13 @@ def build_argv(repo, title, body, label):
     ]
 
 
-def render_draft(report, title, body, label, repo):
+def render_draft(report, title, body, label, target):
     """A draft a dispatcher can read and file, with the filing command spelled out."""
-    target = repo or "<set {0}>".format(REPO_ENV)
     return "\n".join([
         "DRAFT — not filed. Hand this to your dispatcher to review and file.",
         "",
         "Repo:  {0}".format(target),
+        "Scope: {0}".format(SCOPE_NOTE),
         "Label: {0}".format(label),
         "Title: {0}".format(title),
         "",
@@ -233,7 +272,12 @@ def render_draft(report, title, body, label, repo):
 def build_parser():
     p = argparse.ArgumentParser(
         prog="report_issue.py",
-        description="File a defect report about an installed plugin, to a fixed template.",
+        description=(
+            "File a defect report about a plugin from this marketplace, to a fixed "
+            "template. Issues go to the marketplace this reporter shipped from, not to "
+            "the reported plugin's own repo; the resolved target is printed before "
+            "anything is filed."
+        ),
     )
     p.add_argument("kind", choices=KINDS, help="bug (any session) or feature (primary session)")
     p.add_argument("--plugin", required=True, help="the plugin the report is about")
@@ -242,7 +286,13 @@ def build_parser():
     p.add_argument("--symptom", required=True, help="what happens (bug) or what is missing (feature)")
     p.add_argument("--project", default="", help="the consuming project (default: this directory)")
     p.add_argument("--date", default="", help="observation date (default: today)")
-    p.add_argument("--severity", choices=SEVERITIES, default=DEFAULT_SEVERITY)
+    p.add_argument(
+        "--severity",
+        choices=SEVERITIES,
+        default=DEFAULT_SEVERITY,
+        help="how bad it is (default: {0}) — raise it deliberately, with the reason "
+             "visible in the symptom".format(DEFAULT_SEVERITY),
+    )
     p.add_argument("--repro", default="", help="steps to reproduce; required for a bug")
     p.add_argument(
         "--contract",
@@ -326,7 +376,7 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
     repo = resolve_repo(env)
 
     if args.draft:
-        out.write(render_draft(report, title, body, label, repo))
+        out.write(render_draft(report, title, body, label, describe_target(repo, env)))
         return 0
 
     if not repo:
@@ -337,6 +387,13 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
         )
         return 2
 
+    # Announced before the call, not after: an agent or a human watching the transcript
+    # gets to see the destination while it can still stop a misdirected report.
+    out.write(
+        "report_issue: filing to {0} — {1}.\n".format(
+            describe_target(repo, env), SCOPE_NOTE
+        )
+    )
     done = runner(build_argv(repo, title, body, label), text=True, capture_output=True)
     stdout = getattr(done, "stdout", "") or ""
     stderr = getattr(done, "stderr", "") or ""
