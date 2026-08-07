@@ -4,6 +4,7 @@ title: 'atelier: delegation ledger records the parent session, not the delegatio
 status: To Do
 assignee: []
 created_date: '2026-08-06 23:49'
+updated_date: '2026-08-06 23:59'
 labels:
   - primitives
 milestone: m-2
@@ -30,3 +31,12 @@ The subagent-telemetry hook's ledger (logs/delegation.jsonl) is meant to give on
 - [ ] #4 A behavior test proves it: a fixture with N real delegations produces exactly N correct ledger rows
 - [ ] #5 HANDOFF.md's 'don't trust logs/delegation.jsonl until #250 is fixed' gotcha is removed once verified true
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-08-06 23:59
+---
+D4 (/reload-plugins misreporting skill count) independently reproduced a second time, 2026-08-06: /reload-plugins printed 'Reloaded: 9 plugins · 0 skills · 11 agents · 7 hooks · 0 plugin MCP servers · 0 plugin LSP servers' in a live session where 14+ skills from those same 9 dotfiles-agents user-scope plugins (6 from atelier alone) were visibly loaded and invocable immediately before and after the reload. Plugin/agent/hook counts in that same output were all correct (9 plugins, 7 hooks matching atelier's shipped hook count, 11 agents). Only the skill count is wrong, both times observed. Likely a Claude Code core display bug rather than an atelier defect -- probably out of scope for this task's hook fix, but worth confirming before ruling out, since it's the same symptom shape as issue #244's now-closed skills-not-loading investigation.
+---
+<!-- COMMENTS:END -->
