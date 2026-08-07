@@ -4,7 +4,7 @@ title: Promote the lab-setup skill from the EVALS workbench into the collection
 status: To Do
 assignee: []
 created_date: '2026-08-06'
-updated_date: '2026-08-06 21:33'
+updated_date: '2026-08-07 01:10'
 labels:
   - assembly
 milestone: m-2
@@ -88,3 +88,17 @@ session in an unrelated project" means installing the host plugin for that
 project path first (`claude plugin install <id>@dotfiles-agents --scope local`)
 and starting a new session — an `enabledPlugins` flag alone proves nothing.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-08-07 01:10
+---
+Owner ruling 2026-08-07 on the bundle-home question: STANDALONE, not atelier and not code-desk. This resolves the card's open sub-question and its Implementation Plan step 1.
+
+The owner's note carried a second instruction that goes beyond this card: 'create a plugin that distributes all skills that can stand on their own.' Filed separately as TASK-043, because it is a marketplace-shape change rather than a placement decision for one skill.
+
+FLAGGED AS AMBIGUOUS, not resolved here: those two instructions can be read as either compatible or competing. Reading A — lab-setup ships as its own one-skill plugin, and TASK-043 additionally builds an aggregate convenience plugin alongside the existing standalones. Reading B — TASK-043 replaces the pattern of one-plugin-per-standalone-skill, and lab-setup simply joins that aggregate rather than getting a plugin of its own. The readings imply materially different work (one new plugin versus restructuring 17 existing marketplace entries), so this needs the owner's word before either is built. Do not start TASK-043 or the lab-setup move until that is settled.
+---
+<!-- COMMENTS:END -->

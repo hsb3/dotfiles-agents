@@ -1,0 +1,6 @@
+{
+  "event": "SessionStart",
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Noting how to report a plugin defect..."
+}

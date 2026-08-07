@@ -13,6 +13,7 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - Makefile
   - .github/workflows/*
   - "*.config.js"
+handoff: docs/HANDOFF.md   # optional: override the project's handoff file location
 ---
 ```
 
@@ -21,6 +22,18 @@ protected:            # fnmatch patterns, project-relative; * crosses /
 | absent / `off` | silent | silent |
 | `advisory` | injects the worker covenant into every subagent | logs would-deny rows to `logs/config-custody.jsonl`; never blocks |
 | `strict` | injects, naming the tool-layer block | denies subagent edits to `protected:` paths, with an escalation-shaped reason |
+
+`handoff` names the project's handoff file, read by `session-handoff-surfacer` (SessionStart),
+`handoff-freshness-guard` (PreCompact), and the `handoff` skill — all three otherwise search
+`_meta/HANDOFF.md`, `HANDOFF.md`, `.claude/HANDOFF.md` in that order. A set `handoff:` value is
+authoritative over the standard search, with fail-open exceptions:
+
+| `handoff:` value | Effect |
+|---|---|
+| absent, unparseable activation file, or an activation file with other keys but not this one | standard search runs unchanged |
+| names a path that resolves outside the project root | rejected; standard search runs unchanged |
+| names a file that exists (inside the project root) | wins over any standard candidate, even one that also exists |
+| names a file that does not (yet) exist (inside the project root) | treated as "no handoff" — does **not** fall back to the standard search, so a stale file left at a standard location is never resurrected |
 
 ## Design commitments
 

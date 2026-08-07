@@ -25,6 +25,22 @@ one, in the same order, that atelier's `handoff-freshness-guard` and
 Do not reorder or add a path here without changing the hooks' `CANDIDATE_PATHS` in lockstep - a
 mismatch means the hooks act on a different file than this skill writes.
 
+**Per-project override.** A project whose handoff lives somewhere else entirely (not one of
+the candidates above) can say so with a `handoff:` key in `.claude/atelier.local.md`:
+
+```markdown
+---
+handoff: docs/HANDOFF.md
+---
+```
+
+That path, when it resolves inside the project root, is authoritative for both hooks and for
+this skill - it wins over any standard candidate, and the standard search never runs as a
+fallback (a stated-but-not-yet-created override means "no handoff", not "check the
+candidates"). Leave the key absent, or unset, or pointing outside the project root, and
+nothing changes: the standard candidate search above still governs. When an override is
+active, write and update the handoff there instead of at a candidate path.
+
 **Default: a gitignored `_meta/` working desk.** On `/handoff init`, if the project has no
 handoff: create `_meta/` (`mkdir -p _meta`), ensure `_meta/` is in `.gitignore` (append it
 if missing), and write `_meta/HANDOFF.md`. Gitignored-by-default is deliberate: the handoff

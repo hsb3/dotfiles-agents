@@ -4,7 +4,7 @@ title: 'SOP: configure Claude Code for a new project'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-06 21:33'
+updated_date: '2026-08-07 01:09'
 labels:
   - governance
 milestone: m-2
@@ -27,3 +27,19 @@ Migrated from GH #216. Repeatable assess→decide→author→validate procedure 
 - [ ] #1 SOP authored and grounded in linked patterns
 - [ ] #2 Re-run on tmp-learn-pocketbase reproduces a defensible config
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-08-07 01:09
+---
+Owner ruling 2026-08-07: its OWN SKILL, not folded into claude-code-config.
+
+Context that informed it: the TASK-040 spike ruled claude-code-config and claude-code-expertise stay separate precisely because they serve different audiences, and found three shipped defects caused by their content drifting together — including a factual error about hook exit codes. Adding a third concern to claude-code-config cuts directly against that finding.
+
+The two answer different questions at different moments. claude-code-config answers 'change this setting on a live installation'; this answers 'what should a new repo have at all'. Different trigger, different user, different point in a project's life.
+
+AC#2's dependency on re-running against an external repo remains the weak criterion — it has no defined pass signal ('a defensible config' is a judgment call). Worth tightening when the card is picked up.
+---
+<!-- COMMENTS:END -->

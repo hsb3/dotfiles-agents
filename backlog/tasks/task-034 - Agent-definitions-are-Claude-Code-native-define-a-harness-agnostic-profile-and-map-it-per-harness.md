@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-06 19:30'
-updated_date: '2026-08-06 21:33'
+updated_date: '2026-08-07 01:15'
 labels:
   - distribution
   - decision
@@ -104,3 +104,25 @@ Claude Code is the reference harness (owner direction 2026-08-06: Claude Code fi
 - [ ] #8 Tool-to-capability mapping lives in the declared matrix rather than hardcoded Python set membership
 - [ ] #9 make ci green, make symlinks green, and the four plugins/foreman-kit/agents symlinks still resolve
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-08-07 01:09
+---
+Owner ruling 2026-08-07: TAKE THE DECISION NOW, BUILD LATER. Owner's note: 'there are good examples of how to handle this. we can do the build later tho.'
+
+So this card's first deliverable is confirmed as the decision record, not code — which is what the card already proposed. The build stays sequenced behind Claude Code stabilization per the owner's earlier direction; the decision does not have to wait for it and unblocks planning now.
+
+Whoever drafts the decision should look for prior art rather than inventing a profile from scratch — the owner states good examples exist for the harness-neutral-profile-plus-per-harness-mapping shape. The four open questions in the card (profile location and form, body-prose handling, a roster schema-version field, and whether hooks and skills are in scope) are what the decision record must answer.
+---
+
+author: @claude
+created: 2026-08-07 01:15
+---
+Body is now stale in one detail. The card's frontmatter-key inventory states 'memory: project on reviewer only' — as of 2026-08-07 no agent in primitives-core/agents/ carries a memory: key at all. It was removed from reviewer.md under TASK-037, because the Claude Code runtime resolves memory: project to <cwd>/.claude/agent-memory/<agentType>/ and creates that directory at dispatch, which is what was writing into target repos.
+
+Relevant to this card beyond the correction: memory: is a real example of the problem this card exists to solve. It is a Claude-Code-native frontmatter key with runtime semantics (enum user|project|local, optional, no 'off' value) and no obvious counterpart in another harness. Any harness-agnostic agent profile has to decide whether such a key is part of the neutral profile or a per-harness mapping — and this one carries a filesystem side effect, so dropping it silently in translation is not neutral.
+---
+<!-- COMMENTS:END -->

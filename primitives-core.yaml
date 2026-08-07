@@ -169,6 +169,20 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: plugin-feedback-session
+    type: hook
+    source: primitives-core/hooks/plugin-feedback-session
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [cli:gh]
+  - id: plugin-feedback-worker
+    type: hook
+    source: primitives-core/hooks/plugin-feedback-worker
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [cli:gh]
   - id: opencode-expertise
     type: skill
     source: primitives-core/skills/opencode-expertise

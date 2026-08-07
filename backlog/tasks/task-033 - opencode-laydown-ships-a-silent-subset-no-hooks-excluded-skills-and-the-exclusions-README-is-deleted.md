@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-06 19:17'
-updated_date: '2026-08-06 21:33'
+updated_date: '2026-08-07 01:09'
 labels:
   - distribution
 milestone: m-1
@@ -75,3 +75,19 @@ Sequencing set by the owner 2026-08-06: **Claude Code first, opencode after that
 
 TASK-031 ships the one-sentence README disclosure as the interim mitigation, and its wording is deliberately brief so the opencode path does not get more prominence than the Claude Code path.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-08-07 01:09
+---
+Owner ruling 2026-08-07: SPLIT THE CARD.
+
+Half one, do now: fix the silent subset. The installer's cleanup trap deletes the exclusions manifest that gen_opencode.py writes, so a user is told 'success' while silently receiving 25 of 34 skills and no hooks. A user knowing what they did not get is worth having regardless of the larger question, and the fix is mechanical.
+
+Half two, separate card, still sequenced behind Claude Code: whether hooks can be translated to opencode AT ALL. That is an investigation with a real answer, and it is the part AC#4 was blocked on. Today the answer is only implied by their absence, which is not a recorded decision.
+
+This unblocks the mechanical work without forcing the open question to be answered first.
+---
+<!-- COMMENTS:END -->

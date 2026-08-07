@@ -12,8 +12,9 @@ Violations:
   - a hook directory (one carrying config.json/hook.json/hook.py) with no `hook.py`
   - a stray `.py` / `.json` file at a hook root, not inside a `<name>/` hook dir
 
-Four hooks ship under `primitives-core/hooks/` (context-watermark, handoff-freshness-guard,
-session-handoff-surfacer, subagent-telemetry), each a `<name>/hook.py` + `config.json` dir.
+Every hook ships under `primitives-core/hooks/` as a `<name>/hook.py` + `config.json` dir; the
+roster (`primitives-core.yaml`) is the list, so this docstring does not carry a count that would
+go stale as hooks are added.
 That is the one hook root — the former top-level `hooks/` placeholder was removed 2026-08-06
 (an unhomed top-level dir now trips `make flow` instead). The walk validates every hook
 against the layout above, and the fixture in the tests proves it goes red on a wrong-layout

@@ -33,3 +33,13 @@ jobs:
         with:
           python-version: "3.13"
       - run: make check symlinks flow
+      # Version-bump gate (TASK-032): each plugin's assembly, dereferenced, against the
+      # same plugin as published on origin/main — changed bytes must ship under a moved
+      # version or consumers keep serving the cached one. It rides THIS job rather than
+      # `make ci` because it needs network to reach origin/main and `make ci` is offline +
+      # zero-install by design; and rather than a job of its own because dev's branch
+      # protection pins required checks by job NAME (a new one would strand open PRs on a
+      # check that never reports). It fetches origin/main itself and exits 0 with a notice
+      # when that ref is unreachable, so a network blip does not block every PR.
+      - name: version-bump gate (published bytes vs origin/main)
+        run: python3 scripts/check_version_bump.py
