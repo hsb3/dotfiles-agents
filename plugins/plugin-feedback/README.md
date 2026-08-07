@@ -14,6 +14,27 @@ would fire the same nudge once per installed plugin.
 claude plugin install plugin-feedback@dotfiles-agents
 ```
 
+## How it fits together
+
+The two hooks only make the offer; the reporter does the work. What splits the paths is who
+noticed the defect and which kind it is — a bug is checkable against the plugin's own README,
+a feature request needs a judgment a worker inside one slice cannot make.
+
+```mermaid
+flowchart TD
+    Cold[A session starts cold] --> SH[plugin-feedback-session offers both kinds]
+    Sub[A subagent starts] --> WH[plugin-feedback-worker offers bug directly]
+    SH --> Hit[Something misbehaves]
+    WH --> Hit
+    Hit --> Kind{Which kind}
+    Kind -->|bug: contradicts the stated contract| Rep[report_issue.py]
+    Kind -->|feature: needs a why you actually hit| Draft[worker prints it with --draft]
+    Draft --> Disp[Dispatcher reviews and files]
+    Disp --> Rep
+    Rep --> Target[Resolve the destination from this plugin's own manifest]
+    Target --> Issue[One issue in the marketplace this reporter shipped from]
+```
+
 ## What it does
 
 | Hook | Fires | Says |

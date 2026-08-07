@@ -4,6 +4,21 @@ Obsidian guidance in one separately toggleable plugin — build Obsidian plugins
 real API surface, add chat/copilot UIs and in-plugin MCP servers, and automate vaults from
 the terminal.
 
+## How it fits together
+
+Three of these are plugin-development skills and one is not. `obsidian-api-basics` is the
+floor the other two build on — reach for it first, then the one matching what you are adding.
+`obsidian-cli` is a separate path: it drives an existing vault and needs no plugin at all.
+
+```mermaid
+flowchart LR
+    You[Working with Obsidian] --> What{What are you doing}
+    What -->|Building a plugin| API[obsidian-api-basics]
+    What -->|Scripting a vault from a terminal| CLI[obsidian-cli]
+    API -->|Adding a chat or copilot panel| Chat[obsidian-chat-ui]
+    API -->|Exposing vault operations to an agent| MCP[obsidian-mcp-server]
+```
+
 ## What you get
 
 | Skill | What it does |
