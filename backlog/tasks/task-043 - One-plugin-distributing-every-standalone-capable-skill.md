@@ -1,11 +1,11 @@
 ---
 id: TASK-043
 title: One plugin distributing every standalone-capable skill
-status: In Progress
+status: To Do
 assignee:
   - '@claude'
 created_date: '2026-08-07 01:10'
-updated_date: '2026-08-07 01:52'
+updated_date: '2026-08-07 02:07'
 labels:
   - assembly
 milestone: m-1
@@ -94,5 +94,15 @@ It also answers the second open question — what 'can stand on their own' means
 Accepted cost, stated so it is not discovered later: removing a plugin's marketplace entry dangles every existing install record for it, and this marketplace has no alias or redirect mechanism, so the failure is silent on the consumer's next refresh — the plugin simply stops resolving with no message naming its successor. Migration is manual: uninstall the old id, install the aggregate.
 
 Second-order effect to check during the build: TASK-028 just shipped a gate requiring a STANDALONE plugin (exactly one skill, no agents, no hooks) to symlink its README into the skill's own README. If every single-skill plugin is retired, that rule may have no subjects left and would become a gate that can never fire. Confirm whether any standalone assembly survives; if none does, the gate needs either a stated reason to remain or an honest retirement.
+---
+
+author: @claude
+created: 2026-08-07 02:07
+---
+Set back to To Do 2026-08-07: the ANALYSIS is complete (see the two inventory notes above — 27 eligible skills, 3 not, both hazards confirmed) but the BUILD was not started. The session that did the analysis handed it off rather than starting a marketplace-wide restructure on exhausted context.
+
+A session picking this up should not redo the inventory. What remains is the build itself, and the two hazards decide its shape: marketplace.json's metadata.description enumerates all seventeen standalone plugins by name and the catalog guard verifies those names, so it goes red until rewritten; and the check_symlinks standalone branch loses every subject, so it must be retired or explicitly justified.
+
+One thing learned during the inventory that changes how the membership gate must work: eligibility cannot be read from metadata. None of the three ineligible skills was caught by the roster's requires: field — two express the dependency as a hardcoded relative path inside a bundled Python script (mise-en-place-scaffold/scripts/scaffold.py:66-71 and repo-compliance-audit). A gate enforcing membership has to read bodies and scripts.
 ---
 <!-- COMMENTS:END -->
