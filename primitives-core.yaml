@@ -300,3 +300,9 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: editor-project-config
+    type: skill
+    source: primitives-core/skills/editor-project-config
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]

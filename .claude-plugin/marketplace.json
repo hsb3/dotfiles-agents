@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "20 plugins: four multi-skill bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance) \u2014 and sixteen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
-    "version": "0.4.1"
+    "description": "21 plugins: four multi-skill bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance) \u2014 and seventeen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, editor-project-config, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
+    "version": "0.5.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -71,6 +71,15 @@
       "name": "diagrams",
       "source": "./plugins/diagrams",
       "version": "0.1.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Design a repo's tracked .vscode and .zed folders in one pass: file-type associations for files the editors cannot identify, tasks wired to the repo's real lint and build commands, extension recommendations matching its toolchain, debug configs only where they work, and a parity check between the two editor folders.",
+      "name": "editor-project-config",
+      "source": "./plugins/editor-project-config",
+      "version": "0.0.1"
     },
     {
       "author": {
