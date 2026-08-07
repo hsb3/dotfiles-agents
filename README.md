@@ -39,6 +39,7 @@ behind.
 | Make a chart that is legible and honest rather than merely colorful | [`dataviz`](plugins/dataviz/README.md) |
 | Ship a status briefing or board readout on a recurring cadence | [`comms`](plugins/comms/README.md) |
 | Get a batch of decisions from a human without a wall of chat questions | [`owner-signoff`](plugins/owner-signoff/README.md) |
+| Give a repo tracked editor config for both VS Code and Zed | [`editor-project-config`](plugins/editor-project-config/README.md) |
 
 ## Catalog
 
@@ -53,6 +54,7 @@ behind.
 | [`comms`](plugins/comms/README.md) | standalone | Recurring status deliverables (morning briefing, wrap-up, weekly plan, board readout) shipped as a deck, to one standard. | 1 skill |
 | [`dataviz`](plugins/dataviz/README.md) | standalone | Chart design rules to consult before writing chart code: mark selection, anti-patterns to refuse, colorblind-safe palette. | 1 skill |
 | [`deep-research`](plugins/deep-research/README.md) | standalone | Multi-source investigation ending in a cited report: load-bearing claims must survive an attempted refutation before being asserted. | 1 skill |
+| [`editor-project-config`](plugins/editor-project-config/README.md) | standalone | Tracked .vscode and .zed folders designed in one pass: associations, toolchain-matched settings, tasks, and cross-editor parity. | 1 skill |
 | [`github-project-board`](plugins/github-project-board/README.md) | standalone | Stand up and operate one GitHub Project (v2) board: fields, views, dependencies, and the weekly triage cadence. | 1 skill |
 | [`iterm2`](plugins/iterm2/README.md) | standalone | Configure iTerm2 past its silent failures: preferences model, dynamic profiles, shell integration, default-terminal binding. | 1 skill |
 | [`mise-en-place-scaffold`](plugins/mise-en-place-scaffold/README.md) | standalone | Create the repo structure a compliance audit found missing; additive only, plans before it applies, never overwrites. | 1 skill |
