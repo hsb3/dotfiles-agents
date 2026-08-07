@@ -1,10 +1,10 @@
 ---
 id: TASK-11.01
 title: 'Plugin-feedback hooks: standalone plugin for cross-plugin bug/feature reports'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-07 00:19'
-updated_date: '2026-08-07 00:44'
+updated_date: '2026-08-07 01:29'
 labels:
   - distribution
 dependencies: []
@@ -39,12 +39,32 @@ Caveat: the bug-vs-feature tier split above is this session's interpretation of 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A new standalone plugin exists (own plugin.json, own catalog row) containing only the two reminder hooks and the reporting script -- not dual-homed into any existing plugin
-- [ ] #2 A companion script produces a consistently-shaped GH issue (plugin+version, project, symptom/repro, severity, workaround, optional fix) via one command rather than agents free-handing gh issue create
-- [ ] #3 A SessionStart hook reminds the primary session it may file bugs or feature requests via the script; a SubagentStart hook reminds dispatched workers they may file bugs directly but should draft (not file) feature requests for their dispatcher
-- [ ] #4 Both hooks fail open and add zero third-party dependencies, matching this repo's existing hook conventions
-- [ ] #5 TASK-11 AC#3 is satisfied by this mechanism once shipped
+- [x] #1 A new standalone plugin exists (own plugin.json, own catalog row) containing only the two reminder hooks and the reporting script -- not dual-homed into any existing plugin
+- [x] #2 A companion script produces a consistently-shaped GH issue (plugin+version, project, symptom/repro, severity, workaround, optional fix) via one command rather than agents free-handing gh issue create
+- [x] #3 A SessionStart hook reminds the primary session it may file bugs or feature requests via the script; a SubagentStart hook reminds dispatched workers they may file bugs directly but should draft (not file) feature requests for their dispatcher
+- [x] #4 Both hooks fail open and add zero third-party dependencies, matching this repo's existing hook conventions
+- [x] #5 TASK-11 AC#3 is satisfied by this mechanism once shipped
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Shipped as plugins/plugin-feedback (v0.1.0): two hooks symlinked from primitives-core, plugin.json and hooks.json as regular files per ADR 0017, a marketplace row, a README catalog row, and two roster entries. 51 tests. Captured red in two stages — ModuleNotFoundError with no reporter, then 25 failures with the reporter present and both hooks absent.
+
+Adversarially reviewed before merge, which was worth it: the review REFUTED one claim and found a consumer-facing defect.
+
+DEFECT FOUND AND FIXED: both hooks offered to report a defect in 'any installed plugin', but resolve_repo reads the REPORTING plugin's manifest, not the reported one's. Executed proof: a bug about an unrelated third-party plugin resolved to this repo. So a consumer installing this and reporting someone else's plugin would file into this tracker silently. It was a missing specification, not a coding slip — nothing had ever decided whether the target is 'the marketplace this reporter shipped from' or 'the repo of the plugin being reported'. Decided as the former, hook text narrowed to say so, and the resolved target plus its provenance (env var vs manifest) is now printed BEFORE the runner is called, so a watcher can stop a misdirected report.
+
+TWO TESTS THAT COULD NOT FAIL, both proved by mutation and then by sabotage-fix-revert runs. First: _assert_wrote_nothing walked the tempdir while the hook subprocess inherited the test runner's cwd, so it collected an empty list unconditionally — the sabotage run shows the old test passing WHILE the stray file existed on disk, which is the vacuity itself rather than its absence. Fixed by passing cwd=. Second: the no-repo-literal guard asserted only the substring 'github.com/', so a hardcoded git@github.com:owner/repo.git passed it. Now three nets: the tokens from check_identity.IDENTITY (imported, so it drifts with the lint rather than beside it), forge shapes the lint does not model, and this plugin's own slug read from its manifest. The strengthened guard flagged an existing comment whose placeholder was shape-indistinguishable from a live remote; the placeholder was rewritten rather than the guard weakened.
+
+Fail-open verified by execution, not by reading: 13 adversarial cases x 2 hooks, all exit 0 — malformed JSON, empty stdin, closed stdin, /dev/null, JSON list, JSON null, empty object, wrong-typed field, 1MB input, invalid UTF-8, closed pipe, empty environment, bogus plugin root, and stdout fd closed. The genuine broken-pipe case needed a purpose-built harness since /dev/full is unavailable on macOS.
+
+Identity: the shipped script carries no repo string. Resolution is PLUGIN_FEEDBACK_REPO, then the plugin's own manifest, then an explicit refusal naming the variable — verified by execution, including that a garbage override refuses rather than guessing.
+
+--severity defaults to the least severe rather than 'major': an under-marked report costs a maintainer one upgrade at read time, while a queue where everything arrives major destroys the priority signal entirely.
+
+ONE THING NOT VERIFIED, recorded rather than assumed: nobody has observed SubagentStart firing in a live session with this plugin installed. If the event were not honored the worker tier would be silently inert and every test would still pass, since the tests assert only on the hook's stdout. Corroborating but not proof: the pre-existing worker-context hook already ships on SubagentStart via atelier. Closing this needs one live dispatch.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
@@ -55,3 +75,9 @@ created: 2026-08-07 00:44
 Owner ruling 2026-08-07: the bug-vs-feature tier split is CONFIRMED as designed. A dispatched worker may file a bug directly (the bar is 'observed behavior contradicts the plugin's own stated contract' — checkable without judgment); a dispatched worker must DRAFT a feature request for its dispatcher to review and file, not file it itself; the primary/foreman-level session may file either. The description's caveat that this was an unratified interpretation of the 'level 1 or 2 agent' framing is now resolved — this is doctrine, safe to harden into shipped hook text.
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+plugin-feedback ships as its own plugin — never dual-homed, because hook dedup is scoped to settings-file layers only, so dual-homing would fire the reminder once per installed dotfiles-agents plugin instead of once per session. Two hooks inject a short pointer (capped at 700 chars by an asserted test) and a companion script wraps gh issue create with a fixed template and label. The owner-ratified tier rule is implemented as stated: a worker may file a bug directly against an objective bar, must draft rather than file a feature request, and the primary session may file either. Adversarial review before merge caught a real consumer-facing defect (reports about third-party plugins would have landed in this repo silently) and two tests that could not fail; all three fixed and each fix proved by sabotage. Satisfies TASK-11's AC#3.
+<!-- SECTION:FINAL_SUMMARY:END -->
