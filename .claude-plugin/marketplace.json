@@ -34,7 +34,7 @@
       "description": "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.4.1"
+      "version": "0.4.2"
     },
     {
       "author": {
@@ -85,7 +85,7 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Run delegated work across three layers — strategy, management, execution: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, manager). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, brief workers on the delegation covenant, and hold protected config in custody per project.",
+      "description": "Run delegated work across three layers \u2014 strategy, management, execution: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, manager). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, brief workers on the delegation covenant, and hold protected config in custody per project.",
       "name": "atelier",
       "source": "./plugins/atelier",
       "version": "0.10.0"

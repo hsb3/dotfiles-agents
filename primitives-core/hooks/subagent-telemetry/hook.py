@@ -33,8 +33,8 @@ Contract (SubagentStop):
     agent_type.
   - `transcript_path` is the PARENT session's transcript, not the subagent's
     (observed: two sibling delegations reported byte-identical usage). Reading
-    model/ctx_tokens off it describes the foreman, not the delegation — so it
-    is used only to locate the sibling `subagents/` directory.
+    model/ctx_tokens off it describes the strategist, not the delegation — so
+    it is used only to locate the sibling `subagents/` directory.
   - A prospective row is DROPPED unless a matching sidecar exists and yields
     an agent_type. SubagentStop also fires for agents that never get a
     `subagents/` entry; writing those inflated the ledger ~10x.

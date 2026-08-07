@@ -7,11 +7,12 @@ delegation, and nudges once the streak crosses a watermark. The companion of
 context-watermark: that one watches how much context a session is carrying,
 this one watches how much labor it is retaining.
 
-Motivation (the source lab's finding F7, the work-list trigger gap): a foreman
-that never delegates looks, from the inside, exactly like a foreman doing
-careful work. The failure is only visible in aggregate — e.g. a session that
-ran 6+ hours with 93 self-performed tool calls and zero dispatches. A watermark
-makes the aggregate visible without anyone asking for it.
+Motivation (the source lab's finding F7, the work-list trigger gap): a
+strategist that never delegates looks, from the inside, exactly like a
+strategist doing careful work. The failure is only visible in aggregate — e.g.
+a session that ran 6+ hours with 93 self-performed tool calls and zero
+dispatches. A watermark makes the aggregate visible without anyone asking for
+it.
 
 Purely observational: never blocks, never edits, fail-open on every error.
 
@@ -205,8 +206,8 @@ def _format_message(streak, dispatches, ratio):
         "For calibration: delegating sessions' solo runs mostly stayed under ~25, and their "
         "longer stretches (36-69) were grounding or closing work done by hand; sessions that "
         "delegated nothing at all ran 80-103. Past ~25 on a job sized as flat fan-out, "
-        "lead-driven, or phased crews, the session is executing rather than foremanning. "
-        "Pause and re-size:\n"
+        "manager-driven, or phased crews, the session is executing rather than running the "
+        "strategy layer. Pause and re-size:\n"
         "- Is there a work-list left? Hand the remainder to workers rather than continuing "
         "by hand.\n"
         "- Is the recon still unfinished? Dispatch scouts and read their report instead of "
@@ -215,9 +216,9 @@ def _format_message(streak, dispatches, ratio):
         "give the list to one agent.\n"
         "- If this work genuinely belongs to the session (decomposition, definition of done, "
         "judging conflicting reports, final gate runs, user-facing synthesis), say so in one "
-        "line and carry on — that is the foreman floor, and this nudge is answered by naming "
-        "it.\n\n"
-        "The foreman skill has the full floor-and-ceiling list."
+        "line and carry on — that is the strategy layer's floor, and this nudge is answered by "
+        "naming it.\n\n"
+        "The delegation skill has the full floor-and-ceiling list."
     )
 
 
