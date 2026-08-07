@@ -226,14 +226,15 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
 - **A new plugin** = a `plugins/<id>/` dir + a hand-authored root marketplace.json entry.
   pptx-themes' skill README carries the Anthropic attribution for its vendored `base/` — never split
   or drop that section.
-- **Project settings disable product plugins for dev sessions** — editing their source never needs
-  them enabled; flip the entry in `.claude/settings.json` temporarily to *run* one.
+- **Project settings no longer name any `@dotfiles-agents` plugin** (2026-08-07). Enablement now
+  lives entirely in per-project install records; `.claude/settings.json`'s `enabledPlugins` lists
+  only the three `@workbench` dev plugins. Editing a product plugin's source never needs it
+  enabled, so leave this alone unless you want to *run* one.
 - **Removing a marketplace via `/plugin` DELETES every one of its entries from the project's
-  tracked `enabledPlugins`, including deliberate `false` ones.** Observed 2026-08-07: the
-  re-add wiped `atelier: true`, `owner-signoff: true`, and the five `…: false` entries that
-  encoded the rule directly above. Those `false` entries are policy, and losing them silently
-  re-enables product plugins in dev sessions. **Diff `.claude/settings.json` after any
-  marketplace remove/re-add** and restore the intent.
+  tracked `enabledPlugins`.** Observed 2026-08-07: a remove-and-re-add wiped `atelier: true`,
+  `owner-signoff: true`, and five deliberate `…: false` entries in one go. Worth knowing before
+  you do it elsewhere — but the owner ruled the resulting state correct here and the entries were
+  deliberately not reinstated, so **do not "restore" them.**
 - **The owner signs off on major IA changes before they are built.** Present them as an approval
   gate, not a done deal.
 - Backlog specifics beyond CLAUDE.md: `--depends-on` needs the dotted subtask form (`task-21.1`);
