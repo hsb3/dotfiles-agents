@@ -1,0 +1,9 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Report a defect in a plugin you are using without leaving the session. A session-start hook tells the primary session it may file a bug or a feature request; a subagent-start hook gives dispatched workers the tier rule (file a bug directly when observed behavior contradicts the plugin's own stated contract, but draft a feature request for your dispatcher rather than filing it); and a stdlib reporter writes the issue to a fixed template (plugin and version, consuming project, date, symptom and repro, severity and the contract check, workaround, optional fix) instead of a free-handed gh invocation. Install it alongside whatever else you run from this marketplace.",
+  "name": "plugin-feedback",
+  "repository": "https://github.com/hsb3/dotfiles-agents",
+  "version": "0.1.0"
+}

@@ -49,6 +49,7 @@ behind.
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 6 skills · 4 agents · 7 hooks |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
+| [`plugin-feedback`](plugins/plugin-feedback/README.md) | bundle | Tell every session and worker that plugin defects are reportable, then file one to a fixed template instead of a free-handed gh call. | 2 hooks |
 | [`claude-code-config`](plugins/claude-code-config/README.md) | standalone | Settings, permissions, hooks, env vars, and MCP servers routed to the right file by precedence, with a take-effect check. | 1 skill |
 | [`claude-code-expertise`](plugins/claude-code-expertise/README.md) | standalone | Map of Claude Code's extension surfaces: which one fits a need, what its contract is, and how to debug it. | 1 skill |
 | [`comms`](plugins/comms/README.md) | standalone | Recurring status deliverables (morning briefing, wrap-up, weekly plan, board readout) shipped as a deck, to one standard. | 1 skill |
@@ -70,9 +71,9 @@ behind.
 ## Bundles and standalones
 
 A **bundle** groups skills used together on one kind of work, so they toggle as a unit — the
-code desk's audit reads the same standard its scaffold writes from. A **standalone** is a
-single skill that stands on its own; install it when you want that one capability without
-the rest.
+code desk's audit reads the same standard its scaffold writes from. Anything shipping agents
+or hooks is a bundle too, even when it carries no skill at all. A **standalone** is a single
+skill that stands on its own; install it when you want that one capability without the rest.
 
 Cross-desk items ship standalone and never inside a bundle. `dataviz`, `deep-research`, and
 `claude-code-config` apply to any kind of work, so folding them into a desk would tie an

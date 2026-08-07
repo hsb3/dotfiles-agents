@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "21 plugins: four multi-skill bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance) \u2014 and seventeen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, editor-project-config, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
+    "description": "22 plugins: five bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance), plugin-feedback (hooks that invite defect reports on the plugins in use) \u2014 and seventeen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, editor-project-config, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
     "version": "0.5.0"
   },
   "name": "dotfiles-agents",
@@ -143,6 +143,15 @@
       "name": "owner-signoff",
       "source": "./plugins/owner-signoff",
       "version": "0.0.2"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Report a defect in a plugin you are using without leaving the session. A session-start hook tells the primary session it may file a bug or a feature request; a subagent-start hook gives dispatched workers the tier rule (file a bug directly when observed behavior contradicts the plugin's own stated contract, but draft a feature request for your dispatcher rather than filing it); and a stdlib reporter writes the issue to a fixed template (plugin and version, consuming project, date, symptom and repro, severity and the contract check, workaround, optional fix) instead of a free-handed gh invocation. Install it alongside whatever else you run from this marketplace.",
+      "name": "plugin-feedback",
+      "source": "./plugins/plugin-feedback",
+      "version": "0.1.0"
     },
     {
       "author": {

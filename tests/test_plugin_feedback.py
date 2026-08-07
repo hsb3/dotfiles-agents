@@ -1,0 +1,457 @@
+"""Tests for the plugin-feedback plugin — both reminder hooks and the reporter script.
+
+The hooks run as subprocesses (their real invocation shape: JSON on stdin, one JSON
+line on stdout), matching tests/test_worker_context.py: fixtures build into a tempdir
+per test and the child environment is built from scratch with only PATH inherited.
+
+The reporter is imported in process so its body-building logic is covered directly.
+Nothing here shells out to `gh` or touches the network — the one test that exercises
+the filing path substitutes a fake runner and asserts on the argv it was handed.
+"""
+
+import io
+import itertools
+import json
+import os
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HOOKS = os.path.join(REPO, "primitives-core", "hooks")
+SESSION_HOOK = os.path.join(HOOKS, "plugin-feedback-session", "hook.py")
+WORKER_HOOK = os.path.join(HOOKS, "plugin-feedback-worker", "hook.py")
+
+sys.path.insert(0, os.path.join(HOOKS, "plugin-feedback-session"))
+
+import report_issue as R  # noqa: E402
+
+_SEQ = itertools.count()
+
+# The published opt-out contract, asserted from the test's side on purpose: each hook
+# dir is copied and symlinked on its own, so the name is duplicated in both hooks
+# rather than imported across them.
+DISABLE_ENV = "PLUGIN_FEEDBACK_DISABLED"
+
+
+def _session_id():
+    return f"plugin-feedback-session-{next(_SEQ)}"
+
+
+class _HookTestBase:
+    """Shared subprocess driver and fail-open assertions for both hooks.
+
+    A plain mixin, not a TestCase: unittest discovery would otherwise run this
+    class's tests once on its own with no hook to point them at.
+    """
+
+    HOOK = None
+    EVENT = None
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.cwd = os.path.join(self.tmp.name, "cwd")
+        os.makedirs(self.cwd, exist_ok=True)
+
+    # -- fixtures ------------------------------------------------------
+
+    def _payload(self, **over):
+        raise NotImplementedError
+
+    def _run_hook(self, stdin_text=None, env=None, devnull=False):
+        child_env = {"PATH": os.environ.get("PATH", "")}
+        child_env.update(env or {})
+        kwargs = dict(capture_output=True, text=True, env=child_env, timeout=30)
+        if devnull:
+            kwargs["stdin"] = subprocess.DEVNULL
+        else:
+            kwargs["input"] = stdin_text
+        return subprocess.run([sys.executable, self.HOOK], **kwargs)
+
+    def _context(self, result):
+        self.assertEqual(result.returncode, 0)
+        body = json.loads(result.stdout)
+        hso = body["hookSpecificOutput"]
+        self.assertEqual(hso["hookEventName"], self.EVENT)
+        return hso["additionalContext"]
+
+    def _assert_wrote_nothing(self):
+        found = []
+        for root, _dirs, files in os.walk(self.tmp.name):
+            found.extend(os.path.join(root, f) for f in files)
+        self.assertEqual(found, [])
+
+    # -- shared fail-open contract ---------------------------------------
+
+    def test_injects_a_pointer_to_the_reporter(self):
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertIn("report_issue.py", context)
+
+    def test_malformed_stdin_fails_open_and_writes_nothing(self):
+        result = self._run_hook("not json at all")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+        self._assert_wrote_nothing()
+
+    def test_empty_stdin_fails_open(self):
+        result = self._run_hook("")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_absent_stdin_fails_open(self):
+        result = self._run_hook(devnull=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_non_object_payload_fails_open(self):
+        result = self._run_hook(json.dumps(["not", "a", "dict"]))
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_missing_plugin_root_still_injects(self):
+        """CLAUDE_PLUGIN_ROOT absent is the normal case in a bare shell — the hook
+        falls back to a path derived from its own location and never goes quiet."""
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertIn("report_issue.py", context)
+
+    def test_unwritable_plugin_root_still_injects(self):
+        blocked = os.path.join(self.tmp.name, "blocked")
+        os.makedirs(blocked, exist_ok=True)
+        os.chmod(blocked, 0o000)
+        self.addCleanup(os.chmod, blocked, stat.S_IRWXU)
+        result = self._run_hook(
+            json.dumps(self._payload()), env={"CLAUDE_PLUGIN_ROOT": blocked}
+        )
+        context = self._context(result)
+        self.assertIn("report_issue.py", context)
+
+    def test_opt_out_env_silences_the_hook(self):
+        result = self._run_hook(
+            json.dumps(self._payload()), env={DISABLE_ENV: "1"}
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_injected_text_is_a_short_pointer(self):
+        """The card's rule: the hook text points at the reporter, it does not inline
+        the template. Bounded at 700 characters so a wall of instructions goes red."""
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertLessEqual(len(context), 700)
+
+
+class SessionHookTests(_HookTestBase, unittest.TestCase):
+    HOOK = SESSION_HOOK
+    EVENT = "SessionStart"
+
+    def _payload(self, **over):
+        payload = {
+            "session_id": _session_id(),
+            "hook_event_name": "SessionStart",
+            "cwd": self.cwd,
+            "source": "startup",
+        }
+        payload.update(over)
+        return payload
+
+    def test_primary_session_may_file_either_kind(self):
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertIn("bug", context)
+        self.assertIn("feature request", context)
+        self.assertIn("contradicts the plugin's own stated contract", context)
+
+    def test_silent_on_resume_and_compact(self):
+        for source in ("resume", "compact"):
+            with self.subTest(source=source):
+                result = self._run_hook(json.dumps(self._payload(source=source)))
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout.strip(), "")
+
+    def test_fires_on_clear(self):
+        context = self._context(self._run_hook(json.dumps(self._payload(source="clear"))))
+        self.assertIn("report_issue.py", context)
+
+
+class WorkerHookTests(_HookTestBase, unittest.TestCase):
+    HOOK = WORKER_HOOK
+    EVENT = "SubagentStart"
+
+    def _payload(self, **over):
+        payload = {
+            "session_id": _session_id(),
+            "hook_event_name": "SubagentStart",
+            "agent_id": "agent-1",
+            "agent_type": "builder",
+            "cwd": self.cwd,
+        }
+        payload.update(over)
+        return payload
+
+    def test_worker_may_file_a_bug_directly(self):
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertIn("may file a bug directly", context.lower())
+        self.assertIn("contradicts the plugin's own stated contract", context)
+
+    def test_worker_must_not_file_a_feature_request(self):
+        context = self._context(self._run_hook(json.dumps(self._payload())))
+        self.assertIn("must not file a feature request", context.lower())
+        self.assertIn("--draft", context)
+        self.assertIn("dispatcher", context)
+
+    def test_fires_regardless_of_source_field(self):
+        """SubagentStart carries no `source`; the worker hook must not borrow the
+        session hook's cold-start gate and go quiet on every dispatch."""
+        context = self._context(self._run_hook(json.dumps(self._payload(source="resume"))))
+        self.assertIn("report_issue.py", context)
+
+
+class RepoResolutionTests(unittest.TestCase):
+    """The target repo is data, never a literal baked into a shipped body."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def _plugin_root(self, repository):
+        root = os.path.join(self.tmp.name, "plugin")
+        meta = os.path.join(root, ".claude-plugin")
+        os.makedirs(meta, exist_ok=True)
+        manifest = {"name": "demo", "version": "0.1.0"}
+        if repository is not None:
+            manifest["repository"] = repository
+        with open(os.path.join(meta, "plugin.json"), "w", encoding="utf-8") as fh:
+            json.dump(manifest, fh, ensure_ascii=True)
+        return root
+
+    def test_no_repo_literal_in_the_source(self):
+        with open(R.__file__, encoding="utf-8") as fh:
+            source = fh.read()
+        self.assertNotIn("github.com/", source)
+
+    def test_env_var_wins(self):
+        root = self._plugin_root("https://github.com/acme/from-manifest")
+        env = {R.REPO_ENV: "acme/from-env", "CLAUDE_PLUGIN_ROOT": root}
+        self.assertEqual(R.resolve_repo(env), "acme/from-env")
+
+    def test_manifest_url_is_the_fallback(self):
+        root = self._plugin_root("https://github.com/acme/widgets")
+        self.assertEqual(R.resolve_repo({"CLAUDE_PLUGIN_ROOT": root}), "acme/widgets")
+
+    def test_manifest_slug_and_git_forms(self):
+        for value, want in (
+            ("acme/widgets", "acme/widgets"),
+            ("https://github.com/acme/widgets.git", "acme/widgets"),
+            ("git@github.com:acme/widgets.git", "acme/widgets"),
+            ({"url": "https://github.com/acme/widgets"}, "acme/widgets"),
+        ):
+            with self.subTest(value=value):
+                root = self._plugin_root(value)
+                self.assertEqual(R.resolve_repo({"CLAUDE_PLUGIN_ROOT": root}), "acme/widgets")
+
+    def test_unresolvable_returns_none(self):
+        self.assertIsNone(R.resolve_repo({"CLAUDE_PLUGIN_ROOT": self._plugin_root(None)}))
+        self.assertIsNone(R.resolve_repo({"CLAUDE_PLUGIN_ROOT": self.tmp.name}))
+        self.assertIsNone(R.resolve_repo({}))
+
+    def test_garbage_manifest_returns_none(self):
+        root = os.path.join(self.tmp.name, "broken")
+        meta = os.path.join(root, ".claude-plugin")
+        os.makedirs(meta, exist_ok=True)
+        with open(os.path.join(meta, "plugin.json"), "w", encoding="utf-8") as fh:
+            fh.write("{not json")
+        self.assertIsNone(R.resolve_repo({"CLAUDE_PLUGIN_ROOT": root}))
+
+
+class BodyBuildingTests(unittest.TestCase):
+    """A well-formed issue body from a fixture, with no network anywhere near it."""
+
+    def _report(self, **over):
+        fields = dict(
+            kind=R.KIND_BUG,
+            plugin="atelier",
+            plugin_version="0.8.0",
+            project="acme-service",
+            date="2026-08-07",
+            severity="major",
+            summary="worker covenant never injected under strict",
+            symptom="No additionalContext arrives at subagent start.",
+            repro="Set enforce: strict in .claude/atelier.local.md, dispatch any subagent.",
+            contract="Its README states that strict injects the covenant plus the tool-layer clause.",
+            limitation="",
+            workaround="Restate the covenant by hand in every brief.",
+            fix="",
+        )
+        fields.update(over)
+        return R.Report(**fields)
+
+    def test_title_is_component_colon_outcome(self):
+        self.assertEqual(
+            R.build_title(self._report()),
+            "atelier: worker covenant never injected under strict",
+        )
+
+    def test_body_carries_every_template_field(self):
+        body = R.build_body(self._report(fix="Read the activation file before the guard."))
+        for fragment in (
+            "**Plugin:** atelier 0.8.0",
+            "**Consuming project:** acme-service",
+            "**Observed:** 2026-08-07",
+            "**Severity:** major",
+            "**Contract violated:** Its README states",
+            "## What happens",
+            "No additionalContext arrives at subagent start.",
+            "## Repro",
+            "enforce: strict",
+            "## Workaround",
+            "Restate the covenant by hand in every brief.",
+            "## Suggested fix",
+            "Read the activation file before the guard.",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, body)
+
+    def test_body_is_deterministic(self):
+        report = self._report()
+        self.assertEqual(R.build_body(report), R.build_body(report))
+
+    def test_optional_fix_degrades_to_an_explicit_none(self):
+        body = R.build_body(self._report(fix=""))
+        self.assertIn("## Suggested fix", body)
+        self.assertIn(R.NO_FIX, body)
+
+    def test_feature_body_states_the_limitation_not_a_contract(self):
+        body = R.build_body(
+            self._report(
+                kind=R.KIND_FEATURE,
+                contract="",
+                limitation="No way to brief a worker on a per-wave rule.",
+            )
+        )
+        self.assertIn("**Limitation hit:** No way to brief a worker", body)
+        self.assertNotIn("Contract violated", body)
+
+    def test_label_defaults_per_kind_and_is_overridable(self):
+        self.assertEqual(R.resolve_label(R.KIND_BUG, {}), R.DEFAULT_LABELS[R.KIND_BUG])
+        self.assertEqual(R.resolve_label(R.KIND_FEATURE, {}), R.DEFAULT_LABELS[R.KIND_FEATURE])
+        self.assertEqual(
+            R.resolve_label(R.KIND_BUG, {R.LABEL_ENV[R.KIND_BUG]: "defect"}), "defect"
+        )
+        self.assertEqual(R.resolve_label(R.KIND_BUG, {}, override="custom"), "custom")
+
+    def test_argv_is_a_complete_gh_invocation(self):
+        argv = R.build_argv("acme/widgets", "t", "b", "type:fix")
+        self.assertEqual(argv[:3], ["gh", "issue", "create"])
+        for flag, value in (
+            ("--repo", "acme/widgets"),
+            ("--title", "t"),
+            ("--body", "b"),
+            ("--label", "type:fix"),
+        ):
+            with self.subTest(flag=flag):
+                self.assertIn(flag, argv)
+                self.assertEqual(argv[argv.index(flag) + 1], value)
+
+
+class _FakeRunner:
+    """Stands in for subprocess.run; records the argv and never touches the network."""
+
+    def __init__(self, returncode=0):
+        self.calls = []
+        self.returncode = returncode
+
+    def __call__(self, argv, **kwargs):
+        self.calls.append((argv, kwargs))
+
+        class _Completed:
+            pass
+
+        done = _Completed()
+        done.returncode = self.returncode
+        done.stdout = "https://example.invalid/issues/1\n"
+        done.stderr = ""
+        return done
+
+
+class MainTests(unittest.TestCase):
+    """The CLI edges, all driven with a fake runner — `gh` is never executed."""
+
+    BUG_ARGS = [
+        "bug",
+        "--plugin", "atelier",
+        "--plugin-version", "0.8.0",
+        "--project", "acme-service",
+        "--summary", "covenant never injected",
+        "--symptom", "Nothing arrives at subagent start.",
+        "--repro", "Dispatch any subagent.",
+        "--contract", "The README promises the covenant under strict.",
+    ]
+
+    def _main(self, argv, env=None, runner=None, today="2026-08-07"):
+        out = io.StringIO()
+        runner = runner if runner is not None else _FakeRunner()
+        env = dict(env or {})
+        env.setdefault(R.REPO_ENV, "acme/widgets")
+        code = R.main(argv, env=env, runner=runner, today=today, out=out)
+        return code, out.getvalue(), runner
+
+    def test_files_through_the_runner_once(self):
+        code, _out, runner = self._main(self.BUG_ARGS)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(runner.calls), 1)
+        argv = runner.calls[0][0]
+        self.assertEqual(argv[:3], ["gh", "issue", "create"])
+        self.assertIn("acme/widgets", argv)
+        self.assertIn(R.DEFAULT_LABELS[R.KIND_BUG], argv)
+
+    def test_draft_prints_the_body_and_files_nothing(self):
+        code, out, runner = self._main(self.BUG_ARGS + ["--draft"])
+        self.assertEqual(code, 0)
+        self.assertEqual(runner.calls, [])
+        self.assertIn("atelier: covenant never injected", out)
+        self.assertIn("## What happens", out)
+
+    def test_date_defaults_to_the_injected_clock(self):
+        _code, out, _runner = self._main(self.BUG_ARGS + ["--draft"], today="2026-01-02")
+        self.assertIn("**Observed:** 2026-01-02", out)
+
+    def test_bug_without_a_contract_is_a_usage_error(self):
+        argv = [a for a in self.BUG_ARGS]
+        del argv[argv.index("--contract"):]
+        code, out, runner = self._main(argv)
+        self.assertEqual(code, 2)
+        self.assertEqual(runner.calls, [])
+        self.assertIn("--contract", out)
+
+    def test_feature_without_a_limitation_is_a_usage_error(self):
+        argv = ["feature"] + self.BUG_ARGS[1:]
+        del argv[argv.index("--contract"):]
+        code, out, runner = self._main(argv)
+        self.assertEqual(code, 2)
+        self.assertEqual(runner.calls, [])
+        self.assertIn("--limitation", out)
+
+    def test_unresolvable_repo_refuses_and_names_the_env_var(self):
+        code, out, runner = self._main(self.BUG_ARGS, env={R.REPO_ENV: ""})
+        self.assertEqual(code, 2)
+        self.assertEqual(runner.calls, [])
+        self.assertIn(R.REPO_ENV, out)
+
+    def test_draft_works_without_a_resolvable_repo(self):
+        """A worker drafting a feature request for its dispatcher must not need the
+        target repo resolved — that is the dispatcher's problem at filing time."""
+        argv = ["feature"] + self.BUG_ARGS[1:]
+        argv[argv.index("--contract")] = "--limitation"
+        code, out, _runner = self._main(argv + ["--draft"], env={R.REPO_ENV: ""})
+        self.assertEqual(code, 0)
+        self.assertIn("## What happens", out)
+
+    def test_gh_failure_is_reported_as_nonzero(self):
+        code, _out, runner = self._main(self.BUG_ARGS, runner=_FakeRunner(returncode=1))
+        self.assertEqual(code, 1)
+        self.assertEqual(len(runner.calls), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
