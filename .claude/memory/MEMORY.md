@@ -9,5 +9,6 @@
 - [harness claude auth (Option Z)](harness-bare-flag-auth.md) — no --bare (it strips Skill tool); apiKeyHelper + fresh CLAUDE_CONFIG_DIR; live runs need `secret get ANTHROPIC_API_KEY`
 - [launchd = bash 3.2](launchd-bash32-scripts.md) — LaunchAgent scripts run under /bin/bash 3.2; verify with /bin/bash + one kickstart, never interactive bash
 - [Subagent agent-memory litter](subagent-agent-memory-litter.md) — the dir comes from an agent's `memory:` frontmatter key, not its behavior; omitting the key is the only off switch, no atelier agent sets it since 2026-08-07 — sweep the specific stray path, never a whole dir
-- [Worktree agents check out published commit](worktree-agents-check-out-published-commit.md) — isolation:worktree crews in this repo may land on a published-surface commit, not dev; briefs must instruct a self-check + `git reset --hard origin/dev`
+- [Worktree agents check out published commit](worktree-agents-check-out-published-commit.md) — root-caused to `worktreeBaseRef: fresh` branching from origin/main; fix is `"head"`, and a worktree never sees uncommitted work
+- [Forcing subagent worktree isolation](atelier-worktree-isolation-hook.md) — two levers: PreToolUse `updatedInput` on the `Agent` tool, or an `isolation` agent-frontmatter key; atelier ships the hook, opt-in via `isolate:`
 - [No unguarded counts in prose](no-unguarded-counts-in-prose.md) — owner rule 2026-08-06: a count in prose or repo metadata needs a gate that checks it, else phrase it so growth can't falsify it
