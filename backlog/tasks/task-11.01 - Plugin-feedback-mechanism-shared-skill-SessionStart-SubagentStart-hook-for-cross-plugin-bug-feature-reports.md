@@ -4,7 +4,7 @@ title: 'Plugin-feedback hooks: standalone plugin for cross-plugin bug/feature re
 status: To Do
 assignee: []
 created_date: '2026-08-07 00:19'
-updated_date: '2026-08-07 00:22'
+updated_date: '2026-08-07 00:44'
 labels:
   - distribution
 dependencies: []
@@ -45,3 +45,13 @@ Caveat: the bug-vs-feature tier split above is this session's interpretation of 
 - [ ] #4 Both hooks fail open and add zero third-party dependencies, matching this repo's existing hook conventions
 - [ ] #5 TASK-11 AC#3 is satisfied by this mechanism once shipped
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-08-07 00:44
+---
+Owner ruling 2026-08-07: the bug-vs-feature tier split is CONFIRMED as designed. A dispatched worker may file a bug directly (the bar is 'observed behavior contradicts the plugin's own stated contract' — checkable without judgment); a dispatched worker must DRAFT a feature request for its dispatcher to review and file, not file it itself; the primary/foreman-level session may file either. The description's caveat that this was an unratified interpretation of the 'level 1 or 2 agent' framing is now resolved — this is doctrine, safe to harden into shipped hook text.
+---
+<!-- COMMENTS:END -->

@@ -21,10 +21,13 @@ lab.
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. |
 | `lead` | agent | Drives a coupled dependent chain, spawns its own bounded-link workers, and verifies before reporting a proof package — for chains too coupled to parallelize. |
+| `config-custody` | hook (`PreToolUse`) | Denies **subagent** edits to the config listed under `protected:` in the activation file — the ownership map made machine-readable, so a worker cannot quietly edit the gate that defines its own acceptance. The main session is never restricted; only `enforce: strict` actually denies. |
 | `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (70k) / hard (100k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
+| `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which foreman-floor item the stretch is. Observational; never blocks. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
 | `subagent-telemetry` | hook (`SubagentStop`) | Appends one row per delegation (agent id, agent type, model, context tokens) to a local ledger, so tier usage can be measured offline. Silent — no stdout, never blocks. |
+| `worker-context` | hook (`SubagentStart`) | Injects the delegation covenant into every subagent, so the rules a worker is judged by arrive with the worker instead of depending on the dispatching session restating them in each brief. Inert until a project activates it. |
 
 ## Install
 
@@ -56,11 +59,106 @@ Meanwhile, every delegation
 → subagent-telemetry quietly logs agent/model/token usage for later review.
 ```
 
+## Configuration
+
+Everything ships with working defaults and none of this is required. There are two override
+layers, and the practical difference between them is when a change takes effect.
+
+### Per-project settings — `.claude/atelier.local.md`
+
+The Claude Code convention for plugin-local settings is a `.claude/<plugin-name>.local.md` file
+in the project root: YAML frontmatter for the settings, markdown below it for your own notes.
+atelier reads `.claude/atelier.local.md`. It does not exist by default, and its absence is the
+normal state — without it the enforcement layer is entirely off.
+
+```markdown
+---
+effort: deep          # optional — force the foreman's effort level instead of inferring it
+enforce: strict       # off (default when absent) | advisory | strict
+protected:            # fnmatch patterns, project-relative; * crosses /
+  - Makefile
+  - .github/workflows/*
+  - "*.config.js"
+  - configs/*
+---
+
+# Why these paths
+
+Anything below the frontmatter is ignored by the hooks — use it to tell your future self why
+this project's gate is drawn where it is.
+```
+
+| Key | Read by | Effect |
+|---|---|---|
+| `effort` | `foreman` skill | Forces `standard` or `deep` rather than inferring the level from the session's lead model. You saying so in the session still outranks it. |
+| `enforce` | `worker-context`, `config-custody` hooks | Arms the enforcement layer. Absent, `off`, an unrecognized value, or an unparseable file all mean off. |
+| `protected` | `config-custody` hook | fnmatch globs naming the config that defines acceptance. Also accepts the inline form `protected: ["Makefile", "configs/*"]`. `*` crosses `/`, so `configs/*` covers the whole subtree — if you want direct children only, name them. |
+
+What each `enforce` level actually does:
+
+| `enforce` | `worker-context` (SubagentStart) | `config-custody` (PreToolUse) |
+|---|---|---|
+| absent / `off` | silent | silent |
+| `advisory` | injects the worker covenant into every subagent | logs would-be denials to `logs/config-custody.jsonl`; blocks nothing |
+| `strict` | injects the covenant, naming the tool-layer block | denies subagent edits to `protected:` paths |
+
+The main session is never restricted at any level: custody is scoped to subagents, so the
+foreman keeps ownership of config and git and lifting a pattern is always available. Run
+`advisory` for a few waves first and read the ledger — it records exactly what `strict` would
+have blocked, so you graduate on evidence instead of turning enforcement on blind. To stand the
+whole thing down, set `off` or delete the file.
+
+**No restart needed.** The skill and both hooks re-read this file per call, so an edit to
+`enforce:` or `protected:` applies to the very next tool call.
+
+It is a local file, so ignore it:
+
+```gitignore
+.claude/*.local.md
+```
+
+### Session-wide settings — environment variables
+
+Thresholds and file locations read from environment variables with shell-expanded defaults, so
+you override one by setting it in `.claude/settings.json` (or `settings.local.json` for a
+machine-local change):
+
+```json
+{
+  "env": {
+    "DELEGATION_WATERMARK_SOFT": "40",
+    "CONTEXT_WATERMARK_SOFT": "90000"
+  }
+}
+```
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `CONTEXT_WATERMARK_SOFT` | `70000` | Context tokens before the first nudge |
+| `CONTEXT_WATERMARK_HARD` | `100000` | Context tokens before the hard warning |
+| `DELEGATION_WATERMARK_SOFT` | `25` | Solo-run length (delegable calls, no dispatch) before the first nudge |
+| `DELEGATION_WATERMARK_REFIRE_EVERY` | `15` | Further calls before nudging again |
+| `DELEGATION_WATERMARK_STATE_DIR` | `/tmp/delegation-watermark` | Per-session anti-nag state |
+| `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Where the activation file lives |
+| `<HOOK>_LOG_PATH` | per hook, see right | `CONTEXT_WATERMARK_LOG_PATH` → `logs/context-watermark.jsonl`; `DELEGATION_WATERMARK_LOG_PATH` → `logs/delegation-watermark.jsonl`; `ATELIER_CUSTODY_LOG_PATH` → `logs/config-custody.jsonl`; `HANDOFF_GUARD_LOG_PATH` → `logs/handoff-guard.jsonl`; `HANDOFF_SURFACER_LOG_PATH` → `logs/handoff-surfacer.jsonl`; `SUBAGENT_TELEMETRY_LOG_PATH` → `logs/delegation.jsonl` (all under `$CLAUDE_PROJECT_DIR/`) |
+
+**These need a fresh session.** Unlike the activation file, `env` is read once at startup, so an
+edit does not reach the running session. The same goes for any change to `hooks.json`. Each
+hook's own `hooks/<name>/README.md` documents its remaining knobs.
+
 ## Honest scope
 
-The hooks are nudges and guards, not enforcement of correctness: `context-watermark` and
-`handoff-freshness-guard` fail open on any error rather than risk wedging a session, and
-neither blocks automatic compaction. `subagent-telemetry` only records what a subagent's own
-transcript reports — it cannot see or influence the parent session. The delegation agents
-(`scout`/`builder`/`reviewer`/`lead`) are personas for `foreman` to dispatch; they don't run
-unless something explicitly delegates to them.
+Most of the hooks are nudges and guards, not enforcement of correctness: `context-watermark`,
+`delegation-watermark`, and `handoff-freshness-guard` fail open on any error rather than risk
+wedging a session, and none blocks automatic compaction. `subagent-telemetry` only records what
+a subagent's own transcript reports — it cannot see or influence the parent session. The
+delegation agents (`scout`/`builder`/`reviewer`/`lead`) are personas for `foreman` to dispatch;
+they don't run unless something explicitly delegates to them.
+
+`config-custody` is the one hook that can genuinely block a call, and its limits are worth
+knowing. It only denies when a project opts in with `enforce: strict` (`advisory` logs would-be
+denials but blocks nothing), it never restricts the main session, and it matches paths lexically
+— a symlink pointed at a protected file is not caught. That makes it a guardrail on honest tool
+calls rather than a sandbox, which is also why its deny message names the correct move (stop and
+report) instead of pretending to be airtight. The mechanism is covered by fixtures and an
+adversarial matrix, but no real project has run under `strict` yet.

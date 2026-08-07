@@ -1,9 +1,11 @@
 ---
 id: TASK-039
 title: 'layer-cycle: proportionality rule for the evaluate step on small diffs'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-08-06 23:49'
+updated_date: '2026-08-07 00:44'
 labels:
   - primitives
 milestone: m-2

@@ -25,7 +25,7 @@
       "description": "Expert map of Claude Code's extension surfaces for authoring and debugging extenders - skills, subagents, hooks, commands, plugins, marketplaces, MCP servers, and settings/permissions. The map (which surface, which contract, what's idiomatic) complementing the official skill/plugin builders: a surface-selection decision table, each surface's frontmatter/config contract with a minimal example, subagent authoring end to end (scaffold, tool selection, model/tier choice, when-to-use description), cross-surface authoring quality plus a validation checklist, and plugin/marketplace distribution mechanics. Use to pick the right surface for a need, look up a contract, author or debug any extender, or answer how a Claude Code surface works.",
       "name": "claude-code-expertise",
       "source": "./plugins/claude-code-expertise",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "author": {
@@ -70,7 +70,7 @@
       "description": "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "author": {
@@ -88,7 +88,7 @@
       "description": "Run a long session as a foreman: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, lead). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, brief workers on the delegation covenant, and hold protected config in custody per project.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.8.0"
+      "version": "0.9.0"
     },
     {
       "author": {

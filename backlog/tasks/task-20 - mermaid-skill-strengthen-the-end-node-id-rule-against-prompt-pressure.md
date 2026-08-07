@@ -1,10 +1,11 @@
 ---
 id: TASK-20
 title: 'mermaid skill: strengthen the ''end'' node-id rule against prompt pressure'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-06 21:33'
+updated_date: '2026-08-07 00:45'
 labels:
   - primitives
 milestone: m-2

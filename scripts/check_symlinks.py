@@ -10,7 +10,15 @@ incomplete plugin. This lint makes that failure mode loud:
   1. every symlink under plugins/ resolves to an existing path INSIDE the repo;
   2. every plugin entry in the root marketplace.json points (via a relative ./ source)
      at an existing plugin dir that carries .claude-plugin/plugin.json;
-  3. every plugins/<id>/ dir is listed in the root marketplace.json (no orphan assemblies).
+  3. every plugins/<id>/ dir is listed in the root marketplace.json (no orphan assemblies);
+  4. every STANDALONE plugin symlinks README.md to its own skill's README (ADR 0017 /
+     flow.yaml's plugin-assemblies node). The standalone/bundle line is drawn mechanically:
+     a plugin whose assembly contains exactly one skill and no agents and no hooks is a
+     STANDALONE — its README.md must be a symlink to
+     primitives-core/skills/<skill-id>/README.md, so the docs travel with the source
+     instead of drifting from it. Any plugin with more than one skill, or any agent, or
+     any hook, is a BUNDLE — bundle READMEs are hand-authored regular files and this check
+     does not touch them.
 
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violations (prints every one).
 Usage: python3 scripts/check_symlinks.py   (run from anywhere)
@@ -72,11 +80,62 @@ def marketplace_problems():
     return problems
 
 
+def _named_entries(dirpath):
+    """Non-hidden entry names directly under dirpath, or [] if it doesn't exist."""
+    if not os.path.isdir(dirpath):
+        return []
+    return sorted(e for e in os.listdir(dirpath) if not e.startswith("."))
+
+
+def is_standalone(pdir):
+    """A plugin is standalone iff its assembly has exactly one skill and no agents/hooks."""
+    skills = _named_entries(os.path.join(pdir, "skills"))
+    return (
+        len(skills) == 1
+        and not _named_entries(os.path.join(pdir, "agents"))
+        and not _named_entries(os.path.join(pdir, "hooks"))
+    )
+
+
+def readme_problems():
+    """README.md convention for standalone plugins — see the module docstring for the rule."""
+    problems = []
+    if not os.path.isdir(PLUGINS_DIR):
+        return problems
+    for d in sorted(os.listdir(PLUGINS_DIR)):
+        pdir = os.path.join(PLUGINS_DIR, d)
+        if not os.path.isdir(pdir) or not is_standalone(pdir):
+            continue  # bundles may hand-author README.md as a regular file
+        skill_id = _named_entries(os.path.join(pdir, "skills"))[0]
+        readme = os.path.join(pdir, "README.md")
+        rel = os.path.relpath(readme, REPO)
+        expected_rel = f"primitives-core/skills/{skill_id}/README.md"
+        if not os.path.lexists(readme):
+            problems.append(
+                f"{rel}: missing — standalone plugin (1 skill, no agents/hooks) must "
+                f"symlink README.md to {expected_rel}"
+            )
+        elif not os.path.islink(readme):
+            problems.append(
+                f"{rel}: regular file — standalone plugins must symlink README.md to "
+                f"the skill's own README ({expected_rel}); only bundle assemblies "
+                "(>1 skill, or any agent/hook) may hand-author README.md"
+            )
+        else:
+            actual = os.path.realpath(readme)
+            expected = os.path.realpath(os.path.join(REPO, expected_rel))
+            if not os.path.exists(actual):
+                problems.append(f"{rel}: dangling symlink — expected target {expected_rel} does not exist")
+            elif actual != expected:
+                problems.append(f"{rel}: symlink target {actual!r} does not match the expected {expected_rel}")
+    return problems
+
+
 def main():
     if not os.path.isdir(PLUGINS_DIR):
         print("✗ symlink lint: plugins/ does not exist")
         return 1
-    problems = symlink_problems() + marketplace_problems()
+    problems = symlink_problems() + marketplace_problems() + readme_problems()
     if problems:
         print(f"✗ symlink lint: {len(problems)} violation(s)")
         for p in problems:
