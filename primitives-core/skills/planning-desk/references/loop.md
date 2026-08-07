@@ -1,7 +1,7 @@
 # Mode: loop — run a multi-round planning session over a batch
 
-The loop is how a batch of plans gets from "drafted" to "trustworthy". It's a foreman pattern: you
-orchestrate crews and judge their output against the rubric; you don't write every plan yourself.
+The loop is how a batch of plans gets from "drafted" to "trustworthy". It's a strategist pattern:
+you orchestrate crews and judge their output against the rubric; you don't write every plan yourself.
 The payoff is concentrated where a plan rests on a shaky premise — the biggest quality gains come
 from catching an overstated diagnosis or an infeasible recommendation that *read* as authoritative
 until someone re-checked the source.
@@ -27,7 +27,7 @@ gates) before starting.
 
 2. **Review adversarially against the rubric.** One read-only verifier per plan, told to RE-DERIVE
    the load-bearing claims from source and find what is wrong, overstated, or missing — *not* to
-   praise. Every "verified" claim is a hypothesis until re-checked. You (the foreman) personally
+   praise. Every "verified" claim is a hypothesis until re-checked. You (the strategist) personally
    re-check any finding that would change a plan's core recommendation — even a strong-tier reviewer
    gets line numbers and mechanisms wrong.
 

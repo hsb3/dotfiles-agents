@@ -10,6 +10,14 @@ to N independent locations — a rename, an API-signature change, a dependency s
 each site instead needs a *different* judgment call, this is not migrate-at-scale; see "When NOT
 to fan out" below.
 
+**Why this shape earns the collapse.** Being architecture C, it runs without a management layer,
+which the layer model treats as the exception. A frozen transform spec satisfies the collapse
+conditions unusually cleanly: the site inventory makes the work-list final, identical transforms
+make the slices independent in outcome, each worker returns a grep-zero line rather than material,
+and the reconciliation is a diff of the inventory against reported files. When the site count is
+large enough that the worker reports themselves must be cross-read, or odd sites need adjudicating
+mid-wave, put a `manager` over the fan-out and take back one package.
+
 ## 1. Discover and slice the site inventory
 
 Before writing a single brief, produce the **site inventory**: an explicit, enumerated list of
@@ -21,7 +29,7 @@ are for:
 - Group hits by natural ownership boundary — usually one file, sometimes one directory or one
   module — so each group can become a disjoint-file-scope worker slice.
 - Flag **odd sites** the scout can't classify confidently: multi-pattern files, generated code,
-  vendored copies, dynamic call sites the grep can't see through. These stay with the foreman —
+  vendored copies, dynamic call sites the grep can't see through. These stay with the strategist —
   see §3.
 
 The inventory is a deliverable, not scratch: keep it as a checked-in list or task set the
@@ -37,7 +45,7 @@ identical per site, this is where cheap models earn their keep — default every
 `builder` on its sonnet default; there is rarely a case for `model: opus` here, since "the
 transform needs judgment" is exactly the signal that a site doesn't belong in this fan-out (§4).
 
-Brief shape (fill every section — same discipline as the architecture-D lead brief):
+Brief shape (fill every section — same discipline as the architecture-D manager brief):
 
 ```
 You are a BUILDER doing a scoped, mechanical migration slice. Zero chat context — everything
@@ -61,7 +69,7 @@ you need is below.
 ## Evidence format (your handoff note)
 - Files changed, and the grep-zero output for your slice.
 - Anything that didn't fit the transform spec exactly (odd site) — report it, do not improvise
-  a variant transform. Flag it for the foreman instead of guessing.
+  a variant transform. Flag it for the strategist instead of guessing.
 - Commands you ran, with actual output.
 
 ## Stop conditions
@@ -69,7 +77,7 @@ you need is below.
 - The local test/lint command fails after your edit and a reasonable retry — stop and report.
 ```
 
-## 3. What the foreman keeps
+## 3. What the strategy layer keeps
 
 These never move to a worker, whatever the site count:
 
@@ -110,16 +118,16 @@ trusting worker self-reports:
 
 ## When NOT to fan out
 
-Migrate-at-scale is a poor fit — fall back to architecture A (direct) or D (lead-driven) — when:
+Migrate-at-scale is a poor fit. Fall back to architecture A (direct) or D (manager-driven) when:
 
 - **Few sites.** Below the point where slicing, briefing, and reconciling costs less than doing
   it directly, just do it (architecture A's floor applies here too).
 - **Coupled sites.** If site 2's transform depends on how site 1 landed (a shared type threading
   through both, an ordering constraint), this is a dependent chain, not disjoint slices — use
-  architecture D and let a `lead` drive it.
+  architecture D and let a `manager` drive it.
 - **Per-site judgment.** If applying the transform correctly requires different reasoning at
   each site (not just a different literal value, but a different *decision*), workers will
   either improvise inconsistent variants or escalate constantly, defeating the point of cheap
   mechanical dispatch. Route this to architecture D, or split into a small judgment-heavy subset
-  (kept by the foreman or given to an opus-tier `builder`) plus a genuinely mechanical remainder
+  (kept by the strategist or given to an opus-tier `builder`) plus a genuinely mechanical remainder
   fanned out separately.

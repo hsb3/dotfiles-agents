@@ -37,9 +37,11 @@ authoritative over the standard search, with fail-open exceptions:
 
 ## Design commitments
 
-- **The main session is never restricted.** Custody is role-scoped through the documented
-  `agent_id` hook payload field, present only inside subagents. The foreman owns config and git;
-  no mode changes that.
+- **The strategy layer is never restricted.** Custody is role-scoped through the documented
+  `agent_id` hook payload field, present only inside subagents. The strategist owns config and git;
+  no mode changes that. A `manager` is a subagent, so custody binds the management layer too, which
+  is the intended reading: only the layer that wrote the definition of done may edit what checks
+  it.
 - **No command matching.** Path custody is fnmatch against a list the project wrote — Step 3's
   ownership map made machine-readable. Mutating git by workers stays advisory (the injected
   covenant plus the reconciliation check in `briefs.md`), because blocking it would require
@@ -52,7 +54,7 @@ authoritative over the standard search, with fail-open exceptions:
   single pattern to hand one file's ownership to a wave. The deny message itself routes the
   worker to the doctrinally correct move — escalate, never route around.
 - **False-positive story.** A brief that legitimately grants config ownership hits the deny once;
-  the worker reports the conflict; the foreman lifts the pattern for that wave or makes the edit
+  the worker reports the conflict; the strategist lifts the pattern for that wave or makes the edit
   itself. One bounced tool call is the entire cost.
 - **Graduation path.** Run `advisory` first: the would-deny ledger shows exactly what `strict`
   would have blocked. Move to `strict` when the log shows no false positives.

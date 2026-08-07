@@ -103,9 +103,9 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
-  - id: foreman
+  - id: delegation
     type: skill
-    source: primitives-core/skills/foreman
+    source: primitives-core/skills/delegation
     origin: authored
     disposition: qualified
     targets: [claude-code]
@@ -151,9 +151,9 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
-  - id: lead
+  - id: manager
     type: agent
-    source: primitives-core/agents/lead.md
+    source: primitives-core/agents/manager.md
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]

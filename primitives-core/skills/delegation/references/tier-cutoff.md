@@ -1,4 +1,7 @@
-# Tier cutoff — measuring where the cheap tier stops being adequate
+# Tier cutoff — measuring where the cheap model tier stops being adequate
+
+**Tier here means model tier** (haiku / sonnet / opus), never the org layer. Layer says what
+an agent is for; tier says how much judgment is bought for it.
 
 The kit's economics rest on `scout`=haiku and `builder`=sonnet defaults, with opus reserved for
 judgment-heavy slices. **That cutoff has never been measured.** The lab that produced this kit
@@ -62,9 +65,9 @@ same-arm judge spread observed in that run) is `inconclusive`, not a win.
   comparison to a score from another and call the difference a finding.
 - **Report the cost ratio next to the quality delta.** "Opus scored +0.24 at 1.9× the output
   tokens" is a decision; "opus scored higher" is not.
-- **A cheap arm that fails its gate is the most useful outcome available.** It tells the foreman
-  exactly where the cutoff is without any judging at all, which is also why every brief in this
-  protocol needs a gate that has been proved red.
+- **A cheap arm that fails its gate is the most useful outcome available.** It tells the
+  strategist exactly where the cutoff is without any judging at all, which is also why every brief
+  in this protocol needs a gate that has been proved red.
 - **Expect the cutoff to be brief-shaped, not task-shaped.** A well-specified brief with a strict
   DoD moves work down a tier; the same work under a vague brief does not. If cheap arms
   consistently fail on one archetype, check whether the brief was underspecified before blaming

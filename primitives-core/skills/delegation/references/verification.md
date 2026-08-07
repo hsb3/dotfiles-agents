@@ -3,7 +3,8 @@
 ## The evidence ranking
 
 Strongest first. Accepting a lower rank when a higher one was available is the recurring way a
-foreman ships something wrong.
+strategist ships something wrong. The ranking also reads as a layer ranking: evidence gets weaker
+the closer its producer sits to the work.
 
 1. **A loud gate.** A command that fails when the work is wrong, run by the session itself. Only
    counts if the gate has been proved red at least once.
@@ -12,8 +13,8 @@ foreman ships something wrong.
    single-producer gate can.
 3. **An independently re-derived check.** A `reviewer` that re-read the source or re-ran the
    command, without the producer's rationale.
-4. **A lead's proof package.** Evidence assembled by a same-tier agent that also did the work. It
-   catches worker errors; it cannot catch its own blind spots.
+4. **A manager's proof package.** Evidence assembled by an agent on the same model tier that also
+   drove the work. It catches worker errors; it cannot catch its own blind spots.
 5. **A worker's self-report.** A hypothesis. Honest workers still report confidently about things
    they were structurally unable to see.
 

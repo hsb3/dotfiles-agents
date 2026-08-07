@@ -11,19 +11,19 @@ lab.
 
 | Primitive | Type | What it does |
 |---|---|---|
-| `foreman` | skill | Size a substantial task and run the session as a foreman: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration keyed to the model in the session's lead seat: standard by default, deep when a top-tier model leads. |
+| `delegation` | skill | Size a substantial task and route it across the three delegation layers — strategy (the session itself), management, execution: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration keyed to the model in the session's strategist seat: standard by default, deep when a top-tier model leads. |
 | `handoff` | skill | Maintain the project's session-handoff file so a brand-new session can pick up work cold — the externalization pass that makes a session clearable. |
-| `waves` | skill | Drive a repo's issue backlog to closed with near-zero owner input: refresh a pinned triage issue (the living, ranked plan), group buildable issues into branch-sized waves, launch isolated crews via `foreman`, verify and merge each PR in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. |
+| `waves` | skill | Drive a repo's issue backlog to closed with near-zero owner input: refresh a pinned triage issue (the living, ranked plan), group buildable issues into branch-sized waves, launch isolated crews via `delegation`, verify and merge each PR in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. |
 | `rubric-panel` | skill | Score one or more code artifacts against an anchored rubric with a persona-diverse judge panel (whole-field calibration, contested-spread flagging); outputs dimension scores plus findings classified as defect / noise / spec-hole / undeclared-commitment. |
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to the cheapest model tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. |
-| `lead` | agent | Drives a coupled dependent chain, spawns its own bounded-link workers, and verifies before reporting a proof package — for chains too coupled to parallelize. |
+| `manager` | agent | The management layer between strategy and execution — owns a wave or a coupled dependent chain end to end: turns the definition of done into worker briefs, spawns and sequences its own scouts, builders, and reviewers, and reports one proof package upward. The default for non-trivial work. |
 | `config-custody` | hook (`PreToolUse`) | Denies **subagent** edits to the config listed under `protected:` in the activation file — the ownership map made machine-readable, so a worker cannot quietly edit the gate that defines its own acceptance. The main session is never restricted; only `enforce: strict` actually denies. |
 | `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (70k) / hard (100k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
-| `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which foreman-floor item the stretch is. Observational; never blocks. |
+| `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
 | `subagent-telemetry` | hook (`SubagentStop`) | Appends one row per delegation (agent id, agent type, model, context tokens) to a local ledger, so tier usage can be measured offline. Silent — no stdout, never blocks. |
@@ -39,8 +39,8 @@ claude plugin install atelier@dotfiles-agents
 
 ```
 You: "build the export feature — plan it out"
-→ foreman sizes the job, picks a delegation architecture, and dispatches scoped slices to
-  builder agents at the right model tier, holding verification for itself.
+→ delegation sizes the job, picks an architecture, and routes scoped slices through the
+  management and execution layers at the right model tier, holding verification for itself.
 
 Context creeps past 70k tokens
 → context-watermark nudges: run /handoff, then /clear or /compact.
@@ -73,7 +73,7 @@ normal state — without it the enforcement layer is entirely off.
 
 ```markdown
 ---
-effort: deep          # optional — force the foreman's effort level instead of inferring it
+effort: deep          # optional — force the delegation skill's effort level instead of inferring it
 enforce: strict       # off (default when absent) | advisory | strict
 protected:            # fnmatch patterns, project-relative; * crosses /
   - Makefile
@@ -90,7 +90,7 @@ this project's gate is drawn where it is.
 
 | Key | Read by | Effect |
 |---|---|---|
-| `effort` | `foreman` skill | Forces `standard` or `deep` rather than inferring the level from the session's lead model. You saying so in the session still outranks it. |
+| `effort` | `delegation` skill | Forces `standard` or `deep` rather than inferring the level from the session's strategist model. You saying so in the session still outranks it. |
 | `enforce` | `worker-context`, `config-custody` hooks | Arms the enforcement layer. Absent, `off`, an unrecognized value, or an unparseable file all mean off. |
 | `protected` | `config-custody` hook | fnmatch globs naming the config that defines acceptance. Also accepts the inline form `protected: ["Makefile", "configs/*"]`. `*` crosses `/`, so `configs/*` covers the whole subtree — if you want direct children only, name them. |
 
@@ -103,7 +103,7 @@ What each `enforce` level actually does:
 | `strict` | injects the covenant, naming the tool-layer block | denies subagent edits to `protected:` paths |
 
 The main session is never restricted at any level: custody is scoped to subagents, so the
-foreman keeps ownership of config and git and lifting a pattern is always available. Run
+strategist keeps ownership of config and git and lifting a pattern is always available. Run
 `advisory` for a few waves first and read the ledger — it records exactly what `strict` would
 have blocked, so you graduate on evidence instead of turning enforcement on blind. To stand the
 whole thing down, set `off` or delete the file.
@@ -152,8 +152,8 @@ Most of the hooks are nudges and guards, not enforcement of correctness: `contex
 `delegation-watermark`, and `handoff-freshness-guard` fail open on any error rather than risk
 wedging a session, and none blocks automatic compaction. `subagent-telemetry` only records what
 a subagent's own transcript reports — it cannot see or influence the parent session. The
-delegation agents (`scout`/`builder`/`reviewer`/`lead`) are personas for `foreman` to dispatch;
-they don't run unless something explicitly delegates to them.
+delegation agents (`scout`/`builder`/`reviewer`/`manager`) are personas for the `delegation`
+skill to dispatch; they don't run unless something explicitly delegates to them.
 
 `config-custody` is the one hook that can genuinely block a call, and its limits are worth
 knowing. It only denies when a project opts in with `enforce: strict` (`advisory` logs would-be

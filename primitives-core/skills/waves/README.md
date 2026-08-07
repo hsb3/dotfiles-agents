@@ -17,5 +17,5 @@ triage issue in a repo that lacks one. Requires a GitHub repo with issues.
 claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — composes the foreman skill for each
+Ships in the atelier bundle (not standalone) — composes the delegation skill for each
 wave's delegation architecture and the handoff skill to close the session.

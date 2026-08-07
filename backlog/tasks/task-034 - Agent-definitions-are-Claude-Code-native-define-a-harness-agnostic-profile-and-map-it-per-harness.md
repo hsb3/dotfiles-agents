@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-06 19:30'
-updated_date: '2026-08-07 01:15'
+updated_date: '2026-08-07 01:53'
 labels:
   - distribution
   - decision
@@ -124,5 +124,19 @@ created: 2026-08-07 01:15
 Body is now stale in one detail. The card's frontmatter-key inventory states 'memory: project on reviewer only' — as of 2026-08-07 no agent in primitives-core/agents/ carries a memory: key at all. It was removed from reviewer.md under TASK-037, because the Claude Code runtime resolves memory: project to <cwd>/.claude/agent-memory/<agentType>/ and creates that directory at dispatch, which is what was writing into target repos.
 
 Relevant to this card beyond the correction: memory: is a real example of the problem this card exists to solve. It is a Claude-Code-native frontmatter key with runtime semantics (enum user|project|local, optional, no 'off' value) and no obvious counterpart in another harness. Any harness-agnostic agent profile has to decide whether such a key is part of the neutral profile or a per-harness mapping — and this one carries a filesystem side effect, so dropping it silently in translation is not neutral.
+---
+
+author: @claude
+created: 2026-08-07 01:53
+---
+Path reference is now stale: this card lists primitives-core/agents/lead.md in its blast radius. That file no longer exists — it was renamed to primitives-core/agents/manager.md on 2026-08-07 under TASK-045, which defined the strategy/management/execution layers explicitly and retired the 'foreman' term.
+
+Two things about that rename bear directly on this card rather than merely correcting a path.
+
+First, the roster's four agents are now scout, builder, reviewer, manager, and each body states which layer it is on. A harness-neutral agent profile now has a layer field to carry, not just a role name.
+
+Second, and the reason the owner chose the name: the strategy layer is now called 'strategist'. The owner's stated rationale was forward-looking and aimed squarely at this card — other harnesses let the primary agent be set as a named profile, so naming it now gets ahead of that and avoids churn when the collection expands beyond Claude Code. This card's neutral profile should adopt 'strategist' as the primary rather than inventing a name at build time.
+
+Also relevant to this card's central problem: 'memory:' is gone from every agent (TASK-037), so the frontmatter-key inventory here is stale in that respect too.
 ---
 <!-- COMMENTS:END -->
