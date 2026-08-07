@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-06 (session 8). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-07 (session 9). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, and the two higher-precedence paths are absent, so the hooks resolve it with
@@ -20,28 +20,27 @@ push) on the next two dispatches. See §1.
 
 ## 1 · Current standing
 
-- **`dev` tip `2f24203`** (`Feat/atelier`, #260), `make ci` green, 230 tests.
-- **`main` tip `410726d` = `publish: dev@2f24203`**, 20-plugin lineup, published 2026-08-06 by
-  **the `publish.yml` workflow** (confirmed working again — see below), not the fallback.
-  Parent chain intact (append-only).
-- **GitHub Actions outage (declared ~16:00 on 2026-08-06) is resolved**, confirmed same day: two
-  `workflow_dispatch` runs of `publish.yml` (one no-op, one live) both completed normally in
-  13–18s with no `cancelled`/`steps=0` signature. The local-worktree fallback in §5 stays
-  documented for the next outage but is not the active path.
-- **PRs #251 and #253 were merged with `--admin`** during the outage, gated on local `make ci`
-  only. Local `make ci` is a strict superset of CI (CI runs `make floor` and
-  `make check symlinks flow`). Actions is back, so this is historical — new PRs should get a
-  real CI run again; if one doesn't fire, re-check outage status before assuming `--admin`.
-- GH issue queue: **five open — #250, #252, #254, #255, #256** (see §3 — #252 is very likely
-  closeable, the other four are not touched by #260). **m-0 is 4/5**; its last box (every open
-  card cold-readable with verifiable acceptance criteria, assessed by someone who didn't write
-  it) is still unassessed.
-- **`feat/atelier` (#260) merged and published.** Renamed foreman-kit → **atelier** (git mv,
-  both manifests, catalog row, live prose; version 0.8.0), landed the lab-01 doctrine rewrite
-  (#252 — see §3 for what it covers), added three new hooks (delegation-watermark,
-  config-custody, worker-context — the per-project custody model, off by default via
-  `.claude/atelier.local.md`), and 26 hook behavior tests. **Operator checklist, now actionable**
-  (merge + publish both done):
+- **`dev` tip `5f3a2b2`**, `make ci` green, **375 tests** (was 230 two sessions ago).
+- **`main` tip `cb2333b` = `publish: dev@5f3a2b2`**, **22-plugin** lineup, published 2026-08-07
+  by the `publish.yml` workflow. Parent chain intact (append-only).
+- **The GH issue queue is EMPTY.** All four that were open (#250, #254, #255, #256) were fixed
+  and closed 2026-08-07; #252 had been closed earlier. **Note the trap that hid this before:**
+  `Closes #N` in a PR body does **nothing** here, because GitHub only auto-closes on the
+  *default* branch and this repo merges into `dev` while `main` is publish-only. Close issues
+  explicitly or they linger looking open after the fix ships.
+- **Branch state is clean**: only `chore/handoff`, `dev`, `dev-legacy`, `main` remain, and there
+  are no leftover worktrees. `feat/atelier` and its stale worktree are gone — see §5 for what
+  that worktree was hiding.
+- **m-0's last box is now assessed** (TASK-035): a cold read of all 31 open cards by four
+  assessors who authored none of them. AC#1/#2 are deliberately left unchecked — the audit is
+  done and every failing card is named with its defect, but those criteria require the failing
+  cards to be *rewritten*, and several rewrites are still open. See §3.
+- **Session 9 (2026-08-07) closed 13 cards and filed 4.** Closed: TASK-6, 15, 16, 17, 20, 28,
+  032, 035(partial), 036, 037, 038, 039, 040, 11.01. Filed: TASK-041 (board reporting),
+  TASK-042 (trim `surfaces.md`), TASK-043 (**blocked — needs a ruling**, see §3), TASK-044
+  (opencode hook translation).
+- **The atelier operator checklist from session 8 is still yours to run** and is unchanged by
+  session 9, except that the versions moved: install **atelier 0.9.0**, not 0.8.0.
   1. Per project that had foreman-kit installed (re-read `~/.claude/plugins/`
      `installed_plugins.json` — at branch time: dotfiles-agents, EVALS/lab-01-package-inventory,
      pb-task-tracker, plus a user-scope record): `claude plugin uninstall
@@ -51,11 +50,16 @@ push) on the next two dispatches. See §1.
   2. Flip each project's own `enabledPlugins` key to `atelier@dotfiles-agents` (this repo's is
      already done).
   3. Delete `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/` once no record references it.
-  4. Rename any `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (effort override
-     moved there; the file now also carries `enforce:`/`protected:` — see the foreman skill's
-     `references/activation.md`).
-  5. The ~50 remaining `foreman-kit` mentions (backlog, decisions, memory, evals data shapes,
-     this file's history) are deliberate history — do not rewrite them.
+  4. Rename any `.claude/foreman-kit.local.md` → `.claude/atelier.local.md`. That file now also
+     carries `handoff:` (new in session 9) alongside `effort:`/`enforce:`/`protected:` — the
+     full schema is in the foreman skill's `references/activation.md`.
+  5. Consider installing the new **`plugin-feedback`** plugin alongside atelier — it is the
+     mechanism for reporting plugin defects and only fires where it is installed.
+  6. The remaining `foreman-kit` mentions (backlog, decisions, memory, evals data shapes, this
+     file's history) are deliberate history — do not rewrite them.
+- **GitHub Actions is healthy.** The 2026-08-06 outage is long resolved; every PR this session
+  got a real CI run in 7–16s. The §5 local-worktree fallback stays documented for the next
+  outage but has been dormant since session 8. `--admin` merges are historical.
 
 Standing mechanisms a cold session should not re-derive: **ADR 0017 pointer refactor is DONE**
 (symlink assemblies, `dist/` retired, roster = provenance manifest, opencode install-time);
@@ -77,6 +81,16 @@ and a standalone — installing both loads the skill once).
   rides `make check`). Repaired en route: a mid-word-truncated description, two disagreeing
   manifests, a wrong dual-homing count, an 11-byte-stub link, internal codenames in the picker.
   Repo About box set. Published to `main`. Backlog closeout in #253.
+- 2026-08-07 (s9): **full backlog sweep** — 13 cards closed, 4 filed, GH issue queue emptied,
+  two PRs (#266, #267) plus closeouts (#268), published as `dev@5f3a2b2`. Highlights, each with
+  a captured red run: the delegation ledger now records subagents not the parent (#250, verified
+  by replaying the live 262-row ledger to 29 rows, exactly the sidecar count on disk); a
+  **version-bump gate** now fails CI when published bytes change under an unchanged version
+  (TASK-032); `scout` rewritten (turn cap removed, brief-granted read-only shell); `reviewer`'s
+  stray-write bug root-caused to a **frontmatter key**, not behavior (#254); a `handoff:`
+  per-project override (TASK-15); and the new **`plugin-feedback`** plugin (TASK-11.01).
+  Adversarial review before merging that plugin caught a consumer-facing defect and two tests
+  that could not fail — see §5.
 - 2026-08-06 (s8): **Actions outage resolved**; confirmed via a live `publish.yml` dispatch,
   then again publishing #260. **`feat/atelier` (#260) merged and published** — foreman-kit
   renamed to atelier 0.8.0, lab-01 doctrine rewrite (#252), delegation-watermark +
@@ -119,69 +133,56 @@ later extract.
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`) — ranked
 work, drafts, and decisions live there, not duplicated here.
 
-- **Issue #250 — atelier (was foreman-kit) delegation telemetry — still open, #260 did not fix
-  it.** Checked directly: `#260` only renamed `foreman-kit` → `atelier` inside
-  `subagent-telemetry/hook.py` and its README — the D1/D2 defects are untouched (`agent_type`
-  empty in most ledger rows; `model`/`ctx_tokens` record the *parent* session's, not the
-  subagent's; row count runs ~10× the delegation count). The new `references/tier-cutoff.md`
-  (shipped in #260) even says outright its own protocol needs "the delegation ledger once it
-  records the subagent's own model and usage rather than the parent's" — i.e. the kit's newest
-  doc names #250 as its own blocker. **#252's Appendix B has the concrete fix already scoped**:
-  read the sibling `subagents/agent-<agent_id>.meta.json` Claude Code writes next to every
-  transcript (has `agentType`, dispatch-override `model`, `spawnDepth`) instead of the parent
-  session's fields, and drop ledger rows with no matching `subagents/` entry (fixes the ~10×
-  inflation in the same move). D3 (concurrent installs) is now forced through the atelier
-  operator checklist above; D4 (`/reload-plugins` misreporting `0 skills`) is still unverified.
-- **Issue #252 — lab-01 findings into doctrine — very likely closeable.** Diffed #260 against
-  every one of #252's eight findings: F1 (TDD-by-default) landed in `builder.md`; F2 (proved-red
-  gate, config read-only) landed in `builder.md` + the new `config-custody` hook; F3 (bounded
-  constraints) in the brief template; F4 (output differential) in `SKILL.md` evidence ranking;
-  F5 (calibrated panel / cross-slice review) in `reviewer.md`; F6 (contract-amendment floor item)
-  in `SKILL.md`; F7 (work-list-sizing doctrine **and** the delegation-watermark hook) both
-  shipped; F8 (tier-cutoff protocol) shipped as `references/tier-cutoff.md`, which explicitly
-  downgrades the kit's tier-default claim to `[untested]` — meeting F8's own alternate
-  done-when. Nothing found unaddressed. Close pending owner sign-off (comments/closes on
-  pre-existing issues aren't auto-authorized).
-- **Issues #254, #255, #256 — field observations from `pb-task-tracker`, none touched by #260.**
-  #254: a `reviewer` dispatch wrote `.claude/agent-memory/foreman-kit-reviewer/` into the target
-  repo despite a report-only, no-scratch-files brief — grepped `worker-context`/`config-custody`
-  and the agent bodies for "agent-memory", zero hits. #255: `scout`'s hard Bash-less guarantee
-  collides with CLI-mediated repos (e.g. this repo's own Backlog.md CRITICAL_INSTRUCTION) — no
-  diff to `scout.md` at all in #260. #256: `layer-cycle` mandates a full rubric-panel every
-  cycle with no sizing rule, which overcosts small diffs — only `layer-cycle/README.md`'s
-  foreman-kit→atelier rename touched that skill.
-- **New from s8: TASK-11.01, scoped and ready to build — plugin-feedback hooks.** Owner's framing:
-  worker/session agents keep hitting minor plugin defects (see #250/#254/#255/#256) with no
-  consistent way to report them; wants a standalone plugin, not a skill, so a `SessionStart` +
-  `SubagentStart` hook pair injects the reporting instructions directly (inline text, same shape
-  as `worker-context`'s covenant — no separate skill to go read) plus a companion script that
-  wraps `gh issue create` with a fixed template. **Placement is decided, not open**: it must ship
-  as its **own** plugin, never dual-homed into existing ones — verified against
-  code.claude.com/docs/en/hooks ("Hook handler fields"): hook dedup is scoped to settings-file
-  layers only ("if you define the same handler in more than one settings file, it runs once");
-  a plugin's or skill's copy stays separate. Dual-homing would fire the reminder once *per*
-  dotfiles-agents plugin a consumer has installed, not once. Full design, the exact doc quote,
-  and the bug-vs-feature gating logic are in TASK-11.01 (subtask of TASK-11). One thing still
-  unconfirmed: TASK-11.01 notes its bug-vs-feature tier split is this session's own read of the
-  owner's "level 1 or 2 agent" framing, not ratified doctrine — worth a quick confirm before the
-  hook text ships. Owner intent for this session: capture the design, then refresh context before
-  starting the build — so a cold session should read TASK-11.01 in full before writing any code.
-- **New from s7:** **TASK-032** (High — no gate ties published bytes to a version bump; edit one
-  dual-homed skill body and every plugin shipping it changes while CI stays green),
-  **TASK-033** (Low, sequenced behind Claude Code per owner direction — the opencode installer's
-  cleanup trap deletes its own exclusions record; users get 25 of 34 skills and no hooks,
-  silently), **TASK-034** (agent definitions are Claude-Code-native; needs a harness-agnostic
-  profile — **first deliverable is the decision, not code**).
-- **m-0's last box** — a cold-read assessment of every open card, judged by someone who didn't
-  write it.
-- **task-15** (handoff-location override) half resolved: META-06 amended, residual scope is
-  **draft-005**. Two owner-requested scoping drafts landed 2026-08-06: **draft-004** (extender
-  information architecture) and **draft-005** (per-project settings overrides). Promoting
-  draft-004 into its decision is the natural next scoping move.
-- Buildable, no ruling needed: task-25, task-13, task-14, task-27, task-28, task-29.
-- Cross-repo residue for the owner: ra-platform's planning-desk adoption is still
-  **uncommitted** in `~/Developer/ra-platform`; the four desk folders in dotfiles-agents-desk
-  likewise. Committing in a consumer repo is the human's call.
+**Blocked on the owner, and nothing else is:**
+
+- **TASK-043 — needs a ruling before any build.** The owner asked for "a plugin that
+  distributes all skills that can stand on their own", alongside ruling that lab-setup ships
+  standalone. Those read two ways and cost very differently. *Additive*: the existing one-skill
+  plugins stay and this is an aggregate convenience install — cheap, reversible, but every
+  standalone skill becomes dual-homed. *Replacing*: the aggregate becomes the shape and the
+  per-skill plugins retire — a breaking marketplace change across most entries, dangling every
+  install record, with no alias mechanism in this marketplace's shape. Both readings are written
+  out on the card. **Do not start TASK-043 or the lab-setup move until this is settled.**
+  Second open question on the same card: "can stand on their own" needs a mechanical definition.
+  `check_symlinks` now encodes a standalone rule, but that describes an *assembly*, not a skill's
+  self-sufficiency — a skill referencing a sibling by path is not standalone-capable however it
+  is packaged.
+
+**Rulings taken 2026-08-07 and recorded on their cards — implement without re-asking:**
+TASK-032 (gate rides the existing drift-guards CI job — **done**), TASK-15 (`.claude/atelier.local.md`
+key — **done**), TASK-037/038 (**done**), TASK-29 (standalone home — build blocked on TASK-043),
+TASK-034 (take the decision now, build later), TASK-033 (split; TASK-044 carries the open
+question), TASK-12 (its own skill, not folded into `claude-code-config`), TASK-6 (**extraction
+plan withdrawn, card closed** — `evals/` and `harness/` stay; the owner will raise it if that
+changes).
+
+**Buildable now, no ruling needed:** TASK-042 (trim `surfaces.md` — the de-duplication behind
+the three shipped defects s9 fixed), TASK-041 (board reporting), TASK-033's mechanical half (the
+opencode installer's cleanup trap deletes its own exclusions record, so users silently get a
+subset), TASK-25 (**now has seven acceptance criteria** drafted for owner review — it had none),
+TASK-12, TASK-18, TASK-19, TASK-27, TASK-13 (**sequenced behind TASK-036**, now unblocked — but
+the pre-fix ledger history is unusable, so let post-fix delegations accumulate first).
+
+**Needs a live billed run:** TASK-21.3, TASK-21.5. **Needs the PocketBase server:** TASK-21.1,
+TASK-21.2, TASK-21.4. Only 21.1/21.2/21.4 are independently startable; 21.3 gates on 21.2 and
+21.5 gates on both.
+
+**TASK-035 residue:** the cold-read audit is complete but its first two criteria stay unchecked
+because several failing cards still need rewriting — TASK-12's undefined "defensible", TASK-21.4's
+undefined "works", TASK-11's sentence-satisfiable "or explicit disposition", TASK-21.1's
+unprovable "never overwritten". The recurring authoring defect worth watching: **criteria phrased
+as "Either X… or Y…"**, which defers the decision *into* the criterion and makes it unverifiable
+until someone rules. TASK-037 and TASK-038 both had it.
+
+**One thing shipped but never observed live:** nobody has confirmed `SubagentStart` fires in a
+real session with `plugin-feedback` installed. If the event were not honored the worker tier
+would be silently inert and every test would still pass, since they assert only on the hook's
+stdout. `worker-context` already ships on that event via atelier, which is corroboration, not
+proof. One live dispatch closes it.
+
+**Cross-repo residue for the owner:** ra-platform's planning-desk adoption is still
+**uncommitted** in `~/Developer/ra-platform`; the four desk folders in dotfiles-agents-desk
+likewise. Committing in a consumer repo is the human's call.
 
 ## 4 · CROSS-REPO — desk-platform design effort (lives on the desk, NOT here)
 
@@ -223,6 +224,29 @@ Unchanged since 2026-08-04.
   when editing those files programmatically.
 - **`make ci`'s `✗ opencode laydown — refusing…` line is a passing test's own output.** Judge by
   exit code, never by ✗ glyphs.
+- **`Closes #N` in a PR body does nothing here.** GitHub auto-closes only on the *default*
+  branch, and PRs merge into `dev` while `main` is publish-only. Close issues explicitly, or a
+  shipped fix leaves its issue sitting open. This is why four issues looked open for a day
+  after being fixed.
+- **`make ci` is no longer the whole gate.** `scripts/check_version_bump.py` runs **only in CI**,
+  as a step inside the existing drift-guards job, because it needs network to reach `origin/main`
+  and `make ci` is offline by design. Run it by hand before assuming a green `make ci` means a
+  green PR. Offline it skips clean rather than blocking.
+- **An agent's `memory:` frontmatter key makes the runtime create a directory**, before the agent
+  does anything. `memory: project` resolves to `<cwd>/.claude/agent-memory/<agentType>/`. The
+  enum is `user | project | local` with no `off` value, so **omitting the key is the only way to
+  disable it** — no prose in an agent body can prevent the `mkdir`. No atelier agent sets it as
+  of 2026-08-07, so a fresh `agent-memory/` dir now means some other agent definition carries it.
+- **`scout` is no longer Bash-less** (2026-08-07). It cannot write files — `Edit`/`Write` are
+  still absent, so that half is structural — but shell authority is now prompt-enforced: a brief
+  must name the exact read-only commands it grants. Granting one is a real decision. Its
+  `maxTurns` cap is also gone, so scout briefs may now budget honestly.
+- **Adversarially review a new plugin before merging it.** On `plugin-feedback` this paid for
+  itself: it found that reports about third-party plugins would be filed into *this* repo
+  silently, and mutation-tested two tests that could not fail — one of which passed while the
+  stray file it checked for sat on disk. A builder's self-report is a hypothesis.
+- **`ls` is aliased to `eza`** in this shell; `ls <dir>` fails on the `--icons` flag. Use
+  `/bin/ls` in scripted checks.
 - **`logs/delegation.jsonl` is trustworthy from 2026-08-07 onward, but its history is not.**
   The parent-session defect (#250) is fixed: rows now source `agent_type`/`model` from the
   subagent's own `subagents/agent-<id>.meta.json` sidecar and `ctx_tokens` from its transcript,
@@ -253,7 +277,15 @@ Unchanged since 2026-08-04.
   edits with a real `audit.py` run. Known residue: IGNORE-01 still probes `_meta/operations/`.
 - **`isolation: worktree` Agent calls here have repeatedly checked out from a *published* commit
   instead of `dev`** — every worktree-crew brief needs the self-check (`primitives-core/` missing
-  → `git reset --hard origin/dev`). Prefer disjoint file ownership over worktrees.
+  → `git reset --hard origin/dev`). Prefer disjoint file ownership over worktrees; session 9 ran
+  ~15 concurrent workers on one tree with no worktrees at all and no collisions, purely by
+  assigning each an owned file list and forbidding `make`/git.
+- **A stale worktree can hide finished work indefinitely.** `.claude/worktrees/atelier` sat for a
+  day holding ~100 uncommitted lines documenting atelier's configuration surface, while the
+  shipped README described 4 of its 7 hooks. Nothing surfaces this: `git status` in the main tree
+  is clean, and the branch reads as merged. **Run `git worktree list` at session start**, and
+  check each one's `git -C <path> status` before assuming a branch is disposable. The content was
+  recovered and shipped in s9; both the worktree and `feat/atelier` are now gone.
 - Worker agents drop `.claude/agent-memory/` into whatever dir they worked in — sweep the
   specific stray path, never whole-dir `git rm` the root `.claude/` (it holds HANDOFF.md and the
   tracked memory store).
