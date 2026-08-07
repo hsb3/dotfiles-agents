@@ -13,6 +13,7 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - Makefile
   - .github/workflows/*
   - "*.config.js"
+isolate: writers      # optional: off (default when absent) | writers | a list of agent types
 handoff: docs/HANDOFF.md   # optional: override the project's handoff file location
 ---
 ```
@@ -22,6 +23,26 @@ handoff: docs/HANDOFF.md   # optional: override the project's handoff file locat
 | absent / `off` | silent | silent |
 | `advisory` | injects the worker covenant into every subagent | logs would-deny rows to `logs/config-custody.jsonl`; never blocks |
 | `strict` | injects, naming the tool-layer block | denies subagent edits to `protected:` paths, with an escalation-shaped reason |
+
+`isolate` is read by `worktree-isolation` (PreToolUse on the `Agent` tool) and is independent of
+`enforce` — a project can isolate writers without arming custody, or the reverse. It rewrites a
+dispatch to carry `isolation: "worktree"` so a writing worker gets its own checkout instead of
+sharing the strategist's working tree and index.
+
+| `isolate:` | Effect |
+|---|---|
+| absent, `off`, any other scalar, or an unparseable file | inert |
+| `writers` | isolates `builder`, `manager`, `general-purpose` |
+| a list, block or inline (`[builder, my-writer]`) | isolates exactly those agent types |
+| an empty list, or a bare `isolate:` with no items | inert — an empty set is an empty intent, not a request for the built-ins |
+
+**`scout`, `reviewer`, `Explore`, `Plan`, and `fork` are never isolated, even when listed.** A
+worktree is a clean checkout of a ref, so uncommitted and untracked files in the parent do not
+exist inside it; isolating a reviewer would point it at a tree that lacks the very diff it was
+sent to re-derive. The same caveat binds writers: a builder that must see uncommitted work needs
+the work committed first, or that dispatch left un-isolated. The hook also stands down when the
+dispatch already sets `isolation` or `cwd`, and outside a git repository (where forcing isolation
+is a hard error rather than a no-op).
 
 `handoff` names the project's handoff file, read by `session-handoff-surfacer` (SessionStart),
 `handoff-freshness-guard` (PreCompact), and the `handoff` skill — all three otherwise search
