@@ -1,1 +1,0 @@
-../../primitives-core/skills/claude-code-config/README.md

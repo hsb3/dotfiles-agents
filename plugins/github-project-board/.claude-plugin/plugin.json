@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into many views. Covers scriptable field/option/dependency setup via gh and GraphQL, the UI-only views/workflows boundary, and the weekly triage cadence.",
-  "name": "github-project-board",
-  "version": "0.0.2"
-}

@@ -1,1 +1,0 @@
-../../primitives-core/skills/pptx-themes/README.md

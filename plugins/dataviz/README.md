@@ -1,1 +1,0 @@
-../../primitives-core/skills/dataviz/README.md

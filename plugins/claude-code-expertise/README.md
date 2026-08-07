@@ -1,1 +1,0 @@
-../../primitives-core/skills/claude-code-expertise/README.md

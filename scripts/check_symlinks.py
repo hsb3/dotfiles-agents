@@ -20,6 +20,17 @@ incomplete plugin. This lint makes that failure mode loud:
      any hook, is a BUNDLE — bundle READMEs are hand-authored regular files and this check
      does not touch them.
 
+     NOTE — check 4 currently has NO SUBJECTS, deliberately. Every one-skill plugin was
+     retired into the `solo-skills` aggregate (TASK-043), and no remaining assembly
+     satisfies is_standalone(). The rule is kept as a FORWARD GUARD: if a standalone is
+     ever added again, its README must still symlink to the skill's own README rather
+     than fork from it. It is retained rather than retired because the convention it
+     encodes outlives the current lineup, and re-deriving it later costs more than the
+     ~45 lines it occupies. Note that this cannot be discovered from a red gate — the
+     rule is exercised entirely by synthetic fixtures in tests/test_check_symlinks.py,
+     which build their own plugin dirs in tempdirs, so it stays green with zero real
+     subjects either way.
+
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violations (prints every one).
 Usage: python3 scripts/check_symlinks.py   (run from anywhere)
 """

@@ -25,8 +25,9 @@ harness-coupling: ## No-repo-coupling gate for harness/ (stdlib-only; extraction
 flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclicity, doc DAG)
 	@python3 scripts/check_flow.py
 
-symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1
+symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1; solo-skills membership
 	@python3 scripts/check_symlinks.py
+	@python3 scripts/check_solo_skills.py
 
 backlog-labels: ## Backlog label vocabulary: closed two-axis set, exactly one area + at most one signal per card
 	@python3 scripts/check_backlog_labels.py

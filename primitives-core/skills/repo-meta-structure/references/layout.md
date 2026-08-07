@@ -21,7 +21,7 @@ Desk content is clone-survivable by default; deliberately-local scratch belongs 
 | `research/` | Live investigations; findings graduate to `docs/` or issues |
 | `HANDOFF.md` | Cold-start bridge — tracked, secret-free |
 | `README.md` | States this taxonomy |
-| `mise-en-place.yml` | Per-repo variance manifest — tracked (format owned by the mise-en-place scaffold skill: `skills/mise-en-place-scaffold/references/manifest.md`) |
+| `mise-en-place.yml` | Per-repo variance manifest — tracked (format owned by the `mise-en-place-scaffold` skill, in its manifest reference) |
 
 ## `.claude/`
 
