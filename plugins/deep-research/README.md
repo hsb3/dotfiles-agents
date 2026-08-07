@@ -1,1 +1,0 @@
-../../primitives-core/skills/deep-research/README.md

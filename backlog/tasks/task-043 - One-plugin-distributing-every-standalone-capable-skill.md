@@ -1,11 +1,11 @@
 ---
 id: TASK-043
 title: One plugin distributing every standalone-capable skill
-status: To Do
+status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-08-07 01:10'
-updated_date: '2026-08-07 02:07'
+updated_date: '2026-08-07 03:25'
 labels:
   - assembly
 milestone: m-1
@@ -104,5 +104,26 @@ Set back to To Do 2026-08-07: the ANALYSIS is complete (see the two inventory no
 A session picking this up should not redo the inventory. What remains is the build itself, and the two hazards decide its shape: marketplace.json's metadata.description enumerates all seventeen standalone plugins by name and the catalog guard verifies those names, so it goes red until rewritten; and the check_symlinks standalone branch loses every subject, so it must be retired or explicitly justified.
 
 One thing learned during the inventory that changes how the membership gate must work: eligibility cannot be read from metadata. None of the three ineligible skills was caught by the roster's requires: field — two express the dependency as a hardcoded relative path inside a bundled Python script (mise-en-place-scaffold/scripts/scaffold.py:66-71 and repo-compliance-audit). A gate enforcing membership has to read bodies and scripts.
+---
+
+author: @claude
+created: 2026-08-07 03:25
+---
+Owner ruling 2026-08-07 (session 10), recorded before any file changes per AC#1.
+
+CORRECTION MADE AND ACCEPTED FIRST. The owner's framing was 'get rid of any single skill plugin and package a new plug-in that allows each skill to be individually installed', with an explicit invitation to correct it. It was corrected: a plugin is the unit of installation, so no single plugin can offer per-skill installs, and a marketplace does not change that because a marketplace's granularity is also the plugin. The seventeen one-skill plugins ARE the per-skill install mechanism; retiring them is precisely what removes it. The mitigating fact that made the trade acceptable: skills are progressively disclosed, so installing all 27 costs 27 one-line descriptions in context, not 27 skill bodies.
+
+RULED, with that understood: ONE aggregate plugin, the seventeen one-skill plugins retire, per-skill installation is knowingly given up.
+
+- Plugin id: solo-skills. Permanent in effect — install records key on it and there is no alias mechanism.
+- Bundles stay exactly as they are. Owner's reason, verbatim: 'they are packs of things that work together.' So diagrams, obsidian-toolkit, atelier, code-desk, and plugin-feedback are untouched, and the 11 eligible skills living inside them are dual-homed into solo-skills rather than moved.
+- solo-skills carries all 27 eligible skills, not just the 16 backed by a retiring standalone.
+- check_symlinks' standalone branch: KEEP, with a stated reason in the module docstring (a forward guard for a shape no plugin currently has).
+
+Resulting lineup: 6 marketplace entries (solo-skills + the five bundles), down from 22.
+
+FINDING that changes one detail of the plan — mise-en-place-scaffold is the seventeenth standalone and is NOT eligible, so it has nowhere to go in solo-skills. It survives inside code-desk, which carries its two required siblings. Retiring its standalone entry is therefore not a loss: that plugin is ALREADY BROKEN in the published marketplace. Proven by running its own script against its own plugin root — 'scaffold error: checklist file missing: .../plugins/mise-en-place-scaffold/skills/repo-meta-structure/references/checklist.md — broken plugin install; refusing to scaffold against a partial checklist'. It fails loudly and can never have worked as a standalone install. This restructure removes the broken entry as a side effect.
+
+CORRECTION to the card's Hazard B as previously written: check_symlinks' standalone branch is exercised entirely by synthetic fixtures in tests/test_check_symlinks.py, which build their own alpha/beta plugin dirs in tempdirs. It therefore stays green with zero real subjects, and the test suite will not force the retire-or-keep decision either way. That is why the decision had to be made deliberately rather than discovered by a red gate.
 ---
 <!-- COMMENTS:END -->

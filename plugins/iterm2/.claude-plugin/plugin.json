@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Configure iTerm2 and exploit the features that distinguish it from other terminal emulators. Covers the preferences model (iTerm2 rewrites its plist from memory on quit, so scripted `defaults write` calls made while it runs are silently clobbered \u2014 plus the two guard idioms that silently invert: `pgrep -x iTerm2` never matches the full executable path, and `ps | grep -q` returns 141 under pipefail), dynamic profiles and their duplicate-GUID and cannot-self-default edges, tracking the whole configuration in a dotfiles repo via a custom prefs folder, shell integration and its utilities, the five-UTI macOS default-terminal binding and why duti exits 0 on bindings LaunchServices discarded, and a power-feature catalog for triggers, captured output, status bar, hotkey window, badges, and tmux -CC integration.",
-  "name": "iterm2",
-  "version": "0.0.2"
-}

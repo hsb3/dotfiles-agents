@@ -1,1 +1,0 @@
-../../primitives-core/skills/iterm2/README.md

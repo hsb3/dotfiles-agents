@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Configure the Claude Code harness end to end: the settings-file layer (route each change to the correct file by precedence \u2014 managed policy vs user vs project vs machine-local), narrowest-scope allow/deny/ask permission rules, automated behaviors implemented as ratified directory-based hooks (config plus script file, never inline shell), env vars, and MCP server registration, then verify every edit for JSON validity and take-effect. Changing an existing setting is one facet of the broader configuration surface this skill covers.",
-  "name": "claude-code-config",
-  "version": "0.0.1"
-}

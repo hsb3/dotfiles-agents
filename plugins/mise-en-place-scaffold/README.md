@@ -1,1 +1,0 @@
-../../primitives-core/skills/mise-en-place-scaffold/README.md

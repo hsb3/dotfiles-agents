@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "Design a repo's tracked .vscode and .zed folders in one pass: file-type associations for files the editors cannot identify, tasks wired to the repo's real lint and build commands, extension recommendations matching its toolchain, debug configs only where they work, and a parity check between the two editor folders.",
-  "name": "editor-project-config",
-  "version": "0.0.1"
-}

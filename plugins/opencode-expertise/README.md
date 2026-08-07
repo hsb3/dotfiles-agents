@@ -1,1 +1,0 @@
-../../primitives-core/skills/opencode-expertise/README.md

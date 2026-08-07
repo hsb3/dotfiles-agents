@@ -1,1 +1,0 @@
-../../primitives-core/skills/github-project-board/README.md

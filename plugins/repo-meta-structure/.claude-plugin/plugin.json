@@ -1,8 +1,0 @@
-{
-  "author": {
-    "name": "Henry S. Burden III"
-  },
-  "description": "The canonical repo meta-structure standard — consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
-  "name": "repo-meta-structure",
-  "version": "0.0.2"
-}

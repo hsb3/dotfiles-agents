@@ -1,1 +1,0 @@
-../../primitives-core/skills/editor-project-config/README.md

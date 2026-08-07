@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "22 plugins: five bundles \u2014 code-desk (next-release execution plus planning, comms, board triage, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance), plugin-feedback (hooks that invite defect reports on the plugins in use) \u2014 and seventeen standalone one-skill plugins: claude-code-config, claude-code-expertise, comms, dataviz, deep-research, editor-project-config, github-project-board, iterm2, mise-en-place-scaffold, opencode-expertise, owner-signoff, pptx-themes, private-fork, project-memory, readme-value-and-proof, repo-meta-structure, and tech-eval-research.",
-    "version": "0.5.0"
+    "description": "6 plugins, all six bundles: solo-skills (every skill that stands on its own - harness and environment config, session discipline, research, diagrams, repo setup, planning, comms, and Obsidian plugin development - in one install), code-desk (next-release execution plus planning, comms, board triage, repo scaffolding, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance), and plugin-feedback (hooks that invite defect reports on the plugins in use). The one-skill plugins were retired into solo-skills: a plugin is the unit of installation, so per-skill installs are no longer offered.",
+    "version": "0.6.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -13,55 +13,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Configure the Claude Code harness end to end: the settings-file layer (route each change to the correct file by precedence \u2014 managed policy vs user vs project vs machine-local), narrowest-scope allow/deny/ask permission rules, automated behaviors implemented as ratified directory-based hooks (config plus script file, never inline shell), env vars, and MCP server registration, then verify every edit for JSON validity and take-effect. Changing an existing setting is one facet of the broader configuration surface this skill covers.",
-      "name": "claude-code-config",
-      "source": "./plugins/claude-code-config",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Expert map of Claude Code's extension surfaces for authoring and debugging extenders - skills, subagents, hooks, commands, plugins, marketplaces, MCP servers, and settings/permissions. The map (which surface, which contract, what's idiomatic) complementing the official skill/plugin builders: a surface-selection decision table, each surface's frontmatter/config contract with a minimal example, subagent authoring end to end (scaffold, tool selection, model/tier choice, when-to-use description), cross-surface authoring quality plus a validation checklist, and plugin/marketplace distribution mechanics. Use to pick the right surface for a need, look up a contract, author or debug any extender, or answer how a Claude Code surface works.",
-      "name": "claude-code-expertise",
-      "source": "./plugins/claude-code-expertise",
-      "version": "0.0.2"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
       "description": "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.4.2"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a \"briefing\", \"status deck\", \"status readout\", \"board deck\", or \"comms package\". Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.",
-      "name": "comms",
-      "source": "./plugins/comms",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Design data visualizations - charts, plots, dashboards - that are correct, legible, and honest, consulted before any chart code in any library or medium: data-shape to mark-type heuristic, anti-patterns to refuse (pie overuse, dual axes, truncated bars, rainbow scales, 3D), a brand-neutral colorblind-safe palette with light/dark themes and brand-swap, composition, interaction plus static degradation, and a final validation checklist. Data charts only - structural diagrams belong to diagrams/mermaid, deck theming to pptx-themes.",
-      "name": "dataviz",
-      "source": "./plugins/dataviz",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Run a deep, multi-source, fact-checked research investigation that ends in a cited report: scope the question, decompose into ~5 angles, fan out searches (parallel subagents or serial), dedupe/fetch sources, extract falsifiable claims, adversarially refute each load-bearing claim (majority-refute kills it), and synthesize a confidence-ranked, per-claim-cited report that keeps negative findings.",
-      "name": "deep-research",
-      "source": "./plugins/deep-research",
-      "version": "0.0.1"
+      "version": "0.4.3"
     },
     {
       "author": {
@@ -76,46 +31,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Design a repo's tracked .vscode and .zed folders in one pass: file-type associations for files the editors cannot identify, tasks wired to the repo's real lint and build commands, extension recommendations matching its toolchain, debug configs only where they work, and a parity check between the two editor folders.",
-      "name": "editor-project-config",
-      "source": "./plugins/editor-project-config",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
       "description": "Run delegated work across three layers \u2014 strategy, management, execution: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, manager). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, brief workers on the delegation covenant, and hold protected config in custody per project.",
       "name": "atelier",
       "source": "./plugins/atelier",
       "version": "0.10.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Stand up and operate a single GitHub Project (v2) board that serves timeline, prioritization, and day-to-day task management from one item set sliced into many views. Covers scriptable field/option/dependency setup via gh and GraphQL, the UI-only views/workflows boundary, and the weekly triage cadence.",
-      "name": "github-project-board",
-      "source": "./plugins/github-project-board",
-      "version": "0.0.2"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Configure iTerm2 and exploit the features that distinguish it from other terminal emulators. Covers the preferences model (iTerm2 rewrites its plist from memory on quit, so scripted `defaults write` calls made while it runs are silently clobbered \u2014 plus the two guard idioms that silently invert: `pgrep -x iTerm2` never matches the full executable path, and `ps | grep -q` returns 141 under pipefail), dynamic profiles and their duplicate-GUID and cannot-self-default edges, tracking the whole configuration in a dotfiles repo via a custom prefs folder, shell integration and its utilities, the five-UTI macOS default-terminal binding and why duti exits 0 on bindings LaunchServices discarded, and a power-feature catalog for triggers, captured output, status bar, hotkey window, badges, and tmux -CC integration.",
-      "name": "iterm2",
-      "source": "./plugins/iterm2",
-      "version": "0.0.2"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Fill-only repo scaffold against the packaged standards \u2014 use whenever the ask is \"scaffold this repo\", \"run mise-en-place\", \"fill the audit gaps\", \"set up a new repo to the standard\", or any request to create the missing meta-structure the compliance audit flags. Runs the bundled script from the repo root: `--plan` (default) prints planned creations, conflicts, and non-mechanical items per checklist ID and writes nothing; `--apply` creates only the planned items; `--init-manifest` writes the commented `_meta/mise-en-place.yml` variance template. Additive-only: it NEVER overwrites, merges, edits, deletes, or moves an existing file.",
-      "name": "mise-en-place-scaffold",
-      "source": "./plugins/mise-en-place-scaffold",
-      "version": "0.0.2"
     },
     {
       "author": {
@@ -130,24 +49,6 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Expert knowledge of opencode \u2014 every extension surface (config, agents, skills, commands, custom tools, plugins, MCP, rules), the TypeScript constraint, and the claude-code \u2192 opencode translation mapping. Use when configuring opencode, authoring or migrating extenders for it, designing an opencode distribution target for a Claude Code skill collection, or answering how any opencode surface works.",
-      "name": "opencode-expertise",
-      "source": "./plugins/opencode-expertise",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Present a batch of decisions, approvals, or questions to the project owner as a local HTML form in their browser instead of asking in chat; answers flow back to a JSON file the session picks up automatically.",
-      "name": "owner-signoff",
-      "source": "./plugins/owner-signoff",
-      "version": "0.0.2"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
       "description": "Report a defect in a plugin you are using without leaving the session. A session-start hook tells the primary session it may file a bug or a feature request; a subagent-start hook gives dispatched workers the tier rule (file a bug directly when observed behavior contradicts the plugin's own stated contract, but draft a feature request for your dispatcher rather than filing it); and a stdlib reporter writes the issue to a fixed template (plugin and version, consuming project, date, symptom and repro, severity and the contract check, workaround, optional fix) instead of a free-handed gh invocation. Install it alongside whatever else you run from this marketplace.",
       "name": "plugin-feedback",
       "source": "./plugins/plugin-feedback",
@@ -157,55 +58,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Create, edit, and review PowerPoint presentations with a curated theme layer \u2014 semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow \u2014 composed over Anthropic's pptx skill, vendored verbatim in base/ with its license retained.",
-      "name": "pptx-themes",
-      "source": "./plugins/pptx-themes",
-      "version": "0.0.3"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Stand up and operate a private fork (private mirror) of an upstream OSS repo: mirror + remotes setup, governance tiers, delete-vs-disable rubric, divergence ledger/registry, and the recurring upstream review/merge cycle.",
-      "name": "private-fork",
-      "source": "./plugins/private-fork",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Turn a README into a user-centric pitch backed by real visual proof. Use when asked to write/refresh a README with a value proposition, capture app screenshots for docs, add \"visual proof\" of a UI/feature, or explain \"what someone gets\" from a project. Captures live screenshots from the running app (not mockups), writes an honest motivation + value prop + roadmap, and embeds the shots.",
-      "name": "readme-value-and-proof",
-      "source": "./plugins/readme-value-and-proof",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "The canonical repo meta-structure standard \u2014 consult it whenever a question is about \"what is the standard for X\" in a repo's layout: the `_meta/` directory taxonomy, the `.claude/` layout, the `.github/` template set, required root files, and gitignore conventions. Use when setting up or reviewing a repo's structure, answering layout questions, or checking what belongs where. This skill is reference content only.",
-      "name": "repo-meta-structure",
-      "source": "./plugins/repo-meta-structure",
-      "version": "0.0.2"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "The memory taxonomy v1 as consultable reference content \u2014 global vs project layers, always-on index vs situational topics, memory vs rules vs skills, the secret-only birth rule, and the curation-time promotion mechanism \u2014 paired with the operational mechanics: project_memory.py opts a git repo into tracked, in-repo auto-memory by wiring the repo's own .claude/memory/ as autoMemoryDirectory (init/status/path/list; never overwrites), and migrate_memory.py recovers a project's memory (and optional transcripts) after its folder moves, dry-run by default. Pure Python 3 stdlib.",
-      "name": "project-memory",
-      "source": "./plugins/project-memory",
-      "version": "0.0.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Rigorous, cited, comparative technology evaluation producing a ranked shortlist, a capability comparison matrix, and a primary-source-backed recommendation; use to compare, evaluate, choose, or shortlist technologies, for license/paywall audits, self-hostability and OSS-maturity checks, and build-vs-buy research.",
-      "name": "tech-eval-research",
-      "source": "./plugins/tech-eval-research",
-      "version": "0.0.1"
+      "description": "Every skill in this collection that stands on its own - one install instead of a shelf of one-skill plugins. Membership is derived, not curated: a skill belongs here when it needs no agent, no hook, and no sibling skill to do its job, and a gate re-derives that from the skill bodies and their bundled scripts on every run. Covers harness and environment configuration (Claude Code, opencode, project memory, iTerm2), session discipline (handoff, focus checks, review cycles), research and decision support, diagrams and data visualization, repo and project setup, planning and recurring comms, and Obsidian plugin development. The skills that need a companion agent or hook stay in the bundles that carry them.",
+      "name": "solo-skills",
+      "source": "./plugins/solo-skills",
+      "version": "0.1.0"
     }
   ]
 }
