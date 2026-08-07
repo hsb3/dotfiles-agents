@@ -189,12 +189,11 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   start** and check each one's status before assuming a branch is disposable.
 - Worker agents may drop `.claude/agent-memory/` into their working dir — sweep the specific stray
   path, **never** whole-dir `git rm` the root `.claude/` (it holds this file and the tracked memory).
-- **Awaiting the owner's call:** three files under `.claude/agent-memory/foreman-kit-reviewer/`
-  (untracked, gitignored). They are agent litter by classification but carry two real verification
-  lessons — that `git status --porcelain` cannot prove nothing was written, because gitignored
-  artifacts hide from it; and that an env-var probe needs a positive assertion the variable
-  reached the child. Promote them into `.claude/memory/` or delete them; deleting is irreversible,
-  which is why session 9 left them.
+- **Stranded agent-memory is TASK-048**, a one-time migration rather than a standing hazard: the
+  `memory:` frontmatter key that created those directories is gone from every agent, so the pile is
+  finite. Two of the three files carry real verification lessons and are candidates for promotion
+  into `.claude/memory/`; the card says to judge each on the store's bar rather than promoting both
+  by default.
 - **Never mutate a second repo's git history** — read/draft in a consumer repo, leave it uncommitted.
 - **No unguarded counts in prose or metadata** (owner rule) — a count needs a gate that reads it, or
   phrase it so growth cannot falsify it.
