@@ -17,12 +17,14 @@ from the one it was copied from, which is the failure this family was introduced
 ## Naming: never reuse a skill name from the same plugin
 
 Skills and commands share one dispatch namespace, and a command **silently replaces** a
-same-named skill — no error, no warning, `claude plugin validate --strict` passes, and
-`claude plugin details` lists the name twice without comment. The skill becomes
-unreachable by both `/<plugin>:<name>` and the Skill tool, and its description stops
-reaching the model, so its activation trigger dies too. Collision is exact string equality
-on the full `<plugin>:<name>`, so any other name is clean. `activate` is deliberately not
-`activation`.
+same-named skill — no error, no warning, and `claude plugin validate --strict` reports no
+collision. The skill becomes unreachable by both `/<plugin>:<name>` and the Skill tool: ask
+for the skill by name and the command's body comes back instead.
+
+That is worse than the skill simply being dropped. The skill still loads and its description
+still advertises it, so the model is invited by the skill and lands on the command. Collision
+is exact string equality on the full `<plugin>:<name>`, so any other name is clean.
+`activate` is deliberately not `activation`.
 
 ## Testing one locally
 

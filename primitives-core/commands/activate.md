@@ -21,21 +21,20 @@ Target project: `$1` if one was given, otherwise the current project root.
 
 ## How to report
 
-Do not paste the raw `check` output. Translate it. `check` sorts every key into three states,
-and only the third one needs the reader's attention:
+Do not paste the raw `check` output. Translate it. `check` labels every key with a state and
+prints a one-line summary; group the keys under the states **it** reports, using its labels,
+and do not add, rename, or merge states of your own. Per key, a few words on what it is doing
+or why it is not.
 
-- **armed** — the key is set and the hook that reads it agrees. Name the key and, in a few
-  words, what it is now doing.
-- **not configured** — absent, which is off by design. Say so once, as a list of names. No
-  alarm; this is the normal state for a key nobody set.
-- **present but silently inert** — set to something no hook recognises. This is the failure
-  the skill exists to expose: nothing errors, nothing warns, and it reads as configured while
-  being off. For each one, say plainly which setting it is, what was written, what the hook
-  accepts instead, and that it is currently having no effect at all.
+Give the reader's attention to any key `check` calls **inert** — set to something no hook
+recognises. That is the failure this exists to expose: nothing errors, nothing warns, and it
+reads as configured while being off. For each one say plainly which setting it is, what was
+written, what the hook accepts instead, that it is having no effect, and any other key whose
+effect depends on it. `check` exits nonzero when it finds one, so treat a nonzero exit as a
+finding to report rather than a command that failed. Say what would need to change, then stop
+— do not edit the activation file to fix it unless you are asked to.
 
-`check` exits nonzero when it finds an inert key, so treat a nonzero exit as a finding to
-report rather than a command that failed. Say what would need to change, then stop — do not
-edit the activation file to fix an inert key unless you are asked to.
-
-Close with one line stating whether atelier is enforcing anything in this project right now.
-If it was already armed and nothing changed, say that in one line and stop.
+Close by stating which parts of atelier are enforcing in this project right now and which are
+not. Do not reduce that to a single yes or no: armed and inert keys routinely coexist, and a
+blanket "atelier is not enforcing anything" is false whenever any key is armed. If the file
+was already present and nothing changed, say so in one line and stop.
