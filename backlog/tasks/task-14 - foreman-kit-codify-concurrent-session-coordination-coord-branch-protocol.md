@@ -4,7 +4,7 @@ title: 'atelier: codify concurrent-session coordination (coord branch protocol)'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-07 00:47'
+updated_date: '2026-08-10 02:24'
 labels:
   - primitives
 milestone: m-2
@@ -19,12 +19,14 @@ ordinal: 400
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Migrated from GH #219. Field-proven 2026-07-27 (two /waves sessions, one checkout): coord/<date> branch of empty commits carrying WHO / ACTIVE SUBAGENTS / CLAIMS+MERGE QUEUE / SURFACES / REPLY. Codify as a session-coord skill and/or SessionStart hook that surfaces the latest coord message. Open design points (branch naming, pruning, waves Phase-0 check) in the GH record.
+Field-proven 2026-07-27 across two /waves sessions: a coord/<date> branch of empty commits carrying WHO / ACTIVE SUBAGENTS / CLAIMS+MERGE QUEUE / SURFACES / REPLY. Codify this as a skill and/or SessionStart hook in `plugins/atelier/` and `primitives-core/` (originally scoped to "foreman-kit", renamed "atelier" in PR #260). Open design points — branch naming, pruning, waves Phase-0 check — are in the linked issue.
+
+Fresh motivating case (2026-08-07): a session began work at dev tip 03cfd0e and dispatched agents; minutes later a concurrent session merged a PR that moved the tip to 0a432f6 underneath it, with no warning to either side. The first session only noticed because `git worktree list` printed a HEAD that disagreed with a `rev-parse` taken moments earlier. This argues for the SessionStart-hook half of the design over skill-only: a skill has to be invoked to help; a hook can announce another active session at cold start, before work is planned.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Protocol shipped as skill and/or hook in foreman-kit
+- [ ] #1 Protocol shipped as a skill and/or hook in `plugins/atelier/`
 - [ ] #2 Waves Phase 0 checks for a live coord branch
 <!-- AC:END -->
 

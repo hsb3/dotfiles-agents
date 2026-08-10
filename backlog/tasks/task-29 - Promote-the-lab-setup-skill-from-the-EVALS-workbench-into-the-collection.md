@@ -1,10 +1,10 @@
 ---
 id: TASK-29
-title: Promote the lab-setup skill from the EVALS workbench into the collection
+title: Promote lab-setup from the EVALS workbench into the collection
 status: To Do
 assignee: []
 created_date: '2026-08-06'
-updated_date: '2026-08-07 01:10'
+updated_date: '2026-08-10 02:25'
 labels:
   - assembly
 milestone: m-2
@@ -17,46 +17,19 @@ ordinal: 2900
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-The inventory lab (`~/Developer/EVALS/lab-01-package-inventory`) produced four
-generalized artifacts. Three landed here: `rubric-panel`, `deletion-pass`, and
-`layer-cycle` are primitives-core sources shipped through foreman-kit (PR #235,
-kit 0.7.0; currently published in 0.7.1). The fourth never did.
+The inventory lab (`~/Developer/EVALS/lab-01-package-inventory`) produced four generalized artifacts. Three shipped through atelier already: `rubric-panel`, `deletion-pass`, `layer-cycle`. The fourth, `lab-setup`, never did — it's the cross-lab methodology for standing up and running an EVALS lab (subject choice, RULES.md and rubric authoring, toolchain freezing, builder briefs, judging, closeout), and exists only as a skill at `~/Developer/EVALS/.claude/skills/lab-setup/`: no primitives-core source, no roster entry, no translation.yaml disposition.
 
-That fourth is `lab-setup` — the cross-lab methodology, promoted out of the lab
-on 2026-08-05 and packaged as a skill at `~/Developer/EVALS/.claude/skills/lab-setup/`
-(the lab's LAB-GUIDE.md became its SKILL.md; the lab's RUNBOOK.md became a
-reference). It has zero presence in this repo: no `primitives-core/skills/` source,
-no roster entry in `primitives-core.yaml`, no `translation.yaml` disposition, no
-card until this one.
+Owner ruling 2026-08-07: bundle home is standalone — not atelier, not code-desk.
 
-What it covers: standing up and running an EVALS lab — a controlled experiment
-where agents build a program (the instrument) to produce process knowledge (the
-product). Subject choice, contract/RULES.md authoring, rubric authoring, toolchain
-rig freezing, builder briefs, judging, and lab closeout.
-
-Why now: the skill is explicitly framework-not-instance and self-describes as a
-living skill that every lab updates. Left in a single workbench repo, the next lab
-either hand-copies it or diverges from it, and the review trio it pairs with is
-already distributed — the recipe ships without the kitchen. decision-5 deferred
-extracting EVALS to its own repo (dev is the workbench); that defers the *repo*,
-not this skill's distribution.
-
-Open sub-questions for whoever takes it:
-- **Bundle home** — foreman-kit alongside the review trio it composes with, a
-  standalone one-skill plugin, or code-desk. Ruled against the bundle-composition
-  principle from task-9.
-- **Target lane** — it drives judge panels through Claude Code dispatch the same
-  way `rubric-panel` and `layer-cycle` do, both of which are excluded from the
-  opencode lane in `translation.yaml`. Expect the same disposition unless an
-  adaptation pass is in scope.
+BLOCKED until the owner settles one more thing: that ruling also spawned TASK-043 (an aggregate plugin for standalone skills), and whether lab-setup gets its own plugin or joins that aggregate is an open, competing reading — see comment #1 on this card. Don't start the move until that's resolved.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 `primitives-core/skills/lab-setup/SKILL.md` exists with its references, and `rg -n 'lab-setup' primitives-core.yaml` returns a roster entry carrying origin, disposition, and targets
-- [ ] #2 Bundle home is decided and wired — the skill resolves through at least one plugin's `skills/` symlink, and `make ci` is green
-- [ ] #3 Lane disposition recorded — if claude-code-only, `translation.yaml` carries a `lab-setup` exclusion with a stated reason (the `rubric-panel` / `layer-cycle` precedent); otherwise the opencode lane generates it
-- [ ] #4 No duplicate source — the EVALS copy at `~/Developer/EVALS/.claude/skills/lab-setup/` is removed in favour of the distributed one, or a note in this card records why the workbench keeps its own
+- [ ] #1 `primitives-core/skills/lab-setup/SKILL.md` exists with its references, and `primitives-core.yaml` has a roster entry carrying origin, disposition, and targets (verify via `rg -n 'lab-setup' primitives-core.yaml`)
+- [ ] #2 Bundle home (standalone, per the 2026-08-07 owner ruling) is wired — the skill resolves through a plugin's `skills/` symlink — and `make ci` is green
+- [ ] #3 Lane disposition recorded — if claude-code-only, `translation.yaml` carries a `lab-setup` exclusion with a stated reason (the `rubric-panel`/`layer-cycle` precedent); otherwise the opencode lane generates it
+- [ ] #4 No duplicate source — the EVALS copy at `~/Developer/EVALS/.claude/skills/lab-setup/` is removed in favor of the distributed one, or a note on this card records why the workbench keeps its own
 - [ ] #5 No subject-specific instrument rides along — `rg -i 'package-inventory|inventory\.csv|lab-01' primitives-core/skills/lab-setup` returns zero matches
 <!-- AC:END -->
 

@@ -4,6 +4,7 @@ title: board-triage names a board-analyst agent that does not exist
 status: To Do
 assignee: []
 created_date: '2026-08-07 01:52'
+updated_date: '2026-08-10 02:25'
 labels:
   - primitives
 milestone: m-1
@@ -16,23 +17,19 @@ ordinal: 26000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Found 2026-08-07 during the standalone-eligibility inventory, verified independently twice.
+primitives-core/skills/board-triage/SKILL.md:68-69 documents a hand-off variant for harnesses that can't list board items: the local side runs board-export, a "board-analyst" agent produces the changeset, the local side runs board-apply. That agent doesn't exist — the roster has four agents (scout, builder, reviewer, manager) and board-analyst appears nowhere in primitives-core.yaml or any plugin assembly.
 
-primitives-core/skills/board-triage/SKILL.md:68-69 documents a hand-off variant for harnesses where listing board items overflows the context: 'the local side runs board-export, the **board-analyst** agent (this plugin) produces the changeset from the snapshot + repo plans, and the local side runs board-apply.'
+The parenthetical "(this plugin)" claims the agent ships with the skill. A consumer hitting exactly the situation this section is written for — a harness that can't list the board — follows the instruction and finds nothing to dispatch.
 
-There is no board-analyst agent. The roster carries exactly four agents — scout, builder, reviewer, and manager (renamed from lead 2026-08-07) — and a grep across primitives-core.yaml and every plugin assembly returns nothing for board-analyst.
+Fix either by building the agent, or by rewriting the section to describe the hand-off without inventing a name (most likely: any capable agent given the snapshot).
 
-The parenthetical is what makes this a defect rather than a loose reference: '(this plugin)' asserts the agent ships alongside the skill. A consumer hitting the exact situation the section is written for — a harness that cannot list the board — follows the instruction and finds nothing to dispatch. The failure lands on the user precisely when the normal path has already failed them.
-
-Two possible fixes, and the choice is a real one rather than a formality. Either the agent was intended and never built, in which case the hand-off variant has never worked and the section describes a feature that does not exist; or the wording is stale from an earlier design, in which case the section should describe the hand-off in terms of whatever actually performs it (any capable agent given the snapshot, most likely) and drop the invented name.
-
-Adjacent finding from the same pass, worth fixing here or separately: board-triage also references a sibling skill BY PATH at SKILL.md:31 — S="${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts". That breaks if the sibling is not installed, and it is one of the two reasons board-triage is not standalone-eligible.
+Adjacent finding, same pass: board-triage also references a sibling skill by path at SKILL.md:31 (`S="${CLAUDE_PLUGIN_ROOT}/skills/github-project-board/scripts"`), which breaks if the sibling isn't installed — one of two reasons board-triage isn't standalone-eligible. Fix here or split out.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Determine whether board-analyst was ever built; the answer is recorded either way
+- [ ] #1 Determine whether board-analyst was ever built; record the answer either way
 - [ ] #2 The hand-off variant either names an agent that exists, or describes the hand-off without naming a nonexistent one
-- [ ] #3 No shipped skill body names an agent absent from the roster — checked by grep across all skills, not just this one
-- [ ] #4 Consider a gate: a shipped body naming an agent id that is not in the roster should fail, since this class of defect is invisible until a user hits it
+- [ ] #3 No shipped skill body names an agent absent from the roster — checked by grep across all skills, not just board-triage
+- [ ] #4 Consider a gate that fails when a shipped body names an agent id not in the roster, since this defect class is invisible until a user hits it
 <!-- AC:END -->
