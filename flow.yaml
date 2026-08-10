@@ -26,7 +26,7 @@ nodes:
     class: authored
     status: current
     paths: [primitives-core]
-    note: "Single source copy of every primitive: skills, agents, hooks. Every item's README travels with it (per-item template in primitives-core/README.md). The empty top-level hooks/ placeholder was removed 2026-08-06."
+    note: "Single source copy of every primitive: skills, agents, commands, hooks. Every item's README travels with it (per-item template in primitives-core/README.md). The empty top-level hooks/ placeholder was removed 2026-08-06."
   - id: roster
     layer: roster
     class: authored

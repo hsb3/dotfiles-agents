@@ -19,10 +19,11 @@ table rather than as a passing one. Six checks:
      backticked id and link-path id disagree is a violation.
   2. Catalog cell content — per row, `Kind` is exactly `bundle` or `standalone` AND
      agrees with the assembly on disk (a plugin whose `plugins/<id>/` holds more than one
-     skill, or any agent or hook, is a bundle; a one-skill assembly is standalone); the
-     blurb is a non-empty single sentence of at most 140 characters; the `Contents` cell
-     is a `<n> skills · <n> agents · <n> hooks` list whose counts equal what
-     `plugins/<id>/{skills,agents,hooks}/` actually holds.
+     skill, or any agent, hook, or command, is a bundle; a one-skill assembly is
+     standalone); the blurb is a non-empty single sentence of at most 140 characters; the
+     `Contents` cell is a `<n> skills · <n> agents · <n> hooks · <n> commands` list whose
+     counts equal what `plugins/<id>/{skills,agents,hooks,commands}/` actually holds (a
+     unit with a zero count is omitted from the cell, not written as `0`).
   3. Published-surface links — every inline Markdown link, reference-style link
      definition (`[label]: dest`), and HTML `href=`/`src=` attribute in README.md is an
      absolute `http(s)://` URL, a pure `#anchor`, or a relative path that (a) exists on
@@ -86,8 +87,8 @@ PUBLISHED_BLURB = (
 )
 
 KINDS = ("bundle", "standalone")
-CONTENTS_UNITS = ("skill", "agent", "hook")
-CONTENTS_TOKEN = re.compile(r"^(\d+)\s+(skill|agent|hook)s?$")
+CONTENTS_UNITS = ("skill", "agent", "hook", "command")
+CONTENTS_TOKEN = re.compile(r"^(\d+)\s+(skill|agent|hook|command)s?$")
 CONTENTS_SEP = "·"
 MAX_BLURB_CHARS = 140
 MIN_DESCRIPTION_CHARS = 40
@@ -227,7 +228,10 @@ def _count_children(path, want_dirs, suffix=None):
 
 
 def _assembly_counts(pid):
-    """Return (skills, agents, hooks) for plugins/<pid>/, or None if the dir is absent."""
+    """Return (skills, agents, hooks, commands) for plugins/<pid>/, or None if absent.
+
+    Order matches CONTENTS_UNITS; commands are flat `.md` files like agents.
+    """
     base = os.path.join(PLUGINS_DIR, pid)
     if not os.path.isdir(base):
         return None
@@ -235,13 +239,14 @@ def _assembly_counts(pid):
         _count_children(os.path.join(base, "skills"), want_dirs=True),
         _count_children(os.path.join(base, "agents"), want_dirs=False, suffix=".md"),
         _count_children(os.path.join(base, "hooks"), want_dirs=True),
+        _count_children(os.path.join(base, "commands"), want_dirs=False, suffix=".md"),
     )
 
 
 def _expected_kind(counts):
-    """A multi-skill assembly, or one carrying agents or hooks, is a bundle."""
-    skills, agents, hooks = counts
-    return "bundle" if (skills > 1 or agents or hooks) else "standalone"
+    """A multi-skill assembly, or one carrying agents, hooks, or commands, is a bundle."""
+    skills, agents, hooks, commands = counts
+    return "bundle" if (skills > 1 or agents or hooks or commands) else "standalone"
 
 
 def _contents_label(counts_by_unit):
@@ -251,7 +256,7 @@ def _contents_label(counts_by_unit):
         n = counts_by_unit.get(unit, 0)
         if n:
             parts.append(f"{n} {unit}{'' if n == 1 else 's'}")
-    return f" {CONTENTS_SEP} ".join(parts) if parts else "no skills, agents, or hooks"
+    return f" {CONTENTS_SEP} ".join(parts) if parts else "no skills, agents, hooks, or commands"
 
 
 def _parse_contents(cell):
@@ -286,11 +291,11 @@ def _row_cell_problems(pid, cells):
     elif counts is not None:
         expected = _expected_kind(counts)
         if kind != expected:
-            skills, agents, hooks = counts
+            skills, agents, hooks, commands = counts
             problems.append(
                 f"README.md catalog row for `{pid}`: Kind cell {kind!r} disagrees with the "
                 f"assembly — plugins/{pid}/ holds {skills} skill(s), {agents} agent(s), "
-                f"{hooks} hook(s), which is a {expected}"
+                f"{hooks} hook(s), {commands} command(s), which is a {expected}"
             )
 
     if not blurb:
@@ -321,7 +326,8 @@ def _row_cell_problems(pid, cells):
         if stated is None:
             problems.append(
                 f"README.md catalog row for `{pid}`: Contents cell {contents!r} is not a "
-                f"`<n> skills {CONTENTS_SEP} <n> agents {CONTENTS_SEP} <n> hooks` list"
+                f"`<n> skills {CONTENTS_SEP} <n> agents {CONTENTS_SEP} <n> hooks "
+                f"{CONTENTS_SEP} <n> commands` list"
             )
         else:
             actual = {u: n for u, n in zip(CONTENTS_UNITS, counts) if n}

@@ -27,6 +27,10 @@ matrix:
     target: opencode
     treatment: unsupported
     reason: "opencode's only event surface is TS-on-Bun plugins; script+config hooks need per-hook wrapper codegen — deferred"
+  - type: command
+    target: opencode
+    treatment: unsupported
+    reason: "opencode has commands too (.opencode/commands/*.md, with description/agent/model frontmatter and $ARGUMENTS templating), so the frontmatter remap is mechanical; what does not carry is the body — unlike skills, which opencode auto-discovers from .claude/skills/, there is no .claude/commands auto-compat, and a command here is a thin driver that hands a skill to an agent, so porting one is a per-command authoring pass in opencode's skill-tool terms rather than a remap"
   - type: mcp
     target: opencode
     treatment: render

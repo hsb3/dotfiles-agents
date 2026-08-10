@@ -101,7 +101,7 @@ class CatalogGuard(unittest.TestCase):
         with open(C.MARKETPLACE, "w", encoding="utf-8") as fh:
             json.dump({"metadata": {"description": metadata_description}, "plugins": entries}, fh)
 
-    def _write_plugin(self, pid, description, version="0.0.1", skills=1, agents=0, hooks=0):
+    def _write_plugin(self, pid, description, version="0.0.1", skills=1, agents=0, hooks=0, commands=0):
         """Write plugins/<pid>/ — manifest, README, and (additively) its assembly members."""
         pdir = os.path.join(self.fix, "plugins", pid, ".claude-plugin")
         os.makedirs(pdir, exist_ok=True)
@@ -132,6 +132,10 @@ class CatalogGuard(unittest.TestCase):
         if hooks:
             with open(os.path.join(base, "hooks", "hooks.json"), "w", encoding="utf-8") as fh:
                 json.dump({"hooks": {}}, fh)
+        for i in range(commands):
+            os.makedirs(os.path.join(base, "commands"), exist_ok=True)
+            with open(os.path.join(base, "commands", f"{pid}-command-{i}.md"), "w", encoding="utf-8") as fh:
+                fh.write("---\ndescription: x\n---\ndo the thing\n")
 
     def _write_readme(self, text):
         with open(C.README_PATH, "w", encoding="utf-8") as fh:
@@ -287,6 +291,23 @@ class CatalogGuard(unittest.TestCase):
         self._row_with(BETA_ROW, contents="lots of stuff")
         problems = C.catalog_problems()
         self.assertTrue(any("`beta`" in p and "is not a" in p for p in problems), problems)
+
+    def test_command_counts_and_kind_and_contents_cell(self):
+        """decision-010: commands join skills/agents/hooks in the assembly counters, tip an
+        assembly into a bundle, and render/parse singular vs plural in the Contents cell."""
+        self._write_plugin("omega", "Omega is a fixture plugin used only for command counting.",
+                            skills=1, commands=1)
+        counts = C._assembly_counts("omega")
+        self.assertEqual(counts, (1, 0, 0, 1))
+        self.assertEqual(C._expected_kind(counts), "bundle")
+
+        singular = C._contents_label({"skill": 1, "command": 1})
+        self.assertEqual(singular, "1 skill · 1 command")
+        self.assertEqual(C._parse_contents(singular), {"skill": 1, "command": 1})
+
+        plural = C._contents_label({"command": 2})
+        self.assertEqual(plural, "2 commands")
+        self.assertEqual(C._parse_contents(plural), {"command": 2})
 
     # -- check 3: published-surface links ------------------------------------
 

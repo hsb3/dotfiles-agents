@@ -4,8 +4,9 @@
 Verifies that primitives-core.yaml (the roster, slimmed to a provenance manifest per
 ADR 0017) and primitives-core/ on disk agree:
   - every roster entry's `source` exists on disk
-  - every primitive on disk (skill dir, agent .md, hook handler .sh, mcp .json) has a roster entry
-  - basic schema: required fields present, type ∈ {skill,agent,mcp,hook},
+  - every primitive on disk (skill dir, agent .md, command .md, hook handler .sh, mcp .json)
+    has a roster entry
+  - basic schema: required fields present, type ∈ {skill,agent,command,mcp,hook},
     origin ∈ {authored,sourced,vendored}, disposition ∈ {qualified,grandfathered-pending-use,demoted,untriaged,orphaned}
   - `requires` (optional) is a list of {hooks,local-mcp,hosted-mcp} capability words plus
     dependency declarations `cli:<kebab>` (a binary/app that must be installed) and
@@ -27,7 +28,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PC = os.path.join(REPO, "primitives-core")
 
-TYPES = {"skill", "agent", "mcp", "hook"}
+TYPES = {"skill", "agent", "command", "mcp", "hook"}
 # The runtime enum (ADR 0017): claude-code installs the symlink assemblies natively;
 # opencode is generated at install time by gen_opencode.py (task-4).
 TARGETS = {"claude-code", "opencode"}
@@ -101,6 +102,13 @@ def disk_primitives():
             # not a primitive — same exemption check_identity.py applies.
             if f.endswith(".md") and f.lower() != "readme.md":
                 found.add(("agent", f"primitives-core/agents/{f}"))
+    cm = os.path.join(PC, "commands")
+    if os.path.isdir(cm):
+        for f in os.listdir(cm):
+            # commands are flat .md files like agents, so they share the family-README
+            # convention and the same readme.md exemption (decision-010)
+            if f.endswith(".md") and f.lower() != "readme.md":
+                found.add(("command", f"primitives-core/commands/{f}"))
     # Ratified hook-dir layout: each hooks/<name>/ carrying a hook.py is one hook primitive
     # (source = the dir, like a skill). Must stay consistent with scripts/check_hook_layout.py,
     # which bans the old hooks-handlers/*.sh layout; a test guards the two against drifting.
@@ -190,12 +198,12 @@ def main():
     for t, src in sorted(on_disk - rostered):
         problems.append(f"on disk but NOT in roster: ({t}) {src}")
 
-    # roster -> disk for the three file-backed types (orphans in roster)
+    # roster -> disk for the file-backed types (orphans in roster)
     for t, src in sorted(
         {
             (e.get("type"), e.get("source"))
             for e in entries
-            if e.get("type") in {"skill", "agent", "hook", "mcp"}
+            if e.get("type") in {"skill", "agent", "command", "hook", "mcp"}
         }
         - on_disk
     ):

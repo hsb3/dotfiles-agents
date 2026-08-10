@@ -6,9 +6,10 @@ skill only through data surfaces (the roster's `requires:`, a repo's own config)
 into a primitive body. This is the vendored, in-repo successor to the archived workbench
 `scripts/promote_check.py` H2/H5 checks — no cross-repo import at runtime.
 
-Scope = the shipped primitive bodies under `primitives-core/{skills,agents,hooks}/`, plus the
-symlink-assembly tree `plugins/` (ADR 0017): bundle READMEs are regular files there, and each
-standalone wrapper's README travels with its skill (`primitives-core/skills/<id>/README.md`,
+Scope = the shipped primitive bodies under `primitives-core/{skills,agents,commands,hooks}/`,
+plus the symlink-assembly tree `plugins/` (ADR 0017): bundle READMEs are regular files there,
+and each standalone wrapper's README travels with its skill
+(`primitives-core/skills/<id>/README.md`,
 symlinked to the plugin root) — all of it ships to a user the same as a skill body and is in
 scope for the same reason. Within `plugins/`, `.claude-plugin/` metadata is skipped (the
 marketplace/plugin `owner`/`author` metadata is the *sanctioned* data surface for authorship —
@@ -44,6 +45,7 @@ from check_roster import _list, parse_roster  # noqa: E402
 SCAN_ROOTS = (
     os.path.join(REPO, "primitives-core", "skills"),
     os.path.join(REPO, "primitives-core", "agents"),
+    os.path.join(REPO, "primitives-core", "commands"),
     os.path.join(REPO, "primitives-core", "hooks"),
     os.path.join(REPO, "plugins"),
 )
@@ -117,12 +119,13 @@ def _requires_by_source():
 
 
 def _owning_source(rel):
-    """The roster source path that owns a repo-relative file (its skill/agent/hook dir)."""
+    """The roster source path that owns a repo-relative file (its skill/agent/command/hook)."""
     parts = rel.split(os.sep)
     if len(parts) >= 3 and parts[0] == "primitives-core" and parts[1] in ("skills", "hooks"):
         return os.path.join(parts[0], parts[1], parts[2])
-    if len(parts) >= 3 and parts[1] == "agents":
-        return os.path.join(parts[0], parts[1], parts[2])  # agents/<name>.md
+    if len(parts) >= 3 and parts[1] in ("agents", "commands"):
+        # flat-file primitives: agents/<name>.md, commands/<name>.md
+        return os.path.join(parts[0], parts[1], parts[2])
     return None
 
 
