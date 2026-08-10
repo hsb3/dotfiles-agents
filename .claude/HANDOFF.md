@@ -15,12 +15,14 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `a752839`** · **`main` `a3b904e` = `publish: dev@8ea83ba`** · **6 plugins** ·
+- **`dev` `79aca9d`** · **`main` `6694047` = `publish: dev@79aca9d`** · **6 plugins** ·
   `make ci` green · no worktrees. Read the issue count live (see below), never from here.
-- **`dev` IS WELL AHEAD OF THE LAST PUBLISH and the gap now includes a whole new skill.**
-  Session 13's diagram work (TASK-051, #288) plus session 14's `atelier:activation` (TASK-058,
-  #295) are both unpublished; atelier is at `0.12.0` on `dev` and consumers still see `0.11.1`.
-  `publish-to-main` is the obvious next action and is now overdue by two eras of work.
+- **PUBLISHED AND CURRENT — `main` is the dev tip.** Session 14 closed the two-era backlog:
+  session 13's diagram work plus `atelier:activation`, the `command` primitive type, and
+  `/atelier:activate` all reached consumers in one promotion. **atelier ships `0.13.1`.**
+  Verified on `origin/main`, not assumed: `plugins/atelier/commands/activate.md` and
+  `plugins/atelier/skills/activation/{SKILL.md,examples,scripts}` are present and the top-level
+  tree is the distributable subset only. Nothing is pending publish.
 - **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
   **Triaged 2026-08-09 — every one now has a card** (TASK-052 … TASK-057, plus #289 folded into
   TASK-033). Two turned out to be live shipped defects, both code-confirmed: **#282** (the
@@ -80,10 +82,21 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-**Publish is the one thing queued** — `dev` carries the diagram work and six version bumps that no
-consumer has (`publish-to-main`). Issue triage is done (§1); the two live shipped defects it
-surfaced, **TASK-052** and **TASK-053**, are the cards with users waiting on them, and TASK-053's
-remaining work is two published READMEs, so it wants to ride a publish anyway.
+**Nothing is queued and nothing is pending publish.** Session 14 triaged the issue queue into
+cards, shipped TASK-058 end to end, and published. The cards with users actually waiting are
+**TASK-052** (plugin-feedback cannot file a feature request at all) and **TASK-053** (two shipped
+READMEs still teach the ignored flat `worktreeBaseRef` key).
+
+**`command` is now a primitive type** (decision-010) — the first non-{skill,agent,hook,mcp} kind.
+A fifth type would touch `check_roster.py`, `gen_opencode.py`, `check_symlinks.py`, and
+`flow.yaml` again; that is the standing cost, not a defect. **ADR 0001 `skills-over-commands` is
+Superseded** — read it for the anti-duplication argument, never for the ban.
+
+**Four things the command build surfaced and left open**, none blocking: `check_roster.py` has no
+duplicate-id check while `gen_opencode` keys exclusions by id; the harness/eval lane cannot
+evaluate a command and would misclassify one as an agent; `/atelier:activate` leaves an untracked
+`logs/` dir in a fresh project (telemetry hooks, not the command); and **#297 stays open for the
+gate blind spot, not the bug it reported** — see §5.
 
 **TASK-29 is now unblocked, but its ruling needs reinterpreting.** The owner ruled it should get a
 "standalone home"; standalone plugins no longer exist. The faithful reading is that `lab-setup`
@@ -229,6 +242,20 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   error, and the Agent `cwd` param is mutually exclusive with it.
 - **Adversarially review a new plugin before merging.** On `plugin-feedback` it caught third-party
   reports filing into this repo silently, plus two tests that could not fail.
+- **CLAUDE CODE FRONTMATTER PARSING IS LENIENT — strict YAML is a different question.**
+  `agents/manager.md` carried an unquoted `end to end: ` in its description for months. Strict
+  `yaml.safe_load` raises `ScannerError` on it, and #297 concluded the harness therefore dropped
+  every field. **It does not** — the session loaded `atelier:manager` with its full description and
+  exactly its file `tools` value, and the published 0.11.0 copy behaves the same. Quote it anyway
+  (strict-parsing consumers exist), but **do not infer harness behavior from a YAML library.**
+  The durable gap is the one #297 stays open for: **`make ci` never parses agent frontmatter, and
+  repo-level `claude plugin validate` checks only the marketplace manifest without descending into
+  plugin bodies** — a malformed agent body is invisible to every gate. `--strict` on a
+  dereferenced plugin dir catches it.
+- **A doc that restates a script's vocabulary WILL drift, and it drifts downstream.**
+  `activation/SKILL.md` said `check` has "three states"; the script emits four. The command then
+  copied that wrong fact and invented a section. Fix by deletion — point at the script's own
+  labels — not by synchronizing two copies.
 - **`logs/delegation.jsonl` is trustworthy from 2026-08-07 on, its history is not** — earlier rows
   inflate the parent session ~9x and say `lead` where later ones say `manager`, so an analysis
   spanning that boundary reads one agent as two. Truncate before any tier analysis.
