@@ -20,11 +20,13 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 - **`dev` is TWO COMMITS AHEAD OF THE LAST PUBLISH — the diagram work is unpublished.**
   Session 13 landed TASK-051 (#288) and bumped all six plugins; consumers see none of it until
   a `publish-to-main` run. That publish is the obvious next action.
-- **The 7 open issues arrived from OTHER PROJECTS via `plugin-feedback`, not from work here** —
-  4 from `pb-task-tracker`, 3 from an agent session, all 2026-08-07 05:34–05:56Z. Six are
-  atelier delegation-doctrine gaps; **#282 is a live shipped defect** (plugin-feedback's
-  feature-request path cannot file out of the box: it defaults to label `type:feature`, this
-  repo has `type:feat`). None has a backlog card yet — triage is open work.
+- **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
+  **Triaged 2026-08-09 — every one now has a card** (TASK-052 … TASK-057, plus #289 folded into
+  TASK-033). Two turned out to be live shipped defects, both code-confirmed: **#282** (the
+  feature-request path cannot file — default label `type:feature`, this repo has `type:feat`) and
+  **#292** (the worktree base-ref key is documented flat and Claude Code ignores it). **#291 is
+  misfiled** — a `use-railway` bug, a skill this marketplace does not ship; it is evidence for
+  TASK-052's scope check, and forwarding it upstream is the owner's call.
 - **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** (1) The marketplace went
   22 entries → 6: all seventeen one-skill plugins retired into one aggregate, **`solo-skills`**,
   the five bundles untouched. **Per-skill installation no longer exists** and no aggregate can
@@ -77,10 +79,10 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-**Two things are actually queued.** (1) **Publish** — `dev` carries the diagram work and six
-version bumps that no consumer has (`publish-to-main`). (2) **Triage the 7 GH issues** — none
-has a backlog card, and #282 is a live defect in a shipped plugin, so it is the one with a
-user waiting on it.
+**Publish is the one thing queued** — `dev` carries the diagram work and six version bumps that no
+consumer has (`publish-to-main`). Issue triage is done (§1); the two live shipped defects it
+surfaced, **TASK-052** and **TASK-053**, are the cards with users waiting on them, and TASK-053's
+remaining work is two published READMEs, so it wants to ride a publish anyway.
 
 **TASK-29 is now unblocked, but its ruling needs reinterpreting.** The owner ruled it should get a
 "standalone home"; standalone plugins no longer exist. The faithful reading is that `lab-setup`
@@ -200,12 +202,14 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   `scout`/`reviewer`/`Explore`/`Plan`/`fork` even when listed — isolating a reviewer aims it at a
   tree missing the diff it was sent to read. Same trap for a builder: commit first, or leave that
   dispatch un-isolated.
-- **The "worktree crews land on a published commit" mystery is SOLVED and the fix IS APPLIED.**
-  Cause: the `worktreeBaseRef` setting (`fresh` default | `head`); `fresh` branches from
-  `origin/<default-branch>`, which here is publish-only `main`. `.claude/settings.json` has set
-  `"worktreeBaseRef": "head"` since `8ea83ba` (session 11) — **worktree briefs no longer need the
-  `primitives-core/`-missing self-check.** (The three prior handoffs said otherwise; corrected
-  2026-08-07 s13 after reading settings.json.) Also governs `--worktree` and `EnterWorktree`.
+- **The "worktree crews land on a published commit" fix was written under the WRONG KEY and did
+  nothing until 2026-08-09.** Cause is as recorded — base ref defaults to `fresh`, branching from
+  `origin/<default-branch>`, here publish-only `main`. But the key is **nested `worktree.baseRef`**;
+  the flat `worktreeBaseRef` that settings.json carried from `8ea83ba` is only the `/config` menu's
+  widget id and was silently ignored (binary 2.1.220: handler reads `r?.worktree?.baseRef ?? "fresh"`,
+  writes `{worktree:{baseRef}}`). Fixed in settings.json 2026-08-09; **the two published READMEs
+  still teach the flat key — that is TASK-053, and it is issue #292.** Judge any past worktree-crew
+  behavior before 2026-08-09 as having used `fresh`. Also governs `--worktree` and `EnterWorktree`.
 - **Forcing isolation: two levers.** A `PreToolUse` hook matching tool name `Agent` (not `Task`)
   rewrites the dispatch via `hookSpecificOutput.updatedInput` (PreToolUse-only); agent frontmatter
   also takes `isolation:`, resolving as `explicit param ?? frontmatter`. Frontmatter was rejected

@@ -14,8 +14,8 @@
       }
     ]
   },
-  "worktreeBaseRef": "head",
   "worktree": {
+    "baseRef": "head",
     "bgIsolation": "none"
   },
   "enabledPlugins": {
