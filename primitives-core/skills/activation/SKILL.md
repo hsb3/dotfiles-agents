@@ -30,11 +30,13 @@ are not there. `--project-dir` defaults to `$CLAUDE_PROJECT_DIR`, else the cwd.
 *through the hooks' own loader functions* rather than parsing it itself, then reports per key
 what each hook actually resolved. That is why its answer cannot drift from real behavior.
 
-`check` distinguishes three states, not two: a key can be **not configured** (absent — off, as
-designed), **armed** (present and doing what it says), or **present but silently inert** (set to
-something a hook does not recognize — off, but looks configured). The third state is the trap:
-nothing errors, nothing warns, the hook just never fires. `check` exits nonzero when it finds an
-inert key, so a broken file is a failing command, not a hunch.
+The state it exists to expose is **inert**: a key that is present and looks configured, but is set
+to something no hook recognizes, so it is off. Nothing errors, nothing warns, the hook just never
+fires — which is why an absent file and a typo'd one are indistinguishable without this. `check`
+exits nonzero when it finds an inert key, so a broken file is a failing command, not a hunch.
+
+Read the labels off `check` itself rather than from this page. The taxonomy is a fact about the
+script, and a second copy here is exactly the drift this skill exists to catch.
 
 ## The keys
 

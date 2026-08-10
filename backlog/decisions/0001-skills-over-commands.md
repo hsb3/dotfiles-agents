@@ -1,13 +1,22 @@
 ---
 title: "Skills over commands"
 type: decision
-status: Accepted
+status: Superseded
 created: 2026-06-28
-updated: 2026-07-03
-summary: Command intent folds into skills or retires; the roster carries no command type.
+updated: 2026-08-10
+superseded_by: decision-010
+summary: Command intent folds into skills or retires; the roster carries no command type. SUPERSEDED 2026-08-10 by decision-010 — the roster now carries a command type.
 ---
 
 # 0001 · Skills over commands
+
+> **SUPERSEDED 2026-08-10 by [decision-010](decision-010%20-%20Commands-become-a-fourth-primitive-type.md).**
+> The roster now carries a `command` type. What held up is the anti-duplication rule below —
+> decision-010 keeps it by requiring a command to stay thin and defer to its skill rather than
+> restate it. What did not hold up is the conclusion that commands therefore never migrate: this
+> ADR weighed only the operator axis, where a skill already offers a slash invocation. The axis it
+> missed is that a command is what you hand an *agent* to perform on your behalf, which no amount
+> of skill polish substitutes for. Read this ADR for the duplication argument, not for the ban.
 
 _Commands never migrate as commands: their intent folds into skills, or they retire._
 
