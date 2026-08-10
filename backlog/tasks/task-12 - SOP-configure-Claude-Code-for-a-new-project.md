@@ -4,7 +4,7 @@ title: 'SOP: configure Claude Code for a new project'
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-07 01:09'
+updated_date: '2026-08-10 02:26'
 labels:
   - governance
 milestone: m-2
@@ -19,13 +19,13 @@ ordinal: 1500
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Migrated from GH #216. Repeatable assess→decide→author→validate procedure for what agent-facing config a repo gets (CLAUDE.md, agents, skills, settings, continuity scaffolding), grounded in this ecosystem's proven patterns. Ships as a distributed skill (or folds into claude-code-config). Validation target: tmp-learn-pocketbase.
+Repeatable assess→decide→author→validate SOP for what agent-facing config a new repo gets (CLAUDE.md, agents, skills, settings, continuity scaffolding), grounded in this ecosystem's proven patterns. Ships as its own distributed skill — kept separate from claude-code-config per owner ruling 2026-08-07: the two answer different questions at different points in a project's life ("what should a new repo have at all" vs. "change a setting on a live installation"), and the TASK-040 spike found drift between them causes shipped defects. Validation target: tmp-learn-pocketbase.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 SOP authored and grounded in linked patterns
-- [ ] #2 Re-run on tmp-learn-pocketbase reproduces a defensible config
+- [ ] #2 Re-running the SOP against tmp-learn-pocketbase produces a CLAUDE.md, skill/agent selection, and settings that satisfy every checklist item the SOP itself defines, checked item-by-item rather than by subjective judgment
 <!-- AC:END -->
 
 ## Comments

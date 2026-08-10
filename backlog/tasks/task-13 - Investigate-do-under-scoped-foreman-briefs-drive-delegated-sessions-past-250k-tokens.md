@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-04 00:43'
-updated_date: '2026-08-07 00:51'
+updated_date: '2026-08-10 02:23'
 labels:
   - evals
 milestone: m-2
@@ -22,7 +22,7 @@ ordinal: 300
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Migrated from GH #217. Investigation-first: pull token data (subagent-telemetry ledger + campaign runner), report the distribution, record a verdict on the under-scoping hypothesis. No SKILL.md edit ships with this task; a confirmed hypothesis files a separate proposal.
+Migrated from GH #217. Investigation only: pull token data (subagent-telemetry ledger + campaign runner), report the distribution, record a verdict on the under-scoping hypothesis. No SKILL.md edit ships here; a confirmed hypothesis gets a separate follow-up proposal.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria

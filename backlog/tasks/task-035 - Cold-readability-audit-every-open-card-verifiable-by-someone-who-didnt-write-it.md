@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-06 21:33'
-updated_date: '2026-08-07 01:25'
+updated_date: '2026-08-10 02:28'
 labels:
   - governance
 dependencies: []
@@ -18,19 +18,43 @@ ordinal: 13000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Carried over from milestone m-0, whose final unchecked commitment was: 'Every open card is cold-readable with verifiable acceptance criteria, assessed by someone who didn't write it.' m-0 closed on task completion without this being done, so it is tracked here rather than dropped.
+Carried over from milestone m-0, whose final unchecked commitment was: "Every open card is cold-readable with verifiable acceptance criteria, assessed by someone who didn't write it." m-0 closed without this done, so it's tracked here.
 
-A card is cold-readable when a session with no prior context can pick it up and know what done looks like. The independence requirement is the point: the assessor must not be whoever wrote the card, because the author cannot see their own missing context.
+Cold-readable: a session with no prior context can pick up the card and know what done looks like. The assessor must not be the card's author — an author can't see their own missing context.
 
-Scope is the open cards across m-1, m-2, and m-3.
+Scope: open cards across m-1, m-2, m-3.
+
+**Implementation notes**
+
+A full cold-read pass over all 31 open cards ran 2026-08-07 (satisfies AC#3): four independent assessors, none the card's author, each read a disjoint batch and reported per-card whether the AC were independently verifiable, quoting the weakest AC verbatim.
+
+Strong, machine-checkable criteria: TASK-27 (strongest — both AC are literal commands, e.g. "git diff --stat harness/results.jsonl empty after an evidence run"), TASK-036, TASK-040, TASK-18, TASK-19.
+
+Defects found, by kind:
+
+NO CRITERIA AT ALL — TASK-25 had no AC section and named no files, self-described as "a backlog-aware mode OR a scoped successor skill." Unstartable. FIXED: seven criteria drafted; the first forces the mode-vs-successor question to a decision instead of carrying it forward.
+
+EITHER/OR ANTI-PATTERN — TASK-037 and TASK-038 both phrased their primary criterion as "Either X... or Y...," deferring the real decision into the criterion instead of resolving it in the card; neither was verifiable until someone ruled. A recurring authoring habit, not two isolated slips. BOTH RESOLVED by owner ruling 2026-08-07 and implemented.
+
+DECISION SMUGGLED INTO A MECHANICAL CHECK — TASK-29 AC#2 ("Bundle home is decided and wired... make ci is green") and TASK-15 AC#1 ("Override mechanism ruled and implemented") each bundle a human ruling with its implementation into one checkbox, uncheckable until a decision that isn't the implementer's to make happens. Both rulings have since been given.
+
+UNDEFINED SUCCESS WORDS — TASK-12 AC#2 rests on "reproduces a defensible config" with no pass signal; TASK-21.4 AC#1 says the render loop "works" with no test named; TASK-11 AC#1 ends "or explicit disposition," satisfiable by one sentence.
+
+UNVERIFIABLE WITHOUT LEAVING THE REPO — TASK-20 AC#1 referenced "the motivating transcript pattern" with no link or excerpt; a cold reader can't check it. Worked around by verifying against the existing harness case, with the substitution recorded on the card. TASK-17's two unnamed ideas ("schema," "vars") required reading an external issue.
+
+A CLAIM THE CARD CAN'T PROVE — TASK-21.1 AC#3 ("superseded rows marked superseded, never overwritten") asserts a historical guarantee about rows the card never touches.
+
+STALE PREMISE — TASK-14 targeted a plugin name that no longer exists. FIXED: re-scoped, with fresh evidence from this session (a concurrent session moved dev's tip underneath a running session with no warning to either side).
+
+Also filed during the pass: TASK-041, TASK-042, TASK-043, TASK-044, each written to be cold-readable from the outset.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Every open card has acceptance criteria that state a checkable outcome, not an activity
+- [ ] #1 Every open card's acceptance criteria state a checkable outcome, not an activity
 - [ ] #2 Each card names the files, commands, or decisions a cold session needs to start
-- [x] #3 The assessment is done by an agent or session that did not author the card, and its findings are recorded per card
-- [ ] #4 Cards that fail the audit are either rewritten or explicitly dropped
+- [x] #3 Assessed by an agent or session that didn't author the card; findings recorded per card
+- [ ] #4 Failing cards are rewritten or explicitly dropped
 <!-- AC:END -->
 
 ## Implementation Notes

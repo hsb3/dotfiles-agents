@@ -1,12 +1,12 @@
 ---
 id: TASK-033
 title: >-
-  opencode laydown ships a silent subset: no hooks, excluded skills, and the
-  exclusions README is deleted
+  opencode laydown ships a silent subset: hooks and skills excluded, exclusions
+  record deleted before the user sees it
 status: To Do
 assignee: []
 created_date: '2026-08-06 19:17'
-updated_date: '2026-08-07 01:09'
+updated_date: '2026-08-10 02:26'
 labels:
   - distribution
 milestone: m-1
@@ -23,49 +23,25 @@ ordinal: 11000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-## Problem
+Running the documented opencode install (`scripts/install_opencode.sh --global`) reports success but silently ships a subset: 25 of 34 skills, 4 agents, 0 hooks — missing `foreman`, `waves`, `rubric-panel`, `layer-cycle`, `claude-code-config`, `claude-code-expertise`, `project-memory`, `tech-eval-research`, `dev-focus`, and all four hooks. Four catalogued plugins are unavailable there.
 
-A user follows the README's opencode instructions, sees a success message, and receives materially less than the marketplace advertises — with no warning and no artifact explaining the gap.
+`gen_opencode.py` already writes an honest exclusions table ("## Not in this lane (and why)") into the lane README, but the user never sees it: `scripts/install_opencode.sh` builds into a `mktemp -d` deleted by `trap ... EXIT`, and the generated `install.sh` copies only `skills/` and `agents/` — the README is gone before it can be read.
 
-Found 2026-08-06 during a TASK-031 review, by running the documented block verbatim rather than reading it:
+Fix: make the laydown self-describing at its destination — copy the lane README (or a trimmed exclusions note) alongside `skills/`/`agents/`, and print a closing summary naming what was laid down and that hooks do not travel. Reconcile TASK-031's README disclosure sentence with whatever the installer now reports.
 
-```sh
-git clone --branch dev https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
-scripts/install_opencode.sh --global
-```
+Constraints: `gen_opencode.py` stays deterministic (stable ordering, no clocks/randomness) and nothing generated is tracked. Don't widen the published surface on `main` — the installer runs from a `dev` clone.
 
-Result: `opencode laydown complete -> .../.opencode (skills/ + agents/)` carrying **25 skills, 4 agents, and 0 hooks**. Absent: `foreman`, `waves`, `rubric-panel`, `layer-cycle`, `claude-code-config`, `claude-code-expertise`, `project-memory`, `tech-eval-research`, `dev-focus`, and all four hooks. Four catalogued plugins are wholly unavailable on that runtime.
-
-The generator is not at fault for the exclusions themselves — `gen_opencode.py` deliberately writes an exclusions table into the lane's README ("## Not in this lane (and why)"), which is the honest design. The defect is that **the user never sees it**: `scripts/install_opencode.sh` builds into `TMP="$(mktemp -d)"` under `trap 'rm -rf "$TMP"' EXIT`, and the generated `install.sh` copies only `skills/` and `agents/`. The explanation is deleted before it can be read.
-
-The reviewer recovered the table only by building the lane by hand.
-
-## Why it matters
-
-The front door's first chooser row sends a visitor to `foreman-kit`, and the opencode path documented three lines above delivers neither the `foreman` skill nor any hook. This is the one place where following the page's own instructions produces a success message and a materially different outcome from what was promised.
-
-TASK-031 adds a one-sentence disclosure to the README as a stopgap. That is a label on the problem, not a fix.
-
-## Scope
-
-Make the laydown self-describing at its destination. The likely fix is for the generated `install.sh` to copy the lane README (or a trimmed exclusions note) alongside `skills/` and `agents/`, so the installed tree carries its own manifest of what did and did not travel. A closing summary line naming the counts and the omissions would also help.
-
-Whether hooks *can* travel to opencode at all is a separate question from disclosing that they do not — decide it explicitly and record the answer rather than leaving it implied by the generator's behavior.
-
-## Constraints
-
-- `gen_opencode.py` must stay deterministic (stable ordering, no clocks or randomness) — it runs at install time and nothing generated is tracked.
-- Do not widen the published surface on `main` to fix this; the installer runs from a `dev` clone.
+Whether hooks can be translated to opencode at all is a separate, already-split-out question (TASK-044).
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 The installed opencode tree contains a readable record of what was laid down and what was excluded, with reasons
-- [ ] #2 install_opencode.sh no longer deletes the only copy of that record before the user can read it
-- [ ] #3 The installer prints a closing summary naming the counts laid down and the fact that hooks do not travel
-- [ ] #4 Whether hooks can be translated to opencode at all is decided and the answer is recorded in the repo, not left implied
-- [ ] #5 gen_opencode.py remains deterministic and nothing generated is tracked
-- [ ] #6 The README's disclosure sentence added by TASK-031 is reconciled with whatever the installer now reports, so the two cannot disagree
+- [ ] #2 install_opencode.sh no longer deletes that record before the user can read it
+- [ ] #3 The installer prints a closing summary naming the counts laid down and that hooks do not travel
+- [ ] #4 Whether hooks can be translated to opencode at all is decided and the answer recorded in the repo, not left implied
+- [ ] #5 gen_opencode.py stays deterministic and nothing generated is tracked
+- [ ] #6 TASK-031's README disclosure sentence is reconciled with what the installer reports, so the two cannot disagree
 <!-- AC:END -->
 
 ## Implementation Notes

@@ -1,13 +1,13 @@
 ---
 id: TASK-034
 title: >-
-  Agent definitions are Claude-Code-native: define a harness-agnostic profile
-  and map it per harness
+  Agent definitions are Claude-Code-native — map them to other harnesses via a
+  declared capability matrix
 status: To Do
 assignee:
   - claude
 created_date: '2026-08-06 19:30'
-updated_date: '2026-08-07 13:16'
+updated_date: '2026-08-10 02:27'
 labels:
   - distribution
   - on-hold
@@ -31,82 +31,28 @@ ordinal: 12000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-## Problem
+`primitives-core/agents/{scout,builder,reviewer,manager}.md` are the one editable source for the repo's four agent definitions, but they're written in Claude Code's native subagent frontmatter — bare model aliases, a flat `tools:` list, presentation fields like `color`, budget fields like `effort`/`maxTurns`. `scripts/gen_opencode.py` transforms this for opencode ad hoc: it drops `color` and `effort` silently, omits `model` with no warning when an alias it doesn't recognize lacks a `/`, and buckets tools into an opencode permission map via two hardcoded Python sets (`WRITE_TOOLS`/`BASH_TOOLS`) instead of a declared mapping. A field with no representation on a target harness should be an explicit "unsupported," not a silent drop.
 
-`primitives-core/` is the one place a primitive is edited, but the four agent definitions there are authored in **Claude Code's native subagent frontmatter**. The canonical source is written in one harness's dialect, so every other harness is served by a lossy one-way transform bolted on at generation time rather than by a mapping from a neutral source.
+decision-009 (owner-accepted 2026-08-07) settles the shape: no new neutral profile file — Claude Code's existing frontmatter stays the unbuilt source of truth. Harness-neutrality is instead a declared capability matrix extending `translation.yaml` (`tool_capabilities` + `field_treatments`), replacing `gen_opencode.py`'s hardcoded tool sets and silent drops. `manager.md`'s `Agent`/`SendMessage` body prose is accepted as-is and joins `translation.yaml`'s existing exclusions pattern rather than being neutralized. No new roster schema-version field — bump `translation.yaml`'s existing `version` instead, backed by a completeness gate. Hooks and skills stay out of scope.
 
-Verified 2026-08-06 against `primitives-core/agents/{scout,builder,reviewer,lead}.md`.
+What's left is the build: the capability matrix itself, the generator rewrite, and the completeness gate. It stays sequenced behind Claude Code stabilization per the owner's direction — parked, not scheduled. Nothing generated is tracked; per-harness definitions stay install-time artifacts, and the generator stays deterministic (stable ordering, no clocks or randomness).
 
-**The frontmatter is vendor-shaped.** Representative (`scout.md:1-9`):
+Also touches: `primitives-core/agents/README.md` (per-agent model/tier table), the four `plugins/foreman-kit/agents` symlinks, and `scripts/check_identity.py` + `scripts/check_roster.py` (both parse agent frontmatter).
 
-```yaml
-name: scout
-description: Read-only recon — ...
-model: haiku
-effort: low
-maxTurns: 15
-tools: Read, Grep, Glob
-color: cyan
-```
-
-Only `name` and `description` are portable. `tools` is a flat list of Claude Code built-in tool names; `model` is a bare Claude alias with no provider path; `color`, `effort`, and `maxTurns` are Claude Code concepts. Key usage varies by agent (`effort` and `maxTurns` on scout only, `memory: project` on reviewer only), so there is no declared schema either — the format is whatever Claude Code happens to accept.
-
-**The transform is lossy and silent.** `transform_agent` in `scripts/gen_opencode.py:115-136` hardcodes field names and:
-
-- drops `color` (commented — opencode rejects the values),
-- drops `effort` and `memory` with no comment at all; they are simply never referenced,
-- **silently omits `model`** when an alias is unrecognized and contains no `/` (`:123`; `tests/test_gen_opencode.py:61` pins this with `model: mystery`),
-- inverts `tools` into an opencode `permission:` map by membership in two hardcoded sets, `WRITE_TOOLS`/`BASH_TOOLS` (`:55-56`, applied `:130-134`). A tool in neither set — `Grep`, `Glob`, `Read`, `Agent`, `SendMessage` — gets no explicit bucket and is covered only by a blanket `read: allow`.
-
-A field that has no representation on a target should be an explicit, declared "unsupported", not a silent drop. Today the mapping knowledge lives in Python set membership rather than in the capability matrix.
-
-**The bodies leak too, narrowly.** `reviewer.md:31` names the literal tool "Bash"; `lead.md:45` names `SendMessage`, and its frontmatter requests `Agent, SendMessage` — which `gen_opencode.py:259-260` itself flags as having no opencode equivalent. Bodies are copied verbatim (`:136`), so this prose travels untouched to a harness where those tools do not exist. No agent body references `subagent_type`, slash commands, `.claude/` paths, hook events, or hardcoded model ids — so the problem is mostly frontmatter, with two narrow prose exceptions.
-
-**The roster records no format information.** An agent entry carries `id, type, source, origin, disposition, targets` (`primitives-core.yaml:137-141`). `targets` names destination harnesses; nothing records the source format or a schema version, so nothing can detect a definition drifting away from whatever shape the generator expects.
-
-**No prior art.** Searched `backlog/decisions/`, `backlog/docs/`, `AGENTS.md`, `CLAUDE.md`, `flow.yaml` for a harness-neutral or portable extender format: absent. `decision-2` and ADR 0017 cover distribution mechanics (pointer assemblies, generate-at-install-time), not the source format. `translation.yaml` is the closest thing — a capability matrix keyed by primitive type — but it is a remap layer over a Claude-Code-native source, which is the standing approach its own header describes.
-
-## What is wanted
-
-A harness-agnostic agent profile as the authored source, plus declared per-harness mappings that generate the concrete definitions at install time. The profile should describe **intent and capability**, not vendor nouns:
-
-- capabilities (read, search, edit, execute, delegate) instead of a list of one harness's tool names;
-- a tier intent (cheapest / standard / premium) instead of a bare model alias, with the alias resolution living in the per-harness mapping where `translation.yaml:34-40` already keeps `model_aliases`;
-- budgets (turn caps, effort) as neutral fields that a mapping may declare unsupported;
-- presentation-only fields (`color`) marked as such, so dropping them is a declared no-op rather than a silent one.
-
-Claude Code is the reference harness (owner direction 2026-08-06: Claude Code first, other harnesses after it stabilizes), so **the neutral profile must round-trip to the current Claude Code definitions with no observable change** — that is the acceptance test that keeps this from being a rewrite for its own sake.
-
-## Open questions to settle before building
-
-1. **Where does the neutral profile live and in what form?** A new frontmatter schema in the same `.md` files, or a sidecar profile plus a body file? The second decouples format from prose but doubles the file count and changes what the symlink assemblies point at.
-2. **What happens to body prose that names a specific harness's tools?** Options: accept the leak, keep per-target body fragments, or write bodies to a neutral vocabulary and let the mapping substitute. No option is obviously right; picking one is the point of the decision.
-3. **Does the roster gain a format/schema-version field**, so drift from the declared profile shape is machine-detectable?
-4. **Does this extend to hooks and skills**, or are agents the only primitive with a vendor-shaped source? Hooks are `treatment: unsupported` for opencode today, which may make them moot or may make them the next instance of the same problem.
-
-## Constraints
-
-- **This is an information-architecture change to `primitives-core/`, the repo's source of truth. It needs the owner's decision before any build** (AGENTS.md). Scope this task's first deliverable as the decision record, not code.
-- Nothing generated is tracked; the per-harness definitions stay install-time artifacts, and any generator stays deterministic (stable ordering, no clocks or randomness).
-- Agents ship through symlink assemblies — `plugins/foreman-kit/agents/{scout,builder,reviewer,lead}.md` are symlinks into `primitives-core/agents/`. A change to file shape or naming moves those four links and must keep `make symlinks` green.
-- Sequenced behind Claude Code stabilization per the owner's direction. The decision can be taken earlier than the build.
-
-## Blast radius (verified)
-
-4 agent definitions + `primitives-core/agents/README.md` (carries a per-agent model/tier table) + 4 symlinks under `plugins/foreman-kit/agents/` + `translation.yaml` + `scripts/gen_opencode.py` + `scripts/check_identity.py` (parses agent frontmatter, `:168-182`, `:206-207`) + `scripts/check_roster.py` + `tests/test_gen_opencode.py` (pins the current transform, including the color-drop and model-alias behavior, `:39-61`, `:126-129`).
+AC1-3 (the decision) are done. AC4-9 (the build) are deferred and on-hold — not blocked on any open decision, just parked behind Claude Code stabilization.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [x] #1 A decision record defines the harness-agnostic agent profile: its fields, their value vocabularies, and what each field means independent of any harness
-- [x] #2 The four open questions (profile location/form, harness-specific body prose, roster schema-version field, whether hooks and skills are in scope) are each answered in the decision, not deferred silently
-- [x] #3 The owner has approved the profile before any file under primitives-core/ changes shape
-- [ ] #4 Each supported harness has a declared mapping from the neutral profile to its native format, with every neutral field either mapped or explicitly declared unsupported for that harness
-- [ ] #5 No field is dropped silently: generating for a target reports every field the target cannot represent
-- [ ] #6 The Claude Code definitions generated from the neutral profiles are observably identical to today's four agent definitions (round-trip proof, not assertion)
-- [ ] #7 An unrecognized model tier or capability fails loudly instead of being omitted, replacing the current silent-omission behavior in transform_agent
-- [ ] #8 Tool-to-capability mapping lives in the declared matrix rather than hardcoded Python set membership
-- [ ] #9 make ci green, make symlinks green, and the four plugins/foreman-kit/agents symlinks still resolve
+- [x] #1 A decision record defines the harness-agnostic agent profile — its fields, value vocabularies, and per-field meaning independent of harness
+- [x] #2 The decision answers all four open questions — profile location/form, harness-specific body prose, a roster schema-version field, and whether hooks/skills are in scope — none deferred silently
+- [x] #3 The owner approved the profile before any file under primitives-core/ changes shape
+- [ ] #4 Each supported harness has a declared mapping from the neutral profile to its native format; every field is either mapped or explicitly declared unsupported for that harness
+- [ ] #5 No field is dropped silently — generation for a target reports every field it cannot represent
+- [ ] #6 Claude Code definitions generated from the neutral profiles are observably identical to today's four agent definitions — round-trip proof, not assertion
+- [ ] #7 An unrecognized model tier or capability fails loudly instead of being silently omitted, replacing transform_agent's current silent-omission behavior
+- [ ] #8 Tool-to-capability mapping lives in the declared matrix, not hardcoded Python set membership
+- [ ] #9 make ci and make symlinks pass green; all four plugins/foreman-kit/agents symlinks still resolve
 <!-- AC:END -->
 
 ## Implementation Plan
