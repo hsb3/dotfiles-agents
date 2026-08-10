@@ -15,11 +15,12 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `4801d3c`** · **`main` `a3b904e` = `publish: dev@8ea83ba`** · **6 plugins** ·
-  `make ci` green · **438 tests** · **7 open GH issues** · no worktrees.
-- **`dev` is TWO COMMITS AHEAD OF THE LAST PUBLISH — the diagram work is unpublished.**
-  Session 13 landed TASK-051 (#288) and bumped all six plugins; consumers see none of it until
-  a `publish-to-main` run. That publish is the obvious next action.
+- **`dev` `a752839`** · **`main` `a3b904e` = `publish: dev@8ea83ba`** · **6 plugins** ·
+  `make ci` green · no worktrees. Read the issue count live (see below), never from here.
+- **`dev` IS WELL AHEAD OF THE LAST PUBLISH and the gap now includes a whole new skill.**
+  Session 13's diagram work (TASK-051, #288) plus session 14's `atelier:activation` (TASK-058,
+  #295) are both unpublished; atelier is at `0.12.0` on `dev` and consumers still see `0.11.1`.
+  `publish-to-main` is the obvious next action and is now overdue by two eras of work.
 - **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
   **Triaged 2026-08-09 — every one now has a card** (TASK-052 … TASK-057, plus #289 folded into
   TASK-033). Two turned out to be live shipped defects, both code-confirmed: **#282** (the
@@ -196,6 +197,17 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   exists; fixing this one changes what ships.
 - **Prefer disjoint file ownership over worktrees.** Session 9 ran ~15 concurrent workers on one
   tree with zero collisions, purely by giving each an owned file list and forbidding `make`/git.
+- **A STALLED MANAGER LOOKS EXACTLY LIKE A DEAD ONE, and guessing wrong is expensive both ways.**
+  Session 14: a manager went 65 minutes with a 145-byte output file while its builder had already
+  reported. Read as dead; it was not — it was running adversarial review, and it then committed,
+  pushed, and opened the PR on its own while the session was mid-takeover. **Nothing distinguishes
+  the two states** — output-file mtime, size, and `TaskList` all read the same for a slow agent and
+  a corpse. Before taking over a manager's git steps, check `gh pr list` and `git log` for work it
+  landed since you last looked, or you race it. This is issue #285 / **TASK-054**, felt from the
+  strategy layer rather than reported from below. The hour was not waste: that review caught two
+  ship-blockers the builders' self-reports had called clean, one of which would have shipped a
+  `create` that silently disabled handoff surfacing — the exact failure class the skill exists to
+  expose.
 - **A worktree cannot see uncommitted work — structural, not a bug.** It is a clean checkout of a
   ref, so modified and untracked files in the parent do not exist inside it (probed: "No such file
   or directory" for a file sitting right there). Hence `worktree-isolation` never isolates

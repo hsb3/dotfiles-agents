@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-10 02:46'
-updated_date: '2026-08-10 04:21'
+updated_date: '2026-08-10 05:30'
 labels:
   - primitives
 milestone: m-2
@@ -43,18 +43,34 @@ Open question the worker should answer first, not assume: which project the owne
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 An operator can create a valid `.claude/atelier.local.md` in a fresh project without hand-copying a schema block from a README
-- [ ] #2 A malformed or misspelled activation file produces a visible signal rather than silently reading as off
-- [ ] #3 The schema exists in one authoritative place; any second copy is generated from it or is a pointer, and the `handoff:` key appears wherever the schema is shown
-- [ ] #4 The docs state which keys are machine-enforced and which depend on the model reading them
-- [ ] #5 The full setup path for a fresh project is written down in one place, including the steps currently recorded only in repo memory
-- [ ] #6 A test fails if a documented key is unparseable by the code that reads it, or if a schema copy drifts from the authoritative one
-- [ ] #7 Checking an activation file for validity is a command an agent can run, shipped in the skill resources or as a mini CLI, not a procedure written in prose for the agent to apply
-- [ ] #8 The checker and the hooks read the activation file through the same parser, so a file the checker passes cannot be ignored by a hook
-- [ ] #9 Any new script is stdlib-only and runs with zero install
-- [ ] #10 The skill ships and is reachable by the operator as a slash invocation, carrying the procedure and the authoritative key reference
+- [x] #1 An operator can create a valid `.claude/atelier.local.md` in a fresh project without hand-copying a schema block from a README
+- [x] #2 A malformed or misspelled activation file produces a visible signal rather than silently reading as off
+- [x] #3 The schema exists in one authoritative place; any second copy is generated from it or is a pointer, and the `handoff:` key appears wherever the schema is shown
+- [x] #4 The docs state which keys are machine-enforced and which depend on the model reading them
+- [x] #5 The full setup path for a fresh project is written down in one place, including the steps currently recorded only in repo memory
+- [x] #6 A test fails if a documented key is unparseable by the code that reads it, or if a schema copy drifts from the authoritative one
+- [x] #7 Checking an activation file for validity is a command an agent can run, shipped in the skill resources or as a mini CLI, not a procedure written in prose for the agent to apply
+- [x] #8 The checker and the hooks read the activation file through the same parser, so a file the checker passes cannot be ignored by a hook
+- [x] #9 Any new script is stdlib-only and runs with zero install
+- [x] #10 The skill ships and is reachable by the operator as a slash invocation, carrying the procedure and the authoritative key reference
 - [ ] #11 Whether a separate command primitive also ships is recorded as an owner ruling, not left implied by its absence
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Shipped in PR #295, merged to dev as a752839. `primitives-core/skills/activation/` — SKILL.md, examples/atelier.local.md, scripts/activation.py — symlinked into atelier only; roster entry, atelier version 0.11.1 to 0.12.0 in both manifests, 26 stdlib tests. make ci exit 0 (464 tests), check_version_bump.py exit 0, both re-run independently of the build. CI green on both required checks.
+
+`check` adds no sixth parser: it importlib-loads all five hook modules and calls each hook own loader, toggling sys.dont_write_bytecode so auditing an installed plugin leaves no __pycache__. Path resolution works in both layouts because they share the relative shape ../../../hooks/<name>/hook.py, verified in the dev tree, through the symlink, and against a dereferenced copy.
+
+Two ship-blockers were caught by adversarial review AFTER the builders self-reported clean, both fixed before commit. (1) The documented invocation `python3 scripts/activation.py check` could not work — bash runs from the project dir; now the house ${CLAUDE_PLUGIN_ROOT} form. (2) `create` left a project WORSE off: the example set handoff: to a path absent in a fresh project, and the hooks deliberately do not fall back, so create-and-stop silently disabled handoff surfacing — the exact failure class this skill exists to expose, nearly shipped as the default. That key now ships commented out with the reason inline.
+
+Two corrections to the brief premises, both from hook source. handoff: naming a nonexistent in-root file is NOT inert — it is authoritative and suppresses the standard search, so check reports it armed-with-warning. And `protected:` cannot carry a trailing comment: config-custody only enters list-collecting mode when the text after the colon is empty, so `protected:  # patterns` silently yields zero patterns. Both are now documented in the example and pinned by tests.
+
+Spun out: TASK-059, the membership gate reads a proxy for hook coupling rather than the property.
+
+AC 11 is the only one open — whether a command primitive also ships is the owner ruling, unmade. This repo has no command type; adding one reshapes the roster schema plus the roster guard, the symlink guard, and the opencode generator.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
