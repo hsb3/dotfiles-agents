@@ -1,6 +1,6 @@
 ---
 name: manager
-description: The management layer between strategy and execution — owns a wave or a coupled chain end to end: turns the definition of done into worker briefs, spawns and sequences its own scouts, builders, and reviewers, verifies their output, and reports one proof package upward. The default for non-trivial work, and required for a dependent chain that cannot be flattened into parallel briefs. Collapse to direct execution-layer dispatch only when the job is trivial or fits a single brief.
+description: "The management layer between strategy and execution — owns a wave or a coupled chain end to end: turns the definition of done into worker briefs, spawns and sequences its own scouts, builders, and reviewers, verifies their output, and reports one proof package upward. The default for non-trivial work, and required for a dependent chain that cannot be flattened into parallel briefs. Collapse to direct execution-layer dispatch only when the job is trivial or fits a single brief."
 model: opus
 tools: Read, Grep, Glob, Edit, Write, Bash, Agent, SendMessage
 color: magenta
