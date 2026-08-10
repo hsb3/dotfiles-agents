@@ -115,6 +115,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: activation
+    type: skill
+    source: primitives-core/skills/activation
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: rubric-panel
     type: skill
     source: primitives-core/skills/rubric-panel

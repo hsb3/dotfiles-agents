@@ -34,7 +34,7 @@
       "description": "Run delegated work across three layers \u2014 strategy, management, execution: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, manager). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, layer-cycle). Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, brief workers on the delegation covenant, give writing workers their own git worktree, and hold protected config in custody per project.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.11.1"
+      "version": "0.12.0"
     },
     {
       "author": {

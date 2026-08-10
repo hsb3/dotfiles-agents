@@ -47,6 +47,7 @@ create, evaluate, and refine, calling `rubric-panel` to score and `deletion-pass
 | `rubric-panel` | skill | Score one or more code artifacts against an anchored rubric with a persona-diverse judge panel (whole-field calibration, contested-spread flagging); outputs dimension scores plus findings classified as defect / noise / spec-hole / undeclared-commitment. |
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. |
+| `activation` | skill | Create and verify the per-project `.claude/atelier.local.md` activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to the cheapest model tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. |
@@ -100,7 +101,15 @@ layers, and the practical difference between them is when a change takes effect.
 The Claude Code convention for plugin-local settings is a `.claude/<plugin-name>.local.md` file
 in the project root: YAML frontmatter for the settings, markdown below it for your own notes.
 atelier reads `.claude/atelier.local.md`. It does not exist by default, and its absence is the
-normal state — without it the enforcement layer is entirely off.
+normal state — without it the enforcement layer is entirely off. The `activation` skill creates
+and checks this file for you — reach for it instead of hand-copying the schema block below.
+Run from the project root:
+
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py"
+python3 "$S" create   # write .claude/atelier.local.md and gitignore it
+python3 "$S" check    # per key: armed, inert, or not configured
+```
 
 ```markdown
 ---
@@ -112,6 +121,8 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - "*.config.js"
   - configs/*
 isolate: writers      # off (default when absent) | writers | a list of agent types
+handoff: docs/HANDOFF.md   # optional — override where the handoff file lives; set it only
+                           # once that file exists (see the table below)
 ---
 
 # Why these paths
@@ -122,10 +133,11 @@ this project's gate is drawn where it is.
 
 | Key | Read by | Effect |
 |---|---|---|
-| `effort` | `delegation` skill | Forces `standard` or `deep` rather than inferring the level from the session's strategist model. You saying so in the session still outranks it. |
+| `effort` | nothing — no hook reads this key | Prose-only signal for the `delegation` skill: it forces `standard` or `deep` **only if the agent opens this file and reads it**. Unlike the other four keys, nothing enforces it per call; you saying so in the session still outranks it. |
 | `enforce` | `worker-context`, `config-custody` hooks | Arms the enforcement layer. Absent, `off`, an unrecognized value, or an unparseable file all mean off. |
 | `protected` | `config-custody` hook | fnmatch globs naming the config that defines acceptance. Also accepts the inline form `protected: ["Makefile", "configs/*"]`. `*` crosses `/`, so `configs/*` covers the whole subtree — if you want direct children only, name them. |
 | `isolate` | `worktree-isolation` hook | Gives writing workers their own git worktree. `writers` covers `builder`, `manager`, `general-purpose`; a list (block or inline) names your own set. `scout`, `reviewer`, `Explore`, `Plan`, and `fork` are never isolated, even if listed — a worktree cannot see uncommitted work, which is exactly what a reviewer was sent to read. |
+| `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` hooks | Overrides where the project's handoff file lives, project-relative. Three outcomes, and the middle one is the trap. **Names an existing in-root file:** wins over the standard `_meta/HANDOFF.md` → `HANDOFF.md` → `.claude/HANDOFF.md` search. **Names an in-root file that does not exist:** still authoritative — both hooks report no handoff and do **not** fall back to the search, so setting this early turns handoff surfacing off. **Resolves outside the project root:** rejected, and the standard search runs unchanged. |
 
 What each `enforce` level actually does:
 
