@@ -3,9 +3,10 @@ id: TASK-048
 title: >-
   Migrate the stranded .claude/agent-memory/ content into the tracked memory
   store
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-07 02:37'
+updated_date: '2026-08-10 02:05'
 labels:
   - governance
 milestone: m-2
@@ -34,9 +35,27 @@ CLEANUP. After promotion, remove .claude/agent-memory/ entirely. Sweep the speci
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Each of the two content files is either promoted into .claude/memory/ as its own file with a MEMORY.md pointer line, or explicitly dropped with the reason recorded
-- [ ] #2 Any promoted memory follows the store's existing frontmatter shape and links related memories with [[name]] where one applies
-- [ ] #3 .claude/agent-memory/ no longer exists, removed by targeted path and not by a whole-dir sweep of .claude/
-- [ ] #4 The project memory 'subagent-agent-memory-litter' is re-checked and narrowed or retired, since the frontmatter key that caused the litter is gone and it currently reads as an ongoing hazard
-- [ ] #5 make ci is green
+- [x] #1 Each of the two content files is either promoted into .claude/memory/ as its own file with a MEMORY.md pointer line, or explicitly dropped with the reason recorded
+- [x] #2 Any promoted memory follows the store's existing frontmatter shape and links related memories with [[name]] where one applies
+- [x] #3 .claude/agent-memory/ no longer exists, removed by targeted path and not by a whole-dir sweep of .claude/
+- [x] #4 The project memory 'subagent-agent-memory-litter' is re-checked and narrowed or retired, since the frontmatter key that caused the litter is gone and it currently reads as an ongoing hazard
+- [x] #5 make ci is green
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Deviation from AC1: the two stranded lessons were promoted as ONE merged file, .claude/memory/probe-harness-hygiene.md, not two. Both are the same failure mode (a probe that reports success while testing nothing) and each was ~4 sentences of substance; two files would have been two index lines for one idea. Both provenance stories are preserved verbatim in the merged file.
+
+AC3 was already satisfied on arrival — .claude/agent-memory/ does not exist (ls: No such file or directory); the untracked copies had been moved to .claude/memory/ in a prior session and were consumed by this merge.
+
+AC4: subagent-agent-memory-litter.md rewritten 42 -> ~20 lines. It now leads with the root cause (the memory: frontmatter key) and states the source is closed, so it reads as a recognition guide rather than an ongoing hazard.
+
+Done as part of a wider ponytail-ultra pass over AGENTS.md and .claude/memory (17 topic files -> 11, 493 -> 282 lines).
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Both stranded verification lessons now live in the tracked store as one merged memory, .claude/memory/probe-harness-hygiene.md, indexed from MEMORY.md; .claude/agent-memory/ is gone; subagent-agent-memory-litter.md was narrowed to a recognition guide now that the memory: frontmatter key that caused the litter is removed. Verified: index links all resolve (MEM-04 script check, no dangling entries, no unindexed files), .claude/agent-memory/ absent on disk, and make ci exits 0.
+<!-- SECTION:FINAL_SUMMARY:END -->

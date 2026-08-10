@@ -1,15 +1,18 @@
 ---
 name: make-ci-refusal-line-is-a-passing-test
-description: "make ci prints an \"✗ opencode laydown — refusing to build into non-empty dir\" line that is a PASSING test's own output — judge by exit code, not by scanning for ✗"
+description: "The \"✗ opencode laydown — refusing…\" line in make ci output is a passing test's own output — judge by exit code, not by scanning for ✗"
 metadata: 
   node_type: memory
   type: project
-  originSessionId: d6661eac-d9a4-4ee1-937a-b9a5141ce8ca
-  modified: 2026-08-06T05:28:16.467Z
+  originSessionId: f88d2c41-439c-40b6-bbea-2ee31abb84ec
+  modified: 2026-08-10T02:01:55.841Z
 ---
 
-`make ci` output contains `✗ opencode laydown — refusing to build into non-empty dir: /var/...` even on a fully green run — it is a unit test exercising the generator's refusal path, printing the refusal message to stdout as part of PASSING (suite reports `OK`, exit 0).
+A fully green `make ci` still prints
+`✗ opencode laydown — refusing to build into non-empty dir: /var/...`. It is a unit test
+exercising the generator's refusal path and printing the refusal message as part of **passing**
+(suite reports `OK`, exit 0; verified 2026-08-06 on a clean tree).
 
-**Why:** grepping CI output for `✗`/`FAIL` false-positives on this line; verified 2026-08-06 by running `make ci` on a clean tree (same line, exit 0).
-
-**How to apply:** judge `make ci` by its exit code (`make ci > /dev/null 2>&1; echo $?`), never by scanning for ✗ glyphs. Related: [[backlog-cli-rewrites-sibling-tasks]].
+**How to apply:** judge `make ci` by its exit code (`make ci >/dev/null 2>&1; echo $?`), never by
+grepping output for `✗` or `FAIL`. Same lesson, opposite direction:
+[[mermaid-cli-exits-zero-on-failure]].
