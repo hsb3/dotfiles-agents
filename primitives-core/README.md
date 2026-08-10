@@ -12,6 +12,7 @@ symlinks, so an edit here IS the edit everywhere the primitive ships.
 |---|---|---|---|
 | `skills/<name>/` | **skill** | `SKILL.md` (+ optional `references/`, `scripts/`, `assets/`) | `SKILL.md` at the folder root. A skill's README travels with it (`skills/<name>/README.md`); a standalone plugin's root README is a symlink to it. |
 | `agents/<name>.md` | **agent** | one `.md` with frontmatter | one workflow-aware agent per bundle is encouraged (P4). |
+| `commands/<name>.md` | **command** | one `.md` with frontmatter | the slash surface an operator *or an agent* invokes (decision-010). A command stays thin: it loads a skill and drives it, never restating the procedure — one surface, one source of truth. |
 | `hooks/<name>/` | **hook** | handler + config in the ratified hook-dir layout `hooks/<name>/hook.py` | Claude-Code-only; stdlib-only (no pip/npm deps). |
 
 ## Roster entry schema (provenance manifest, ADR 0017)
@@ -24,7 +25,7 @@ guarded by [`../scripts/check_symlinks.py`](../scripts/check_symlinks.py):
 | Field | Values | Notes |
 |---|---|---|
 | `id` | unique kebab-case name | |
-| `type` | `skill` \| `agent` \| `mcp` \| `hook` | |
+| `type` | `skill` \| `agent` \| `command` \| `mcp` \| `hook` | |
 | `source` | repo-relative path | must exist on disk (drift guard) |
 | `origin` | `authored` \| `sourced` | provenance; immutable per entry. `sourced` requires non-null `upstream` + `ref`. |
 | `disposition` | `qualified` \| `grandfathered-pending-use` \| `demoted` \| `untriaged` | owner-curated verdict. |
@@ -40,12 +41,12 @@ recorded by reference in [`../externals.yaml`](../externals.yaml), never copied 
 Every primitive carries a README — the shop label; the body is the manual. A **skill's**
 README lives in its dir (`skills/<id>/README.md`) and travels with it into every assembly
 that symlinks the skill; a standalone plugin's root README is one more symlink to it. A
-**hook's** README lives at `hooks/<id>/README.md` and ships the same way. **Agents** are
-single files, so the family shares one `agents/README.md` (exempted from roster/agent
-discovery). A **bundle's** README describes the composition, so it is hand-authored
-directly at `plugins/<id>/README.md` (top level, not under `primitives-core/`). All of it
-ships to a user the same way a skill body does, so all of it is in scope for the
-identity-neutrality lint (`scripts/check_identity.py`).
+**hook's** README lives at `hooks/<id>/README.md` and ships the same way. **Agents** and
+**commands** are single files, so each family shares one `agents/README.md` /
+`commands/README.md` (exempted from roster discovery). A **bundle's** README describes the
+composition, so it is hand-authored directly at `plugins/<id>/README.md` (top level, not
+under `primitives-core/`). All of it ships to a user the same way a skill body does, so all
+of it is in scope for the identity-neutrality lint (`scripts/check_identity.py`).
 
 ### Per-item README template (tight scope)
 

@@ -104,6 +104,34 @@ class TestExclusionConflict(unittest.TestCase):
         self.assertTrue(any("resolve the disagreement" in p for p in problems))
 
 
+class TestCommandExclusion(unittest.TestCase):
+    """decision-010: a roster `type: command` entry must reach the exclusions manifest with
+    the matrix's reason, not be silently skipped (the pre-change treatment loop never
+    reached the type at all, so it left no trace in the generated README)."""
+
+    def test_command_lands_in_exclusions_with_matrix_reason(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        reason = "commands need a per-command authoring pass"
+        translation = {
+            "matrix": [
+                {"type": "command", "target": "opencode", "treatment": "unsupported", "reason": reason},
+            ],
+            "model_aliases": [],
+            "exclusions": [],
+        }
+        entries = [{
+            "id": "activate", "type": "command",
+            "source": "primitives-core/commands/activate.md",
+            "targets": "[claude-code]",
+        }]
+        problems = G.build(d, entries, translation)
+        self.assertEqual(problems, [])
+        with open(os.path.join(d, "README.md"), encoding="utf-8") as fh:
+            readme = fh.read()
+        self.assertIn(f"| `activate` | command | {reason} |", readme)
+
+
 class TestOutMode(unittest.TestCase):
     """The install-time CLI contract (ADR 0017): --out builds the laydown, never clobbers."""
 

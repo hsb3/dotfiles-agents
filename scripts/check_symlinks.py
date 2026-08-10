@@ -13,12 +13,13 @@ incomplete plugin. This lint makes that failure mode loud:
   3. every plugins/<id>/ dir is listed in the root marketplace.json (no orphan assemblies);
   4. every STANDALONE plugin symlinks README.md to its own skill's README (ADR 0017 /
      flow.yaml's plugin-assemblies node). The standalone/bundle line is drawn mechanically:
-     a plugin whose assembly contains exactly one skill and no agents and no hooks is a
-     STANDALONE — its README.md must be a symlink to
+     a plugin whose assembly contains exactly one skill and no agents, hooks, or commands
+     is a STANDALONE — its README.md must be a symlink to
      primitives-core/skills/<skill-id>/README.md, so the docs travel with the source
-     instead of drifting from it. Any plugin with more than one skill, or any agent, or
-     any hook, is a BUNDLE — bundle READMEs are hand-authored regular files and this check
-     does not touch them.
+     instead of drifting from it. Any plugin with more than one skill, or any agent, hook,
+     or command, is a BUNDLE — a command is a shipped surface beyond the one skill, so it
+     takes the assembly off the standalone path (decision-010). Bundle READMEs are
+     hand-authored regular files and this check does not touch them.
 
      NOTE — check 4 currently has NO SUBJECTS, deliberately. Every one-skill plugin was
      retired into the `solo-skills` aggregate (TASK-043), and no remaining assembly
@@ -99,12 +100,14 @@ def _named_entries(dirpath):
 
 
 def is_standalone(pdir):
-    """A plugin is standalone iff its assembly has exactly one skill and no agents/hooks."""
+    """A plugin is standalone iff its assembly has exactly one skill and no agents, hooks,
+    or commands."""
     skills = _named_entries(os.path.join(pdir, "skills"))
     return (
         len(skills) == 1
         and not _named_entries(os.path.join(pdir, "agents"))
         and not _named_entries(os.path.join(pdir, "hooks"))
+        and not _named_entries(os.path.join(pdir, "commands"))
     )
 
 
@@ -123,14 +126,14 @@ def readme_problems():
         expected_rel = f"primitives-core/skills/{skill_id}/README.md"
         if not os.path.lexists(readme):
             problems.append(
-                f"{rel}: missing — standalone plugin (1 skill, no agents/hooks) must "
-                f"symlink README.md to {expected_rel}"
+                f"{rel}: missing — standalone plugin (1 skill, no agents/hooks/commands) "
+                f"must symlink README.md to {expected_rel}"
             )
         elif not os.path.islink(readme):
             problems.append(
                 f"{rel}: regular file — standalone plugins must symlink README.md to "
                 f"the skill's own README ({expected_rel}); only bundle assemblies "
-                "(>1 skill, or any agent/hook) may hand-author README.md"
+                "(>1 skill, or any agent/hook/command) may hand-author README.md"
             )
         else:
             actual = os.path.realpath(readme)

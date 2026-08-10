@@ -48,6 +48,7 @@ create, evaluate, and refine, calling `rubric-panel` to score and `deletion-pass
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. |
 | `activation` | skill | Create and verify the per-project `.claude/atelier.local.md` activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
+| `activate` | command | `/atelier:activate` — arms atelier in the current project: creates the activation file if it is missing, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and is safe to hand to an agent: it never overwrites an existing file unasked. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to the cheapest model tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. |
@@ -101,9 +102,14 @@ layers, and the practical difference between them is when a change takes effect.
 The Claude Code convention for plugin-local settings is a `.claude/<plugin-name>.local.md` file
 in the project root: YAML frontmatter for the settings, markdown below it for your own notes.
 atelier reads `.claude/atelier.local.md`. It does not exist by default, and its absence is the
-normal state — without it the enforcement layer is entirely off. The `activation` skill creates
-and checks this file for you — reach for it instead of hand-copying the schema block below.
-Run from the project root:
+normal state — without it the enforcement layer is entirely off. Run `/atelier:activate` and it
+is done for you: the file is created if missing, then checked, and you get back what each hook
+actually resolved in plain language. Ask an agent to run it and the same thing happens
+unattended. Reach for either instead of hand-copying the schema block below.
+
+Under the command sits the `activation` skill, which is what an agent loads when it needs to
+reason about activation mid-task rather than just perform it. To drive it directly from the
+project root:
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py"

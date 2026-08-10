@@ -7,6 +7,7 @@ every fixture is a tempdir, never under primitives-core/.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -98,6 +99,37 @@ class Frontmatter(unittest.TestCase):
 class RealTree(unittest.TestCase):
     def test_shipped_tree_is_identity_neutral(self):
         self.assertEqual(I.main(), 0)
+
+
+class CommandScope(unittest.TestCase):
+    """Proves commands are actually inside the identity scan (decision-010): before that
+    change, SCAN_ROOTS omitted primitives-core/commands entirely, so the guard printed a
+    clean run while scanning zero command bodies."""
+
+    def setUp(self):
+        self.fix = tempfile.mkdtemp(prefix="check-identity-command-")
+        self.saved_repo = I.REPO
+        self.saved_roots = I.SCAN_ROOTS
+        # Mirror whatever roots the module itself declares (relative to its real REPO) into
+        # the fixture, so this test is genuinely sensitive to a root being added or dropped
+        # rather than hand-asserting "commands" belongs in the list.
+        rel_roots = [os.path.relpath(p, self.saved_repo) for p in self.saved_roots]
+        I.REPO = self.fix
+        I.SCAN_ROOTS = tuple(os.path.join(self.fix, r) for r in rel_roots)
+        with open(os.path.join(self.fix, "primitives-core.yaml"), "w", encoding="utf-8") as fh:
+            fh.write("primitives:\n")
+
+    def tearDown(self):
+        I.REPO = self.saved_repo
+        I.SCAN_ROOTS = self.saved_roots
+        shutil.rmtree(self.fix, ignore_errors=True)
+
+    def test_command_body_identity_violation_is_flagged(self):
+        cmd_dir = os.path.join(self.fix, "primitives-core", "commands")
+        os.makedirs(cmd_dir)
+        with open(os.path.join(cmd_dir, "activate.md"), "w", encoding="utf-8") as fh:
+            fh.write("---\ndescription: x\n---\nProduce Henry's report.\n")
+        self.assertEqual(I.main(), 1)
 
 
 if __name__ == "__main__":

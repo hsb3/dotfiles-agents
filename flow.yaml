@@ -26,7 +26,7 @@ nodes:
     class: authored
     status: current
     paths: [primitives-core]
-    note: "Single source copy of every primitive: skills, agents, hooks. Every item's README travels with it (per-item template in primitives-core/README.md). The empty top-level hooks/ placeholder was removed 2026-08-06."
+    note: "Single source copy of every primitive: skills, agents, commands, hooks. Every item's README travels with it (per-item template in primitives-core/README.md). The empty top-level hooks/ placeholder was removed 2026-08-06."
   - id: roster
     layer: roster
     class: authored
@@ -104,7 +104,7 @@ nodes:
     class: authored
     status: current
     paths: [plugins, .claude-plugin]
-    note: "Pointer-based marketplace surface (ADR 0017): plugins/<id>/ as hand-authored thin symlink assemblies over primitives-core/ (plugin.json + hooks.json regular files; skills/agents/hooks as in-repo symlinks; bundle READMEs regular, standalone READMEs symlinked to the skill's README) plus the root .claude-plugin/marketplace.json listing each plugin by relative source. Claude Code dereferences at install; guarded by scripts/check_symlinks.py (make symlinks). Replaced the dist lanes (task-3)."
+    note: "Pointer-based marketplace surface (ADR 0017): plugins/<id>/ as hand-authored thin symlink assemblies over primitives-core/ (plugin.json + hooks.json regular files; skills/agents/commands/hooks as in-repo symlinks; bundle READMEs regular, standalone READMEs symlinked to the skill's README) plus the root .claude-plugin/marketplace.json listing each plugin by relative source. Claude Code dereferences at install; guarded by scripts/check_symlinks.py (make symlinks). Replaced the dist lanes (task-3)."
   - id: translation-config
     layer: roster
     class: authored

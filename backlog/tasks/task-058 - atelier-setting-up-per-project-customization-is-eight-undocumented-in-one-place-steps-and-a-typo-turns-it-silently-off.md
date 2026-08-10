@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-10 02:46'
-updated_date: '2026-08-10 05:30'
+updated_date: '2026-08-10 05:35'
 labels:
   - primitives
 milestone: m-2
@@ -53,7 +53,7 @@ Open question the worker should answer first, not assume: which project the owne
 - [x] #8 The checker and the hooks read the activation file through the same parser, so a file the checker passes cannot be ignored by a hook
 - [x] #9 Any new script is stdlib-only and runs with zero install
 - [x] #10 The skill ships and is reachable by the operator as a slash invocation, carrying the procedure and the authoritative key reference
-- [ ] #11 Whether a separate command primitive also ships is recorded as an owner ruling, not left implied by its absence
+- [x] #11 Whether a separate command primitive also ships is recorded as an owner ruling, not left implied by its absence
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -86,5 +86,14 @@ SHAPE. Skill plus executable validation, confirmed. The command half hit a struc
 DERIVED KEY SET, from the readers rather than the docs: exactly five — enforce, protected, isolate, handoff (all hook-read), and effort (prose-only, no hook parses it). references/activation.md documents all five correctly and is authoritative; plugins/atelier/README.md is the drifted copy, missing handoff from both its fenced example and its key table.
 
 VALIDATION DESIGN. Five hand-rolled parsers exist, one per hook, standalone by ADR 0017 — so the checker must not add a sixth and must not refactor them into a shared module. It importlib-loads each hook and calls that hook's own loader, which is ground truth and cannot drift. The three states it has to separate are not configured / armed / present but silently inert, because those are exactly the three an operator cannot tell apart today.
+---
+
+created: 2026-08-10 05:35
+---
+Owner ruling 2026-08-10: SHIP THE COMMAND. The cost was raised before the ruling — first primitive of its kind, reshapes the roster schema plus check_roster, gen_opencode, check_symlinks, and flow.yaml — and the owner chose it anyway, on an axis the cost argument had missed: "the agent can run it on my behalf as well."
+
+That is the part worth keeping. The case against the command was built on the operator axis, where skills already give a slash invocation. But a skill is knowledge a model reaches for, and a command is an instruction an operator OR an agent issues. Wanting the setup performed unattended on request is command-shaped, and no amount of skill polish substitutes.
+
+Recorded as decision-010. AC 11 is answered — the ruling exists rather than being implied by absence.
 ---
 <!-- COMMENTS:END -->

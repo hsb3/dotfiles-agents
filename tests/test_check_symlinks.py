@@ -125,7 +125,7 @@ class ReadmeConvention(unittest.TestCase):
             setattr(S, k, v)
         shutil.rmtree(self.fix, ignore_errors=True)
 
-    def _make_plugin(self, plugin_id, skill_ids, agents=False, hooks=False, readme=None):
+    def _make_plugin(self, plugin_id, skill_ids, agents=False, hooks=False, commands=False, readme=None):
         pdir = os.path.join(S.PLUGINS_DIR, plugin_id)
         os.makedirs(os.path.join(pdir, ".claude-plugin"))
         with open(os.path.join(pdir, ".claude-plugin", "plugin.json"), "w") as fh:
@@ -148,6 +148,11 @@ class ReadmeConvention(unittest.TestCase):
             os.makedirs(hooks_dir)
             with open(os.path.join(hooks_dir, "hooks.json"), "w") as fh:
                 fh.write("{}\n")
+        if commands:
+            commands_dir = os.path.join(pdir, "commands")
+            os.makedirs(commands_dir)
+            with open(os.path.join(commands_dir, "go.md"), "w") as fh:
+                fh.write("---\ndescription: x\n---\ndo the thing\n")
         readme_path = os.path.join(pdir, "README.md")
         if readme == "regular":
             with open(readme_path, "w") as fh:
@@ -224,6 +229,14 @@ class ReadmeConvention(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("plugins/lambda/README.md", problems[0])
         self.assertIn("does not match", problems[0])
+
+    def test_commands_dir_makes_assembly_a_bundle(self):
+        """A one-skill assembly with a commands/ entry is a bundle (decision-010: a command
+        is a shipped surface beyond the one skill); with no commands it's still standalone."""
+        with_cmd = self._make_plugin("nu", ["nu"], commands=True)
+        self.assertFalse(S.is_standalone(with_cmd))
+        without_cmd = self._make_plugin("xi", ["xi"])
+        self.assertTrue(S.is_standalone(without_cmd))
 
 
 if __name__ == "__main__":

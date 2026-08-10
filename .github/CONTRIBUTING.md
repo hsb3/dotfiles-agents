@@ -1,6 +1,6 @@
 # Contributing
 
-This marketplace ships **primitives** (skills, agents, hooks) authored in `primitives-core/`,
+This marketplace ships **primitives** (skills, agents, commands, hooks) authored in `primitives-core/`,
 listed in the `primitives-core.yaml` roster, and distributed as thin symlink assemblies under
 `plugins/<id>/` (ADR 0017 — no build step; nothing generated is tracked). This page is the
 single entry point for landing a change; the canonical rules live
@@ -47,8 +47,9 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
   recorded **by reference** in [`../externals.yaml`](../externals.yaml) (non-null `upstream` +
   `ref`), never copied into the source tree ([ADR 0003](../backlog/decisions/0003-externals-tracked-not-vendored.md)).
 - Primitive layout: `skills/<id>/SKILL.md` (+ optional `references/`, `scripts/`, `assets/`),
-  `agents/<id>.md` (frontmatter), `hooks/<id>/hook.py` (+ `config.json`) — the ratified hook-dir
-  layout.
+  `agents/<id>.md` (frontmatter), `commands/<id>.md` (frontmatter; the command loads a skill
+  and drives it rather than restating one — decision-010), `hooks/<id>/hook.py`
+  (+ `config.json`) — the ratified hook-dir layout.
 
 ## What `make ci` enforces
 
@@ -57,7 +58,7 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 | Command | Enforces |
 |---|---|
 | `make check` | **Roster ↔ disk drift** — every roster `source` exists; provenance-manifest schema valid; no orphaned bodies. Also the consumer-catalog guard and the **plugin-README diagram** guard (see below). |
-| `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, ADRs, and `backlog/` are exempt (they don't ship). |
+| `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,commands,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, ADRs, and `backlog/` are exempt (they don't ship). |
 | `make provenance` | **Provenance** — every `primitives-core/` body is `origin: authored`; every `externals.yaml` entry has non-null `upstream` + `ref` (ADR 0015 / ADR 0003). |
 | `make hook-layout` | **Hook layout** — hooks use the ratified `hooks/<name>/hook.py` dir layout, never flat handlers or inline-in-settings. |
 | `make symlinks` | **Symlink-assembly lint** (ADR 0017) — every link under `plugins/` resolves in-repo; the root marketplace manifest and the assemblies match 1:1. |

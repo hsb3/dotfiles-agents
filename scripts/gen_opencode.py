@@ -23,8 +23,10 @@ tempdir and executes the generated installer; `--out` is the direct entry point:
   README.md               generated lane README incl. the EXCLUSIONS manifest — every
                           primitive that does NOT travel, with its reason (no silent caps)
 
-Hooks are `unsupported` in the matrix (opencode's only event surface is TS-on-Bun plugins);
-they appear in the exclusions manifest, never in the tree.
+Hooks and commands are `unsupported` in the matrix (opencode's only event surface is TS-on-Bun
+plugins; opencode does have commands, but the drive-a-skill body needs a per-command authoring
+pass — full reasons in translation.yaml). They appear in the exclusions manifest, never in the
+tree, so the laydown stays skills + agents.
 
 Deterministic and stdlib-only:
 
@@ -195,7 +197,10 @@ def build(out_root, entries, translation):
     excluded = []  # (id, type, reason)
     for e in entries:
         eid, ptype = e["id"], e["type"]
-        if ptype not in ("skill", "agent", "hook", "mcp"):
+        # Every roster type reaches treatment_for(); a type absent here is a SILENT skip,
+        # not a recorded exclusion. Commands land on translation.yaml's `type: command`
+        # matrix row (treatment: unsupported), which carries the reason the manifest prints.
+        if ptype not in ("skill", "agent", "command", "hook", "mcp"):
             continue
         if eid in excluded_ids:
             if "opencode" in _targets(e):

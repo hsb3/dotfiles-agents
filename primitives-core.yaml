@@ -7,7 +7,7 @@
 # symlink assemblies under plugins/<id>/ (guarded by scripts/check_symlinks.py).
 #
 # Entry schema (see primitives-core/README.md):
-#   id · type{skill|agent|mcp|hook} · source · origin{authored|sourced|vendored} ·
+#   id · type{skill|agent|command|mcp|hook} · source · origin{authored|sourced|vendored} ·
 #   disposition{qualified|grandfathered-pending-use|demoted|untriaged|orphaned} · targets[] ·
 #   requires[] (optional; absent = no needs) — capability words {hooks|local-mcp|hosted-mcp}
 #   plus dependency declarations cli:<kebab> (a binary/app that must be installed) and
@@ -332,3 +332,9 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: activate
+    type: command
+    source: primitives-core/commands/activate.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]

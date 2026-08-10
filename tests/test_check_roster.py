@@ -5,7 +5,10 @@ rule), the parser, and a clean-tree smoke of main() against the seeded scaffold 
 Stdlib-only.
 """
 
+import contextlib
+import io
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -150,6 +153,85 @@ class DiskPrimitives(unittest.TestCase):
 class CleanTree(unittest.TestCase):
     def test_main_returns_zero(self):
         self.assertEqual(C.main(), 0)
+
+
+class CommandType(unittest.TestCase):
+    """End-to-end roster<->disk checks for the `command` primitive type (decision-010): a
+    command is a flat .md file under primitives-core/commands/, same shape as an agent."""
+
+    ROSTER_ENTRY = (
+        "primitives:\n"
+        "  - id: activate\n"
+        "    type: command\n"
+        "    source: primitives-core/commands/activate.md\n"
+        "    origin: authored\n"
+        "    disposition: qualified\n"
+        "    targets: [claude-code]\n"
+    )
+    PLACEHOLDER_SKILL_ENTRY = (
+        "primitives:\n"
+        "  - id: placeholder\n"
+        "    type: skill\n"
+        "    source: primitives-core/skills/placeholder\n"
+        "    origin: authored\n"
+        "    disposition: qualified\n"
+        "    targets: [claude-code]\n"
+    )
+
+    def setUp(self):
+        self.fix = tempfile.mkdtemp(prefix="check-roster-command-")
+        self.saved = {k: getattr(C, k) for k in ("REPO", "PC", "ROSTER")}
+        C.REPO = self.fix
+        C.PC = os.path.join(self.fix, "primitives-core")
+        C.ROSTER = os.path.join(self.fix, "primitives-core.yaml")
+
+    def tearDown(self):
+        for k, v in self.saved.items():
+            setattr(C, k, v)
+        shutil.rmtree(self.fix, ignore_errors=True)
+
+    def _write_roster(self, text):
+        with open(C.ROSTER, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
+    def _write_command(self, name):
+        cmd_dir = os.path.join(C.PC, "commands")
+        os.makedirs(cmd_dir, exist_ok=True)
+        with open(os.path.join(cmd_dir, f"{name}.md"), "w", encoding="utf-8") as fh:
+            fh.write("---\ndescription: x\n---\nbody\n")
+
+    def _write_placeholder_skill(self):
+        d = os.path.join(C.PC, "skills", "placeholder")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "SKILL.md"), "w", encoding="utf-8") as fh:
+            fh.write("---\nname: placeholder\ndescription: x\n---\n")
+
+    def test_command_entry_with_matching_disk_file_validates(self):
+        """A roster `type: command` entry whose source exists on disk is clean — and a
+        family README.md alongside it (commands/README.md) is not mistaken for a second
+        command primitive, the same exemption agents/README.md gets."""
+        self._write_roster(self.ROSTER_ENTRY)
+        self._write_command("activate")
+        with open(os.path.join(C.PC, "commands", "README.md"), "w", encoding="utf-8") as fh:
+            fh.write("# commands\n")
+        self.assertEqual(C.main(), 0)
+
+    def test_command_on_disk_without_roster_entry_is_red(self):
+        self._write_roster(self.PLACEHOLDER_SKILL_ENTRY)
+        self._write_placeholder_skill()
+        self._write_command("activate")
+        self.assertEqual(C.main(), 1)
+
+    def test_roster_command_entry_without_disk_file_is_red(self):
+        """The roster->disk orphan check specifically names it, not just any drift — a
+        `type: command` entry alone already goes red pre-decision-010 (the type itself
+        wasn't recognized), so the exit code alone would not distinguish old from new."""
+        self._write_roster(self.ROSTER_ENTRY)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = C.main()
+        self.assertEqual(code, 1)
+        self.assertIn("in roster but NOT on disk: (command) primitives-core/commands/activate.md", out.getvalue())
 
 
 if __name__ == "__main__":
