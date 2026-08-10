@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-10 02:46'
-updated_date: '2026-08-10 02:53'
+updated_date: '2026-08-10 04:21'
 labels:
   - primitives
 milestone: m-2
@@ -50,8 +50,25 @@ Open question the worker should answer first, not assume: which project the owne
 - [ ] #5 The full setup path for a fresh project is written down in one place, including the steps currently recorded only in repo memory
 - [ ] #6 A test fails if a documented key is unparseable by the code that reads it, or if a schema copy drifts from the authoritative one
 - [ ] #7 Checking an activation file for validity is a command an agent can run, shipped in the skill resources or as a mini CLI, not a procedure written in prose for the agent to apply
-- [ ] #8 Both a command and a skill ship, the command for the operator one-shot and the skill for mid-task reasoning, with the procedure living in exactly one of them
-- [ ] #9 The checker and the hooks read the activation file through the same parser, so a file the checker passes cannot be ignored by a hook
-- [ ] #10 The reported non-working setup is reproduced and its failure point named — authoring, parsing, or a hook that never fired — before the fix is designed
-- [ ] #11 Any new script is stdlib-only and runs with zero install
+- [ ] #8 The checker and the hooks read the activation file through the same parser, so a file the checker passes cannot be ignored by a hook
+- [ ] #9 Any new script is stdlib-only and runs with zero install
+- [ ] #10 The skill ships and is reachable by the operator as a slash invocation, carrying the procedure and the authoritative key reference
+- [ ] #11 Whether a separate command primitive also ships is recorded as an owner ruling, not left implied by its absence
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-08-10 04:21
+---
+Owner ruling 2026-08-09/10, two parts.
+
+DIAGNOSIS, settled — do not re-litigate. The failure point is AUTHORING and DISCOVERABILITY, not parsing and not a hook that never fires: "there is no easy way to create a local override file and nothing documents all the different things I can set in it. An example that ships, and a command and/or skill to do it right, is what I need." AC on reproducing the failure is therefore removed as answered.
+
+SHAPE. Skill plus executable validation, confirmed. The command half hit a structural finding that changes its cost: this repo ships NO commands at all — no primitives-core/commands/, no plugins/*/commands/, and the roster type enum is skill|agent|mcp|hook. A command would be the first of its kind, reshaping the roster schema plus the roster guard, the symlink guard, and the opencode generator. Skills are already reachable as a slash invocation, so the command buys an affordance the skill provides. Built the skill under the ruling's "and/or"; whether a command primitive type is worth introducing is a separate owner call and is now its own criterion rather than an assumption.
+
+DERIVED KEY SET, from the readers rather than the docs: exactly five — enforce, protected, isolate, handoff (all hook-read), and effort (prose-only, no hook parses it). references/activation.md documents all five correctly and is authoritative; plugins/atelier/README.md is the drifted copy, missing handoff from both its fenced example and its key table.
+
+VALIDATION DESIGN. Five hand-rolled parsers exist, one per hook, standalone by ADR 0017 — so the checker must not add a sixth and must not refactor them into a shared module. It importlib-loads each hook and calls that hook's own loader, which is ground truth and cannot drift. The three states it has to separate are not configured / armed / present but silently inert, because those are exactly the three an operator cannot tell apart today.
+---
+<!-- COMMENTS:END -->
