@@ -51,3 +51,6 @@ harness/campaign-logs/
 
 # machine-local agent auto-memory (redirect target differs per machine; tracked store is .claude/memory/)
 .claude/agent-memory/
+
+# per-project plugin activation (atelier.local.md and friends) — local by convention
+.claude/*.local.md
