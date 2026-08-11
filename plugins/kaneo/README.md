@@ -55,6 +55,12 @@ integration's push-driven status transition.
 
 ## Failing loudly when the tools are not there
 
+**Enabling this plugin is a declaration that this repo's work lives on a Kaneo board.** So
+there are two supported states, and no quiet third one: configured and working, or turned
+off. Enabled-but-broken gets complained about at the start of every session until you fix
+the configuration or disable the plugin. That is deliberate — the alternative is a session
+that believes it has board tools it does not have.
+
 Installing a plugin's MCP server is not the same as having it. Three things switch it off
 without a word: the repo is unconfigured, someone ran `/mcp disable` here (per-project, and
 recorded only in `~/.claude.json`), or `CLAUDE_CODE_SKIP_PLUGIN_MCP_SERVERS` is set. In all
