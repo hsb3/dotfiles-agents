@@ -43,6 +43,7 @@ behind.
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows. | 10 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 4 agents · 9 hooks · 1 command |
+| [`kaneo`](plugins/kaneo/README.md) | bundle | Track a repo's work on a live Kaneo board instead of in-repo task files, with board authority narrowing down the delegation chain. | 1 skill · 1 agent · 2 hooks |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
 | [`plugin-feedback`](plugins/plugin-feedback/README.md) | bundle | Tell every session and worker that plugin defects are reportable, then file one to a fixed template instead of a free-handed gh call. | 2 hooks |
 

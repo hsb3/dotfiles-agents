@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/kaneo-mcp-policy/hook.py\"",
+            "statusMessage": "Checking kaneo board level policy...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "mcp__(plugin_kaneo_)?kaneo__.*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/kaneo-bash-tripwire/hook.py\"",
+            "statusMessage": "Checking for direct board access...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ]
+  }
+}

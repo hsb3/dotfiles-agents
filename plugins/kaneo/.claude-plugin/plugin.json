@@ -1,0 +1,9 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Work a repo's tracked tasks on a live Kaneo board instead of in-repo task files, so parallel sessions stop grabbing the same work and no branch grows its own backlog.md. Ships the workflow skill (claim ritual, decision convention, level split), the board's MCP server definition so installing the plugin registers the tools, a reference L2 manager agent whose tools list is the append-only allowlist, and two PreToolUse hooks: a level policy that keeps claim authority in the root session and stamps every comment and task with its agent and session, plus an advisory tripwire on subagent Bash that reaches the board directly. Configure with five KANEO_* env vars; nothing about an instance is baked in.",
+  "name": "kaneo",
+  "repository": "https://github.com/hsb3/dotfiles-agents",
+  "version": "0.3.0"
+}
