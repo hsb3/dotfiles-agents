@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-11 (session 15). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-11 (session 16). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, with the two higher-precedence paths absent, so the hooks resolve it with no
@@ -15,21 +15,22 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `5c2d1ac`** · **`main` `6694047` = `publish: dev@79aca9d`** · **6 plugins** ·
-  **53 primitives** · `make ci` green (exit 0, 484 tests) · no worktrees. Read the issue queue
+- **`dev` `0a58e63`** · **`main` `30a20fb` = `publish: dev@6b9701e`** · **7 plugins** ·
+  **59 primitives** · `make ci` green (exit 0, 519 tests) · no worktrees. Read the issue queue
   live, never from here.
-- **UNPUBLISHED — `main` is behind `dev` by session 15's work.** `comment-hygiene` shipped
-  (skill + `PreToolUse` gate, #302 then #303), so **atelier `0.14.0`** and **solo-skills
-  `0.1.3`** are bumped in-tree but have NOT reached consumers. **Publishing is the open
-  action** (`publish-to-main` skill). Everything before it is on `main` as `dev@79aca9d`.
+- **NOTHING IS UNPUBLISHED.** The 2026-08-11 publish carried session 15's `comment-hygiene`
+  (atelier `0.14.0`, solo-skills `0.1.3`) and session 16's `kaneo` (`0.4.0`) in one assembly.
+  Verified on `origin/main`, not from the green run.
 - **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
   The 2026-08-09 triage carded everything then open (TASK-052 … TASK-057, #289 → TASK-033).
-  **Three have arrived since and have NO card: #299, #300, #301** (2026-08-10). On a first
-  read, unverified: #301 restates #282/TASK-052; #299 (a manager never receives completion
-  reports from workers it resumes) sits in the same wait-forever family as #280/#285/TASK-054;
-  #300 (instrument long runs — 30-minute tasks taking 2–4 hours) looks genuinely new. Triage
-  them properly rather than trusting that sentence. **#291 no longer exists** — it was deleted
-  upstream, so ignore any older note about forwarding it.
+  **Four have arrived since and have NO card: #299, #300, #301** (2026-08-10) **and #306**
+  (2026-08-11, which landed mid-session while nobody was working the queue — the standing
+  proof of the "re-read `gh issue list` at session start" rule below). On a first read,
+  unverified: #301 restates #282/TASK-052; #299 and #306 both describe a manager never
+  receiving worker completion reports and are probably one bug, in the same wait-forever
+  family as #280/#285/TASK-054; #300 (instrument long runs — 30-minute tasks taking 2–4
+  hours) looks genuinely new. Triage them properly rather than trusting that sentence.
+  **#291 no longer exists** — deleted upstream, so ignore any older note about forwarding it.
 - **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** The marketplace went 22
   entries → 6 (seventeen one-skill plugins retired into **`solo-skills`**; `mise-en-place-scaffold`
   survives only inside `code-desk`), and the delegation vocabulary changed: skill
@@ -38,10 +39,11 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 - **Operator checklist — this project is migrated, OTHER projects are not.** Per project: remove
   and re-add the marketplace (not just uninstall — §5), uninstall `foreman-kit` and retired
   one-skill ids, install `atelier` + `solo-skills` **in that project** (an `enabledPlugins` flag
-  alone proves nothing — memory: `plugin-enablement-needs-per-project-install`), delete the stale
-  `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`, and rename
-  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema in the delegation skill's
-  `references/activation.md`).
+  alone proves nothing — memory: `plugin-enablement-needs-per-project-install`; confirmed again
+  2026-08-11, where `kaneo@kaneo-ops: true` sat in a repo whose marketplace was never
+  registered), delete the stale `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`, and
+  rename `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema in the delegation
+  skill's `references/activation.md`).
 
 Standing mechanisms not to re-derive: **ADR 0017** (symlink assemblies, `dist/` retired, roster =
 provenance manifest, opencode generated at install time); **`origin: vendored`** (third-party
@@ -63,7 +65,15 @@ in-tree only under `backlog/docs/vendoring-rule.md`, machine-checked); **dual-ho
 - 2026-08-11 (s15): **`comment-hygiene`** — a skill (dual-homed, atelier + solo-skills) and an
   advisory `PreToolUse` gate that fires on `git commit` / `gh pr create` (#302, #303). Owner
   directive: history belongs on the task, not in code comments. **TASK-060** filed for the gate
-  gap it exposed. Two measurement lessons in §5; both PRs merged, neither published.
+  gap it exposed. Two measurement lessons in §5.
+- 2026-08-11 (s16): **`kaneo` adopted as the 7th plugin and published** (#304, #305,
+  TASK-061). Moved from the `hsb3/kaneo-ops` ops repo, which gave it none of these gates.
+  Ships the roster's **first `mcp`-type primitive** — closing a defect where the plugin
+  claimed to ship an MCP server config that actually sat at the ops repo root, so every
+  consumer but that one silently got no board tools. Then #305 added the availability guards
+  the owner asked for ("fail loudly"): a `SessionStart` preflight plus a call-time config
+  deny. **Proven live** in `~/Developer/kaneo`, not just by tests — see §5. TASK-062/063/064
+  filed.
 - 2026-08-07 (s13): **plugin-README diagrams** (TASK-051, #288) — a standard
   (`backlog/docs/readme-diagram-standard.md`), a gate (`scripts/check_plugin_diagrams.py`, in
   `make check`), and one Mermaid diagram backfilled into all six plugin READMEs. Six version
@@ -81,15 +91,25 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-**Two things are queued: publish, and triage three new issues.** `comment-hygiene` is merged and
-unpublished (§1), and #299/#300/#301 have no cards. Beyond those, the cards with users actually
-waiting are **TASK-052** (plugin-feedback cannot file a feature request at all) and **TASK-053**
-(two shipped READMEs still teach the ignored flat `worktreeBaseRef` key).
+**The queued thing is triage: #299/#300/#301/#306 have no cards** (§1). Beyond those, the cards
+with users actually waiting are **TASK-052** (plugin-feedback cannot file a feature request at
+all) and **TASK-053** (two shipped READMEs still teach the ignored flat `worktreeBaseRef` key).
 
-**TASK-060 is the newest card and is cheap.** No gate reads a *bundle* README's skill table, so
-`comment-hygiene` shipped into `solo-skills`, counted right in the root README, passed every
-gate, and was still missing from the bundle's own table. Same failure class the catalog guard
-already closed one level up.
+**One loose end from s16, and it is in a second repo.** TASK-061 is Done with **AC #8
+unchecked**: `kaneo-ops` still lists `kaneo` in its own `.claude-plugin/marketplace.json` and
+still carries `plugins/kaneo/`, so two copies of the plugin now exist. Left untouched on
+purpose (never mutate a second repo). It needs its marketplace entry dropped and its README
+pointed here. Note that repo's tracked `.claude/settings.json` also carries an inert
+`"kaneo@kaneo-ops": true` — that marketplace is not registered on this machine, so the plugin
+was never actually installed there; it ran on a project `.mcp.json` alone.
+
+**TASK-060 and TASK-064 are the cheap ones.** TASK-060: no gate reads a *bundle* README's skill
+table, so `comment-hygiene` shipped into `solo-skills`, counted right in the root README, passed
+every gate, and was still missing from the bundle's own table. TASK-064: three gaps the first
+`mcp` primitive exposed — `gen_opencode` would silently drop an opencode-targeted `mcp` entry
+(`translation.yaml` has a `render` row but `build()` has no branch for it), `check_catalog`'s
+Contents vocabulary cannot express an MCP server, and `check_plugin_diagrams` miscounts nodes
+on inline dotted-edge labels.
 
 **`command` is now a primitive type** (decision-010) — the first non-{skill,agent,hook,mcp} kind.
 A fifth type would touch `check_roster.py`, `gen_opencode.py`, `check_symlinks.py`, and
@@ -109,12 +129,13 @@ joins `solo-skills` **if the membership gate says it qualifies** — run
 not qualify, the ruling has no valid target and needs a fresh one.
 
 **No card is blocked on the owner** — every question asked on 2026-08-07 was ruled, and the rulings
-sit on the cards (TASK-034, TASK-033, TASK-12). Read the card, do not re-ask. Two things do want a
-decision: **whether to publish** (§1), and **whether §5 should move out of this file** — it is 190
-of these lines and is a gotcha inventory rather than session narrative, so it grows every session
-and cannot be pruned to the handoff skill's ~200-line ceiling without destroying knowledge.
-Splitting it into a tracked `backlog/docs/` doc with a pointer here is an IA change, so it needs
-the owner's word first.
+sit on the cards (TASK-034, TASK-033, TASK-12). Read the card, do not re-ask. **One decision is
+still open and is now overdue: whether §5 should move out of this file.** It is ~230 of these
+lines, and this file is ~395 against the handoff skill's ~200 ceiling. §5 is a gotcha inventory
+rather than session narrative, so it grows every session and cannot be pruned without destroying
+knowledge that cost real time to learn. Splitting it into a tracked `backlog/docs/` doc with a
+pointer here is an IA change, so it needs the owner's word first — asked 2026-08-07, re-raised
+2026-08-11. Until then this file stays over the ceiling on purpose, not by neglect.
 
 **Buildable now** is most of To Do; the cards carry their own scope. Only the sequencing judgment
 is worth keeping here: **TASK-042** (trim `surfaces.md`) is the highest-leverage, being the
@@ -223,6 +244,34 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
 - **A gate passing tells you nothing about whether it has subjects.** `check_symlinks`' standalone
   README rule now has zero real subjects and is exercised only by synthetic fixtures, so it stays
   green either way; it is kept deliberately as a forward guard (reason in its module docstring).
+
+**Plugin MCP servers** (new surface as of `kaneo`, s16 — all of this was probed, not read)
+
+- **A marketplace-installed plugin's MCP server is NOT gated by the per-project approval
+  dialog. Installing the plugin IS the trust decision.** The gate's candidate list is project
+  `.mcp.json` servers plus plugins where `aPt(p) = p.scope === "project" &&
+  p.source.endsWith("@skills-dir")` — repo-supplied plugins only. Do not design around an
+  approval step that will never fire.
+- **A plugin's root `.mcp.json` is auto-discovered and merged.** A *string* `mcpServers` in
+  `plugin.json` means a path to an **MCPB file**, not a config file — setting it to
+  `"./.mcp.json"` is wrong and silently does nothing useful. Ship the `.mcp.json`, omit the key.
+- **`/mcp disable` is per-project, invisible, and survives everything.** It writes
+  `plugin:<plugin>:<server>` into `disabledMcpServers` under the cwd's entry in
+  `~/.claude.json` — not a settings file. Real example on this machine:
+  `plugin:desk-pm:desk-pm`. Approvals themselves have MOVED to `.claude/settings.local.json`;
+  the reset path calls the `~/.claude.json` copies "legacy approvals".
+- **A server can connect on fewer variables than the skill needs, and nothing errors.** kaneo's
+  `.mcp.json` expands 2 of 5; the workflow needs all 5. The tools then exist and work against
+  an unknown board. If a plugin ships a server, something must check the *contract's* config,
+  not the server's — `kaneo-mcp-policy` is the worked example.
+- **`claude mcp list` does NOT apply project settings `env`**, so it reports
+  `Missing environment variables: X` for servers that work fine in a real session. Diagnose MCP
+  config from a session, never from that subcommand. Cost an hour on 2026-08-11.
+- **`--allowedTools` on a headless probe restricts the tool list the model can SEE**, so asking
+  a probe to "list your tools" returns `NONE` even when the server loaded. A negative from such
+  a probe is not evidence of absence — re-ask without the filter.
+- **`claude plugin install --scope project` writes to the TRACKED `.claude/settings.json`.**
+  In someone else's repo that dirties a tracked file; use `--scope local` when that matters.
 
 **Agents and delegation**
 
