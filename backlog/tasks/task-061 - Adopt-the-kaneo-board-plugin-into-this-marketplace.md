@@ -1,10 +1,10 @@
 ---
 id: TASK-061
 title: Adopt the kaneo board plugin into this marketplace
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-11 08:20'
-updated_date: '2026-08-11 08:36'
+updated_date: '2026-08-11 13:16'
 labels:
   - assembly
 milestone: m-1
@@ -36,13 +36,13 @@ Source of truth for what moves: the kaneo-ops checkout at plugins/kaneo (11 file
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 primitives-core/ holds the kaneo skill, the kaneo-manager agent, both policy hooks, and the MCP server config, each with a roster entry in primitives-core.yaml (origin: authored)
-- [ ] #2 The MCP server config ships INSIDE the plugin - installing kaneo into a repo that is not kaneo-ops registers the kaneo MCP server with no hand-authored .mcp.json in that repo
-- [ ] #3 Both hooks are stdlib-Python hook dirs matching the ratified hooks/<name>/hook.py layout, and their behaviour is covered by a stdlib unittest file under tests/ that fails if the floor-deny or the stamping regresses
-- [ ] #4 plugins/kaneo/ is a hand-authored symlink assembly with a bundle README carrying a Mermaid diagram under How it fits together; make symlinks and make check pass
-- [ ] #5 make ci exits 0, and scripts/check_identity.py reports no violation from any kaneo file
-- [ ] #6 No live instance host, project id, or agent identifier appears in any shipped kaneo artifact - all instance values are placeholders or KANEO_* env references
-- [ ] #7 The seventh marketplace entry exists in .claude-plugin/marketplace.json and flow.yaml homes every new top-level path
+- [x] #1 primitives-core/ holds the kaneo skill, the kaneo-manager agent, both policy hooks, and the MCP server config, each with a roster entry in primitives-core.yaml (origin: authored)
+- [x] #2 The MCP server config ships INSIDE the plugin - installing kaneo into a repo that is not kaneo-ops registers the kaneo MCP server with no hand-authored .mcp.json in that repo
+- [x] #3 Both hooks are stdlib-Python hook dirs matching the ratified hooks/<name>/hook.py layout, and their behaviour is covered by a stdlib unittest file under tests/ that fails if the floor-deny or the stamping regresses
+- [x] #4 plugins/kaneo/ is a hand-authored symlink assembly with a bundle README carrying a Mermaid diagram under How it fits together; make symlinks and make check pass
+- [x] #5 make ci exits 0, and scripts/check_identity.py reports no violation from any kaneo file
+- [x] #6 No live instance host, project id, or agent identifier appears in any shipped kaneo artifact - all instance values are placeholders or KANEO_* env references
+- [x] #7 The seventh marketplace entry exists in .claude-plugin/marketplace.json and flow.yaml homes every new top-level path
 - [ ] #8 kaneo-ops no longer ships the plugin from its own marketplace, or its README states plainly that the plugin is now maintained here
 <!-- AC:END -->
 
@@ -84,4 +84,22 @@ Two things caught by inspection that no gate would have caught:
 NOT verified: no live install probe. Installing into a throwaway project would mutate the machine's marketplace registration and other projects' enabledPlugins, which the handoff documents as having wiped seven entries in one go elsewhere. The load mechanism is confirmed from the binary and the dereferenced tree, but nobody has watched this plugin register its MCP server in a real session.
 
 Follow-ups filed: TASK-062 (brownfield adoption skill), TASK-063 (provisioning skill), TASK-064 (three gate gaps the first mcp primitive exposed).
+
+Published 2026-08-11: main is now 30a20fb = publish: dev@6b9701e. Verified on origin/main rather than from the green run — 7 plugins, kaneo at 0.4.0, marketplace metadata 0.7.0, all 19 kaneo files present as dereferenced regular files, and .mcp.json carrying only ${KANEO_API_URL} / ${KANEO_MCP_TOKEN} placeholders. Session 15's comment-hygiene work rode along in the same assembly (atelier 0.14.0, solo-skills 0.1.3), clearing the standing unpublished backlog.
+
+AC 8 is NOT met and is the one loose end: kaneo-ops still lists the plugin in its own .claude-plugin/marketplace.json and still carries plugins/kaneo/, so two copies now ship. Left untouched deliberately — mutating a second repo's history is out of bounds for this card. Needs its marketplace entry dropped and its README pointed here.
+
+Scope grew once, with the owner's word: PR #305 added the availability guards after the owner asked for the missing-tools case to fail loudly. Probing the harness settled the security question first — the per-project MCP approval gate covers project .mcp.json servers and repo-supplied @skills-dir plugins only, so a marketplace-installed plugin's server is never gated and installing IS the trust decision. That makes the guards the only thing between installed and working.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+The kaneo board plugin now lives here and ships from this marketplace as the seventh assembly: 5 primitives including the roster's first mcp-type entry, 3 hooks, and 35 tests (suite 484 -> 519). Published to main as dev@6b9701e and verified on origin/main.
+
+Closed the packaging defect that motivated the move — the plugin claimed to ship an MCP server config that actually sat at the ops repo root, so every consumer but that one installed it and silently got no board tools.
+
+Verified rather than asserted: probed the harness binary to confirm plugin .mcp.json discovery and that a string mcpServers manifest key means an MCPB path (the first draft had that key and was wrong); mutation-tested every guard, nine mutations, all red; dereferenced the assembly and ran claude plugin validate --strict; read the generated opencode lane directly, which caught the skill being rostered for a runtime where none of its tools or hooks exist.
+
+Not verified: no live install probe — nobody has watched the plugin register its server in a real session.
+<!-- SECTION:FINAL_SUMMARY:END -->
