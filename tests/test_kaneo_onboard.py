@@ -109,6 +109,35 @@ A comment thread entry.
 <!-- COMMENTS:END -->
 """
 
+# Definition of Done: bare-marker like AC, and absent from dotfiles-agents' own backlog —
+# which is the whole reason the dialect fix shipped without it. The five repos migrated
+# before that fix wrote 459 of these between them.
+DOD_DIALECT = """---
+id: TASK-019
+title: Task carrying a definition of done
+status: To Do
+priority: medium
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+The work itself.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+
+<!-- AC:BEGIN -->
+- [ ] #1 The criterion
+<!-- AC:END -->
+
+## Definition of Done
+
+<!-- DOD:BEGIN -->
+- [x] #1 Verification evidence recorded (commands + actual output)
+<!-- DOD:END -->
+"""
+
 
 def write(root, folder, name, text):
     directory = os.path.join(root, "backlog", folder)
@@ -169,6 +198,15 @@ class TaskFileTests(unittest.TestCase):
         self.assertIn("## Implementation Notes", body)
         self.assertIn("## Comments", body)
         self.assertLess(body.index("Acceptance"), body.index("Plan"))
+
+    def test_the_definition_of_done_section_is_carried(self):
+        # The dialect fix was validated against a repo with zero DOD sections, so nothing
+        # failed when it dropped them. Five boards lost 459 of these.
+        path = write(self.root, "tasks", "task-019.md", DOD_DIALECT)
+        body = ob.parse_task_file(path, "TASK")["body"]
+        self.assertIn("## Definition of Done", body)
+        self.assertIn("Verification evidence recorded", body)
+        self.assertLess(body.index("Acceptance Criteria"), body.index("Definition of Done"))
 
     def test_both_dialects_of_one_section_carry_once(self):
         both = TASK + "\n<!-- AC:BEGIN -->\n- [ ] duplicate spelling\n<!-- AC:END -->\n"
@@ -637,6 +675,66 @@ class CentralVocabularyTests(unittest.TestCase):
     def test_the_two_axes_never_collide(self):
         upper = {ob.DOC_LABEL, *ob.DOC_KINDS}
         self.assertEqual({u.lower() for u in upper} & set(ob.WORK_TYPES), set())
+
+
+class RepairPlanTests(unittest.TestCase):
+    """The repair rewrites live board descriptions, so its only guard against destroying
+    work is this verdict. It gets tested harder than the happy path."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        path = write(self.root, "tasks", "task-052.md", REAL_DIALECT)
+        self.record = ob.parse_task_file(path, "TASK")
+        self.correct = ob.body_for(self.record)
+
+    def _plan(self, description, title="TASK-052: Real marker dialect"):
+        task = {"id": "abc", "title": title, "description": description}
+        return ob.repair_plan([self.record], [task])[0][2]
+
+    def test_a_truncated_import_is_rewritten(self):
+        # What the broken parser left behind: the description section and nothing else.
+        truncated = self.correct[: self.correct.index("## Acceptance Criteria")].strip()
+        self.assertEqual(self._plan(truncated), "rewrite")
+
+    def test_an_already_correct_body_is_left_alone(self):
+        self.assertEqual(self._plan(self.correct), "unchanged")
+
+    def test_trailing_whitespace_alone_is_not_a_rewrite(self):
+        self.assertEqual(self._plan(self.correct + "\n\n"), "unchanged")
+
+    def test_a_body_edited_on_the_board_is_never_silently_overwritten(self):
+        edited = self.correct.replace("The described defect.", "Rewritten by a human.")
+        self.assertEqual(self._plan(edited), "diverged")
+
+    def test_an_empty_body_is_not_treated_as_a_truncated_import(self):
+        # "" is a prefix of every string; treating it as a rewrite would be right by
+        # accident here and wrong the moment a body is blank for another reason.
+        self.assertEqual(self._plan(""), "diverged")
+
+    def test_a_source_id_with_no_board_task_is_reported_absent(self):
+        self.assertEqual(self._plan(self.correct, title="TASK-999: something else"), "absent")
+
+    def test_matching_is_by_source_id_not_by_title_text(self):
+        self.assertEqual(self._plan(self.correct, title="TASK-052: renamed on the board"),
+                         "unchanged")
+
+
+class CarriedHeadingTests(unittest.TestCase):
+    def test_every_carried_section_has_exactly_one_heading(self):
+        headings = ob.carried_headings()
+        self.assertEqual(len(headings), len(set(headings)), "dialect synonyms must collapse")
+        self.assertIn("## Acceptance Criteria", headings)
+        self.assertIn("## Definition of Done", headings)
+
+    def test_the_verify_headings_match_what_the_parser_emits(self):
+        # If these drift, verify_repair reports a gap that does not exist, or misses one
+        # that does — which is how the DOD loss stayed invisible.
+        root = tempfile.mkdtemp()
+        path = write(root, "tasks", "task-019.md", DOD_DIALECT)
+        body = ob.parse_task_file(path, "TASK")["body"]
+        for heading in ("## Description", "## Acceptance Criteria", "## Definition of Done"):
+            self.assertIn(heading, ob.carried_headings())
+            self.assertIn(heading + "\n", body)
 
 
 if __name__ == "__main__":
