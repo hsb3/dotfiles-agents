@@ -40,8 +40,9 @@ are root-session only (the plugin hook denies them in any subagent context).
 | `get_task_relations` | relations involving a task | yes |
 | `delete_task_relation` | delete a relation by id | |
 
-Missing at 2.16.4 (the 2.17.1 bump closes them): assignee-only update, column and
-member discovery, task delete, search. Use REST for those.
+Missing from the MCP tool set at 2.16.4: assignee-only update, member discovery,
+task delete, search, column read/write, and bulk import/export. Use REST for those —
+several have perfectly good endpoints, listed below.
 
 ## REST endpoints
 
@@ -52,12 +53,42 @@ GET  /auth/get-session                your identity → userId
 GET  /task/tasks/{projectId}          board; shape {"data":{"columns":[{"tasks":[...]}]}}
 GET  /task/{id}                       single task (check assignee before claiming)
 POST /task/{projectId}                create; title/description/status/priority ALL required
-PUT  /task/status/{id}                status slugs: to-do | in-progress | in-review | done
+PUT  /task/status/{id}                status = the target column's slug (see below)
 PUT  /task/assignee/{id}              {"userId": ...}
 POST /comment/{taskId}                {"content": ...}
 GET  /project?workspaceId=...         projects
+GET  /column/{projectId}              the board's lanes, ordered by `position`
+POST /column/{projectId}              create a lane; {name, icon?, color?, isFinal?}
+GET  /task/export/{projectId}         {project, tasks:[...]} — INCLUDES labels
+POST /task/import/{projectId}         bulk create; {"tasks":[{title, status, ...}]}
+GET  /label/workspace/{workspaceId}   labels (workspace-scoped, not per-project)
 GET  /openapi                         full spec when anything 404s
 ```
+
+## Statuses are column slugs, not a fixed vocabulary
+
+There is no global status enum. A task's `status` is the **slug of a column in its own
+project**, so the valid set is whatever `GET /column/{projectId}` returns. Boards in the
+wild carry lanes like `to-do`, `up-next`, `in-progress`, `documents` — a board with a
+`Documents` lane accepts `"status":"documents"` and no other board does.
+
+Read the columns before writing a status. Guessing from another project's board, or from
+a remembered four-slug list, writes tasks into lanes that do not exist on the target.
+
+Provision lanes with `POST /column/{projectId}`; `isFinal` marks the terminal lane.
+
+## Bulk import silently drops labels
+
+`POST /task/import/{projectId}` takes the whole array in one call and is the right tool
+for a migration — but its accepted fields are only `title`, `description`, `status`,
+`priority`, `startDate`, `dueDate`, `userId`. **Send `labels` and they are discarded
+without comment**: the response still reports `"failed": 0`, and the tasks come back with
+`labels: []`.
+
+Since `GET /task/export/{projectId}` *does* emit labels, an export → import round-trip
+looks lossless and is not. Re-attach labels afterwards as a second pass
+(`PUT /label/{id}/task`, or `POST /label` with the task id), and verify by re-exporting
+rather than by trusting the import summary.
 
 ## Gotchas
 

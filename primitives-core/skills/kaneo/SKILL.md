@@ -53,6 +53,21 @@ Any missing → ask the owner; never guess or create a project. Use the agent
 identity you were assigned, never an owner key. Confirm identity:
 `GET /auth/get-session` (REST) or the MCP `whoami` tool → your userId.
 
+## Adopting a repo that already has a backlog
+
+Never migrate an existing tracker by creating tasks one tool call at a time, and never
+fan that out across subagents — it is bulk data movement, so it gets a script:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/kaneo/scripts/onboard_repo.py" \
+  --workspace <id> discover --repo . --project-id <id>     # read-only, run this first
+```
+
+`discover` is mandatory before `apply`, which will not create a project for you. The
+duplicate-board mistake happens when nothing looks first. `apply` is a dry run until
+`--yes`, records every created task in `--state` so an interrupted run resumes, and
+verifies by re-exporting rather than trusting the import summary.
+
 ## MCP first, claim ritual on REST
 
 Board reads, comments, task creation, labels, and relations go through the
