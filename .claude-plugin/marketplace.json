@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "7 plugins, all seven bundles: solo-skills (every skill that stands on its own - harness and environment config, session discipline, research, diagrams, repo setup, planning, comms, and Obsidian plugin development - in one install), code-desk (next-release execution plus planning, comms, board triage, repo scaffolding, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (tracking a repo's work on a live Kaneo board, with per-level board authority), obsidian-toolkit (Obsidian plugin-dev guidance), and plugin-feedback (hooks that invite defect reports on the plugins in use). The one-skill plugins were retired into solo-skills: a plugin is the unit of installation, so per-skill installs are no longer offered.",
+    "description": "Seven plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (repo standards, planning, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), obsidian-toolkit (Obsidian plugin development), and plugin-feedback (report a plugin defect without leaving the session).",
     "version": "0.7.0"
   },
   "name": "dotfiles-agents",
@@ -13,64 +13,64 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Bring a software project through the next-release execution loop, a documented repo standard, and the executive-desk overhead together \u2014 plan the work into conformant issues and source-grounded plans, keep the repo's meta-structure/memory/README to standard, produce recurring status comms, run board triage, and build themed PowerPoint decks.",
+      "description": "Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows: conformant issues, source-grounded plans, meta-structure and memory upkeep, board triage, recurring status comms, and themed PowerPoint decks.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.4.4"
+      "version": "0.4.5"
     },
     {
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Structural diagrams for repo docs, decks, and architecture briefings - Mermaid for GitHub-rendered markdown (house rule: no parentheses or special characters in node labels), Python diagrams for cloud architecture with provider icons (Azure first, GCP legacy), draw.io legacy-file reading and headless export, Excalidraw sketch diagrams with an author-the-JSON fallback when MCP tools are absent, and raw Graphviz - all feeding SVG+PNG output pipelines with light/dark-friendly styling. Structural diagrams only: data charts belong to the dataviz skill, deck theming to pptx-themes.",
+      "description": "Structural diagrams for repo docs, decks, and briefings, with consistent SVG and PNG output: Mermaid for GitHub-rendered markdown, Python diagrams for cloud architecture with provider icons, draw.io reading and headless export, Excalidraw sketches, and raw Graphviz. Data charts belong to the dataviz skill, deck theming to pptx-themes.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
+      "version": "0.1.4"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, and hold protected config in custody. Run /atelier:activate to arm it in a project and see what each hook resolved.",
+      "name": "atelier",
+      "source": "./plugins/atelier",
+      "version": "0.14.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Track a repo's work on a live Kaneo board instead of in-repo task files, so parallel sessions stop claiming the same task and no branch grows its own backlog. Ships the workflow skill, the board's MCP server definition, a reference manager agent, and hooks that keep claim authority in the root session, block board writes while the config is incomplete, and stamp every write with its agent and session. Configure with five KANEO_* env vars; nothing about an instance is baked in.",
+      "name": "kaneo",
+      "source": "./plugins/kaneo",
+      "version": "0.4.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Build Obsidian plugins against the real API \u2014 lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP \u2014 and automate vaults from the terminal with the official Obsidian CLI.",
+      "name": "obsidian-toolkit",
+      "source": "./plugins/obsidian-toolkit",
       "version": "0.1.3"
     },
     {
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Run delegated work across three layers \u2014 strategy, management, execution: size the task, pick a delegation architecture, and dispatch scoped slices to model-tiered agents (scout, builder, reviewer, manager). Skills cover orchestration, session handoff, backlog waves, and a review cycle (rubric-panel, deletion-pass, comment-hygiene, layer-cycle) whose refine phase is the cleanup step that runs before work lands. Hooks watch context watermarks, guard handoff freshness, surface the handoff on cold start, log delegation tier usage, nudge on retained-labor streaks, flag history left in comments at the moment of a commit or a PR, brief workers on the delegation covenant, give writing workers their own git worktree, and hold protected config in custody per project. The /atelier:activate command arms all of that in a project and reports in plain language what each hook actually resolved.",
-      "name": "atelier",
-      "source": "./plugins/atelier",
-      "version": "0.14.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Work a repo's tracked tasks on a live Kaneo board instead of in-repo task files, so parallel sessions stop grabbing the same work and no branch grows its own backlog.md. Ships the workflow skill (claim ritual, decision convention, level split), the board's MCP server definition so installing the plugin registers the tools, a reference L2 manager agent whose tools list is the append-only allowlist, and three hooks: a session-start preflight that says loudly when the board is unreachable and which of three causes it is, a level policy that keeps claim authority in the root session, denies board writes while the config is incomplete, and stamps every comment and task with its agent and session, plus an advisory tripwire on subagent Bash that reaches the board directly. Configure with five KANEO_* env vars; nothing about an instance is baked in.",
-      "name": "kaneo",
-      "source": "./plugins/kaneo",
-      "version": "0.4.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Obsidian guidance bundle - plugin API fundamentals (lifecycle, settings, vault operations, commands), chat/copilot sidebar UI patterns, in-plugin MCP servers over Streamable HTTP, and vault automation via the official Obsidian CLI, packaged as a separately toggleable plugin.",
-      "name": "obsidian-toolkit",
-      "source": "./plugins/obsidian-toolkit",
+      "description": "File a bug or feature request against a plugin you are using without leaving the session. Hooks tell the primary session and its dispatched workers what each may file, and a stdlib reporter writes the issue to a fixed template instead of a free-handed gh call.",
+      "name": "plugin-feedback",
+      "source": "./plugins/plugin-feedback",
       "version": "0.1.2"
     },
     {
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Report a defect in a plugin you are using without leaving the session. A session-start hook tells the primary session it may file a bug or a feature request; a subagent-start hook gives dispatched workers the tier rule (file a bug directly when observed behavior contradicts the plugin's own stated contract, but draft a feature request for your dispatcher rather than filing it); and a stdlib reporter writes the issue to a fixed template (plugin and version, consuming project, date, symptom and repro, severity and the contract check, workaround, optional fix) instead of a free-handed gh invocation. Install it alongside whatever else you run from this marketplace.",
-      "name": "plugin-feedback",
-      "source": "./plugins/plugin-feedback",
-      "version": "0.1.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Every skill in this collection that stands on its own - one install instead of a shelf of one-skill plugins. Membership is derived, not curated: a skill belongs here when it needs no agent, no hook, and no sibling skill to do its job, and a gate re-derives that from the skill bodies and their bundled scripts on every run. Covers harness and environment configuration (Claude Code, opencode, project memory, iTerm2), session discipline (handoff, focus checks, review cycles), research and decision support, diagrams and data visualization, repo and project setup, planning and recurring comms, and Obsidian plugin development. The skills that need a companion agent or hook stay in the bundles that carry them.",
+      "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, and Obsidian plugin development. Membership is derived, not curated \u2014 a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.1.3"
+      "version": "0.1.4"
     }
   ]
 }
