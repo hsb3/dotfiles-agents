@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-11 (session 16). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-11 (session 17). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, with the two higher-precedence paths absent, so the hooks resolve it with no
@@ -15,12 +15,13 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `0a58e63`** · **`main` `30a20fb` = `publish: dev@6b9701e`** · **7 plugins** ·
-  **59 primitives** · `make ci` green (exit 0, 519 tests) · no worktrees. Read the issue queue
+- **`dev` `b5c05ea`** · **`main` `30a20fb` = `publish: dev@6b9701e`** · **7 plugins** ·
+  **59 primitives** · `make ci` green (exit 0, 564 tests) · no worktrees. Read the issue queue
   live, never from here.
-- **NOTHING IS UNPUBLISHED.** The 2026-08-11 publish carried session 15's `comment-hygiene`
-  (atelier `0.14.0`, solo-skills `0.1.3`) and session 16's `kaneo` (`0.4.0`) in one assembly.
-  Verified on `origin/main`, not from the green run.
+- **`kaneo` 0.4.1 → 0.9.0 is MERGED TO `dev` BUT UNPUBLISHED** (#310, #311), and **PR #312 is
+  green and unmerged** on `feat/kaneo-central-vocabulary`. Merge #312, then publish — consumers
+  are still installing 0.4.0, which cannot complete first-run setup at all (below). Everything
+  else on `main` is current.
 - **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
   The 2026-08-09 triage carded everything then open (TASK-052 … TASK-057, #289 → TASK-033).
   **Four have arrived since and have NO card: #299, #300, #301** (2026-08-10) **and #306**
@@ -74,6 +75,15 @@ in-tree only under `backlog/docs/vendoring-rule.md`, machine-checked); **dual-ho
   the owner asked for ("fail loudly"): a `SessionStart` preflight plus a call-time config
   deny. **Proven live** in `~/Developer/kaneo`, not just by tests — see §5. TASK-062/063/064
   filed.
+- 2026-08-11 (s17): **`kaneo` 0.4.1 → 0.9.0 — first-run fixed, and five repos migrated onto one
+  live board.** #308/#310 shipped `mint-mcp-token.sh` inside the skill (the plugin mandated five
+  env vars and shipped nothing that produced them; SKILL.md pointed at a path resolving to
+  nothing) and taught `kaneo-preflight` to catch a stray headerless `kaneo` registration in
+  `~/.claude.json`, which outranks the plugin's server and makes Claude Code fall back to
+  interactive OAuth **as the human owner** while every tool still works. #311 corrected
+  `references/api.md` on three counts and shipped `scripts/onboard_repo.py`. #312 (**unmerged**)
+  imposed one closed label vocabulary. TASK-065/066 closed. Live state, gotchas and the
+  remaining fleet: §7.
 - 2026-08-07 (s13): **plugin-README diagrams** (TASK-051, #288) — a standard
   (`backlog/docs/readme-diagram-standard.md`), a gate (`scripts/check_plugin_diagrams.py`, in
   `make check`), and one Mermaid diagram backfilled into all six plugin READMEs. Six version
@@ -402,3 +412,70 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   `readme-diagram-standard.md`, `FLOW.md`).
 - **Exec desks:** `~/Documents/EXECUTIVE_DESK/Projects/dotfiles-agents-desk/` (this repo);
   `.../desk-standard-desk/`; `.../ARCHIVE/dev-tooling-desk-old/` (desk-platform design).
+
+## 7 · Kaneo migration — live state (2026-08-11, s17)
+
+**The board is now the tracker for five repos.** Instance `kaneo-production-5641.up.railway.app`,
+workspace `hsb3` = `6DfGLeeKlTRArM24iKqeZCQ0v2BZWBq0`. 553 tasks, all imported by
+`scripts/onboard_repo.py`, all verified by re-export rather than by the import summary.
+
+| slug | project | id | tasks |
+| --- | --- | --- | --- |
+| PBTT | pb-task-tracker (learn-pocketbase) | `mutooe0ijwd3yhyhd5behk74` | 241 |
+| APIA | api-agents | `rhq4qgsmu2q7cztfpeui2cfp` | 164 |
+| MSS | mcp-server-standard | `v6844qhsgp45ntrio55g8fle` | 73 |
+| DAPI | desk-api-agents | `cv36ncnegdo5pmq36upkthb2` | 39 |
+| AZR | azure-resources | `luci7yxlxv0rqcwv54dmeg2v` | 36 |
+
+**Label model, closed on both axes** (#312): lowercase = kind of WORK
+(`feature bug chore docs test spike`, Backlog.md's own `type:` axis, synonyms folded);
+UPPERCASE = kind of DOCUMENT (`DOC DECISION SPEC GUIDE REFERENCE RESEARCH INCIDENT REGISTER`).
+Per-repo area labels are dropped — the five repos' union was 80+, api-agents alone 52. Every
+board has a **Document** lane holding decisions and docs.
+
+### Gotchas that cost real time here
+
+- **Statuses are NOT a global vocabulary.** A task's `status` is the slug of a column in its own
+  project, so the valid set is whatever `GET /column/{projectId}` returns. A board with a
+  `Documents` lane accepts `"status":"documents"` and no other board does.
+- **A column's slug is fixed at creation; renaming changes only the display name.** PBTT's lane
+  is named `Document` but keeps slug `documents`; boards created later use `document`. Resolve
+  lanes by slug OR name — `onboard_repo.py` does.
+- **`POST /task/import/{projectId}` silently discards `labels`** and still reports
+  `"failed": 0`. `GET /task/export/{projectId}` *does* emit them, so an export → import
+  round-trip looks lossless and is not. Labels need a second pass, verified by re-export.
+- **`GET /label/workspace/{id}` returns one row per ATTACHMENT, not per label.** A name on 81
+  tasks comes back 81 times. Compare distinct lowercased names or you will "discover" duplicates.
+- **Cross-project task relations do not work** on this instance (owner-verified). Nothing in
+  `/config` governs it. So a cross-cutting strategy project cannot link to the work it governs;
+  workspace-scoped `GET /search` is the connective tissue instead.
+- **Kaneo has no milestone/sprint/release primitive.** Hierarchy is workspace → project → task,
+  plus columns, labels, relations. Releases are best modelled as a parent task with `subtask`
+  relations — projects-as-releases renumbers task ids on every slip.
+- **Backlog.md layouts differ per repo, silently.** learn-pocketbase keeps finished work in
+  `tasks/` with status Done; mcp-server-standard used `completed/` and nests `archive/tasks/`.
+  A fixed source list would have imported 31 of 73 items there and said nothing about the rest.
+- **~100 of 192 task files in one repo carry folded-scalar titles** (`title: >-` + indented
+  continuation). Treating that as the value retitles most of an import to `>-`.
+
+### Not done
+
+- **`--repo` takes a filesystem path only.** Repos with no checkout must be cloned first; the
+  clone step is not automated.
+- **~15 repos remain**, across `hsb3` and `mhi-raptorxai`, greenfield and brownfield mixed.
+  `mhi-raptorxai` should be its own workspace (a real trust boundary); nothing there is started.
+- **dotfiles-agents itself is deliberately NOT migrated.** It is the most coupled repo in the
+  fleet — a `CRITICAL_INSTRUCTION` block in CLAUDE.md, `scripts/check_backlog_labels.py`,
+  DoD-as-code reading `backlog/config.yml`, and 20 decision docs citing TASK ids. Migrating it
+  changes repo law and gates, not just data. Do it last, or not at all.
+- Run state (manifest, per-repo id-maps, the one-off `relabel.py` / `backfill_labels.py`) lived
+  in the session scratchpad and is **gone**. `onboard_repo.py adopt` rebuilds a state file from
+  board titles, which is why `apply` writes `TASK-083: ...` titles by default.
+
+### Credentials
+
+The migration ran under the **owner** key from this repo's gitignored `.env`
+(`KANEO_CLIENT_URL`, `KANEO_API_KEY`), as a one-time owner-authorised exception. Normal
+operation wants a per-repo **agent** key — an owner key misattributes every claim comment and
+holds rights over every workspace. `.env` is covered by `.gitignore`'s `.env*`; `.env.example`
+is trackable via the `!.env*.example` negation and holds placeholders only.
