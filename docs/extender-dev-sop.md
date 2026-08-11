@@ -48,7 +48,7 @@ the standard the entry gate enforces, so entry is a formality rather than rework
   composes a mix of third-party + authored primitives.
 - **Hooks use the ratified hook-dir layout** — `hooks/<name>/hook.py` (config + script per
   hook; never inline bash in `settings.json` — ADR
-  [0002](../decisions/0002-hooks-as-script-plus-config.md)).
+  [0002](decisions/0002-hooks-as-script-plus-config.md)).
 - **Tests exercise the extender's real behavior**, not just its shape.
 - Nothing generated is tracked (ADR 0017) — anything that must be generated (e.g. the
   opencode laydown) is produced at install/run time by a deterministic generator.
@@ -56,7 +56,7 @@ the standard the entry gate enforces, so entry is a formality rather than rework
 ## 3. Enter distribution
 
 `dev` is the integration branch; `main` is publish-only (ADR
-[0007](../decisions/0007-distribution-restructure-dev-main.md)):
+[0007](decisions/0007-distribution-restructure-dev-main.md)):
 
 - Branch off `dev`, open your PR **into `dev`** — never `main`. It's the CI-published
   marketplace surface, advanced only by the sanctioned `dev` → `main` promotion, never a

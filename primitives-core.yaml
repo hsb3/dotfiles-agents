@@ -15,7 +15,7 @@
 # origin is provenance (authored here, sourced from upstream, or vendored in-tree). Immutable
 # per entry. origin: sourced entries must carry non-null `upstream:` and `ref:` (enforced by
 # check_roster.py). origin: vendored entries must carry non-null `upstream:` + `ref:` + LICENSE
-# file + attribution in README (enforced by check_provenance.py; see backlog/docs/vendoring-rule.md).
+# file + attribution in README (enforced by check_provenance.py; see docs/vendoring-rule.md).
 # targets selects runtimes: claude-code installs the symlink assemblies natively; opencode is
 # generated at install time (gen_opencode.py, task-4).
 

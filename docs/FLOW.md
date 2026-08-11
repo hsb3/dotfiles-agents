@@ -5,7 +5,7 @@ publishes where, and where the eval loop re-enters through the owner. Status: ac
 (2026-07-22). Machine form: `flow.yaml`, enforced by `make flow` (in `make ci`)._
 
 Other docs carry the pieces — `README.md` the layout and build-interface tables, `CLAUDE.md`
-the source-of-truth rules, `backlog/docs/extender-dev-sop.md` the extender-dev SOP, the ADRs the whys.
+the source-of-truth rules, `docs/extender-dev-sop.md` the extender-dev SOP, the ADRs the whys.
 This page carries the one thing none of them draw: the **edges**, in one graph, kept honest
 by a drift guard.
 
@@ -56,13 +56,13 @@ flowchart TD
     N_harness[harness]
     N_evals[evals]
     N_local_dev_tooling[local dev tooling]
-    N_backlog[backlog]
   end
   subgraph L_runtime[runtime]
     N_runtime_logs[runtime logs]
   end
   subgraph L_docs[docs]
     N_repo_docs[repo docs]
+    N_repo_law[repo law]
   end
   N_gates -->|gates| N_primitive_bodies
   N_primitive_bodies -.->|consumes| N_plugin_assemblies
@@ -92,7 +92,8 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `scripts/` | toolchain | generator | H | generators + every checker + campaign runner |
 | `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
 | `dist/` | dist-lanes | dist | **G** | `dist/claude-code/` marketplace surface (`gen_marketplace.py`) lifted to main's root at publish; `dist/opencode/` laydown lane (`gen_opencode.py`) published as `opencode/`; both under `build-check` |
-| `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page now live under `backlog/`) |
+| `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page live under `docs/`) |
+| `docs/` | repo-law | docs | H | standing law in prose: `docs/decisions/` (ADRs), the extender-dev SOP, the vendoring rule, the diagram standard, this page |
 | `harness/` | harness | workbench | H | uv eval project; own CI lane; `results.jsonl` tracked |
 | `evals/` | evals | workbench | H | extender-db projection — never a source of truth |
 | `.agents/`, `.claude/`, `skills-lock.json` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |

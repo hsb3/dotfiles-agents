@@ -17,6 +17,6 @@ diagram is broken.
 
 **How to apply:** verify a render with `test -s out.svg`, and for anything shipping to consumers
 confirm every node and edge label survived into the SVG text (partial renders happen). The
-banned-character house rule and its static gate live in `backlog/docs/readme-diagram-standard.md`;
+banned-character house rule and its static gate live in `docs/readme-diagram-standard.md`;
 that rule is deliberately wider than the current renderer's tolerance (`&` renders fine today and
 is still banned). Related: [[make-ci-refusal-line-is-a-passing-test]].

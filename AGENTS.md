@@ -33,7 +33,7 @@ PreToolUse hook blocks it. Read the published surface with `git show origin/main
 Keep changes surgical and match existing style. Get the owner's approval before major
 information-architecture changes (moving/renaming top-level structures, reshaping the roster).
 
-GitHub issues are bug intake only; planned work is Backlog.md tasks.
+GitHub issues are bug intake only; planned work lives on the Kaneo board (see "Task tracking").
 
 ### Branch hygiene
 
@@ -53,62 +53,12 @@ git fetch origin && git checkout chore/handoff && git merge --ff-only origin/dev
 `--ff-only` **refuses** if the branch still carries an unparked handoff update — that refusal is
 the point. Write the update, PR into `dev`, merge before the session ends, leave the branch.
 
-### Backlog card metadata
+## Task tracking
 
-Four fields, one axis each. `make backlog-labels` enforces the label rule, because Backlog.md
-silently accepts any label.
+The tracker is the **Kaneo board** (project `DFA` / "dotfiles-agents", workspace `hsb3`) — a
+live board, not files in this tree. Work it through the `kaneo` plugin's skill: the claim
+ritual, the level rules, and how decisions get recorded are that skill's law, not this page's.
 
-| Field | Axis | Rule |
-| --- | --- | --- |
-| `type` | kind of change | `bug feature task chore docs spike` |
-| `priority` | urgency | High / Medium / Low |
-| `label` | **where** it lands | **exactly one** area + **at most one** signal |
-| `milestone` | **which outcome** it serves | an active outcome milestone |
-
-Areas: `primitives` `assembly` `distribution` `gates` `harness` `evals` `governance`.
-Signals: `decision`, `on-hold` — mutually exclusive. A card needing two areas is two cards.
-Adding a label means editing `backlog/config.yml` **and** `AREAS`/`SIGNALS` in
-`scripts/check_backlog_labels.py`; the gate goes red if either side drifts alone.
-
-Statuses: `To Do → Up Next → In Progress → Done`. `Up Next` is the committed queue — promoting
-into it is the owner's scheduling call, so leave it alone unless asked. Statuses are edited in
-`backlog/config.yml` directly (the CLI refuses and says so; the "never edit directly" rule below
-covers task/draft/document/decision/milestone markdown, not the project config).
-
-Milestones are outcomes, not buckets — each states a condition the repo reaches, so it can be
-closed. Before archiving a completed milestone, convert any unchecked commitment in its body
-into a task.
-
-Avoid two sessions writing the backlog concurrently: a 2026-08-04 race invalidated the CLI's
-index and looked exactly like a CLI defect.
-
-**Gotcha:** `backlog task list -m` matches milestone *titles*, not IDs — `-m m-1` returns
-nothing with no error; `-m "Measured"` works. `task edit -m m-1` does take the ID, so the two
-disagree. Trust `backlog milestone list` for counts.
-
-<!-- BACKLOG.MD GUIDELINES START -->
-<!-- backlog.md-instructions-version: 1.48.0 -->
-
-<CRITICAL_INSTRUCTION>
-
-## Backlog.md Workflow
-
-This project uses Backlog.md for task and project management.
-
-**For every user request in this project, run `backlog instructions overview` before answering or taking action.**
-
-Use the overview to decide whether to search, read, create, or update Backlog tasks.
-
-Before task lifecycle actions, read the matching detailed guide:
-
-- `backlog instructions task-creation` before creating or splitting tasks
-- `backlog instructions task-execution` before planning, changing status or assignee, adding a plan or implementation notes, or implementing task work
-- `backlog instructions task-finalization` before checking acceptance criteria, writing final summaries, or moving tasks to terminal statuses
-
-Use `backlog <command> --help` before running unfamiliar commands. Help shows options, fields, and examples.
-
-Do not edit Backlog task, draft, document, decision, or milestone markdown files directly. Use the `backlog` CLI so metadata, relationships, and history stay consistent.
-
-</CRITICAL_INSTRUCTION>
-
-<!-- BACKLOG.MD GUIDELINES END -->
+Config is the five `KANEO_*` values in `.claude/settings.local.json` (gitignored — they carry a
+credential); missing or wrong, ask the owner rather than guessing. Never create a
+`backlog.md`, a `TODO` file, or any other in-repo task list — file it on the board.

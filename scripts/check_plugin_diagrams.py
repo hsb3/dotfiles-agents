@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plugin-README diagram guard — every plugin ships a visual, and it cannot go stale silently.
 
-Standard: backlog/docs/readme-diagram-standard.md. Each `plugins/<id>/README.md` is
+Standard: docs/readme-diagram-standard.md. Each `plugins/<id>/README.md` is
 hand-authored (bundle READMEs are regular files under ADR 0017, not symlinks) and carries at
 least one Mermaid diagram drawing what the "What you get" table cannot — what makes each
 piece fire, in what order, and what comes out.
@@ -284,7 +284,7 @@ def problems():
         if not fences:
             out.append(
                 f"{rel}: no ```mermaid block — every plugin README carries at least one "
-                "diagram (backlog/docs/readme-diagram-standard.md)"
+                "diagram (docs/readme-diagram-standard.md)"
             )
             continue
         members = _assembly_members(pid)

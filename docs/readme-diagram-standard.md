@@ -15,7 +15,7 @@ diagram that draws exactly the thing the table cannot.
 
 A fenced ` ```mermaid ` block in the README itself. No `.svg`, no `.png`, no `.mmd` source.
 
-- **[ADR 0017](../decisions/0017-pointer-based-marketplace.md) forbids tracked generated
+- **[ADR 0017](decisions/0017-pointer-based-marketplace.md) forbids tracked generated
   artifacts.** A committed SVG rendered from a diagram source is precisely that, and it
   would need a regen step nobody would run.
 - Mermaid renders natively on GitHub, which is the surface these READMEs are read on — both

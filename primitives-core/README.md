@@ -2,7 +2,7 @@
 
 The **single canonical source copy** of every primitive. Edit primitives **here** — the
 `plugins/<id>/` dirs are thin symlink assemblies over this tree
-([ADR 0017](../backlog/decisions/0017-pointer-based-marketplace.md)): they add hand-authored
+([ADR 0017](../docs/decisions/0017-pointer-based-marketplace.md)): they add hand-authored
 `plugin.json`/`hooks.json`/bundle READMEs and point at everything else with in-repo
 symlinks, so an edit here IS the edit everywhere the primitive ships.
 
@@ -34,7 +34,7 @@ guarded by [`../scripts/check_symlinks.py`](../scripts/check_symlinks.py):
 | `requires` | optional capability/dependency words | `{hooks,local-mcp,hosted-mcp}` + `cli:<kebab>` / `env:<kebab>`. |
 
 `primitives-core` holds **self-authored** primitives only
-([ADR 0015](../backlog/decisions/0015-self-authored-primitives-only.md)); third-party items are
+([ADR 0015](../docs/decisions/0015-self-authored-primitives-only.md)); third-party items are
 recorded by reference in [`../externals.yaml`](../externals.yaml), never copied in.
 
 ## READMEs
