@@ -139,6 +139,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: comment-hygiene
+    type: skill
+    source: primitives-core/skills/comment-hygiene
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md
@@ -305,6 +311,12 @@ primitives:
   - id: delegation-watermark
     type: hook
     source: primitives-core/hooks/delegation-watermark
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+  - id: comment-hygiene-gate
+    type: hook
+    source: primitives-core/hooks/comment-hygiene-gate
     origin: authored
     disposition: qualified
     targets: [claude-code]
