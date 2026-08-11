@@ -23,12 +23,13 @@ state, decisions with their whys, and the gotchas that bite.
   `6DfGLeeKlTRArM24iKqeZCQ0v2BZWBq0`. Backlog.md is fully retired (#317): no `backlog/`,
   no label gate, no CLI workflow block in AGENTS.md. Standing law rehomed to `docs/`
   (flow node `repo-law`); ADRs at `docs/decisions/`.
-- **Session credentials are wired**: five `KANEO_*` values in gitignored
-  `.claude/settings.local.json`; identity = agent account `dotfiles-agents@agents.local`
-  (the instance's FIRST per-repo agent; creds also on the Railway roster as
-  `DOTFILES_AGENTS_*`). MCP token expires ~2026-09-10; on 401 re-mint per the kaneo skill.
-  A session started before 2026-08-11 evening has no board tools — headers expand at
-  process start only.
+- **Board connection PROVEN LIVE 2026-08-11 post-restart**: `whoami` returns the agent
+  account `dotfiles-agents@agents.local` (role user, NOT the owner) via the plugin-shipped
+  server (`mcp__plugin_kaneo_kaneo__*`). Five `KANEO_*` values in gitignored
+  `.claude/settings.local.json`; creds also on the Railway roster as `DOTFILES_AGENTS_*`.
+  MCP token expires 2026-09-10; on 401 re-mint per the kaneo skill. `.env` holds only
+  `KANEO_CLIENT_URL`; `.env.example` is clean KANEO placeholders, still untracked — track
+  or drop at will.
 - Open GH issues 13 as of the last look; #308/#309 closed (shipped in 0.9.0/#310), #301
   closed duplicate of #282, #299/#300/#306 triaged onto cards (now board tasks
   TASK-067/068).
@@ -65,6 +66,12 @@ appends to tracked `results.jsonl`** (board task, was TASK-27).
 keep `TASK-NNN:` prefixes; milestones are the three `Milestone m-N:` tasks; member cards
 carry `Milestone: m-N` under Source Metadata.
 
+**OWNER DIRECTIVE 2026-08-11: the next session leads the cleanup.** That means the meta
+board's open work, headed by the **five-board repair task** (AC/notes/plan/comments
+sections dropped by the pre-0.9.1 importer — full diagnosis and safe procedure on the
+task), plus per-repo agent keys for those five and the rest of the migration program.
+kaneo-ops' duplicate plugin copy is RESOLVED (owner removed it 2026-08-11).
+
 - **Users actually waiting:** TASK-052 (plugin-feedback can't file feature requests — #282
   still open) and TASK-053 (two shipped READMEs teach the ignored flat `worktreeBaseRef`).
 - **Sequencing judgment kept from the cards:** TASK-042 (trim surfaces.md) highest-leverage;
@@ -76,18 +83,12 @@ carry `Milestone: m-N` under Source Metadata.
   migrated before the #316 fix (PBTT/APIA/MSS/DAPI/AZR) are missing every AC/notes/plan/
   comments section; their source repos still hold the truth.** Also open there: per-repo
   agent keys for those five, mhi-raptorxai workspace, ~15 remaining repos.
-- **kaneo-ops residue (second repo, owner's call):** `~/Developer/kaneo` ops repo still
-  lists `kaneo` in its own marketplace.json and carries `plugins/kaneo/` — two copies
-  exist; needs its entry dropped and README pointed here. Never mutate it unprompted.
 - **`plugin-feedback` SubagentStart tier still unconfirmed** — if the event is unhonored
   the tier is silently inert and every test passes. Close with the headless probe recipe
   (§5) rather than waiting for an organic dispatch.
 
 ## 4 · Owner's court
 
-- **`.env.example`** (untracked, repo root): looks copy-pasted — duplicate KANEO header,
-  unrelated TELEGRAM placeholders. Confirm intent before tracking; flagged 2026-08-11,
-  unanswered.
 - **Should §5 move out of this file?** Still open (asked 2026-08-07, re-raised 2026-08-11).
   With `docs/` now homed as `repo-law`, a `docs/gotchas.md` with a pointer here is the
   natural landing — but that is an IA change and needs the owner's word. Until then this
