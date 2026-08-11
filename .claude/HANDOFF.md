@@ -1,6 +1,6 @@
 # HANDOFF — dotfiles-agents
 
-_Cold-start bridge. Last updated: 2026-08-07 (session 13). Refresh at session boundaries (/handoff). Secret-free._
+_Cold-start bridge. Last updated: 2026-08-11 (session 15). Refresh at session boundaries (/handoff). Secret-free._
 
 _**This file lives at `.claude/HANDOFF.md`** — the third entry in the handoff hooks'
 `CANDIDATE_PATHS`, with the two higher-precedence paths absent, so the hooks resolve it with no
@@ -15,38 +15,33 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `79aca9d`** · **`main` `6694047` = `publish: dev@79aca9d`** · **6 plugins** ·
-  `make ci` green · no worktrees. Read the issue count live (see below), never from here.
-- **PUBLISHED AND CURRENT — `main` is the dev tip.** Session 14 closed the two-era backlog:
-  session 13's diagram work plus `atelier:activation`, the `command` primitive type, and
-  `/atelier:activate` all reached consumers in one promotion. **atelier ships `0.13.1`.**
-  Verified on `origin/main`, not assumed: `plugins/atelier/commands/activate.md` and
-  `plugins/atelier/skills/activation/{SKILL.md,examples,scripts}` are present and the top-level
-  tree is the distributable subset only. Nothing is pending publish.
+- **`dev` `5c2d1ac`** · **`main` `6694047` = `publish: dev@79aca9d`** · **6 plugins** ·
+  **53 primitives** · `make ci` green (exit 0, 484 tests) · no worktrees. Read the issue queue
+  live, never from here.
+- **UNPUBLISHED — `main` is behind `dev` by session 15's work.** `comment-hygiene` shipped
+  (skill + `PreToolUse` gate, #302 then #303), so **atelier `0.14.0`** and **solo-skills
+  `0.1.3`** are bumped in-tree but have NOT reached consumers. **Publishing is the open
+  action** (`publish-to-main` skill). Everything before it is on `main` as `dev@79aca9d`.
 - **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
-  **Triaged 2026-08-09 — every one now has a card** (TASK-052 … TASK-057, plus #289 folded into
-  TASK-033). Two turned out to be live shipped defects, both code-confirmed: **#282** (the
-  feature-request path cannot file — default label `type:feature`, this repo has `type:feat`) and
-  **#292** (the worktree base-ref key is documented flat and Claude Code ignores it). **#291 is
-  misfiled** — a `use-railway` bug, a skill this marketplace does not ship; it is evidence for
-  TASK-052's scope check, and forwarding it upstream is the owner's call.
-- **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** (1) The marketplace went
-  22 entries → 6: all seventeen one-skill plugins retired into one aggregate, **`solo-skills`**,
-  the five bundles untouched. **Per-skill installation no longer exists** and no aggregate can
-  restore it (§5); `mise-en-place-scaffold` is the exception, living only inside `code-desk`.
-  (2) The delegation vocabulary: skill `atelier:foreman` → **`atelier:delegation`**, agent
-  `lead` → **`manager`**. Doctrine names three **layers** — strategy (the session itself, never
-  spawnable), management (`manager`), execution (`scout`/`builder`/`reviewer`) — and **three
-  layers is the default for non-trivial work**, inverting guidance that had called the middle
-  layer avoidable cost.
+  The 2026-08-09 triage carded everything then open (TASK-052 … TASK-057, #289 → TASK-033).
+  **Three have arrived since and have NO card: #299, #300, #301** (2026-08-10). On a first
+  read, unverified: #301 restates #282/TASK-052; #299 (a manager never receives completion
+  reports from workers it resumes) sits in the same wait-forever family as #280/#285/TASK-054;
+  #300 (instrument long runs — 30-minute tasks taking 2–4 hours) looks genuinely new. Triage
+  them properly rather than trusting that sentence. **#291 no longer exists** — it was deleted
+  upstream, so ignore any older note about forwarding it.
+- **Two BREAKING renames published 2026-08-07; old ids fail SILENTLY.** The marketplace went 22
+  entries → 6 (seventeen one-skill plugins retired into **`solo-skills`**; `mise-en-place-scaffold`
+  survives only inside `code-desk`), and the delegation vocabulary changed: skill
+  `atelier:foreman` → **`atelier:delegation`**, agent `lead` → **`manager`**. Remaining `foreman`
+  mentions in `backlog/`, decisions, and memory are deliberate history — **do not rewrite them**.
 - **Operator checklist — this project is migrated, OTHER projects are not.** Per project: remove
-  and re-add the marketplace (not just uninstall — §5), uninstall `foreman-kit` and any retired
+  and re-add the marketplace (not just uninstall — §5), uninstall `foreman-kit` and retired
   one-skill ids, install `atelier` + `solo-skills` **in that project** (an `enabledPlugins` flag
   alone proves nothing — memory: `plugin-enablement-needs-per-project-install`), delete the stale
-  `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`, and rename any
-  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema, including `handoff:` and
-  `isolate:`, in the delegation skill's `references/activation.md`). Remaining `foreman` mentions
-  in `backlog/`, decisions, and memory are deliberate history — **do not rewrite them**.
+  `~/.claude/plugins/cache/dotfiles-agents/foreman-kit/`, and rename
+  `.claude/foreman-kit.local.md` → `.claude/atelier.local.md` (schema in the delegation skill's
+  `references/activation.md`).
 
 Standing mechanisms not to re-derive: **ADR 0017** (symlink assemblies, `dist/` retired, roster =
 provenance manifest, opencode generated at install time); **`origin: vendored`** (third-party
@@ -65,6 +60,10 @@ in-tree only under `backlog/docs/vendoring-rule.md`, machine-checked); **dual-ho
   **three-layer rewrite** (TASK-045); **22 marketplace entries → 6** with `solo-skills` behind a
   derived membership gate (TASK-043, #276/#277); **`worktree-isolation`** (TASK-050, #286);
   published twice, ending at `dev@8ea83ba`. Every durable gotcha from these is in §5.
+- 2026-08-11 (s15): **`comment-hygiene`** — a skill (dual-homed, atelier + solo-skills) and an
+  advisory `PreToolUse` gate that fires on `git commit` / `gh pr create` (#302, #303). Owner
+  directive: history belongs on the task, not in code comments. **TASK-060** filed for the gate
+  gap it exposed. Two measurement lessons in §5; both PRs merged, neither published.
 - 2026-08-07 (s13): **plugin-README diagrams** (TASK-051, #288) — a standard
   (`backlog/docs/readme-diagram-standard.md`), a gate (`scripts/check_plugin_diagrams.py`, in
   `make check`), and one Mermaid diagram backfilled into all six plugin READMEs. Six version
@@ -82,10 +81,15 @@ after (TASK-27).
 
 **Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
 
-**Nothing is queued and nothing is pending publish.** Session 14 triaged the issue queue into
-cards, shipped TASK-058 end to end, and published. The cards with users actually waiting are
-**TASK-052** (plugin-feedback cannot file a feature request at all) and **TASK-053** (two shipped
-READMEs still teach the ignored flat `worktreeBaseRef` key).
+**Two things are queued: publish, and triage three new issues.** `comment-hygiene` is merged and
+unpublished (§1), and #299/#300/#301 have no cards. Beyond those, the cards with users actually
+waiting are **TASK-052** (plugin-feedback cannot file a feature request at all) and **TASK-053**
+(two shipped READMEs still teach the ignored flat `worktreeBaseRef` key).
+
+**TASK-060 is the newest card and is cheap.** No gate reads a *bundle* README's skill table, so
+`comment-hygiene` shipped into `solo-skills`, counted right in the root README, passed every
+gate, and was still missing from the bundle's own table. Same failure class the catalog guard
+already closed one level up.
 
 **`command` is now a primitive type** (decision-010) — the first non-{skill,agent,hook,mcp} kind.
 A fifth type would touch `check_roster.py`, `gen_opencode.py`, `check_symlinks.py`, and
@@ -104,8 +108,13 @@ joins `solo-skills` **if the membership gate says it qualifies** — run
 `python3 scripts/check_solo_skills.py --report` against it rather than deciding by eye. If it does
 not qualify, the ruling has no valid target and needs a fresh one.
 
-**Nothing is blocked on the owner** — every question asked on 2026-08-07 was ruled, and the rulings
-sit on the cards (TASK-034, TASK-033, TASK-12). Read the card, do not re-ask.
+**No card is blocked on the owner** — every question asked on 2026-08-07 was ruled, and the rulings
+sit on the cards (TASK-034, TASK-033, TASK-12). Read the card, do not re-ask. Two things do want a
+decision: **whether to publish** (§1), and **whether §5 should move out of this file** — it is 190
+of these lines and is a gotcha inventory rather than session narrative, so it grows every session
+and cannot be pruned to the handoff skill's ~200-line ceiling without destroying knowledge.
+Splitting it into a tracked `backlog/docs/` doc with a pointer here is an IA change, so it needs
+the owner's word first.
 
 **Buildable now** is most of To Do; the cards carry their own scope. Only the sequencing judgment
 is worth keeping here: **TASK-042** (trim `surfaces.md`) is the highest-leverage, being the
@@ -114,8 +123,8 @@ de-duplication behind three shipped defects; **TASK-049** waits on TASK-034's pr
 **Needs a live billed run:** TASK-21.3, TASK-21.5. **Needs the PocketBase server:** TASK-21.1,
 TASK-21.2, TASK-21.4. **TASK-035 residue:** two criteria stay unchecked pending card rewrites.
 
-**`plugin-feedback` is PROVEN IN THE FIELD at the session tier** — the 7 open issues are
-unprompted reports from two other projects, so the `SessionStart` hook, the reporter, and the
+**`plugin-feedback` is PROVEN IN THE FIELD at the session tier** — the open issues are all
+unprompted reports from other projects, so the `SessionStart` hook, the reporter, and the
 repo resolution all work end to end. **The `SubagentStart` worker tier is still unconfirmed**;
 if that event were unhonored the tier is silently inert and every test still passes (they assert
 only on stdout). Close it with the headless probe recipe in §5 rather than waiting for an
@@ -164,8 +173,26 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   to dev"); that waiver does not extend to code, which still needs a PR so the gates actually run.
 - **CI job names are frozen** — branch protection pins required checks by NAME, so a new gate must
   ride an existing job.
-- **`make ci`'s `✗ opencode laydown — refusing…` line is a passing test's own output.** Judge by
-  exit code, never by ✗ glyphs.
+- **`make ci`'s `✗` lines are passing tests' own output. Judge by exit code, never by glyphs.**
+  Several gate tests run the real check scripts against synthetic tempdir fixtures and let their
+  stdout through, so `✗ identity-neutrality`, `✗ roster<->disk drift`, and `✗ opencode laydown`
+  all appear on a green run. Tell them apart by the counts: a fixture says "1 primitives" or
+  "1 plugin(s), 2 symlink(s)" where the real repo says 53 and 6. **This trap bit again on
+  2026-08-11** — an incoming handoff reported "3 pre-existing failures on HEAD" that did not
+  exist, having also mis-attributed two of them to `tests/test_plugin_feedback.py`. Re-run
+  before inheriting any claim that the tree is red.
+- **A heuristic that passes its tests can still be mostly wrong — measure it against a corpus
+  before shipping.** `comment-hygiene-gate` arrived with 7 passing tests and a clean self-review.
+  Replayed over the last 40 commits it would have fired on 25 of them, with 73 of 75 findings in
+  markdown — flagging the backlog cards and this file, the exact places history is supposed to
+  live. A second pass, scored against Python's `tokenize` as ground truth, put real precision at
+  79%. Both fixes came from the numbers, not from reading the code. **The method generalizes and
+  is cheap:** replay the thing over `git log` history, and where the stdlib already has an
+  authoritative parser for the format, use it as the oracle instead of eyeballing samples.
+- **`git diff` appends a TAB to the `+++ b/<path>` header when the path contains spaces.** Every
+  `backlog/tasks/*.md` filename here has spaces, so any tool parsing diff headers in this repo
+  hits it — and a naive `line[6:]` silently carries the tab into the filename, which then breaks
+  every downstream suffix or extension test. Split on `\t` first.
 - **PROBE the harness instead of reasoning about it.** A hook or agent behavior in question is
   answered in one round-trip by a headless run in a throwaway git repo:
   `printf '<prompt>' | claude -p --settings <f> --model haiku --permission-mode acceptEdits
@@ -227,14 +254,12 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   `scout`/`reviewer`/`Explore`/`Plan`/`fork` even when listed — isolating a reviewer aims it at a
   tree missing the diff it was sent to read. Same trap for a builder: commit first, or leave that
   dispatch un-isolated.
-- **The "worktree crews land on a published commit" fix was written under the WRONG KEY and did
-  nothing until 2026-08-09.** Cause is as recorded — base ref defaults to `fresh`, branching from
-  `origin/<default-branch>`, here publish-only `main`. But the key is **nested `worktree.baseRef`**;
-  the flat `worktreeBaseRef` that settings.json carried from `8ea83ba` is only the `/config` menu's
-  widget id and was silently ignored (binary 2.1.220: handler reads `r?.worktree?.baseRef ?? "fresh"`,
-  writes `{worktree:{baseRef}}`). Fixed in settings.json 2026-08-09; **the two published READMEs
-  still teach the flat key — that is TASK-053, and it is issue #292.** Judge any past worktree-crew
-  behavior before 2026-08-09 as having used `fresh`. Also governs `--worktree` and `EnterWorktree`.
+- **The worktree base ref is the NESTED `worktree.baseRef` key**, not the flat `worktreeBaseRef`
+  (that is only the `/config` widget id and is silently ignored). Unset, it defaults to `fresh`,
+  branching from `origin/<default-branch>` — here, publish-only `main`. settings.json was fixed
+  2026-08-09, so judge any earlier worktree-crew behavior as having used `fresh`; **the two
+  published READMEs still teach the flat key (TASK-053 / #292)**. Also governs `--worktree` and
+  `EnterWorktree`.
 - **Forcing isolation: two levers.** A `PreToolUse` hook matching tool name `Agent` (not `Task`)
   rewrites the dispatch via `hookSpecificOutput.updatedInput` (PreToolUse-only); agent frontmatter
   also takes `isolation:`, resolving as `explicit param ?? frontmatter`. Frontmatter was rejected
@@ -242,16 +267,13 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   error, and the Agent `cwd` param is mutually exclusive with it.
 - **Adversarially review a new plugin before merging.** On `plugin-feedback` it caught third-party
   reports filing into this repo silently, plus two tests that could not fail.
-- **CLAUDE CODE FRONTMATTER PARSING IS LENIENT — strict YAML is a different question.**
-  `agents/manager.md` carried an unquoted `end to end: ` in its description for months. Strict
-  `yaml.safe_load` raises `ScannerError` on it, and #297 concluded the harness therefore dropped
-  every field. **It does not** — the session loaded `atelier:manager` with its full description and
-  exactly its file `tools` value, and the published 0.11.0 copy behaves the same. Quote it anyway
-  (strict-parsing consumers exist), but **do not infer harness behavior from a YAML library.**
-  The durable gap is the one #297 stays open for: **`make ci` never parses agent frontmatter, and
-  repo-level `claude plugin validate` checks only the marketplace manifest without descending into
-  plugin bodies** — a malformed agent body is invisible to every gate. `--strict` on a
-  dereferenced plugin dir catches it.
+- **Do not infer harness behavior from a YAML library.** #297 concluded that an unquoted
+  `end to end: ` in `agents/manager.md` made the harness drop every frontmatter field, because
+  strict `yaml.safe_load` raises on it. It did not — the agent loaded with its full description
+  and exact `tools`. Quote it anyway (strict-parsing consumers exist). **#297 stays open for the
+  real gap: `make ci` never parses agent frontmatter, and repo-level `claude plugin validate`
+  checks only the marketplace manifest without descending into plugin bodies**, so a malformed
+  agent body is invisible to every gate. `--strict` on a dereferenced plugin dir catches it.
 - **A doc that restates a script's vocabulary WILL drift, and it drifts downstream.**
   `activation/SKILL.md` said `check` has "three states"; the script emits four. The command then
   copied that wrong fact and invented a section. Fix by deletion — point at the script's own
