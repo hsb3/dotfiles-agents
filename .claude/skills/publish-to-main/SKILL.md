@@ -80,6 +80,16 @@ confirm the consumer surface: the changed plugin's `version` appears in
 
 ## Gotchas
 
+- **A re-run hides itself, and its metadata lies about what shipped.** Re-running a publish
+  dispatch from the Actions UI reuses the original run id AND its `created_at`, so
+  `gh run list --workflow=publish.yml` still shows the ORIGINAL timestamp as the newest row —
+  watching for a fresh run means watching for one that by design never appears (only
+  `updated_at` and `run_attempt` reveal it). Worse, `head_sha` is fixed at dispatch while the
+  re-run checks out `dev` fresh, so it names a commit that is NOT what got published. Observed
+  2026-08-11: dispatched on `dev@ad24b47`, re-run 2h22m later, published `dev@eeb87f5`.
+  **Audit a publish by the commit on `main`** (`publish: dev@<sha>`, append-only), never by the
+  run. And because a re-run ships whatever `dev` is at execution time, dispatch-and-walk-away
+  can publish a later tip than intended.
 - **`main` is an assembled subset, not a snapshot of dev.** Never diff `dev` against `main`
   whole-tree; compare the lifted paths' tree hashes (above).
 - **Consumers pull from `main`.** Installed marketplaces pick up the change on their next

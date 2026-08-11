@@ -15,13 +15,13 @@ carries only what CLAUDE.md cannot: live state, decisions and their whys, and th
 
 ## 1 · Current standing
 
-- **`dev` `b5c05ea`** · **`main` `30a20fb` = `publish: dev@6b9701e`** · **7 plugins** ·
-  **59 primitives** · `make ci` green (exit 0, 564 tests) · no worktrees. Read the issue queue
+- **`dev` `eeb87f5`** · **`main` `696bf82` = `publish: dev@eeb87f5`** · **7 plugins** ·
+  **59 primitives** · `make ci` green (exit 0, 589 tests) · no worktrees. Read the issue queue
   live, never from here.
-- **`kaneo` 0.4.1 → 0.9.0 is MERGED TO `dev` BUT UNPUBLISHED** (#310, #311), and **PR #312 is
-  green and unmerged** on `feat/kaneo-central-vocabulary`. Merge #312, then publish — consumers
-  are still installing 0.4.0, which cannot complete first-run setup at all (below). Everything
-  else on `main` is current.
+- **NOTHING IS UNPUBLISHED.** `kaneo` `0.4.0 → 0.9.0` published 2026-08-11 and verified by
+  payload rather than version string: `mint-mcp-token.sh` present as a real file (mode 100755,
+  symlink correctly dereferenced), `onboard_repo.py` carrying `DOC_LABEL`/`WORK_TYPES`, and the
+  preflight hook carrying the shadow-registration check. #310/#311/#312/#313 all merged.
 - **The open issues arrive from OTHER PROJECTS via `plugin-feedback`, not from work here.**
   The 2026-08-09 triage carded everything then open (TASK-052 … TASK-057, #289 → TASK-033).
   **Four have arrived since and have NO card: #299, #300, #301** (2026-08-10) **and #306**
