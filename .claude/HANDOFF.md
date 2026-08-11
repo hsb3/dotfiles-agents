@@ -152,7 +152,15 @@ only on stdout). Close it with the headless probe recipe in §5 rather than wait
 organic dispatch.
 
 **Cross-repo, the owner's call:** ra-platform's planning-desk adoption is uncommitted in
-`~/Developer/ra-platform`; the four desk folders in dotfiles-agents-desk likewise.
+`~/Developer/ra-platform`; the four desk folders in dotfiles-agents-desk likewise. **New
+2026-08-11 — `~/Developer/kaneo` is the live test bed for the `kaneo` plugin and carries
+uncommitted changes:** its tracked `.claude/settings.json` gained `"kaneo@dotfiles-agents":
+true` (written by `claude plugin install --scope project`), and its gitignored
+`.claude/settings.local.json` gained `"disabledMcpjsonServers": ["kaneo"]` — deliberate, so the
+repo's own project `.mcp.json` server cannot mask the plugin-shipped one and the test stays
+conclusive. Reverting that key restores the project server. That repo also carries a stale
+**local-scope** `kaneo` MCP server pointed at `http://localhost:5173/api/mcp` that fails every
+session; clear it with `claude mcp remove kaneo -s local`.
 
 ## 4 · CROSS-REPO — desk-platform design (on the desk, NOT here)
 
