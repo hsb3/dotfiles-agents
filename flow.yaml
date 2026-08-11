@@ -80,7 +80,7 @@ nodes:
     class: authored
     status: current
     paths: [.claude, .vscode]
-    note: "Project-local session tooling: under .claude/, HANDOFF.md (the cold-start bridge — third path in the handoff hooks' precedence list), the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the untracked secrets home (.claude/operations/, decision-8 — ex _meta/operations), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
+    note: "Project-local session tooling: under .claude/, HANDOFF.md (the cold-start bridge — third path in the handoff hooks' precedence list), the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the untracked secrets home (.claude/operations/, decision-8 — ex _meta/operations), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect and the five KANEO_* values pointing this repo at its board are machine-local (settings.local.json, untracked — the tracker itself is off-tree since the Backlog.md retirement, 2026-08-11); under .vscode/, git.branchProtection for main. Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime
@@ -99,12 +99,6 @@ nodes:
     status: current
     paths: []
     note: "Machines installing via claude plugin marketplace add (the pointer surface) and the opencode laydown installer (scripts/install_opencode.sh, generating at install time per ADR 0017)."
-  - id: backlog
-    layer: workbench
-    class: authored
-    status: current
-    paths: [backlog]
-    note: "Backlog.md task system — THE task-management surface (decision-1, 2026-08-03): tasks, drafts, decisions (including the ADR mirrors, moved from docs/ 2026-08-06), milestones, and docs/ (FLOW.md, the extender-dev SOP, the vendoring rule). GitHub issues are bug-report intake only; a reported bug gets a backlog task when planned."
   - id: plugin-assemblies
     layer: dist
     class: authored

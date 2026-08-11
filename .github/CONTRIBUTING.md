@@ -43,9 +43,9 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 - **`origin: authored | sourced`** is provenance and is immutable per entry.
   `primitives-core/` holds **self-authored** bodies only — every entry sourced from under
   `primitives-core/` must be `origin: authored`
-  ([ADR 0015](../backlog/decisions/0015-self-authored-primitives-only.md)). Third-party material is
+  ([ADR 0015](../docs/decisions/0015-self-authored-primitives-only.md)). Third-party material is
   recorded **by reference** in [`../externals.yaml`](../externals.yaml) (non-null `upstream` +
-  `ref`), never copied into the source tree ([ADR 0003](../backlog/decisions/0003-externals-tracked-not-vendored.md)).
+  `ref`), never copied into the source tree ([ADR 0003](../docs/decisions/0003-externals-tracked-not-vendored.md)).
 - Primitive layout: `skills/<id>/SKILL.md` (+ optional `references/`, `scripts/`, `assets/`),
   `agents/<id>.md` (frontmatter), `commands/<id>.md` (frontmatter; the command loads a skill
   and drives it rather than restating one — decision-010), `hooks/<id>/hook.py`
@@ -58,17 +58,16 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 | Command | Enforces |
 |---|---|
 | `make check` | **Roster ↔ disk drift** — every roster `source` exists; provenance-manifest schema valid; no orphaned bodies. Also the consumer-catalog guard and the **plugin-README diagram** guard (see below). |
-| `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,commands,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, ADRs, and `backlog/` are exempt (they don't ship). |
+| `make identity` | **Identity-neutrality** — no hardcoded name/org/repo/issue in any *shipped* body (`primitives-core/{skills,agents,commands,hooks}` + the `plugins/` assemblies; skill READMEs travel with their skill). Root docs, this file, and everything under `docs/` (ADRs included) are exempt (they don't ship). |
 | `make provenance` | **Provenance** — every `primitives-core/` body is `origin: authored`; every `externals.yaml` entry has non-null `upstream` + `ref` (ADR 0015 / ADR 0003). |
 | `make hook-layout` | **Hook layout** — hooks use the ratified `hooks/<name>/hook.py` dir layout, never flat handlers or inline-in-settings. |
 | `make symlinks` | **Symlink-assembly lint** (ADR 0017) — every link under `plugins/` resolves in-repo; the root marketplace manifest and the assemblies match 1:1. |
 | `make harness-coupling` | `harness/` imports only itself + stdlib (no repo coupling). |
 | `make flow` | **Repo-flow DAG** — every tracked top-level path is homed in `flow.yaml`; a new top-level path must claim a node there. |
-| `make backlog-labels` | **Backlog label vocabulary** — every card carries exactly one area label and at most one signal label, all drawn from the closed set in `backlog/config.yml`. Backlog.md validates types and statuses but accepts any label, so this supplies the missing check. |
 | `make test` | **Unit tests** — `python3 -m unittest`, **stdlib-only** (zero install is an invariant; fixtures live under `tests/`, never under `primitives-core/`). |
 
 Adding a whole new top-level path also needs a home in `flow.yaml` (the `make flow` guard). Files
-that nest under an already-homed path (e.g. under `primitives-core/`, `backlog/`,
+that nest under an already-homed path (e.g. under `primitives-core/`, `docs/`,
 `.github/`) need no flow change.
 
 ## Plugin READMEs
@@ -78,7 +77,7 @@ symlinks) and **must carry a Mermaid diagram** under a `## How it fits together`
 placed before the section that enumerates the plugin's pieces. The rule for what it must
 show — draw the trigger and the flow, never the inventory — plus the format, placement, and
 constraints are in
-[`../backlog/docs/readme-diagram-standard.md`](../backlog/docs/readme-diagram-standard.md).
+[`../docs/readme-diagram-standard.md`](../docs/readme-diagram-standard.md).
 `make check` enforces the mechanical parts.
 
 Render any diagram you write before trusting it — a house-rule violation renders blank on
@@ -97,16 +96,17 @@ design smell; raise it before adding one.
 
 ## Where work is tracked
 
-**Backlog.md is the task system** (backlog decision-1): planned work, drafts, decisions, and
-milestones live in the `backlog/` tree (`backlog board` for the live view). **GitHub issues
-are bug-report intake only** — the bug template is the only one offered. A reported bug gets
-a backlog task when it is planned; after the fix merges into `dev`, close the issue by hand
-(a `Closes #N` in a PR into `dev` does NOT auto-close — auto-close fires only on the default
-branch).
+**A live Kaneo board is the task system** — project `DFA` ("dotfiles-agents", workspace
+`hsb3`), not files in this tree. Planned work, its status, and the decisions taken along the
+way all live there; the board replaced the in-repo Backlog.md tree on 2026-08-11 (the retired
+tree is recoverable from git history). Board access is configured per machine via the five
+`KANEO_*` values in `.claude/settings.local.json` (gitignored); the workflow itself — claiming,
+statuses, decision records — is the `kaneo` plugin's skill, and that skill is the law.
 
-Cards move `To Do → Up Next → In Progress → Done`. `Up Next` is the committed queue — what
-you have actually picked, not everything filed. Each card carries one `type`, one `priority`,
-exactly one **area** label (`primitives` `assembly` `distribution` `gates` `harness` `evals`
-`governance`), at most one **signal** label (`decision`, `on-hold`), and one milestone.
-Milestones are stated outcomes rather than buckets, so they can be closed. Full rules and the
-reason the label gate exists: [`AGENTS.md`](../AGENTS.md) → "Backlog card metadata".
+**GitHub issues stay bug-report intake only** — the bug template is the only one offered. A
+reported bug becomes a board task when it is planned; after the fix merges into `dev`, close
+the issue by hand (a `Closes #N` in a PR into `dev` does NOT auto-close — auto-close fires
+only on the default branch).
+
+Architecture decisions are a separate thing from tracked work: they are ADRs under
+[`../docs/decisions/`](../docs/decisions/), append-only, and they stay in the repo.
