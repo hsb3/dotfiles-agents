@@ -22,6 +22,9 @@ lives on the board.
   and the enforcement ceiling. Read it before describing this as containment; it is not.
 - `scripts/mint-mcp-token.sh` — mints `KANEO_MCP_TOKEN` from the repo's agent key. The one
   credential you produce yourself; the other four come from the owner.
+- `scripts/onboard_repo.py` — moves a repo's Backlog.md tree onto a board, or reports that
+  there is nothing to move. Read-only `discover` first, then `apply` (a dry run until
+  `--yes`). Use this rather than creating tasks one tool call at a time.
 
 ## Install
 
