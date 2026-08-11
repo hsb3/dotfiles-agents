@@ -427,6 +427,13 @@ workspace `hsb3` = `6DfGLeeKlTRArM24iKqeZCQ0v2BZWBq0`. 553 tasks, all imported b
 | DAPI | desk-api-agents | `cv36ncnegdo5pmq36upkthb2` | 39 |
 | AZR | azure-resources | `luci7yxlxv0rqcwv54dmeg2v` | 36 |
 
+**The `meta` workspace (`VZWoU4ImwHL99wPAhLqVF6JHRG3wfm71`) is where the migration guides
+itself.** Project `MIG` / `migration` = `qb6wjtyagke9bmg9n9mcm159`. Read it before doing more
+migration work — it holds five documents (API gotchas, the onboarding runbook, board
+conventions, the workspace/project decision, and a living status register) and seven open
+tasks covering everything below. Workspaces have no REST CRUD; this one was created with
+`POST /api/auth/organization/create`.
+
 **Label model, closed on both axes** (#312): lowercase = kind of WORK
 (`feature bug chore docs test spike`, Backlog.md's own `type:` axis, synonyms folded);
 UPPERCASE = kind of DOCUMENT (`DOC DECISION SPEC GUIDE REFERENCE RESEARCH INCIDENT REGISTER`).
