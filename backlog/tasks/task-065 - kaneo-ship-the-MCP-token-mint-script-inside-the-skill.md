@@ -1,11 +1,11 @@
 ---
 id: TASK-065
 title: 'kaneo: ship the MCP-token mint script inside the skill'
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-08-11 15:22'
-updated_date: '2026-08-11 15:22'
+updated_date: '2026-08-11 15:29'
 labels:
   - primitives
 milestone: m-1
@@ -27,10 +27,10 @@ mint-mcp-token.sh (in the private ops checkout) is already fully portable: its o
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 primitives-core/skills/kaneo/scripts/mint-mcp-token.sh exists, is executable, and depends on nothing outside its arguments and $MINT_KEY
-- [ ] #2 SKILL.md's config section points at the skill-local script path rather than an unnamed ops repo
-- [ ] #3 references/configuration.md states which credential the owner must mint out of band (the agent key) and why that step cannot ship
-- [ ] #4 make ci passes, including the symlink and roster guards
+- [x] #1 primitives-core/skills/kaneo/scripts/mint-mcp-token.sh exists, is executable, and depends on nothing outside its arguments and $MINT_KEY
+- [x] #2 SKILL.md's config section points at the skill-local script path rather than an unnamed ops repo
+- [x] #3 references/configuration.md states which credential the owner must mint out of band (the agent key) and why that step cannot ship
+- [x] #4 make ci passes, including the symlink and roster guards
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -42,3 +42,19 @@ mint-mcp-token.sh (in the private ops checkout) is already fully portable: its o
 4. Note the script in the skill README's 'what to read next'.
 5. Bump plugins/kaneo/.claude-plugin/plugin.json to 0.4.2; make ci.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Shipped primitives-core/skills/kaneo/scripts/mint-mcp-token.sh (executable lines byte-identical to the ops-repo original; shebang zsh -> bash to match the repo's other skill script, header retargeted at the skill-local path). SKILL.md, references/configuration.md, and README.md rewritten to split owner-supplied credentials from self-minted ones and to state why agent-account creation cannot ship. Version 0.4.1 -> 0.4.2.
+
+Verification: make ci exits 0 (519 tests; roster/symlink/catalog/identity guards clean). PR #310 green on both CI checks. End-to-end live mint run from the new location under bash against the production instance: all 4 steps succeeded, exit 0, returned a 36-char token. Token proven valid by contrast against the MCP endpoint — minted token returns 400 'Server not initialized' (authenticated, awaiting handshake) while a bogus token returns 401. Minted credential deleted from scratchpad after testing.
+
+Note: that run created one additional 30-day better-auth session row for agent-kaneo-a on the live instance. Harmless and self-expiring; it does not affect the existing KANEO_MCP_TOKEN.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Shipped the MCP-token mint script inside the kaneo skill and rewrote the config docs to name the owner's one hand-off (the agent key) instead of pointing at an unshipped script in an unnamed repo. Verified with make ci (exit 0) and a live end-to-end mint against the production instance, with the minted token proven to authenticate (400 vs 401 against a bogus control).
+<!-- SECTION:FINAL_SUMMARY:END -->

@@ -8,7 +8,7 @@ tracked work, and still forbids `TODO.md`. An agent that finds no board tools do
 it improvises. This hook is the one thing standing between that state and a silent wrong
 turn, so it states the problem in the session's own context before any work starts.
 
-Three causes, each silent on its own and each checkable here:
+Four causes, each silent on its own and each checkable here:
 
   1. **Unconfigured.** `KANEO_API_URL` or `KANEO_MCP_TOKEN` unset, so `${...}` expansion in
      the plugin's `.mcp.json` cannot resolve and the server never connects.
@@ -19,6 +19,14 @@ Three causes, each silent on its own and each checkable here:
      rare.
   3. **Discovery switched off.** `CLAUDE_CODE_SKIP_PLUGIN_MCP_SERVERS` suppresses plugin
      MCP servers wholesale, with an `..._EXCEPT` allowlist that can exempt this one.
+  4. **Shadowed by a headerless direct registration.** A separate server named `kaneo` in
+     `~/.claude.json` wins over the plugin's. If it carries no `Authorization` header, the
+     Kaneo server answers with `WWW-Authenticate`, Claude Code runs its own interactive
+     OAuth, and the browser consent authenticates **the human owner** — not the agent. This
+     is the only failure here where the tools are present and working, so nothing looks
+     broken; the identity is just silently wrong, and every claim comment is misattributed.
+     Cost 40+ messages of misdiagnosis in the wild on 2026-08-11, because the documented
+     symptom (owner identity) pointed at the wrong cause (a mis-wired key).
 
 Silent when the board is reachable, which is the common case — this fires only when
 something is actually wrong. `KANEO_PREFLIGHT_DISABLED` (any non-empty value) stands it
@@ -58,22 +66,77 @@ FOOTER = (
     "with work that does not touch tracked tasks."
 )
 
+IDENTITY_HEADER = (
+    "The Kaneo board tools will probably work in this session, but as THE WRONG USER. "
+    "Nothing will look broken; the attribution will just be wrong."
+)
+IDENTITY_FOOTER = (
+    "Verify before trusting it: call the kaneo `whoami` tool and check the account it "
+    "names. If it is the owner rather than this repo's agent, claim nothing — a claim "
+    "comment under the owner's name misattributes the work and defeats the board's only "
+    "race protection. Report this to the owner and stop."
+)
 
-def _disabled_for_project(home, cwd):
-    """True when /mcp disable has switched this plugin's server off for this directory.
 
-    Reads ~/.claude.json rather than any settings file on purpose: that is where the
-    toggle actually persists, and the whole point of this check is that the state is
-    invisible everywhere else.
+def _claude_json(home):
+    """`~/.claude.json` as a dict, or {} when it is absent or unreadable.
+
+    Read rather than any settings file on purpose: this is where both the /mcp disable
+    toggle and direct server registrations actually persist, and the point of the checks
+    below is that neither state is visible anywhere else.
     """
     try:
         with open(os.path.join(home, ".claude.json"), encoding="utf-8") as fh:
-            entry = json.load(fh).get("projects", {}).get(cwd, {})
-        disabled = entry.get("disabledMcpServers") or []
-        return SERVER_KEY in disabled or BARE_SERVER_KEY in disabled
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
     except Exception:
         # An unreadable or absent file is not evidence of anything; stay quiet.
+        return {}
+
+
+def _disabled_for_project(config, cwd):
+    """True when /mcp disable has switched this plugin's server off for this directory."""
+    entry = config.get("projects", {}).get(cwd) or {}
+    disabled = entry.get("disabledMcpServers") or []
+    return SERVER_KEY in disabled or BARE_SERVER_KEY in disabled
+
+
+def _has_auth_header(server):
+    """True when a server definition carries some Authorization header of its own.
+
+    Any auth header at all is enough to keep Claude Code from falling back to interactive
+    OAuth, which is the whole hazard — so this deliberately does not check that the value
+    is a *correct* token. A registration with a wrong token fails loudly at call time; a
+    registration with no token fails silently by authenticating as the wrong human.
+    """
+    if not isinstance(server, dict):
         return False
+    headers = server.get("headers") or {}
+    if not isinstance(headers, dict):
+        return False
+    return any(name.lower() == "authorization" for name in headers)
+
+
+def _shadowing_registrations(config, cwd):
+    """Scopes holding a direct `kaneo` server that would outrank the plugin's, unauthed.
+
+    A deliberate direct registration that carries its own header is supported — the skill
+    says as much — so only the headerless kind is reported.
+    """
+    scopes = [
+        ("user (global `mcpServers`)", config.get("mcpServers")),
+        (
+            f"project ({cwd})",
+            (config.get("projects", {}).get(cwd) or {}).get("mcpServers"),
+        ),
+    ]
+    return [
+        label
+        for label, servers in scopes
+        if isinstance(servers, dict)
+        and BARE_SERVER_KEY in servers
+        and not _has_auth_header(servers[BARE_SERVER_KEY])
+    ]
 
 
 def _skipped_by_env(env):
@@ -85,6 +148,26 @@ def _skipped_by_env(env):
     return not any(name == BARE_SERVER_KEY or name.startswith("kaneo@") for name in names)
 
 
+def identity_problems(home, cwd):
+    """Reasons the board tools will work but act as the WRONG USER. Empty means healthy.
+
+    Kept apart from `problems` because the remedy and the stakes differ: those causes
+    leave the agent with no tools and nothing it can damage, while these leave it fully
+    armed under the owner's identity, where every write is both permitted and wrong.
+    """
+    found = []
+    for scope in _shadowing_registrations(_claude_json(home), cwd):
+        found.append(
+            f"A direct `kaneo` MCP server registered at {scope} has no Authorization "
+            "header, and it outranks the plugin's. Claude Code will fall back to "
+            "interactive OAuth, whose browser consent authenticates THE OWNER, not this "
+            "repo's agent — so `whoami` returns the owner even though the agent key is "
+            "wired correctly. Remove it with `claude mcp remove kaneo -s local` (try "
+            "`-s user` if that reports nothing) and fully quit the process, then relaunch."
+        )
+    return found
+
+
 def problems(env, home, cwd):
     """Every reason the board tools will be absent, worst first. Empty means healthy."""
     found = []
@@ -94,10 +177,11 @@ def problems(env, home, cwd):
             f"Not configured: {', '.join(missing)} unset, so the server definition cannot "
             "expand and no connection is attempted. Set the five KANEO_* values in this "
             "repo's .claude/settings.local.json — the kaneo skill's "
-            "references/configuration.md says where each comes from — then restart the "
-            "session, because headers expand at session start."
+            "references/configuration.md says where each comes from — then fully quit and "
+            "relaunch the process, because headers expand once at process start "
+            "(/reload-plugins and a resumed session both keep the old values)."
         )
-    if _disabled_for_project(home, cwd):
+    if _disabled_for_project(_claude_json(home), cwd):
         found.append(
             "Disabled for this project: someone ran /mcp disable, which wrote "
             f"'{SERVER_KEY}' into disabledMcpServers under this directory's entry in "
@@ -112,11 +196,21 @@ def problems(env, home, cwd):
     return found
 
 
-def build_message(found):
-    lines = [HEADER, ""]
-    lines += [f"- {item}" for item in found]
-    lines += ["", FOOTER]
-    return "\n".join(lines)
+def build_message(found, identity=()):
+    """One block per failure kind, so the loud absent-tools warning never buries the
+    quiet wrong-identity one — the quiet one is the more dangerous of the two."""
+    blocks = []
+    if found:
+        blocks.append("\n".join([HEADER, ""] + [f"- {item}" for item in found] + ["", FOOTER]))
+    if identity:
+        blocks.append(
+            "\n".join(
+                [IDENTITY_HEADER, ""]
+                + [f"- {item}" for item in identity]
+                + ["", IDENTITY_FOOTER]
+            )
+        )
+    return "\n\n".join(blocks)
 
 
 def _emit(obj):
@@ -142,15 +236,16 @@ def main():
             return 0
         if payload.get("source") not in SURFACE_SOURCES:
             return 0
-        found = problems(
-            os.environ, os.path.expanduser("~"), payload.get("cwd") or os.getcwd()
-        )
-        if not found:
+        home = os.path.expanduser("~")
+        cwd = payload.get("cwd") or os.getcwd()
+        found = problems(os.environ, home, cwd)
+        identity = identity_problems(home, cwd)
+        if not found and not identity:
             return 0
         _emit({
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
-                "additionalContext": build_message(found),
+                "additionalContext": build_message(found, identity),
             },
         })
     except Exception:
