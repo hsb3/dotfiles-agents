@@ -105,9 +105,11 @@ class TaskFileTests(unittest.TestCase):
             "sections must keep their declared order",
         )
 
-    def test_the_type_field_becomes_a_label_alongside_declared_labels(self):
+    def test_the_type_field_becomes_a_label_and_area_labels_are_dropped(self):
+        # `docs` is the task's type and survives; `backend` is a per-repo area label and
+        # does not, because the central vocabulary is closed. See CentralVocabularyTests.
         path = write(self.root, "tasks", "task-004.md", TASK)
-        self.assertEqual(ob.parse_task_file(path, "TASK")["labels"], ["backend", "docs"])
+        self.assertEqual(ob.parse_task_file(path, "TASK")["labels"], ["docs"])
 
     def test_a_file_with_no_markers_keeps_its_whole_body(self):
         # Losing the body of a hand-written card is silent data loss, so the fallback
@@ -224,12 +226,12 @@ class DecisionLabelTests(unittest.TestCase):
     def test_decisions_are_labelled_so_they_stay_filterable(self):
         root = tempfile.mkdtemp()
         path = write(root, "decisions", "decision-1.md", BARE)
-        self.assertIn("DECISION", ob.parse_task_file(path, "DECISION")["labels"])
+        self.assertIn("DECISION", ob.parse_task_file(path, "DECISION")["doc_labels"])
 
     def test_tasks_do_not_get_the_decision_label(self):
         root = tempfile.mkdtemp()
         path = write(root, "tasks", "task-009.md", BARE)
-        self.assertNotIn("DECISION", ob.parse_task_file(path, "TASK")["labels"])
+        self.assertNotIn("DECISION", ob.parse_task_file(path, "TASK")["doc_labels"])
 
 
 class BlockScalarTests(unittest.TestCase):
@@ -291,28 +293,28 @@ class DocumentLabelTests(unittest.TestCase):
         write(self.root, "docs", "doc-002.md", DOC)
         write(self.root, "decisions", "decision-1.md", BARE)
         for record in ob.read_backlog(self.root):
-            self.assertIn(ob.DOC_LABEL, record["labels"], record["kind"])
+            self.assertIn(ob.DOC_LABEL, record["doc_labels"], record["kind"])
 
     def test_a_known_backlog_type_maps_to_a_kind(self):
         write(self.root, "docs", "doc-002.md", DOC)
-        self.assertIn("SPEC", ob.read_backlog(self.root)[0]["labels"])
+        self.assertIn("SPEC", ob.read_backlog(self.root)[0]["doc_labels"])
 
     def test_type_other_gets_no_kind_rather_than_a_guessed_one(self):
         # `other` is the majority value in real repos and carries no information.
         write(self.root, "docs", "doc-002.md", DOC_OTHER)
-        labels = ob.read_backlog(self.root)[0]["labels"]
-        self.assertEqual(set(labels) & set(ob.DOC_KINDS), set())
-        self.assertIn(ob.DOC_LABEL, labels)
+        record = ob.read_backlog(self.root)[0]
+        self.assertEqual(set(record["doc_labels"]) & set(ob.DOC_KINDS), set())
+        self.assertIn(ob.DOC_LABEL, record["doc_labels"])
 
     def test_decisions_carry_both_the_umbrella_and_their_kind(self):
         write(self.root, "decisions", "decision-1.md", BARE)
-        labels = ob.read_backlog(self.root)[0]["labels"]
+        labels = ob.read_backlog(self.root)[0]["doc_labels"]
         self.assertIn(ob.DOC_LABEL, labels)
         self.assertIn("DECISION", labels)
 
     def test_tasks_are_not_labelled_as_documents(self):
         write(self.root, "tasks", "task-009.md", BARE)
-        self.assertNotIn(ob.DOC_LABEL, ob.read_backlog(self.root)[0]["labels"])
+        self.assertNotIn(ob.DOC_LABEL, ob.read_backlog(self.root)[0]["doc_labels"])
 
     def test_the_kind_vocabulary_is_closed_and_every_kind_has_a_colour(self):
         self.assertTrue(all(c.startswith("#") for c in ob.DOC_KINDS.values()))
@@ -324,7 +326,8 @@ class DocumentLabelTests(unittest.TestCase):
         # next to the `spec` it maps to. Both are junk on a board you filter by label.
         write(self.root, "docs", "a.md", DOC)
         write(self.root, "docs", "b.md", DOC_OTHER)
-        seen = {label for r in ob.read_backlog(self.root) for label in r["labels"]}
+        recs = ob.read_backlog(self.root)
+        seen = {l for r in recs for l in r["labels"]} | {l for r in recs for l in r["doc_labels"]}
         self.assertNotIn("other", seen)
         self.assertNotIn("specification", seen)
         self.assertIn("SPEC", seen)
@@ -406,7 +409,7 @@ class UppercaseVocabularyTests(unittest.TestCase):
         original = ob.api
         ob.api = lambda method, path, body=None: sent.append(body)
         try:
-            ob.attach_labels("ws", [({"labels": ["DECISION"]}, "t1")],
+            ob.attach_labels("ws", [({"labels": [], "doc_labels": ["DECISION"]}, "t1")],
                              [{"name": "decision", "color": "#111111"}])
         finally:
             ob.api = original
@@ -417,7 +420,7 @@ class UppercaseVocabularyTests(unittest.TestCase):
         original = ob.api
         ob.api = lambda method, path, body=None: sent.append(body)
         try:
-            ob.attach_labels("ws", [({"labels": ["research"]}, "t1")],
+            ob.attach_labels("ws", [({"labels": [], "doc_labels": ["RESEARCH"]}, "t1")],
                              [{"name": "research", "color": "pink"}])
         finally:
             ob.api = original
@@ -482,6 +485,82 @@ class LaneResolutionTests(unittest.TestCase):
 
     def test_an_absent_lane_resolves_to_none_rather_than_a_guess(self):
         self.assertIsNone(ob.resolve_lane("document", [{"slug": "to-do", "name": "To Do"}]))
+
+
+class SourceLabelCollisionTests(unittest.TestCase):
+    """api-agents uses `decision` and `research` as ORDINARY task labels. Forcing those
+    into the document vocabulary would relabel plain tasks as documents, so the casing
+    rule applies only to labels this script added."""
+
+    def _sent(self, record):
+        sent = []
+        original = ob.api
+        ob.api = lambda method, path, body=None: sent.append(body)
+        try:
+            ob.attach_labels("ws", [(record, "t1")], [])
+        finally:
+            ob.api = original
+        return [s["name"] for s in sent]
+
+    def test_a_task_label_named_decision_is_not_promoted_to_a_document_type(self):
+        got = self._sent({"labels": ["decision"], "doc_labels": []})
+        self.assertEqual(got, ["decision"])
+
+    def test_a_task_label_named_research_keeps_its_case(self):
+        got = self._sent({"labels": ["research"], "doc_labels": []})
+        self.assertEqual(got, ["research"])
+
+    def test_a_real_decision_document_still_gets_the_uppercase_label(self):
+        got = self._sent({"labels": [], "doc_labels": ["DECISION", "DOC"]})
+        self.assertEqual(sorted(got), ["DECISION", "DOC"])
+
+    def test_both_sets_are_attached_when_a_document_also_has_its_own_labels(self):
+        got = self._sent({"labels": ["backend"], "doc_labels": ["DOC"]})
+        self.assertEqual(sorted(got), ["DOC", "backend"])
+
+
+class CentralVocabularyTests(unittest.TestCase):
+    """A central board whose label list is the union of every repo's local habits filters
+    worse than one with a closed set. api-agents alone carried 52 (`area: agent`,
+    `size/L`, `platform-opportunity`)."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        ob.KEEP_SOURCE_LABELS[0] = False
+
+    def tearDown(self):
+        ob.KEEP_SOURCE_LABELS[0] = False
+
+    def _labels(self, frontmatter_labels):
+        body = "---\nid: TASK-1\ntitle: t\nstatus: To Do\nlabels:\n"
+        body += "".join(f"  - {l}\n" for l in frontmatter_labels) + "---\n\nbody\n"
+        write(self.root, "tasks", "task-1.md", body)
+        return ob.read_backlog(self.root)[0]["labels"]
+
+    def test_off_vocabulary_labels_are_dropped(self):
+        self.assertEqual(self._labels(["area: agent", "size/L", "backend"]), [])
+
+    def test_vocabulary_labels_survive(self):
+        self.assertEqual(self._labels(["bug", "chore"]), ["bug", "chore"])
+
+    def test_synonyms_fold_into_the_closed_set(self):
+        self.assertEqual(self._labels(["enhancement"]), ["feature"])
+        self.assertEqual(self._labels(["documentation"]), ["docs"])
+        self.assertEqual(self._labels(["testing"]), ["test"])
+
+    def test_casing_is_normalised(self):
+        self.assertEqual(self._labels(["BUG"]), ["bug"])
+
+    def test_keep_source_labels_opts_out(self):
+        ob.KEEP_SOURCE_LABELS[0] = True
+        self.assertEqual(self._labels(["area: agent"]), ["area: agent"])
+
+    def test_no_alias_points_outside_the_closed_set(self):
+        self.assertTrue(set(ob.WORK_ALIASES.values()) <= set(ob.WORK_TYPES))
+
+    def test_the_two_axes_never_collide(self):
+        upper = {ob.DOC_LABEL, *ob.DOC_KINDS}
+        self.assertEqual({u.lower() for u in upper} & set(ob.WORK_TYPES), set())
 
 
 if __name__ == "__main__":

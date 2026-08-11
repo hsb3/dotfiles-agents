@@ -88,6 +88,29 @@ DOC_KINDS = {
 # kind from the title would put a wrong, confident label on the ones hardest to re-find.
 DOC_TYPE_MAP = {"specification": "SPEC", "guide": "GUIDE", "reference": "REFERENCE"}
 
+# The lowercase half: what KIND of work, closed and shared by every repo because it is
+# Backlog.md's own `type:` axis. Per-repo area labels are deliberately dropped — one repo
+# alone carried 52 (`area: agent`, `size/L`, `platform-opportunity`), and a central board
+# whose label list is the union of every repo's local habits filters worse than one with
+# fourteen labels that mean the same thing everywhere. `--keep-source-labels` opts out.
+WORK_TYPES = {
+    "feature": "#3b82f6",
+    "bug": "#ef4444",
+    "chore": "#6b7280",
+    "docs": "#0ea5e9",
+    "test": "#22c55e",
+    "spike": "#a855f7",
+}
+# Common synonyms seen in the wild, folded into the closed set rather than carried.
+WORK_ALIASES = {
+    "enhancement": "feature", "documentation": "docs", "testing": "test",
+    "task": "chore", "maintenance": "chore", "tooling": "chore",
+}
+
+
+# Set once from the CLI; read inside parse_task_file, which has no argument for it.
+KEEP_SOURCE_LABELS = [False]
+
 
 class ApiError(RuntimeError):
     pass
@@ -220,17 +243,24 @@ def parse_task_file(path, kind):
         # copying it raw as well would put a literal `other` and a duplicate
         # `specification` alongside `spec` on the board.
         labels.append(str(fields["type"]))
+    labels = [
+        WORK_ALIASES.get(name.lower(), name.lower())
+        for name in labels
+        if WORK_ALIASES.get(name.lower(), name.lower()) in WORK_TYPES
+    ] if not KEEP_SOURCE_LABELS[0] else labels
+    doc_labels = []
     if kind in ("DECISION", "DOC"):
         # Matches the convention the reference board already uses: a document is a task in
-        # the Documents lane, filterable by label once its original Proposed/Accepted
-        # wording is no longer a status.
-        labels.append(DOC_LABEL)
+        # the Document lane, filterable by label once its original Proposed/Accepted
+        # wording is no longer a status. Kept apart from the file's own labels because
+        # only these get their casing forced — see attach_labels.
+        doc_labels.append(DOC_LABEL)
         if kind == "DECISION":
-            labels.append("DECISION")
+            doc_labels.append("DECISION")
         else:
             mapped = DOC_TYPE_MAP.get(str(fields.get("type", "")).strip().lower())
             if mapped:
-                labels.append(mapped)
+                doc_labels.append(mapped)
     priority = str(fields.get("priority", "") or "").lower()
     return {
         "source_id": str(fields.get("id") or path.rsplit("/", 1)[-1]),
@@ -239,6 +269,8 @@ def parse_task_file(path, kind):
         "status": str(fields.get("status") or "").strip(),
         "priority": priority if priority in PRIORITIES else "medium",
         "labels": sorted(set(labels)),
+        "raw_labels": sorted(set(labels)),
+        "doc_labels": sorted(set(doc_labels)),
         "body": body,
         "path": path,
     }
@@ -409,24 +441,28 @@ def attach_labels(workspace_id, created, existing_labels):
     # board's existing casing — reusing `RESEARCH` rather than seeding a `research`.
     owned = {name.lower(): (name, color) for name, color in
              {DOC_LABEL: "#6366f1", **DOC_KINDS}.items()}
+    palette = dict(WORK_TYPES)
     attached = 0
     for record, task_id in created:
+        # A repo may legitimately use `decision` or `research` as ORDINARY task labels
+        # (api-agents does). Forcing those to the document vocabulary's uppercase would
+        # relabel plain tasks as documents, so only labels this script added are forced.
         for name in record["labels"]:
-            canonical, color = owned.get(
-                name.lower(), known.get(name.lower(), (name, LABEL_COLOR))
+            canonical, color = known.get(
+                name.lower(), (name, palette.get(name.lower(), LABEL_COLOR))
             )
-            api(
-                "POST",
-                "/label",
-                {
-                    "name": canonical,
-                    "color": color,
-                    "workspaceId": workspace_id,
-                    "taskId": task_id,
-                },
-            )
+            _post_label(workspace_id, task_id, canonical, color)
+            attached += 1
+        for name in record.get("doc_labels", []):
+            canonical, color = owned.get(name.lower(), (name, LABEL_COLOR))
+            _post_label(workspace_id, task_id, canonical, color)
             attached += 1
     return attached
+
+
+def _post_label(workspace_id, task_id, name, color):
+    api("POST", "/label", {"name": name, "color": color,
+                           "workspaceId": workspace_id, "taskId": task_id})
 
 
 # ------------------------------------------------------------------------------ state
@@ -704,6 +740,8 @@ def main(argv=None):
     disc = sub.add_parser("discover", help="read-only: what exists, what would move")
     disc.add_argument("--repo", help="path to the repo checkout")
     disc.add_argument("--project-id", help="existing Kaneo project, if there is one")
+    disc.add_argument("--keep-source-labels", action="store_true",
+                      help="carry every label the repo used instead of the closed set")
     disc.add_argument("--include-archive", action="store_true",
                       help="also import backlog/archive, which the owner filed out of view")
     disc.set_defaults(func=cmd_discover)
@@ -721,6 +759,8 @@ def main(argv=None):
                      help="lane for backlog/docs; they also get a `doc` label")
     app.add_argument("--no-title-prefix", dest="title_prefix", action="store_false",
                      help="omit the source id from imported titles")
+    app.add_argument("--keep-source-labels", action="store_true",
+                     help="carry every label the repo used instead of the closed set")
     app.add_argument("--include-archive", action="store_true",
                      help="also import backlog/archive, which the owner filed out of view")
     app.add_argument("--yes", action="store_true", help="actually write (default is a dry run)")
@@ -737,6 +777,7 @@ def main(argv=None):
     lab.set_defaults(func=cmd_labels)
 
     args = parser.parse_args(argv)
+    KEEP_SOURCE_LABELS[0] = bool(getattr(args, "keep_source_labels", False))
     try:
         return args.func(args)
     except ApiError as exc:
