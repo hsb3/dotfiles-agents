@@ -31,8 +31,9 @@ flowchart TD
     finish --> board
     mgr -->|reads and appends only| board
 
+    pre[kaneo-preflight] -->|board unreachable, say so and stop| session
     kaneo[kaneo skill] -.->|governs the ritual| claim
-    policy[kaneo-mcp-policy] -.->|denies claim tools and stamps agent plus session| mgr
+    policy[kaneo-mcp-policy] -.->|denies claim tools, denies unconfigured writes, stamps| mgr
     tripwire[kaneo-bash-tripwire] -.->|denies subagent Bash aimed at the host| mgr
 ```
 
@@ -48,8 +49,31 @@ integration's push-driven status transition.
 | `skills/kaneo/` | The contract: claim ritual, levels, decision convention, plus configuration, API, and access-model references |
 | `.mcp.json` | The board's MCP server, registered by installing the plugin — no hand-written config in the consuming repo |
 | `agents/kaneo-manager.md` | Reference L2 manager; its `tools:` list *is* the append-only allowlist |
-| `hooks/kaneo-mcp-policy/` | Floor-deny for subagents, plus attribution stamping on comments and task creation |
+| `hooks/kaneo-preflight/` | Says at session start that the board is unreachable, and which of three causes it is |
+| `hooks/kaneo-mcp-policy/` | Floor-deny for subagents, deny on unconfigured board writes, attribution stamping |
 | `hooks/kaneo-bash-tripwire/` | Advisory deny on subagent Bash that reaches the board host directly |
+
+## Failing loudly when the tools are not there
+
+**Enabling this plugin is a declaration that this repo's work lives on a Kaneo board.** So
+there are two supported states, and no quiet third one: configured and working, or turned
+off. Enabled-but-broken gets complained about at the start of every session until you fix
+the configuration or disable the plugin. That is deliberate — the alternative is a session
+that believes it has board tools it does not have.
+
+Installing a plugin's MCP server is not the same as having it. Three things switch it off
+without a word: the repo is unconfigured, someone ran `/mcp disable` here (per-project, and
+recorded only in `~/.claude.json`), or `CLAUDE_CODE_SKIP_PLUGIN_MCP_SERVERS` is set. In all
+three the skill still loads, still says the board holds the work, and still forbids
+`TODO.md` — so an agent that finds no board tools improvises rather than stopping.
+
+There is also a quieter version. The MCP server expands only `KANEO_API_URL` and
+`KANEO_MCP_TOKEN`, but the workflow needs all five variables. Set just those two and the
+board tools are fully present with no project id and no identity: nothing errors, and the
+agent picks a board. `kaneo-preflight` catches the first three at session start;
+`kaneo-mcp-policy` denies the fourth at the moment of the call, naming the variable to set.
+The diagnostic tools — `whoami`, `list_workspaces`, `list_projects` — stay open throughout,
+because denying the diagnostic turns a loud failure back into a confusing one.
 
 ## Levels, and the ceiling
 
