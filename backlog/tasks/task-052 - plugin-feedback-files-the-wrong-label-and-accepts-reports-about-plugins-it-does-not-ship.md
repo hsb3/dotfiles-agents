@@ -6,13 +6,14 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-08-10 02:45'
-updated_date: '2026-08-10 02:52'
+updated_date: '2026-08-11 18:20'
 labels:
   - primitives
 milestone: m-2
 dependencies: []
 references:
   - 'https://github.com/hsb3/dotfiles-agents/issues/282'
+  - 'https://github.com/hsb3/dotfiles-agents/issues/301'
 priority: high
 type: bug
 ordinal: 31000
