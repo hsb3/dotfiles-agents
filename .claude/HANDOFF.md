@@ -189,6 +189,15 @@ Parked on the owner's IA approval; unchanged since 2026-08-04. Full state:
   79%. Both fixes came from the numbers, not from reading the code. **The method generalizes and
   is cheap:** replay the thing over `git log` history, and where the stdlib already has an
   authoritative parser for the format, use it as the oracle instead of eyeballing samples.
+- **`comment-hygiene-gate` HAS REAL SUBJECTS HERE — expect it to fire on this repo's own
+  commits.** A sweep of all 425 source files found **41 findings in 25 files**, essentially all
+  true positives: board refs and dates in comments in `evals/ingest.py`, `externals.yaml`,
+  `scaffold.py`, the workflow YAML, and the harness. Touching any of those will nudge. That is
+  the gate working, not misfiring — but nobody has done the cleanup pass, and it is not carded.
+- **Pushing straight to `dev` prints `remote: Bypassed rule violations` — that is expected, not
+  an error.** `dev` is protected and expects 2 status checks; the owner's docs-only waiver means
+  those commits land by bypass and therefore get **zero CI**. Run `make ci` locally before any
+  such push, because nothing else will.
 - **`git diff` appends a TAB to the `+++ b/<path>` header when the path contains spaces.** Every
   `backlog/tasks/*.md` filename here has spaces, so any tool parsing diff headers in this repo
   hits it — and a naive `line[6:]` silently carries the tab into the filename, which then breaks
