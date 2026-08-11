@@ -99,7 +99,13 @@ after (TASK-27).
 
 ## 3 · Next up
 
-**Source of truth is the backlog** (`backlog board` / `backlog task list --plain`).
+**Source of truth is the backlog** (`backlog board` / `backlog task list --plain`) — until the
+migration below changes that.
+
+**OWNER'S CALL, 2026-08-11: migrate THIS repo onto the Kaneo board next.** The `kaneo` plugin
+is installed here now. Read §7 first — it is a governance change (the CLAUDE.md
+`CRITICAL_INSTRUCTION` block and the `make ci` label gate both hard-depend on `backlog/`), not
+a data move, so decide their fate before importing anything.
 
 **The queued thing is triage: #299/#300/#301/#306 have no cards** (§1). Beyond those, the cards
 with users actually waiting are **TASK-052** (plugin-feedback cannot file a feature request at
@@ -471,10 +477,22 @@ board has a **Document** lane holding decisions and docs.
   clone step is not automated.
 - **~15 repos remain**, across `hsb3` and `mhi-raptorxai`, greenfield and brownfield mixed.
   `mhi-raptorxai` should be its own workspace (a real trust boundary); nothing there is started.
-- **dotfiles-agents itself is deliberately NOT migrated.** It is the most coupled repo in the
-  fleet — a `CRITICAL_INSTRUCTION` block in CLAUDE.md, `scripts/check_backlog_labels.py`,
-  DoD-as-code reading `backlog/config.yml`, and 20 decision docs citing TASK ids. Migrating it
-  changes repo law and gates, not just data. Do it last, or not at all.
+- **THIS REPO IS NEXT — start here.** The owner installed the `kaneo` plugin into
+  dotfiles-agents on 2026-08-11 and ruled that migrating it is the next session's job. It was
+  held back until last on purpose, because it is the most Backlog-coupled repo in the fleet and
+  migrating it **changes repo law and a CI gate, not just data**:
+  - the `CRITICAL_INSTRUCTION` block in CLAUDE.md orders every session to run
+    `backlog instructions` before acting;
+  - `scripts/check_backlog_labels.py` enforces a closed label vocabulary in `make ci`, and
+    `AREAS`/`SIGNALS` there must agree with `backlog/config.yml` or the gate goes red;
+  - definition-of-done-as-code reads `backlog/config.yml`;
+  - ~20 decision documents cite `TASK-NNN` ids, which is why `apply` keeps the source id in
+    the title.
+
+  So this is not a data move: decide first what happens to the CLAUDE.md block and the label
+  gate (retire, or repoint at the board), then migrate. `backlog/` currently holds 71 tasks,
+  8 drafts, 20 decisions and 4 docs. The board conventions, the runbook and the API gotchas
+  all live on the `meta` board — read them before starting.
 - Run state (manifest, per-repo id-maps, the one-off `relabel.py` / `backfill_labels.py`) lived
   in the session scratchpad and is **gone**. `onboard_repo.py adopt` rebuilds a state file from
   board titles, which is why `apply` writes `TASK-083: ...` titles by default.
