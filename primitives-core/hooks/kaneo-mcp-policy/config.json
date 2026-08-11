@@ -1,0 +1,6 @@
+{
+  "event": "PreToolUse",
+  "matcher": "mcp__(plugin_kaneo_)?kaneo__.*",
+  "timeout": 10,
+  "statusMessage": "Checking kaneo board level policy..."
+}

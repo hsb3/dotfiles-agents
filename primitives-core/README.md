@@ -14,6 +14,7 @@ symlinks, so an edit here IS the edit everywhere the primitive ships.
 | `agents/<name>.md` | **agent** | one `.md` with frontmatter | one workflow-aware agent per bundle is encouraged (P4). |
 | `commands/<name>.md` | **command** | one `.md` with frontmatter | the slash surface an operator *or an agent* invokes (decision-010). A command stays thin: it loads a skill and drives it, never restating the procedure — one surface, one source of truth. |
 | `hooks/<name>/` | **hook** | handler + config in the ratified hook-dir layout `hooks/<name>/hook.py` | Claude-Code-only; stdlib-only (no pip/npm deps). |
+| `mcp/<name>.json` | **mcp** | one `.json` in the `.mcp.json` shape | symlinked to `plugins/<id>/.mcp.json`, which Claude Code auto-discovers, so installing the plugin registers the server. Instance values arrive by `${ENV_VAR}` only — see `mcp/README.md`. |
 
 ## Roster entry schema (provenance manifest, ADR 0017)
 

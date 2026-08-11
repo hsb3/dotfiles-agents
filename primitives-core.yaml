@@ -350,3 +350,49 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  # claude-code only, deliberately. The skill's contract is the MCP tools and the two
+  # policy hooks; neither reaches the opencode lane (mcp targets claude-code, hooks are
+  # `unsupported` there). Shipping the skill alone would tell an opencode session to call
+  # tools that do not exist and to trust stamping that never happens.
+  - id: kaneo
+    type: skill
+    source: primitives-core/skills/kaneo
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hosted-mcp, env:kaneo]
+  - id: kaneo-manager
+    type: agent
+    source: primitives-core/agents/kaneo-manager.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hosted-mcp, env:kaneo]
+  - id: kaneo-mcp-policy
+    type: hook
+    source: primitives-core/hooks/kaneo-mcp-policy
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hooks, hosted-mcp]
+  - id: kaneo-bash-tripwire
+    type: hook
+    source: primitives-core/hooks/kaneo-bash-tripwire
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hooks, env:kaneo]
+  - id: kaneo-preflight
+    type: hook
+    source: primitives-core/hooks/kaneo-preflight
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hooks, env:kaneo]
+  - id: kaneo-server
+    type: mcp
+    source: primitives-core/mcp/kaneo.json
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hosted-mcp, env:kaneo]

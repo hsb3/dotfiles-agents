@@ -1,0 +1,6 @@
+{
+  "event": "PreToolUse",
+  "matcher": "Bash",
+  "timeout": 10,
+  "statusMessage": "Checking for direct board access..."
+}

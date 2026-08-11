@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "6 plugins, all six bundles: solo-skills (every skill that stands on its own - harness and environment config, session discipline, research, diagrams, repo setup, planning, comms, and Obsidian plugin development - in one install), code-desk (next-release execution plus planning, comms, board triage, repo scaffolding, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), obsidian-toolkit (Obsidian plugin-dev guidance), and plugin-feedback (hooks that invite defect reports on the plugins in use). The one-skill plugins were retired into solo-skills: a plugin is the unit of installation, so per-skill installs are no longer offered.",
-    "version": "0.6.0"
+    "description": "7 plugins, all seven bundles: solo-skills (every skill that stands on its own - harness and environment config, session discipline, research, diagrams, repo setup, planning, comms, and Obsidian plugin development - in one install), code-desk (next-release execution plus planning, comms, board triage, repo scaffolding, and deck themes), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (tracking a repo's work on a live Kaneo board, with per-level board authority), obsidian-toolkit (Obsidian plugin-dev guidance), and plugin-feedback (hooks that invite defect reports on the plugins in use). The one-skill plugins were retired into solo-skills: a plugin is the unit of installation, so per-skill installs are no longer offered.",
+    "version": "0.7.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -35,6 +35,15 @@
       "name": "atelier",
       "source": "./plugins/atelier",
       "version": "0.14.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Work a repo's tracked tasks on a live Kaneo board instead of in-repo task files, so parallel sessions stop grabbing the same work and no branch grows its own backlog.md. Ships the workflow skill (claim ritual, decision convention, level split), the board's MCP server definition so installing the plugin registers the tools, a reference L2 manager agent whose tools list is the append-only allowlist, and three hooks: a session-start preflight that says loudly when the board is unreachable and which of three causes it is, a level policy that keeps claim authority in the root session, denies board writes while the config is incomplete, and stamps every comment and task with its agent and session, plus an advisory tripwire on subagent Bash that reaches the board directly. Configure with five KANEO_* env vars; nothing about an instance is baked in.",
+      "name": "kaneo",
+      "source": "./plugins/kaneo",
+      "version": "0.4.0"
     },
     {
       "author": {
