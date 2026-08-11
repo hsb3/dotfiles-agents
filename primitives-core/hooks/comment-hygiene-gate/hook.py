@@ -51,17 +51,40 @@ LANDING = (
     re.compile(r"\bgh\b\s+pr\s+create\b"),
 )
 
-# Comment openers across the syntaxes this repo's consumers actually write in.
-COMMENT_OPENER = re.compile(r"^\s*(?://+|#+|/\*+|\*(?!/)|--|<!--|;+|%|\"\"\"|''')")
-# ponytail: regex lexer, no string-literal awareness — a URL fragment or a `#`
-# inside a quoted string can read as a comment. Acceptable for an advisory that
-# never blocks; swap in a per-language tokenizer only if the noise is real.
-INLINE_COMMENT = re.compile(r"(?:\s//|\s#|\s/\*|\s--\s|\s<!--)(.*)$")
+# What opens a comment depends on the language: `#` starts one in Python and
+# names a colour in CSS. A single universal table is what makes `color: #141413`
+# read as an issue reference, so the openers are keyed by extension.
+_HASH = ("#",)
+_C = ("//", "/*")
+_BLOCK = ("/*",)
+_MARKUP = ("<!--",)
+_DASH = ("--",)
+_SEMI = (";",)
+
+OPENERS = {
+    "py": _HASH, "pyi": _HASH, "sh": _HASH, "bash": _HASH, "zsh": _HASH,
+    "rb": _HASH, "pl": _HASH, "r": _HASH, "yaml": _HASH, "yml": _HASH,
+    "toml": _HASH, "tf": _HASH, "ini": _HASH, "cfg": _HASH, "conf": _HASH,
+    "gitignore": _HASH, "dockerfile": _HASH, "makefile": _HASH, "mk": _HASH,
+    "c": _C, "h": _C, "cc": _C, "cpp": _C, "hpp": _C, "cs": _C, "go": _C,
+    "rs": _C, "java": _C, "kt": _C, "swift": _C, "scala": _C, "php": _C,
+    "js": _C, "cjs": _C, "mjs": _C, "jsx": _C, "ts": _C, "tsx": _C,
+    "scss": _C, "less": _C, "css": _BLOCK,
+    "html": _MARKUP, "htm": _MARKUP, "xml": _MARKUP, "svg": _MARKUP,
+    "vue": _MARKUP, "svelte": _MARKUP,
+    "sql": _DASH, "lua": _DASH, "hs": _DASH, "elm": _DASH,
+    "el": _SEMI, "lisp": _SEMI, "clj": _SEMI, "scm": _SEMI,
+}
+# An unknown extension gets the two commonest families rather than nothing:
+# missing a comment costs less than inventing one, but silence costs coverage.
+DEFAULT_OPENERS = _HASH + _C
+QUOTES = "\"'`"
 
 # `UTF-8`, `SHA-256` and friends are not board refs.
 KEY_PREFIX_SKIP = {
     "UTF", "SHA", "RFC", "ISO", "AES", "CVE", "TLS", "SSL", "HTTP", "HTTPS",
     "IPV", "PEP", "RGB", "UTC", "MD", "GPT", "API", "URL", "ID",
+    "LICENSE", "LICENCE", "GPL", "LGPL", "BSD", "ES", "HTML", "CSS",
 }
 
 BOARD_KEY = re.compile(r"\b([A-Z][A-Z0-9]{1,9})-([0-9]{1,6})\b")
@@ -70,9 +93,16 @@ BOARD_KEY = re.compile(r"\b([A-Z][A-Z0-9]{1,9})-([0-9]{1,6})\b")
 # mid-sentence is a sentence. Scanning them inverts the rule this hook enforces,
 # because a tracker card or a handoff is where the history is SUPPOSED to live.
 PROSE_SUFFIXES = (".md", ".markdown", ".mdx", ".rst", ".txt", ".adoc", ".org")
+# The same, for the prose files that carry no extension at all.
+PROSE_NAMES = {
+    "license", "licence", "notice", "copying", "authors", "contributors",
+    "changelog", "readme",
+}
 
 MARKERS = (
-    (re.compile(r"(?<![\w&])#[0-9]{1,6}\b"), "issue reference"),
+    # Same shape the identity gate uses: 1-5 digits with a hex-char lookahead, so a
+    # six-hex-digit colour is not read as an issue number.
+    (re.compile(r"(?<![\w&])#[0-9]{1,5}(?![0-9A-Fa-f])"), "issue reference"),
     (re.compile(r"\b\d{4}-\d{2}-\d{2}\b"), "date"),
     (re.compile(r"\b(?:CI\s+)?run\s+(?:id\s+)?\d{6,}\b", re.I), "CI run id"),
     (
@@ -123,13 +153,61 @@ def _merge_base_diff(cwd):
     return None
 
 
-def _comment_text(added_line):
-    """The comment portion of an added diff line, or None."""
+def _openers_for(path):
+    name = path.rsplit("/", 1)[-1].lower()
+    return OPENERS.get(name.rsplit(".", 1)[-1] if "." in name else name, DEFAULT_OPENERS)
+
+
+def _is_prose(path):
+    name = path.rsplit("/", 1)[-1].lower()
+    return name.endswith(PROSE_SUFFIXES) or name.split(".")[0] in PROSE_NAMES
+
+
+def _comment_text(added_line, openers):
+    """The comment portion of an added diff line, or None.
+
+    Walks the line left to right tracking quote state, so a marker inside a
+    string literal stays code: `print("see #NNN")` is not history. Only single
+    lines are ever available here (a diff hunk is fragments, not a parseable
+    file), so this is a lexer for one line, not a parser.
+
+    ponytail: single-line scope — a comment character inside a MULTI-line
+    string (a generator's file template) still reads as a comment, because the
+    opening quote is on a line this never sees. Measured at 1 occurrence in 156
+    Python files. Reaching it needs whole-file parsing per language; do that
+    only if templates ever become a real share of the noise.
+    """
     body = added_line[1:]
-    if COMMENT_OPENER.match(body):
-        return body.strip()
-    m = INLINE_COMMENT.search(body)
-    return m.group(1).strip() if m else None
+    stripped = body.lstrip()
+    if stripped[:3] in ('"""', "'''"):  # a docstring's opening line
+        return stripped[3:].strip() or None
+
+    i, n, quote = 0, len(body), ""
+    while i < n:
+        ch = body[i]
+        if quote:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote:
+                quote = ""
+            i += 1
+            continue
+        if ch in QUOTES:
+            quote = ch
+            i += 1
+            continue
+        for op in openers:
+            if body.startswith(op, i):
+                # `--` opens a comment only with a space after it; otherwise it
+                # is `i--` or a CSS custom property.
+                if op == "--" and body[i + 2:i + 3] != " ":
+                    continue
+                if op == "//" and body[i - 1:i] == ":":  # a URL scheme
+                    continue
+                return body[i + len(op):].strip() or None
+        i += 1
+    return None
 
 
 def _board_ref(text):
@@ -144,17 +222,19 @@ def _scan(diff):
     findings = {}
     current = None
     skip = False
+    openers = DEFAULT_OPENERS
     for line in diff.splitlines():
         if line.startswith("+++ b/"):
             # git appends a tab to the header when the path contains spaces.
             current = line[6:].split("\t")[0]
-            skip = current.lower().endswith(PROSE_SUFFIXES)
+            skip = _is_prose(current)
+            openers = _openers_for(current)
             continue
         if skip:
             continue
         if not line.startswith("+") or line.startswith("+++"):
             continue
-        text = _comment_text(line)
+        text = _comment_text(line, openers)
         if not text:
             continue
         kinds = [why for rx, why in MARKERS if rx.search(text)]

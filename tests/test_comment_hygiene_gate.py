@@ -86,7 +86,7 @@ class CommentHygieneGateTests(unittest.TestCase):
 
     def test_flags_branch_diff_on_pr_create(self):
         self._git("checkout", "-qb", "feature")
-        self._stage("x = 1  # rollback plan lives in ABC-77, per the review call\n")
+        self._stage("x = 1  // rollback plan lives in ABC-77, per the review call\n")
         self._git("commit", "-qm", "work")
         out = json.loads(self._run("gh pr create --fill"))
         self.assertIn("attribution", out["hookSpecificOutput"]["additionalContext"])
@@ -133,6 +133,36 @@ class CommentHygieneGateTests(unittest.TestCase):
         ctx = json.loads(self._run("git commit -m ci"))["hookSpecificOutput"]["additionalContext"]
         self.assertIn("board reference", ctx)
         self.assertIn("ci workflow.yml (1)", ctx)
+
+    def test_silent_on_markers_inside_string_literals(self):
+        """`#` in a quoted string is code, not a comment."""
+        self._stage(
+            'const msg = "fixed in #291 on 2026-08-10"\n'
+            "const sql = '-- TASK-032 per the owner call'\n"
+        )
+        self.assertEqual(self._run("git commit -m x"), "")
+
+    def test_silent_on_css_hex_colours_and_custom_properties(self):
+        """`#` names a colour in CSS and `--x` is a custom property, not a comment."""
+        self._write("theme.css", ":root {\n  --text: #141413;\n  color: #141413;\n}\n")
+        self._git("add", "-A")
+        self.assertEqual(self._run("git commit -m style"), "")
+
+    def test_silent_on_url_scheme_slashes(self):
+        """`//` in a URL is not a comment opener, and NOTICE/LICENSE are prose."""
+        self._write("deps.properties", "docs=http://example.com/TASK-032/2026-08-10\n")
+        self._write("NOTICE", "Licensed under http://www.apache.org/licenses/LICENSE-2.0\n")
+        self._git("add", "-A")
+        self.assertEqual(self._run("git commit -m deps"), "")
+
+    def test_still_flags_a_real_comment_in_each_language_family(self):
+        self._write("a.py", "x = 1  # rollback plan lives in ABC-77\n")
+        self._write("b.go", "var x = 1  // owner directive: retry twice\n")
+        self._write("c.sql", "select 1  -- superseded 2026-08-10\n")
+        self._git("add", "-A")
+        ctx = json.loads(self._run("git commit -m x"))["hookSpecificOutput"]["additionalContext"]
+        for f in ("a.py", "b.go", "c.sql"):
+            self.assertIn(f, ctx)
 
     def test_version_like_tokens_are_not_board_refs(self):
         self._stage("const enc = 'x'  // UTF-8 only, SHA-256 digest, see CVE-2024-1234\n")
