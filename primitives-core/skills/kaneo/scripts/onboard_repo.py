@@ -33,15 +33,42 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# Backlog.md wraps each section in these markers, which makes the body parseable without
-# guessing at heading levels that differ across repos.
+# Backlog.md wraps each section in HTML-comment markers, which makes the body parseable
+# without guessing at heading levels that differ across repos. Two marker dialects exist
+# in the wild: `<!-- SECTION:NAME:BEGIN -->` and the bare `<!-- NAME:BEGIN -->` (current
+# Backlog.md emits AC and COMMENTS bare, everything else prefixed). Matching only the
+# prefixed form silently dropped every acceptance-criteria section of a 101-card import.
 SECTION = re.compile(
-    r"<!--\s*SECTION:(?P<name>[A-Z_]+):BEGIN\s*-->(?P<body>.*?)<!--\s*SECTION:\1:END\s*-->",
+    r"<!--\s*(?:SECTION:)?(?P<name>[A-Z_]+):BEGIN\s*-->(?P<body>.*?)"
+    r"<!--\s*(?:SECTION:)?(?P=name):END\s*-->",
     re.S,
 )
 FRONTMATTER = re.compile(r"\A---\r?\n(?P<fm>.*?)\r?\n---\r?\n(?P<body>.*)\Z", re.S)
 # Sections worth carrying across, in the order they should appear in the Kaneo body.
-CARRY = ("DESCRIPTION", "ACCEPTANCE_CRITERIA", "IMPLEMENTATION_PLAN", "IMPLEMENTATION_NOTES")
+# Both dialects' names for the same section appear here; first present wins its heading.
+CARRY = (
+    "DESCRIPTION",
+    "ACCEPTANCE_CRITERIA",
+    "AC",
+    "IMPLEMENTATION_PLAN",
+    "PLAN",
+    "IMPLEMENTATION_NOTES",
+    "NOTES",
+    "FINAL_SUMMARY",
+    "COMMENTS",
+)
+# Marker names whose title-cased form would mislabel the section on the board.
+CARRY_HEADINGS = {
+    "AC": "Acceptance Criteria",
+    "PLAN": "Implementation Plan",
+    "NOTES": "Implementation Notes",
+}
+# Marker pairs naming the same section across dialects — carry whichever appears first.
+CARRY_SYNONYMS = {
+    "AC": "ACCEPTANCE_CRITERIA",
+    "PLAN": "IMPLEMENTATION_PLAN",
+    "NOTES": "IMPLEMENTATION_NOTES",
+}
 # Backlog.md layouts differ per repo and the difference is silent: one repo keeps finished
 # work in tasks/ with status Done, another moves it to completed/, a third nests
 # archive/tasks/. A fixed list that happens to match the repo you tested on drops the rest
@@ -227,15 +254,23 @@ def parse_task_file(path, kind):
         return None
     fields = parse_frontmatter(match.group("fm"))
     sections = {m.group("name"): m.group("body").strip() for m in SECTION.finditer(text)}
-    body = "\n\n".join(
-        f"## {name.replace('_', ' ').title()}\n\n{sections[name]}"
-        for name in CARRY
-        if sections.get(name)
-    )
+    parts = []
+    carried = set()
+    for name in CARRY:
+        canonical = CARRY_SYNONYMS.get(name, name)
+        if not sections.get(name) or canonical in carried:
+            continue
+        carried.add(canonical)
+        heading = CARRY_HEADINGS.get(name, name.replace("_", " ").title())
+        parts.append(f"## {heading}\n\n{sections[name]}")
+    body = "\n\n".join(parts)
     if not body:
         # No marked sections (hand-written or an older Backlog.md): keep the whole body
         # rather than silently importing an empty description.
         body = match.group("body").strip()
+    meta = frontmatter_metadata(fields)
+    if meta:
+        body = f"{body}\n\n{meta}" if body else meta
     labels = [str(v) for v in (fields.get("labels") or []) if str(v).strip()]
     if fields.get("type") and kind != "DOC":
         # On a task, `type:` is the kind of work (feature/bug/chore) and makes a good
@@ -274,6 +309,33 @@ def parse_task_file(path, kind):
         "body": body,
         "path": path,
     }
+
+
+def frontmatter_metadata(fields):
+    """Frontmatter worth keeping that has no Kaneo field: milestone, dependencies, references.
+
+    Kaneo has no milestone primitive and relations are attached after import, so these
+    ride in the body under one heading — dropping them silently loses the issue links
+    and the outcome grouping the source cards carried.
+    """
+    lines = []
+    if str(fields.get("milestone") or "").strip():
+        lines.append(f"Milestone: {str(fields['milestone']).strip()}")
+    deps = fields.get("dependencies") or []
+    if isinstance(deps, str):
+        deps = [deps]
+    deps = [str(d).strip() for d in deps if str(d).strip()]
+    if deps:
+        lines.append("Dependencies: " + ", ".join(deps))
+    refs = fields.get("references") or []
+    if isinstance(refs, str):
+        refs = [refs]
+    refs = [str(r).strip() for r in refs if str(r).strip()]
+    if refs:
+        lines.append("References:\n" + "\n".join(f"- {r}" for r in refs))
+    if not lines:
+        return ""
+    return "## Source Metadata\n\n" + "\n\n".join(lines)
 
 
 def path_read(path):
