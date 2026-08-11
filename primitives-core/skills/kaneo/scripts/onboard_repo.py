@@ -42,37 +42,51 @@ SECTION = re.compile(
 FRONTMATTER = re.compile(r"\A---\r?\n(?P<fm>.*?)\r?\n---\r?\n(?P<body>.*)\Z", re.S)
 # Sections worth carrying across, in the order they should appear in the Kaneo body.
 CARRY = ("DESCRIPTION", "ACCEPTANCE_CRITERIA", "IMPLEMENTATION_PLAN", "IMPLEMENTATION_NOTES")
+# Backlog.md layouts differ per repo and the difference is silent: one repo keeps finished
+# work in tasks/ with status Done, another moves it to completed/, a third nests
+# archive/tasks/. A fixed list that happens to match the repo you tested on drops the rest
+# without a word — 42 of 73 items in one real repo. Hence: known folders map to a kind,
+# `archive` is excluded by default because the owner filed it out of view on purpose, and
+# ANY other folder holding .md files is reported rather than guessed at.
 SOURCES = (
     ("tasks", "TASK"),
+    ("completed", "TASK"),
     ("drafts", "DRAFT"),
     ("decisions", "DECISION"),
     ("docs", "DOC"),
 )
+ARCHIVE_DIR = "archive"
 PRIORITIES = ("low", "medium", "high")
 # Kaneo requires a colour on every label; used only when creating one that does not exist.
 LABEL_COLOR = "#6b7280"
 
 # Kaneo has no document type — a board holds tasks. Filing documents on it anyway means
 # the only thing that can carry "what kind of document is this" is a label, so documents
-# get two: `doc` on every one of them (the umbrella filter, the whole point of the
-# exercise) plus at most one kind below. Same shape as a well-run backlog's one-area-plus-
-# one-signal rule, and deliberately closed — an open vocabulary filters no better than the
-# `other` it replaces.
-DOC_LABEL = "doc"
+# get two: DOC on every one of them (the umbrella filter, the whole point of the exercise)
+# plus at most one kind below. Same shape as a well-run backlog's one-area-plus-one-signal
+# rule, and deliberately closed — an open vocabulary filters no better than the `other` it
+# replaces.
+#
+# UPPERCASE on purpose, and it is the whole readability trick: a board mixes two
+# taxonomies that answer different questions. Lowercase says where work lands and what
+# kind it is (frontend, bug, chore); UPPERCASE says what kind of document this is. Casing
+# tells them apart at a glance in a filter list, with no prefix and no nesting — which
+# Kaneo's flat label model does not offer anyway.
+DOC_LABEL = "DOC"
 DOC_KINDS = {
-    "decision": "#8b5cf6",     # a ruling, with consequences
-    "spec": "#0ea5e9",         # a contract something else is built against
-    "guide": "#22c55e",        # how to carry out a procedure
-    "reference": "#64748b",    # durable facts and pointers
-    "research": "#f59e0b",     # an investigation or comparison writeup
-    "incident": "#ef4444",     # what happened, and what it cost
-    "register": "#14b8a6",     # a living table someone updates
+    "DECISION": "#8b5cf6",     # a ruling, with consequences
+    "SPEC": "#0ea5e9",         # a contract something else is built against
+    "GUIDE": "#22c55e",        # how to carry out a procedure
+    "REFERENCE": "#64748b",    # durable facts and pointers
+    "RESEARCH": "#f59e0b",     # an investigation or comparison writeup
+    "INCIDENT": "#ef4444",     # what happened, and what it cost
+    "REGISTER": "#14b8a6",     # a living table someone updates
 }
 # Backlog.md's doc `type:` field, mapped onto the above. `other` is deliberately absent:
 # it is the majority value in real repos and carries no information, so those documents
 # get the umbrella label and are listed by `discover` for a human to classify. Guessing a
 # kind from the title would put a wrong, confident label on the ones hardest to re-find.
-DOC_TYPE_MAP = {"specification": "spec", "guide": "guide", "reference": "reference"}
+DOC_TYPE_MAP = {"specification": "SPEC", "guide": "GUIDE", "reference": "REFERENCE"}
 
 
 class ApiError(RuntimeError):
@@ -212,7 +226,7 @@ def parse_task_file(path, kind):
         # wording is no longer a status.
         labels.append(DOC_LABEL)
         if kind == "DECISION":
-            labels.append("decision")
+            labels.append("DECISION")
         else:
             mapped = DOC_TYPE_MAP.get(str(fields.get("type", "")).strip().lower())
             if mapped:
@@ -235,20 +249,45 @@ def path_read(path):
         return handle.read()
 
 
-def read_backlog(root):
-    """Every task/draft/decision under <root>/backlog, sorted for a stable import order."""
+def _markdown_under(directory):
+    """Every .md below a directory, recursively — archive/ nests its tasks a level down."""
+    found = []
+    for base, _, names in os.walk(directory):
+        found.extend(os.path.join(base, n) for n in names if n.endswith(".md"))
+    return sorted(found)
+
+
+def read_backlog(root, include_archive=False):
+    """Every backlog item under <root>/backlog, sorted for a stable import order."""
     records = []
-    for folder, kind in SOURCES:
-        directory = os.path.join(root, "backlog", folder)
-        if not os.path.isdir(directory):
-            continue
-        for name in sorted(os.listdir(directory)):
-            if not name.endswith(".md"):
-                continue
-            record = parse_task_file(os.path.join(directory, name), kind)
+    folders = list(SOURCES) + ([(ARCHIVE_DIR, "TASK")] if include_archive else [])
+    for folder, kind in folders:
+        for path in _markdown_under(os.path.join(root, "backlog", folder)):
+            record = parse_task_file(path, kind)
             if record:
                 records.append(record)
     return records
+
+
+def unhandled_folders(root, include_archive=False):
+    """Folders under backlog/ holding .md files that no source claims.
+
+    Reported rather than swept in: an unrecognised folder might be templates or notes, and
+    importing it because it happens to contain markdown is how a board fills with junk.
+    """
+    backlog = os.path.join(root, "backlog")
+    if not os.path.isdir(backlog):
+        return {}
+    claimed = {name for name, _ in SOURCES} | ({ARCHIVE_DIR} if include_archive else set())
+    unclaimed = {}
+    for name in sorted(os.listdir(backlog)):
+        path = os.path.join(backlog, name)
+        if not os.path.isdir(path) or name in claimed:
+            continue
+        count = len(_markdown_under(path))
+        if count:
+            unclaimed[name] = count
+    return unclaimed
 
 
 def slugify(value):
@@ -276,6 +315,18 @@ def workflow_records(records):
     their original wording in the body.
     """
     return [r for r in records if r["kind"] == "TASK"]
+
+
+def resolve_lane(wanted, columns):
+    """A column's slug, matched on slug or display name. None if the board has no such lane."""
+    target = slugify(wanted)
+    for column in columns:
+        if column["slug"] == wanted or column["slug"] == target:
+            return column["slug"]
+    for column in columns:
+        if slugify(column["name"]) == target:
+            return column["slug"]
+    return None
 
 
 def resolve_statuses(records, columns, create_for=None):
@@ -353,10 +404,17 @@ def attach_labels(workspace_id, created, existing_labels):
         str(label["name"]).lower(): (str(label["name"]), label.get("color") or LABEL_COLOR)
         for label in existing_labels
     }
+    # The document vocabulary is owned here, so its declared UPPERCASE wins over whatever
+    # casing happens to be on the board. Work labels are the repo's, so those keep the
+    # board's existing casing — reusing `RESEARCH` rather than seeding a `research`.
+    owned = {name.lower(): (name, color) for name, color in
+             {DOC_LABEL: "#6366f1", **DOC_KINDS}.items()}
     attached = 0
     for record, task_id in created:
         for name in record["labels"]:
-            canonical, color = known.get(name.lower(), (name, LABEL_COLOR))
+            canonical, color = owned.get(
+                name.lower(), known.get(name.lower(), (name, LABEL_COLOR))
+            )
             api(
                 "POST",
                 "/label",
@@ -395,7 +453,7 @@ def save_state(path, state):
 
 def cmd_discover(args):
     """Read-only. What exists for this repo already, and what the backlog holds."""
-    records = read_backlog(args.repo) if args.repo else []
+    records = read_backlog(args.repo, args.include_archive) if args.repo else []
     print(f"repo: {args.repo or '(none given)'}")
     if records:
         by_kind, by_status = {}, {}
@@ -419,6 +477,10 @@ def cmd_discover(args):
                 print(f"    {record['source_id']}: {record['title'][:58]}")
     else:
         print("  backlog: none found — greenfield, nothing to import")
+    if args.repo:
+        for name, count in unhandled_folders(args.repo, args.include_archive).items():
+            flag = " (pass --include-archive to import)" if name == ARCHIVE_DIR else ""
+            print(f"  NOT imported: backlog/{name}/ holds {count} markdown file(s){flag}")
 
     projects = unwrap(api("GET", f"/project?workspaceId={args.workspace}")) or []
     print(f"\nprojects already in workspace {args.workspace}: {len(projects)}")
@@ -491,13 +553,26 @@ def cmd_labels(args):
     # case-sensitively invents a `research` next to an existing `RESEARCH`, and the two
     # look like one label in the UI while filtering as two.
     rows = unwrap(api("GET", f"/label/workspace/{args.workspace}")) or []
-    existing = {str(label["name"]).lower() for label in rows}
+    existing = {str(label["name"]) for label in rows}
+    folded = {name.lower(): name for name in existing}
     wanted = {DOC_LABEL: "#6366f1", **DOC_KINDS}
-    missing = {name: color for name, color in wanted.items() if name.lower() not in existing}
+    missing = {name: color for name, color in wanted.items() if name not in existing}
+    # A label that exists in the wrong case is NOT missing — creating it would leave two
+    # that read as one and filter as two. Report it instead; re-pointing existing
+    # attachments is a data migration, not a provisioning step.
+    collisions = {
+        name: folded[name.lower()]
+        for name in missing
+        if name.lower() in folded and folded[name.lower()] != name
+    }
+    for name in collisions:
+        missing.pop(name, None)
     print(
-        f"workspace {args.workspace}: {len(existing)} distinct labels across {len(rows)} "
+        f"workspace {args.workspace}: {len(folded)} distinct labels across {len(rows)} "
         f"attachments, {len(missing)} to create"
     )
+    for name, found in sorted(collisions.items()):
+        print(f"  ! {found!r} exists where {name!r} is wanted — re-point it, do not duplicate")
     if not missing:
         return 0
     if not args.yes:
@@ -512,7 +587,7 @@ def cmd_labels(args):
 
 
 def cmd_apply(args):
-    records = read_backlog(args.repo)
+    records = read_backlog(args.repo, args.include_archive)
     if not records:
         print("nothing to import (greenfield repo or no backlog/ directory)")
         return 0
@@ -541,17 +616,27 @@ def cmd_apply(args):
         )
         return 2
 
-    lanes = {
+    # Resolve by slug OR display name: a column created as "Documents" and later renamed
+    # keeps slug `documents`, while one created as "Document" gets `document`. Two boards
+    # meant to match then disagree on the value the API wants, and only the slug works.
+    lanes, unknown = {}, {}
+    requested = {
         "DRAFT": args.draft_lane,
         "DECISION": args.decision_lane,
         "DOC": args.doc_lane,
     }
-    slugs = {c["slug"] for c in columns}
-    needed = {lanes[k] for k in {r["kind"] for r in pending} & set(lanes)}
-    if not needed <= slugs:
+    for kind in {r["kind"] for r in pending} & set(requested):
+        wanted = requested[kind]
+        found = resolve_lane(wanted, columns)
+        if found:
+            lanes[kind] = found
+        else:
+            unknown[kind] = wanted
+    if unknown:
         print(
-            f"error: fixed lane(s) {sorted(needed - slugs)} do not exist on this board. "
-            f"Available: {sorted(slugs)}",
+            "error: no lane matches "
+            + ", ".join(f"{k}={v!r}" for k, v in sorted(unknown.items()))
+            + f". Available slugs: {sorted(c['slug'] for c in columns)}",
             file=sys.stderr,
         )
         return 2
@@ -619,6 +704,8 @@ def main(argv=None):
     disc = sub.add_parser("discover", help="read-only: what exists, what would move")
     disc.add_argument("--repo", help="path to the repo checkout")
     disc.add_argument("--project-id", help="existing Kaneo project, if there is one")
+    disc.add_argument("--include-archive", action="store_true",
+                      help="also import backlog/archive, which the owner filed out of view")
     disc.set_defaults(func=cmd_discover)
 
     app = sub.add_parser("apply", help="import a repo's backlog onto an existing project")
@@ -628,12 +715,14 @@ def main(argv=None):
     app.add_argument("--create-columns", action="store_true", help="provision missing lanes")
     app.add_argument("--draft-lane", default="to-do",
                      help="lane for drafts, whose status is not a workflow state")
-    app.add_argument("--decision-lane", default="documents",
+    app.add_argument("--decision-lane", default="document",
                      help="lane for decisions; they also get a `decision` label")
-    app.add_argument("--doc-lane", default="documents",
+    app.add_argument("--doc-lane", default="document",
                      help="lane for backlog/docs; they also get a `doc` label")
     app.add_argument("--no-title-prefix", dest="title_prefix", action="store_false",
                      help="omit the source id from imported titles")
+    app.add_argument("--include-archive", action="store_true",
+                     help="also import backlog/archive, which the owner filed out of view")
     app.add_argument("--yes", action="store_true", help="actually write (default is a dry run)")
     app.set_defaults(func=cmd_apply, title_prefix=True)
 

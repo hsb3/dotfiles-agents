@@ -224,12 +224,12 @@ class DecisionLabelTests(unittest.TestCase):
     def test_decisions_are_labelled_so_they_stay_filterable(self):
         root = tempfile.mkdtemp()
         path = write(root, "decisions", "decision-1.md", BARE)
-        self.assertIn("decision", ob.parse_task_file(path, "DECISION")["labels"])
+        self.assertIn("DECISION", ob.parse_task_file(path, "DECISION")["labels"])
 
     def test_tasks_do_not_get_the_decision_label(self):
         root = tempfile.mkdtemp()
         path = write(root, "tasks", "task-009.md", BARE)
-        self.assertNotIn("decision", ob.parse_task_file(path, "TASK")["labels"])
+        self.assertNotIn("DECISION", ob.parse_task_file(path, "TASK")["labels"])
 
 
 class BlockScalarTests(unittest.TestCase):
@@ -295,7 +295,7 @@ class DocumentLabelTests(unittest.TestCase):
 
     def test_a_known_backlog_type_maps_to_a_kind(self):
         write(self.root, "docs", "doc-002.md", DOC)
-        self.assertIn("spec", ob.read_backlog(self.root)[0]["labels"])
+        self.assertIn("SPEC", ob.read_backlog(self.root)[0]["labels"])
 
     def test_type_other_gets_no_kind_rather_than_a_guessed_one(self):
         # `other` is the majority value in real repos and carries no information.
@@ -308,7 +308,7 @@ class DocumentLabelTests(unittest.TestCase):
         write(self.root, "decisions", "decision-1.md", BARE)
         labels = ob.read_backlog(self.root)[0]["labels"]
         self.assertIn(ob.DOC_LABEL, labels)
-        self.assertIn("decision", labels)
+        self.assertIn("DECISION", labels)
 
     def test_tasks_are_not_labelled_as_documents(self):
         write(self.root, "tasks", "task-009.md", BARE)
@@ -327,7 +327,7 @@ class DocumentLabelTests(unittest.TestCase):
         seen = {label for r in ob.read_backlog(self.root) for label in r["labels"]}
         self.assertNotIn("other", seen)
         self.assertNotIn("specification", seen)
-        self.assertIn("spec", seen)
+        self.assertIn("SPEC", seen)
 
     def test_a_tasks_type_is_still_a_label(self):
         write(self.root, "tasks", "task-004.md", TASK)
@@ -345,21 +345,24 @@ class LabelCasingTests(unittest.TestCase):
     case-sensitively seeds a second label that reads as the same one and filters as two."""
 
     ROWS = [
-        {"name": "RESEARCH", "color": "pink"},
-        {"name": "RESEARCH", "color": "pink"},
-        {"name": "decision", "color": "#8b5cf6"},
+        {"name": "HANDOFF", "color": "purple"},
+        {"name": "HANDOFF", "color": "purple"},
+        {"name": "infra", "color": "#3b82f6"},
     ]
 
     def test_attach_reuses_existing_casing_and_colour(self):
+        # HANDOFF is a real workspace label the plugin does not own, so the board's
+        # casing and colour win. (An owned document label goes the other way — see
+        # UppercaseVocabularyTests.)
         sent = []
         original = ob.api
         ob.api = lambda method, path, body=None: sent.append(body)
         try:
-            ob.attach_labels("ws", [({"labels": ["research"]}, "t1")], self.ROWS)
+            ob.attach_labels("ws", [({"labels": ["handoff"]}, "t1")], self.ROWS)
         finally:
             ob.api = original
-        self.assertEqual(sent[0]["name"], "RESEARCH")
-        self.assertEqual(sent[0]["color"], "pink")
+        self.assertEqual(sent[0]["name"], "HANDOFF")
+        self.assertEqual(sent[0]["color"], "purple")
 
     def test_an_unknown_label_keeps_its_own_name(self):
         sent = []
@@ -387,6 +390,98 @@ class SourceIdTests(unittest.TestCase):
 
     def test_a_title_with_no_source_id_is_left_alone(self):
         self.assertIsNone(ob.SOURCE_ID.search("Meta: how this migration was done"))
+
+
+class UppercaseVocabularyTests(unittest.TestCase):
+    """Casing is the readability rule: UPPERCASE = what kind of document, lowercase =
+    what kind of work. So the document vocabulary's casing is owned here and overrides
+    whatever is on the board, while work labels keep the board's casing."""
+
+    def test_the_whole_document_vocabulary_is_uppercase(self):
+        for name in {ob.DOC_LABEL, *ob.DOC_KINDS, *ob.DOC_TYPE_MAP.values()}:
+            self.assertEqual(name, name.upper(), name)
+
+    def test_a_document_label_is_forced_to_its_declared_casing(self):
+        sent = []
+        original = ob.api
+        ob.api = lambda method, path, body=None: sent.append(body)
+        try:
+            ob.attach_labels("ws", [({"labels": ["DECISION"]}, "t1")],
+                             [{"name": "decision", "color": "#111111"}])
+        finally:
+            ob.api = original
+        self.assertEqual(sent[0]["name"], "DECISION")
+
+    def test_an_owned_label_takes_the_declared_colour_too(self):
+        sent = []
+        original = ob.api
+        ob.api = lambda method, path, body=None: sent.append(body)
+        try:
+            ob.attach_labels("ws", [({"labels": ["research"]}, "t1")],
+                             [{"name": "research", "color": "pink"}])
+        finally:
+            ob.api = original
+        self.assertEqual(sent[0]["name"], "RESEARCH")
+        self.assertEqual(sent[0]["color"], ob.DOC_KINDS["RESEARCH"])
+
+
+class LayoutTests(unittest.TestCase):
+    """Backlog.md layouts differ per repo, silently. One keeps finished work in tasks/
+    with status Done; another moves it to completed/; a third nests archive/tasks/."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+
+    def test_completed_counts_as_tasks(self):
+        write(self.root, "completed", "task-029.md", BARE)
+        self.assertEqual([r["kind"] for r in ob.read_backlog(self.root)], ["TASK"])
+
+    def test_archive_is_excluded_by_default(self):
+        # The owner filed it out of view on purpose; resurrecting it silently is wrong.
+        write(self.root, "archive/tasks", "task-001.md", BARE)
+        self.assertEqual(ob.read_backlog(self.root), [])
+
+    def test_archive_is_read_recursively_when_asked(self):
+        write(self.root, "archive/tasks", "task-001.md", BARE)
+        self.assertEqual(len(ob.read_backlog(self.root, include_archive=True)), 1)
+
+    def test_an_unclaimed_folder_is_reported_not_swept_in(self):
+        write(self.root, "templates", "a.md", BARE)
+        self.assertEqual(ob.unhandled_folders(self.root), {"templates": 1})
+
+    def test_archive_is_reported_while_excluded(self):
+        write(self.root, "archive/tasks", "task-001.md", BARE)
+        self.assertEqual(ob.unhandled_folders(self.root), {"archive": 1})
+
+    def test_archive_stops_being_reported_once_included(self):
+        write(self.root, "archive/tasks", "task-001.md", BARE)
+        self.assertEqual(ob.unhandled_folders(self.root, include_archive=True), {})
+
+    def test_known_folders_are_never_reported_as_unhandled(self):
+        write(self.root, "tasks", "task-004.md", TASK)
+        write(self.root, "completed", "task-029.md", BARE)
+        self.assertEqual(ob.unhandled_folders(self.root), {})
+
+
+class LaneResolutionTests(unittest.TestCase):
+    """A column created as "Documents" and renamed keeps slug `documents`; one created as
+    "Document" gets `document`. Two boards meant to match then disagree on the value the
+    API wants, and only the slug works."""
+
+    RENAMED = [{"slug": "documents", "name": "Document"}]
+    FRESH = [{"slug": "document", "name": "Document"}]
+
+    def test_matches_a_renamed_column_by_display_name(self):
+        self.assertEqual(ob.resolve_lane("document", self.RENAMED), "documents")
+
+    def test_matches_a_fresh_column_by_slug(self):
+        self.assertEqual(ob.resolve_lane("document", self.FRESH), "document")
+
+    def test_always_returns_the_slug_the_api_wants(self):
+        self.assertEqual(ob.resolve_lane("Document", self.RENAMED), "documents")
+
+    def test_an_absent_lane_resolves_to_none_rather_than_a_guess(self):
+        self.assertIsNone(ob.resolve_lane("document", [{"slug": "to-do", "name": "To Do"}]))
 
 
 if __name__ == "__main__":
