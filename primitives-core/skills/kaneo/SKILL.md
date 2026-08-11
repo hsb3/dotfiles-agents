@@ -23,9 +23,18 @@ this skill's directory). When anything 404s, `GET /openapi` for the full spec.
 - `KANEO_PROJECT_ID` — the board to work
 - `KANEO_AGENT_NAME` — identity for claim/close comments
 
-Mint the token in the kaneo ops repo: `MINT_KEY=<this repo's agent key>
-scripts/mint-mcp-token.sh <base-url>`, then put it in this repo's
-`.claude/settings.local.json`. It expires after 30 days and has no refresh; on a
+The owner supplies the URL, the agent key, and the project id — an agent account
+cannot be created from here, since that needs owner credentials and the
+instance's workspace id. Given the agent key, mint the MCP token yourself with
+the script this skill ships:
+
+```
+MINT_KEY=<this repo's agent key> \
+  "${CLAUDE_PLUGIN_ROOT}/skills/kaneo/scripts/mint-mcp-token.sh" <base-url>
+```
+
+Put the result in this repo's `.claude/settings.local.json` (gitignored — the
+key is a credential). The token expires after 30 days and has no refresh; on a
 401 from a kaneo MCP tool, re-mint, update the file, and restart the session
 (headers expand at session start).
 

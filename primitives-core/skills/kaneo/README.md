@@ -20,6 +20,8 @@ lives on the board.
   the first 400.
 - `references/access-model.md` — the level split, what the policy hooks actually guarantee,
   and the enforcement ceiling. Read it before describing this as containment; it is not.
+- `scripts/mint-mcp-token.sh` — mints `KANEO_MCP_TOKEN` from the repo's agent key. The one
+  credential you produce yourself; the other four come from the owner.
 
 ## Install
 
@@ -27,5 +29,7 @@ lives on the board.
 claude plugin install kaneo@dotfiles-agents
 ```
 
-Needs a reachable Kaneo instance and an agent account on it. Configure the repo before
+Needs a reachable Kaneo instance and an agent account on it — the instance owner creates
+that account and hands over its API key, which is the one piece the plugin cannot produce.
+Everything else the repo needs, it mints or reads for itself. Configure the repo before
 first use — an unset variable stops work rather than guessing a board.
