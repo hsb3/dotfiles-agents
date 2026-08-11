@@ -382,6 +382,13 @@ primitives:
     disposition: qualified
     targets: [claude-code]
     requires: [hooks, env:kaneo]
+  - id: kaneo-preflight
+    type: hook
+    source: primitives-core/hooks/kaneo-preflight
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+    requires: [hooks, env:kaneo]
   - id: kaneo-server
     type: mcp
     source: primitives-core/mcp/kaneo.json

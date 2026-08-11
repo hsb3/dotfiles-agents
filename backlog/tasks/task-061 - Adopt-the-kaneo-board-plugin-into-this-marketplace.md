@@ -4,7 +4,7 @@ title: Adopt the kaneo board plugin into this marketplace
 status: In Progress
 assignee: []
 created_date: '2026-08-11 08:20'
-updated_date: '2026-08-11 08:22'
+updated_date: '2026-08-11 08:36'
 labels:
   - assembly
 milestone: m-1
@@ -63,3 +63,25 @@ Source of truth for what moves: the kaneo-ops checkout at plugins/kaneo (11 file
 
 Deliberately NOT in scope: publishing to main, and the two follow-on skills (TASK-062, TASK-063).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Migrated on branch feat/kaneo-plugin; PR #304 into dev, both required checks green. Merge blocked by the session's permission classifier, so the PR is open and waiting.
+
+What landed: 5 primitives (skill, agent, 2 hooks, 1 mcp - the roster's first), the plugins/kaneo/ symlink assembly, the seventh marketplace entry, a root README catalog row, and tests/test_kaneo_policy.py (17 tests; suite 484 -> 501).
+
+Verified rather than assumed:
+- Probed the harness binary before writing plugin.json: a plugin's own root .mcp.json IS merged at load, and a STRING mcpServers in the manifest means a path to an MCPB file, not a config. The manifest key is deliberately absent; the symlinked .mcp.json is the whole mechanism.
+- Mutation-tested the policy hook, because 17 green tests prove nothing on their own. Disabling the subagent floor deny -> 4 failures; removing stamp idempotence -> 1; dropping the mcp__plugin_kaneo_kaneo__ prefix -> 4. All three regressions are silent in production.
+- Dereferenced the assembly with cp -RL and ran claude plugin validate --strict: 16 files, all resolve, validation passed. Note this only confirms the manifest and that no symlink is broken - per the known gotcha it does not descend into agent or skill bodies.
+- Read the generated opencode lane directly instead of trusting the gate: all five kaneo primitives appear as explicit reasoned exclusions, not silent skips.
+
+Two things caught by inspection that no gate would have caught:
+- The kaneo skill initially targeted opencode. Its contract is the MCP tools plus the two hooks, none of which reach that lane, so an opencode session would have loaded a skill telling it to call tools that do not exist and to trust stamping that never happens. Now claude-code only, with the reason in the roster.
+- gen_opencode.py's fragment comment claimed no mcp entry was rostered. Corrected; the underlying render-branch hole is TASK-064.
+
+NOT verified: no live install probe. Installing into a throwaway project would mutate the machine's marketplace registration and other projects' enabledPlugins, which the handoff documents as having wiped seven entries in one go elsewhere. The load mechanism is confirmed from the binary and the dereferenced tree, but nobody has watched this plugin register its MCP server in a real session.
+
+Follow-ups filed: TASK-062 (brownfield adoption skill), TASK-063 (provisioning skill), TASK-064 (three gate gaps the first mcp primitive exposed).
+<!-- SECTION:NOTES:END -->
