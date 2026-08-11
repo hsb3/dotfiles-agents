@@ -62,6 +62,53 @@ priority: nonsense
 Just a plain body, written by hand.
 """
 
+# The dialect current Backlog.md actually emits: AC and COMMENTS are bare markers, plan
+# and notes are SECTION:PLAN / SECTION:NOTES. The first import against a real repo lost
+# every acceptance-criteria section because the fixtures above only exercise the
+# SECTION:ACCEPTANCE_CRITERIA spelling, which no current Backlog.md writes.
+REAL_DIALECT = """---
+id: TASK-052
+title: Real marker dialect
+status: To Do
+priority: high
+type: bug
+milestone: m-2
+dependencies:
+  - TASK-003
+references:
+  - 'https://example.com/issues/282'
+  - 'https://example.com/issues/301'
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+The described defect.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+
+<!-- AC:BEGIN -->
+- [ ] #1 The criterion survives import
+<!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Step one of the plan.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+A note about the work.
+<!-- SECTION:NOTES:END -->
+
+<!-- COMMENTS:BEGIN -->
+A comment thread entry.
+<!-- COMMENTS:END -->
+"""
+
 
 def write(root, folder, name, text):
     directory = os.path.join(root, "backlog", folder)
@@ -110,6 +157,35 @@ class TaskFileTests(unittest.TestCase):
         # does not, because the central vocabulary is closed. See CentralVocabularyTests.
         path = write(self.root, "tasks", "task-004.md", TASK)
         self.assertEqual(ob.parse_task_file(path, "TASK")["labels"], ["docs"])
+
+    def test_the_real_marker_dialect_is_carried_not_dropped(self):
+        # 0 of 101 cards kept their acceptance criteria on the first real import.
+        path = write(self.root, "tasks", "task-052.md", REAL_DIALECT)
+        body = ob.parse_task_file(path, "TASK")["body"]
+        self.assertIn("## Acceptance Criteria", body)
+        self.assertIn("The criterion survives import", body)
+        self.assertIn("## Implementation Plan", body)
+        self.assertIn("Step one of the plan.", body)
+        self.assertIn("## Implementation Notes", body)
+        self.assertIn("## Comments", body)
+        self.assertLess(body.index("Acceptance"), body.index("Plan"))
+
+    def test_both_dialects_of_one_section_carry_once(self):
+        both = TASK + "\n<!-- AC:BEGIN -->\n- [ ] duplicate spelling\n<!-- AC:END -->\n"
+        path = write(self.root, "tasks", "task-004.md", both)
+        body = ob.parse_task_file(path, "TASK")["body"]
+        self.assertEqual(body.count("## Acceptance Criteria"), 1)
+        self.assertIn("Regenerated", body)
+
+    def test_milestone_dependencies_and_references_ride_in_the_body(self):
+        # Kaneo has no field for any of these; dropping them loses the issue links.
+        path = write(self.root, "tasks", "task-052.md", REAL_DIALECT)
+        body = ob.parse_task_file(path, "TASK")["body"]
+        self.assertIn("## Source Metadata", body)
+        self.assertIn("Milestone: m-2", body)
+        self.assertIn("Dependencies: TASK-003", body)
+        self.assertIn("- https://example.com/issues/282", body)
+        self.assertIn("- https://example.com/issues/301", body)
 
     def test_a_file_with_no_markers_keeps_its_whole_body(self):
         # Losing the body of a hand-written card is silent data loss, so the fallback
