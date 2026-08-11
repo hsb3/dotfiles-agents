@@ -68,6 +68,21 @@ duplicate-board mistake happens when nothing looks first. `apply` is a dry run u
 `--yes`, records every created task in `--state` so an interrupted run resumes, and
 verifies by re-exporting rather than trusting the import summary.
 
+A board imported by an older parser is repaired in place, never by wipe-and-reimport —
+that is lossy the moment anyone has touched a task:
+
+```
+onboard_repo.py --workspace <id> repair --repo . --project-id <id>   # dry run
+```
+
+It rewrites descriptions only, leaving status, assignee, labels and comments alone, and
+it refuses to overwrite a body that is not a truncated version of what the parser now
+produces (a card edited on the board, or written by another tool) unless `--force`. Match
+the flags to how the board was imported — if the source count and the board count
+disagree, `--include-archive` is usually why. Verification counts every carried section
+against the source, per section: counting only acceptance criteria is what let 459
+dropped Definition-of-Done sections read as a clean import.
+
 ## MCP first, claim ritual on REST
 
 Board reads, comments, task creation, labels, and relations go through the

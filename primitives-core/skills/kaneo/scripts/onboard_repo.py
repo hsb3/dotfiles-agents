@@ -25,6 +25,7 @@ Stdlib only. Reads KANEO_API_URL and KANEO_API_KEY from the environment.
 """
 
 import argparse
+import collections
 import json
 import os
 import re
@@ -50,6 +51,7 @@ CARRY = (
     "DESCRIPTION",
     "ACCEPTANCE_CRITERIA",
     "AC",
+    "DOD",
     "IMPLEMENTATION_PLAN",
     "PLAN",
     "IMPLEMENTATION_NOTES",
@@ -60,6 +62,11 @@ CARRY = (
 # Marker names whose title-cased form would mislabel the section on the board.
 CARRY_HEADINGS = {
     "AC": "Acceptance Criteria",
+    # `DOD` was missed by the dialect fix because the repo it was validated against has
+    # none: dotfiles-agents' own backlog wrote zero DOD sections while the five repos
+    # migrated before it wrote 459 between them. A corpus that cannot express a section
+    # cannot fail on dropping it.
+    "DOD": "Definition of Done",
     "PLAN": "Implementation Plan",
     "NOTES": "Implementation Notes",
 }
@@ -397,6 +404,136 @@ def get_columns(project_id):
 
 def get_tasks(project_id):
     return (unwrap(api("GET", f"/task/export/{project_id}")) or {}).get("tasks", [])
+
+
+def board_tasks(project_id):
+    """Every task WITH its id, read from the board view.
+
+    `/task/export/{id}` omits ids, so anything that writes back to a specific task has to
+    come through here instead.
+    """
+    data = unwrap(api("GET", f"/task/tasks/{project_id}")) or {}
+    return [task for column in data.get("columns", []) for task in (column.get("tasks") or [])]
+
+
+def repair_plan(records, tasks):
+    """Match source records to board tasks by source id and say what each one needs.
+
+    Verdicts:
+      `unchanged` — the board body already matches what the parser produces now.
+      `rewrite`   — the board body is a truncated import: every byte of it is the head of
+                    the correct body, so overwriting adds the dropped sections and
+                    destroys nothing.
+      `diverged`  — the board body is neither, so something (a person, or an import shaped
+                    differently again) wrote it. Overwriting could destroy work, so this
+                    is reported and skipped unless the caller insists.
+      `absent`    — no board task carries this source id.
+    """
+    by_id = {}
+    for task in tasks:
+        match = SOURCE_ID.search(task.get("title") or "")
+        if match:
+            by_id.setdefault(match.group(0), task)
+    plan = []
+    for record in records:
+        task = by_id.get(record["source_id"])
+        wanted = body_for(record).strip()
+        current = (task or {}).get("description", "").strip()
+        if task is None:
+            verdict = "absent"
+        elif current == wanted:
+            verdict = "unchanged"
+        elif current and wanted.startswith(current):
+            verdict = "rewrite"
+        else:
+            verdict = "diverged"
+        plan.append((record, task, verdict))
+    return plan
+
+
+def cmd_repair(args):
+    """Re-parse a repo's backlog and put the dropped sections back onto its board.
+
+    For boards imported by an earlier parser that matched one marker dialect and dropped
+    the rest. Wipe-and-reimport is the other option and it is lossy the moment anyone has
+    touched a board task, so this rewrites descriptions in place and leaves everything
+    else — status, assignee, labels, comments — alone.
+    """
+    records = read_backlog(args.repo, args.include_archive)
+    if not records:
+        print("nothing to repair (greenfield repo or no backlog/ directory)")
+        return 0
+    tasks = board_tasks(args.project_id)
+    if not tasks:
+        print(f"error: project {args.project_id} has no tasks — wrong id?", file=sys.stderr)
+        return 2
+    plan = repair_plan(records, tasks)
+    counts = collections.Counter(verdict for _, _, verdict in plan)
+    print(f"{len(records)} in backlog, {len(tasks)} on board: "
+          + ", ".join(f"{n} {verdict}" for verdict, n in sorted(counts.items())))
+    for record, _, verdict in plan:
+        if verdict in ("absent", "diverged"):
+            print(f"  ! {verdict:<9} {record['source_id']}: {record['title'][:60]}")
+
+    writing = ["rewrite"] + (["diverged"] if args.force else [])
+    todo = [(r, t) for r, t, verdict in plan if verdict in writing]
+    if not args.yes:
+        print(f"\n-- dry run, re-run with --yes to rewrite {len(todo)} descriptions --")
+        return 0
+
+    failed = 0
+    for record, task in todo:
+        payload = {
+            "title": task["title"],
+            "description": body_for(record),
+            "priority": task.get("priority") or record["priority"],
+            "status": task.get("status") or "",
+            "projectId": args.project_id,
+            "position": task.get("position") or 0,
+        }
+        # The instance rejects a null userId outright, so an unassigned task must omit the
+        # key rather than send the null the board just handed back.
+        if task.get("userId"):
+            payload["userId"] = task["userId"]
+        try:
+            api("PUT", f"/task/{task['id']}", payload)
+        except ApiError as exc:
+            failed += 1
+            print(f"  FAILED {record['source_id']}: {exc}", file=sys.stderr)
+    print(f"rewrote {len(todo) - failed}/{len(todo)} descriptions, {failed} failed")
+    return verify_repair(args.project_id, records) or (1 if failed else 0)
+
+
+def carried_headings():
+    """The `## Heading` each carried section becomes, once per section across dialects."""
+    seen, headings = set(), []
+    for name in CARRY:
+        canonical = CARRY_SYNONYMS.get(name, name)
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        headings.append("## " + CARRY_HEADINGS.get(name, name.replace("_", " ").title()))
+    return headings
+
+
+def verify_repair(project_id, records):
+    """Count each section on the board against the source it came from.
+
+    A write that reports success proves nothing about what landed, and counting only
+    acceptance criteria would have missed the DOD sections this parser used to drop — so
+    every carried section gets its own row.
+    """
+    on_board = board_tasks(project_id)
+    gaps = 0
+    for heading in carried_headings():
+        want = sum(1 for r in records if heading + "\n" in r["body"])
+        got = sum(1 for t in on_board if heading + "\n" in (t.get("description") or ""))
+        flag = ""
+        if got < want:
+            gaps += 1
+            flag = "  <-- GAP"
+        print(f"verify: {heading:<28} source {want:>4}  board {got:>4}{flag}")
+    return 1 if gaps else 0
 
 
 def workflow_records(records):
@@ -834,11 +971,29 @@ def main(argv=None):
     ado.add_argument("--yes", action="store_true", help="actually write the state file")
     ado.set_defaults(func=cmd_adopt)
 
+    rep = sub.add_parser("repair", help="re-parse a backlog and restore sections an "
+                                        "earlier import dropped")
+    rep.add_argument("--repo", required=True)
+    rep.add_argument("--project-id", required=True)
+    rep.add_argument("--include-archive", action="store_true",
+                     help="also read backlog/archive, which the owner filed out of view")
+    rep.add_argument("--force", action="store_true",
+                     help="also overwrite bodies that diverged — destroys edits made on "
+                          "the board since the import")
+    rep.add_argument("--yes", action="store_true", help="actually write (default is a dry run)")
+    rep.set_defaults(func=cmd_repair)
+
     lab = sub.add_parser("labels", help="provision the document label vocabulary")
     lab.add_argument("--yes", action="store_true", help="actually write (default is a dry run)")
     lab.set_defaults(func=cmd_labels)
 
     args = parser.parse_args(argv)
+    # A path that does not exist reads as an empty backlog, which every command reports as
+    # "greenfield" and exits 0 on — so a typo, or a shell that did not split the variable
+    # you thought it did, looks exactly like a clean run against the right repo.
+    if getattr(args, "repo", None) is not None and not os.path.isdir(args.repo):
+        print(f"error: --repo {args.repo!r} is not a directory", file=sys.stderr)
+        return 2
     KEEP_SOURCE_LABELS[0] = bool(getattr(args, "keep_source_labels", False))
     try:
         return args.func(args)
