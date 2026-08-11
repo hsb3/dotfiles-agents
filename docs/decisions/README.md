@@ -5,11 +5,12 @@ why, and what it affects — so a choice made once isn't silently re-litigated._
 
 Status: active
 
-> **2026-08-06:** this directory moved from `docs/decisions/` into the backlog (the task
-> system, decision-1) and now holds both series side by side: the numbered ADR mirrors
-> (`NNNN-*.md`, conventions below) and the backlog-native rulings (`decision-N - *.md`,
-> managed via the backlog CLI). One home for every decision; the ADR conventions below
-> apply to the `NNNN` series only.
+> **2026-08-11:** this directory is back at `docs/decisions/` — it lived under
+> `backlog/decisions/` between 2026-08-06 and the Backlog.md retirement, and came home when
+> the tracker moved to the Kaneo board. It holds both series side by side: the numbered ADR
+> mirrors (`NNNN-*.md`, conventions below) and the rulings carried over from the backlog
+> (`decision-N - *.md`, now plain files — the CLI that managed them is gone). One home for
+> every decision; the ADR conventions below apply to the `NNNN` series only.
 
 ## Convention
 

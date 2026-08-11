@@ -10,7 +10,7 @@ Enforces the composition + provenance invariants of the rebuild (ADR 0015 / desk
   2. Externals are by reference with recorded intent: every `externals.yaml` entry carries a
      non-null `upstream` + `ref`.
   3. Vendored entries carry the full contract: LICENSE + non-null upstream + immutable ref
-     (commit SHA, never branch/tag) + attribution in README (enforced per backlog/docs/vendoring-rule.md).
+     (commit SHA, never branch/tag) + attribution in README (enforced per docs/vendoring-rule.md).
 
 The `origin: sourced ⇒ non-null upstream+ref` roster rule is already enforced by
 `check_roster.py`; this check owns placement invariant (1), externals intent (2), and the

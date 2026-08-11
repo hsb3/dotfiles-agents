@@ -2,7 +2,7 @@
 
 The one-shot instructions an operator types or hands to an agent. A skill is knowledge a
 model reaches for; a command is a thing you ask to be *done*
-([decision-010](../../backlog/decisions/decision-010%20-%20Commands-become-a-fourth-primitive-type.md)).
+([decision-010](../../docs/decisions/decision-010%20-%20Commands-become-a-fourth-primitive-type.md)).
 Each is one `.md` with frontmatter, named by its filename, and reachable as
 `/<plugin>:<filename>`.
 
