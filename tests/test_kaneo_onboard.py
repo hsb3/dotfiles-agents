@@ -261,5 +261,133 @@ class BlockScalarTests(unittest.TestCase):
         self.assertEqual(fields["labels"], ["docs", "backend"])
 
 
+DOC = """---
+id: doc-002
+title: Backend-gap register
+type: specification
+---
+
+# Backend-gap register
+
+Living doc.
+"""
+
+DOC_OTHER = DOC.replace("type: specification", "type: other")
+
+
+class DocumentLabelTests(unittest.TestCase):
+    """Kaneo has no document type, so a label is the only thing that can carry one."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+
+    def test_docs_are_read_at_all(self):
+        # They were silently skipped at first: backlog/docs is a fourth source, and
+        # dropping it loses whole documents without a word.
+        write(self.root, "docs", "doc-002.md", DOC)
+        self.assertEqual([r["kind"] for r in ob.read_backlog(self.root)], ["DOC"])
+
+    def test_every_document_carries_the_umbrella_label(self):
+        write(self.root, "docs", "doc-002.md", DOC)
+        write(self.root, "decisions", "decision-1.md", BARE)
+        for record in ob.read_backlog(self.root):
+            self.assertIn(ob.DOC_LABEL, record["labels"], record["kind"])
+
+    def test_a_known_backlog_type_maps_to_a_kind(self):
+        write(self.root, "docs", "doc-002.md", DOC)
+        self.assertIn("spec", ob.read_backlog(self.root)[0]["labels"])
+
+    def test_type_other_gets_no_kind_rather_than_a_guessed_one(self):
+        # `other` is the majority value in real repos and carries no information.
+        write(self.root, "docs", "doc-002.md", DOC_OTHER)
+        labels = ob.read_backlog(self.root)[0]["labels"]
+        self.assertEqual(set(labels) & set(ob.DOC_KINDS), set())
+        self.assertIn(ob.DOC_LABEL, labels)
+
+    def test_decisions_carry_both_the_umbrella_and_their_kind(self):
+        write(self.root, "decisions", "decision-1.md", BARE)
+        labels = ob.read_backlog(self.root)[0]["labels"]
+        self.assertIn(ob.DOC_LABEL, labels)
+        self.assertIn("decision", labels)
+
+    def test_tasks_are_not_labelled_as_documents(self):
+        write(self.root, "tasks", "task-009.md", BARE)
+        self.assertNotIn(ob.DOC_LABEL, ob.read_backlog(self.root)[0]["labels"])
+
+    def test_the_kind_vocabulary_is_closed_and_every_kind_has_a_colour(self):
+        self.assertTrue(all(c.startswith("#") for c in ob.DOC_KINDS.values()))
+        self.assertTrue(set(ob.DOC_TYPE_MAP.values()) <= set(ob.DOC_KINDS))
+
+
+    def test_a_docs_raw_type_does_not_leak_in_as_a_label(self):
+        # `type: other` became a literal `other` label, and `type: specification` sat
+        # next to the `spec` it maps to. Both are junk on a board you filter by label.
+        write(self.root, "docs", "a.md", DOC)
+        write(self.root, "docs", "b.md", DOC_OTHER)
+        seen = {label for r in ob.read_backlog(self.root) for label in r["labels"]}
+        self.assertNotIn("other", seen)
+        self.assertNotIn("specification", seen)
+        self.assertIn("spec", seen)
+
+    def test_a_tasks_type_is_still_a_label(self):
+        write(self.root, "tasks", "task-004.md", TASK)
+        self.assertIn("docs", ob.read_backlog(self.root)[0]["labels"])
+
+    def test_documents_route_to_their_lane_not_a_workflow_one(self):
+        lanes = {"DRAFT": "to-do", "DECISION": "documents", "DOC": "documents"}
+        record = {"kind": "DOC", "status": "", "body": "b"}
+        self.assertEqual(ob.lane_for(record, {}, lanes), "documents")
+
+
+class LabelCasingTests(unittest.TestCase):
+    """The workspace label endpoint returns one row per attachment, and real workspaces
+    already hold mixed casing (`RESEARCH` and `handoff` side by side). Matching
+    case-sensitively seeds a second label that reads as the same one and filters as two."""
+
+    ROWS = [
+        {"name": "RESEARCH", "color": "pink"},
+        {"name": "RESEARCH", "color": "pink"},
+        {"name": "decision", "color": "#8b5cf6"},
+    ]
+
+    def test_attach_reuses_existing_casing_and_colour(self):
+        sent = []
+        original = ob.api
+        ob.api = lambda method, path, body=None: sent.append(body)
+        try:
+            ob.attach_labels("ws", [({"labels": ["research"]}, "t1")], self.ROWS)
+        finally:
+            ob.api = original
+        self.assertEqual(sent[0]["name"], "RESEARCH")
+        self.assertEqual(sent[0]["color"], "pink")
+
+    def test_an_unknown_label_keeps_its_own_name(self):
+        sent = []
+        original = ob.api
+        ob.api = lambda method, path, body=None: sent.append(body)
+        try:
+            ob.attach_labels("ws", [({"labels": ["brand-new"]}, "t1")], self.ROWS)
+        finally:
+            ob.api = original
+        self.assertEqual(sent[0]["name"], "brand-new")
+
+
+class SourceIdTests(unittest.TestCase):
+    """adopt only works if a hand-migrated title still names its source file."""
+
+    def test_recovers_ids_from_real_board_titles(self):
+        for title, want in [
+            ("TASK-083 \u2014 New account never receives its confirmation email", "TASK-083"),
+            ("TASK-013.05: Prove hard-purge workspace reprovision", "TASK-013.05"),
+            ("decision-002: Full cutover", "decision-002"),
+            ("DRAFT-012: v2 comment reactions", "DRAFT-012"),
+        ]:
+            with self.subTest(title=title):
+                self.assertEqual(ob.SOURCE_ID.search(title).group(0), want)
+
+    def test_a_title_with_no_source_id_is_left_alone(self):
+        self.assertIsNone(ob.SOURCE_ID.search("Meta: how this migration was done"))
+
+
 if __name__ == "__main__":
     unittest.main()

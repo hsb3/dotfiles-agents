@@ -3,9 +3,8 @@
 *.swp
 
 # --- secrets ---
-.env
-.env.*
-!.env.example
+.env*
+!.env*.example
 
 # --- secrets/live-ops home (decision-8; ex _meta/operations per ADR-0006) — content never tracked ---
 .claude/operations/*

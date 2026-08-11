@@ -42,11 +42,37 @@ SECTION = re.compile(
 FRONTMATTER = re.compile(r"\A---\r?\n(?P<fm>.*?)\r?\n---\r?\n(?P<body>.*)\Z", re.S)
 # Sections worth carrying across, in the order they should appear in the Kaneo body.
 CARRY = ("DESCRIPTION", "ACCEPTANCE_CRITERIA", "IMPLEMENTATION_PLAN", "IMPLEMENTATION_NOTES")
-SOURCES = (("tasks", "TASK"), ("drafts", "DRAFT"), ("decisions", "DECISION"))
+SOURCES = (
+    ("tasks", "TASK"),
+    ("drafts", "DRAFT"),
+    ("decisions", "DECISION"),
+    ("docs", "DOC"),
+)
 PRIORITIES = ("low", "medium", "high")
-# Kaneo requires a colour on every label; these are the plugin's neutral defaults and are
-# only used when creating a label that does not exist yet.
+# Kaneo requires a colour on every label; used only when creating one that does not exist.
 LABEL_COLOR = "#6b7280"
+
+# Kaneo has no document type — a board holds tasks. Filing documents on it anyway means
+# the only thing that can carry "what kind of document is this" is a label, so documents
+# get two: `doc` on every one of them (the umbrella filter, the whole point of the
+# exercise) plus at most one kind below. Same shape as a well-run backlog's one-area-plus-
+# one-signal rule, and deliberately closed — an open vocabulary filters no better than the
+# `other` it replaces.
+DOC_LABEL = "doc"
+DOC_KINDS = {
+    "decision": "#8b5cf6",     # a ruling, with consequences
+    "spec": "#0ea5e9",         # a contract something else is built against
+    "guide": "#22c55e",        # how to carry out a procedure
+    "reference": "#64748b",    # durable facts and pointers
+    "research": "#f59e0b",     # an investigation or comparison writeup
+    "incident": "#ef4444",     # what happened, and what it cost
+    "register": "#14b8a6",     # a living table someone updates
+}
+# Backlog.md's doc `type:` field, mapped onto the above. `other` is deliberately absent:
+# it is the majority value in real repos and carries no information, so those documents
+# get the umbrella label and are listed by `discover` for a human to classify. Guessing a
+# kind from the title would put a wrong, confident label on the ones hardest to re-find.
+DOC_TYPE_MAP = {"specification": "spec", "guide": "guide", "reference": "reference"}
 
 
 class ApiError(RuntimeError):
@@ -174,13 +200,23 @@ def parse_task_file(path, kind):
         # rather than silently importing an empty description.
         body = match.group("body").strip()
     labels = [str(v) for v in (fields.get("labels") or []) if str(v).strip()]
-    if fields.get("type"):
+    if fields.get("type") and kind != "DOC":
+        # On a task, `type:` is the kind of work (feature/bug/chore) and makes a good
+        # label. On a document it is the doc type, which is mapped to a kind label below —
+        # copying it raw as well would put a literal `other` and a duplicate
+        # `specification` alongside `spec` on the board.
         labels.append(str(fields["type"]))
-    if kind == "DECISION":
-        # Matches the convention the reference board already uses: a decision is a task
-        # in the Documents lane carrying a `decision` label, so it stays filterable once
-        # its original Proposed/Accepted wording is no longer a status.
-        labels.append("decision")
+    if kind in ("DECISION", "DOC"):
+        # Matches the convention the reference board already uses: a document is a task in
+        # the Documents lane, filterable by label once its original Proposed/Accepted
+        # wording is no longer a status.
+        labels.append(DOC_LABEL)
+        if kind == "DECISION":
+            labels.append("decision")
+        else:
+            mapped = DOC_TYPE_MAP.get(str(fields.get("type", "")).strip().lower())
+            if mapped:
+                labels.append(mapped)
     priority = str(fields.get("priority", "") or "").lower()
     return {
         "source_id": str(fields.get("id") or path.rsplit("/", 1)[-1]),
@@ -311,16 +347,22 @@ def attach_labels(workspace_id, created, existing_labels):
     Kaneo's label rows are per-attachment, so this posts one label per (task, name) pair
     rather than trying to reuse a single id across tasks.
     """
-    known = {label["name"]: label.get("color") or LABEL_COLOR for label in existing_labels}
+    # Keyed case-insensitively so an import of `research` reuses an existing `RESEARCH`
+    # rather than seeding a second label that reads as the same one and filters as two.
+    known = {
+        str(label["name"]).lower(): (str(label["name"]), label.get("color") or LABEL_COLOR)
+        for label in existing_labels
+    }
     attached = 0
     for record, task_id in created:
         for name in record["labels"]:
+            canonical, color = known.get(name.lower(), (name, LABEL_COLOR))
             api(
                 "POST",
                 "/label",
                 {
-                    "name": name,
-                    "color": known.get(name, LABEL_COLOR),
+                    "name": canonical,
+                    "color": color,
                     "workspaceId": workspace_id,
                     "taskId": task_id,
                 },
@@ -364,6 +406,17 @@ def cmd_discover(args):
         print(f"  statuses in use: " + json.dumps(by_status))
         labels = sorted({label for r in records for label in r["labels"]})
         print(f"  labels in use ({len(labels)}): {', '.join(labels) or '—'}")
+        vague = [
+            r for r in records
+            if r["kind"] == "DOC" and not (set(r["labels"]) & set(DOC_KINDS))
+        ]
+        if vague:
+            # These import with the umbrella `doc` label and no kind. Listed rather than
+            # guessed at: a wrong kind label is worse than none on exactly the documents
+            # that are hardest to find again.
+            print(f"  {len(vague)} document(s) have no recognisable kind — label by hand after:")
+            for record in vague:
+                print(f"    {record['source_id']}: {record['title'][:58]}")
     else:
         print("  backlog: none found — greenfield, nothing to import")
 
@@ -390,6 +443,71 @@ def cmd_discover(args):
                     "--decision-lane); their free-text status is kept in the body"
                 )
         print(f"  tasks already on board: {len(get_tasks(args.project_id))}")
+    return 0
+
+
+SOURCE_ID = re.compile(r"\b(TASK|DRAFT|DECISION|decision|doc|DOC)-[0-9]+(?:\.[0-9]+)?\b")
+
+
+def cmd_adopt(args):
+    """Seed the state file from tasks already on the board, so apply does not duplicate.
+
+    The realistic starting point is a half-finished migration: someone moved a slice by
+    hand before there was a script. Those tasks are only recoverable if their source id
+    survived into the title, which is exactly why apply writes `TASK-083: ...` titles by
+    default. Writes nothing to the board.
+    """
+    tasks = get_tasks(args.project_id)
+    state = load_state(args.state)
+    found, skipped = {}, 0
+    for task in tasks:
+        match = SOURCE_ID.search(task.get("title") or "")
+        if not match:
+            skipped += 1
+            continue
+        # Export does not carry task ids, so record the title. apply only needs to know
+        # the source id is spoken for; the value is for a human reading the state file.
+        found[match.group(0)] = task.get("title")
+    state["imported"].update({k: v for k, v in found.items() if k not in state["imported"]})
+    print(f"{len(tasks)} on board, {len(found)} carry a source id, {skipped} do not")
+    if skipped:
+        print("  (unmatched tasks are left alone — they were not created from a backlog file)")
+    if not args.yes:
+        print("-- dry run, re-run with --yes to write the state file --")
+        return 0
+    save_state(args.state, state)
+    print(f"state file now claims {len(state['imported'])} source ids: {args.state}")
+    return 0
+
+
+def cmd_labels(args):
+    """Provision the document label vocabulary on a workspace, idempotently.
+
+    Labels are workspace-scoped, so this runs once per workspace and every project in it
+    can filter by the same set. A workspace label is one created with no `taskId`.
+    """
+    # This endpoint returns one row per ATTACHMENT, not per label: a name attached to 81
+    # tasks comes back 81 times. Compare on distinct lowercased names — matching
+    # case-sensitively invents a `research` next to an existing `RESEARCH`, and the two
+    # look like one label in the UI while filtering as two.
+    rows = unwrap(api("GET", f"/label/workspace/{args.workspace}")) or []
+    existing = {str(label["name"]).lower() for label in rows}
+    wanted = {DOC_LABEL: "#6366f1", **DOC_KINDS}
+    missing = {name: color for name, color in wanted.items() if name.lower() not in existing}
+    print(
+        f"workspace {args.workspace}: {len(existing)} distinct labels across {len(rows)} "
+        f"attachments, {len(missing)} to create"
+    )
+    if not missing:
+        return 0
+    if not args.yes:
+        print("-- dry run, re-run with --yes to write --")
+        for name in sorted(missing):
+            print(f"  + {name}")
+        return 0
+    for name, color in sorted(missing.items()):
+        api("POST", "/label", {"name": name, "color": color, "workspaceId": args.workspace})
+        print(f"  created {name}")
     return 0
 
 
@@ -423,7 +541,11 @@ def cmd_apply(args):
         )
         return 2
 
-    lanes = {"DRAFT": args.draft_lane, "DECISION": args.decision_lane}
+    lanes = {
+        "DRAFT": args.draft_lane,
+        "DECISION": args.decision_lane,
+        "DOC": args.doc_lane,
+    }
     slugs = {c["slug"] for c in columns}
     needed = {lanes[k] for k in {r["kind"] for r in pending} & set(lanes)}
     if not needed <= slugs:
@@ -508,10 +630,22 @@ def main(argv=None):
                      help="lane for drafts, whose status is not a workflow state")
     app.add_argument("--decision-lane", default="documents",
                      help="lane for decisions; they also get a `decision` label")
+    app.add_argument("--doc-lane", default="documents",
+                     help="lane for backlog/docs; they also get a `doc` label")
     app.add_argument("--no-title-prefix", dest="title_prefix", action="store_false",
                      help="omit the source id from imported titles")
     app.add_argument("--yes", action="store_true", help="actually write (default is a dry run)")
     app.set_defaults(func=cmd_apply, title_prefix=True)
+
+    ado = sub.add_parser("adopt", help="claim tasks already on the board so apply skips them")
+    ado.add_argument("--project-id", required=True)
+    ado.add_argument("--state", required=True, help="state file to seed")
+    ado.add_argument("--yes", action="store_true", help="actually write the state file")
+    ado.set_defaults(func=cmd_adopt)
+
+    lab = sub.add_parser("labels", help="provision the document label vocabulary")
+    lab.add_argument("--yes", action="store_true", help="actually write (default is a dry run)")
+    lab.set_defaults(func=cmd_labels)
 
     args = parser.parse_args(argv)
     try:
