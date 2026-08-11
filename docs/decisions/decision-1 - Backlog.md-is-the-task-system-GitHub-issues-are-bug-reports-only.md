@@ -2,7 +2,7 @@
 id: decision-1
 title: Backlog.md is the task system; GitHub issues are bug reports only
 date: '2026-08-04 00:44'
-status: accepted
+status: superseded-by-decision-011
 ---
 ## Context
 
