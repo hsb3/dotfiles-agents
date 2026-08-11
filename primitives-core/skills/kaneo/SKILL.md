@@ -23,16 +23,31 @@ this skill's directory). When anything 404s, `GET /openapi` for the full spec.
 - `KANEO_PROJECT_ID` — the board to work
 - `KANEO_AGENT_NAME` — identity for claim/close comments
 
-Mint the token in the kaneo ops repo: `MINT_KEY=<this repo's agent key>
-scripts/mint-mcp-token.sh <base-url>`, then put it in this repo's
-`.claude/settings.local.json`. It expires after 30 days and has no refresh; on a
-401 from a kaneo MCP tool, re-mint, update the file, and restart the session
-(headers expand at session start).
+The owner supplies the URL, the agent key, and the project id — an agent account
+cannot be created from here, since that needs owner credentials and the
+instance's workspace id. Given the agent key, mint the MCP token yourself with
+the script this skill ships:
+
+```
+MINT_KEY=<this repo's agent key> \
+  "${CLAUDE_PLUGIN_ROOT}/skills/kaneo/scripts/mint-mcp-token.sh" <base-url>
+```
+
+Put the result in this repo's `.claude/settings.local.json` (gitignored — the
+key is a credential). The token expires after 30 days and has no refresh; on a
+401 from a kaneo MCP tool, re-mint, update the file, and **fully quit and relaunch
+the process** — headers expand once at process start, so `/reload-plugins` and a
+resumed session both keep the old token.
 
 Tool names: the plugin-shipped server surfaces as `mcp__plugin_kaneo_kaneo__<tool>`;
 a directly-registered server named `kaneo` surfaces as `mcp__kaneo__<tool>`. The
 plugin hook handles both; agent `tools:` grants must use the form your repo
 actually has (plugin-shipped unless you registered it yourself).
+
+**If you are calling `mcp__kaneo__*` and nobody registered it deliberately, stop and
+check `whoami`.** A direct registration outranks the plugin's, and a headerless one
+makes Claude Code fall back to interactive OAuth — which authenticates the *owner*,
+silently, with every tool still working. `references/configuration.md` has the fix.
 
 Any missing → ask the owner; never guess or create a project. Use the agent
 identity you were assigned, never an owner key. Confirm identity:

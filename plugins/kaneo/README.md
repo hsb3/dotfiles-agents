@@ -49,7 +49,7 @@ integration's push-driven status transition.
 | `skills/kaneo/` | The contract: claim ritual, levels, decision convention, plus configuration, API, and access-model references |
 | `.mcp.json` | The board's MCP server, registered by installing the plugin — no hand-written config in the consuming repo |
 | `agents/kaneo-manager.md` | Reference L2 manager; its `tools:` list *is* the append-only allowlist |
-| `hooks/kaneo-preflight/` | Says at session start that the board is unreachable, and which of three causes it is |
+| `hooks/kaneo-preflight/` | Says at session start that the board is unreachable and which cause it is — or that the tools work but under the wrong identity |
 | `hooks/kaneo-mcp-policy/` | Floor-deny for subagents, deny on unconfigured board writes, attribution stamping |
 | `hooks/kaneo-bash-tripwire/` | Advisory deny on subagent Bash that reaches the board host directly |
 
@@ -74,6 +74,14 @@ agent picks a board. `kaneo-preflight` catches the first three at session start;
 `kaneo-mcp-policy` denies the fourth at the moment of the call, naming the variable to set.
 The diagnostic tools — `whoami`, `list_workspaces`, `list_projects` — stay open throughout,
 because denying the diagnostic turns a loud failure back into a confusing one.
+
+And the quietest one of all, where everything works. A server *also* named `kaneo`
+registered directly in `~/.claude.json` outranks the plugin's. If it carries no
+`Authorization` header, Claude Code falls back to interactive OAuth and the browser consent
+authenticates **the human owner**, not the repo's agent — so every tool call succeeds under
+the wrong name and every claim comment is misattributed. `kaneo-preflight` reports this
+separately from the unreachable cases, because "board NOT available" is the wrong thing to
+read while the tools sit right there working.
 
 ## Levels, and the ceiling
 

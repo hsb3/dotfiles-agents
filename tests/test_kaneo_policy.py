@@ -432,6 +432,70 @@ class PreflightSubprocessTests(unittest.TestCase):
         )
         self.assertEqual(out, "", "the toggle is per-project and must be read that way")
 
+    def test_a_headerless_direct_registration_is_surfaced_as_wrong_identity(self):
+        # The 2026-08-11 failure: tools present and working, authenticated as the owner.
+        # It must NOT be reported as "board unavailable" — that sends the reader hunting
+        # for missing tools that are right there, which is what cost 40 messages.
+        body = context(
+            self._run(
+                CONFIGURED,
+                claude_json={"projects": {self.cwd: {"mcpServers": {"kaneo": {"url": "u"}}}}},
+            )
+        )
+        self.assertIn("WRONG USER", body)
+        self.assertIn("claude mcp remove kaneo", body)
+        self.assertIn("whoami", body)
+        self.assertNotIn("NOT available", body)
+
+    def test_a_direct_registration_carrying_its_own_auth_header_is_left_alone(self):
+        # Registering the server yourself is supported by the skill; only the headerless
+        # kind triggers the OAuth fallback. Warning about a working setup trains the
+        # reader to ignore this hook.
+        out = self._run(
+            CONFIGURED,
+            claude_json={
+                "projects": {
+                    self.cwd: {
+                        "mcpServers": {
+                            "kaneo": {"url": "u", "headers": {"Authorization": "Bearer t"}}
+                        }
+                    }
+                }
+            },
+        )
+        self.assertEqual(out, "")
+
+    def test_the_auth_header_check_is_case_insensitive(self):
+        out = self._run(
+            CONFIGURED,
+            claude_json={
+                "projects": {
+                    self.cwd: {
+                        "mcpServers": {"kaneo": {"headers": {"authorization": "Bearer t"}}}
+                    }
+                }
+            },
+        )
+        self.assertEqual(out, "", "HTTP header names are not case-sensitive")
+
+    def test_a_global_headerless_registration_is_surfaced_too(self):
+        body = context(self._run(CONFIGURED, claude_json={"mcpServers": {"kaneo": {}}}))
+        self.assertIn("WRONG USER", body)
+
+    def test_another_projects_direct_registration_does_not_leak(self):
+        out = self._run(
+            CONFIGURED,
+            claude_json={"projects": {"/somewhere/else": {"mcpServers": {"kaneo": {}}}}},
+        )
+        self.assertEqual(out, "")
+
+    def test_both_failure_kinds_report_together_without_burying_each_other(self):
+        # An unconfigured repo that ALSO has a shadowing registration must say both:
+        # fixing the loud one and then hitting the quiet one is the worst version of this.
+        body = context(self._run({}, claude_json={"mcpServers": {"kaneo": {}}}))
+        self.assertIn("NOT available", body)
+        self.assertIn("WRONG USER", body)
+
     def test_resume_and_compact_stay_quiet(self):
         for source in ("resume", "compact"):
             with self.subTest(source=source):
