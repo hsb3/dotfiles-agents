@@ -44,9 +44,9 @@ flow up, intentions flow down, nothing else crosses levels.
      amendment implies new behavior (→ fix brief).
    - Contested scores (>1.5 judge spread) → targeted re-judge with a
      tiebreaker persona, or a note to the human.
-4. **Refine**: dispatch briefs — fixes first, then deletion-pass, then
-   optional hardening (adversarial inputs beyond what the contract
-   names).
+4. **Refine**: dispatch briefs — fixes first, then deletion-pass and
+   comment-hygiene (code, then the prose around it), then optional
+   hardening (adversarial inputs beyond what the contract names).
 5. Re-verify gate + golden behavior; record the cycle's outcome
    (rubric scores, when a panel ran) and diff.
 

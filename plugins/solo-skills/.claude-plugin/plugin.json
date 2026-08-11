@@ -4,5 +4,5 @@
   },
   "description": "Every skill in this collection that stands on its own - one install instead of a shelf of one-skill plugins. Membership is derived, not curated: a skill belongs here when it needs no agent, no hook, and no sibling skill to do its job, and a gate re-derives that from the skill bodies and their bundled scripts on every run. Covers harness and environment configuration (Claude Code, opencode, project memory, iTerm2), session discipline (handoff, focus checks, review cycles), research and decision support, diagrams and data visualization, repo and project setup, planning and recurring comms, and Obsidian plugin development. The skills that need a companion agent or hook stay in the bundles that carry them.",
   "name": "solo-skills",
-  "version": "0.1.2"
+  "version": "0.1.3"
 }

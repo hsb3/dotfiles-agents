@@ -26,6 +26,7 @@ flowchart TD
     Ctx -->|yes| Hand[handoff externalizes the state]
     Hand --> Cold
 
+    Done -.->|before it lands| CH[comment-hygiene-gate flags history left in comments]
     Work -.->|keeping the labor| DW[delegation-watermark nudges]
     Mgr -.->|every dispatch| WC[worker-context injects the covenant]
     Workers -.->|every write| CC[config-custody and worktree-isolation]
@@ -35,7 +36,9 @@ flowchart TD
 ```
 
 The review-cycle trio sits inside that `manager` box: `layer-cycle` drives a module through
-create, evaluate, and refine, calling `rubric-panel` to score and `deletion-pass` to cut.
+create, evaluate, and refine, calling `rubric-panel` to score and `deletion-pass` to cut. The
+refine phase runs `comment-hygiene` alongside `deletion-pass`: one cuts code that cannot name
+its commitment, the other cuts comments that cannot.
 
 ## What you get
 
@@ -47,12 +50,14 @@ create, evaluate, and refine, calling `rubric-panel` to score and `deletion-pass
 | `rubric-panel` | skill | Score one or more code artifacts against an anchored rubric with a persona-diverse judge panel (whole-field calibration, contested-spread flagging); outputs dimension scores plus findings classified as defect / noise / spec-hole / undeclared-commitment. |
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. |
+| `comment-hygiene` | skill | Strip history and commentary out of source comments before the work lands: harvest the reasoning onto its tracker item first, then keep only what a competent reader would break something without. The prose counterpart of `deletion-pass` — that one cuts code that cannot name its commitment, this one cuts comments that cannot. |
 | `activation` | skill | Create and verify the per-project `.claude/atelier.local.md` activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
 | `activate` | command | `/atelier:activate` — arms atelier in the current project: creates the activation file if it is missing, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and is safe to hand to an agent: it never overwrites an existing file unasked. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Defaults to the cheapest model tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. |
 | `manager` | agent | The management layer between strategy and execution — owns a wave or a coupled dependent chain end to end: turns the definition of done into worker briefs, spawns and sequences its own scouts, builders, and reviewers, and reports one proof package upward. The default for non-trivial work. |
+| `comment-hygiene-gate` | hook (`PreToolUse`) | Silent until a Bash command is about to land work (`git commit`, `gh pr create`), then scans the added comment lines of the source files in that change for history markers — issue and board refs, dates, CI run ids, attributions — and names the files and a couple of examples. Skips prose files, where the harvested history is supposed to end up. Advisory; never blocks. |
 | `config-custody` | hook (`PreToolUse`) | Denies **subagent** edits to the config listed under `protected:` in the activation file — the ownership map made machine-readable, so a worker cannot quietly edit the gate that defines its own acceptance. The main session is never restricted; only `enforce: strict` actually denies. |
 | `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (70k) / hard (100k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
 | `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
