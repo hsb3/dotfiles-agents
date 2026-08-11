@@ -9,12 +9,30 @@ Markers: issue and board references, ISO dates, CI run ids, attributions ("owner
 "per the review call"), and superseded-history phrasing ("this used to", "the original version
 of"). Board-key detection skips the obvious non-refs (`UTF-8`, `SHA-256`, `CVE-*`).
 
-**Prose files are skipped entirely** (`.md`, `.rst`, `.txt`, `.adoc`, and friends). A markdown
-`#` is a heading and an issue number mid-sentence is a sentence, so scanning them inverts the rule
-this hook exists to enforce — a tracker card, a decisions log, or a handoff is exactly where
-the harvested history is supposed to end up. Measured against 40 commits of this repo's own
-history before the skip existed: 25 would have fired, 73 of 75 findings were markdown. After:
-2 fired, both true positives in a `.yml` comment.
+**Prose files are skipped entirely** (`.md`, `.rst`, `.txt`, `.adoc`, and the extensionless
+`LICENSE`/`NOTICE`/`CHANGELOG` family). A markdown `#` is a heading and an issue number
+mid-sentence is a sentence, so scanning them inverts the rule this hook exists to enforce — a
+tracker card, a decisions log, or a handoff is exactly where the harvested history is supposed
+to end up.
+
+## Finding a comment
+
+Precision is the whole currency of an advisory nudge: one that cries wolf gets ignored, which
+costs more than the findings it would have surfaced. So the lexer errs toward silence.
+
+It walks each added line left to right, **tracking quote state** — a marker inside a string
+literal is code, not history (`print("see #NNN")`). Which sequences open a comment is **keyed by
+file extension**, because `#` starts a comment in Python and names a colour in CSS; one
+universal table is what makes `color: #141413` read as an issue reference. `--` opens a comment
+only when followed by a space (otherwise it is `i--` or a CSS custom property), and `//` does
+not open one directly after a `:` (a URL scheme). An unrecognized extension falls back to the
+hash and C families.
+
+Measured against this repo, using Python's `tokenize` as ground truth on the 156-file Python
+corpus: **27 findings in real comments, 1 false.** Across all 425 source files the false
+positives from CSS, string literals, and license URLs are gone. The one remaining is the
+documented ceiling — a comment character inside a *multi-line* string, whose opening quote sits
+on a line a single-line lexer never sees.
 
 Advisory only. It never emits `permissionDecision`, so it cannot block a commit, and it fails
 open on every error path: no git, not a repo, no staged diff, an oversized diff, or a malformed
