@@ -44,20 +44,17 @@ deleting any branch, `git rev-list --count origin/dev..<branch>`; nonzero means 
 changed file against `dev` before calling the work superseded. `dev-legacy` is a deliberate
 pre-restructure archive — never delete it.
 
-The handoff rides one long-lived branch, `chore/handoff`:
-
-```sh
-git fetch origin && git checkout chore/handoff && git merge --ff-only origin/dev
-```
-
-`--ff-only` **refuses** if the branch still carries an unparked handoff update — that refusal is
-the point. Write the update, PR into `dev`, merge before the session ends, leave the branch.
-
 ## Task tracking
 
 The tracker is the **Kaneo board** (project `DFA` / "dotfiles-agents", workspace `hsb3`) — a
 live board, not files in this tree. Work it through the `kaneo` plugin's skill: the claim
 ritual, the level rules, and how decisions get recorded are that skill's law, not this page's.
+
+**The session handoff is a board task too**: the one labeled `HANDOFF` in the `Document` lane
+(DFA-233). Read it at session start; at session end rewrite its **description** in place under
+the `handoff` skill's content rules. There is no `HANDOFF.md` in this tree and no handoff
+branch — never recreate either. Consequence to know: atelier's `handoff-freshness-guard` finds
+no file here, so a manual `/compact` is refused; update the board task, then `/clear`.
 
 Config is the five `KANEO_*` values in `.claude/settings.local.json` (gitignored — they carry a
 credential); missing or wrong, ask the owner rather than guessing. Never create a
