@@ -23,7 +23,9 @@
 
 ## Governance
 
-Contributor SOP: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md).
+Contributor SOP: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). Traps this repo has
+already hit — how to read `make ci`, which gates are CI-only, what `flow.yaml` breaks:
+[`docs/gotchas.md`](docs/gotchas.md).
 
 Branch off `dev`, PR into `dev`. Never merge PRs or commit to the default branch. `main` is
 publish-only (CI, `.github/workflows/publish.yml`) and is never checked out locally — a
