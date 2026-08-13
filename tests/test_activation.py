@@ -326,6 +326,33 @@ class CheckTests(_Base):
         self.assertEqual(self.row(mapping_output, "handoff"),
                          self.row(scalar_output, "handoff"))
 
+    def test_a_nested_handoff_mapping_does_not_swallow_the_keys_after_it(self):
+        """Both hooks stop the mapping scan at the first unindented line. If
+        one ran on, `protected:`'s list items would land in the handoff key and
+        wipe it -- and the checker would report an inert handoff next to a
+        protected row that still looks fine, which is the confusing shape."""
+        self.write("---\nenforce: strict\nhandoff:\n  mode: external\n"
+                   "  stamp: .claude/handoff.stamp\n"
+                   "  location: Kaneo board task DFA-233\n"
+                   "protected:\n  - Makefile\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("armed", self.row(output, "handoff"), output)
+        self.assertIn("external", self.row(output, "handoff"), output)
+        self.assertIn("Makefile", self.row(output, "protected"), output)
+
+    def test_an_uppercase_handoff_mode_arms_external(self):
+        """`mode` is lowercased before it is matched. Both hooks must do it:
+        if only one does, the row is a DISAGREEMENT rather than armed."""
+        self._write_handoff_mapping(mode="EXTERNAL", stamp=".claude/handoff.stamp",
+                                    location="Kaneo board task DFA-233")
+        code, output = self.check()
+        row = self.row(output, "handoff")
+        self.assertNotIn("DISAGREEMENT", row)
+        self.assertIn("armed", row)
+        self.assertIn("external", row)
+        self.assertEqual(code, 0, output)
+
     def test_the_mapping_form_always_registers_as_a_present_top_level_key(self):
         """`not configured` for a written key is the silent failure this
         whole tool exists to catch -- the nested form must never report it,

@@ -61,10 +61,17 @@ No handoff signal found (stamp .claude/handoff.stamp has never been touched; the
 lives at: Kaneo board task DFA-233) — update the handoff and touch the stamp, then /compact.
 ```
 
-(Drops the `location` clause when none is set, and swaps "has never been touched" for
-"is stale" when the stamp exists but has aged out.) An **automatic** compaction never
-blocks, in either mode — it logs and posts the same non-blocking `systemMessage` guidance
-it always has, naming the stamp instead of a file.
+or, once the stamp exists but has aged out:
+
+```
+Handoff signal is stale (stamp .claude/handoff.stamp; the handoff lives at: Kaneo board
+task DFA-233) — update the handoff and touch the stamp, then /compact.
+```
+
+(Both drop the `; the handoff lives at: ...` clause when no `location` is set.) An
+**automatic** compaction never blocks, in either mode: on a stale/missing stamp it instead
+posts a non-blocking `systemMessage` pointing at the stamp and telling the session to update
+the handoff and touch the stamp soon — the file-mode equivalent of "run /handoff soon."
 
 This same key and precedence rule is honored by `session-handoff-surfacer` and documented
 by the `handoff` skill — the three must never disagree about where the handoff lives.

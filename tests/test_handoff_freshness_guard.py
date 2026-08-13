@@ -33,6 +33,15 @@ LOCATION = "Kaneo board task DFA-233"
 # block text never sends someone whose handoff is on a board to a repo file.
 TRIO = ("_meta/HANDOFF.md", "HANDOFF.md", ".claude/HANDOFF.md")
 
+# What an armed external mode with an untouched stamp says. Shared by the
+# message test that owns it and by the parser-shape tests, which use it purely
+# as the "external mode armed" signal.
+EXTERNAL_MISSING = (
+    "No handoff signal found (stamp .claude/handoff.stamp has never been "
+    "touched; the handoff lives at: Kaneo board task DFA-233) — update the "
+    "handoff and touch the stamp, then /compact."
+)
+
 
 def _session_id():
     return f"handoff-guard-session-{next(_SEQ)}"
@@ -209,12 +218,7 @@ class HandoffFreshnessGuardOverrideTests(unittest.TestCase):
         self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
         result = self._run_hook(self._payload(trigger="manual"))
         body = self._assert_blocked(result)
-        self.assertEqual(
-            body["reason"],
-            "No handoff signal found (stamp .claude/handoff.stamp has never "
-            "been touched; the handoff lives at: Kaneo board task DFA-233) — "
-            "update the handoff and touch the stamp, then /compact.",
-        )
+        self.assertEqual(body["reason"], EXTERNAL_MISSING)
         self.assertEqual(body["systemMessage"], body["reason"])
         for candidate in TRIO:
             self.assertNotIn(candidate, body["reason"])
@@ -311,6 +315,40 @@ class HandoffFreshnessGuardOverrideTests(unittest.TestCase):
             ["blocked", "cwd", "handoff_age_minutes", "handoff_mode",
              "handoff_path", "session_id", "status", "trigger", "ts"],
         )
+
+    # -- where the mapping scan has to stop ---------------------------------
+    #
+    # Each of these puts a FRESH HANDOFF.md on disk, so if the mapping fails to
+    # parse the hook falls back to the trio and allows silently. The block is
+    # the proof the mapping survived.
+
+    MAPPING = ("handoff:\n"
+               "  mode: external\n"
+               "  stamp: .claude/handoff.stamp\n"
+               "  location: Kaneo board task DFA-233\n")
+
+    def _assert_external_armed(self, frontmatter_body):
+        self._write_file("HANDOFF.md")  # fresh trio candidate: must stay unused
+        self._write_activation(raw_text="---\n" + frontmatter_body + "---\n")
+        result = self._run_hook(self._payload(trigger="manual"))
+        self.assertEqual(self._assert_blocked(result)["reason"], EXTERNAL_MISSING)
+
+    def test_a_nested_mapping_stops_at_the_next_top_level_key(self):
+        """The scan must end at the first unindented line. Run past it into
+        `protected:`'s `- Makefile` and the sequence branch wipes the children,
+        silently dropping the whole handoff key back to the trio -- on an
+        activation file whose key order is entirely ordinary."""
+        self._assert_external_armed(self.MAPPING + "protected:\n  - Makefile\n")
+
+    def test_a_nested_mapping_followed_by_a_scalar_top_level_key(self):
+        self._assert_external_armed(self.MAPPING + "effort: deep\n")
+
+    def test_a_nested_mapping_as_the_last_key_before_the_fence(self):
+        self._assert_external_armed("enforce: strict\n" + self.MAPPING)
+
+    def test_mode_is_matched_case_insensitively(self):
+        """`mode` is normalized to lowercase, so a shouted value still arms."""
+        self._assert_external_armed(self.MAPPING.replace("external", "EXTERNAL"))
 
     # -- external mode: inert shapes fall back to the trio -----------------
     #

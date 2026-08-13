@@ -29,6 +29,13 @@ LOCATION = "Kaneo board task DFA-233"
 # nothing from inside the stamp may ever reach stdout.
 SENTINEL = "STAMP-CONTENTS-MUST-NEVER-BE-SURFACED"
 
+# The armed external pointer. Shared by the message test that owns it and by
+# the parser-shape tests, which use it purely as the "external armed" signal.
+EXTERNAL_POINTER = (
+    "This project's handoff lives outside the repo: Kaneo board task DFA-233. "
+    "Read it before starting. Its freshness stamp is .claude/handoff.stamp."
+)
+
 
 def _session_id():
     return f"handoff-surfacer-session-{next(_SEQ)}"
@@ -188,12 +195,7 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
         result = self._run_hook(self._payload(source="startup"))
         context, system = self._surfaced(result)
-        self.assertEqual(
-            context,
-            "This project's handoff lives outside the repo: Kaneo board task "
-            "DFA-233. Read it before starting. Its freshness stamp is "
-            ".claude/handoff.stamp.",
-        )
+        self.assertEqual(context, EXTERNAL_POINTER)
         self.assertEqual(
             system,
             "atelier: surfaced external handoff pointer (Kaneo board task DFA-233).",
@@ -208,12 +210,7 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
         result = self._run_hook(self._payload(source="startup"))
         context, system = self._surfaced(result)
-        self.assertEqual(
-            context,
-            "This project's handoff lives outside the repo: Kaneo board task "
-            "DFA-233. Read it before starting. Its freshness stamp is "
-            ".claude/handoff.stamp.",
-        )
+        self.assertEqual(context, EXTERNAL_POINTER)
         self.assertEqual(
             system,
             "atelier: surfaced external handoff pointer (Kaneo board task DFA-233).",
@@ -256,6 +253,40 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         self.assertEqual(record["handoff_mode"], "external")
         self.assertEqual(record["handoff_path"], STAMP)
         self.assertIs(record["surfaced"], True)
+
+    # -- where the mapping scan has to stop ---------------------------------
+    #
+    # Each of these puts a HANDOFF.md on disk, so a mapping that fails to parse
+    # falls back to the trio and surfaces THAT instead. The pointer is the
+    # proof the mapping survived.
+
+    MAPPING = ("handoff:\n"
+               "  mode: external\n"
+               "  stamp: .claude/handoff.stamp\n"
+               "  location: Kaneo board task DFA-233\n")
+
+    def _assert_external_armed(self, frontmatter_body):
+        self._write_file("HANDOFF.md", "root handoff\n")  # trio: must stay unused
+        self._write_activation(raw_text="---\n" + frontmatter_body + "---\n")
+        result = self._run_hook(self._payload(source="startup"))
+        self.assertEqual(self._surfaced(result)[0], EXTERNAL_POINTER)
+
+    def test_a_nested_mapping_stops_at_the_next_top_level_key(self):
+        """The scan must end at the first unindented line. Run past it into
+        `protected:`'s `- Makefile` and the sequence branch wipes the children,
+        silently dropping the whole handoff key back to the trio -- on an
+        activation file whose key order is entirely ordinary."""
+        self._assert_external_armed(self.MAPPING + "protected:\n  - Makefile\n")
+
+    def test_a_nested_mapping_followed_by_a_scalar_top_level_key(self):
+        self._assert_external_armed(self.MAPPING + "effort: deep\n")
+
+    def test_a_nested_mapping_as_the_last_key_before_the_fence(self):
+        self._assert_external_armed("enforce: strict\n" + self.MAPPING)
+
+    def test_mode_is_matched_case_insensitively(self):
+        """`mode` is normalized to lowercase, so a shouted value still arms."""
+        self._assert_external_armed(self.MAPPING.replace("external", "EXTERNAL"))
 
     # -- external mode: inert shapes fall back to the trio -----------------
     #
