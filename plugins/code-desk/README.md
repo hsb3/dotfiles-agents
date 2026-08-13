@@ -42,7 +42,7 @@ flowchart TD
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app, not mockups. |
 | `dev-focus` | A mid-session focus check that flags drift from the original task, and a scope triage that sorts a task list into MUST/DEFER/CUT. |
 | `planning-desk` | Stands up a source-grounded planning desk under `_meta/plans/` — write conformant issue bodies and deep build plans, driven through a draft → review → fix → reconcile loop. |
-| `board-triage` | The weekly routine that fills in Impact/Effort/Priority on a GitHub Project (v2) board so its prioritization and roadmap views stay useful instead of drifting into noise. |
+| `board-triage` | The weekly routine that ranks the un-ranked items on a task board so its prioritization and roadmap views stay useful instead of drifting into noise. The Impact×Effort judgment is backend-agnostic; a thin adapter does the board's I/O (GitHub Projects v2 and Kaneo ship). |
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
 | `pptx-themes` | Builds the decks `comms` ships as, with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill. |
 
@@ -87,8 +87,9 @@ You: "plan this out"
   grounded in cited source, stated as deliverables/criteria/parallelism — never a timeline.
 
 Later: "run board triage"
-→ board-triage exports the board snapshot, finds the un-ranked/blank/stale items, sets
-  Workstream/Impact/Effort/Priority by the standing rubric, and applies only the diffs.
+→ board-triage exports the board snapshot, finds the un-ranked/blank/stale items, ranks
+  them by the standing Impact×Effort rubric, and applies only the diffs through the
+  adapter for whatever board you run.
 
 End of week: "produce the weekly planning briefing"
 → comms assembles the deck from the same sources the planning desk and board already
@@ -103,7 +104,8 @@ Every skill here is additive or read-only by design — nothing in this bundle m
 deletes, or force-overwrites existing content. `mise-en-place-scaffold` reports a conflict
 instead of resolving it when a file already exists but doesn't match the expected shape; a
 human (or a separate, deliberate edit) still makes that call. The executive-desk skills
-assume a repo, a planning-desk `_meta/plans/` tree, and (for `board-triage`) a GitHub
-Project (v2) board already stood up — they operate on those directly rather than replacing
-them. `pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a
+assume a repo, a planning-desk `_meta/plans/` tree, and (for `board-triage`) a board
+already stood up with an adapter for it — they operate on those directly rather than
+replacing them. `board-triage`'s GitHub Projects adapter drives scripts that ship in the
+`solo-skills` bundle, so that backend needs both installed; its Kaneo adapter does not. `pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a
 full authoring replacement for it.

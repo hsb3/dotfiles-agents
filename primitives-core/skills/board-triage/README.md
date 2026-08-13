@@ -1,16 +1,19 @@
 # board-triage
 
-Runs the weekly board-prioritization pass over a GitHub Project (v2): pulls a snapshot,
-finds items missing Workstream/Impact/Effort/Priority (or carrying a stale ranking), judges
-each against the repo's own plan/issue context, and applies only the diff rather than
-guessing a rank it can't justify. Turns a board full of captured-but-unranked items into a
-workable, ranked backlog.
+Runs the prioritization pass over a task board: pulls a compact snapshot, finds the items
+missing a rank (or carrying a stale one), judges each against the repo's own plan/issue
+context, and applies only the diff rather than guessing a rank it can't justify. Turns a
+board full of captured-but-unranked items into a workable, ranked backlog.
+
+The judgment is backend-agnostic and lives in `SKILL.md`. The board's I/O lives in a thin
+adapter under `references/adapters/` — **GitHub Projects (v2)** and **Kaneo** ship. A new
+backend is a new adapter file: two commands and a field map, no edit to the rubric.
 
 ## When it triggers
 
 Use it to "run board triage", "triage the backlog", "prioritize the issues", "rank the
-unranked issues", "fill in Impact/Effort/Priority", "do the weekly triage", or classify
-GitHub Project (v2) items so the Prioritization/Now/Roadmap views become useful.
+unranked issues", "fill in Impact/Effort/Priority", or "do the weekly triage" so the
+prioritization and roadmap views become useful instead of drifting into noise.
 
 ## Install
 
@@ -18,4 +21,6 @@ GitHub Project (v2) items so the Prioritization/Now/Roadmap views become useful.
 claude plugin install code-desk@dotfiles-agents
 ```
 
-Ships in the code-desk bundle (not standalone).
+Ships in the code-desk bundle (not standalone). The GitHub Projects adapter additionally
+needs the `solo-skills` bundle, which is where its export/apply scripts live; the Kaneo
+adapter is self-contained.
