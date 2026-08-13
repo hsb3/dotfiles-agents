@@ -23,6 +23,16 @@ isolate: writers           # off (default when absent) | writers | [builder, my-
 # path that does not exist reads as "no handoff" to both hooks, and they do NOT fall
 # back to the standard search — setting this too early turns handoff surfacing off.
 # handoff: .claude/HANDOFF.md
+#
+# Or, for a handoff that lives on a tracker/board outside the repo (external mode):
+# `stamp` is a freshness signal /handoff touches instead of writing a file; `location`
+# is free text describing where the real handoff lives. The same fail-open rule applies
+# to `stamp` as to the scalar path above — missing, blank, or out-of-root leaves this
+# inert and the standard search runs.
+# handoff:
+#   mode: external
+#   stamp: .claude/handoff.stamp
+#   location: Kaneo board task DFA-233
 
 # Prose-only: no hook reads this. The delegation skill honours it when an agent
 # reads this file, and `activation.py check` validates the spelling.

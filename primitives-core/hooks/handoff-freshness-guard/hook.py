@@ -26,12 +26,24 @@ Contract (PreCompact):
     default is possible without special-casing exit codes.
   - Fail-open: any internal error -> exit 0, no JSON (compaction proceeds).
 
-Per-project override: a `handoff:` key in `.claude/atelier.local.md` names
-the project's handoff file, taking full precedence over the standard
-candidate search below (found or not — an override that names a file that
-does not yet exist means "missing", not "fall back to the trio"). Absent,
-unparseable, or out-of-project-root overrides leave the standard search
-untouched. The activation-file parser here is intentionally a duplicate of
+Per-project override: a `handoff:` key in `.claude/atelier.local.md` either
+names the project's handoff file (`handoff: docs/HANDOFF.md`), or declares
+that the handoff lives outside the repo entirely — on a tracker board, say —
+with a stamp file standing in as its only freshness signal:
+
+    handoff:
+      mode: external
+      stamp: .claude/handoff.stamp
+      location: the DFA board task
+
+In external mode the stamp's mtime answers the freshness question the
+handoff file's mtime answers in file mode, and the block text points at the
+stamp and the location instead of at a repo path that does not exist.
+Either form takes full precedence over the standard candidate search below
+(found or not — an override that names a file that does not yet exist means
+"missing", not "fall back to the trio"). Absent, unparseable, or
+out-of-project-root overrides leave the standard search untouched. The
+activation-file parser here is intentionally a duplicate of
 config-custody/worker-context's, not an import: each hook directory is
 copied and symlinked on its own (ADR 0017), so a cross-hook import would
 break the moment one hook is installed without the other.
@@ -50,7 +62,8 @@ import traceback
 FRESHNESS_MINUTES_DEFAULT = 30
 LOG_FILENAME_DEFAULT = "handoff-guard.jsonl"
 
-# Used only when no valid `handoff:` override is active (see _find_handoff).
+# Used only when no `handoff:` key is armed — neither a file override nor an
+# external stamp (see _find_handoff).
 CANDIDATE_PATHS = [
     "_meta/HANDOFF.md",
     "HANDOFF.md",
@@ -117,15 +130,43 @@ def _unquote(value):
     return value
 
 
-def _parse_handoff_override(text):
-    """Return the `handoff:` key's value from a YAML frontmatter block, or
-    None if absent/blank/unparseable.
+def _normalize_handoff(children):
+    """The two written forms collapsed into one shape, or None when there is
+    nothing to collapse (an empty `handoff:` with no children, or a sequence
+    where a mapping belongs).
+
+    Every sub-key is present in the result so callers can read one without
+    guarding, and `mode` is lowercased but NOT validated here — an
+    unrecognised mode has to survive the parser for `activation.py check` to
+    name the bad value back to the operator.
+    """
+    if not children:
+        return None
+    return {
+        "mode": (children.get("mode") or "file").lower(),
+        "path": children.get("path") or None,
+        "stamp": children.get("stamp") or None,
+        "location": children.get("location") or None,
+    }
+
+
+def _parse_handoff_config(text):
+    """Return the `handoff:` key from a YAML frontmatter block as a config
+    dict, or None if absent/blank/unparseable.
+
+        handoff: docs/HANDOFF.md   ->  {"mode": "file", "path": "docs/HANDOFF.md", ...}
+
+        handoff:                   ->  {"mode": "external", "stamp": "...", ...}
+          mode: external
+          stamp: .claude/handoff.stamp
+          location: the DFA board task
 
     Deliberately narrow (mirrors worker-context's `enforce`-only parser):
-    understands one scalar key, on an unindented top-level line, and
-    ignores everything else. Anything it cannot make sense of — no fences,
-    no closing fence — returns None, so a malformed activation file behaves
-    exactly as if the key were absent (fall back to the standard search).
+    understands one top-level key, either its scalar value or one level of
+    indented sub-keys beneath it, and ignores everything else. Anything it
+    cannot make sense of — no fences, no closing fence, a sequence under the
+    key — returns None, so a malformed activation file behaves exactly as if
+    the key were absent (fall back to the standard search).
     """
     lines = text.splitlines()
 
@@ -148,20 +189,56 @@ def _parse_handoff_override(text):
     if end is None:
         return None
 
-    value = None
-    for line in lines[start:end]:
+    config = None
+    index = start
+    while index < end:
+        line = lines[index]
+        index += 1
         if not line.strip() or line[:1].isspace() or line.strip().startswith("#"):
             continue
         item = line.strip()
         colon = item.find(":")
         if colon == -1:
             continue
-        if item[:colon].strip().lower() == HANDOFF_KEY:
-            value = _unquote(item[colon + 1:])
-    return value or None
+        if item[:colon].strip().lower() != HANDOFF_KEY:
+            continue
+        # A comment where the value would be reads as no value at all, so
+        # `handoff:  # note` opens the mapping form rather than resolving a
+        # path named "# note". _unquote only strips a comment that follows a
+        # value, which is why the leading case is caught before it.
+        rest = item[colon + 1:].strip()
+        value = "" if rest.startswith("#") else _unquote(rest)
+        if value:
+            config = _normalize_handoff({"path": value})
+            continue
+        # Nothing after the colon: the mapping form, whose children are the
+        # indented lines that follow. The scan advances the shared cursor
+        # rather than returning, so a key written twice still takes the last
+        # value — the same duplicate rule the top level has always had.
+        children = {}
+        while index < end:
+            child = lines[index]
+            if not child.strip():
+                index += 1
+                continue
+            if not child[:1].isspace():
+                break  # back at the top level: the mapping is over
+            index += 1
+            sub = child.strip()
+            if sub.startswith("#"):
+                continue
+            if sub.startswith("-"):
+                children = None  # a list, not a mapping: unreadable, stay inert
+                break
+            sub_colon = sub.find(":")
+            if sub_colon == -1:
+                continue
+            children[sub[:sub_colon].strip().lower()] = _unquote(sub[sub_colon + 1:])
+        config = _normalize_handoff(children)
+    return config
 
 
-def _load_handoff_override(project_dir):
+def _load_handoff_config(project_dir):
     """Read the activation file. Any trouble at all -> None (no override)."""
     path = _resolve_activation_path(project_dir)
     try:
@@ -172,9 +249,22 @@ def _load_handoff_override(project_dir):
     except Exception:
         return None
     try:
-        return _parse_handoff_override(text)
+        return _parse_handoff_config(text)
     except Exception:
         return None
+
+
+def _load_handoff_override(project_dir):
+    """The configured handoff FILE path, or None.
+
+    None also covers external mode, where the project has no handoff file at
+    all — a caller that only knows about files must see "no override" there,
+    not a stamp path it would then read as a handoff.
+    """
+    config = _load_handoff_config(project_dir)
+    if not config or config["mode"] != "file":
+        return None
+    return config["path"]
 
 
 def _resolve_override_path(value, project_dir):
@@ -246,43 +336,74 @@ def _log(log_path, record):
 
 
 # ---------------------------------------------------------------------------
-# Handoff file discovery
+# Handoff discovery
 # ---------------------------------------------------------------------------
 
 def _find_handoff(cwd):
-    """Return (path, mtime, searched) for the active handoff file, else
-    (None, None, searched) — searched is a human-readable description of
-    where the hook looked, used only in the "missing" block message.
+    """Return (path, mtime, searched, mode, location) for the file whose
+    mtime answers the freshness question, with path/mtime None when it does
+    not exist — searched is a human-readable description of where the hook
+    looked, used only in the block message.
 
     A valid, in-project-root `handoff:` override in .claude/atelier.local.md
     is authoritative — found or not, it is the only location checked, and
-    the standard candidate search below never runs. Absent, unparseable, or
-    out-of-root overrides fall back unchanged to the documented precedence
+    the standard candidate search below never runs. In external mode the
+    file being stat'ed is the stamp, not a handoff; `mode` says which, so
+    the caller can pick message text that sends the operator to the right
+    place. Absent, unparseable, out-of-root, or external-without-a-usable-
+    stamp configurations fall back unchanged to the documented precedence
     order.
     """
     project_dir = _resolve_project_dir(cwd)
-    override_path = _resolve_override_path(_load_handoff_override(project_dir), project_dir)
-    if override_path is not None:
-        searched = os.path.relpath(override_path, project_dir).replace(os.sep, "/")
-        if os.path.isfile(override_path):
+    config = _load_handoff_config(project_dir) or {}
+
+    named = None
+    mode = "file"
+    location = None
+    if config.get("mode") == "external":
+        named = _resolve_override_path(config.get("stamp"), project_dir)
+        if named is not None:
+            mode = "external"
+            location = config.get("location")
+    elif config.get("mode") == "file":
+        named = _resolve_override_path(config.get("path"), project_dir)
+
+    if named is not None:
+        searched = os.path.relpath(named, project_dir).replace(os.sep, "/")
+        if os.path.isfile(named):
             try:
-                return override_path, os.path.getmtime(override_path), searched
+                return named, os.path.getmtime(named), searched, mode, location
             except OSError:
-                return None, None, searched
-        return None, None, searched
+                return None, None, searched, mode, location
+        return None, None, searched, mode, location
 
     for rel in CANDIDATE_PATHS:
         path = os.path.join(cwd, rel)
         if os.path.isfile(path):
             try:
-                return path, os.path.getmtime(path), rel
+                return path, os.path.getmtime(path), rel, "file", None
             except OSError:
                 continue
-    return None, None, CANDIDATE_PATHS_DESC
+    return None, None, CANDIDATE_PATHS_DESC, "file", None
 
 
 def _age_minutes(mtime):
     return (time.time() - mtime) / 60.0
+
+
+def _external_reason(status, stamp, location):
+    """Block text for external mode. It names the stamp and where the
+    handoff actually lives, never a repo path — telling someone whose
+    handoff is on a board to "run /handoff" would send them to a file that
+    is not the handoff.
+    """
+    where = "; the handoff lives at: {0}".format(location) if location else ""
+    if status == "stale":
+        return ("Handoff signal is stale (stamp {0}{1}) — update the handoff "
+                "and touch the stamp, then /compact.".format(stamp, where))
+    return ("No handoff signal found (stamp {0} has never been touched{1}) — "
+            "update the handoff and touch the stamp, then /compact.".format(
+                stamp, where))
 
 
 # ---------------------------------------------------------------------------
@@ -299,7 +420,7 @@ def main():
         trigger = payload.get("trigger", "unknown")  # "manual" | "auto"
         log_path = _resolve_log_path(cwd)
 
-        path, mtime, searched = _find_handoff(cwd)
+        path, mtime, searched, mode, location = _find_handoff(cwd)
 
         if path is None:
             status = "missing"
@@ -317,7 +438,7 @@ def main():
         else:
             if trigger == "manual":
                 blocked = True
-                reason = (
+                reason = _external_reason(status, searched, location) if mode == "external" else (
                     "Handoff is stale/missing — run /handoff first, then /compact."
                     if status == "stale"
                     else "No handoff file found ({0}) — run /handoff first, "
@@ -336,6 +457,11 @@ def main():
                 # can pick up the slack.
                 msg = (
                     "Auto-compaction is proceeding with a stale/missing handoff "
+                    "signal (stamp {0}). Update the handoff and touch the stamp "
+                    "soon to avoid losing externalized state on the next "
+                    "compaction.".format(searched)
+                    if mode == "external"
+                    else "Auto-compaction is proceeding with a stale/missing handoff "
                     "file. Run /handoff soon to avoid losing externalized state "
                     "on the next compaction."
                 )
@@ -349,6 +475,7 @@ def main():
             "cwd": cwd,
             "trigger": trigger,
             "handoff_path": path,
+            "handoff_mode": mode,
             "handoff_age_minutes": age,
             "status": status,
             "blocked": blocked,

@@ -22,6 +22,13 @@ HOOK_PATH = os.path.join(
 
 _SEQ = itertools.count()
 
+STAMP = ".claude/handoff.stamp"
+LOCATION = "Kaneo board task DFA-233"
+
+# Written into the stamp file itself. External mode must surface a POINTER, so
+# nothing from inside the stamp may ever reach stdout.
+SENTINEL = "STAMP-CONTENTS-MUST-NEVER-BE-SURFACED"
+
 
 def _session_id():
     return f"handoff-surfacer-session-{next(_SEQ)}"
@@ -51,12 +58,26 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             fh.write(raw_text)
         return path
 
+    def _write_mapping(self, **children):
+        """The mapping form of `handoff:` — an empty value, one level of
+        indented sub-keys. Children given as None are omitted entirely."""
+        lines = ["---", "handoff:"]
+        for key, value in children.items():
+            if value is not None:
+                lines.append("  {0}: {1}".format(key, value))
+        lines.append("---")
+        return self._write_activation(raw_text="\n".join(lines) + "\n")
+
     def _write_file(self, relpath, content="content\n"):
         full = os.path.join(self.cwd, relpath)
         os.makedirs(os.path.dirname(full), exist_ok=True)
         with open(full, "w", encoding="utf-8") as fh:
             fh.write(content)
         return full
+
+    def _log_records(self):
+        with open(self.log_path, encoding="utf-8") as fh:
+            return [json.loads(line) for line in fh if line.strip()]
 
     def _payload(self, source="startup", session_id=None):
         return {
@@ -91,11 +112,21 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         # "atelier: surfaced project handoff (<relpath>)."
         return msg.split("(", 1)[1].rsplit(")", 1)[0]
 
+    def _surfaced(self, result):
+        """(additionalContext, systemMessage) for a surfacing run."""
+        self.assertEqual(result.returncode, 0)
+        body = json.loads(result.stdout)
+        self.assertEqual(
+            body["hookSpecificOutput"]["hookEventName"], "SessionStart")
+        return (body["hookSpecificOutput"]["additionalContext"],
+                body["systemMessage"])
+
     # -- tests -----------------------------------------------------------
 
     def test_override_absent_standard_search_unaffected(self):
-        """No activation file at all: byte-identical to pre-override
-        behavior -- the standard candidate-path search finds HANDOFF.md."""
+        """BACKWARD COMPAT: no activation file at all -- byte-identical to
+        pre-external-mode behavior, the standard candidate-path search finds
+        HANDOFF.md and the excerpt is unchanged."""
         self._write_file("HANDOFF.md", "root handoff\n")
         result = self._run_hook(self._payload())
         self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
@@ -107,20 +138,31 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         )
 
     def test_override_existing_file_wins_over_standard_candidate(self):
+        """BACKWARD COMPAT: the bare-path scalar form still wins and still
+        carries the head excerpt, asserted as the exact whole message."""
         self._write_file("_meta/HANDOFF.md", "meta handoff\n")  # highest-precedence trio candidate
         self._write_file("docs/HANDOFF.md", "override handoff\n")
         self._write_activation(handoff="docs/HANDOFF.md")
         result = self._run_hook(self._payload())
         self.assertEqual(self._surfaced_relpath(result), "docs/HANDOFF.md")
-        self.assertIn("override handoff", result.stdout)
+        context, system = self._surfaced(result)
+        self.assertEqual(
+            context,
+            "A project handoff exists at docs/HANDOFF.md — read it before "
+            "starting. First lines:\noverride handoff",
+        )
+        self.assertEqual(system, "atelier: surfaced project handoff (docs/HANDOFF.md).")
 
     def test_override_nonexistent_path_does_not_fall_back(self):
+        """BACKWARD COMPAT: a named-but-absent file still means silence, not
+        a fall back to the trio."""
         self._write_file("HANDOFF.md", "root handoff\n")  # would be found by standard search
         self._write_activation(handoff="docs/HANDOFF.md")  # never created
         result = self._run_hook(self._payload())
         self._assert_silent(result)
 
     def test_override_outside_project_root_falls_back(self):
+        """BACKWARD COMPAT: an escaping scalar path stays fail-open."""
         self._write_file("HANDOFF.md", "root handoff\n")
         self._write_activation(handoff="/etc/hosts")  # exists, but outside project root
         result = self._run_hook(self._payload())
@@ -135,6 +177,132 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
     def test_activation_with_other_keys_not_handoff_falls_back(self):
         self._write_file("HANDOFF.md", "root handoff\n")
         self._write_activation(raw_text="---\nenforce: strict\n---\n")
+        result = self._run_hook(self._payload())
+        self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
+
+    # -- external mode: armed ---------------------------------------------
+
+    def test_external_cold_start_surfaces_a_pointer_never_the_stamp_contents(self):
+        self._write_file("_meta/HANDOFF.md", "stale repo handoff\n")  # trio, must lose
+        self._write_file(STAMP, SENTINEL + "\n")
+        self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
+        result = self._run_hook(self._payload(source="startup"))
+        context, system = self._surfaced(result)
+        self.assertEqual(
+            context,
+            "This project's handoff lives outside the repo: Kaneo board task "
+            "DFA-233. Read it before starting. Its freshness stamp is "
+            ".claude/handoff.stamp.",
+        )
+        self.assertEqual(
+            system,
+            "atelier: surfaced external handoff pointer (Kaneo board task DFA-233).",
+        )
+        self.assertNotIn(SENTINEL, result.stdout)
+        self.assertNotIn("stale repo handoff", result.stdout)
+
+    def test_external_cold_start_surfaces_even_when_the_stamp_does_not_exist(self):
+        """The #319 defect: a cold session on a board-handoff project got
+        nothing at all. The stamp is only a freshness signal -- the handoff
+        is on the board whether or not anything has touched the stamp."""
+        self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
+        result = self._run_hook(self._payload(source="startup"))
+        context, system = self._surfaced(result)
+        self.assertEqual(
+            context,
+            "This project's handoff lives outside the repo: Kaneo board task "
+            "DFA-233. Read it before starting. Its freshness stamp is "
+            ".claude/handoff.stamp.",
+        )
+        self.assertEqual(
+            system,
+            "atelier: surfaced external handoff pointer (Kaneo board task DFA-233).",
+        )
+
+    def test_external_cold_start_without_location_asks_where_the_handoff_lives(self):
+        self._write_file(STAMP, SENTINEL + "\n")
+        self._write_mapping(mode="external", stamp=STAMP)
+        result = self._run_hook(self._payload(source="startup"))
+        context, system = self._surfaced(result)
+        self.assertEqual(
+            context,
+            "This project's handoff lives outside the repo — its freshness "
+            "stamp is .claude/handoff.stamp, but this project set no location. "
+            "Ask the user where the handoff lives.",
+        )
+        self.assertEqual(
+            system,
+            "atelier: surfaced external handoff pointer (stamp .claude/handoff.stamp).",
+        )
+        self.assertNotIn(SENTINEL, result.stdout)
+
+    def test_external_clear_source_also_counts_as_cold(self):
+        self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
+        result = self._run_hook(self._payload(source="clear"))
+        self.assertIn("Kaneo board task DFA-233", self._surfaced(result)[0])
+
+    def test_external_warm_sources_stay_silent(self):
+        """Unchanged from today: resume/compact already have the context."""
+        for source in ("resume", "compact"):
+            with self.subTest(source=source):
+                self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
+                result = self._run_hook(self._payload(source=source))
+                self._assert_silent(result)
+
+    def test_external_logs_the_mode_and_the_relative_stamp_path(self):
+        self._write_mapping(mode="external", stamp=STAMP, location=LOCATION)
+        self._run_hook(self._payload(source="startup"))
+        record = self._log_records()[-1]
+        self.assertEqual(record["handoff_mode"], "external")
+        self.assertEqual(record["handoff_path"], STAMP)
+        self.assertIs(record["surfaced"], True)
+
+    # -- external mode: inert shapes fall back to the trio -----------------
+    #
+    # As in the freshness guard's suite, these also pass against the
+    # pre-external-mode hook -- "unusable config behaves as if the key were
+    # absent" is defined as the OLD behavior. They guard the new parser
+    # against arming on a shape it now understands.
+
+    def test_external_without_a_stamp_falls_back_to_the_trio(self):
+        self._write_file("HANDOFF.md", "root handoff\n")
+        self._write_mapping(mode="external", location=LOCATION)
+        result = self._run_hook(self._payload())
+        self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
+
+    def test_external_with_an_out_of_root_stamp_falls_back_to_the_trio(self):
+        self._write_file("HANDOFF.md", "root handoff\n")
+        self._write_mapping(mode="external", stamp="../../etc/hosts",
+                            location=LOCATION)
+        result = self._run_hook(self._payload())
+        self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
+
+    def test_unknown_mode_falls_back_to_the_trio(self):
+        self._write_file("HANDOFF.md", "root handoff\n")
+        self._write_mapping(mode="board", stamp=STAMP, location=LOCATION)
+        result = self._run_hook(self._payload())
+        self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
+
+    # -- file mode written as a mapping ------------------------------------
+
+    def test_file_mode_mapping_with_a_path_matches_the_bare_scalar_form(self):
+        """Form B `{mode: file, path: X}` is defined as identical to Form A
+        `handoff: X` -- asserted as identical output, not merely similar."""
+        self._write_file("HANDOFF.md", "root handoff\n")  # trio, must stay unused
+        self._write_file("docs/HANDOFF.md", "override handoff\n")
+
+        self._write_mapping(mode="file", path="docs/HANDOFF.md")
+        mapping_result = self._run_hook(self._payload())
+
+        self._write_activation(handoff="docs/HANDOFF.md")
+        scalar_result = self._run_hook(self._payload())
+
+        self.assertEqual(mapping_result.stdout, scalar_result.stdout)
+        self.assertEqual(self._surfaced_relpath(mapping_result), "docs/HANDOFF.md")
+
+    def test_file_mode_mapping_without_a_path_falls_back_to_the_trio(self):
+        self._write_file("HANDOFF.md", "root handoff\n")
+        self._write_mapping(mode="file")
         result = self._run_hook(self._payload())
         self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
 

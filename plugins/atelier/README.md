@@ -132,8 +132,9 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - "*.config.js"
   - configs/*
 isolate: writers      # off (default when absent) | writers | a list of agent types
-handoff: docs/HANDOFF.md   # optional — override where the handoff file lives; set it only
-                           # once that file exists (see the table below)
+handoff: docs/HANDOFF.md   # optional — override where the handoff lives; set it only once
+                           # that file exists (or use a {mode: external} mapping for a
+                           # tracker or board — see the table below)
 ---
 
 # Why these paths
@@ -148,7 +149,7 @@ this project's gate is drawn where it is.
 | `enforce` | `worker-context`, `config-custody` hooks | Arms the enforcement layer. Absent, `off`, an unrecognized value, or an unparseable file all mean off. |
 | `protected` | `config-custody` hook | fnmatch globs naming the config that defines acceptance. Also accepts the inline form `protected: ["Makefile", "configs/*"]`. `*` crosses `/`, so `configs/*` covers the whole subtree — if you want direct children only, name them. |
 | `isolate` | `worktree-isolation` hook | Gives writing workers their own git worktree. `writers` covers `builder`, `manager`, `general-purpose`; a list (block or inline) names your own set. `scout`, `reviewer`, `Explore`, `Plan`, and `fork` are never isolated, even if listed — a worktree cannot see uncommitted work, which is exactly what a reviewer was sent to read. |
-| `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` hooks | Overrides where the project's handoff file lives, project-relative. Three outcomes, and the middle one is the trap. **Names an existing in-root file:** wins over the standard `_meta/HANDOFF.md` → `HANDOFF.md` → `.claude/HANDOFF.md` search. **Names an in-root file that does not exist:** still authoritative — both hooks report no handoff and do **not** fall back to the search, so setting this early turns handoff surfacing off. **Resolves outside the project root:** rejected, and the standard search runs unchanged. |
+| `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` hooks | Overrides where the project's handoff lives. Two modes. **File** (a bare project-relative path, or `{mode: file, path: ...}`): an existing in-root file wins over the standard `_meta/HANDOFF.md` → `HANDOFF.md` → `.claude/HANDOFF.md` search; an in-root file that does not exist is still authoritative and turns handoff surfacing off (the trap); a path outside the project root is rejected and the standard search runs unchanged. **External** (`{mode: external, stamp: ..., location: ...}`), for a handoff kept on a tracker or board: `stamp` is a freshness signal judged by mtime, never the handoff itself; a missing/blank/out-of-root `stamp`, or an unrecognized `mode`, leaves the key inert and the standard search runs; once armed the surfacer always points a cold session at `location`, even before the stamp is first touched. |
 
 What each `enforce` level actually does:
 

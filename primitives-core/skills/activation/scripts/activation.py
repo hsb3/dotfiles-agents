@@ -309,20 +309,23 @@ def evaluate(project_dir, modules):
             "{0} -> {1}".format(isolate_mode, ", ".join(isolate_types)),
             ["worktree-isolation"]))
 
-    # -- handoff (two hooks; raw value, then the hooks' own path validation) -
+    # -- handoff (two hooks; config, then the hooks' own path validation) ----
     handoff_sources = ["handoff-freshness-guard", "session-handoff-surfacer"]
     raw_by_hook = {
-        "session-handoff-surfacer": surfacer._load_handoff_override(project_dir),
-        "handoff-freshness-guard": freshness._load_handoff_override(project_dir),
+        "session-handoff-surfacer": surfacer._load_handoff_config(project_dir),
+        "handoff-freshness-guard": freshness._load_handoff_config(project_dir),
     }
     raw, raw_clash = _agree(raw_by_hook)
-    # The loader alone does not say whether the value survived: a path escaping the
-    # project root is silently rejected by both hooks.
+    mode = (raw or {}).get("mode")
+    # Which value has to survive path validation depends on the mode: the handoff
+    # file in file mode, the freshness stamp in external mode. Ask each hook for
+    # its own answer - the loader alone does not say whether the value survived,
+    # since a path escaping the project root is silently rejected by both.
+    key = "stamp" if mode == "external" else "path"
     resolved_by_hook = {
-        "session-handoff-surfacer": surfacer._resolve_override_path(
-            raw_by_hook["session-handoff-surfacer"], project_dir),
-        "handoff-freshness-guard": freshness._resolve_override_path(
-            raw_by_hook["handoff-freshness-guard"], project_dir),
+        name: module._resolve_override_path((raw_by_hook[name] or {}).get(key), project_dir)
+        for name, module in (("session-handoff-surfacer", surfacer),
+                             ("handoff-freshness-guard", freshness))
     }
     resolved, resolved_clash = _agree(resolved_by_hook)
 
@@ -335,11 +338,42 @@ def evaluate(project_dir, modules):
         result["rows"].append(_row(
             "handoff", "inert", "written, but blank - both hooks read no value",
             handoff_sources))
+    elif mode not in ("file", "external"):
+        result["rows"].append(_row(
+            "handoff", "inert",
+            "unrecognised mode {0!r} - expected `file` or `external`, so both hooks "
+            "ignore the key and fall back to the standard search".format(mode),
+            handoff_sources))
+    elif not (raw or {}).get(key):
+        # No value written at all is a different mistake from a value that was
+        # written and then rejected, and the operator fixes them differently:
+        # one line to add versus one line to move inside the root.
+        result["rows"].append(_row(
+            "handoff", "inert",
+            "{0} mode, but no `{1}:` - the key names nowhere to look, so both hooks "
+            "fall back to the standard search".format(mode, key), handoff_sources))
+    elif resolved is None and mode == "external":
+        result["rows"].append(_row(
+            "handoff", "inert",
+            "external mode `stamp` resolves outside the project root, so both hooks "
+            "reject it and fall back to the standard search", handoff_sources))
     elif resolved is None:
         result["rows"].append(_row(
             "handoff", "inert",
             "resolves outside the project root, so both hooks reject it and fall "
             "back to the standard search", handoff_sources))
+    elif mode == "external":
+        where = raw["location"] or "no location set"
+        result["rows"].append(_row(
+            "handoff", "armed",
+            "external - stamp {0}, handoff lives at: {1}".format(resolved, where),
+            handoff_sources))
+        if not os.path.isfile(resolved):
+            result["warnings"].append(
+                "handoff: that stamp file does not exist yet, so the freshness guard "
+                "reads it as no handoff at all and blocks a manual /compact. The "
+                "surfacer still points a cold session at the location. Touch the stamp "
+                "whenever the handoff is updated.")
     else:
         result["rows"].append(_row("handoff", "armed", resolved, handoff_sources))
         if not os.path.isfile(resolved):
