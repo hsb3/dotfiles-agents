@@ -96,6 +96,9 @@ regardless of effort.
 1. **Snapshot.** Run the adapter's export command; read the JSON it writes.
 2. **Find the work.** List items whose priority is null (untriaged), plus anything whose ranking
    looks stale — a top-band item no longer on a dated path, a blocked item whose blocker closed.
+   **Drop everything the snapshot marks `state: done` first.** A rank on a closed item changes
+   nothing and buries the live work; on a board that never triaged before, closed items are
+   usually most of the blank cells.
 3. **Judge — don't guess.** For each item, pull context from the **repo's** plan/spec/issue text
    (not the board), then apply §3. Skip epics (containers) and owner-gated or non-buildable
    items. Where there is no context to judge from, leave it blank and flag it.
@@ -109,7 +112,11 @@ regardless of effort.
   definition of done.
 - A dated critical path forces the top band regardless of effort.
 - Don't invent Impact/Effort for items you can't see. An honest blank beats a fabricated rank —
-  the next pass, or the owner, fills it.
+  the next pass, or the owner, fills it. An owner-gated item (one whose scope is a decision, not
+  a build) leaves blank too, and gets flagged.
+- Ranking is not the only output. A pass that reads every untriaged item is the pass most likely
+  to notice a duplicate, or a closed item whose defect is demonstrably still live — say so
+  instead of quietly assigning it a band.
 - Triage is meant to be cheap and frequent. Resist adding required fields; each one is a cell to
   fill on every pass.
 - The snapshot file **is** the hand-off seam. An analyst that cannot reach the board reads the
