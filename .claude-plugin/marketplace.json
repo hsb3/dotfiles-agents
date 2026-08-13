@@ -16,7 +16,7 @@
       "description": "Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows: conformant issues, source-grounded plans, meta-structure and memory upkeep, board triage, recurring status comms, and themed PowerPoint decks.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.4.5"
+      "version": "0.5.0"
     },
     {
       "author": {

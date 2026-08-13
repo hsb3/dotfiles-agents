@@ -1,0 +1,244 @@
+"""board-triage's split into a backend-agnostic core plus per-backend adapters.
+
+Two invariants and one adapter's logic. The invariants are the split itself: if the
+rubric page starts naming a backend again, or an adapter stops declaring where the
+rubric's outputs land, the skill has quietly re-fused and adding a third backend means
+editing the procedure again. Both failures are silent — an agent reading a
+GitHub-flavoured procedure against a Kaneo board just produces a wrong changeset.
+
+The Kaneo half is covered where it can be wrong on its own: what the snapshot looks
+like, what a changeset row resolves to, and that a cell already at its target value
+produces no write. The network is not mocked — a mock there asserts only that the
+author's guess about Kaneo's response shape is self-consistent.
+"""
+
+import json
+import os
+import sys
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SKILL = os.path.join(ROOT, "primitives-core", "skills", "board-triage")
+ADAPTERS = os.path.join(SKILL, "references", "adapters")
+
+sys.path.insert(0, os.path.join(SKILL, "scripts"))
+
+import kaneo_board as kb  # noqa: E402
+
+# Naming any of these on the rubric page means the judgment has been re-coupled to one
+# board. Lowercased substring match, so "gh " catches the CLI without catching "high".
+BACKEND_TOKENS = (
+    "github",
+    "graphql",
+    "projects (v2)",
+    "project (v2)",
+    "kaneo",
+    "gh ",
+    "jira",
+    "linear",
+)
+
+# Every adapter answers the same four questions, or the core cannot rely on it.
+REQUIRED_ADAPTER_SECTIONS = ("## Key", "## Export", "## Apply", "## Field map")
+
+
+def read(path):
+    with open(path) as handle:
+        return handle.read()
+
+
+class BackendAgnosticCore(unittest.TestCase):
+    """AC #1/#3: the rubric and procedure name no backend, so a new one costs an adapter."""
+
+    def test_skill_body_names_no_backend(self):
+        # Frontmatter is exempt: the description is the trigger surface, and someone
+        # asking to triage a named board should still reach this skill.
+        raw = read(os.path.join(SKILL, "SKILL.md"))
+        body = raw.split("\n---\n", 1)[1] if raw.startswith("---\n") else raw
+        offset = len(raw[: len(raw) - len(body)].splitlines())
+
+        offenders = []
+        for lineno, line in enumerate(body.splitlines(), offset + 1):
+            if "references/adapters/" in line:
+                continue  # the adapter index is the one place a backend may be named
+            low = line.lower()
+            for token in BACKEND_TOKENS:
+                if token in low:
+                    offenders.append(f"SKILL.md:{lineno}: {token!r} in {line.strip()!r}")
+        self.assertEqual([], offenders, "backend leaked into the backend-agnostic core")
+
+    def test_core_documents_the_adapter_contract(self):
+        body = read(os.path.join(SKILL, "SKILL.md"))
+        for required in ("**Snapshot**", "**Changeset**", "**Apply**", "**Field map**"):
+            self.assertIn(required, body, "adapter contract is missing a required artifact")
+
+    def test_no_dangling_board_analyst_agent(self):
+        """AC #4: the hand-off variant used to route through an agent that never existed."""
+        for dirpath, _, filenames in os.walk(SKILL):
+            for name in filenames:
+                if name.endswith(".md"):
+                    path = os.path.join(dirpath, name)
+                    self.assertNotIn("board-analyst", read(path), f"{path} names a nonexistent agent")
+
+
+class Adapters(unittest.TestCase):
+    """AC #2: two adapters, each answering the contract's questions."""
+
+    def test_at_least_two_adapters_exist(self):
+        found = sorted(n for n in os.listdir(ADAPTERS) if n.endswith(".md"))
+        self.assertGreaterEqual(len(found), 2, f"expected two or more adapters, found {found}")
+
+    def test_each_adapter_declares_the_contract(self):
+        for name in sorted(os.listdir(ADAPTERS)):
+            if not name.endswith(".md"):
+                continue
+            body = read(os.path.join(ADAPTERS, name))
+            with self.subTest(adapter=name):
+                for section in REQUIRED_ADAPTER_SECTIONS:
+                    self.assertIn(section, body, f"{name} is missing {section}")
+
+    def test_core_links_every_adapter(self):
+        body = read(os.path.join(SKILL, "SKILL.md"))
+        for name in sorted(os.listdir(ADAPTERS)):
+            if name.endswith(".md"):
+                self.assertIn(f"references/adapters/{name}", body, f"{name} is unreachable")
+
+
+COLUMNS = [
+    {"slug": "to-do", "name": "To Do", "isFinal": False},
+    {"slug": "up-next", "name": "Up Next", "isFinal": False},
+    {"slug": "done", "name": "Done", "isFinal": True},
+]
+
+BOARD = [
+    {
+        "slug": "to-do",
+        "isFinal": False,
+        "tasks": [
+            {
+                "id": "t1",
+                "number": 10,
+                "title": "untriaged thing",
+                "status": "to-do",
+                "priority": "no-priority",
+                "dueDate": None,
+                "assigneeName": None,
+                "labels": [],
+            },
+            {
+                "id": "t2",
+                "number": 11,
+                "title": "already high",
+                "status": "to-do",
+                "priority": "high",
+                "dueDate": "2026-09-01T00:00:00.000Z",
+                "assigneeName": "someone",
+                "labels": [{"id": "row-a", "name": "infra"}],
+            },
+        ],
+    },
+    {"slug": "done", "isFinal": True, "tasks": [{"id": "t3", "number": 9, "title": "shipped",
+                                                 "status": "done", "priority": "low",
+                                                 "dueDate": None, "assigneeName": None,
+                                                 "labels": []}]},
+]
+
+LABELS = [{"id": "ws-infra", "name": "infra"}, {"id": "ws-docs", "name": "docs"}]
+
+
+def snapshot():
+    snap = kb.build_snapshot({"name": "demo"}, COLUMNS, BOARD, LABELS)
+    attachments = {t["id"]: {l["name"]: l["id"] for l in t["labels"]}
+                   for c in BOARD for t in c["tasks"]}
+    for item in snap["items"]:
+        item["label_ids"] = attachments.get(item["id"], {})
+    return snap
+
+
+class KaneoSnapshot(unittest.TestCase):
+    def test_shape_matches_the_contract(self):
+        snap = snapshot()
+        self.assertEqual("kaneo", snap["board"]["backend"])
+        self.assertEqual([9, 10, 11], [i["key"] for i in snap["items"]])
+        self.assertEqual(["to-do", "up-next", "done"], snap["fields"]["status"]["options"])
+        json.dumps(snap)  # the snapshot has to survive a round-trip to the analyst
+
+    def test_untriaged_priority_reads_as_null_not_a_band(self):
+        item = next(i for i in snapshot()["items"] if i["key"] == 10)
+        self.assertIsNone(item["fields"]["priority"], "blanks must be visible to triage")
+
+    def test_native_priority_reads_back_as_a_rubric_band(self):
+        item = next(i for i in snapshot()["items"] if i["key"] == 11)
+        self.assertEqual("P1", item["fields"]["priority"])
+
+    def test_final_column_marks_state_done(self):
+        item = next(i for i in snapshot()["items"] if i["key"] == 9)
+        self.assertEqual("done", item["state"])
+
+    def test_impact_and_effort_are_absent_not_null(self):
+        """An unmapped output must not look like an unset-but-settable cell."""
+        fields = snapshot()["items"][0]["fields"]
+        self.assertNotIn("impact", fields)
+        self.assertNotIn("effort", fields)
+
+
+class KaneoChangeset(unittest.TestCase):
+    def test_parses_tsv_and_skips_header_and_comments(self):
+        rows = kb.parse_changeset("key\tfield\tvalue\n# note\n\n10\tpriority\tP1\n")
+        self.assertEqual([(10, "priority", "P1")], rows)
+
+    def test_bands_and_native_priorities_both_resolve(self):
+        self.assertEqual(("urgent", None), kb.normalize("priority", "P0"))
+        self.assertEqual(("urgent", None), kb.normalize("priority", "urgent"))
+        self.assertEqual(("no-priority", None), kb.normalize("priority", ""))
+        value, problem = kb.normalize("priority", "P9")
+        self.assertIsNone(value)
+        self.assertIn("P9", problem)
+
+    def test_plan_writes_only_differing_cells(self):
+        ops, problems = kb.plan(snapshot(), [(10, "priority", "P1"), (11, "priority", "P1")])
+        self.assertEqual([], problems)
+        self.assertEqual([("updatePriority", "high", "t1")], [op[:3] for op in ops],
+                         "#11 is already high — a no-op row must not produce a write")
+
+    def test_replanning_an_applied_changeset_is_empty(self):
+        rows = [(11, "priority", "P1"), (11, "status", "to-do"), (11, "due", "2026-09-01")]
+        ops, problems = kb.plan(snapshot(), rows)
+        self.assertEqual(([], []), (ops, problems), "apply must be idempotent")
+
+    def test_status_off_the_board_is_refused(self):
+        ops, problems = kb.plan(snapshot(), [(10, "status", "in-progress")])
+        self.assertEqual([], ops)
+        self.assertIn("not a lane on this board", problems[0])
+
+    def test_unknown_item_and_unknown_field_are_reported_not_guessed(self):
+        ops, problems = kb.plan(snapshot(), [(99, "priority", "P1"), (10, "impact", "High")])
+        self.assertEqual([], ops)
+        self.assertEqual(2, len(problems))
+        self.assertIn("not on this board", problems[0])
+        self.assertIn("no Kaneo cell", problems[1])
+
+    def test_labels_diff_into_attach_and_detach(self):
+        ops, problems = kb.plan(snapshot(), [(11, "labels", "docs")],
+                                {"infra": "ws-infra", "docs": "ws-docs"})
+        self.assertEqual([], problems)
+        self.assertEqual(
+            [("addLabel", "ws-docs", "t2"), ("removeLabel", "row-a", "t2")],
+            [op[:3] for op in ops],
+        )
+
+    def test_label_missing_from_the_workspace_is_skipped_not_invented(self):
+        ops, problems = kb.plan(snapshot(), [(10, "labels", "nope")], {"infra": "ws-infra"})
+        self.assertEqual([], ops)
+        self.assertIn("does not exist in this workspace", problems[0])
+
+    def test_group_collapses_same_valued_writes_into_one_call(self):
+        ops = [("updatePriority", "high", "t1", ""), ("updatePriority", "high", "t2", ""),
+               ("updateStatus", "up-next", "t1", "")]
+        calls = kb.group(ops)
+        self.assertEqual(2, len(calls))
+        self.assertEqual(["t1", "t2"], next(c for c in calls if c["operation"] == "updatePriority")["taskIds"])
+
+
+if __name__ == "__main__":
+    unittest.main()
