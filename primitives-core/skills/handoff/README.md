@@ -9,7 +9,10 @@ file readable in under ~10k tokens.
 Use it at session boundaries when the user says "wrap up", "update the handoff", "prepare to
 clear/compact", "write the handoff", or runs `/handoff`; use `/handoff init` to create the
 file in a project that lacks one. It updates `_meta/HANDOFF.md` (or `HANDOFF.md` /
-`.claude/HANDOFF.md`, whichever the project already uses).
+`.claude/HANDOFF.md`, whichever the project already uses, or a project-relative path the
+project's `handoff:` key names). A project whose handoff lives outside the repo entirely
+(a tracker or board) sets that key to external mode instead — the skill updates the handoff
+there and touches a freshness stamp, no HANDOFF.md involved.
 
 ## Install
 

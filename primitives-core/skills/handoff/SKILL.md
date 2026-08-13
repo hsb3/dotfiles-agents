@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Maintain the project's session-handoff file so a brand-new session can pick up work cold. Use at session boundaries when the user says "wrap up", "update the handoff", "prepare to clear/compact", "write the handoff", or runs /handoff; use "/handoff init" to create the file in a project that lacks one. Updates _meta/HANDOFF.md (or HANDOFF.md / .claude/HANDOFF.md) with current state, in-flight work, decisions made and pending, and gotchas - the externalization pass that makes a session clearable.
+description: Maintain the project's session-handoff so a brand-new session can pick up work cold - a file this skill writes directly (_meta/HANDOFF.md, HANDOFF.md, .claude/HANDOFF.md, or a per-project override), or an external tracker/board it signals via a freshness stamp when the project's handoff key is set to external mode. Use at session boundaries when the user says "wrap up", "update the handoff", "prepare to clear/compact", "write the handoff", or runs /handoff; use "/handoff init" to create the file in a project that lacks one (file mode only). Updates current state, in-flight work, decisions made and pending, and gotchas - or, in external mode, updates the external handoff and touches its stamp - the externalization pass that makes a session clearable.
 ---
 
 # Project Handoff
@@ -25,8 +25,9 @@ one, in the same order, that atelier's `handoff-freshness-guard` and
 Do not reorder or add a path here without changing the hooks' `CANDIDATE_PATHS` in lockstep - a
 mismatch means the hooks act on a different file than this skill writes.
 
-**Per-project override.** A project whose handoff lives somewhere else entirely (not one of
-the candidates above) can say so with a `handoff:` key in `.claude/atelier.local.md`:
+**Per-project override - file mode.** A project whose handoff lives somewhere else entirely
+(not one of the candidates above) can say so with a `handoff:` key in
+`.claude/atelier.local.md`:
 
 ```markdown
 ---
@@ -39,9 +40,35 @@ this skill - it wins over any standard candidate, and the standard search never 
 fallback (a stated-but-not-yet-created override means "no handoff", not "check the
 candidates"). Leave the key absent, or unset, or pointing outside the project root, and
 nothing changes: the standard candidate search above still governs. When an override is
-active, write and update the handoff there instead of at a candidate path.
+active, write and update the handoff there instead of at a candidate path. The same value
+can be spelled as a mapping, `{mode: file, path: docs/HANDOFF.md}` - identical to the scalar
+form, just explicit.
 
-**Default: a gitignored `_meta/` working desk.** On `/handoff init`, if the project has no
+**Per-project override - external mode.** A project whose handoff is not a file at all - a
+Kaneo board task, a Linear issue, a wiki page - has nothing here for this skill to write, but
+still needs the freshness guard and the cold-start surfacer to know the handoff exists. Say
+so with the mapping form:
+
+```markdown
+---
+handoff:
+  mode: external
+  stamp: .claude/handoff.stamp
+  location: Kaneo board task DFA-233
+---
+```
+
+`stamp` is a project-relative path this skill touches (`touch .claude/handoff.stamp`), never
+writes content to - it is a freshness signal standing in for a file that does not exist.
+`location` is free text pointing at where the real handoff lives; it is never path-resolved
+and never read from disk. **The session's obligation is different from file mode: update the
+external handoff first, then touch the stamp - do not write a HANDOFF.md anywhere.** Gitignore
+the stamp; it carries no content worth tracking, only an mtime. `/handoff init` and the
+"gitignored `_meta/` working desk" default below are file-mode guidance only - external mode
+has no file to initialize, since the handoff already exists on the board before atelier is
+ever pointed at it.
+
+**Default: a gitignored `_meta/` working desk (file mode).** On `/handoff init`, if the project has no
 handoff: create `_meta/` (`mkdir -p _meta`), ensure `_meta/` is in `.gitignore` (append it
 if missing), and write `_meta/HANDOFF.md`. Gitignored-by-default is deliberate: the handoff
 must stay BLUNT (candid gotchas, undecided questions, operational state) without becoming
@@ -67,9 +94,10 @@ worktrees must read/write the handoff via the MAIN checkout's absolute path.
    - what is in flight (agents, open PRs, unfinished reconciliations)
    - gotchas discovered the hard way (the things that will bite the next session)
    - what sits in the owner's court (reviews, decisions, manual steps)
-3. Edit surgically - update sections in place, do not rewrite the file. Convert relative
-   dates ("today", "yesterday") to absolute (YYYY-MM-DD).
-4. Keep the file a TIGHT BRIDGE, not a diary (target ~150 lines; hard ceiling ~200). The
+3. Edit surgically - update sections in place, do not rewrite the handoff wholesale. Convert
+   relative dates ("today", "yesterday") to absolute (YYYY-MM-DD).
+4. (File mode; a board/tracker item follows its own tracker's conventions instead.) Keep the
+   file a TIGHT BRIDGE, not a diary (target ~150 lines; hard ceiling ~200). The
    dominant failure mode is a growing chronological wave-log of dated session entries -
    each session appends another multi-paragraph block and the bridge rots into a journal.
    When that creeps in, distill in THIS order so nothing load-bearing is lost:
@@ -86,6 +114,11 @@ worktrees must read/write the handoff via the MAIN checkout's absolute path.
 6. Finish by answering, in your reply: **"what do I still know that isn't written down?"**
    If anything, write it first. Then state plainly whether the session is now clearable,
    or what keeps it un-clearable (e.g., background agents still running).
+7. **External mode only:** the pass isn't done until the stamp is touched, and the order
+   matters - update the external handoff itself first (the board task, the tracker item;
+   this skill has no file to write there), THEN run `touch <stamp>` last. An untouched stamp
+   is what makes `handoff-freshness-guard` block the next manual `/compact` even though the
+   board is current - the guard can only see the stamp's age, never the board's content.
 
 ## `/handoff init` - when no handoff exists
 
@@ -118,7 +151,7 @@ _Cold-start onboarding. Last updated: YYYY-MM-DD. Keep updated at session bounda
   is IN the formatter's scope, so it must be
   listed in the formatter's OWN ignore file (which prettier reads after `.gitignore`, so it wins).
 - Target cost: ~1-2k tokens of writing per boundary. If an update takes much longer, the
-  file has rotted - distill it as part of the pass.
+  handoff has rotted - distill it as part of the pass.
 - The handoff records ONLY what a fresh session cannot derive from the repo itself (state,
   intent, decisions, gotchas). **CLAUDE.md / AGENTS.md is HOT-LOADED into every session**, so
   any convention copied from it is pure wasted context that loads twice. Run a de-dup audit

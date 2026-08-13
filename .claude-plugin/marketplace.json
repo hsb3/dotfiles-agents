@@ -34,7 +34,7 @@
       "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, and hold protected config in custody. Run /atelier:activate to arm it in a project and see what each hook resolved.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.14.1"
+      "version": "0.15.0"
     },
     {
       "author": {
@@ -70,7 +70,7 @@
       "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, and Obsidian plugin development. Membership is derived, not curated \u2014 a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.1.4"
+      "version": "0.1.5"
     }
   ]
 }

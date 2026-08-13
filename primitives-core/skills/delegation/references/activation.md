@@ -14,7 +14,9 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - .github/workflows/*
   - "*.config.js"
 isolate: writers      # optional: off (default when absent) | writers | a list of agent types
-handoff: docs/HANDOFF.md   # optional: override the project's handoff file location
+handoff: docs/HANDOFF.md   # optional: override the project's handoff location — a file
+                           # path (above), or a {mode: external} mapping for a tracker
+                           # or board (see below)
 ---
 ```
 
@@ -44,17 +46,34 @@ the work committed first, or that dispatch left un-isolated. The hook also stand
 dispatch already sets `isolation` or `cwd`, and outside a git repository (where forcing isolation
 is a hard error rather than a no-op).
 
-`handoff` names the project's handoff file, read by `session-handoff-surfacer` (SessionStart),
-`handoff-freshness-guard` (PreCompact), and the `handoff` skill — all three otherwise search
-`_meta/HANDOFF.md`, `HANDOFF.md`, `.claude/HANDOFF.md` in that order. A set `handoff:` value is
-authoritative over the standard search, with fail-open exceptions:
+`handoff` names where the project's handoff lives, read by `session-handoff-surfacer`
+(SessionStart), `handoff-freshness-guard` (PreCompact), and the `handoff` skill — all three
+otherwise search `_meta/HANDOFF.md`, `HANDOFF.md`, `.claude/HANDOFF.md` in that order. It takes
+two forms: a bare scalar path (`handoff: docs/HANDOFF.md`), or a mapping with a `mode` sub-key
+(`file` | `external`, defaulting to `file` when the mapping omits it). The scalar form and
+`{mode: file, path: ...}` are identical.
 
-| `handoff:` value | Effect |
+**File mode** — `path` (the scalar, or the mapping's `path:`) is authoritative over the
+standard search, with fail-open exceptions:
+
+| `handoff:` (file mode) | Effect |
 |---|---|
 | absent, unparseable activation file, or an activation file with other keys but not this one | standard search runs unchanged |
-| names a path that resolves outside the project root | rejected; standard search runs unchanged |
-| names a file that exists (inside the project root) | wins over any standard candidate, even one that also exists |
-| names a file that does not (yet) exist (inside the project root) | treated as "no handoff" — does **not** fall back to the standard search, so a stale file left at a standard location is never resurrected |
+| `path` resolves outside the project root | rejected; standard search runs unchanged |
+| `path` names a file that exists (inside the project root) | wins over any standard candidate, even one that also exists |
+| `path` names a file that does not (yet) exist (inside the project root) | treated as "no handoff" — does **not** fall back to the standard search, so a stale file left at a standard location is never resurrected |
+
+**External mode** — for a handoff that lives on a tracker or board, not a file in this repo.
+`stamp` is a project-relative path the `handoff` skill touches (never writes content to) as a
+freshness signal; `location` is free text naming where the handoff actually lives — never
+path-resolved, and optional:
+
+| `handoff:` (external mode) | Effect |
+|---|---|
+| `stamp` absent, blank, or resolves outside the project root | the whole key is inert; standard search runs unchanged |
+| `mode` present but neither `file` nor `external` | inert; standard search runs unchanged |
+| `stamp` resolves inside the project root, file does not exist yet | armed: `handoff-freshness-guard` reads this as "missing" (same as a stale/absent file in file mode); `session-handoff-surfacer` still surfaces the `location` pointer on a cold session regardless — silence at cold start is the bug external mode exists to fix |
+| `stamp` resolves inside the project root, file exists | armed: freshness judged by the stamp's mtime against the same freshness window file mode uses |
 
 ## Design commitments
 

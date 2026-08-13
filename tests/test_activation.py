@@ -29,6 +29,46 @@ SKILL_MD = os.path.join(SKILL_DIR, "SKILL.md")
 
 SCRUBBED_ENV = ("CLAUDE_PROJECT_DIR", "ATELIER_ACTIVATION_FILE")
 
+COMMENT = "# "
+
+
+def _uncomment_scalar_handoff(text):
+    """The shipped example with its commented `handoff: <path>` line live.
+
+    Deliberately surgical: the example carries TWO commented `handoff:`
+    blocks (the scalar form and the external mapping form), and a blanket
+    `text.replace("# handoff:", "handoff:")` uncomments both. Two top-level
+    `handoff:` keys means last-wins picks the childless header, and the row
+    reads inert -- a false failure that says nothing about the value under
+    test. Only the line with a value after the colon is uncommented here.
+    """
+    out = []
+    for line in text.splitlines():
+        body = line[len(COMMENT):]
+        if line.startswith(COMMENT + "handoff:") and body[len("handoff:"):].strip():
+            line = body
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
+def _uncomment_mapping_handoff(text):
+    """The shipped example with its commented `handoff:` MAPPING block live —
+    the bare `# handoff:` header plus the indented sub-keys under it."""
+    lines = text.splitlines()
+    out = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        index += 1
+        if line.strip() != (COMMENT + "handoff:").strip():
+            out.append(line)
+            continue
+        out.append(line[len(COMMENT):])
+        while index < len(lines) and lines[index].startswith(COMMENT + "  "):
+            out.append(lines[index][len(COMMENT):])
+            index += 1
+    return "\n".join(out) + "\n"
+
 # The documented invocation: sibling skills all run through $CLAUDE_PLUGIN_ROOT, because
 # Bash runs from the project dir, not the skill dir.
 INVOCATION = '"${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py"'
@@ -113,7 +153,9 @@ class CheckTests(_Base):
         """The commented value still has to be a working one."""
         with open(EXAMPLE_PATH, encoding="utf-8") as fh:
             text = fh.read()
-        self.write(text.replace("# handoff:", "handoff:"))
+        armed = _uncomment_scalar_handoff(text)
+        self.assertIn("\nhandoff: ", armed)  # the transform actually fired
+        self.write(armed)
         with open(os.path.join(self.project, ".claude", "HANDOFF.md"), "w") as fh:
             fh.write("# handoff\n")
 
@@ -121,6 +163,30 @@ class CheckTests(_Base):
         self.assertEqual(code, 0, output)
         self.assertIn("armed", self.row(output, "handoff"), output)
         self.assertNotIn("WARN", output)
+
+    def test_shipped_examples_external_handoff_block_arms_when_uncommented(self):
+        """Same bar for the second commented form: the external mapping the
+        example documents has to be a working one too, not just prose."""
+        with open(EXAMPLE_PATH, encoding="utf-8") as fh:
+            text = fh.read()
+        armed = _uncomment_mapping_handoff(text)
+        self.assertIn("\nhandoff:\n", armed)  # the transform actually fired
+        self.assertIn("\n  mode: external\n", armed)
+        self.write(armed)
+
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "handoff")
+        self.assertIn("armed", row, output)
+        self.assertIn("external", row, output)
+        # The example's `location:` parsed, rather than degrading to the
+        # no-location wording.
+        self.assertIn("handoff lives at:", row)
+        self.assertNotIn("no location set", row)
+        # The example's stamp is deliberately a file a fresh project does not
+        # have yet, so the row is armed AND warned about.
+        self.assertIn("WARN", output)
+        self.assertIn("stamp file does not exist yet", output)
 
     def test_unknown_key_is_flagged_with_a_suggestion(self):
         self.write("---\nenfroce: strict\n---\n")
@@ -175,6 +241,135 @@ class CheckTests(_Base):
         self.assertIn("armed", self.row(output, "handoff"))
         self.assertIn("WARN", output)
         self.assertIn("do NOT fall back", output)
+
+    # -- handoff, mapping form ---------------------------------------------
+
+    def _write_handoff_mapping(self, **children):
+        lines = ["---", "handoff:"]
+        for key, value in children.items():
+            if value is not None:
+                lines.append("  {0}: {1}".format(key, value))
+        lines.append("---")
+        return self.write("\n".join(lines) + "\n")
+
+    def test_external_handoff_with_an_existing_stamp_is_armed(self):
+        stamp = os.path.join(self.project, ".claude", "handoff.stamp")
+        with open(stamp, "w", encoding="utf-8") as fh:
+            fh.write("touched\n")
+        self._write_handoff_mapping(mode="external", stamp=".claude/handoff.stamp",
+                                    location="Kaneo board task DFA-233")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "handoff")
+        self.assertIn("armed", row)
+        self.assertIn("external", row)
+        self.assertIn(stamp, row)
+        self.assertIn("Kaneo board task DFA-233", row)
+        self.assertNotIn("WARN", output)
+
+    def test_external_handoff_without_the_stamp_file_is_armed_with_a_warning(self):
+        self._write_handoff_mapping(mode="external", stamp=".claude/handoff.stamp",
+                                    location="Kaneo board task DFA-233")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("armed", self.row(output, "handoff"), output)
+        self.assertIn("WARN", output)
+        self.assertIn("stamp file does not exist yet", output)
+        self.assertIn("blocks a manual /compact", output)
+        self.assertIn("surfacer still points", output)
+
+    def test_external_handoff_without_a_location_says_so(self):
+        self._write_handoff_mapping(mode="external", stamp=".claude/handoff.stamp")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("no location set", self.row(output, "handoff"), output)
+
+    def test_external_handoff_without_a_stamp_is_inert(self):
+        self._write_handoff_mapping(mode="external",
+                                    location="Kaneo board task DFA-233")
+        code, output = self.check()
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "handoff")
+        self.assertIn("inert", row)
+        self.assertIn("stamp", row)
+        self.assertIn("standard search", row)
+
+    def test_external_handoff_with_an_out_of_root_stamp_is_inert(self):
+        self._write_handoff_mapping(mode="external", stamp="../../etc/passwd",
+                                    location="Kaneo board task DFA-233")
+        code, output = self.check()
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "handoff")
+        self.assertIn("inert", row)
+        self.assertIn("stamp", row)
+
+    def test_unknown_handoff_mode_is_inert_and_names_the_bad_value(self):
+        self._write_handoff_mapping(mode="board", stamp=".claude/handoff.stamp")
+        code, output = self.check()
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "handoff")
+        self.assertIn("inert", row)
+        self.assertIn("'board'", row)
+
+    def test_file_mode_mapping_arms_the_same_way_the_bare_scalar_does(self):
+        os.makedirs(os.path.join(self.project, "docs"))
+        with open(os.path.join(self.project, "docs", "HANDOFF.md"), "w") as fh:
+            fh.write("# handoff\n")
+        self._write_handoff_mapping(mode="file", path="docs/HANDOFF.md")
+        mapping_code, mapping_output = self.check()
+
+        self.write("---\nhandoff: docs/HANDOFF.md\n---\n")
+        scalar_code, scalar_output = self.check()
+
+        self.assertEqual(mapping_code, 0, mapping_output)
+        self.assertEqual(mapping_code, scalar_code)
+        self.assertEqual(self.row(mapping_output, "handoff"),
+                         self.row(scalar_output, "handoff"))
+
+    def test_a_nested_handoff_mapping_does_not_swallow_the_keys_after_it(self):
+        """Both hooks stop the mapping scan at the first unindented line. If
+        one ran on, `protected:`'s list items would land in the handoff key and
+        wipe it -- and the checker would report an inert handoff next to a
+        protected row that still looks fine, which is the confusing shape."""
+        self.write("---\nenforce: strict\nhandoff:\n  mode: external\n"
+                   "  stamp: .claude/handoff.stamp\n"
+                   "  location: Kaneo board task DFA-233\n"
+                   "protected:\n  - Makefile\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("armed", self.row(output, "handoff"), output)
+        self.assertIn("external", self.row(output, "handoff"), output)
+        self.assertIn("Makefile", self.row(output, "protected"), output)
+
+    def test_an_uppercase_handoff_mode_arms_external(self):
+        """`mode` is lowercased before it is matched. Both hooks must do it:
+        if only one does, the row is a DISAGREEMENT rather than armed."""
+        self._write_handoff_mapping(mode="EXTERNAL", stamp=".claude/handoff.stamp",
+                                    location="Kaneo board task DFA-233")
+        code, output = self.check()
+        row = self.row(output, "handoff")
+        self.assertNotIn("DISAGREEMENT", row)
+        self.assertIn("armed", row)
+        self.assertIn("external", row)
+        self.assertEqual(code, 0, output)
+
+    def test_the_mapping_form_always_registers_as_a_present_top_level_key(self):
+        """`not configured` for a written key is the silent failure this
+        whole tool exists to catch -- the nested form must never report it,
+        armed or inert."""
+        shapes = (
+            {"mode": "external", "stamp": ".claude/handoff.stamp"},
+            {"mode": "external"},
+            {"mode": "external", "stamp": "../../etc/passwd"},
+            {"mode": "board", "stamp": ".claude/handoff.stamp"},
+            {"mode": "file", "path": "docs/HANDOFF.md"},
+            {"mode": "file"},
+        )
+        for shape in shapes:
+            with self.subTest(**shape):
+                self._write_handoff_mapping(**shape)
+                _, output = self.check()
+                self.assertNotIn("not configured", self.row(output, "handoff"), output)
 
     def test_oversized_file_is_reported_as_oversized_not_as_bad_values(self):
         """Every hook bails on size before parsing, so the report must blame the size."""
