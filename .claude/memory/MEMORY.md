@@ -8,7 +8,7 @@
 - [Use subagents for labor](feedback-use-subagents-for-labor.md) — the session keeps the foreman floor; edit chains, sweeps, and verification get briefs
 - [Worktree isolation](worktree-isolation.md) — two levers to force it, and the uncommitted work a worktree can never see
 - [Subagent agent-memory litter](subagent-agent-memory-litter.md) — comes from an agent's `memory:` frontmatter key; sweep the exact stray path, never a parent dir
-- [Plugin enablement needs a per-project install](plugin-enablement-needs-per-project-install.md) — `enabledPlugins` is inert without an install record for this projectPath
+- [Plugin enablement needs a per-project install](plugin-enablement-needs-per-project-install.md) — `enabledPlugins` is inert without an install record for this projectPath; and a stale project-scope record silently pins that repo behind user scope
 - [Harness lane](harness-lane.md) — standing commit/PR/merge permission (dev only) + the claude invocation that keeps the Skill tool
 - [launchd = bash 3.2](launchd-bash32-scripts.md) — verify LaunchAgent scripts with `/bin/bash`, not the interactive shell
 - [Extender estate cohesion](extender-estate-cohesion.md) — opencode is deferred not abandoned; desk-standard is deliberately not distributed yet
