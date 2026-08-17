@@ -70,7 +70,12 @@ LABEL_ENV = {
     KIND_BUG: "PLUGIN_FEEDBACK_LABEL_BUG",
     KIND_FEATURE: "PLUGIN_FEEDBACK_LABEL_FEATURE",
 }
-DEFAULT_LABELS = {KIND_BUG: "type:fix", KIND_FEATURE: "type:feature"}
+DEFAULT_LABELS = {KIND_BUG: "type:fix", KIND_FEATURE: "type:feat"}
+
+# gh fails the whole `issue create` when a label is missing, AFTER the body is composed —
+# so a stale default costs the filer their report and buys a re-run. Matching this lets the
+# report land unlabelled instead, which is recoverable; a lost report is not.
+LABEL_MISSING = re.compile(r"could not add label", re.I)
 
 NO_FIX = "None offered."
 NO_REPRO = "Not captured."
@@ -238,14 +243,17 @@ def build_body(report):
 
 
 def build_argv(repo, title, body, label):
-    """The one gh invocation this reporter makes."""
-    return [
+    """The gh invocation this reporter makes. A falsy label omits the flag entirely —
+    the unlabelled retry below, not a caller's normal path."""
+    argv = [
         "gh", "issue", "create",
         "--repo", repo,
         "--title", title,
         "--body", body,
-        "--label", label,
     ]
+    if label:
+        argv += ["--label", label]
+    return argv
 
 
 def render_draft(report, title, body, label, target):
@@ -397,6 +405,19 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
     done = runner(build_argv(repo, title, body, label), text=True, capture_output=True)
     stdout = getattr(done, "stdout", "") or ""
     stderr = getattr(done, "stderr", "") or ""
+    if getattr(done, "returncode", 1) != 0 and LABEL_MISSING.search(stderr):
+        # The label is the least important part of the report and the only part that can
+        # fail on its own. Retry unlabelled rather than hand back a composed body the
+        # filer would have to reconstruct.
+        out.write(
+            "report_issue: label {0!r} not found in {1} — filing unlabelled; "
+            "set {2} to a label that repo carries.\n".format(
+                label, repo, LABEL_ENV[report.kind]
+            )
+        )
+        done = runner(build_argv(repo, title, body, None), text=True, capture_output=True)
+        stdout = getattr(done, "stdout", "") or ""
+        stderr = getattr(done, "stderr", "") or ""
     if getattr(done, "returncode", 1) != 0:
         out.write("report_issue: gh issue create failed.\n{0}{1}".format(stdout, stderr))
         return 1
