@@ -96,6 +96,43 @@ class Frontmatter(unittest.TestCase):
         self.assertEqual(self._fm("---\nname: x\ndescription: a clean one-liner\n---\nbody"), [])
 
 
+class PlainScalarParseability(unittest.TestCase):
+    """The manager agent shipped published for weeks with an unquoted description
+    containing ': '. YAML ended the scalar at the colon, Claude Code dropped every
+    frontmatter field without erroring, and the agent ran with no model and no tool
+    allowlist while `make ci` stayed green. These prove the gate that closes it."""
+
+    def _faults(self, fm):
+        return [why for _key, why in I._plain_scalar_faults(fm)]
+
+    def test_colon_space_in_unquoted_value_flagged(self):
+        fm = "name: manager\ndescription: owns a chain end to end: turns done into briefs"
+        self.assertTrue(any("nested mapping" in w for w in self._faults(fm)))
+
+    def test_quoting_the_value_clears_it(self):
+        fm = 'name: manager\ndescription: "owns a chain end to end: turns done into briefs"'
+        self.assertEqual(self._faults(fm), [])
+
+    def test_trailing_colon_flagged(self):
+        self.assertTrue(self._faults("name: x\ndescription: use it when:"))
+
+    def test_inline_comment_truncation_flagged(self):
+        self.assertTrue(any("truncates" in w for w in self._faults("name: x\nprotected: Makefile # note")))
+
+    def test_folded_block_scalar_is_valid_yaml_not_a_fault(self):
+        # 15 shipped SKILL.md files open their description with `>-`; the content lives on
+        # the indented lines below, which are not top-level keys.
+        fm = "name: x\ndescription: >-\n  a folded description with a colon: right here"
+        self.assertEqual(self._faults(fm), [])
+
+    def test_list_and_mapping_children_not_scanned(self):
+        self.assertEqual(self._faults("handoff:\n  mode: external\n  location: a board: really"), [])
+
+    def test_real_agents_and_skills_parse(self):
+        """The shipped tree itself — the regression this gate exists to prevent."""
+        self.assertEqual(I.main(), 0)
+
+
 class RealTree(unittest.TestCase):
     def test_shipped_tree_is_identity_neutral(self):
         self.assertEqual(I.main(), 0)
