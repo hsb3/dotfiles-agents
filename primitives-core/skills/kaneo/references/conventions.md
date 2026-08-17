@@ -68,8 +68,9 @@ left alone.
 When the branch does **not** match, the server falls back to scanning the PR title for
 `#N`, `[N]`, `(N)`, a leading `N:`, or `task N`, then the PR body for
 `task`/`closes`/`fixes`/`resolves N` — and it cannot tell a task number from a GitHub
-issue reference. A PR titled `fix the thing (#7)` on an unmatched branch moves task 7.
-Name the branch correctly and the fallback never runs.
+issue reference. A PR titled `fix the thing` with a GitHub issue number in parens on an
+unmatched branch moves the task sharing that number. Name the branch correctly and the
+fallback never runs.
 
 ## Reading back a write
 
