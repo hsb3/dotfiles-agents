@@ -57,12 +57,12 @@ ritual, the level rules, and how decisions get recorded are that skill's law, no
 the `handoff` skill's content rules. **No handoff file is tracked in this tree, and there is no
 handoff branch — never create either.**
 
-One untracked exception, `.claude/HANDOFF.md` (gitignored): a pointer stub holding no content.
-The installed `handoff-freshness-guard` can only see a file, so without it every manual
-`/compact` here is refused. Its external-mode replacement is merged to `dev` (#319) but not
-published; when it publishes, switch to a `handoff: {mode: external, stamp: …}` block in
-`.claude/atelier.local.md` and delete the stub. Update the board task first, touch the stamp
-last — the guard reads the stamp's age, never the board's content.
+`handoff-freshness-guard` knows this via the `handoff: {mode: external, …}` block in
+`.claude/atelier.local.md` (gitignored, per-project): it stats `.claude/handoff.stamp` instead
+of searching for a handoff file. **Update the board task first, touch the stamp last** — the
+guard reads the stamp's age, never the board's content, so an early touch certifies a handoff
+that has not happened. No stamp yet in a fresh clone means the first manual `/compact` is
+refused until `/handoff` runs, which is the intended answer. Needs atelier ≥ 0.15.0.
 
 Config is the five `KANEO_*` values in `.claude/settings.local.json` (gitignored — they carry a
 credential); missing or wrong, ask the owner rather than guessing. Never create a
