@@ -30,7 +30,7 @@ Names below. "L2" = available to subagent managers; the rest are root-session on
 | `get_task` | one task by id | yes |
 | `create_task` | create a task in a project | yes |
 | `update_task` | full-object update (read-merge-write) | |
-| `move_task` | move a task to another project/column | |
+| `move_task` | move a task to another **project** (`destinationProjectId` required, `destinationStatus` optional) — never a lane change within a project; that is `update_task_status` | |
 | `update_task_status` | status only | |
 | `list_task_comments` | comments on a task | yes |
 | `create_task_comment` | add a comment | yes |
@@ -38,7 +38,7 @@ Names below. "L2" = available to subagent managers; the rest are root-session on
 | `delete_task_comment` | delete your own comment | |
 | `list_workspace_labels` | labels in a workspace | yes |
 | `create_label` | create a label, optionally attached | |
-| `delete_label` | delete a label (task-attached only) | |
+| `delete_label` | delete a label row — **cascades, see below** | |
 | `attach_label_to_task` | attach an existing label | |
 | `detach_label_from_task` | detach a label | |
 | `create_task_relation` | subtask / blocks / related | |
@@ -143,9 +143,67 @@ So a migration is: import the bodies, read `results.tasks` (or re-read
 `POST /label` including `taskId`, then verify against `/task/tasks` — never against the
 import summary, which reports success for tasks it has just buried.
 
+## Labels are row-groups, and a definition delete takes the group
+
+A label name is not one row. Each name has at most one **definition row** (`taskId: null`
+— the workspace palette entry) and one **attachment row** per task carrying it.
+`GET /label/workspace/{workspaceId}` returns both kinds mixed together; `taskId` is the
+only thing that tells them apart.
+
+Writes on a definition row apply to the whole name-group, workspace-wide. Measured live
+on image 2.19.1:
+
+| Call | Result |
+|---|---|
+| `DELETE /label/{definition-row}` | **200**, and every attachment of that name is destroyed |
+| `DELETE /label/{attachment-row}` | 200, correctly scoped to that one task |
+| `PUT /label/{definition-row}` renaming it | 200, and the whole group is renamed with it |
+| `PUT /label/{definition-row}` colour only | 200, attachments untouched — no cascade |
+| `PUT /label/{id}` without `name` | 400 schema error; `name` is required even to change a colour |
+
+Two consequences worth internalising:
+
+- **The status code tells you nothing about the blast radius.** A definition delete that
+  removes 233 attachments and one that removes zero both answer `200` with the deleted
+  row echoed. Verify by re-reading the workspace, never by the response.
+- **The 400 comes afterwards, not instead.** `DELETE` on a row that no longer exists
+  answers `400 Workspace ID could not be determined` — the same missing-row 400 tasks
+  give. Delete a definition row, then try to clean up "its" attachments, and every one of
+  those follow-up calls 400s because the cascade already took them. That reads as "the
+  delete failed" while the data is already gone.
+
+So: **attachments first, definition last**, and re-read to verify. `scripts/kaneo_labels.py`
+does exactly that — `audit` for the workspace's label health, `delete --name X` which
+refuses a definition-row delete until `--cascade` acknowledges the attachment count it
+printed. Use it rather than hand-rolling the order.
+
+`audit` also reports **attachments with no definition row** — a name live on tasks that
+the palette no longer offers, so the UI cannot re-attach it. The DFA workspace carries two
+(`owner-gated`, `upstream`).
+
+## Unattributed status writes can double-step
+
+On a GitHub-wired board, status moves itself: push → `in-progress`, PR → `in-review`,
+merge → `done`. Those are logged with `userId: null`, which is normal — no human made them.
+
+The failure is an unattributed write that puts a task **back** to the status it just left,
+seconds after a real transition. The task then sits in a lane nobody chose. It self-heals
+on the next event, so it is invisible unless something looks. Confirmed live on the DFA
+board: two tasks, one reverted `in-progress` → `in-review` after 3s, the other after 43s.
+
+`scripts/kaneo_status_drift.py --project <id>` scans a board's activity for exactly that
+pattern (consecutive `status_changed` entries where the later is unattributed and undoes
+the earlier, inside a window) and exits 1 when it finds any. Do not widen it to "any
+unattributed write" — that fires on every healthy board.
+
 ## Gotchas
 
-- Missing task → 400 "Workspace ID could not be determined" (treat as 404).
+- Missing task → 400 "Workspace ID could not be determined" (treat as 404). The same 400
+  answers a `DELETE /label/{id}` for a row that is already gone.
+- **`PATCH /task/{id}` is not a route** — it answers a bare `404 Not Found` and changes
+  nothing. Use `PUT`, echoing a fresh `GET` minus nulls and `{id, number, createdAt,
+  assigneeName}`, and always re-`GET` immediately before the `PUT`: a stale echo silently
+  reverts whatever transitioned in between.
 - Omit `priority` on create → validation error; default to "medium" only when
   you genuinely can't judge — an honest "medium" beats a fabricated rank.
 - `/api/mcp` rejects `x-api-key` directly (it is OAuth 2.1 Bearer only), but a

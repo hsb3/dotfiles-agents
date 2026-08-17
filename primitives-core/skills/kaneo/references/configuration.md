@@ -111,6 +111,14 @@ process and launching a new one**. It does not mean:
 Server auth headers expand **once, at process start**. An edited token does nothing until
 the process is gone. Three restart cycles were burned on this on 2026-08-11.
 
+## Email sign-in can look like it works when it cannot
+
+Instance-level, not something an agent can route around: `sendOtpEmail` has no
+is-SMTP-configured guard. Invitation and notification mail returns `SMTP_NOT_CONFIGURED`,
+but the email-OTP sign-in path calls nodemailer and swallows the failure — so the UI says
+"check your email" for a code that will never arrive. If someone cannot sign in that way,
+check the instance's SMTP config before assuming a bad address or a spam folder.
+
 ## The 401 you will eventually hit
 
 The MCP token expires after 30 days and has no refresh. On a 401 from any kaneo MCP
