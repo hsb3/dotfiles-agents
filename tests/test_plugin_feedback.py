@@ -431,6 +431,29 @@ class _FakeRunner:
         return done
 
 
+class _LabelMissingRunner:
+    """gh's actual behaviour when the label does not exist: the whole `issue create`
+    fails, after the body has already been composed. Succeeds on the retry."""
+
+    MESSAGE = "could not add label: 'type:feature' not found\n"
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, argv, **kwargs):
+        self.calls.append((argv, kwargs))
+
+        class _Completed:
+            pass
+
+        done = _Completed()
+        first = len(self.calls) == 1
+        done.returncode = 1 if first else 0
+        done.stdout = "" if first else "https://example.invalid/issues/1\n"
+        done.stderr = self.MESSAGE if first else ""
+        return done
+
+
 class MainTests(unittest.TestCase):
     """The CLI edges, all driven with a fake runner — `gh` is never executed."""
 
@@ -470,6 +493,34 @@ class MainTests(unittest.TestCase):
         self.assertEqual(argv[:3], ["gh", "issue", "create"])
         self.assertIn("acme/widgets", argv)
         self.assertIn(R.DEFAULT_LABELS[R.KIND_BUG], argv)
+
+    def test_feature_default_is_the_label_the_marketplace_repo_carries(self):
+        """Filed twice from the field (two separate consuming projects) before it was
+        fixed: the default was `type:feature`, the repo's taxonomy is `type:feat`, so
+        every feature filing failed out of the box."""
+        self.assertEqual(R.DEFAULT_LABELS[R.KIND_FEATURE], "type:feat")
+
+    def test_missing_label_files_unlabelled_instead_of_losing_the_report(self):
+        """The label is the least important part of a report and the only part that can
+        fail on its own. Losing a composed body over it costs the filer a full re-run."""
+        runner = _LabelMissingRunner()
+        code, out, runner = self._main(self.BUG_ARGS, runner=runner)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(runner.calls), 2)
+        retry = runner.calls[1][0]
+        self.assertNotIn("--label", retry)
+        self.assertIn("--body", retry)  # the report itself survived the retry
+        self.assertIn("filing unlabelled", out)
+        self.assertIn(R.LABEL_ENV[R.KIND_BUG], out)  # names the way to fix it for good
+
+    def test_a_failure_that_is_not_about_the_label_is_not_retried(self):
+        runner = _FakeRunner(returncode=1)
+        code, _out, runner = self._main(self.BUG_ARGS, runner=runner)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(runner.calls), 1)
+
+    def test_argv_omits_the_flag_entirely_when_the_label_is_falsy(self):
+        self.assertNotIn("--label", R.build_argv("acme/widgets", "t", "b", None))
 
     def test_filing_names_the_target_repo_before_it_files(self):
         """Where the issue lands is the one thing a reporter must never keep to

@@ -97,11 +97,16 @@ queue where everything arrives `major` carries no priority signal at all.
 |---|---|---|
 | `PLUGIN_FEEDBACK_REPO` | this plugin's manifest `repository` | Where every issue is filed, as `owner/name` — one destination, not per reported plugin |
 | `PLUGIN_FEEDBACK_LABEL_BUG` | `type:fix` | Label applied to a bug |
-| `PLUGIN_FEEDBACK_LABEL_FEATURE` | `type:feature` | Label applied to a feature request |
+| `PLUGIN_FEEDBACK_LABEL_FEATURE` | `type:feat` | Label applied to a feature request |
 | `PLUGIN_FEEDBACK_DISABLED` | unset | Any non-empty value stands both reminders down |
 
 No repo is hardcoded. With neither the variable nor a manifest `repository` resolvable, the
 reporter refuses and names the variable rather than guessing a target.
+
+A label the target repo does not carry never costs you the report: `gh` fails the whole
+`issue create` over a missing label, so the reporter retries once unlabelled and tells you
+which variable to set. Point the variable at a label that repo actually has to get it
+labelled again.
 
 ## Honest scope
 
