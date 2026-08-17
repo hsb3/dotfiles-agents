@@ -21,7 +21,8 @@ scanned here.
 Folded in from the D1-dropped `validate` lane (per the desk's R5 ruling), so that intent is
 not lost:
   - frontmatter shape — every SKILL.md carries `name` + `description`; agent .md carries
-    `name` + `description`.
+    `name` + `description`. Presence is not enough: a plain scalar YAML cannot parse takes
+    the whole block down silently, so unquoted values are checked for parseability too.
   - description hygiene — no XML/angle-bracket tag in a SKILL.md `description` (Claude Cowork
     refuses to load such a skill).
   - secret hygiene — no literal credential (token/key) baked into a body.
@@ -145,6 +146,43 @@ def _fm_value(fm, key):
     return m.group(1) if m else ""
 
 
+# Faults a plain (unquoted, non-block) YAML scalar cannot survive. Claude Code drops
+# EVERY frontmatter field silently when the block fails to parse — no error, no partial
+# load — so an agent with a colon in its description ships with no model, no tools, and
+# no colour while `make ci` stays green. Quoting the value is the fix in every case.
+#
+# Deliberately three rules, not a YAML validator: stdlib has no YAML parser (zero-install
+# is an invariant), and these are the faults that actually reach the shipped tree. Block
+# scalars (`|`, `>`, `>-`) are valid and common here, so a value that opens one is exempt
+# — its content lives on the indented lines this scan already skips.
+PLAIN_SCALAR_FAULTS = (
+    (lambda v: ": " in v, "contains ': ' — YAML reads it as a nested mapping and the "
+                          "whole block fails to parse"),
+    (lambda v: v.endswith(":"), "ends with ':' — YAML reads it as a nested mapping key"),
+    (lambda v: " #" in v, "contains ' #' — YAML truncates the value at the comment"),
+)
+
+
+def _plain_scalar_faults(fm):
+    """(key, why) for every top-level frontmatter key whose unquoted scalar value YAML
+    would reject or silently truncate. Quoted values and block scalars are exempt."""
+    if fm is None:
+        return
+    for line in fm.splitlines():
+        # indented -> a block scalar's content or a mapping child, not a top-level key
+        if not line.strip() or line[:1].isspace() or line.lstrip().startswith("#"):
+            continue
+        colon = line.find(":")
+        if colon == -1:
+            continue
+        key, value = line[:colon].strip(), line[colon + 1:].strip()
+        if not value or value[:1] in ("'", '"', "|", ">"):
+            continue
+        for predicate, why in PLAIN_SCALAR_FAULTS:
+            if predicate(value):
+                yield key, why
+
+
 def scan_file(fp, rel, requires, problems):
     try:
         with open(fp, encoding="utf-8", errors="ignore") as fh:
@@ -175,6 +213,8 @@ def check_frontmatter(fp, rel, is_skill, problems):
     for need in ("name", "description"):
         if not _fm_has(fm, need):
             problems.append(f"{rel}: frontmatter missing `{need}`")
+    for key, why in _plain_scalar_faults(fm):
+        problems.append(f"{rel}: frontmatter `{key}` {why} — quote the value")
     if is_skill:
         tags = XML_TAG.findall(_fm_value(fm, "description"))
         if tags:
