@@ -9,9 +9,13 @@ directly registered) rather than calling the endpoint by hand.
 
 ## MCP tools
 
-24 tools on image 2.16.4, each a thin proxy onto the REST API. Names below;
-`tools/list` has the parameters. "L2" = available to subagent managers; the rest
-are root-session only (the plugin hook denies them in any subagent context).
+**36 tools on image 2.19.1** (verified live 2026-08-17), each a thin proxy onto the
+REST API. `tools/list` has the parameters — and is the authority. This table has been
+wrong before, which is how sessions ended up hand-rolling REST for tools that existed;
+enumerate rather than trust it if a tool you want is missing here.
+
+Names below. "L2" = available to subagent managers; the rest are root-session only
+(the plugin hook denies them in any subagent context).
 
 | Tool | Purpose | L2 |
 |---|---|---|
@@ -39,10 +43,27 @@ are root-session only (the plugin hook denies them in any subagent context).
 | `create_task_relation` | subtask / blocks / related | |
 | `get_task_relations` | relations involving a task | yes |
 | `delete_task_relation` | delete a relation by id | |
+| `update_task_assignee` | assignee only, no read-merge-write | |
+| `update_task_due_date` | due date only | |
+| `delete_task` | delete a task | |
+| `search` | search across the board | yes |
+| `list_workspace_members` | members, for assignee ids | yes |
+| `list_project_columns` | the board's lanes (read only) | yes |
+| `list_task_activity` | a task's activity trail | yes |
+| `list_notifications` | your notifications | yes |
+| `create_time_entry` / `update_time_entry` | time tracking | |
+| `get_time_entry` / `list_task_time_entries` | time tracking, read | yes |
 
-Missing from the MCP tool set at 2.16.4: assignee-only update, member discovery,
-task delete, search, column read/write, and bulk import/export. Use REST for those —
-several have perfectly good endpoints, listed below.
+**Only two gaps remain at 2.19.1**, both with REST endpoints below: **column writes**
+(create/update/delete/reorder a lane) and **bulk import/export**. Everything the older
+version of this file listed as missing — assignee-only update, member discovery, task
+delete, search, column *read* — shipped between 2.16.4 and 2.19.1.
+
+Do not build a parallel CRUD layer for those two gaps. `curl` covers them, and the
+`board-triage` skill's `scripts/kaneo_board.py` already does snapshot → changeset →
+apply over REST. Writing to Postgres directly is worse than either: the API publishes
+the events that drive the Telegram and GitHub integrations, the activity trail, and
+workflow rules, so a direct row write lands silently with no notification and no audit.
 
 ## REST endpoints
 
@@ -59,6 +80,9 @@ POST /comment/{taskId}                {"content": ...}
 GET  /project?workspaceId=...         projects
 GET  /column/{projectId}              the board's lanes, ordered by `position`
 POST /column/{projectId}              create a lane; {name, icon?, color?, isFinal?}
+PUT  /column/{id}                     rename/recolour; {name, icon?, color?, isFinal?}
+PUT  /column/reorder/{projectId}      {"columns":[{"id","position"}]} — whole set at once
+DELETE /column/{id}                   delete a lane
 GET  /task/export/{projectId}         {project, tasks:[...]} — INCLUDES labels
 POST /task/import/{projectId}         bulk create; {"tasks":[{title, status, ...}]}
 GET  /label/workspace/{workspaceId}   labels (workspace-scoped, not per-project)
@@ -74,6 +98,11 @@ wild carry lanes like `to-do`, `up-next`, `in-progress`, `documents` — a board
 
 Read the columns before writing a status. Guessing from another project's board, or from
 a remembered four-slug list, writes tasks into lanes that do not exist on the target.
+
+**A lane's name and its slug drift independently** — renaming a lane does not re-slug it.
+Live examples: a lane named `Documents` whose slug is `decisions`, and one named
+`Document` whose slug is `documents`. Match lanes on **name**, then write back the `slug`
+you read. Never derive one from the other.
 
 Provision lanes with `POST /column/{projectId}`; `isFinal` marks the terminal lane.
 
