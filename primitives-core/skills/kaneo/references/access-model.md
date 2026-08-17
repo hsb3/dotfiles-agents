@@ -66,12 +66,13 @@ glob-looking regex that matches by accident. The live tool prefix is pinned:
 a plugin-registered server surfaces `mcp__plugin_kaneo_kaneo__<tool>`, a directly
 registered one `mcp__kaneo__<tool>`. A wrong prefix fails open, and silently.
 
-## Claim ritual stays on REST at 2.16.4
+## Claim ritual stays on REST
 
-MCP's only assignee path is full-object `update_task` (read-merge-write). Racing
-the GitHub integration's push-driven status transition, a stale snapshot would
-silently revert it — the exact thing `SKILL.md` forbids. So the claim ritual
-(assignee + status + claim comment) stays the REST sequence in `SKILL.md`, root
-session only, and its claim comment is stamped by hand because REST is not
-hook-stamped. Everything else is MCP-first. When the 2.17.1 bump lands
-`update_task_assignee`, the ritual moves to MCP field-scoped tools.
+The claim ritual (assignee + status + claim comment) is the REST sequence in
+`SKILL.md`, root session only, and its claim comment is stamped by hand because REST
+is not hook-stamped. Everything else is MCP-first.
+
+Never claim with full-object `update_task`: its read-merge-write can race the GitHub
+integration's push-driven status transition and silently revert it. Use the
+field-scoped path on either transport (`PUT /task/assignee/{id}`, or the
+`update_task_assignee` tool).

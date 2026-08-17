@@ -15,6 +15,10 @@ so a future agent can act on them with no conversation context.
 MCP tools, REST endpoints, required fields, and gotchas: `references/api.md` (in
 this skill's directory). When anything 404s, `GET /openapi` for the full spec.
 
+Lane order, the handoff task, labels, and decision records follow one shape across
+every board: `references/conventions.md`. Read it before creating a board, moving a
+task into an unfamiliar lane, or attaching a label.
+
 ## Config (env vars, all mandatory)
 
 - `KANEO_API_URL` — API base, e.g. `https://<host>/api` (no fallback)
@@ -87,10 +91,13 @@ dropped Definition-of-Done sections read as a clean import.
 
 Board reads, comments, task creation, labels, and relations go through the
 kaneo MCP tools. Use REST for the claim ritual and for anything the tool set
-doesn't cover. The ritual stays on REST at image 2.16.4 because MCP's only
-assignee path is full-object `update_task`, whose read-merge-write can silently
-revert the GitHub integration's status transition; it moves to MCP once the
-2.17.1 pin bump (board task 5) lands `update_task_assignee`.
+doesn't cover.
+
+The ritual stays on REST for one reason only: the re-read in step 3 is the sole
+protection against a claim race, and it has to read what was actually written. Either
+transport is safe for step 2 — `update_task_assignee` is a field-scoped tool, so it
+carries none of the read-merge-write risk of full-object `update_task`. Prefer REST
+anyway, so the whole ritual reads as one sequence against one surface.
 
 ## Levels
 
@@ -128,14 +135,26 @@ presence or intent alone. Blocked: comment why, leave in-progress.
 ## Linked GitHub repos
 
 If the dev repo is linked to the project (GitHub integration), name work branches
-`<project-slug>-<taskNumber>[-suffix]`, lowercase (e.g. `sbx-4-retry-logic`).
-Status then moves itself: push → in-progress, PR open → in-review, merge → done —
-don't set those statuses by hand for branch-driven work; comments are still on you.
+`<project-slug>-<taskNumber>` with an optional suffix that starts with a hyphen (e.g.
+`sbx-4-retry-logic`). Matching is case-insensitive. Status then moves itself: push →
+in-progress, PR open → in-review, merge → done — don't set those statuses by hand for
+branch-driven work; comments are still on you.
+
+An unmatched branch falls back to reading task numbers out of the PR title and body,
+where it cannot tell a task number from a GitHub issue reference — the trap, and the
+full pattern list, are in `references/conventions.md`.
 
 ## Decisions
 
-A decision is a task: label `decision`, description has Context / Decision /
-Consequences, status `done` when settled, approvals as comments. Check existing
+A decision is a task: label `DECISION`, description has Context / Decision /
+Consequences, parked in the Documents lane, approvals as comments. Check existing
 decision tasks before contradicting one. Never claim a decision task (or any
 task blocked on an owner ruling) to settle it yourself — those are the owner's;
 back off and pick buildable work.
+
+## Handoff
+
+One `HANDOFF`-labelled task per board, in Documents, kept current in place rather than
+re-filed per session — and never an in-repo `HANDOFF.md`. It is not work: never claim
+it, never move it out. Details and the reason Documents must stay `isFinal`:
+`references/conventions.md`.

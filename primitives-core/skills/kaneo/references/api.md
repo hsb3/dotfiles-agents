@@ -9,9 +9,14 @@ directly registered) rather than calling the endpoint by hand.
 
 ## MCP tools
 
-24 tools on image 2.16.4, each a thin proxy onto the REST API. Names below;
-`tools/list` has the parameters. "L2" = available to subagent managers; the rest
-are root-session only (the plugin hook denies them in any subagent context).
+**36 tools** as last counted, each a thin proxy onto the REST API. `tools/list` has the
+parameters — and is the authority. This table has been wrong before, which is how
+sessions ended up hand-rolling REST for tools that existed; enumerate rather than trust
+it if a tool you want is missing here. The tool surface grows with the instance's image,
+so treat any absence here as a claim to re-check, never as a fact.
+
+Names below. "L2" = available to subagent managers; the rest are root-session only
+(the plugin hook denies them in any subagent context).
 
 | Tool | Purpose | L2 |
 |---|---|---|
@@ -39,10 +44,27 @@ are root-session only (the plugin hook denies them in any subagent context).
 | `create_task_relation` | subtask / blocks / related | |
 | `get_task_relations` | relations involving a task | yes |
 | `delete_task_relation` | delete a relation by id | |
+| `update_task_assignee` | assignee only, no read-merge-write | |
+| `update_task_due_date` | due date only | |
+| `delete_task` | delete a task | |
+| `search` | search across the board | yes |
+| `list_workspace_members` | members, for assignee ids | yes |
+| `list_project_columns` | the board's lanes (read only) | yes |
+| `list_task_activity` | a task's activity trail | yes |
+| `list_notifications` | your notifications | yes |
+| `create_time_entry` / `update_time_entry` | time tracking | |
+| `get_time_entry` / `list_task_time_entries` | time tracking, read | yes |
 
-Missing from the MCP tool set at 2.16.4: assignee-only update, member discovery,
-task delete, search, column read/write, and bulk import/export. Use REST for those —
-several have perfectly good endpoints, listed below.
+**Two gaps as last checked**, both with REST endpoints below: **column writes**
+(create/update/delete/reorder a lane) and **bulk import/export**. Confirm against
+`tools/list` before working around either — assignee-only update, member discovery, task
+delete, search and column *read* were all listed as gaps here once, and all shipped.
+
+Do not build a parallel CRUD layer for those two gaps. `curl` covers them, and the
+`board-triage` skill's `scripts/kaneo_board.py` already does snapshot → changeset →
+apply over REST. Writing to Postgres directly is worse than either: the API publishes
+the events that drive the Telegram and GitHub integrations, the activity trail, and
+workflow rules, so a direct row write lands silently with no notification and no audit.
 
 ## REST endpoints
 
@@ -59,8 +81,12 @@ POST /comment/{taskId}                {"content": ...}
 GET  /project?workspaceId=...         projects
 GET  /column/{projectId}              the board's lanes, ordered by `position`
 POST /column/{projectId}              create a lane; {name, icon?, color?, isFinal?}
-GET  /task/export/{projectId}         {project, tasks:[...]} — INCLUDES labels
-POST /task/import/{projectId}         bulk create; {"tasks":[{title, status, ...}]}
+PUT  /column/{id}                     rename/recolour; {name, icon?, color?, isFinal?}
+PUT  /column/reorder/{projectId}      {"columns":[{"id","position"}]} — whole set at once
+DELETE /column/{id}                   delete a lane
+GET  /task/export/{projectId}         {project, tasks:[...]} — labels yes, id/number NO
+GET  /task/tasks/{projectId}          identity-bearing read: id, number, position, labels
+POST /task/import/{projectId}         bulk CREATE (never updates); {"tasks":[{title, status, ...}]}
 GET  /label/workspace/{workspaceId}   labels (workspace-scoped, not per-project)
 GET  /openapi                         full spec when anything 404s
 ```
@@ -75,20 +101,47 @@ wild carry lanes like `to-do`, `up-next`, `in-progress`, `documents` — a board
 Read the columns before writing a status. Guessing from another project's board, or from
 a remembered four-slug list, writes tasks into lanes that do not exist on the target.
 
+**A lane's name and its slug drift independently** — renaming a lane does not re-slug it.
+Live examples: a lane named `Documents` whose slug is `decisions`, and one named
+`Document` whose slug is `documents`. Match lanes on **name**, then write back the `slug`
+you read. Never derive one from the other.
+
 Provision lanes with `POST /column/{projectId}`; `isFinal` marks the terminal lane.
 
-## Bulk import silently drops labels
+## Bulk import and export
 
-`POST /task/import/{projectId}` takes the whole array in one call and is the right tool
-for a migration — but its accepted fields are only `title`, `description`, `status`,
-`priority`, `startDate`, `dueDate`, `userId`. **Send `labels` and they are discarded
-without comment**: the response still reports `"failed": 0`, and the tasks come back with
-`labels: []`.
+**Import always creates, never updates.** There is no upsert: `POST /task/import/{projectId}`
+mints a new id and a new number for every element, so running the same payload twice
+gives you two copies.
 
-Since `GET /task/export/{projectId}` *does* emit labels, an export → import round-trip
-looks lossless and is not. Re-attach labels afterwards as a second pass
-(`PUT /label/{id}/task`, or `POST /label` with the task id), and verify by re-exporting
-rather than by trusting the import summary.
+`GET /task/export/{projectId}` returns `{project, tasks:[...]}` and each task carries
+`title`, `description`, `status`, `priority`, `startDate`, `dueDate`, `userId`, `labels` —
+and **no `id`, no `number`, no `position`**. That is the same payload the UI's download
+button produces, which is why a downloaded file has nothing to key a task by. Export is a
+content dump, not a snapshot you can write back from. When identity matters, read
+`GET /task/tasks/{projectId}`: it has `id`, `number`, `position`, hydrated `labels` and
+`externalLinks`, grouped by column, plus separate `archivedTasks` and `plannedTasks`
+buckets that no column contains.
+
+`POST /task/import/{projectId}` accepts `{"tasks":[{...}]}` where only `title` and
+`status` are required, and the accepted fields are `title`, `description`, `status`,
+`priority`, `startDate`, `dueDate`, `userId`. It answers with
+`{importedAt, project, results:{total, successful, failed, tasks:[...]}}` — the per-task
+entries hold the new ids, which is the only place to get them without re-reading.
+
+Three silent losses, all verified live:
+
+- **`labels` are discarded**, though export emits them. `"failed": 0`, and the tasks come
+  back with `labels: []`. So an export → import round-trip looks lossless and is not.
+- **An unknown `status` is coerced to `planned`** rather than rejected. The task is
+  created, counted as successful, and lands in the `plannedTasks` bucket where **no lane
+  shows it**. A single typo'd slug hides a task from the board with no error anywhere.
+- **`priority` defaults to `low`** when omitted, not to `medium`.
+
+So a migration is: import the bodies, read `results.tasks` (or re-read
+`/task/tasks/{projectId}`) for the new ids, attach labels as a second pass with
+`POST /label` including `taskId`, then verify against `/task/tasks` — never against the
+import summary, which reports success for tasks it has just buried.
 
 ## Gotchas
 
