@@ -9,10 +9,11 @@ directly registered) rather than calling the endpoint by hand.
 
 ## MCP tools
 
-**36 tools on image 2.19.1** (verified live 2026-08-17), each a thin proxy onto the
-REST API. `tools/list` has the parameters — and is the authority. This table has been
-wrong before, which is how sessions ended up hand-rolling REST for tools that existed;
-enumerate rather than trust it if a tool you want is missing here.
+**36 tools** as last counted, each a thin proxy onto the REST API. `tools/list` has the
+parameters — and is the authority. This table has been wrong before, which is how
+sessions ended up hand-rolling REST for tools that existed; enumerate rather than trust
+it if a tool you want is missing here. The tool surface grows with the instance's image,
+so treat any absence here as a claim to re-check, never as a fact.
 
 Names below. "L2" = available to subagent managers; the rest are root-session only
 (the plugin hook denies them in any subagent context).
@@ -54,10 +55,10 @@ Names below. "L2" = available to subagent managers; the rest are root-session on
 | `create_time_entry` / `update_time_entry` | time tracking | |
 | `get_time_entry` / `list_task_time_entries` | time tracking, read | yes |
 
-**Only two gaps remain at 2.19.1**, both with REST endpoints below: **column writes**
-(create/update/delete/reorder a lane) and **bulk import/export**. Everything the older
-version of this file listed as missing — assignee-only update, member discovery, task
-delete, search, column *read* — shipped between 2.16.4 and 2.19.1.
+**Two gaps as last checked**, both with REST endpoints below: **column writes**
+(create/update/delete/reorder a lane) and **bulk import/export**. Confirm against
+`tools/list` before working around either — assignee-only update, member discovery, task
+delete, search and column *read* were all listed as gaps here once, and all shipped.
 
 Do not build a parallel CRUD layer for those two gaps. `curl` covers them, and the
 `board-triage` skill's `scripts/kaneo_board.py` already does snapshot → changeset →

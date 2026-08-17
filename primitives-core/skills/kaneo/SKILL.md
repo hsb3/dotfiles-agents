@@ -94,12 +94,10 @@ kaneo MCP tools. Use REST for the claim ritual and for anything the tool set
 doesn't cover.
 
 The ritual stays on REST for one reason only: the re-read in step 3 is the sole
-protection against a claim race, and it has to read what was actually written. The old
-reason — that MCP's only assignee path was full-object `update_task`, whose
-read-merge-write could silently revert a GitHub status transition — **no longer
-applies**: `update_task_assignee` exists from 2.17.1 and is live on 2.19.1. Either
-transport is safe for step 2 now. Prefer REST anyway, so the whole ritual reads as one
-sequence against one surface.
+protection against a claim race, and it has to read what was actually written. Either
+transport is safe for step 2 — `update_task_assignee` is a field-scoped tool, so it
+carries none of the read-merge-write risk of full-object `update_task`. Prefer REST
+anyway, so the whole ritual reads as one sequence against one surface.
 
 ## Levels
 

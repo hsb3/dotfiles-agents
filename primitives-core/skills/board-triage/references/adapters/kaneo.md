@@ -61,7 +61,7 @@ priority band records the conclusion, and the reasoning goes in a task comment w
 keeping. Their cells are absent from the snapshot rather than `null`, so they cannot be mistaken
 for unset-but-settable.
 
-## Notes verified against Kaneo image 2.16.4
+## Notes verified against a live instance
 
 - `PUT /task/priority/{id}`, `/task/due-date/{id}`, `/task/status/{id}`, `/task/title/{id}`,
   `/task/description/{id}` and `PATCH /task/bulk` all exist. Full-object `update_task` is never
