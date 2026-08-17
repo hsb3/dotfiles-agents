@@ -84,8 +84,9 @@ POST /column/{projectId}              create a lane; {name, icon?, color?, isFin
 PUT  /column/{id}                     rename/recolour; {name, icon?, color?, isFinal?}
 PUT  /column/reorder/{projectId}      {"columns":[{"id","position"}]} — whole set at once
 DELETE /column/{id}                   delete a lane
-GET  /task/export/{projectId}         {project, tasks:[...]} — INCLUDES labels
-POST /task/import/{projectId}         bulk create; {"tasks":[{title, status, ...}]}
+GET  /task/export/{projectId}         {project, tasks:[...]} — labels yes, id/number NO
+GET  /task/tasks/{projectId}          identity-bearing read: id, number, position, labels
+POST /task/import/{projectId}         bulk CREATE (never updates); {"tasks":[{title, status, ...}]}
 GET  /label/workspace/{workspaceId}   labels (workspace-scoped, not per-project)
 GET  /openapi                         full spec when anything 404s
 ```
@@ -107,18 +108,40 @@ you read. Never derive one from the other.
 
 Provision lanes with `POST /column/{projectId}`; `isFinal` marks the terminal lane.
 
-## Bulk import silently drops labels
+## Bulk import and export
 
-`POST /task/import/{projectId}` takes the whole array in one call and is the right tool
-for a migration — but its accepted fields are only `title`, `description`, `status`,
-`priority`, `startDate`, `dueDate`, `userId`. **Send `labels` and they are discarded
-without comment**: the response still reports `"failed": 0`, and the tasks come back with
-`labels: []`.
+**Import always creates, never updates.** There is no upsert: `POST /task/import/{projectId}`
+mints a new id and a new number for every element, so running the same payload twice
+gives you two copies.
 
-Since `GET /task/export/{projectId}` *does* emit labels, an export → import round-trip
-looks lossless and is not. Re-attach labels afterwards as a second pass
-(`PUT /label/{id}/task`, or `POST /label` with the task id), and verify by re-exporting
-rather than by trusting the import summary.
+`GET /task/export/{projectId}` returns `{project, tasks:[...]}` and each task carries
+`title`, `description`, `status`, `priority`, `startDate`, `dueDate`, `userId`, `labels` —
+and **no `id`, no `number`, no `position`**. That is the same payload the UI's download
+button produces, which is why a downloaded file has nothing to key a task by. Export is a
+content dump, not a snapshot you can write back from. When identity matters, read
+`GET /task/tasks/{projectId}`: it has `id`, `number`, `position`, hydrated `labels` and
+`externalLinks`, grouped by column, plus separate `archivedTasks` and `plannedTasks`
+buckets that no column contains.
+
+`POST /task/import/{projectId}` accepts `{"tasks":[{...}]}` where only `title` and
+`status` are required, and the accepted fields are `title`, `description`, `status`,
+`priority`, `startDate`, `dueDate`, `userId`. It answers with
+`{importedAt, project, results:{total, successful, failed, tasks:[...]}}` — the per-task
+entries hold the new ids, which is the only place to get them without re-reading.
+
+Three silent losses, all verified live:
+
+- **`labels` are discarded**, though export emits them. `"failed": 0`, and the tasks come
+  back with `labels: []`. So an export → import round-trip looks lossless and is not.
+- **An unknown `status` is coerced to `planned`** rather than rejected. The task is
+  created, counted as successful, and lands in the `plannedTasks` bucket where **no lane
+  shows it**. A single typo'd slug hides a task from the board with no error anywhere.
+- **`priority` defaults to `low`** when omitted, not to `medium`.
+
+So a migration is: import the bodies, read `results.tasks` (or re-read
+`/task/tasks/{projectId}`) for the new ids, attach labels as a second pass with
+`POST /label` including `taskId`, then verify against `/task/tasks` — never against the
+import summary, which reports success for tasks it has just buried.
 
 ## Gotchas
 
