@@ -344,6 +344,13 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: opencode-sandbox
+    type: skill
+    source: primitives-core/skills/opencode-sandbox
+    origin: authored
+    disposition: qualified
+    requires: [cli:opencode-sandbox]
+    targets: [claude-code, opencode]
   - id: activate
     type: command
     source: primitives-core/commands/activate.md
