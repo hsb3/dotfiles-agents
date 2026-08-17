@@ -144,6 +144,36 @@ An unmatched branch falls back to reading task numbers out of the PR title and b
 where it cannot tell a task number from a GitHub issue reference — the trap, and the
 full pattern list, are in `references/conventions.md`.
 
+## Two operations that need a script, not a careful agent
+
+**Deleting a label.** A label name is a group of rows — one workspace definition row plus
+one per task carrying it. Deleting the definition row destroys the whole group
+workspace-wide and answers `200` regardless of how much it took, so the response cannot
+tell you what you just did. Never call `delete_label` on a row you have not identified:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/kaneo/scripts/kaneo_labels.py" audit
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/kaneo/scripts/kaneo_labels.py" delete --name X
+```
+
+`delete` refuses outright while attachments exist, printing the count and the task ids;
+`--cascade` accepts that, drops attachments before the definition, and verifies by
+re-reading rather than by status code. `audit` also names labels whose attachments have no
+definition row — live on tasks, absent from the palette.
+
+**Checking a board for reverted statuses.** A GitHub-wired board's transitions are
+unattributed (`userId: null`) and normal; the defect is an unattributed write that undoes
+the previous transition seconds later, parking a task in a lane nobody chose. It
+self-heals on the next event, so nothing surfaces it:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/kaneo/scripts/kaneo_status_drift.py" --project <id>
+```
+
+Exits 1 when it finds drift. Run it before trusting a board's lanes after a wave of
+branch-driven work. Both scripts and the measured API contract behind them:
+`references/api.md`.
+
 ## Decisions
 
 A decision is a task: label `DECISION`, description has Context / Decision /
