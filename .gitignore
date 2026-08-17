@@ -54,8 +54,8 @@ harness/campaign-logs/
 # per-project plugin activation (atelier.local.md and friends) — local by convention
 .claude/*.local.md
 
-# handoff pointer stub. The real handoff is Kaneo task DFA-233; this file only exists so
-# atelier's file-only freshness guard stops refusing every manual /compact. Retire it once
-# #319's external-mode stamp publishes. The guard hard-codes the name, so it cannot use the
-# *.local.md rule above.
-.claude/HANDOFF.md
+# handoff freshness signal. The handoff itself is Kaneo task DFA-233; this file carries no
+# content, only an mtime, and machine-local mtime is not something to share. A fresh clone
+# has no stamp, so the guard refuses the first manual /compact until /handoff runs — which
+# is the correct answer for a session that has not written a handoff yet.
+.claude/handoff.stamp
