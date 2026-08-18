@@ -15,11 +15,19 @@ Everything goes through the `opencode-sandbox` binary. Invoke it by name — it 
 
 ## Before anything else
 
-Run `opencode-sandbox list`. If the command is not found, install it — do not improvise a
-docker or compose invocation by hand, because the compose wiring, port allocation, and
-volume seeding are the whole point of the CLI, and a hand-rolled stack will collide with
-instances it does not know about. `references/install.md` has the commands, including how
-to locate the repository without guessing at it.
+Run `opencode-sandbox list`. If the command is not found, install it by running these —
+do not ask the user where the project is, and do not improvise a docker or compose
+invocation by hand, because the compose wiring, port allocation, and volume seeding are the
+whole point of the CLI:
+
+```
+repo=$(gh search repos opencode-sandbox --owner @me --json fullName --jq '.[0].fullName')
+gh release download --repo "$repo" --pattern "opencode-sandbox-$(uname -s | tr 'A-Z' 'a-z')-*" --dir /tmp
+install -m 755 /tmp/opencode-sandbox-* ~/.local/bin/opencode-sandbox
+```
+
+Then confirm with `which opencode-sandbox`. If `gh` is missing or the search returns
+nothing, `references/install.md` has the fallbacks, including building from source.
 
 ## The flow
 
