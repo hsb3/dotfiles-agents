@@ -35,6 +35,15 @@ against user-scope 0.11.0. `claude plugin update <id>` updates **user scope only
 success while reaching none of them; each needs `claude plugin update <id> --scope project` run
 from inside the repo.
 
+**A third trap, 2026-08-17: `claude plugin marketplace update <mkt>` does NOT install the new
+version.** It refreshes the catalog and answers `✔ Successfully updated marketplace`, while the
+installed copy under `~/.claude/plugins/cache/<mkt>/<plugin>/<version>/` stays where it was —
+so a fresh session keeps loading the OLD body. This invalidated a verification run here: a
+just-published skill fix was "retested" against the previous version and read as still broken.
+`claude plugin install <id>@<marketplace>` afterwards materializes the new version directory.
+Verify by listing the cache dir and grepping the installed file for a string only the new
+version contains — never infer "published" means "loaded".
+
 So read `~/.claude/plugins/installed_plugins.json` and check **every** record's `scope` +
 `version`, not just whether one exists. Do not infer "not installed here" from a project record's
 absence, and do not infer "current" from a user-scope update.
