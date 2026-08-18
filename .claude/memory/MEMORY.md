@@ -13,3 +13,4 @@
 - [launchd = bash 3.2](launchd-bash32-scripts.md) — verify LaunchAgent scripts with `/bin/bash`, not the interactive shell
 - [Extender estate cohesion](extender-estate-cohesion.md) — opencode is deferred not abandoned; desk-standard is deliberately not distributed yet
 - [Reproduce before fixing a card](reproduce-before-fixing-a-card.md) — a card is the filer's inference, not a measurement; stale cards and partial closes regenerate work
+- [Identity gate blocks personal-repo installs](identity-gate-blocks-personal-repo-installs.md) — the owner handle is an unconditional ban with no exemption; `gh search --owner @me` is the only legal shape and only works for the owner
