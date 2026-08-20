@@ -1,14 +1,23 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Seven plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (repo standards, planning, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), obsidian-toolkit (Obsidian plugin development), and plugin-feedback (report a plugin defect without leaving the session).",
-    "version": "0.7.0"
+    "description": "Eight plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (repo standards, planning, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), and plugin-feedback (report a plugin defect without leaving the session).",
+    "version": "0.8.0"
   },
   "name": "dotfiles-agents",
   "owner": {
     "name": "Henry S. Burden III"
   },
   "plugins": [
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, and hold protected config in custody. Run /atelier:activate to arm it in a project and see what each hook resolved.",
+      "name": "atelier",
+      "source": "./plugins/atelier",
+      "version": "0.15.0"
+    },
     {
       "author": {
         "name": "Henry S. Burden III"
@@ -31,15 +40,6 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, and hold protected config in custody. Run /atelier:activate to arm it in a project and see what each hook resolved.",
-      "name": "atelier",
-      "source": "./plugins/atelier",
-      "version": "0.15.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
       "description": "Track a repo's work on a live Kaneo board instead of in-repo task files, so parallel sessions stop claiming the same task and no branch grows its own backlog. Ships the workflow skill, the board's MCP server definition, a reference manager agent, and hooks that keep claim authority in the root session, block board writes while the config is incomplete, catch a stray MCP registration that would silently authenticate the owner instead of the agent, and stamp every write with its agent and session. Configure with five KANEO_* env vars; nothing about an instance is baked in.",
       "name": "kaneo",
       "source": "./plugins/kaneo",
@@ -49,7 +49,7 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Build Obsidian plugins against the real API \u2014 lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP \u2014 and automate vaults from the terminal with the official Obsidian CLI.",
+      "description": "Build Obsidian plugins against the real API — lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP — and automate vaults from the terminal with the official Obsidian CLI.",
       "name": "obsidian-toolkit",
       "source": "./plugins/obsidian-toolkit",
       "version": "0.1.3"
@@ -67,7 +67,16 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated \u2014 a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook.",
+      "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes) plus a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment.",
+      "name": "pocketbase",
+      "source": "./plugins/pocketbase",
+      "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
       "version": "0.1.8"
