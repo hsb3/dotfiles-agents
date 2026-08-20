@@ -72,7 +72,10 @@ nohup ./pocketbase serve --http=127.0.0.1:8090 > pb.log 2>&1 &
 python scripts/pb_health.py
 ```
 
-As of 2026-02-27, latest stable release is `v0.36.5`.
+Never hardcode a latest-version claim: resolve it at run time with the release query in
+Bootstrap above, and read the version of the instance actually in front of you
+(`./pocketbase --version`). PocketBase moves fast enough that a pinned claim in a doc is
+stale before it is read.
 
 ## 1. Design & Safety Checklist
 

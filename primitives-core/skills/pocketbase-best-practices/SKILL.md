@@ -38,20 +38,26 @@ Rough split:
 
 ## Field notes
 
-Verified findings that extend the vendored base. Each names how it was established.
+`references/field-notes.md` carries findings from real PocketBase projects that the vendored
+rules do not cover, or cover less precisely. **Where a field note disagrees with `base/`, the
+field note wins** — those came from running instances, the base came from documentation.
+Each is tagged PROVEN (observed live, with the observation quoted), REPORTED (settled knowledge
+from a project that hit it), or INFERRED (from docs, unexercised).
 
-### Protected-file tokens are reusable, not single-use
+Read it before acting on a base rule in these areas — it is where the expensive surprises are:
 
-`base/rules/file-serving.md` says a file access token is "valid for limited time" and leaves
-reuse undefined. It is **reusable for its full lifetime** (approximately 2 minutes), not
-invalidated on first use.
+| Area | The kind of thing it corrects |
+|---|---|
+| Access control | Rules that look correct and are public; denial returns 200-empty or 404, never 403 |
+| Filters | Filters are unparameterized strings; hidden fields silently never match |
+| Hooks | Hooks run before migrations; request-scoped hooks skip programmatic writes; read-then-write races |
+| Schema | Field types cannot change in place; views reject UNION and non-unique ids |
+| Auth | `upsert` on a superuser invalidates every live session; the stock auth collection allows open signup |
+| Files | A fetch wrapper that always JSON-stringifies destroys uploads silently |
+| Operations | `serve` errors exit 0; the logs API is ~3 seconds behind |
 
-Established live against PocketBase v0.39.9: the same token fetched the same protected file
-repeatedly, returning 200 every time.
-
-Consequence for design: fetch one token per burst of protected-file reads and reuse it across
-the batch. Calling `pb.files.getToken()` per file is a round trip you do not need, and code
-written defensively against a single-use assumption is doing needless work.
+The single most repeated finding across projects: **custom routes bypass collection rules
+entirely.** Rules protect collection endpoints, not your API surface.
 
 ## Version skew
 
