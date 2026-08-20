@@ -26,7 +26,8 @@ __pycache__/
 *.pyc
 .ruff_cache/
 
-# --- runtime logs (e.g. foreman-kit subagent-telemetry -> logs/delegation.jsonl) ---
+# --- runtime logs. Hook ledgers write outside the project, under
+# ${XDG_DATA_HOME:-~/.local/share}/agent-logs/; anything left here is stale. ---
 logs/
 *.log
 

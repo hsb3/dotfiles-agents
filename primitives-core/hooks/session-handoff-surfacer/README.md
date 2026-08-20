@@ -16,7 +16,7 @@ instead surface a pointer to a handoff that lives outside the repo altogether.
 
 Env-overridable; shipped wiring leaves both at hook.py's built-in defaults:
 - `HANDOFF_SURFACER_HEAD_LINES` — default 15 (lines of the handoff excerpted).
-- `HANDOFF_SURFACER_LOG_PATH` — default `<project-root>/logs/handoff-surfacer.jsonl`.
+- `HANDOFF_SURFACER_LOG_PATH` — default `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/handoff-surfacer.jsonl`.
 
 **Per-project handoff location override.** A project that keeps its handoff somewhere
 other than the standard candidate paths can say so with a `handoff:` key in

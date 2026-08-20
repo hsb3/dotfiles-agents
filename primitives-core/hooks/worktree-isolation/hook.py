@@ -28,9 +28,27 @@ Activated by `<project>/.claude/atelier.local.md`: `isolate: writers` arms the
 built-in writer set, `isolate:` as a list arms exactly the named agent types.
 Anything else stays silent.
 
-Stateless: no ledger, no state file, writes nothing anywhere. Fails open on
-every error path — a hook that cannot decide must let the dispatch through
-unchanged, never block it.
+No state file, and no writes into the project. The one thing it does record
+is its own decisions, to the shared `worktree-isolation` stream (see
+`_lib/agentlog.py`): a hook that silently rewrites a dispatch is otherwise
+invisible to anyone asking why a worker landed in a different checkout.
+
+The ledger starts at activation, not before. Once a project has armed the
+hook, every Agent dispatch it sees produces exactly one row — `isolated: true`
+for a rewrite, `isolated: false` with a `reason` for one it leaves alone. A
+project that has not armed it writes no decision rows, which is the same rule
+config-custody follows: an un-adopted hook must stay silent rather than open
+a ledger nobody asked for. The cheap pre-activation exits (wrong tool, an
+isolation already set, a `cwd` already present) are likewise unlogged — they
+are reached before the activation file is read.
+
+The one exception is the error path, which logs regardless of activation. It
+has to: it is reached when the hook could not get far enough to know whether
+the project armed it, and a hook crashing on every dispatch while staying
+silent is precisely the outage this ledger exists to make visible.
+
+Fails open on every error path — a hook that cannot decide must let the
+dispatch through unchanged, never block it.
 
 Doc sources verified against:
   https://code.claude.com/docs/en/hooks
@@ -57,6 +75,15 @@ must stay compatible with Python 3.9.
 import json
 import os
 import sys
+import traceback
+
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -69,6 +96,8 @@ ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
 ACTIVATION_MAX_BYTES = 256 * 1024
 
 TOOL_NAME = "Agent"
+LOG_STREAM = "worktree-isolation"
+LOG_PATH_ENV = "WORKTREE_ISOLATION_LOG_PATH"
 WORKTREE = "worktree"
 
 OFF = "off"
@@ -372,13 +401,25 @@ def main():
         if mode == OFF:
             sys.exit(0)
 
+        # Armed from here on, so every remaining path is one ledger row.
+        log = agentlog.make_logger(
+            LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(payload.get("cwd")),
+        )
         agent_type = tool_input.get("subagent_type") or DEFAULT_AGENT_TYPE
+        row = {
+            "session_id": payload.get("session_id"),
+            "agent_type": agent_type,
+            "mode": mode,
+        }
+
         if not _should_isolate(agent_type, armed_types):
+            log(dict(row, isolated=False, reason="agent type not armed"))
             sys.exit(0)
 
         # Checked last: the walk is the most expensive step, and every cheaper
         # inert path above has already returned.
         if not _is_git_repo(project_dir):
+            log(dict(row, isolated=False, reason="project dir is not a git repo"))
             sys.exit(0)
 
         updated = dict(tool_input)
@@ -396,12 +437,24 @@ def main():
                 agent_type=agent_type, mode=mode,
             ),
         })
+        log(dict(row, isolated=True, reason=None))
         sys.exit(0)
 
-    except Exception:
-        # Fail open and silent: an un-isolated worker is the pre-hook status quo
-        # and merely risky, while a hook that crashes loudly on every dispatch
-        # is an outage. Nothing here is worth blocking a delegation over.
+    except Exception as e:
+        # Fail open: an un-isolated worker is the pre-hook status quo and merely
+        # risky, while a hook that crashes loudly on every dispatch is an
+        # outage. Nothing here is worth blocking a delegation over. Silent to
+        # the caller, but not to the ledger — a rewrite that should have
+        # happened and did not is exactly what someone will come looking for.
+        try:
+            agentlog.append(LOG_STREAM, {
+                "isolated": False,
+                "reason": "error",
+                "error": "{0}: {1}".format(type(e).__name__, e),
+                "traceback": traceback.format_exc(limit=3),
+            }, agentlog.resolve_project(), LOG_PATH_ENV)
+        except Exception:
+            pass
         sys.exit(0)
 
 

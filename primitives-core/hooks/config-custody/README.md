@@ -83,7 +83,7 @@ ignored. `protected:` also accepts the inline form `protected: ["Makefile", "con
 |---|---|---|
 | `CLAUDE_PROJECT_DIR` | set by Claude Code | Jurisdiction anchor; falls back to the payload `cwd` |
 | `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Activation file location |
-| `ATELIER_CUSTODY_LOG_PATH` | `$CLAUDE_PROJECT_DIR/logs/config-custody.jsonl` | Ledger |
+| `ATELIER_CUSTODY_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/config-custody.jsonl` | Ledger |
 
 ## Design notes
 
@@ -117,12 +117,27 @@ ignored. `protected:` also accepts the inline form `protected: ["Makefile", "con
 
 ## Ledger
 
-One row per **match**, appended to `logs/config-custody.jsonl` — denials and, in advisory mode,
-would-be denials. Edits that match nothing are not logged, so the file stays a record of contested
-paths rather than a transcript of every edit:
+One row per **match**, appended to the `config-custody` stream — denials and, in advisory
+mode, would-be denials.
+
+Ledgers live outside the project, in one partitioned root shared with every other hook in
+this plugin (and with the opencode mirror, which writes under its own `<harness>` segment):
+
+```
+${XDG_DATA_HOME:-~/.local/share}/agent-logs/<harness>/<plugin>/<stream>.jsonl
+```
+
+Every row carries an identity envelope — `v`, `plugin`, `harness`, `stream`, `ts`
+(ISO-8601 UTC), `project` — so a row stays attributable after the files are concatenated.
+The append path is `hooks/_lib/agentlog.py`; no hook writes its own rows.
+
+Edits that match nothing are not logged, so the stream stays a record of contested paths
+rather than a transcript of every edit:
 
 ```json
-{"session_id":"...","agent_type":"builder","tool_name":"Edit","path":"Makefile",
+{"v":1,"plugin":"atelier","harness":"claude-code","stream":"config-custody",
+ "ts":"2026-08-20T15:37:08.666Z","project":"/repo/x",
+ "session_id":"...","agent_type":"builder","tool_name":"Edit","path":"Makefile",
  "pattern":"Makefile","mode":"strict","denied":true}
 ```
 

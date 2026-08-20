@@ -61,15 +61,23 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only).
 import json
 import os
 import sys
-import time
 import traceback
+
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
 HEAD_LINES_DEFAULT = 15
-LOG_FILENAME_DEFAULT = "handoff-surfacer.jsonl"
+LOG_STREAM = "handoff-surfacer"
+LOG_PATH_ENV = "HANDOFF_SURFACER_LOG_PATH"
 
 # Same discovery precedence as handoff-freshness-guard/hook.py. Used only
 # when no `handoff:` key is armed — neither a file override nor an external
@@ -99,8 +107,8 @@ ACTIVATION_MAX_BYTES = 256 * 1024
 def _resolve_project_dir(cwd):
     """CLAUDE_PROJECT_DIR env anchor first, else the resolved payload cwd —
     same anchor config-custody/worker-context use to locate
-    .claude/atelier.local.md, and the same one this hook's own log path
-    already prefers (see _resolve_log_path)."""
+    .claude/atelier.local.md, and the same anchor agentlog.resolve_project
+    uses for the `project` field on this hook's rows."""
     base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
     try:
         return os.path.abspath(base)
@@ -308,38 +316,6 @@ def _env_path(name, default):
 HEAD_LINES = _env_int("HANDOFF_SURFACER_HEAD_LINES", HEAD_LINES_DEFAULT)
 
 
-def _resolve_log_path(cwd):
-    """HANDOFF_SURFACER_LOG_PATH override, else <project-root>/logs/handoff-surfacer.jsonl.
-
-    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
-    commands), so the hook is portable across any project that installs the
-    atelier plugin, not just this one. The payload cwd is a last resort
-    only — anchoring on cwd scatters stray logs/ dirs into whatever
-    subdirectory an agent happens to be running in.
-    """
-    override = os.environ.get("HANDOFF_SURFACER_LOG_PATH")
-    if override:
-        return override
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
-    return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
-
-
-# ---------------------------------------------------------------------------
-# Logging (best-effort; must never raise into the caller)
-# ---------------------------------------------------------------------------
-
-def _log(log_path, record):
-    try:
-        d = os.path.dirname(log_path)
-        if d:
-            os.makedirs(d, exist_ok=True)
-        record.setdefault("ts", time.time())
-        with open(log_path, "a") as f:
-            f.write(json.dumps(record, default=str) + "\n")
-    except Exception:
-        pass
-
-
 # ---------------------------------------------------------------------------
 # Handoff discovery + head excerpt
 # ---------------------------------------------------------------------------
@@ -428,12 +404,14 @@ def main():
         cwd = payload.get("cwd") or os.getcwd()
         source = payload.get("source", "unknown")
 
-        log_path = _resolve_log_path(cwd)
+        log = agentlog.make_logger(
+            LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(cwd),
+        )
 
         path, relpath, mode, location = _find_handoff(cwd)
 
         if source not in SURFACE_SOURCES:
-            _log(log_path, {
+            log({
                 "session_id": session_id,
                 "source": source,
                 "handoff_path": relpath,
@@ -457,7 +435,7 @@ def main():
             }
             print(json.dumps(out))
 
-            _log(log_path, {
+            log({
                 "session_id": session_id,
                 "source": source,
                 "handoff_path": relpath,
@@ -467,7 +445,7 @@ def main():
             sys.exit(0)
 
         if path is None:
-            _log(log_path, {
+            log({
                 "session_id": session_id,
                 "source": source,
                 "handoff_path": None,
@@ -491,7 +469,7 @@ def main():
         }
         print(json.dumps(out))
 
-        _log(log_path, {
+        log({
             "session_id": session_id,
             "source": source,
             "handoff_path": relpath,
@@ -504,8 +482,8 @@ def main():
     except Exception as e:
         # Fail-open: never break session start on our own error.
         try:
-            _log(
-                _resolve_log_path(None),
+            agentlog.append(
+                LOG_STREAM,
                 {
                     "session_id": None,
                     "source": None,
@@ -513,6 +491,8 @@ def main():
                     "error": f"{type(e).__name__}: {e}",
                     "traceback": traceback.format_exc(limit=3),
                 },
+                agentlog.resolve_project(),
+                LOG_PATH_ENV,
             )
         except Exception:
             pass
