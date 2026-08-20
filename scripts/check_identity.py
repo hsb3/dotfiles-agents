@@ -119,6 +119,26 @@ def _requires_by_source():
     return out
 
 
+def _vendored_bases():
+    """Repo-relative `<source>/base` prefix for every `origin: vendored` roster entry.
+
+    A vendored body is third-party bytes held verbatim under `base/` (docs/vendoring-rule.md):
+    it carries none of OUR personalization, and it cannot be corrected here — a hand-edit
+    registers as `diverged` against the pinned ref and fails the provenance gate. So the
+    IDENTITY token scan, whose whole subject is our own name/org/repo/issue leaking into a
+    shipped body, is both inapplicable and unfixable there. Derived from the roster rather
+    than hardcoded, so a new vendored entry is covered the day it lands.
+
+    Machine-tied paths and secret literals are still scanned: those would be real defects in
+    any bytes we ship, whoever wrote them.
+    """
+    bases = []
+    for e in parse_roster(os.path.join(REPO, "primitives-core.yaml")):
+        if (e.get("origin") or "").strip() == "vendored":
+            bases.append(os.path.join(e.get("source", ""), "base") + os.sep)
+    return tuple(b for b in bases if b.strip(os.sep))
+
+
 def _owning_source(rel):
     """The roster source path that owns a repo-relative file (its skill/agent/command/hook)."""
     parts = rel.split(os.sep)
@@ -183,16 +203,17 @@ def _plain_scalar_faults(fm):
                 yield key, why
 
 
-def scan_file(fp, rel, requires, problems):
+def scan_file(fp, rel, requires, problems, skip_identity=False):
     try:
         with open(fp, encoding="utf-8", errors="ignore") as fh:
             body = fh.read()
     except OSError as e:
         problems.append(f"{rel}: unreadable ({e})")
         return
-    for rx, why in IDENTITY:
-        if rx.search(body):
-            problems.append(f"{rel}: {why}")
+    if not skip_identity:
+        for rx, why in IDENTITY:
+            if rx.search(body):
+                problems.append(f"{rel}: {why}")
     for rx, why in HARD_MACHINE:
         if rx.search(body):
             problems.append(f"{rel}: {why}")
@@ -228,6 +249,7 @@ def check_frontmatter(fp, rel, is_skill, problems):
 def main():
     problems = []
     req_by_src = _requires_by_source()
+    vendored = _vendored_bases()
     for root in SCAN_ROOTS:
         if not os.path.isdir(root):
             continue
@@ -243,7 +265,8 @@ def main():
                 src = _owning_source(rel)
                 requires = req_by_src.get(src, set()) if src else set()
                 if f.endswith(TEXT_EXT):
-                    scan_file(fp, rel, requires, problems)
+                    scan_file(fp, rel, requires, problems,
+                              skip_identity=rel.startswith(vendored))
                 if f == "SKILL.md":
                     check_frontmatter(fp, rel, True, problems)
                 elif root.endswith("agents") and f.endswith(".md") and f.lower() != "readme.md":

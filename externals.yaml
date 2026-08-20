@@ -37,3 +37,21 @@ externals:
     ref: fa0fa64bdc967915dc8399e803be67759e1e62b8
     provides: "The .pptx create/edit/analyze base composed under the authored pptx-themes skill (vendored verbatim in primitives-core/skills/pptx-themes/base/). Triggers whenever a .pptx or .potx file is input, output, or referenced. Creates new decks via pptxgenjs scripting; edits existing decks/templates by unzip, modify slide XML, rezip, with scripts to duplicate/reorder slides, prune orphaned parts, and schema/relationship-validate the OOXML; extracts slide text via markitdown and renders labeled thumbnail grids for layout selection; converts formats via headless LibreOffice. Supplies file-format mechanics only — pptx-themes supplies the palette/motif/design-judgment layer this skill omits."
     targets: [claude-code]
+  - id: pocketbase-best-practices
+    kind: skill
+    upstream: https://github.com/greendesertsnow/pocketbase-skills
+    path: skills/pocketbase-best-practices
+    ref: c573263e84a2066d0564f428dd8160e74fc54226
+    provides: "63 prioritized PocketBase design rules across 9 categories (collection design, API rules and access control, auth, SDK usage, query performance, realtime, file handling, deployment, server-side extending), vendored verbatim in primitives-core/skills/pocketbase-best-practices/base/ under the authored routing + field-notes layer. Supplies the rule corpus only — the authored layer supplies the operational/design split and the verified findings that extend it."
+    targets: [claude-code]
+
+# ── Not externals: recorded here so the absence is deliberate, not an oversight. ──
+#
+# `pocketbase` (the operational skill, primitives-core/skills/pocketbase) has NO entry above
+# because it has no upstream to pin. It was authored outside any public repository and reached
+# its consuming projects by hand-copying; the pre-consolidation original no longer exists on
+# disk, and no public repo hosts it. It therefore fails criterion 3 of
+# docs/vendoring-rule.md (pinnable + attributable) and is classified `origin: authored` in the
+# roster — first-party content this repo maintains, not third-party content awaiting a pin.
+# This is the specific reason required by the vendored-skill provenance-coverage work, not a
+# bare "skipped".

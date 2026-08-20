@@ -16,14 +16,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import check_identity as I  # noqa: E402
 
 
-def _scan(content, requires=frozenset()):
+def _scan(content, requires=frozenset(), skip_identity=False):
     """Write content to a temp file, run scan_file, return the problem strings."""
     d = tempfile.mkdtemp()
     fp = os.path.join(d, "SKILL.md")
     with open(fp, "w", encoding="utf-8") as fh:
         fh.write(content)
     problems = []
-    I.scan_file(fp, "fixture/SKILL.md", set(requires), problems)
+    I.scan_file(fp, "fixture/SKILL.md", set(requires), problems,
+                skip_identity=skip_identity)
     return problems
 
 
@@ -73,6 +74,49 @@ class Precision(unittest.TestCase):
 
     def test_neutral_body_clean(self):
         self.assertEqual(_scan("Produce your recurring reports for the owner."), [])
+
+
+class VendoredBaseExemption(unittest.TestCase):
+    """A vendored `base/` holds third-party bytes verbatim: it carries none of OUR
+    personalization, and correcting it there is forbidden (a hand-edit registers as
+    `diverged` against the pinned ref). So IDENTITY tokens are not scanned inside one --
+    but machine paths and secrets, which would be real defects in any bytes we ship, still
+    are. The exempt prefixes are derived from the roster, never hardcoded."""
+
+    def test_identity_token_exempt_inside_vendored_base(self):
+        # "the #1 source of" is an idiom, not an issue reference
+        body = "Unencrypted settings are the #1 source of credential leaks.\n"
+        self.assertTrue(_scan(body))                       # red without the exemption
+        self.assertFalse(_scan(body, skip_identity=True))  # green inside a vendored base
+
+    def test_secret_literal_still_flagged_inside_vendored_base(self):
+        p = _scan("token: ghp_" + "a" * 24 + "\n", skip_identity=True)
+        self.assertTrue(any("PAT literal" in x for x in p))
+
+    def test_machine_path_still_flagged_inside_vendored_base(self):
+        p = _scan("see /Users/someone/notes\n", skip_identity=True)
+        self.assertTrue(any("machine-absolute path" in x for x in p))
+
+    def test_bases_derived_from_roster_not_hardcoded(self):
+        bases = I._vendored_bases()
+        self.assertTrue(bases, "roster declares vendored entries; none were derived")
+        for b in bases:
+            self.assertTrue(b.startswith("primitives-core/skills/"), b)
+            self.assertTrue(b.endswith("base" + os.sep), b)
+            self.assertTrue(os.path.isdir(os.path.join(I.REPO, b)), f"{b} not on disk")
+
+    def test_every_vendored_roster_entry_has_a_base_dir(self):
+        """The exemption is only sound if `origin: vendored` really means a base/ tree --
+        an entry without one would silently exempt nothing while looking covered."""
+        from check_roster import parse_roster
+        vendored = [e for e in parse_roster(os.path.join(I.REPO, "primitives-core.yaml"))
+                    if (e.get("origin") or "").strip() == "vendored"]
+        self.assertTrue(vendored)
+        for e in vendored:
+            self.assertTrue(
+                os.path.isdir(os.path.join(I.REPO, e["source"], "base")),
+                f"vendored entry {e['id']} has no base/ dir",
+            )
 
 
 class Frontmatter(unittest.TestCase):

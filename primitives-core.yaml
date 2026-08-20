@@ -201,6 +201,20 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: pocketbase
+    type: skill
+    source: primitives-core/skills/pocketbase
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
+  - id: pocketbase-best-practices
+    type: skill
+    source: primitives-core/skills/pocketbase-best-practices
+    origin: vendored
+    upstream: https://github.com/greendesertsnow/pocketbase-skills
+    ref: c573263e84a2066d0564f428dd8160e74fc54226
+    disposition: qualified
+    targets: [claude-code, opencode]
   - id: pptx-themes
     type: skill
     source: primitives-core/skills/pptx-themes
