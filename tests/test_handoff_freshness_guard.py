@@ -22,6 +22,11 @@ HOOK_PATH = os.path.join(
     "handoff-freshness-guard", "hook.py",
 )
 
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "primitives-core", "hooks", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 _SEQ = itertools.count()
 
 STALE_SECONDS = 60 * 60  # well past the 30-minute default freshness window
@@ -106,6 +111,12 @@ class HandoffFreshnessGuardOverrideTests(unittest.TestCase):
     def _run_hook(self, payload):
         env = {
             "PATH": os.environ.get("PATH", ""),
+            # Sandbox the partitioned log root: a run that ever loses its
+            # path override must not append synthetic rows to the real
+            # ~/.local/share/agent-logs ledger. HOME too — expanduser("~")
+            # falls back to the passwd entry when HOME is unset.
+            "HOME": os.path.join(self.tmp.name, "home"),
+            "XDG_DATA_HOME": os.path.join(self.tmp.name, "xdg"),
             "HANDOFF_GUARD_LOG_PATH": self.log_path,
         }
         return subprocess.run(
@@ -311,10 +322,16 @@ class HandoffFreshnessGuardOverrideTests(unittest.TestCase):
         record = self._log_records()[-1]
         self.assertEqual(record["handoff_mode"], "file")
         self.assertEqual(
-            sorted(record),
+            sorted(set(record) - set(agentlog.ENVELOPE_KEYS)),
             ["blocked", "cwd", "handoff_age_minutes", "handoff_mode",
-             "handoff_path", "session_id", "status", "trigger", "ts"],
+             "handoff_path", "session_id", "status", "trigger"],
         )
+        # Envelope asserted against the module, never a literal copied here.
+        self.assertEqual(
+            sorted(set(record) & set(agentlog.ENVELOPE_KEYS)),
+            sorted(agentlog.ENVELOPE_KEYS),
+        )
+        self.assertEqual(record["stream"], "handoff-guard")
 
     # -- where the mapping scan has to stop ---------------------------------
     #

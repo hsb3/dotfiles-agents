@@ -40,6 +40,14 @@ class ConfigCustodyTests(unittest.TestCase):
         self.cwd = os.path.join(self.tmp.name, "cwd")
         os.makedirs(self.cwd, exist_ok=True)
         self.log_path = os.path.join(self.tmp.name, "logs", "config-custody.jsonl")
+        # Sandbox the partitioned log root for every subprocess in this class.
+        # Without it a run that sets no path override resolves the real
+        # ~/.local/share/agent-logs and appends synthetic rows to the ledger
+        # this machine actually collects.
+        self.xdg = os.path.join(self.tmp.name, "xdg")
+        self.default_log_path = os.path.join(
+            self.xdg, "agent-logs", "claude-code", "atelier", "config-custody.jsonl",
+        )
 
     # -- fixtures ------------------------------------------------------
 
@@ -80,7 +88,14 @@ class ConfigCustodyTests(unittest.TestCase):
         return payload
 
     def _run_hook(self, payload, set_log_env=True, log_path=None, stdin_text=None):
-        env = {"PATH": os.environ.get("PATH", "")}
+        env = {
+            "PATH": os.environ.get("PATH", ""),
+            # HOME as well as XDG_DATA_HOME: expanduser("~") falls back to the
+            # passwd entry when HOME is unset, so unsetting alone does not
+            # contain a write.
+            "HOME": os.path.join(self.tmp.name, "home"),
+            "XDG_DATA_HOME": self.xdg,
+        }
         if set_log_env:
             env["ATELIER_CUSTODY_LOG_PATH"] = log_path if log_path is not None else self.log_path
         stdin_text = json.dumps(payload) if stdin_text is None else stdin_text
@@ -161,6 +176,8 @@ class ConfigCustodyTests(unittest.TestCase):
         self._assert_silent(result)
 
     def test_no_stray_writes_outside_configured_log_path(self):
+        """With no path override the ledger goes to the partitioned root, and
+        the project tree keeps exactly the file the test put there."""
         activation_path = self._write_activation(mode="strict", patterns=["Makefile"])
         result = self._run_hook(self._payload(file_path="Makefile"), set_log_env=False)
         self._assert_denied(result)
@@ -169,11 +186,28 @@ class ConfigCustodyTests(unittest.TestCase):
         for root, _dirs, files in os.walk(self.cwd):
             for name in files:
                 found.add(os.path.relpath(os.path.join(root, name), self.cwd))
-        expected = {
-            os.path.relpath(activation_path, self.cwd),
-            os.path.join("logs", "config-custody.jsonl"),
-        }
-        self.assertEqual(found, expected)
+        self.assertEqual(found, {os.path.relpath(activation_path, self.cwd)})
+        self.assertTrue(
+            os.path.isfile(self.default_log_path),
+            "row did not land in the partitioned root",
+        )
+
+    def test_default_row_carries_the_identity_envelope(self):
+        """Envelope is asserted on a real written row, not on a literal."""
+        self._write_activation(mode="strict", patterns=["Makefile"])
+        self._assert_denied(
+            self._run_hook(self._payload(file_path="Makefile"), set_log_env=False)
+        )
+        row = _last_log_row(self.default_log_path)
+        self.assertEqual(row["stream"], "config-custody")
+        self.assertEqual(row["plugin"], "atelier")
+        self.assertEqual(row["harness"], "claude-code")
+        self.assertEqual(row["v"], 1)
+        self.assertEqual(row["project"], self.cwd)
+        self.assertRegex(row["ts"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
+        # payload survives alongside the envelope
+        self.assertEqual(row["path"], "Makefile")
+        self.assertTrue(row["denied"])
 
 
 if __name__ == "__main__":

@@ -23,7 +23,9 @@ equals delegation count.
 
 Env-overridable; shipped wiring leaves all three at hook.py's built-in defaults:
 - `SUBAGENT_TELEMETRY_TAIL_BYTES` — default 262,144 (256 KB transcript tail window).
-- `SUBAGENT_TELEMETRY_LOG_PATH` — default `<project-root>/logs/delegation.jsonl`.
+- `SUBAGENT_TELEMETRY_LOG_PATH` — default `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/delegation.jsonl` (stream name
+  `delegation`, kept from the ledger's original filename so old and new rows read as
+  one series).
 - `SUBAGENT_TELEMETRY_DEBUG` — off by default. Set it to record an error row when the
   hook itself fails; leave it off so diagnostics cannot distort the row count.
 

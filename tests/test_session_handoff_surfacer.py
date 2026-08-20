@@ -20,6 +20,11 @@ HOOK_PATH = os.path.join(
     "session-handoff-surfacer", "hook.py",
 )
 
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "primitives-core", "hooks", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 _SEQ = itertools.count()
 
 STAMP = ".claude/handoff.stamp"
@@ -97,6 +102,12 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
     def _run_hook(self, payload):
         env = {
             "PATH": os.environ.get("PATH", ""),
+            # Sandbox the partitioned log root: a run that ever loses its
+            # path override must not append synthetic rows to the real
+            # ~/.local/share/agent-logs ledger. HOME too — expanduser("~")
+            # falls back to the passwd entry when HOME is unset.
+            "HOME": os.path.join(self.tmp.name, "home"),
+            "XDG_DATA_HOME": os.path.join(self.tmp.name, "xdg"),
             "HANDOFF_SURFACER_LOG_PATH": self.log_path,
         }
         return subprocess.run(

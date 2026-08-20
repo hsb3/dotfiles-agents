@@ -79,7 +79,7 @@ gets reminded roughly every 15 calls rather than on every call.
 | `DELEGATION_WATERMARK_REFIRE_EVERY` | `15` | Further calls before nudging again |
 | `DELEGATION_WATERMARK_MAX_BYTES` | `67108864` | Refuse to scan a transcript larger than this |
 | `DELEGATION_WATERMARK_STATE_DIR` | `/tmp/delegation-watermark` | Per-session anti-nag state |
-| `DELEGATION_WATERMARK_LOG_PATH` | `$CLAUDE_PROJECT_DIR/logs/delegation-watermark.jsonl` | Ledger |
+| `DELEGATION_WATERMARK_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/delegation-watermark.jsonl` | Ledger |
 
 ## Design notes
 
@@ -99,10 +99,24 @@ gets reminded roughly every 15 calls rather than on every call.
 
 ## Ledger
 
-One row per fire check, appended to `logs/delegation-watermark.jsonl`:
+One row per fire check, appended to the `delegation-watermark` stream:
+
+Ledgers live outside the project, in one partitioned root shared with every other hook in
+this plugin (and with the opencode mirror, which writes under its own `<harness>` segment):
+
+```
+${XDG_DATA_HOME:-~/.local/share}/agent-logs/<harness>/<plugin>/<stream>.jsonl
+```
+
+Every row carries an identity envelope — `v`, `plugin`, `harness`, `stream`, `ts`
+(ISO-8601 UTC), `project` — so a row stays attributable after the files are concatenated.
+The append path is `hooks/_lib/agentlog.py`; no hook writes its own rows.
+
 
 ```json
-{"session_id":"...","tool_name":"Edit","streak":69,"dispatches":8,
+{"v":1,"plugin":"atelier","harness":"claude-code","stream":"delegation-watermark",
+ "ts":"2026-08-20T15:37:08.666Z","project":"/repo/x",
+ "session_id":"...","tool_name":"Edit","streak":69,"dispatches":8,
  "delegable_total":139,"ratio":17.38,"fired":true}
 ```
 

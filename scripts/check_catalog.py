@@ -211,12 +211,18 @@ def _row_cells(line):
 
 
 def _count_children(path, want_dirs, suffix=None):
-    """Count the non-dotted immediate children of `path` (symlinks followed)."""
+    """Count the public immediate children of `path` (symlinks followed).
+
+    A leading dot or underscore marks a child that is not a member of the
+    assembly: `hooks/_lib/` is the hooks' shared append helper, imported by
+    them rather than registered as one of them, and counting it would put the
+    catalog one hook ahead of the plugin's real contents.
+    """
     if not os.path.isdir(path):
         return 0
     n = 0
     for entry in os.listdir(path):
-        if entry.startswith("."):
+        if entry.startswith((".", "_")):
             continue
         full = os.path.join(path, entry)
         if want_dirs:

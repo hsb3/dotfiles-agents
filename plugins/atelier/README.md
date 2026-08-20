@@ -156,7 +156,7 @@ What each `enforce` level actually does:
 | `enforce` | `worker-context` (SubagentStart) | `config-custody` (PreToolUse) |
 |---|---|---|
 | absent / `off` | silent | silent |
-| `advisory` | injects the worker covenant into every subagent | logs would-be denials to `logs/config-custody.jsonl`; blocks nothing |
+| `advisory` | injects the worker covenant into every subagent | logs would-be denials to the `config-custody` stream; blocks nothing |
 | `strict` | injects the covenant, naming the tool-layer block | denies subagent edits to `protected:` paths |
 
 The main session is never restricted at any level: custody is scoped to subagents, so the
@@ -204,11 +204,38 @@ machine-local change):
 | `DELEGATION_WATERMARK_REFIRE_EVERY` | `15` | Further calls before nudging again |
 | `DELEGATION_WATERMARK_STATE_DIR` | `/tmp/delegation-watermark` | Per-session anti-nag state |
 | `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Where the activation file lives |
-| `<HOOK>_LOG_PATH` | per hook, see right | `CONTEXT_WATERMARK_LOG_PATH` → `logs/context-watermark.jsonl`; `DELEGATION_WATERMARK_LOG_PATH` → `logs/delegation-watermark.jsonl`; `ATELIER_CUSTODY_LOG_PATH` → `logs/config-custody.jsonl`; `HANDOFF_GUARD_LOG_PATH` → `logs/handoff-guard.jsonl`; `HANDOFF_SURFACER_LOG_PATH` → `logs/handoff-surfacer.jsonl`; `SUBAGENT_TELEMETRY_LOG_PATH` → `logs/delegation.jsonl` (all under `$CLAUDE_PROJECT_DIR/`) |
+| `<HOOK>_LOG_PATH` | the hook's stream under the log root (see **Ledgers** below) | Overrides one stream's path. `CONTEXT_WATERMARK_LOG_PATH` → `context-watermark`; `DELEGATION_WATERMARK_LOG_PATH` → `delegation-watermark`; `ATELIER_CUSTODY_LOG_PATH` → `config-custody`; `HANDOFF_GUARD_LOG_PATH` → `handoff-guard`; `HANDOFF_SURFACER_LOG_PATH` → `handoff-surfacer`; `SUBAGENT_TELEMETRY_LOG_PATH` → `delegation`; `WORKTREE_ISOLATION_LOG_PATH` → `worktree-isolation` |
+| `XDG_DATA_HOME` | `~/.local/share` | Base of the log root. Ignored when relative. |
 
 **These need a fresh session.** Unlike the activation file, `env` is read once at startup, so an
 edit does not reach the running session. The same goes for any change to `hooks.json`. Each
 hook's own `hooks/<name>/README.md` documents its remaining knobs.
+
+## Ledgers
+
+Hooks do not write into your project. Every stream lands in one partitioned root:
+
+```
+${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/<stream>.jsonl
+```
+
+The partitioning is what lets more than one plugin, on more than one harness, share a
+single analytics-ready dataset: the opencode mirror of these hooks writes the same shape
+under its own `<harness>` segment. Every row carries an identity envelope first, then the
+hook's own fields:
+
+```json
+{"v":1,"plugin":"atelier","harness":"claude-code","stream":"config-custody",
+ "ts":"2026-08-20T15:37:08.666Z","project":"/repo/x","tool_name":"Edit","denied":false}
+```
+
+`stream` keeps a row attributable once files are concatenated, `v` is the schema version,
+and `project` replaces what used to be a per-project directory. `ts` is ISO-8601 UTC, so
+rows sort lexically in the order they happened.
+
+One helper owns every append (`hooks/_lib/agentlog.py`); no hook writes its own rows, which
+is what keeps the envelope impossible to skip. Set a `<HOOK>_LOG_PATH` to divert a single
+stream elsewhere.
 
 ## Honest scope
 

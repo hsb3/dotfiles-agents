@@ -50,12 +50,24 @@ import os
 import sys
 import traceback
 
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
 TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB — same window as context-watermark
-LOG_FILENAME_DEFAULT = "delegation.jsonl"
+# Stream name is the stem this ledger already had (`delegation.jsonl`), not
+# the hook name: the rows are the delegation record, and keeping the stem
+# keeps old and new rows queryable as one series.
+LOG_STREAM = "delegation"
+LOG_PATH_ENV = "SUBAGENT_TELEMETRY_LOG_PATH"
 SUBAGENTS_DIRNAME = "subagents"
 AGENT_FILE_PREFIX = "agent-"
 SIDECAR_SUFFIX = ".meta.json"
@@ -81,38 +93,6 @@ def _debug_enabled():
     return os.environ.get("SUBAGENT_TELEMETRY_DEBUG", "").strip().lower() not in (
         "", "0", "false", "no",
     )
-
-
-def _resolve_log_path(cwd):
-    """SUBAGENT_TELEMETRY_LOG_PATH override, else <project-root>/logs/delegation.jsonl.
-
-    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
-    commands), so the hook stays portable across any project that installs
-    the atelier plugin. The payload cwd is a last resort only — anchoring
-    on cwd scatters stray logs/ dirs into whatever subdirectory an agent
-    happens to be running in.
-    """
-    override = os.environ.get("SUBAGENT_TELEMETRY_LOG_PATH")
-    if override:
-        return override
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
-    return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
-
-
-# ---------------------------------------------------------------------------
-# Logging (best-effort; must never raise into the caller)
-# ---------------------------------------------------------------------------
-
-def _append_row(log_path, record):
-    try:
-        d = os.path.dirname(log_path)
-        if d:
-            os.makedirs(d, exist_ok=True)
-        with open(log_path, "a") as f:
-            f.write(json.dumps(record, default=str) + "\n")
-    except Exception:
-        # Logging must never break the hook.
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +289,10 @@ def main():
 
         row = _build_row(payload)
         if row is not None:
-            _append_row(_resolve_log_path(payload.get("cwd")), row)
+            agentlog.append(
+                LOG_STREAM, row,
+                agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV,
+            )
 
         # Telemetry is silent: no stdout, ever.
         sys.exit(0)
@@ -322,10 +305,10 @@ def main():
         # opt-in, so the ledger's row count stays equal to the delegation count.
         if _debug_enabled():
             try:
-                _append_row(_resolve_log_path(None), {
+                agentlog.append(LOG_STREAM, {
                     "error": "{0}: {1}".format(type(e).__name__, e),
                     "traceback": traceback.format_exc(limit=3),
-                })
+                }, agentlog.resolve_project(), LOG_PATH_ENV)
             except Exception:
                 pass
         sys.exit(0)

@@ -17,7 +17,7 @@ lives outside the repo.
 
 Env-overridable; shipped wiring leaves both at hook.py's built-in defaults:
 - `HANDOFF_GUARD_FRESHNESS_MINUTES` — default 30.
-- `HANDOFF_GUARD_LOG_PATH` — default `<project-root>/logs/handoff-guard.jsonl`.
+- `HANDOFF_GUARD_LOG_PATH` — default `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/handoff-guard.jsonl`.
 
 **Per-project handoff location override.** A project that keeps its handoff somewhere
 other than the standard candidate paths can say so with a `handoff:` key in

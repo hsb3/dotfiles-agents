@@ -55,12 +55,21 @@ import sys
 import time
 import traceback
 
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
 FRESHNESS_MINUTES_DEFAULT = 30
-LOG_FILENAME_DEFAULT = "handoff-guard.jsonl"
+LOG_STREAM = "handoff-guard"
+LOG_PATH_ENV = "HANDOFF_GUARD_LOG_PATH"
 
 # Used only when no `handoff:` key is armed — neither a file override nor an
 # external stamp (see _find_handoff).
@@ -97,8 +106,8 @@ ACTIVATION_MAX_BYTES = 256 * 1024
 def _resolve_project_dir(cwd):
     """CLAUDE_PROJECT_DIR env anchor first, else the resolved payload cwd —
     same anchor config-custody/worker-context use to locate
-    .claude/atelier.local.md, and the same one this hook's own log path
-    already prefers (see _resolve_log_path)."""
+    .claude/atelier.local.md, and the same anchor agentlog.resolve_project
+    uses for the `project` field on this hook's rows."""
     base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
     try:
         return os.path.abspath(base)
@@ -303,38 +312,6 @@ FRESHNESS_MINUTES = _env_int(
 )
 
 
-def _resolve_log_path(cwd):
-    """HANDOFF_GUARD_LOG_PATH override, else <project-root>/logs/handoff-guard.jsonl.
-
-    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
-    commands), matching the surfacer and telemetry hooks' convention, so the
-    hook stays portable across any project that installs this plugin. The
-    payload cwd is a last resort only — anchoring on cwd scatters stray
-    logs/ dirs into whatever subdirectory an agent happens to be running in.
-    """
-    override = os.environ.get("HANDOFF_GUARD_LOG_PATH")
-    if override:
-        return override
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
-    return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
-
-
-# ---------------------------------------------------------------------------
-# Logging (best-effort; must never raise into the caller)
-# ---------------------------------------------------------------------------
-
-def _log(log_path, record):
-    try:
-        d = os.path.dirname(log_path)
-        if d:
-            os.makedirs(d, exist_ok=True)
-        record.setdefault("ts", time.time())
-        with open(log_path, "a") as f:
-            f.write(json.dumps(record, default=str) + "\n")
-    except Exception:
-        pass
-
-
 # ---------------------------------------------------------------------------
 # Handoff discovery
 # ---------------------------------------------------------------------------
@@ -418,7 +395,9 @@ def main():
         session_id = payload.get("session_id", "unknown")
         cwd = payload.get("cwd") or os.getcwd()
         trigger = payload.get("trigger", "unknown")  # "manual" | "auto"
-        log_path = _resolve_log_path(cwd)
+        log = agentlog.make_logger(
+            LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(cwd),
+        )
 
         path, mtime, searched, mode, location = _find_handoff(cwd)
 
@@ -470,7 +449,7 @@ def main():
         if out is not None:
             print(json.dumps(out))
 
-        _log(log_path, {
+        log({
             "session_id": session_id,
             "cwd": cwd,
             "trigger": trigger,
@@ -486,14 +465,14 @@ def main():
     except Exception as e:
         # Fail-open: never block compaction on our own error.
         try:
-            _log(_resolve_log_path(None), {
+            agentlog.append(LOG_STREAM, {
                 "session_id": None,
                 "trigger": None,
                 "status": "error",
                 "blocked": False,
                 "error": f"{type(e).__name__}: {e}",
                 "traceback": traceback.format_exc(limit=3),
-            })
+            }, agentlog.resolve_project(), LOG_PATH_ENV)
         except Exception:
             pass
         sys.exit(0)

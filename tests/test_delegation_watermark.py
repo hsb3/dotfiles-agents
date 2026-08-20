@@ -18,6 +18,11 @@ HOOK_PATH = os.path.join(
     "delegation-watermark", "hook.py",
 )
 
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "primitives-core", "hooks", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 _SEQ = itertools.count()
 
 
@@ -41,14 +46,29 @@ def _write_transcript(path, records):
             fh.write(json.dumps(rec) + "\n")
 
 
-def _run_hook(payload, state_dir, log_path, extra_env=None):
-    env = {
+def _sandbox_env(state_dir, log_path):
+    """Environment for one hook run, with the partitioned log root contained.
+
+    HOME and XDG_DATA_HOME are set even though LOG_PATH is: a run that ever
+    loses its override must not append synthetic rows to the real
+    ~/.local/share/agent-logs ledger, and expanduser("~") falls back to the
+    passwd entry when HOME is merely unset. The sandbox is derived from the
+    caller's log_path, which always lives in the test's own tempdir.
+    """
+    sandbox = os.path.join(os.path.dirname(os.path.dirname(log_path)), "sandbox")
+    return {
         "PATH": os.environ.get("PATH", ""),
+        "HOME": os.path.join(sandbox, "home"),
+        "XDG_DATA_HOME": os.path.join(sandbox, "xdg"),
         "DELEGATION_WATERMARK_STATE_DIR": state_dir,
         "DELEGATION_WATERMARK_LOG_PATH": log_path,
         "DELEGATION_WATERMARK_SOFT": "25",
         "DELEGATION_WATERMARK_REFIRE_EVERY": "15",
     }
+
+
+def _run_hook(payload, state_dir, log_path, extra_env=None):
+    env = _sandbox_env(state_dir, log_path)
     # CLAUDE_PROJECT_DIR deliberately absent -> no scatter if LOG_PATH override
     # were ever missing.
     if extra_env:
@@ -151,13 +171,7 @@ class DelegationWatermarkTests(unittest.TestCase):
         self.assertIn("hookSpecificOutput", result_3.stdout)
 
     def test_fail_open_on_garbage_stdin(self):
-        env = {
-            "PATH": os.environ.get("PATH", ""),
-            "DELEGATION_WATERMARK_STATE_DIR": self.state_dir,
-            "DELEGATION_WATERMARK_LOG_PATH": self.log_path,
-            "DELEGATION_WATERMARK_SOFT": "25",
-            "DELEGATION_WATERMARK_REFIRE_EVERY": "15",
-        }
+        env = _sandbox_env(self.state_dir, self.log_path)
         result = subprocess.run(
             [sys.executable, HOOK_PATH],
             input="not json",

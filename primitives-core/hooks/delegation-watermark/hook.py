@@ -40,6 +40,14 @@ import os
 import sys
 import traceback
 
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
@@ -48,7 +56,8 @@ SOFT_DEFAULT = 25          # delegable calls since the last dispatch before the 
 REFIRE_EVERY_DEFAULT = 15  # further calls before nudging again, while the streak keeps growing
 MAX_BYTES_DEFAULT = 64 * 1024 * 1024  # refuse to scan a pathological transcript
 STATE_DIR_DEFAULT = "/tmp/delegation-watermark"
-LOG_FILENAME_DEFAULT = "delegation-watermark.jsonl"
+LOG_STREAM = "delegation-watermark"
+LOG_PATH_ENV = "DELEGATION_WATERMARK_LOG_PATH"
 
 # The whole transcript is scanned, not a tail window: a tail that happens to
 # exclude the last dispatch reports an inflated streak and fires on a session
@@ -80,41 +89,6 @@ SOFT = _env_int("DELEGATION_WATERMARK_SOFT", SOFT_DEFAULT)
 REFIRE_EVERY = _env_int("DELEGATION_WATERMARK_REFIRE_EVERY", REFIRE_EVERY_DEFAULT)
 MAX_BYTES = _env_int("DELEGATION_WATERMARK_MAX_BYTES", MAX_BYTES_DEFAULT)
 STATE_DIR = os.environ.get("DELEGATION_WATERMARK_STATE_DIR") or STATE_DIR_DEFAULT
-
-
-def _resolve_log_path(cwd):
-    """Override, else <project-root>/logs/delegation-watermark.jsonl.
-
-    CLAUDE_PROJECT_DIR is set by Claude Code for hook commands; anchoring on the
-    payload cwd instead scatters stray logs/ dirs into whatever subdirectory an
-    agent happened to be in. With no override, no CLAUDE_PROJECT_DIR, and no
-    payload cwd, return None — skip logging rather than anchor on the process
-    cwd, which is exactly the scattering this function exists to avoid.
-    """
-    override = os.environ.get("DELEGATION_WATERMARK_LOG_PATH")
-    if override:
-        return override
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
-    if not base:
-        return None
-    return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
-
-
-# ---------------------------------------------------------------------------
-# Best-effort IO (never raises into the caller)
-# ---------------------------------------------------------------------------
-
-def _log(log_path, record):
-    if not log_path:
-        return
-    try:
-        log_dir = os.path.dirname(log_path)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-        with open(log_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record) + "\n")
-    except Exception:
-        pass
 
 
 def _emit(obj):
@@ -223,7 +197,6 @@ def _format_message(streak, dispatches, ratio):
 
 
 def main():
-    log_path = None
     payload = None
     try:
         payload = json.loads(sys.stdin.read())
@@ -234,10 +207,12 @@ def main():
 
         session_id = payload.get("session_id", "unknown")
         transcript_path = payload.get("transcript_path")
-        log_path = _resolve_log_path(payload.get("cwd"))
+        log = agentlog.make_logger(
+            LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(payload.get("cwd")),
+        )
 
         if not transcript_path or not os.path.isfile(transcript_path):
-            _log(log_path, {
+            log({
                 "session_id": session_id, "fired": False,
                 "error": "transcript_path missing or not a file",
             })
@@ -245,7 +220,7 @@ def main():
 
         size = os.path.getsize(transcript_path)
         if size > MAX_BYTES:
-            _log(log_path, {
+            log({
                 "session_id": session_id, "fired": False,
                 "error": f"transcript {size} bytes exceeds MAX_BYTES {MAX_BYTES}",
             })
@@ -281,7 +256,7 @@ def main():
             _emit(out)
             _save_state(session_id, {"last_fire_at_streak": streak})
 
-        _log(log_path, {
+        log({
             "session_id": session_id,
             "tool_name": payload.get("tool_name"),
             "streak": streak,
@@ -296,11 +271,11 @@ def main():
         try:
             if not isinstance(payload, dict):
                 payload = {}
-            _log(log_path or _resolve_log_path(payload.get("cwd")), {
+            agentlog.append(LOG_STREAM, {
                 "session_id": payload.get("session_id"), "fired": False,
                 "error": f"{type(e).__name__}: {e}",
                 "traceback": traceback.format_exc(limit=3),
-            })
+            }, agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV)
         except Exception:
             pass
         sys.exit(0)

@@ -36,6 +36,11 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.cwd = os.path.join(self.tmp.name, "cwd")
         os.makedirs(os.path.join(self.cwd, ".git"), exist_ok=True)
+        self.xdg = os.path.join(self.tmp.name, "xdg")
+        self.log_path = os.path.join(
+            self.xdg, "agent-logs", "claude-code", "atelier",
+            "worktree-isolation.jsonl",
+        )
 
     # -- fixtures ------------------------------------------------------
 
@@ -66,7 +71,15 @@ class WorktreeIsolationTests(unittest.TestCase):
         }
 
     def _run_hook(self, stdin_text):
-        env = {"PATH": os.environ.get("PATH", "")}
+        env = {
+            "PATH": os.environ.get("PATH", ""),
+            # Sandbox the partitioned log root. Without this the hook's own
+            # decision rows land in the real ~/.local/share/agent-logs ledger;
+            # HOME too, since expanduser("~") falls back to the passwd entry
+            # when HOME is merely unset.
+            "HOME": os.path.join(self.tmp.name, "home"),
+            "XDG_DATA_HOME": self.xdg,
+        }
         return subprocess.run(
             [sys.executable, HOOK_PATH],
             input=stdin_text,
@@ -242,14 +255,66 @@ class WorktreeIsolationTests(unittest.TestCase):
 
     # -- fail-open ------------------------------------------------------
 
-    def test_malformed_stdin_fails_open_and_writes_nothing(self):
+    def test_malformed_stdin_fails_open_and_writes_nothing_into_the_project(self):
+        """Fail-open, no state file, nothing written into the project tree.
+
+        The error row itself goes to the partitioned log root, which is why
+        this walks self.cwd and not the whole tempdir: a crash that leaves no
+        trace anywhere is the failure mode the ledger exists to end.
+        """
         result = self._run_hook("not json")
         self._assert_silent(result)
 
         found = []
-        for root, _dirs, files in os.walk(self.tmp.name):
+        for root, _dirs, files in os.walk(self.cwd):
             found.extend(os.path.join(root, f) for f in files)
-        self.assertEqual(found, [], "hook must be stateless and write nothing")
+        self.assertEqual(found, [], "hook must write nothing into the project")
+
+        rows = self._rows()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["reason"], "error")
+        self.assertFalse(rows[0]["isolated"])
+
+    # -- ledger ---------------------------------------------------------
+
+    def _rows(self):
+        """Rows the hook really wrote, from the sandboxed partitioned root."""
+        if not os.path.isfile(self.log_path):
+            return []
+        with open(self.log_path, encoding="utf-8") as fh:
+            return [json.loads(ln) for ln in fh if ln.strip()]
+
+    def test_rewrite_is_recorded(self):
+        """The defect this closes: the hook silently rewrote a dispatch and
+        left no record that it had."""
+        self._write_activation(isolate="writers")
+        self._rewrite(self._payload())
+
+        rows = self._rows()
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0]["isolated"])
+        self.assertEqual(rows[0]["agent_type"], "builder")
+        self.assertEqual(rows[0]["stream"], "worktree-isolation")
+        self.assertEqual(rows[0]["project"], self.cwd)
+        self.assertIsNone(rows[0]["reason"])
+
+    def test_dispatch_left_alone_is_recorded_with_a_reason(self):
+        self._write_activation(isolate="writers")
+        # scout is read-only: an armed project, deliberately not isolated.
+        payload = self._payload(tool_input={"subagent_type": "scout"})
+        self._assert_silent(self._run_hook(json.dumps(payload)))
+
+        rows = self._rows()
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0]["isolated"])
+        self.assertEqual(rows[0]["reason"], "agent type not armed")
+        self.assertEqual(rows[0]["agent_type"], "scout")
+
+    def test_unactivated_project_writes_no_ledger_at_all(self):
+        """An un-adopted hook stays silent rather than opening a ledger the
+        project never asked for — the rule config-custody already follows."""
+        self._assert_silent(self._run_hook(json.dumps(self._payload())))
+        self.assertEqual(self._rows(), [])
 
     def test_non_dict_payloads_fail_open(self):
         for raw in ("[]", '"str"', "null", ""):

@@ -25,8 +25,15 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only).
 import json
 import os
 import sys
-import time
 import traceback
+
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -37,7 +44,8 @@ HARD_DEFAULT = 100_000
 TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB
 REFIRE_EVERY_DEFAULT = 5  # prompts, while still above a tier
 STATE_DIR_DEFAULT = "/tmp/context-watermark"
-LOG_FILENAME_DEFAULT = "context-watermark.jsonl"
+LOG_STREAM = "context-watermark"
+LOG_PATH_ENV = "CONTEXT_WATERMARK_LOG_PATH"
 
 
 def _env_int(name, default):
@@ -60,39 +68,6 @@ HARD = _env_int("CONTEXT_WATERMARK_HARD", HARD_DEFAULT)
 TAIL_BYTES = _env_int("CONTEXT_WATERMARK_TAIL_BYTES", TAIL_BYTES_DEFAULT)
 REFIRE_EVERY = _env_int("CONTEXT_WATERMARK_REFIRE_EVERY", REFIRE_EVERY_DEFAULT)
 STATE_DIR = _env_path("CONTEXT_WATERMARK_STATE_DIR", STATE_DIR_DEFAULT)
-
-
-def _resolve_log_path(cwd):
-    """CONTEXT_WATERMARK_LOG_PATH override, else <project-root>/logs/context-watermark.jsonl.
-
-    The project root is CLAUDE_PROJECT_DIR (set by Claude Code for hook
-    commands), matching the surfacer and telemetry hooks' convention, so the
-    hook stays portable across any project that installs this plugin. The
-    payload cwd is a last resort only — anchoring on cwd scatters stray
-    logs/ dirs into whatever subdirectory an agent happens to be running in.
-    """
-    override = os.environ.get("CONTEXT_WATERMARK_LOG_PATH")
-    if override:
-        return override
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
-    return os.path.join(base, "logs", LOG_FILENAME_DEFAULT)
-
-
-# ---------------------------------------------------------------------------
-# Logging (best-effort; must never raise into the caller)
-# ---------------------------------------------------------------------------
-
-def _log(log_path, record):
-    try:
-        d = os.path.dirname(log_path)
-        if d:
-            os.makedirs(d, exist_ok=True)
-        record.setdefault("ts", time.time())
-        with open(log_path, "a") as f:
-            f.write(json.dumps(record, default=str) + "\n")
-    except Exception:
-        # Logging must never break the hook.
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -252,10 +227,12 @@ def main():
 
         session_id = payload.get("session_id", "unknown")
         transcript_path = payload.get("transcript_path")
-        log_path = _resolve_log_path(payload.get("cwd"))
+        log = agentlog.make_logger(
+            LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(payload.get("cwd")),
+        )
 
         if not transcript_path or not os.path.isfile(transcript_path):
-            _log(log_path, {
+            log({
                 "session_id": session_id,
                 "ctx_tokens": None,
                 "tier": "none",
@@ -268,7 +245,7 @@ def main():
         usage = _find_last_assistant_usage(tail_text)
 
         if usage is None:
-            _log(log_path, {
+            log({
                 "session_id": session_id,
                 "ctx_tokens": None,
                 "tier": "none",
@@ -322,7 +299,7 @@ def main():
                     "prompts_since_fire": check_state.get("prompts_since_fire", 0),
                 })
 
-        _log(log_path, {
+        log({
             "session_id": session_id,
             "ctx_tokens": ctx_tokens,
             "tier": tier,
@@ -334,14 +311,14 @@ def main():
     except Exception as e:
         # Fail-open: never break prompt flow. Log what we can.
         try:
-            _log(_resolve_log_path(None), {
+            agentlog.append(LOG_STREAM, {
                 "session_id": None,
                 "ctx_tokens": None,
                 "tier": "none",
                 "fired": False,
                 "error": f"{type(e).__name__}: {e}",
                 "traceback": traceback.format_exc(limit=3),
-            })
+            }, override_env=LOG_PATH_ENV)
         except Exception:
             pass
         sys.exit(0)

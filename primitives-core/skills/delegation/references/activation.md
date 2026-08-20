@@ -23,7 +23,7 @@ handoff: docs/HANDOFF.md   # optional: override the project's handoff location â
 | `enforce` | `worker-context` (SubagentStart) | `config-custody` (PreToolUse) |
 |---|---|---|
 | absent / `off` | silent | silent |
-| `advisory` | injects the worker covenant into every subagent | logs would-deny rows to `logs/config-custody.jsonl`; never blocks |
+| `advisory` | injects the worker covenant into every subagent | logs would-deny rows to the `config-custody` stream; never blocks |
 | `strict` | injects, naming the tool-layer block | denies subagent edits to `protected:` paths, with an escalation-shaped reason |
 
 `isolate` is read by `worktree-isolation` (PreToolUse on the `Agent` tool) and is independent of

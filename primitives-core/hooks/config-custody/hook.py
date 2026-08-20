@@ -42,12 +42,21 @@ import os
 import sys
 import traceback
 
+# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# That relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
 ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
-LOG_FILENAME_DEFAULT = "config-custody.jsonl"
+LOG_STREAM = "config-custody"
+LOG_PATH_ENV = "ATELIER_CUSTODY_LOG_PATH"
 
 # A frontmatter block is a few dozen lines; anything larger is not an activation
 # file and reading it into a hook that runs on every edit is not worth it.
@@ -92,33 +101,6 @@ def _resolve_activation_path(project_dir):
     if not project_dir:
         return None
     return os.path.join(project_dir, ACTIVATION_RELPATH)
-
-
-def _resolve_log_path(project_dir):
-    """Override, else <project-root>/logs/config-custody.jsonl, else None."""
-    override = os.environ.get("ATELIER_CUSTODY_LOG_PATH")
-    if override:
-        return override
-    if not project_dir:
-        return None
-    return os.path.join(project_dir, "logs", LOG_FILENAME_DEFAULT)
-
-
-# ---------------------------------------------------------------------------
-# Best-effort IO (never raises into the caller)
-# ---------------------------------------------------------------------------
-
-def _log(log_path, record):
-    if not log_path:
-        return
-    try:
-        log_dir = os.path.dirname(log_path)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-        with open(log_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record) + "\n")
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +293,7 @@ def _first_match(relpath, abs_path, patterns):
 
 
 def main():
-    log_path = None
+    log = None
     payload = None
     try:
         payload = json.loads(sys.stdin.read())
@@ -346,7 +328,7 @@ def main():
         if not pattern:
             sys.exit(0)
 
-        log_path = _resolve_log_path(project_dir)
+        log = agentlog.make_logger(LOG_STREAM, LOG_PATH_ENV, project_dir)
         rel_posix = relpath.replace(os.sep, "/")
         denied = mode == STRICT
 
@@ -364,7 +346,7 @@ def main():
         # Only matches are logged — one row per would-be or actual denial, never
         # one per edit. In advisory mode a row is a would-be denial: the evidence
         # a project graduates to strict on.
-        _log(log_path, {
+        log({
             "session_id": payload.get("session_id"),
             "agent_type": payload.get("agent_type"),
             "tool_name": payload.get("tool_name"),
@@ -377,14 +359,13 @@ def main():
 
     except Exception as e:
         try:
-            # log_path is resolved only after the activation file armed the hook
-            # and a pattern matched. A project that never activated custody must
-            # stay byte-for-byte untouched, so pre-activation failures are not
-            # logged anywhere.
-            if log_path:
+            # The logger is bound only after the activation file armed the
+            # hook and a pattern matched. A project that never activated custody
+            # must stay silent, so pre-activation failures are not logged.
+            if log:
                 if not isinstance(payload, dict):
                     payload = {}
-                _log(log_path, {
+                log({
                     "session_id": payload.get("session_id"),
                     "denied": False,
                     "error": "{0}: {1}".format(type(e).__name__, e),

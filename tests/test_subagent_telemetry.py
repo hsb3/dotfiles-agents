@@ -28,6 +28,11 @@ HOOK_PATH = os.path.join(
     "subagent-telemetry", "hook.py",
 )
 
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "primitives-core", "hooks", "_lib")
+)
+import agentlog  # noqa: E402  (path must be primed before this import)
+
 _SEQ = itertools.count()
 
 # Parent-session values. Any of these showing up in a ledger row means the hook
@@ -145,6 +150,12 @@ class SubagentTelemetryTests(unittest.TestCase):
     def _run_hook(self, stdin_text, extra_env=None):
         env = {
             "PATH": os.environ.get("PATH", ""),
+            # Sandbox the partitioned log root: a run that ever loses its
+            # path override must not append synthetic rows to the real
+            # ~/.local/share/agent-logs ledger. HOME too — expanduser("~")
+            # falls back to the passwd entry when HOME is unset.
+            "HOME": os.path.join(self.tmp.name, "home"),
+            "XDG_DATA_HOME": os.path.join(self.tmp.name, "xdg"),
             "SUBAGENT_TELEMETRY_LOG_PATH": self.log_path,
         }
         # CLAUDE_PROJECT_DIR deliberately absent -> a stray write would land in
@@ -367,13 +378,21 @@ class SubagentTelemetryTests(unittest.TestCase):
         self.assertEqual(stray, [])
 
     def test_row_shape_is_stable(self):
+        """Envelope keys come from agentlog, never a hand-copied list here — a
+        literal would drift silently the first time the envelope changes."""
         self._delegation("a1616161616161616")
         self._run(self._payload("a1616161616161616"))
         row = _read_rows(self.log_path)[0]
+        envelope = set(agentlog.ENVELOPE_KEYS)
         self.assertEqual(
-            sorted(row.keys()),
+            sorted(set(row) - envelope),
             ["agent_id", "agent_type", "ctx_tokens", "model", "session_id"],
         )
+        self.assertEqual(sorted(set(row) & envelope), sorted(envelope))
+        # Envelope keys lead the row: a reader that truncates a long line
+        # still sees what produced it.
+        self.assertEqual(list(row)[: len(envelope)], list(agentlog.ENVELOPE_KEYS))
+        self.assertEqual(row["stream"], "delegation")
 
 
 if __name__ == "__main__":
