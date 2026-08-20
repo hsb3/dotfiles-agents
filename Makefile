@@ -47,6 +47,9 @@ ci: check identity provenance hook-layout symlinks harness-coupling flow test ##
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).
 .PHONY: harness-test harness-eval harness-report
+vendored-drift: ## Vendored base/ vs pinned upstream ref (needs network; NOT in ci)
+	@python3 scripts/check_vendored_drift.py
+
 harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
 	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q
 

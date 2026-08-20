@@ -43,3 +43,11 @@ jobs:
       # when that ref is unreachable, so a network blip does not block every PR.
       - name: version-bump gate (published bytes vs origin/main)
         run: python3 scripts/check_version_bump.py
+      # Vendored-drift gate: every `origin: vendored` base/ against its pinned upstream ref
+      # (docs/vendoring-rule.md). Rides this job for the same two reasons as the gate above
+      # — it needs network to reach the upstream, and dev's branch protection pins required
+      # checks by job NAME. Skips an entry with a notice when the upstream is unreachable,
+      # so a network blip does not block every PR; a reachable upstream missing the ref, or
+      # a base/ that no longer matches, is red.
+      - name: vendored-drift gate (base/ vs pinned upstream ref)
+        run: python3 scripts/check_vendored_drift.py

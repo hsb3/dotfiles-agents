@@ -11,8 +11,13 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
 - **`make ci`'s `✗` lines are passing tests' own output. Judge by exit code only.** Fixture runs
   print "1 primitives"; the real repo says 59. This trap produced a false "3 pre-existing
   failures" handoff claim on 2026-08-11 — re-run before inheriting any red-tree claim.
-- **`make ci` is not the whole gate.** `scripts/check_version_bump.py` runs in CI only; run it by
-  hand before assuming green.
+- **`make ci` is not the whole gate.** Two guards run in CI only, both because they need
+  network where `make ci` is offline-and-zero-install by design. Run both by hand before
+  assuming green:
+  `scripts/check_version_bump.py` (changed published bytes must ship under a moved version —
+  it caught `solo-skills` shipping two new skills under an unmoved 0.1.8 on 2026-08-20), and
+  `scripts/check_vendored_drift.py` / `make vendored-drift` (every `origin: vendored` `base/`
+  still matches its pinned upstream ref).
 - **`ci.yml` fires on `pull_request` ONLY.** A direct push to `dev` gets ZERO CI, and the owner's
   waiver means `remote: Bypassed rule violations` is expected on the handful of paths it covers.
   Run `make ci` locally first — nothing else will. Code still goes through a PR.

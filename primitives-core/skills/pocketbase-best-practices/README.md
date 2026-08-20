@@ -32,7 +32,7 @@ The `base/` directory is the **`pocketbase-best-practices` skill** from the
 The original files are kept in place and unmodified to satisfy the attribution obligation.
 
 Do not edit `base/` — update the pin instead (a new ref, re-vendored verbatim). A hand-edit
-there registers as `diverged` against the pinned ref and fails the provenance gate.
+there registers as `diverged` against the pinned ref and fails the vendored-drift gate.
 Corrections belong in the authored layer's "Field notes", and upstream-worthy ones should be
 reported to the upstream project.
 

@@ -27,10 +27,17 @@ Contributor SOP: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). Traps thi
 already hit — how to read `make ci`, which gates are CI-only, what `flow.yaml` breaks:
 [`docs/gotchas.md`](docs/gotchas.md).
 
-Branch off `dev`, PR into `dev`. Never merge PRs or commit to the default branch. `main` is
-publish-only (CI, `.github/workflows/publish.yml`) and is never checked out locally — a
-PreToolUse hook blocks it. Read the published surface with `git show origin/main:<path>`, or
-`git worktree add ../dotfiles-agents-main origin/main` (remove the worktree after).
+Branch off `dev`, PR into `dev`. Merging your own PR into `dev` is granted: the owner's
+standing grant (2026-08-20) covers the whole loop — branch, commit, push, open PR, run CI,
+merge, delete the branch. That grant is conditional on CI. Watch the checks to green and report
+before calling a merge done; never merge red, and never bypass a required check.
+
+Never commit to the default branch. `main` is publish-only (CI,
+`.github/workflows/publish.yml`), is never merged into directly, and is never checked out
+locally — a PreToolUse hook blocks it. Publishing goes through the sanctioned workflow dispatch
+(the `publish-to-main` skill), which the merge grant does not replace. Read the published
+surface with `git show origin/main:<path>`, or `git worktree add ../dotfiles-agents-main
+origin/main` (remove the worktree after).
 
 Keep changes surgical and match existing style. Get the owner's approval before major
 information-architecture changes (moving/renaming top-level structures, reshaping the roster).

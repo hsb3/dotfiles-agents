@@ -69,9 +69,13 @@ Every vendored body must carry, at minimum:
 - **`LICENSE`** (or `LICENSE.txt`) from the upstream, present in the vendored dir.
 - **Attribution** in the entry's README naming the upstream repo + pinned ref — never split from
   or dropped off the vendored content.
-- Subjection to the **drift checker** (task-10): `up_to_date | behind | diverged | not_found`
-  against the pinned ref; `diverged` (upstream rewrote history at the ref, or our copy was
-  hand-edited outside the compose layer) is a loud failure.
+- Subjection to the **drift checker** — [`scripts/check_vendored_drift.py`](../scripts/check_vendored_drift.py),
+  a step in the `drift guards` CI job (it needs network, so it is not in `make ci`; run it by
+  hand with `make vendored-drift`). It reports `up_to_date | behind | diverged | not_found`
+  against the pinned ref. `diverged` (upstream rewrote history at the ref, or our copy was
+  hand-edited outside the compose layer) and `not_found` (a reachable upstream no longer
+  carrying the ref) are failures; `behind` is informational, since the pin is deliberate. An
+  unreachable upstream is skipped with a notice — a network blip is not evidence of drift.
 
 A vendored entry whose upstream later disappears is not deleted — it is reclassified
 `disposition: orphaned` and reviewed under task-11 (vendored-skill quality).
