@@ -22,7 +22,7 @@ flowchart TD
   layer --> verdict[A design verdict with the rule id behind it]
   ops --> change[A changed instance: collection, record, migration, backup]
 
-  base -.->|Hand-editing here fails the provenance gate| layer
+  base -.->|Hand-editing here fails the vendored drift gate| layer
 ```
 
 The design skill decides *what to build*; the operational skill *builds it*. Each hands off to

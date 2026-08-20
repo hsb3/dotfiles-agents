@@ -124,7 +124,7 @@ def _vendored_bases():
 
     A vendored body is third-party bytes held verbatim under `base/` (docs/vendoring-rule.md):
     it carries none of OUR personalization, and it cannot be corrected here — a hand-edit
-    registers as `diverged` against the pinned ref and fails the provenance gate. So the
+    registers as `diverged` against the pinned ref and fails the vendored-drift gate. So the
     IDENTITY token scan, whose whole subject is our own name/org/repo/issue leaking into a
     shipped body, is both inapplicable and unfixable there. Derived from the roster rather
     than hardcoded, so a new vendored entry is covered the day it lands.

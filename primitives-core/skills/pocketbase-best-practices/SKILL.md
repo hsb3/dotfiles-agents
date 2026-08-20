@@ -69,6 +69,6 @@ difference, and record it under "Field notes" rather than editing `base/`.
 ## Found an error?
 
 `base/` is vendored verbatim and must never be hand-edited — an edit there registers as
-upstream drift and fails the provenance gate. Corrections go in "Field notes" above, with the
+upstream drift and fails the vendored-drift gate. Corrections go in "Field notes" above, with the
 evidence that established them. A correction that belongs upstream should also be reported to
 the upstream project named in this skill's README.
