@@ -20,6 +20,21 @@ The subject list is DERIVED from `plugins/*/` on disk, never from a recorded inv
 same rule as every other guard here. A plugin dir with no `.claude-plugin/plugin.json` is
 reported rather than skipped, since that is a broken assembly, not a non-subject.
 
+VALIDATION RUNS ON A DEREFERENCED COPY, NOT ON THE TREE IN PLACE. `plugins/<id>/` are
+symlink assemblies (ADR 0017), and the validator reads components WITHOUT following
+symlinks — from CLI 2.1.240 it says so out loud: "N entries here are symlinks and were not
+read ... A session loading this plugin does follow them, so validate the real paths
+separately." Under --strict that warning is fatal, so validating the assemblies in place
+fails every bundle in this repo by construction. Copying with symlinks resolved (the same
+`cp -RL` shape `.github/workflows/publish.yml` uses to build `main`) fixes it properly:
+what gets validated is then exactly what a consumer installs, which is the thing worth
+checking anyway. Suppressing the warning instead would have validated a hollow tree.
+
+MEASURED 2026-08-22: CLI 2.1.231 (the `stable` dist-tag) does not emit that warning;
+2.1.240 (`latest`) does. An unpinned `npm install -g` therefore turned this gate red with
+no change to the repo — which is why the workflows pin the CLI, and why the pin is a
+correctness control rather than tidiness.
+
 NOT in `make ci`. `make ci` is offline and zero-install by design, and this needs the
 `claude` binary. It rides the `drift guards` CI job for the same reason
 `check_version_bump.py` and `check_vendored_drift.py` do — dev's branch protection pins
@@ -33,10 +48,12 @@ Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violations (prints every on
 Usage: python3 scripts/check_manifests.py [--verbose]   (run from anywhere)
 """
 
+import contextlib
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGINS_DIR = os.path.join(REPO, "plugins")
@@ -61,6 +78,29 @@ def subjects():
             continue
         out.append((name, path))
     return out
+
+
+@contextlib.contextmanager
+def dereferenced():
+    """Yield a temp dir holding the publish shape with every symlink resolved.
+
+    Mirrors `.github/workflows/publish.yml`'s assembly: `.claude-plugin/marketplace.json`
+    plus a `cp -RL` of `plugins/`. Yields None when there is nothing to copy, so callers
+    fall back to validating in place and the missing-file checks still report.
+    """
+    if not os.path.isdir(PLUGINS_DIR):
+        yield None
+        return
+    tmp = tempfile.mkdtemp(prefix="manifest-gate-")
+    try:
+        # symlinks=False copies what each link points at, which is what ships.
+        shutil.copytree(PLUGINS_DIR, os.path.join(tmp, "plugins"), symlinks=False)
+        if os.path.isfile(MARKETPLACE):
+            os.makedirs(os.path.join(tmp, ".claude-plugin"), exist_ok=True)
+            shutil.copy2(MARKETPLACE, os.path.join(tmp, ".claude-plugin", "marketplace.json"))
+        yield tmp
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def validate(path):
@@ -99,20 +139,8 @@ def main():
 
     problems = []
     checked = 0
-    for label, path in subjects():
-        rel = os.path.relpath(path, REPO) or "."
-        if label != "marketplace":
-            manifest = os.path.join(path, ".claude-plugin", "plugin.json")
-            if not os.path.isfile(manifest):
-                problems.append(f"{rel}: no .claude-plugin/plugin.json — broken assembly")
-                continue
-        ok, output = validate(path)
-        checked += 1
-        if not ok:
-            detail = output or "validator exited non-zero with no output"
-            problems.append(f"{rel}: --strict failed\n    " + detail.replace("\n", "\n    "))
-        elif verbose:
-            print(f"  ✓ {rel}")
+    with dereferenced() as deref:
+        problems, checked = _run(subjects(), deref, verbose)
 
     if problems:
         print(f"✗ manifest gate: {len(problems)} problem(s):", file=sys.stderr)
@@ -122,9 +150,40 @@ def main():
 
     print(
         f"✓ manifests clean — {checked} manifest(s) pass `claude plugin validate --strict` "
-        "(marketplace + every plugin assembly, derived from disk)"
+        "on the DEREFERENCED publish shape (marketplace + every plugin assembly, derived "
+        "from disk)"
     )
     return 0
+
+
+def _run(subject_list, deref, verbose):
+    """Validate each subject, reporting paths as they appear in the REAL tree.
+
+    `deref` is the resolved copy to validate against, or None to validate in place.
+    """
+    problems = []
+    checked = 0
+    for label, path in subject_list:
+        rel = os.path.relpath(path, REPO) or "."
+        if label != "marketplace":
+            manifest = os.path.join(path, ".claude-plugin", "plugin.json")
+            if not os.path.isfile(manifest):
+                problems.append(f"{rel}: no .claude-plugin/plugin.json — broken assembly")
+                continue
+        target = path
+        if deref is not None:
+            candidate = deref if label == "marketplace" else os.path.join(deref, "plugins", label)
+            if os.path.exists(candidate):
+                target = candidate
+        ok, output = validate(target)
+        checked += 1
+        if not ok:
+            detail = output or "validator exited non-zero with no output"
+            problems.append(f"{rel}: --strict failed\n    " + detail.replace("\n", "\n    "))
+        elif verbose:
+            print(f"  ✓ {rel}")
+
+    return problems, checked
 
 
 if __name__ == "__main__":

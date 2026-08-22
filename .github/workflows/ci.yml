@@ -61,7 +61,13 @@ jobs:
       #
       # A missing binary is a FAILURE, not a skip — see scripts/check_manifests.py. That is
       # why the install step below is not `continue-on-error`.
+      # PINNED, and the pin is a correctness control not tidiness. An unpinned
+      # `npm install -g` installs `latest`, and on 2026-08-22 that took this gate from
+      # green to red with zero repo changes: 2.1.231 (the `stable` tag, what local dev
+      # machines run) is silent about symlinks, 2.1.240 warns about them, and --strict
+      # makes a warning fatal. Bump this deliberately, and expect to re-run the gate when
+      # you do.
       - name: Install the Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.240
       - name: manifest gate (claude plugin validate --strict)
         run: make manifests

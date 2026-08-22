@@ -9,6 +9,12 @@ Fixture repos are built under a tempdir (never under primitives-core/ or plugins
 roster guard's orphan rule) and the module's REPO/PLUGINS_DIR/MARKETPLACE constants — all
 computed at import time — are pointed at them for the duration of each test, so subjects()
 derives from the fixture rather than the real repo.
+
+Validation happens on a DEREFERENCED COPY in a second tempdir, so the path handed to the
+validator is NOT the path reported in messages. The fake validator therefore keys its
+canned results by subject LABEL (recovered from the path's shape) rather than by path:
+tests say "beta fails" without caring which tree beta was validated in, which is the only
+thing that keeps them honest about the copy/report split.
 """
 
 import contextlib
@@ -26,25 +32,62 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 import check_manifests as M  # noqa: E402
 
 
+def label_for(path):
+    """Recover a subject label from a validated path, in either tree.
+
+    `<anywhere>/plugins/beta` is beta; anything else is the marketplace root (the repo
+    itself in place, or the dereferenced copy's root).
+    """
+    parent, base = os.path.split(path.rstrip(os.sep))
+    return base if os.path.basename(parent) == "plugins" else "marketplace"
+
+
 class FakeValidator:
     """Stands in for `subprocess.run(["claude", "plugin", "validate", ...])`.
 
-    `results` maps a subject path to (returncode, stdout); anything unlisted passes clean.
-    Every invocation is recorded so a test can assert what was NOT run.
+    `results` maps a subject LABEL to (returncode, stdout); anything unlisted passes clean.
+    Every invocation is recorded so a test can assert what was NOT run, and what tree the
+    path pointed into. With `snapshot` on it also records the bytes actually visible at the
+    validated path, which is how the symlink-following behaviour is pinned.
     """
 
     def __init__(self, results=None):
         self.results = results or {}
         self.calls = []
+        self.snapshot = False
+        self.snapshots = {}
 
     def __call__(self, argv, **kwargs):
         self.calls.append(argv)
-        rc, out = self.results.get(argv[3], (0, ""))
+        path = argv[3]
+        label = label_for(path)
+        if self.snapshot:
+            self.snapshots[label] = self._walk(path)
+        rc, out = self.results.get(label, (0, ""))
         return subprocess.CompletedProcess(argv, rc, stdout=out, stderr="")
+
+    @staticmethod
+    def _walk(path):
+        """{relpath: (is_symlink, text)} for every file reachable at `path`.
+
+        os.walk does not follow directory symlinks, so a component that is still a link
+        simply does not appear here — exactly the blindness the real validator has.
+        """
+        seen = {}
+        for root, _dirs, files in os.walk(path):
+            for name in files:
+                full = os.path.join(root, name)
+                with open(full, encoding="utf-8", errors="replace") as fh:
+                    seen[os.path.relpath(full, path)] = (os.path.islink(full), fh.read())
+        return seen
 
     @property
     def validated_paths(self):
         return [argv[3] for argv in self.calls]
+
+    @property
+    def validated_labels(self):
+        return [label_for(argv[3]) for argv in self.calls]
 
 
 class ManifestGateBase(unittest.TestCase):
@@ -86,11 +129,32 @@ class ManifestGateBase(unittest.TestCase):
                 json.dump({"name": pid, "description": "fixture", "version": "0.1.0"}, fh)
         return pdir
 
-    def fail(self, path, output):
-        self.validator.results[path] = (1, output)
+    def symlink_component(self, pid, body="---\nname: alpha\ndescription: real body\n---\n"):
+        """Give `pid` a skills/ entry that is a real symlink into a fixture primitives-core.
+
+        This is the shape that turned CI red: the validator does not follow it, so the copy
+        has to resolve it. Returns the link path.
+        """
+        src = os.path.join(self.fix, "primitives-core", "skills", pid)
+        os.makedirs(src, exist_ok=True)
+        with open(os.path.join(src, "SKILL.md"), "w") as fh:
+            fh.write(body)
+        skills = os.path.join(self.plugin_path(pid), "skills")
+        os.makedirs(skills, exist_ok=True)
+        link = os.path.join(skills, pid)
+        os.symlink(os.path.relpath(src, skills), link)
+        return link
+
+    def fail(self, label, output):
+        self.validator.results[label] = (1, output)
 
     def plugin_path(self, pid):
         return os.path.join(M.PLUGINS_DIR, pid)
+
+    @property
+    def deref_root(self):
+        """The dereferenced copy's root, recovered from the marketplace invocation."""
+        return self.validator.calls[0][3]
 
     def run_main(self, argv=("check_manifests.py",)):
         """main() with stdout+stderr captured; returns (rc, combined text)."""
@@ -113,10 +177,7 @@ class CleanRepo(ManifestGateBase):
 
     def test_marketplace_and_every_plugin_are_validated(self):
         self.run_main()
-        self.assertEqual(
-            self.validator.validated_paths,
-            [self.fix, self.plugin_path("alpha"), self.plugin_path("beta")],
-        )
+        self.assertEqual(self.validator.validated_labels, ["marketplace", "alpha", "beta"])
 
     def test_the_validator_is_invoked_with_strict(self):
         self.run_main()
@@ -131,12 +192,79 @@ class CleanRepo(ManifestGateBase):
         self.assertIn("plugins/beta", text)
 
 
+class DereferencedCopy(ManifestGateBase):
+    """The fix for the red CI: validate what ships, not the symlink assembly in place."""
+
+    def test_the_validated_target_is_the_copy_not_the_tree_in_place(self):
+        self.run_main()
+        paths = self.validator.validated_paths
+        for path in paths:
+            self.assertFalse(
+                path == self.fix or path.startswith(self.fix + os.sep),
+                f"validated the real tree in place: {path}",
+            )
+        self.assertEqual(
+            paths[1:],
+            [os.path.join(self.deref_root, "plugins", pid) for pid in ("alpha", "beta")],
+        )
+
+    def test_a_symlinked_component_is_followed_into_the_copy(self):
+        """The exact bug: a link the validator will not read must be resolved first."""
+        self.symlink_component("alpha")
+        self.validator.snapshot = True
+        rc, text = self.run_main()
+        self.assertEqual(rc, 0, text)
+        seen = self.validator.snapshots["alpha"]
+        self.assertIn("skills/alpha/SKILL.md", seen, "the symlinked body never reached the copy")
+        is_link, content = seen["skills/alpha/SKILL.md"]
+        self.assertFalse(is_link, "the copy still holds a symlink, so the validator skips it")
+        self.assertIn("real body", content)
+
+    def test_the_copy_carries_the_marketplace_manifest(self):
+        with M.dereferenced() as deref:
+            self.assertTrue(
+                os.path.isfile(os.path.join(deref, ".claude-plugin", "marketplace.json"))
+            )
+
+    def test_the_tempdir_is_cleaned_up_afterwards(self):
+        self.run_main()
+        self.assertNotEqual(self.deref_root, self.fix)
+        self.assertFalse(os.path.exists(self.deref_root), "the dereferenced copy leaked")
+
+    def test_reported_paths_stay_repo_relative_not_tempdir_paths(self):
+        """A failure message naming a vanished tempdir would be useless to a human."""
+        self.fail("beta", "Warning: unrecognized field `changelog`")
+        rc, text = self.run_main()
+        self.assertEqual(rc, 1, text)
+        self.assertIn("plugins/beta", text)
+        self.assertNotIn(self.deref_root, text)
+        self.assertNotIn("manifest-gate-", text)
+
+    def test_no_plugins_dir_yields_no_copy(self):
+        shutil.rmtree(M.PLUGINS_DIR)
+        with M.dereferenced() as deref:
+            self.assertIsNone(deref)
+
+    def test_run_validates_in_place_when_there_is_no_copy(self):
+        problems, checked = M._run(M.subjects(), None, False)
+        self.assertEqual(problems, [])
+        self.assertEqual(checked, 3)
+        self.assertEqual(
+            self.validator.validated_paths,
+            [self.fix, self.plugin_path("alpha"), self.plugin_path("beta")],
+        )
+
+    def test_a_subject_missing_from_the_copy_falls_back_to_its_real_path(self):
+        """A copy that somehow lacks a counterpart must not validate a nonexistent path."""
+        empty = tempfile.mkdtemp(prefix="empty-deref-")
+        self.addCleanup(shutil.rmtree, empty, True)
+        M._run([("alpha", self.plugin_path("alpha"))], empty, False)
+        self.assertEqual(self.validator.validated_paths, [self.plugin_path("alpha")])
+
+
 class FailingManifests(ManifestGateBase):
     def test_one_failing_manifest_is_red_and_names_only_that_subject(self):
-        self.fail(
-            self.plugin_path("beta"),
-            "Warning: unrecognized field `changelog` in plugin.json",
-        )
+        self.fail("beta", "Warning: unrecognized field `changelog` in plugin.json")
         rc, text = self.run_main()
         self.assertEqual(rc, 1, text)
         self.assertIn("plugins/beta", text)
@@ -145,8 +273,8 @@ class FailingManifests(ManifestGateBase):
 
     def test_every_failing_subject_is_reported_not_just_the_first(self):
         """The docstring promises every violation prints; a bail-on-first would hide one."""
-        self.fail(self.plugin_path("alpha"), "Warning: missing `author`")
-        self.fail(self.plugin_path("beta"), "Warning: unrecognized field `changelog`")
+        self.fail("alpha", "Warning: missing `author`")
+        self.fail("beta", "Warning: unrecognized field `changelog`")
         rc, text = self.run_main()
         self.assertEqual(rc, 1, text)
         self.assertIn("plugins/alpha", text)
@@ -154,13 +282,13 @@ class FailingManifests(ManifestGateBase):
         self.assertIn("2 problem(s)", text)
 
     def test_a_failing_marketplace_is_red(self):
-        self.fail(self.fix, "Warning: marketplace entry has no `description`")
+        self.fail("marketplace", "Warning: marketplace entry has no `description`")
         rc, text = self.run_main()
         self.assertEqual(rc, 1, text)
         self.assertIn("description", text)
 
     def test_silent_nonzero_exit_still_reports_something(self):
-        self.fail(self.plugin_path("alpha"), "")
+        self.fail("alpha", "")
         rc, text = self.run_main()
         self.assertEqual(rc, 1, text)
         self.assertIn("no output", text)
@@ -190,7 +318,7 @@ class MissingPrerequisites(ManifestGateBase):
         self.assertIn("plugins/gamma", text)
         self.assertIn("broken assembly", text)
         # reported, not validated: the validator must not be asked about it
-        self.assertNotIn(self.plugin_path("gamma"), self.validator.validated_paths)
+        self.assertNotIn("gamma", self.validator.validated_labels)
 
 
 class ValidatorFailureModes(ManifestGateBase):

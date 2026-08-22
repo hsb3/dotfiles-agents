@@ -22,6 +22,18 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   `claude plugin validate --strict` over the marketplace and every assembly).
   All three ride the `drift guards` CI job rather than getting their own, because branch
   protection pins required checks by job NAME.
+- **`claude plugin validate --strict` cannot see through a symlink assembly, so the gate
+  validates a dereferenced copy.** From CLI 2.1.240 the validator warns "N entries here are
+  symlinks and were not read ... validate the real paths separately", and `--strict` makes
+  that fatal — which fails every bundle in this repo by construction, since ADR 0017 makes
+  every `plugins/<id>/` a symlink tree. `check_manifests.py` therefore `cp -RL`s into a
+  tempdir (the same shape `publish.yml` builds `main` from) and validates that. Bonus: what
+  gets checked is then exactly what a consumer installs.
+- **The Claude Code CLI is PINNED in both workflows, and that pin is load-bearing.** An
+  unpinned `npm install -g` installs `latest`. On 2026-08-22 that alone took `drift guards`
+  from green to red with no repo change: local machines run 2.1.231 (the `stable` tag,
+  silent about symlinks), CI installed 2.1.240 (which warns). Any gate shelling out to a
+  vendored binary inherits that binary's release cadence — pin it, and bump deliberately.
 - **A missing tool is a failed gate, never a skipped one.** `make manifests` exits 1 when
   `claude` is not on PATH rather than passing with a notice. The two network gates differ
   deliberately — they exit 0 with a notice when the remote is unreachable, so a network blip
