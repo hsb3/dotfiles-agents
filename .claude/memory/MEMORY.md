@@ -15,3 +15,4 @@
 - [Reproduce before fixing a card](reproduce-before-fixing-a-card.md) — a card is the filer's inference, not a measurement; stale cards and partial closes regenerate work
 - [Identity gate blocks personal-repo installs](identity-gate-blocks-personal-repo-installs.md) — the owner handle is an unconditional ban with no exemption; `gh search --owner @me` is the only legal shape and only works for the owner
 - [Default to Up Next](feedback-default-to-up-next.md) — work the owner's `Up Next` lane; empty means ask, never self-select from `To Do`
+- [Board writes need read-back](board-writes-need-readback.md) — Kaneo bulk writes revert silently; single-field PUT + delayed re-read is the only proof
