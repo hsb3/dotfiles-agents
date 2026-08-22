@@ -52,6 +52,14 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
 
 ## Method
 
+- **Same-size source mutation + stale bytecode = a mutant sweep that lies.** CPython validates
+  `.pyc` files on mtime **and size**, so flipping `return 1` to `return 0` (identical length)
+  and reverting inside the same mtime second leaves the stale bytecode valid. The tests then
+  keep reporting the mutant's result against provably correct source. Observed 2026-08-22
+  while mutation-testing `check_manifests.py`: the first full sweep was untrustworthy and had
+  to be redone. **Clear `__pycache__` between mutants.** Also: put the restore in a `finally` —
+  a sweep script that crashes before restoring leaves the tree sabotaged, and a commit taken in
+  that window ships the mutation.
 - **A heuristic that passes its tests can still be mostly wrong — measure it against a corpus.**
   Replay over git history, and use a stdlib parser as the oracle where one exists. Proved twice:
   `comment-hygiene-gate` (replay found 79% precision) and the kaneo importer (its tests used a
