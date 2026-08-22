@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Build Obsidian plugins against the real API \u2014 lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP \u2014 and automate vaults from the terminal with the official Obsidian CLI.",
+  "description": "Build Obsidian plugins against the real API \u2014 lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP \u2014 and automate vaults from the terminal with the official Obsidian CLI. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "obsidian-toolkit",
-  "version": "0.1.3"
+  "version": "0.1.4"
 }

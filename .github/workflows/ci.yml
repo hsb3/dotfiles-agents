@@ -51,3 +51,17 @@ jobs:
       # a base/ that no longer matches, is red.
       - name: vendored-drift gate (base/ vs pinned upstream ref)
         run: python3 scripts/check_vendored_drift.py
+      # Manifest gate: the first-party validator over the marketplace and every assembly.
+      # `--strict` turns warnings into failures, catching what the runtime tolerates in
+      # silence — an unrecognized field (a `changelog:` key nothing reads), missing
+      # attribution. It rides THIS job for the same reason as the two gates above: dev's
+      # branch protection pins required checks by job NAME, so a new gate joins an existing
+      # job rather than adding one. It is out of `make ci` because it needs the `claude`
+      # binary and `make ci` is offline + zero-install by design.
+      #
+      # A missing binary is a FAILURE, not a skip — see scripts/check_manifests.py. That is
+      # why the install step below is not `continue-on-error`.
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+      - name: manifest gate (claude plugin validate --strict)
+        run: make manifests

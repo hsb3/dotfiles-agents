@@ -39,6 +39,17 @@ jobs:
           python-version: "3.13"
       - name: Gate the source tip
         run: make ci
+      # The Claude Code CLI is the first-party manifest validator and tagger. It is not on
+      # the runner by default, and `make ci` deliberately cannot depend on it (offline +
+      # zero-install by design), so it is installed here rather than folded into the gate.
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+      # Manifest conformance (scripts/check_manifests.py) — `claude plugin validate --strict`
+      # over the marketplace and every assembly. Catches what the runtime tolerates silently:
+      # unrecognized fields, missing attribution. Runs BEFORE assembly so a bad manifest never
+      # reaches main.
+      - name: Manifest gate (claude plugin validate --strict)
+        run: make manifests
       - name: Assemble the publish tree
         # Lift map (ADR 0008, updated after #229 retired the dist lanes): the live
         # symlink assemblies (ADR 0017) ARE the marketplace — dereference them to the
@@ -62,6 +73,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           DEV_SHA="$(git rev-parse --short HEAD)"
+          # Full sha is carried forward so the release step can return to the SOURCE commit
+          # to tag it — by the time that step runs, HEAD is the publish-tree commit.
+          {
+            echo "DEV_SHA=$DEV_SHA"
+            echo "DEV_FULL_SHA=$(git rev-parse HEAD)"
+          } >> "$GITHUB_ENV"
           if [ "${{ github.event.inputs.reset }}" = "orphan" ]; then
             git checkout --orphan publish-tree
           else
@@ -74,8 +91,10 @@ jobs:
           git add -A
           if git diff --cached --quiet; then
             echo "publish surface unchanged — nothing to publish"
+            echo "PUBLISHED=false" >> "$GITHUB_ENV"
             exit 0
           fi
+          echo "PUBLISHED=true" >> "$GITHUB_ENV"
           git commit -m "publish: dev@${DEV_SHA}" \
             -m "$(python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); print('\n'.join(p['name']+' '+p['version'] for p in d['plugins']))")"
           # (marketplace.json is read from the assembled tree — root-level after the lift)
@@ -84,3 +103,65 @@ jobs:
           else
             git push origin HEAD:refs/heads/main
           fi
+      # The consumer-facing record (decision-013). A plugin's `version` is a cache key the
+      # CLI never explains, and `homepage`/`repository` are rendered nowhere — so a release
+      # page is the only durable place someone can read what changed. Two artifacts:
+      #
+      #   1. Per-plugin tags `<id>--v<version>`, cut by the first-party `claude plugin tag`,
+      #      which also asserts plugin.json and the marketplace entry agree on the version.
+      #      A tag that already exists means that plugin did not change — that is how the
+      #      changed set is DERIVED rather than recorded.
+      #   2. ONE dated release per publish. Per-plugin releases were rejected: GitHub's
+      #      generated notes diff against the previous release regardless of which plugin it
+      #      belonged to, so eight plugin releases would each claim every commit.
+      #
+      # This step FAILS the workflow rather than warning. Once the release page is the only
+      # history, a silently skipped release stops the record with nothing going red.
+      - name: Tag each changed plugin and cut the release
+        if: env.PUBLISHED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force origin
+          # `claude plugin tag` refuses to tag a dirty tree — correct behaviour, but by this
+          # point we are standing on the publish-tree commit with its assembled files. Reset
+          # hard to the source commit and clean, or every publish fails at the tag step.
+          # (The assembly lives in a mktemp dir outside the repo, so clean cannot eat it.)
+          git checkout -q --detach "$DEV_FULL_SHA"
+          git reset -q --hard "$DEV_FULL_SHA"
+          git clean -qfd
+          for d in plugins/*/; do
+            id="$(basename "$d")"
+            ver="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$d.claude-plugin/plugin.json")"
+            tag="${id}--v${ver}"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "  $tag exists — $id unchanged since its last tag"
+              continue
+            fi
+            echo "  tagging $tag"
+            claude plugin tag "$d" --push --remote origin -m "$id %s"
+          done
+          REL_TAG="publish-$(date -u +%Y-%m-%d)-${DEV_SHA}"
+          git tag -a "$REL_TAG" -m "publish dev@${DEV_SHA}"
+          git push origin "refs/tags/$REL_TAG"
+          # Body = the plugin/version manifest (the ledger that until now only existed in a
+          # commit body on main) followed by GitHub's generated notes. The notes are fetched
+          # from the generate-notes API rather than passed as --generate-notes, because that
+          # flag cannot be combined with a custom body.
+          {
+            echo "### Plugins in this publish"
+            echo
+            python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); [print('- \`'+p['name']+'\` '+p['version']) for p in d['plugins']]"
+            echo
+            echo "Install: \`claude plugin install <name>@dotfiles-agents\`"
+            echo
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$REL_TAG" -f target_commitish="$DEV_FULL_SHA" \
+              --jq .body
+          } > "$RUNNER_TEMP/notes.md"
+          gh release create "$REL_TAG" \
+            --title "Marketplace publish $(date -u +%Y-%m-%d)" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --verify-tag \
+            --latest
