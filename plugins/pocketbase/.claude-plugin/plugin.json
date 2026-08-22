@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes) plus a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment.",
+  "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes) plus a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "pocketbase",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

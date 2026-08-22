@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks
+.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -29,6 +29,9 @@ flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclici
 symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1; solo-skills membership
 	@python3 scripts/check_symlinks.py
 	@python3 scripts/check_solo_skills.py
+
+manifests: ## Manifest gate: `claude plugin validate --strict` over marketplace + every assembly (needs the claude CLI; NOT in ci)
+	@python3 scripts/check_manifests.py
 
 members: ## Print each plugin's members, derived live from the symlink assemblies
 	@for p in plugins/*/; do id=$$(basename "$$p"); echo "$$id:"; \
