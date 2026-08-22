@@ -42,14 +42,15 @@ jobs:
       # The Claude Code CLI is the first-party manifest validator and tagger. It is not on
       # the runner by default, and `make ci` deliberately cannot depend on it (offline +
       # zero-install by design), so it is installed here rather than folded into the gate.
-      # PINNED, and the pin is a correctness control not tidiness. An unpinned
-      # `npm install -g` installs `latest`, and on 2026-08-22 that took this gate from
-      # green to red with zero repo changes: 2.1.231 (the `stable` tag, what local dev
-      # machines run) is silent about symlinks, 2.1.240 warns about them, and --strict
-      # makes a warning fatal. Bump this deliberately, and expect to re-run the gate when
-      # you do.
+      # PINNED TO WHAT LOCAL DEV MACHINES RUN — the `stable` tag. The pin is a correctness
+      # control, not tidiness, and matching local is the point: an unpinned `npm install -g`
+      # installs `latest`, and `latest` disagrees with `stable` about this gate — the newer
+      # CLI warns about symlinks where `stable` is silent, and --strict makes a warning
+      # fatal. A gate that fails only in CI is a gate nobody can reproduce, so CI tracks the
+      # machines rather than the other way round. Bump this when local `stable` moves, and
+      # re-run the gate when you do.
       - name: Install the Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code@2.1.240
+        run: npm install -g @anthropic-ai/claude-code@2.1.231
       # Manifest conformance (scripts/check_manifests.py) — `claude plugin validate --strict`
       # over the marketplace and every assembly. Catches what the runtime tolerates silently:
       # unrecognized fields, missing attribution. Runs BEFORE assembly so a bad manifest never
