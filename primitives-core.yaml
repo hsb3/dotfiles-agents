@@ -91,6 +91,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: starting-conditions
+    type: skill
+    source: primitives-core/skills/starting-conditions
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
   - id: context-watermark
     type: hook
     source: primitives-core/hooks/context-watermark
@@ -166,6 +172,12 @@ primitives:
   - id: manager
     type: agent
     source: primitives-core/agents/manager.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
+  - id: rig-builder
+    type: agent
+    source: primitives-core/agents/rig-builder.md
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]

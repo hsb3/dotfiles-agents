@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Audit a repo against a documented structure standard, scaffold the gaps, then plan, track, and report the work that follows: conformant issues, source-grounded plans, meta-structure and memory upkeep, board triage, recurring status comms, and themed PowerPoint decks.",
+  "description": "Set a project's starting conditions and then run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, audit the repo against a documented structure standard, scaffold the gaps, and plan, track, and report what follows — conformant issues, source-grounded plans, meta-structure and memory upkeep, board triage, recurring status comms, and themed PowerPoint decks.",
   "name": "code-desk",
-  "version": "0.5.0"
+  "version": "0.6.0"
 }

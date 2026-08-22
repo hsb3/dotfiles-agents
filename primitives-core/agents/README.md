@@ -1,10 +1,15 @@
 # agents
 
-The delegation roles the atelier skills dispatch for scoped work. `scout`, `builder`,
-and `reviewer` sit on the **execution layer**: each takes one bounded brief and reports
-back. `manager` sits on the **management layer**, owning a wave or a coupled chain and
+Two families live here. The **atelier delegation roles** (`scout`, `builder`, `reviewer`,
+`manager`) are generic: any skill can dispatch them at any layer. `scout`, `builder`, and
+`reviewer` sit on the **execution layer**, each taking one bounded brief and reporting
+back; `manager` sits on the **management layer**, owning a wave or a coupled chain and
 driving it with its own workers. The **strategy layer** is the session itself
 (`strategist`), which is never a spawned agent.
+
+The **bundle-specific agents** (`kaneo-manager`, `rig-builder`) are the opposite: each is
+bound to one bundle's subject matter and its access model, and is dispatched by that
+bundle's skills rather than by the delegation router.
 
 The model below is each role's default; the dispatcher overrides it per call when a
 slice's difficulty warrants a different tier.
@@ -15,9 +20,20 @@ slice's difficulty warrants a different tier.
 | `builder` | sonnet | opus, for coupled or expensive-to-unwind slices | Scoped implementation inside an owned file list against explicit acceptance criteria. |
 | `reviewer` | opus | always premium; no override | Adversarial, report-only verification that re-derives each claim from its cited source and re-runs its commands. |
 | `manager` | opus | always premium; no override | Owns a wave or a coupled chain end to end: briefs, sequences, and verifies its own workers, then reports one proof package upward. |
+| `kaneo-manager` | inherits the session's | any; nothing is pinned | Board work under a read-plus-append allowlist — reads tasks, comments, and relations, adds comments and new tasks, and never claims or mutates an existing one. A reference template for a consuming repo to copy and adapt. |
+| `rig-builder` | sonnet | opus, when the artifact has no compiler and the checker must be designed | Turning a written contract into one gate command, proving it green *and* red, and reporting a measured baseline. |
+
+**Never swap `builder` for `rig-builder`:** `builder` implements until the acceptance
+criteria pass; `rig-builder` measures the baseline and must not fix it, because a baseline
+taken after remediation is worthless.
 
 ## Install
 
+The delegation roles ship in `atelier`; each bundle-specific agent ships in the bundle it
+belongs to — `kaneo-manager` in `kaneo`, `rig-builder` in `code-desk`.
+
 ```
 claude plugin install atelier@dotfiles-agents
+claude plugin install kaneo@dotfiles-agents
+claude plugin install code-desk@dotfiles-agents
 ```
