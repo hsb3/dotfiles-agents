@@ -70,6 +70,37 @@ accept worker self-reports as proof.
 - To course-correct or extend a worker you already spawned, continue it with
   SendMessage (it keeps its accumulated context) — never re-brief a fresh worker for
   the same link; a re-brief discards the context you already paid for.
+- **That message is one-way.** `builder`, `reviewer`, and `scout` do not carry
+  SendMessage, so they cannot answer you before they finish. Send amendments, never
+  questions, and never block on a reply: the reply IS the worker's final report. Need
+  an answer sooner? Re-read the contract, or send a `scout` to get it independently.
+- **A file you handed to a live worker is not yours.** Read it freely; do not edit it,
+  not even a one-liner — a manager fix was silently reverted when its builder finished
+  and wrote the file it owned. Queue the edit on your punch list for after the
+  completion notification, or fold it into that worker as an amendment.
+
+## Waiting — never on something that cannot arrive
+
+Every wait you adopt names three things: what would satisfy it, WHO produces that (a
+named live dispatch, a running command, or an escalation upward), and what you do when
+it does not arrive. Missing any one, you are not waiting, you are deadlocked — stop and
+take the fallback.
+
+**Polling a worker's output is not a liveness check.** A test suite is green between
+mutants and a file is complete between edits; the completion notification is the only
+signal the work is finished. To tell a dead worker from a slow one, check whether it is
+still writing its transcript:
+
+```sh
+slug=$(pwd | sed 's/[^A-Za-z0-9]/-/g')
+d=$(/bin/ls -dt ~/.claude/projects/"$slug"/*/subagents 2>/dev/null | head -1)
+[ -n "$d" ] || d=$(/bin/ls -dt ~/.claude/projects/*/*/subagents | head -1)
+/bin/ls -lt "$d"/agent-*.jsonl | head
+```
+
+mtime advancing means alive — slow is not dead, do not re-dispatch. mtime unchanged
+across two checks a few minutes apart means presumed dead: stop waiting and report the
+link as not done, never as done-and-unreported.
 
 ## First-pass verification
 

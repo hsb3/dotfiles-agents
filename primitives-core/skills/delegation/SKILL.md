@@ -11,8 +11,9 @@ description: >
   session; and when a session notices it has been reading, editing, and running commands itself
   for a long stretch without delegating. Provides the three-layer model (strategy, management,
   execution), the effort calibration, the architecture matrix, the pre-dispatch preconditions, the
-  model cheat-sheet, the never-delegated floor and its ceiling, the brief rules, and the
-  context-hygiene defaults.
+  model cheat-sheet, the never-delegated floor and its ceiling, the brief rules, the
+  context-hygiene defaults, and the waiting rules that keep an agent from blocking forever on a
+  reply, a signal, or a worker it cannot tell is dead.
 ---
 
 # Delegation
@@ -44,7 +45,9 @@ not. The map from rule to measurement is `references/provenance.md`.
 | Execution | `scout`, `builder`, `reviewer` | no, escalates | no | no | one slice; disposable |
 
 Spawn authority is structural, not a rule to be observed: `manager` carries the `Agent` and
-`SendMessage` tools, and the execution agents do not have them.
+`SendMessage` tools, and the execution agents do not have them. The consequence is easy to miss
+and deadlocks managers: a message to an execution agent cannot be answered, because the callee
+has no tool to answer with (`references/waiting.md`).
 
 ### Strategy — `strategist`
 
@@ -106,7 +109,8 @@ starts optimizing for the plan instead of reporting the chain honestly.
 
 **Never:** amend the DoD (an unverifiable criterion is an escalation, not an edit); choose the
 architecture above its own chain; address the user; treat its own proof package as the verdict;
-touch read-only config.
+touch read-only config; edit a file inside a live worker's owned list, or wait on a reply an
+execution agent has no tool to send (`references/waiting.md`).
 
 ### Execution — `scout`, `builder`, `reviewer`
 
@@ -126,7 +130,8 @@ this slice.
 
 **Never:** spawn another agent; edit the config that defines its own acceptance criteria; mutate
 git; widen its own scope to unblock itself; improvise past a stop condition; present a self-report
-as proof.
+as proof; wait for an answer to a message it received — it has no channel to ask on, and its
+report is its reply (`references/waiting.md`).
 
 ### Which layer am I on
 
@@ -340,6 +345,22 @@ personas scoring against written anchors with disagreement surfaced rather than 
 `rubric-panel` skill implements it; `layer-cycle` drives the create → evaluate → refine loop it
 feeds).
 
+## Waiting and liveness
+
+An agent that blocks on something that cannot happen is the most expensive failure this kit has
+recorded, and none of the layer rules above prevent it. Three rules do, and
+**`references/waiting.md`** carries them in full with the four reported deadlocks walked to
+termination:
+
+- **No wait without a producer.** Every wait — including one an agent adopts for itself, which is
+  where every reported deadlock came from — names what would satisfy it, who produces that, and
+  what happens when it does not arrive `[untested]`.
+- **A message down is one-way.** Only `manager` carries `SendMessage`; an execution agent that
+  receives a message has no tool to answer with, so its reply is its final report. Send amendments,
+  never questions.
+- **A live worker's owned files are not the dispatcher's**, manager included, and a green poll is
+  not a completion signal. Wait for the completion notification, then edit.
+
 ## Context hygiene
 
 Operating defaults from measured findings `[cost]`. The `context-watermark` (UserPromptSubmit),
@@ -375,6 +396,8 @@ a slicing defect to escalate, not a compaction to ride out.
 - **`references/tier-cutoff.md`** — the protocol for measuring where cheap model tiers stop being
   enough.
 - **`references/dispatch-knobs.md`** — `isolation`, `maxTurns`, SendMessage, the git policy.
+- **`references/waiting.md`** — the no-wait-without-a-producer rule, one-way messages down, the
+  liveness check, and file ownership while a worker is live.
 - **`references/activation.md`** — per-project enforcement: `.claude/atelier.local.md`, the
   `enforce` modes, the `protected:` map, and the worker covenant.
 - **`references/provenance.md`** — which rule came from which measurement, and which are untested.

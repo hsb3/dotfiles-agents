@@ -39,6 +39,13 @@ its id rather than dispatching a fresh agent with a longer brief. A re-brief dis
 accumulated context that is most of what that agent already cost. This matters most for a
 `manager`, whose value is precisely the chain context it has absorbed.
 
+**Downward it is one-way.** `scout`, `builder`, and `reviewer` do not carry SendMessage, so a
+message to a live execution agent arrives and cannot be answered: the callee has no tool with
+which to send anything before it finishes. Send amendments, never questions, and never block on
+the reply — it is the callee's final report. Waiting on it instead deadlocked two managers in one
+session `[field]`. `waiting.md` has the rule, the alternatives, and the liveness check for
+telling a dead callee from a slow one.
+
 ## Agent capabilities and the git policy
 
 - **Spawn authority is structural.** `manager` is the only shipped agent carrying `Agent` and
