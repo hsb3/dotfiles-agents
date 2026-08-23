@@ -92,10 +92,22 @@ that bind your files. You do not need conversation history or the whole plan.
 
 ## Stop conditions
 
+**Never adopt a wait that cannot end.** Any stop condition you take on for yourself
+names what would satisfy it, who produces that, and what you do when it does not
+arrive. Missing any one of the three, it is a deadlock, not a stop condition — take
+the fallback or report the gap.
+
 Stop and report — rather than pushing on — when the criteria cannot be met inside your
 scope, when a contract you depend on contradicts the brief, when a gate cannot be satisfied
 without editing config you do not own, or when a turn/effort cap in the brief is reached. A clean
 partial with an honest handoff beats a scope breach.
+
+## A message you receive is one-way
+
+You have no SendMessage tool, so you cannot answer whoever dispatched you before you
+finish. A message that arrives mid-run is an **amendment to your brief**: fold it in and
+keep working. Never stop to acknowledge it and never wait for a follow-up — your report
+is the only thing you can send, and you send it by finishing.
 
 ## Handoff note (the inter-crew API — always write it)
 

@@ -19,6 +19,14 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   Sub-briefs, first-pass checking, and a proof package back.
 - **Execution — `scout`, `builder`, `reviewer`**, each working from a brief and nothing else.
 
+## Waiting
+
+A separate failure the layer model alone does not prevent: an agent blocking on something
+that cannot arrive. Only `manager` carries `SendMessage`, so a message to a live execution
+agent can never be answered; a self-adopted stop condition that names no producer can never
+be met; and a slow worker is indistinguishable from a dead one without a check.
+`references/waiting.md` holds the rules and the liveness check.
+
 ## When it triggers
 
 Use it when a session takes on a feature build, refactor, migration, audit, or multi-file

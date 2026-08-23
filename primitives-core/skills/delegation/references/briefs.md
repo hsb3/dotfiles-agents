@@ -15,7 +15,8 @@ conditions, and it writes its own workers' briefs to this file's rules.
   calls.
 - **In and out of scope, WITH file ownership** — which files this agent owns, which are
   report-only, and **which are read-only config** (gate, lint, typecheck, coverage thresholds,
-  CI). One file has one owner per wave.
+  CI). One file has one owner per wave — including against whoever dispatched the worker; a
+  manager does not edit inside its own builder's owned list (`waiting.md`).
 - **Evidence format** to return.
 - **Verification commands** to run, with the instruction to paste actual output.
 - **Stop conditions** — "if the code does not match this brief, or a command fails after a
@@ -44,6 +45,13 @@ Write constraints that carry their own limit:
 
 Best of all: if a tool can check it, make the tool check it and delete the prose. Prompt rules are
 for what tools cannot see.
+
+**The same rule binds a constraint an agent adopts for itself**, and that half is where the
+damage has actually landed: four reported deadlocks, all of them an agent waiting on a condition
+it invented and never bounded. A stop condition adopted mid-flight names what would satisfy it,
+who produces that, and what the agent does when it does not arrive — or it is not a stop
+condition, it is a deadlock. `waiting.md` carries the rule, the one-way message channel behind
+one of the four, and the liveness check for the other.
 
 ### 2. Test-first is the default, and RED is the evidence
 
