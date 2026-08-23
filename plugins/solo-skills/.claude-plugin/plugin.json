@@ -4,5 +4,5 @@
   },
   "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "solo-skills",
-  "version": "0.2.2"
+  "version": "0.3.0"
 }

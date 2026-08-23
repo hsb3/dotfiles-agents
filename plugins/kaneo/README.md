@@ -47,6 +47,7 @@ integration's push-driven status transition.
 | Path | What it does |
 |---|---|
 | `skills/kaneo/` | The contract: claim ritual, levels, decision convention, plus configuration, API, and access-model references |
+| `skills/task-authoring/` | How to write a tracker item a cold agent can execute: titles, failing-capable acceptance criteria, thresholds, gates, ownership |
 | `.mcp.json` | The board's MCP server, registered by installing the plugin — no hand-written config in the consuming repo |
 | `agents/kaneo-manager.md` | Reference L2 manager; its `tools:` list *is* the append-only allowlist |
 | `hooks/kaneo-preflight/` | Says at session start that the board is unreachable and which cause it is — or that the tools work but under the wrong identity |

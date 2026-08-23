@@ -394,6 +394,12 @@ primitives:
     disposition: qualified
     targets: [claude-code]
     requires: [hosted-mcp, env:kaneo]
+  - id: task-authoring
+    type: skill
+    source: primitives-core/skills/task-authoring
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: kaneo-manager
     type: agent
     source: primitives-core/agents/kaneo-manager.md
