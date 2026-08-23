@@ -3,9 +3,10 @@
 ## `--seed` copies verbatim
 
 `--seed <dir>` tars the directory into the fresh workspace volume before the instance
-first starts. It applies **no filtering at all** — no `.gitignore`, no skip list. A
-`node_modules`, a `.git` with years of history, a `dist/` — all of it goes in, costing copy
-time and disk, and all of it is visible to the agent as ordinary files.
+first starts. It applies **no filtering beyond `.DS_Store`** — no `.gitignore`, no skip
+list otherwise. A `node_modules`, a `.git` with years of history, a `dist/` — all of it
+goes in, costing copy time and disk, and all of it is visible to the agent as ordinary
+files.
 
 So decide deliberately what "the project" means for this sandbox:
 
@@ -32,18 +33,29 @@ The agent then cannot be distracted by, or leak context from, the rest of the re
 branch or diff, seed the working tree instead, or `git init` inside the container
 afterward.
 
-## After creation: `docker cp` both directions
+## After creation: getting files in and out
 
-Seeding only happens at create time, and the CLI has no copy subcommand. Use Docker
-directly against the instance's backend container, named `ocsbx-<instance>-opencode-1`:
+Seeding only happens at create time. For a single loose file afterward, `docker cp`
+against the instance's backend container — named `ocsbx-<instance>-opencode-1` — still
+works, and a file pushed in this way is immediately visible to the agent through the MCP
+bridge, no restart needed:
 
 ```
-docker cp ./notes.md ocsbx-review-opencode-1:/workspace/notes.md          # push in
-docker cp ocsbx-review-opencode-1:/workspace/out/report.md ./report.md    # pull out
+docker cp ./notes.md ocsbx-review-opencode-1:/workspace/notes.md
 ```
 
-Both are verified working, and a file pushed in this way is immediately visible to the
-agent through the MCP bridge — no restart needed.
+**Pulling work back out is host-pull only, deliberately** — no credentials ever go into
+an instance, so nothing inside it ever needs to reach out with a token:
 
-**Pull results out before destroying.** `destroy` deletes the workspace volume and
-everything in it. There is no undo and no snapshot.
+- **A git branch, with its history.** `opencode-sandbox fetch-url <name>` prints a `git
+  fetch` line that speaks git's wire protocol over `docker exec` stdio; run it from your
+  project's own repo and the branch, its commits, and its files land locally, ready to
+  review before you push with your own credentials. `docker cp`ing a checkout gives you a
+  detached directory with no history — use `fetch-url` for anything you'll want to diff
+  or merge.
+- **The whole workspace.** `opencode-sandbox export <name> <dir>` reads the workspace
+  volume directly and copies it to a host directory. It works even while the instance is
+  stopped, and refuses to write into a non-empty destination.
+
+**Export before destroying.** `destroy` deletes the workspace volume and everything in
+it; `opencode-sandbox export <name> <dir>` is the right last step before that.

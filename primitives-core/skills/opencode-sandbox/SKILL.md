@@ -29,19 +29,43 @@ install -m 755 /tmp/opencode-sandbox-* ~/.local/bin/opencode-sandbox
 Then confirm with `which opencode-sandbox`. If `gh` is missing or the search returns
 nothing, `references/install.md` has the fallbacks, including building from source.
 
+## Choosing instance topology
+
+Decide this before running `create`, not after:
+
+- **One project → one instance.** The default. Seeding only happens at create time, so a
+  second project's tree cannot be layered into an existing instance without clobbering the
+  first — never share a workspace across projects.
+- **One project, several branches, one agent hopping between them** → in-instance git
+  worktrees (`references/workspaces.md`), not a second instance.
+- **One project, several branches, several agents working in parallel** → one instance per
+  branch, named `<project>-<branch>` (e.g. `myapp-feature-x`), so each agent gets its own
+  workspace, ports, and MCP registration.
+- **Several projects** → several instances, always. A shared instance can't stand in for
+  multiple projects anyway: its read/list MCP tools ignore the `directory` param and always
+  report the one project they booted with.
+
 ## The flow
 
 1. **Create.** Name it after what it is for.
 
    ```
-   opencode-sandbox create <name> [--seed .] [--config ./opencode.jsonc] [--web]
+   opencode-sandbox create <name> [--seed .] [--config ./opencode.jsonc] [--api-port <n>]
+                     [--publish <port>] [--web]
    ```
 
    `--seed` copies a directory into the fresh workspace before first start, and it copies
-   **everything** — no `.gitignore`, no skip list — so for a large repo seed a pruned copy
-   instead. `references/project-context.md` covers whole vs partial seeding and how to move
-   files in and out afterward. `--web` also publishes the browser UI; leave it off unless
-   the user wants to click around.
+   **everything except `.DS_Store` files** — no `.gitignore`, no skip list otherwise — so
+   for a large repo seed a pruned copy instead. `references/project-context.md` covers
+   whole vs partial seeding and how to move files in and out afterward. `--web` also
+   publishes the browser UI; leave it off unless the user wants to click around.
+
+   `--api-port <n>` publishes the raw opencode backend on `127.0.0.1:<n>`, for attaching a
+   local opencode client to the same instance an agent is driving over MCP. `--publish
+   <container-port>` or `--publish <host-port>:<container-port>` maps an extra host port
+   into the instance — repeatable — for anything else running in there you want to reach
+   from the host, like a dev server the agent started. Both bind `127.0.0.1` only, same as
+   the MCP bridge, and neither has inbound authentication.
 
    Provider API keys are forwarded from your environment (`ANTHROPIC_API_KEY`,
    `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `OPENROUTER_API_KEY`). With none set
@@ -66,15 +90,19 @@ nothing, `references/install.md` has the fallbacks, including building from sour
    claude mcp remove <name> && opencode-sandbox destroy <name>
    ```
 
-   `destroy` deletes the workspace volume with everything in it. Copy out anything worth
-   keeping first, and confirm with the user if the instance produced real work.
+   `destroy` deletes the workspace volume with everything in it. Salvage first —
+   `opencode-sandbox export <name> <dir>` copies the whole workspace out (works even while
+   stopped), or `opencode-sandbox fetch-url <name>` if what's worth keeping is a git branch
+   with its history (see `references/project-context.md`). Confirm with the user if the
+   instance produced real work.
 
 ## Going further
 
 - `references/config.md` — pinning a model or provider, giving the instance its own MCP
   servers, loading plugins, and what to edit after creation. Note there is no theme setting.
 - `references/project-context.md` — seeding whole repos, tracked files only, or one
-  subdirectory; `docker cp` in and out of a running instance.
+  subdirectory; getting work back out with `fetch-url` and `export`, `docker cp` for
+  pushing a loose file in.
 - `references/workspaces.md` — git worktrees inside an instance, what they require, and
   when a second instance is the better answer.
 
@@ -82,9 +110,10 @@ nothing, `references/install.md` has the fallbacks, including building from sour
 
 The MCP bridge has no inbound authentication. Anyone who can reach its port gets the full
 tool surface — reading and writing files and running shell commands inside that instance's
-`/workspace`. The CLI publishes on `127.0.0.1` only. Never widen the bind to `0.0.0.0`,
-forward the port, or put it behind a public reverse proxy without a real auth layer in
-front of it.
+`/workspace`. `--api-port` and `--publish` are the same story — no auth of their own, and
+`--publish` opens whatever the agent happened to start. The CLI publishes all of these on
+`127.0.0.1` only. Never widen the bind to `0.0.0.0`, forward a port, or put one behind a
+public reverse proxy without a real auth layer in front of it.
 
 The isolation protects the host from the instance, not the instance from itself. Anything
 seeded into the workspace is readable by whatever runs in there, so do not seed secrets.
