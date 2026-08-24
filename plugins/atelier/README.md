@@ -63,7 +63,7 @@ its commitment, the other cuts comments that cannot.
 | `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
-| `subagent-telemetry` | hook (`SubagentStop`) | Appends one row per delegation (agent id, agent type, model, context tokens) to a local ledger, so tier usage can be measured offline. Silent — no stdout, never blocks. |
+| `subagent-telemetry` | hook (`SubagentStop`, `Stop`) | Appends one row per delegation (agent id, agent type, model, context tokens, start time, duration) to a local ledger, so tier usage and per-agent wall clock can be measured offline. On `Stop` it also records delegations still pending past a threshold. Silent — no stdout, never blocks. |
 | `worker-context` | hook (`SubagentStart`) | Injects the delegation covenant into every subagent, so the rules a worker is judged by arrive with the worker instead of depending on the dispatching session restating them in each brief. Inert until a project activates it. |
 | `worktree-isolation` | hook (`PreToolUse`) | Rewrites a dispatch so a **writing** worker gets its own git worktree instead of sharing the session's checkout. Read-only roles are left alone on purpose — a worktree cannot see uncommitted work. Never denies; inert until a project sets `isolate:`. |
 
@@ -94,7 +94,7 @@ You /clear and start a new session
   so it picks up cold without re-deriving prior state.
 
 Meanwhile, every delegation
-→ subagent-telemetry quietly logs agent/model/token usage for later review.
+→ subagent-telemetry quietly logs agent/model/token usage and wall clock for later review.
 ```
 
 ## Configuration
@@ -241,8 +241,9 @@ stream elsewhere.
 
 Most of the hooks are nudges and guards, not enforcement of correctness: `context-watermark`,
 `delegation-watermark`, and `handoff-freshness-guard` fail open on any error rather than risk
-wedging a session, and none blocks automatic compaction. `subagent-telemetry` only records what
-a subagent's own transcript reports — it cannot see or influence the parent session. The
+wedging a session, and none blocks automatic compaction. `subagent-telemetry` records what a
+subagent's own transcript reports, plus a scan for still-pending delegations on the parent's
+`Stop`; it only ever writes to the ledger and never influences the session. The
 delegation agents (`scout`/`builder`/`reviewer`/`manager`) are personas for the `delegation`
 skill to dispatch; they don't run unless something explicitly delegates to them.
 

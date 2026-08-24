@@ -74,6 +74,19 @@
         "matcher": "*"
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-telemetry/hook.py\"",
+            "statusMessage": "Checking for stalled delegations...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
     "SubagentStart": [
       {
         "hooks": [
