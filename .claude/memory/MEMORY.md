@@ -16,3 +16,4 @@
 - [Identity gate blocks personal-repo installs](identity-gate-blocks-personal-repo-installs.md) — the owner handle is an unconditional ban with no exemption; `gh search --owner @me` is the only legal shape and only works for the owner
 - [Default to Up Next](feedback-default-to-up-next.md) — work the owner's `Up Next` lane; empty means ask, never self-select from `To Do`
 - [Board writes need read-back](board-writes-need-readback.md) — Kaneo bulk writes revert silently; single-field PUT + delayed re-read is the only proof
+- [/clear re-homes running subagents](clear-rehomes-running-subagents.md) — survives the clear, sidecar left behind; key on `agent_id` across sibling session dirs, widen only the settled set
