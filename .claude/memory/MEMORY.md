@@ -17,3 +17,4 @@
 - [Default to Up Next](feedback-default-to-up-next.md) — work the owner's `Up Next` lane; empty means ask, never self-select from `To Do`
 - [Board writes need read-back](board-writes-need-readback.md) — Kaneo bulk writes revert silently; single-field PUT + delayed re-read is the only proof
 - [/clear re-homes running subagents](clear-rehomes-running-subagents.md) — survives the clear, sidecar left behind; key on `agent_id` across sibling session dirs, widen only the settled set
+- [Close issues on dev merge](feedback-close-issues-on-dev-merge.md) — nothing auto-closes here (`main` is publish-only); close by hand once the fixing PR lands on `dev`
