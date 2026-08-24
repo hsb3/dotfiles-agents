@@ -18,8 +18,8 @@ report with a comparison matrix and a recommendation — a themed deck only if r
 
 ## Install
 
-```
-claude plugin install tech-eval-research@dotfiles-agents
-```
+Ships inside the `solo-skills` bundle:
 
-Standalone-only — it does not ship inside any bundle.
+```
+claude plugin install solo-skills@dotfiles-agents
+```
