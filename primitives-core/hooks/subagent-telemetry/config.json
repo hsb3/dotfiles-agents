@@ -1,6 +1,9 @@
 {
-  "event": "SubagentStop",
+  "event": ["SubagentStop", "Stop"],
   "matcher": "*",
   "timeout": 10,
-  "statusMessage": "Recording delegation telemetry..."
+  "statusMessage": {
+    "SubagentStop": "Recording delegation telemetry...",
+    "Stop": "Checking for stalled delegations..."
+  }
 }

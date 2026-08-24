@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-subagent-telemetry — SubagentStop hook.
+subagent-telemetry — SubagentStop + Stop hook.
 
 Appends one JSONL row per delegation (agent_id, agent_type, model,
-ctx_tokens) to a local ledger so the plugin's own tier usage can be measured
-offline (by a sibling analysis script, e.g. delegation_stats.py) — data that
-is not otherwise derivable from the parent transcript alone, since a
-subagent's type, model and token usage live only in the SUBAGENT's own
-sidecar + transcript.
+ctx_tokens, started_at, duration_ms) to a local ledger so the plugin's own
+tier usage AND per-agent wall clock can be measured offline (by a sibling
+analysis script, e.g. delegation_stats.py) — data that is not otherwise
+derivable from the parent transcript alone, since a subagent's type, model,
+token usage and start time live only in the SUBAGENT's own sidecar +
+transcript. It also appends a distinctly-shaped `stall` row when a delegation
+this session started has still not settled past a threshold.
 
 Purely observational: never blocks, never injects context, never prints
 anything (telemetry is silent).
@@ -28,9 +30,8 @@ spawnDepth, model (only when the dispatch overrode the model), parentAgentId,
 worktreePath, worktreeBranch, name, isFork. There is NO token/usage data on
 the sidecar, so ctx_tokens comes from the subagent's own transcript tail.
 
-Contract (SubagentStop):
-  - stdin JSON fields consumed: session_id, transcript_path, cwd, agent_id,
-    agent_type.
+Contract (SubagentStop) — measured stdin fields: session_id, transcript_path,
+cwd, hook_event_name, agent_id, agent_type, permission_mode.
   - `transcript_path` is the PARENT session's transcript, not the subagent's
     (observed: two sibling delegations reported byte-identical usage). Reading
     model/ctx_tokens off it describes the strategist, not the delegation — so
@@ -38,9 +39,71 @@ Contract (SubagentStop):
   - A prospective row is DROPPED unless a matching sidecar exists and yields
     an agent_type. SubagentStop also fires for agents that never get a
     `subagents/` entry; writing those inflated the ledger ~10x.
-  - stdout: NOTHING, ever (telemetry must not surface to the user/agent).
-  - exit 0 always; fail-open on any internal error (missing/unreadable
-    sidecar or transcript, malformed stdin, etc) by writing no row at all.
+  - The sidecar is looked up in the payload's own `subagents/` dir first and,
+    only on a miss, in sibling session dirs under the same slug (see
+    `_sidecar_dir`). A `/clear` mid-delegation re-homes the running agent's
+    transcript under a NEW session id and leaves its sidecar behind under the
+    OLD one — measured: one live agent, two session dirs, one sidecar. Without
+    the fallback the delegation with the longest wall clock records nothing.
+  - Then the stall scan runs.
+
+Contract (Stop) — measured stdin fields: session_id, transcript_path, cwd,
+hook_event_name, stop_hook_active. There is NO agent_id, which is how the
+path is chosen: `hook_event_name == "Stop"`, or an absent/unusable agent_id,
+means scan only. `stop_hook_active` needs no guard here — the hook emits no
+decision and the scan is idempotent within a tail window.
+
+Both paths: stdout NOTHING, ever (telemetry must not surface to the
+user/agent); exit 0 always; fail-open on any internal error (missing or
+unreadable sidecar/transcript/ledger, malformed stdin) by writing no row.
+
+Start time (`started_at`, `duration_ms`), sourced by measurement over 11 real
+delegations:
+  - primary: the FIRST line of the subagent's own transcript that carries a
+    non-empty `timestamp`, read from a bounded 64 KB head. It lands
+    +0.04..+0.06s after true dispatch. Walking forward rather than taking
+    line 0 is required: 4 of 44 real transcripts open with a
+    `type: "fork-context-ref"` line that has no timestamp.
+  - fallback: the sidecar's mtime, which tracked true dispatch to +0.1s in 9
+    of 11 cases but blew out to +409s and +664s in the other two — which is
+    exactly why it is the fallback and not the primary.
+  - `duration_ms` is `now - started_at` at hook run time, so it is comparable
+    with the envelope's own `ts`. Both keys are null when the start time is
+    unknown; the row is still written, because losing a delegation record over
+    a missing timestamp would be the bigger regression.
+  - when a re-home has split the delegation across two dirs, the start stamp
+    is read from the SIDECAR's half, which holds the true beginning. Session
+    B's transcript is only the resumed tail, so sourcing it would restart the
+    clock at the `/clear` and undercount `duration_ms` by everything before
+    it. The consequence, taken deliberately: `duration_ms` for a re-homed
+    delegation spans the clear, which is the honest wall clock. The usage tail
+    is read the other way round — from the payload's own half, the live one
+    carrying the delegation's final context.
+
+Stall rule: the STARTED universe is the `agent-*.meta.json` sidecars in the
+session's `subagents/` dir — deliberately the same predicate that gates a
+delegation row, so a phantom SubagentStop can never enter it. That universe is
+the CURRENT dir only, and the asymmetry with the sidecar fallback above is
+deliberate: widening it across siblings would sweep in every historical session
+under the slug, whose stop rows aged out of the ledger tail long ago, and report
+all of them stalled at every Stop. The SETTLED set comes from a bounded 256 KB
+tail of the ledger: agent_ids on delegation rows, plus every agent_id inside the
+`pending` list of a `stall` row (the dedup), plus whatever just stopped — all
+matched by agent_id ALONE, regardless of session, because after a re-home the
+stop row lands under a session id the orphaned sidecar's dir never sees.
+Whatever is left and has been pending at least STALL_SECONDS produces ONE
+`stall` row.
+Edge cost of the 256 KB bound (~800 rows), stated rather than hidden: a
+delegation whose stop row has aged out of the window looks un-stopped, so a
+still-present sidecar past the threshold is named pending once more before
+the new stall row re-suppresses it.
+
+Row classification for readers: a row with NEITHER an `event` key NOR an
+`error` key is a delegation row. Stall rows carry `event`; the opt-in
+SUBAGENT_TELEMETRY_DEBUG rows carry `error` and no `event`, so `event` alone
+does not separate them. That is exact for every row written before stall rows
+existed; such rows simply also lack `started_at`/`duration_ms`, which is
+honest — their start time was never recorded.
 
 This file must have ZERO third-party dependencies (Python 3 stdlib only).
 """
@@ -49,6 +112,7 @@ import json
 import os
 import sys
 import traceback
+from datetime import datetime, timezone
 
 # The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
 # That relative hop resolves both here in primitives-core/ and in an installed
@@ -63,6 +127,21 @@ import agentlog  # noqa: E402  (path must be primed before this import)
 # ---------------------------------------------------------------------------
 
 TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB — same window as context-watermark
+# 64 KB is enough to reach the first timestamped line of a subagent transcript:
+# the largest first-line end offset over 44 real transcripts was 16,558 bytes.
+HEAD_BYTES = 64 * 1024
+# How many sibling session directories a sidecar miss may probe (see
+# `_sidecar_dir`). A `/clear` re-homes a live delegation into a NEW session dir
+# adjacent in time to the old one, so the sidecar's dir is among the newest
+# siblings — while a slug can accumulate hundreds of session dirs in total.
+# Twelve covers the re-home with room for the interleaved sessions of a busy
+# day; past it the row is dropped exactly as it was before, silently.
+SIBLING_PROBE_LIMIT = 12
+# A delegation still pending this long after it started is reported as stalled.
+# 15 minutes: longer than any healthy delegation observed, short enough that a
+# wedged worker surfaces inside one working session.
+STALL_SECONDS_DEFAULT = 900
+STALL_EVENT = "stall"
 # Stream name is the stem this ledger already had (`delegation.jsonl`), not
 # the hook name: the rows are the delegation record, and keeping the stem
 # keeps old and new rows queryable as one series.
@@ -85,6 +164,7 @@ def _env_int(name, default):
 
 
 TAIL_BYTES = _env_int("SUBAGENT_TELEMETRY_TAIL_BYTES", TAIL_BYTES_DEFAULT)
+STALL_SECONDS = _env_int("SUBAGENT_TELEMETRY_STALL_SECONDS", STALL_SECONDS_DEFAULT)
 
 
 def _debug_enabled():
@@ -134,6 +214,56 @@ def _agent_key(agent_id):
     return key
 
 
+def _sidecar_dir(subagents_dir, key):
+    """The `subagents/` directory that actually holds this agent's sidecar, or
+    None if no bounded probe finds one.
+
+    Normally it is the payload's own directory. It is NOT after a `/clear`:
+    the session is re-homed under a new id mid-delegation, the agent keeps
+    running, its transcript follows into `<slug>/<new_session>/subagents/` and
+    the sidecar stays behind in the old one (measured: one live agent, two
+    session dirs under one slug, exactly one sidecar). Resolving only in the
+    payload's directory drops that row — and it is the longest-running
+    delegation of the wave, the one most worth measuring.
+
+    `agent_id` is globally unique by design, so it carries the join across
+    directories. The probe is deliberately narrow, and this narrowness is the
+    whole safety argument: it runs only on a miss, looks only for that ONE
+    exact filename, never leaves the slug, and stops after the
+    SIBLING_PROBE_LIMIT most recently modified siblings.
+    """
+    if os.path.isfile(
+        os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
+    ):
+        return subagents_dir
+
+    session_dir = os.path.dirname(subagents_dir)
+    candidates = []
+    try:
+        with os.scandir(os.path.dirname(session_dir)) as entries:
+            for entry in entries:
+                if entry.path == session_dir or not entry.is_dir():
+                    continue
+                try:
+                    # The session dir's own mtime, one stat from the entry we
+                    # already hold. Recency is the right order here because the
+                    # two halves of a re-homed delegation are adjacent in time.
+                    candidates.append((entry.stat().st_mtime, entry.path))
+                except OSError:
+                    continue
+    except OSError:
+        return None
+
+    candidates.sort(reverse=True)
+    for _mtime, path in candidates[:SIBLING_PROBE_LIMIT]:
+        sibling = os.path.join(path, SUBAGENTS_DIRNAME)
+        if os.path.isfile(
+            os.path.join(sibling, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
+        ):
+            return sibling
+    return None
+
+
 def _read_sidecar(path):
     """Parsed sidecar dict, or None if absent/unreadable/malformed/not an object."""
     try:
@@ -168,6 +298,14 @@ def _read_tail(path, tail_bytes):
         nl = data.find(b"\n")
         if nl != -1:
             data = data[nl + 1 :]
+    return data.decode("utf-8", errors="replace")
+
+
+def _read_head(path, head_bytes):
+    """Read only the first `head_bytes` of the file. Returns a str whose last
+    line may be truncated; the caller parses per line and discards what fails."""
+    with open(path, "rb") as f:
+        data = f.read(head_bytes)
     return data.decode("utf-8", errors="replace")
 
 
@@ -231,6 +369,88 @@ def _read_model_and_ctx_tokens(transcript_path):
 
 
 # ---------------------------------------------------------------------------
+# Wall clock — when the delegation started, and how long it ran
+# ---------------------------------------------------------------------------
+
+def _iso_ms(moment):
+    """`2026-08-20T15:37:08.666Z` — the exact shape agentlog stamps `ts` with,
+    so `ts` and `started_at` are directly comparable as strings."""
+    return (
+        moment.astimezone(timezone.utc)
+        .isoformat(timespec="milliseconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def _parse_iso(text):
+    """A tz-aware datetime from an ISO-8601 string, or None. Defensive: a
+    transcript stamp is other software's output, so anything unparseable
+    (wrong type, wrong shape, no digits) degrades to an unknown start time
+    rather than an exception."""
+    if not isinstance(text, str) or not text.strip():
+        return None
+    try:
+        moment = datetime.fromisoformat(text.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=timezone.utc)
+
+
+def _first_transcript_timestamp(path):
+    """Normalised start stamp from the transcript HEAD, or None.
+
+    Walks lines from the FIRST forward rather than taking line 0: 4 of 44 real
+    transcripts open with a `type: "fork-context-ref"` line carrying no
+    `timestamp`. The first line that yields one wins — measured at +0.04..+0.06s
+    after true dispatch, including in the two cases where sidecar mtime blew out.
+    """
+    for line in _read_head(path, HEAD_BYTES).split("\n"):
+        if not line.strip():
+            continue
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(obj, dict):
+            continue
+        moment = _parse_iso(obj.get("timestamp"))
+        if moment is not None:
+            return _iso_ms(moment)
+    return None
+
+
+def _started_at(subagents_dir, key):
+    """When this delegation began, as an ISO-8601 UTC ms string, or None.
+
+    Primary source is the subagent's own transcript. Fallback is the sidecar's
+    mtime, and only a fallback: over 11 real delegations it tracked true
+    dispatch to +0.1s in 9 but blew out to +409s and +664s in the other two.
+    """
+    base = os.path.join(subagents_dir, AGENT_FILE_PREFIX + key)
+    try:
+        transcript = base + TRANSCRIPT_SUFFIX
+        if os.path.isfile(transcript):
+            stamp = _first_transcript_timestamp(transcript)
+            if stamp is not None:
+                return stamp
+    except Exception:
+        pass
+    try:
+        return _iso_ms(datetime.fromtimestamp(
+            os.path.getmtime(base + SIDECAR_SUFFIX), timezone.utc))
+    except Exception:
+        return None
+
+
+def _elapsed_ms(started_at, now):
+    """Whole milliseconds from `started_at` to `now`, or None if unknown."""
+    moment = _parse_iso(started_at)
+    if moment is None:
+        return None
+    return int((now - moment).total_seconds() * 1000)
+
+
+# ---------------------------------------------------------------------------
 # Row construction
 # ---------------------------------------------------------------------------
 
@@ -250,8 +470,14 @@ def _build_row(payload):
     if subagents_dir is None:
         return None
 
+    # Usually subagents_dir itself; a sibling session dir when a `/clear`
+    # re-homed this delegation away from its sidecar.
+    sidecar_dir = _sidecar_dir(subagents_dir, key)
+    if sidecar_dir is None:
+        return None
+
     meta = _read_sidecar(
-        os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
+        os.path.join(sidecar_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
     )
     if meta is None:
         return None
@@ -261,12 +487,24 @@ def _build_row(payload):
         # A row with no agent type is the defect this hook exists to fix.
         return None
 
-    transcript_model, ctx_tokens = _read_model_and_ctx_tokens(
-        os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + TRANSCRIPT_SUFFIX)
-    )
+    # When the two halves are split, they answer different questions. The
+    # USAGE tail is read from the payload's own half, which is the live one
+    # carrying the delegation's final context. The START stamp is read from
+    # the sidecar's half, which holds the true beginning (see `_started_at`).
+    # In the ordinary un-split case both are the same directory.
+    transcript = os.path.join(
+        subagents_dir, AGENT_FILE_PREFIX + key + TRANSCRIPT_SUFFIX)
+    if not os.path.isfile(transcript):
+        transcript = os.path.join(
+            sidecar_dir, AGENT_FILE_PREFIX + key + TRANSCRIPT_SUFFIX)
+    transcript_model, ctx_tokens = _read_model_and_ctx_tokens(transcript)
     # A sidecar `model` is the dispatch-time override — the delegation decision
     # itself — so it outranks whatever the transcript happens to name.
     model = _clean_str(meta.get("model")) or transcript_model
+
+    # An unknown start time yields nulls, never a dropped row: losing the whole
+    # delegation record over a missing timestamp would be the bigger regression.
+    started_at = _started_at(sidecar_dir, key)
 
     return {
         "session_id": payload.get("session_id", "unknown"),
@@ -274,7 +512,148 @@ def _build_row(payload):
         "agent_type": agent_type,
         "model": model,
         "ctx_tokens": ctx_tokens,
+        "started_at": started_at,
+        "duration_ms": _elapsed_ms(started_at, datetime.now(timezone.utc)),
     }
+
+
+# ---------------------------------------------------------------------------
+# Stall detection — a delegation that started and never settled
+# ---------------------------------------------------------------------------
+
+def _settled_ids():
+    """agent_ids already accounted for, per the ledger tail — matched by
+    agent_id ALONE, regardless of which session recorded them.
+
+    Two kinds of row settle an agent: its delegation row (it stopped), and a
+    prior stall row naming it (it was already reported — that is the dedup, so
+    a stalled agent is named once per tail window rather than at every
+    subsequent settle).
+
+    The session is deliberately NOT part of the match. After a `/clear` the
+    stop row lands under the NEW session id while the sidecar stays under the
+    OLD one, so a session-filtered settled set can never see the stop and the
+    orphaned sidecar is reported pending past every threshold, forever.
+    `agent_id` is globally unique by design, which is what makes the id alone a
+    sound join; the worst a collision could cost is one missed stall row, never
+    a false one.
+
+    Bounded at TAIL_BYTES (256 KB, ~800 rows). Edge cost, stated rather than
+    hidden: a delegation whose stop row has aged out of that window looks
+    un-stopped, so a still-present sidecar past the threshold is reported
+    pending once more before the new stall row re-suppresses it.
+    """
+    settled = set()
+    path = agentlog.stream_path(LOG_STREAM, LOG_PATH_ENV)
+    if not path or not os.path.isfile(path):
+        return settled
+    for line in _read_tail(path, TAIL_BYTES).split("\n"):
+        if not line.strip():
+            continue
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(obj, dict):
+            continue
+        if "event" not in obj:
+            # D7 reader rule: no `event` key means a delegation row. A debug
+            # `error` row also lacks one, but carries no agent_id, so the
+            # _agent_key guard below drops it without a second predicate.
+            key = _agent_key(obj.get("agent_id"))
+            if key:
+                settled.add(key)
+        elif obj.get("event") == STALL_EVENT:
+            # Any session's stall row settles it — same uniqueness argument.
+            for entry in obj.get("pending") or []:
+                if isinstance(entry, dict):
+                    key = _agent_key(entry.get("agent_id"))
+                    if key:
+                        settled.add(key)
+    return settled
+
+
+def _sidecar_keys(subagents_dir):
+    """Every agent this session STARTED, from the sidecar files themselves.
+
+    The sidecar directory is deliberately the started universe. It is the exact
+    predicate that gates a delegation row being written, so a phantom
+    SubagentStop (an event for an agent that never got a `subagents/` entry)
+    can neither produce a stop row nor enter the pending set — one predicate,
+    one code path, no join to go wrong.
+
+    THIS DIRECTORY ONLY. Do NOT extend `_sidecar_dir`'s sibling probe to here:
+    that probe is a single-filename lookup for an agent already known to have
+    stopped, whereas widening the started universe would sweep in every
+    historical session under the slug — delegations whose stop rows aged out of
+    the 256 KB ledger tail long ago — and report every one of them as stalled,
+    at every Stop. The asymmetry is the design, not an oversight; it is pinned
+    by test_a_sidecar_only_in_a_sibling_session_is_never_reported_pending.
+    """
+    keys = []
+    for name in os.listdir(subagents_dir):
+        if not (name.startswith(AGENT_FILE_PREFIX) and name.endswith(SIDECAR_SUFFIX)):
+            continue
+        key = name[len(AGENT_FILE_PREFIX):-len(SIDECAR_SUFFIX)]
+        if key:
+            keys.append(key)
+    return keys
+
+
+def _stall_scan(payload, just_stopped_id):
+    """Append AT MOST ONE stall row for delegations still pending past the
+    threshold. Runs at the tail of both event paths.
+
+    Wholly fail-open: any error anywhere writes no stall row, and because the
+    scan runs after the delegation row is appended it can never cost one.
+    """
+    try:
+        subagents_dir = _subagents_dir(payload.get("transcript_path"))
+        if subagents_dir is None:
+            return
+        session_id = payload.get("session_id", "unknown")
+        settled = _settled_ids()
+        if just_stopped_id:
+            settled.add(just_stopped_id)
+
+        now = datetime.now(timezone.utc)
+        pending = []
+        for key in _sidecar_keys(subagents_dir):
+            if key in settled:
+                continue
+            started_at = _started_at(subagents_dir, key)
+            pending_ms = _elapsed_ms(started_at, now)
+            if pending_ms is None or pending_ms < STALL_SECONDS * 1000:
+                continue
+            meta = _read_sidecar(
+                os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
+            ) or {}
+            pending.append({
+                "agent_id": key,
+                "agent_type": _clean_str(meta.get("agentType")),
+                "started_at": started_at,
+                "pending_ms": pending_ms,
+            })
+        if not pending:
+            return
+        pending.sort(key=lambda entry: entry["agent_id"])
+        agentlog.append(
+            LOG_STREAM,
+            {"event": STALL_EVENT, "session_id": session_id, "pending": pending},
+            agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV,
+        )
+    except Exception:
+        pass
+
+
+def _is_stop_event(payload):
+    """True for the session-level `Stop` payload, decided from the payload
+    rather than trusted: a measured `Stop` carries session_id, transcript_path,
+    cwd, hook_event_name and stop_hook_active — and no agent_id."""
+    return (
+        payload.get("hook_event_name") == "Stop"
+        or _agent_key(payload.get("agent_id")) is None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -287,14 +666,21 @@ def main():
         if not isinstance(payload, dict):
             sys.exit(0)
 
-        row = _build_row(payload)
-        if row is not None:
-            agentlog.append(
-                LOG_STREAM, row,
-                agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV,
-            )
+        just_stopped_id = None
+        if not _is_stop_event(payload):
+            just_stopped_id = _agent_key(payload.get("agent_id"))
+            row = _build_row(payload)
+            if row is not None:
+                agentlog.append(
+                    LOG_STREAM, row,
+                    agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV,
+                )
 
-        # Telemetry is silent: no stdout, ever.
+        _stall_scan(payload, just_stopped_id)
+
+        # Telemetry is silent: no stdout, ever. A `Stop` payload may carry
+        # stop_hook_active — there is nothing to guard against, because this
+        # hook emits no decision and the scan is idempotent within a window.
         sys.exit(0)
 
     except SystemExit:
