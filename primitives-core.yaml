@@ -181,6 +181,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: code-reviewer
+    type: agent
+    source: primitives-core/agents/code-reviewer.md
+    origin: authored
+    disposition: untriaged
+    targets: [claude-code, opencode]
   - id: session-handoff-surfacer
     type: hook
     source: primitives-core/hooks/session-handoff-surfacer
@@ -400,6 +406,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: tui-craft
+    type: skill
+    source: primitives-core/skills/tui-craft
+    origin: authored
+    disposition: untriaged
+    targets: [claude-code, opencode]
   - id: kaneo-manager
     type: agent
     source: primitives-core/agents/kaneo-manager.md
