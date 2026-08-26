@@ -1,0 +1,19 @@
+{
+  "id": "self-blunt",
+  "name": "Self, blunt",
+  "description": "Internal self-comms: blunt, imperative, decision-first. May name issue/PR ids - plain-English label first, id second.",
+  "register": "fragments",
+  "id_policy": "label-first",
+  "budgets": {
+    "title_chars": 66,
+    "bullet_words": 24,
+    "bullets_per_slide": 8
+  },
+  "guidance": [
+    "Lead with the outcome / the decision; bury the detail.",
+    "Honest framing only: describe what is actually proven, call out gaps explicitly, never round up.",
+    "Numbers live in systems; the deck points to the board / registry, as-of the date.",
+    "Phrases, not sentences, on slides; target ~12 words per bullet (the budget is a ceiling, not the target); detail goes to the audio or skippable slides.",
+    "Plain-English label first, id second: 'the scaffold-warning fix (#NN)', never a bare '#NN' leading."
+  ]
+}
