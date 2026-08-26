@@ -40,7 +40,7 @@ behind.
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 35 skills |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 36 skills |
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and the gate that enforces it, audit its structure, scaffold the gaps, then plan and report the work. | 11 skills · 1 agent |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 4 agents · 9 hooks · 1 command |
