@@ -9,9 +9,17 @@ permissions:
 jobs:
   # Tier-1 entry-gate machine floor — required status check on every PR into dev.
   # A red floor is not mergeable (identity-neutrality · tests · provenance · hook-layout).
+  #
+  # runs-on ternary: setting the repo Actions variable USE_FALLBACK_RUNNER=true routes
+  # these jobs to the local Docker-based ephemeral runner (`gh-runner-fallback run`,
+  # ~/dotfiles _docs/reference/gh-runner-fallback.md) during a GitHub-hosted runner
+  # outage. A repo variable rather than the documented workflow_dispatch input because
+  # this repo's default branch is publish-only: a dispatch trigger could not land there
+  # without a publish, but pull_request runs use the PR branch's own workflow file.
+  # Unset the variable after the outage; unset, the ternary is 'ubuntu-latest'.
   entry-gate-floor:
     name: entry-gate floor (identity · tests · provenance · hook-layout)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -26,7 +34,7 @@ jobs:
   # reads "marketplace · catalog" after ADR 0017 retired those artifacts).
   drift-guards:
     name: drift guards (roster · marketplace · catalog)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -68,6 +76,11 @@ jobs:
       # fatal. A gate that fails only in CI is a gate nobody can reproduce, so CI tracks the
       # machines rather than the other way round. Bump this when local `stable` moves, and
       # re-run the gate when you do.
+      # Explicit rather than relying on the hosted image's preinstalled node, so the
+      # job also runs on the fallback runner container (which ships no node).
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
       - name: Install the Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code@2.1.231
       - name: manifest gate (claude plugin validate --strict)
