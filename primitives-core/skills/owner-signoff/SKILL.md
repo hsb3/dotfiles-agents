@@ -12,10 +12,18 @@ session is notified the moment they submit.
 
 ## The loop
 
-1. **Build the form** — copy `assets/template.html` into a dated batch dir inside the
-   project's working area (convention: `_meta/signoff/YYYY-MM-DD-<topic>/index.html`;
-   any project-appropriate dir works). Fill in the sections (rules below).
-2. **Start the one-shot server** as a background Bash task (`run_in_background: true`):
+1. **Write the spec** — a YAML or JSON file in a dated batch dir inside the project's
+   working area (convention: `_meta/signoff/YYYY-MM-DD-<topic>/signoff.yaml`; any
+   project-appropriate dir works). Schema below. Never hand-write the HTML.
+2. **Build the form** (foreground, so validation errors surface immediately):
+
+   ```bash
+   python3 <skill-dir>/scripts/build_signoff.py <batch-dir>/signoff.yaml
+   ```
+
+   Validates the spec and writes `index.html` next to it; on schema errors it prints
+   every problem and exits 1 — fix the spec and rerun.
+3. **Start the one-shot server** as a background Bash task (`run_in_background: true`):
 
    ```bash
    python3 <skill-dir>/scripts/serve_signoff.py <batch-dir> [port]
@@ -23,31 +31,52 @@ session is notified the moment they submit.
 
    Default port 8737; the script walks forward to the next free port if taken —
    **read the first line of its output for the actual URL** before opening.
-3. **Open it**: `open "http://localhost:<port>/"`. Tell the owner it's open and list
+4. **Open it**: `open "http://localhost:<port>/"`. Tell the owner it's open and list
    the items in one line each.
-4. **Wait — do not poll.** The server accepts exactly one POST `/save`, writes
+5. **Wait — do not poll.** The server accepts exactly one POST `/save`, writes
    `answers.json` next to `index.html`, then exits. Its exit is the background-task
    notification: when it fires, Read `answers.json` and act.
-5. **Fallback**: if the server is gone when he submits (much-later submit, reopened
+6. **Fallback**: if the server is gone when he submits (much-later submit, reopened
    tab), the page downloads `*-answers-*.json` to `~/Downloads` and tells him to say
    so — pick it up there.
 
-## Form rules (what makes these work)
+## Spec schema
 
-- **One section per item**, each with: a short context paragraph (why this needs him),
-  an explicit **recommendation preselected** as the first radio, a "Modify"/alternative
-  option, and a per-item notes `<textarea>`. Free-text `<input type="text">` for
-  things like names. Radios are grouped by the section's `data-id`.
-- **All-defaults must be one click**: if he agrees with every recommendation, Submit
-  with no other interaction is a valid, complete answer.
-- Add a read-only **summary block at the top** when he may have lost the thread
-  ("where things stand" — done / decided / waiting-on-you). Keep it scannable.
-- End with a **general-notes section** (`data-id="Z"`).
+YAML needs PyYAML on the system python3; JSON always works. Unknown keys are
+rejected (they're almost always typos).
+
+```yaml
+title: Sign-off — plugin restructure          # required
+project: dotfiles-agents                      # optional, shown in the header
+date: 2026-08-26                              # optional, shown in the header
+summary:                                      # optional "where things stand" block
+  done: ["Roster migrated", "CI green"]
+  waiting: ["The three items below"]
+items:                                        # required, 1+ items
+  - question: Delete the legacy branch?       # required
+    context: Why this needs the owner — one or two plain sentences.   # required
+    recommendation: The recommended call and why, one sentence.       # required
+    category: Cleanup                         # optional, default "Decision"
+    id: A                                     # optional; auto A/B/C… ("Z" reserved)
+    choices: [Approve, Modify (note below)]   # optional; first one is preselected
+    text_field: New name…                     # optional free-text input, this is its
+                                              # placeholder; answers key <id>_text
+```
+
+Every item automatically gets a notes textarea; a general-notes section (`Z`) is
+always appended. Answers come back keyed by item id:
+`{"items": {"A": {"choice": "...", "text": "...", "notes": "..."}}}`.
+
+## Content rules (what makes these work)
+
+- **All-defaults must be one click**: `recommendation` is preselected as the first
+  choice, so agreeing with everything is Submit with no other interaction.
+- Include the `summary` block when he may have lost the thread; keep it scannable.
 - Explanatory register, plain language, no jargon fragments. Spell out file paths and
   consequences ("I copy X as uncommitted changes; you review and commit").
 - Only include items that genuinely need him — if nothing is blocked on an item, it
-  is a status line in the summary, not a question.
-- Never put secrets in the form or the answers file.
+  is a `summary` line, not a question.
+- Never put secrets in the spec, the form, or the answers file.
 
 ## After pickup
 

@@ -9,14 +9,17 @@ click — and the answers land in a JSON file the session picks up the moment th
 
 Use it when multiple items need the owner's input at once (sign-offs, dispositions,
 priorities, open questions), when the owner asks "what do you need from me", or when they
-want a summary/quiz they can react to. The skill ships the HTML form template and a
-one-shot localhost server (binds 127.0.0.1 only, accepts exactly one submit, then exits),
-plus a download fallback for much-later submits.
+want a summary/quiz they can react to. The skill ships a spec-driven form builder (write
+a small YAML/JSON file, it validates and renders the HTML) and a one-shot localhost
+server (binds 127.0.0.1 only, accepts exactly one submit, then exits), plus a download
+fallback for much-later submits.
 
 ## Install
 
+Ships inside the `solo-skills` bundle:
+
 ```
-claude plugin install owner-signoff@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle. Needs only `python3` (stdlib).
+Needs only `python3` (stdlib); YAML specs additionally need PyYAML, JSON specs never do.

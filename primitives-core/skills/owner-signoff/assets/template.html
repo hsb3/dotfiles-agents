@@ -54,33 +54,12 @@
 <body>
 <main>
   <h1>{{TITLE}}</h1>
-  <p class="sub">{{DATE}} · {{PROJECT}} · Pick a choice per item; add inline notes anywhere.
+  <p class="sub">{{META}}Pick a choice per item; add inline notes anywhere.
   <b>Submit once at the bottom</b> — answers land in a file and the session is notified.</p>
 
-  <!-- OPTIONAL read-only summary block; delete if not needed
-  <section class="summary">
-    <h2>Where things stand</h2>
-    <ul>
-      <li class="done"><b>Done thing</b> — detail.</li>
-      <li class="wait"><b>Waiting on you</b> — the items below.</li>
-    </ul>
-  </section>
-  -->
+{{SUMMARY}}
 
-  <!-- REPEAT one section per item. data-id is the answer key; radio name MUST equal
-       data-id; textarea name is <id>_notes; optional text input name is <id>_<field>.
-       Put the recommended option FIRST and mark it checked. -->
-  <section data-id="A">
-    <span class="pill">{{CATEGORY}}</span>
-    <h2>{{ITEM QUESTION}}</h2>
-    <p class="ctx">{{Why this needs the owner — one or two plain sentences.}}</p>
-    <div class="rec"><b>Recommendation:</b> {{the recommended call and why, one sentence}}.</div>
-    <div class="choices">
-      <label><input type="radio" name="A" value="approve" checked> Approve</label>
-      <label><input type="radio" name="A" value="modify"> Modify (note below)</label>
-    </div>
-    <textarea name="A_notes" placeholder="Inline notes…"></textarea>
-  </section>
+{{SECTIONS}}
 
   <section data-id="Z">
     <span class="pill">Anything else</span>
