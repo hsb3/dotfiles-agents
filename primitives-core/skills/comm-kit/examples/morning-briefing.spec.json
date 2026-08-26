@@ -1,0 +1,103 @@
+{
+  "type": "morning-briefing",
+  "title": "Morning briefing - 2026-06-13",
+  "repo": "acme/acme-platform",
+  "sections": {
+    "title": [
+      {
+        "kicker": "ACME-PLATFORM - MORNING BRIEFING",
+        "notes": "Companion audio alongside this deck. Order: recommendation -> horizon -> what shipped.",
+        "blocks": [
+          { "type": "heading", "level": 1, "text": "What to do today" },
+          { "type": "subtitle", "text": "2026-06-13 - the recommendation first, the detail last" }
+        ]
+      }
+    ],
+    "recommended-today": [
+      {
+        "kicker": "RECOMMENDED TODAY",
+        "layout": "top",
+        "footer": "All three route around the first-client gate (epic #NNN)",
+        "blocks": [
+          { "type": "heading", "text": "Build the BPT loader; decide signing; everything else is parallel" },
+          { "type": "bullets", "items": [
+            "BUILD the BPT loader (#NNN) - highest leverage, makes the payment numbers honest",
+            "DECIDE Developer ID signing (#NNN) - the long pole, has lead time",
+            "PARALLEL: the export path (#NNN) and the ESRD verification tail (#NNN)",
+            "30-second call: keep or discard the uncommitted Stop hook"
+          ] }
+        ]
+      }
+    ],
+    "horizon": [
+      {
+        "kicker": "ON THE HORIZON",
+        "footer": "Gate status: gate:pilot empty - gate:client-1-install = 5 open",
+        "blocks": [
+          { "type": "heading", "text": "One gate stands between us and a first client" },
+          { "type": "columns", "columns": [
+            [
+              { "type": "heading", "level": 2, "text": "Install-week blockers" },
+              { "type": "bullets", "items": [
+                "The BPT loader (#NNN) - honest payment math",
+                "Developer ID signing (#NNN) - clean install",
+                "The export path (#NNN) - no CSV/PDF today"
+              ] }
+            ],
+            [
+              { "type": "heading", "level": 2, "text": "Then: credibility" },
+              { "type": "bullets", "items": [
+                "Known-answer proof writeup (#NNN)",
+                "Methodology one-pager (#NNN)",
+                "Sandbox wired to a finding (#NNN)"
+              ] }
+            ]
+          ] }
+        ]
+      }
+    ],
+    "at-a-glance": [
+      {
+        "kicker": "SINCE THE LAST BRIEFING",
+        "footer": "Live counts belong to the board; as-of 2026-06-13 morning",
+        "blocks": [
+          { "type": "heading", "text": "What shipped, at a glance" },
+          { "type": "columns", "columns": [
+            [ { "type": "stat", "value": "11", "label": "PRs merged 06-13" } ],
+            [ { "type": "stat", "value": "16/16", "label": "Recall held" } ],
+            [ { "type": "stat", "value": "0", "label": "pilot-gate items" } ]
+          ] },
+          { "type": "bullets", "items": [
+            "ESRD scoring graduated end-to-end, gated on a one-cent error",
+            "Dev 'real scoring unavailable' banner root-caused and fixed",
+            "Carbon UX wave-3: skips surfaced, assurance on real data"
+          ] }
+        ]
+      }
+    ],
+    "shipped": [
+      {
+        "kicker": "WHAT SHIPPED - 1",
+        "layout": "top",
+        "footer": "Proven locally; cloud-acceptance tail tracked on #NNN / #NNN",
+        "blocks": [
+          { "type": "heading", "text": "ESRD scoring is graduated and wired through" },
+          { "type": "bullets", "items": [
+            "4 PRs: data model, engine + sandbox, pipeline recompute, member-trace labeling",
+            "The ESRD_OK hard gate passes 13/13 - a +0.01 perturbation flips it to FAIL",
+            "Default non-ESRD cohort byte-identical; recall held 16/16"
+          ] }
+        ]
+      }
+    ],
+    "line-for-today": [
+      {
+        "kicker": "THE LINE FOR TODAY",
+        "layout": "center",
+        "blocks": [
+          { "type": "callout", "variant": "accent", "size": "hero", "title": "The ask", "text": "Build the BPT loader and make the signing call. **The first client comes down to three named items, and two can move today.**" }
+        ]
+      }
+    ]
+  }
+}
