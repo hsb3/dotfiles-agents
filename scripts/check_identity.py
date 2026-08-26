@@ -29,6 +29,14 @@ not lost:
   - portability — machine-tied content is banned outright (absolute /Users paths, personal
     home-folder locations, personal vault name, non-portable install flags); a machine-local
     tool reference is legal only when the roster entry declares it in `requires:`.
+  - issue reference — no bare `#NNN` (or MUL-/DEV-/da#/wb#) issue key baked into a shipped
+    body: an issue number is repo-specific personalization, and a shipped primitive must stay
+    portable across repos (entered a3d1014, 2026-07-17, entry-gate D6, decision 0013 item 9).
+    Carve-out: a file under an `examples/` directory is exempt from THIS rule only — sample
+    content demonstrating ref-linkify has to contain a ref, and a ref inside `examples/` is
+    self-evidently demo data, not real personalization. Every other identity rule (name, org,
+    repo slug, secrets, absolute paths, machine-tied content, frontmatter) still applies inside
+    `examples/` unchanged.
 
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violations (prints every one).
 Usage: python3 scripts/check_identity.py   (run from the repo root)
@@ -69,8 +77,13 @@ IDENTITY = [
     (re.compile(r"(?<![\w-])headcase(?![\w-])"), "client token 'headcase'"),
     (re.compile(r"(?<![\w-])dotfiles-agents-workbench(?![\w-])"), "internal repo slug 'dotfiles-agents-workbench'"),
     (re.compile(r"(?<![\w-])fable-optimization(?![\w-])"), "internal repo slug 'fable-optimization'"),
-    # Issue refs. Capped at 5 digits + a hex-char lookahead so a 6-hex-digit colour (#003366)
-    # is not read as an issue number; `&#123;` HTML entities excluded via the `&` lookbehind.
+]
+
+# ── Issue refs: repo-specific personalization, kept separate from IDENTITY above so the
+# `examples/` carve-out can exempt this rule ONLY, never the name/org/repo tokens above it. ──
+ISSUE_REF = [
+    # Capped at 5 digits + a hex-char lookahead so a 6-hex-digit colour (#003366) is not read
+    # as an issue number; `&#123;` HTML entities excluded via the `&` lookbehind.
     # (Issue numbers realistically run 1-5 digits; a 6-digit ref is far more likely a colour.)
     (re.compile(r"(?<![\w&])#[0-9]{1,5}(?![0-9A-Fa-f])"), "hardcoded issue reference (#NNN)"),
     # Multica issue keys only — `GH-NN` is deliberately NOT here: the repo-meta-structure
@@ -203,7 +216,13 @@ def _plain_scalar_faults(fm):
                 yield key, why
 
 
-def scan_file(fp, rel, requires, problems, skip_identity=False):
+def _in_examples_dir(rel):
+    """True if the repo-relative path has a path segment exactly `examples` — the
+    ref-linkify carve-out (issue refs only; every other rule still applies there)."""
+    return "examples" in rel.split(os.sep)
+
+
+def scan_file(fp, rel, requires, problems, skip_identity=False, skip_issue_ref=False):
     try:
         with open(fp, encoding="utf-8", errors="ignore") as fh:
             body = fh.read()
@@ -214,6 +233,10 @@ def scan_file(fp, rel, requires, problems, skip_identity=False):
         for rx, why in IDENTITY:
             if rx.search(body):
                 problems.append(f"{rel}: {why}")
+        if not skip_issue_ref:
+            for rx, why in ISSUE_REF:
+                if rx.search(body):
+                    problems.append(f"{rel}: {why}")
     for rx, why in HARD_MACHINE:
         if rx.search(body):
             problems.append(f"{rel}: {why}")
@@ -266,7 +289,8 @@ def main():
                 requires = req_by_src.get(src, set()) if src else set()
                 if f.endswith(TEXT_EXT):
                     scan_file(fp, rel, requires, problems,
-                              skip_identity=rel.startswith(vendored))
+                              skip_identity=rel.startswith(vendored),
+                              skip_issue_ref=_in_examples_dir(rel))
                 if f == "SKILL.md":
                     check_frontmatter(fp, rel, True, problems)
                 elif root.endswith("agents") and f.endswith(".md") and f.lower() != "readme.md":

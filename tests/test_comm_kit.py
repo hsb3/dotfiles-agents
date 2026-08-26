@@ -64,6 +64,40 @@ def run_cli(argv: list[str]) -> tuple[int, str, str]:
     return code, out.getvalue(), err.getvalue()
 
 
+def capture(fn, *args, **kwargs):
+    """Call *fn*, returning ``(value, stdout, stderr)`` — for the functions that warn."""
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        value = fn(*args, **kwargs)
+    return value, out.getvalue(), err.getvalue()
+
+
+def write_local(tmp: str, text: str) -> str:
+    """Write a project-local preferences file at ``<tmp>/.claude/comm-kit.local.md``."""
+    d = os.path.join(tmp, ".claude")
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, "comm-kit.local.md")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    return path
+
+
+def write_spec(directory: str, spec, name: str = "spec.json") -> str:
+    os.makedirs(directory, exist_ok=True)
+    path = os.path.join(directory, name)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(spec, fh)
+    return path
+
+
+def helper_script(tmp: str, body: str, name: str = "fake_provider.py") -> str:
+    """A tiny python file standing in for an audio provider — never a real TTS engine."""
+    path = os.path.join(tmp, name)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(body)
+    return path
+
+
 class SpecLoader(unittest.TestCase):
     def test_json_dict_spec_loads(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -372,6 +406,332 @@ class PdfGuards(unittest.TestCase):
         finally:
             dl.shutil.which = real_which
             dl.os.path.isfile = real_isfile
+
+
+class LocalPreferences(unittest.TestCase):
+    """`.claude/comm-kit.local.md` — house defaults, ranked below the spec."""
+
+    def spec(self, **top) -> dict:
+        spec = {"type": "morning-briefing", "sections": full_morning_sections()}
+        spec.update(top)
+        return spec
+
+    def test_missing_file_is_silent_and_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            value, out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {})
+        self.assertEqual(err, "")
+        self.assertEqual(out, "")
+
+    def test_no_spec_context_means_no_local_file(self):
+        self.assertEqual(dl.load_local_config(None), {})
+
+    def test_found_by_walking_up_from_the_spec_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\ntheme: midnight\n---\n")
+            deep = os.path.join(tmp, "a", "b", "c")
+            os.makedirs(deep)
+            value, _out, err = capture(dl.load_local_config, deep)
+        self.assertEqual(value, {"theme": "midnight"})
+        self.assertEqual(err, "")
+
+    def test_quotes_and_trailing_comments_are_stripped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, '---\ntheme: "midnight"  # house dark palette\n---\n')
+            value, _out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {"theme": "midnight"})
+        self.assertEqual(err, "")
+
+    def test_malformed_frontmatter_warns_once_and_degrades(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "theme: midnight\n")  # no fences at all
+            value, _out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {})
+        self.assertEqual(len(err.strip().splitlines()), 1, err)
+        self.assertTrue(err.startswith("✗"), err)
+
+    def test_unclosed_frontmatter_warns_and_degrades(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\ntheme: midnight\n")
+            value, _out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {})
+        self.assertEqual(len(err.strip().splitlines()), 1, err)
+
+    def test_unknown_key_warns_but_recognized_keys_still_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\ntheme: midnight\npalette: neon\n---\n")
+            value, _out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {"theme": "midnight"})
+        self.assertIn("palette", err)
+        self.assertTrue(err.startswith("✗"), err)
+
+    def test_nested_and_list_structures_are_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\ntheme: midnight\nnested:\n  a: b\n- item\n---\n")
+            value, _out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {"theme": "midnight"})
+        self.assertEqual(err, "")
+
+    # -- precedence: CLI flag > spec field > project local > type default ----
+
+    def test_local_theme_beats_the_type_default(self):
+        ctx, problems = dl.resolve_context(self.spec(), local={"theme": "midnight"})
+        self.assertEqual(problems, [])
+        self.assertEqual(ctx["theme_name"], "midnight")
+
+    def test_spec_theme_beats_the_local_file(self):
+        ctx, problems = dl.resolve_context(
+            self.spec(theme="carbon-white"), local={"theme": "midnight"}
+        )
+        self.assertEqual(problems, [])
+        self.assertEqual(ctx["theme_name"], "carbon-white")
+
+    def test_cli_override_beats_both_spec_and_local(self):
+        ctx, problems = dl.resolve_context(
+            self.spec(theme="carbon-white"),
+            overrides={"theme": "ivory"},
+            local={"theme": "midnight"},
+        )
+        self.assertEqual(problems, [])
+        self.assertEqual(ctx["theme_name"], "ivory")
+
+    def test_local_voice_and_repo_rank_below_the_spec(self):
+        local = {"voice": "self-blunt", "repo": "house/default"}
+        ctx, _p = dl.resolve_context(self.spec(repo="spec/repo"), local=local)
+        self.assertEqual(ctx["repo"], "spec/repo")
+        ctx, _p = dl.resolve_context(self.spec(), local=local)
+        self.assertEqual(ctx["repo"], "house/default")
+        self.assertEqual(ctx["voice_name"], "self-blunt")
+
+    def test_absent_local_leaves_resolution_exactly_as_before(self):
+        spec = self.spec()
+        self.assertEqual(dl.resolve_context(spec), dl.resolve_context(spec, local={}))
+
+    def test_unknown_local_value_fails_in_the_normal_resolution_path(self):
+        _ctx, problems = dl.resolve_context(self.spec(), local={"theme": "nosuch"})
+        self.assertTrue(any("available" in p and "nosuch" in p for p in problems), problems)
+
+    # -- precedence, end to end through the CLI ------------------------------
+
+    def _build(self, tmp: str, spec: dict, *flags: str) -> str:
+        spec_path = write_spec(tmp, spec)
+        out = os.path.join(tmp, "deck.html")
+        code, _o, err = run_cli(["build", spec_path, "--html", out, *flags])
+        self.assertEqual(code, 0, err)
+        with open(out, encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_cli_build_applies_the_full_precedence_ladder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\ntheme: midnight\n---\n")
+            self.assertIn("#0A0E27", self._build(tmp, self.spec()))          # local: midnight canvas
+            self.assertIn("#1A4E8A", self._build(tmp, self.spec(theme="boardroom")))  # spec accent
+            doc = self._build(tmp, self.spec(theme="boardroom"), "--theme", "carbon-white")
+            self.assertIn("#0F62FE", doc)                                    # CLI flag: carbon accent
+
+    def test_cli_build_proceeds_after_an_unknown_local_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\ntheme: midnight\nbogus: x\n---\n")
+            spec_path = write_spec(tmp, self.spec())
+            out = os.path.join(tmp, "deck.html")
+            code, _o, err = run_cli(["build", spec_path, "--html", out])
+            self.assertEqual(code, 0, err)
+            self.assertTrue(os.path.isfile(out))
+        self.assertIn("bogus", err)
+
+
+class NarrationScript(unittest.TestCase):
+    SLIDES = [
+        {
+            "kicker": "THE LINE FOR TODAY",
+            "notes": "Read this one slowly.",
+            "blocks": [
+                {"type": "heading", "text": "Ship the **loader**"},
+                {"type": "subtitle", "text": "2026-06-13 - decision first"},
+                {"type": "lead", "text": "The `loader` is the gate"},
+                {"type": "bullets", "items": [
+                    "{accent:BUILD} the loader",
+                    "{chip.ok:DONE} scoring graduated",
+                ]},
+            ],
+        },
+        {"kicker": "SECOND", "blocks": [{"type": "callout", "text": "One sentence ask"}]},
+    ]
+
+    def test_content_arrives_in_deck_order(self):
+        text = dl.narration_script(self.SLIDES)
+        order = [
+            "THE LINE FOR TODAY", "Ship the loader", "decision first", "the gate",
+            "BUILD the loader", "scoring graduated", "Read this one slowly.",
+            "SECOND", "One sentence ask",
+        ]
+        positions = [text.find(needle) for needle in order]
+        self.assertNotIn(-1, positions, f"missing from script:\n{text}")
+        self.assertEqual(positions, sorted(positions), text)
+
+    def test_inline_markup_is_stripped(self):
+        text = dl.narration_script(self.SLIDES)
+        for marker in ("**", "`", "{accent:", "{chip.ok:", "}"):
+            self.assertNotIn(marker, text, f"{marker!r} survived into the script")
+
+    def test_stats_are_spoken_label_then_value(self):
+        """A stat-only slide must not narrate to a bare kicker — the numbers ARE the slide."""
+        slides = [{"kicker": "AT A GLANCE", "blocks": [
+            {"type": "stat", "value": "11", "label": "PRs merged", "delta": "up 4",
+             "trend": "up", "sub": "since the last one"},
+        ]}]
+        text = dl.narration_script(slides)
+        self.assertIn("PRs merged: 11.", text)
+        self.assertIn("up 4", text)
+        self.assertIn("since the last one", text)
+
+    def test_bullets_nested_in_columns_are_reached(self):
+        slides = [{"blocks": [{"type": "columns", "columns": [
+            [{"type": "bullets", "items": ["nested point"]}],
+        ]}]}]
+        self.assertIn("nested point", dl.narration_script(slides))
+
+    def test_guidance_becomes_a_commented_header(self):
+        text = dl.narration_script(self.SLIDES, guidance="spell out acronyms")
+        head = text.splitlines()[:2]
+        self.assertTrue(all(line.startswith("#") for line in head), head)
+        self.assertIn("spell out acronyms", "\n".join(head))
+
+    def test_header_says_it_is_a_draft(self):
+        self.assertIn("DRAFT", dl.narration_script(self.SLIDES).splitlines()[0])
+
+    def test_cli_emits_a_script_for_the_shipped_example(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "script.txt")
+            code, stdout, err = run_cli(["narrate", MORNING_BRIEFING_SPEC, "--script", out])
+            self.assertEqual(code, 0, err)
+            with open(out, encoding="utf-8") as fh:
+                text = fh.read()
+        self.assertIn("✓", stdout)
+        self.assertIn("spell out acronyms", text)  # morning-briefing type's audio guidance
+        self.assertIn("RECOMMENDED TODAY", text)
+        self.assertIn("THE LINE FOR TODAY", text)
+
+    def test_cli_rejects_both_modes_at_once(self):
+        code, _o, err = run_cli(["narrate", MORNING_BRIEFING_SPEC, "--script", "a", "--audio", "b"])
+        self.assertEqual(code, 1)
+        self.assertIn("--script", err)
+
+
+class AudioProviderSeam(unittest.TestCase):
+    """Never invokes a real engine: the seam is exercised with a command template."""
+
+    COPY = (
+        "import sys\n"
+        "open(sys.argv[2], 'w').write('MARKER ' + open(sys.argv[1]).read())\n"
+    )
+    FAIL = "import sys\nsys.stderr.write('provider blew up\\n')\nsys.exit(3)\n"
+
+    def setup_script(self, tmp: str) -> str:
+        path = os.path.join(tmp, "script.txt")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("# DRAFT header, not spoken\nHello there.\n")
+        return path
+
+    def template(self, helper: str) -> str:
+        return f"{sys.executable} {helper} {{script}} {{out}}"
+
+    def test_command_template_runs_and_writes_the_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script = self.setup_script(tmp)
+            helper = helper_script(tmp, self.COPY)
+            out = os.path.join(tmp, "audio.m4a")
+            code, stdout, err = run_cli(
+                ["narrate", script, "--audio", out, "--provider", self.template(helper)]
+            )
+            self.assertEqual(code, 0, err)
+            self.assertTrue(os.path.isfile(out))
+            with open(out, encoding="utf-8") as fh:
+                body = fh.read()
+        self.assertIn("MARKER", body)
+        self.assertIn("Hello there.", body)
+        self.assertIn("✓", stdout)
+
+    def test_comment_lines_never_reach_the_provider(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script = self.setup_script(tmp)
+            helper = helper_script(tmp, self.COPY)
+            out = os.path.join(tmp, "audio.m4a")
+            run_cli(["narrate", script, "--audio", out, "--provider", self.template(helper)])
+            with open(out, encoding="utf-8") as fh:
+                body = fh.read()
+        self.assertNotIn("DRAFT header", body)
+
+    def test_provider_comes_from_the_local_file_when_no_flag_is_given(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            helper = helper_script(tmp, self.COPY)
+            write_local(tmp, f"---\naudio: {self.template(helper)}\n---\n")
+            script = self.setup_script(tmp)
+            out = os.path.join(tmp, "audio.m4a")
+            code, _o, err = run_cli(["narrate", script, "--audio", out])
+            self.assertEqual(code, 0, err)
+            self.assertTrue(os.path.isfile(out))
+
+    def test_flag_beats_the_local_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\naudio: none\n---\n")
+            script = self.setup_script(tmp)
+            helper = helper_script(tmp, self.COPY)
+            out = os.path.join(tmp, "audio.m4a")
+            code, _o, err = run_cli(
+                ["narrate", script, "--audio", out, "--provider", self.template(helper)]
+            )
+            self.assertEqual(code, 0, err)
+            self.assertTrue(os.path.isfile(out))
+
+    def test_none_provider_succeeds_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\naudio: none\n---\n")
+            script = self.setup_script(tmp)
+            out = os.path.join(tmp, "audio.m4a")
+            code, stdout, err = run_cli(["narrate", script, "--audio", out])
+        self.assertEqual(code, 0, err)
+        self.assertIn("✓", stdout)
+        self.assertFalse(os.path.exists(out))
+
+    def test_failing_provider_names_the_command(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script = self.setup_script(tmp)
+            helper = helper_script(tmp, self.FAIL, name="broken_provider.py")
+            out = os.path.join(tmp, "audio.m4a")
+            code, _o, err = run_cli(
+                ["narrate", script, "--audio", out, "--provider", self.template(helper)]
+            )
+        self.assertEqual(code, 1)
+        self.assertIn("broken_provider.py", err)
+        self.assertIn("3", err)
+
+    def test_missing_say_errors_with_the_fallback_named(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script = self.setup_script(tmp)
+            out = os.path.join(tmp, "audio.m4a")
+            with mock.patch.object(dl.shutil, "which", return_value=None):
+                code, _o, err = run_cli(["narrate", script, "--audio", out])
+        self.assertEqual(code, 1)
+        self.assertIn("none", err)
+        self.assertIn("comm-kit.local.md", err)
+
+    def test_missing_script_file_is_a_clear_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "audio.m4a")
+            code, _o, err = run_cli(
+                ["narrate", os.path.join(tmp, "nope.txt"), "--audio", out, "--provider", "none"]
+            )
+        # `none` short-circuits before any read, so exercise a real provider instead.
+        self.assertEqual(code, 0, err)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "audio.m4a")
+            code, _o, err = run_cli(
+                ["narrate", os.path.join(tmp, "nope.txt"), "--audio", out,
+                 "--provider", "true {script} {out}"]
+            )
+        self.assertEqual(code, 1)
+        self.assertIn("nope.txt", err)
 
 
 if __name__ == "__main__":
