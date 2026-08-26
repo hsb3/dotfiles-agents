@@ -412,6 +412,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: api-craft
+    type: skill
+    source: primitives-core/skills/api-craft
+    origin: authored
+    disposition: untriaged
+    targets: [claude-code, opencode]
   - id: tui-craft
     type: skill
     source: primitives-core/skills/tui-craft
