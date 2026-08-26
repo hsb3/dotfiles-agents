@@ -191,7 +191,7 @@ primitives:
     type: agent
     source: primitives-core/agents/code-reviewer.md
     origin: authored
-    disposition: untriaged
+    disposition: qualified
     targets: [claude-code, opencode]
   - id: session-handoff-surfacer
     type: hook
@@ -251,52 +251,52 @@ primitives:
     type: skill
     source: primitives-core/skills/diagrams
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     requires: [cli:graphviz]
     targets: [claude-code, opencode]
   - id: mermaid
     type: skill
     source: primitives-core/skills/mermaid
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     targets: [claude-code, opencode]
   - id: drawio
     type: skill
     source: primitives-core/skills/drawio
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     requires: [cli:drawio]
     targets: [claude-code, opencode]
   - id: excalidraw
     type: skill
     source: primitives-core/skills/excalidraw
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     targets: [claude-code, opencode]
   - id: obsidian-api-basics
     type: skill
     source: primitives-core/skills/obsidian-api-basics
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     targets: [claude-code, opencode]
   - id: obsidian-chat-ui
     type: skill
     source: primitives-core/skills/obsidian-chat-ui
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     targets: [claude-code, opencode]
   - id: obsidian-cli
     type: skill
     source: primitives-core/skills/obsidian-cli
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     requires: [cli:obsidian]
     targets: [claude-code, opencode]
   - id: obsidian-mcp-server
     type: skill
     source: primitives-core/skills/obsidian-mcp-server
     origin: authored
-    disposition: grandfathered-pending-use
+    disposition: qualified
     targets: [claude-code, opencode]
   - id: owner-signoff
     type: skill
