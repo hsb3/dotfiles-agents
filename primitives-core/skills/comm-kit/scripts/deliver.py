@@ -11,8 +11,10 @@ pass, styled HTML comes out.
 
 Key entry points: ``load_spec`` (JSON or YAML, plus the bare-array legacy shape),
 ``validate_spec`` and ``voice_lint`` (every problem reported at once, never fail-fast),
-``render_html`` (self-contained document), ``export_pdf`` (headless-Chrome print).
-Stdlib only, except that a ``.yaml`` spec needs PyYAML.
+``render_html`` (self-contained document), ``export_pdf`` (headless-Chrome print),
+``narration_script`` + ``render_audio`` (a spoken companion, provider-agnostic).
+``load_local_config`` reads a project's house defaults. Stdlib only, except that a
+``.yaml`` spec needs PyYAML.
 
 Limitation: unsupported block types are a hard error, never a silent drop. A status deck
 that quietly loses a slide is worse than one that fails to build.
@@ -27,6 +29,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -39,6 +42,15 @@ VOICES_DIR = os.path.join(SKILL_ROOT, "voices")
 TYPES_DIR = os.path.join(SKILL_ROOT, "types")
 
 DEFAULT_THEME = "boardroom"
+
+# Project-local preferences, discovered by walking up from the spec file. Recognized keys
+# are flat strings only; `audio` names an audio provider, the rest are config names.
+LOCAL_RELPATH = os.path.join(".claude", "comm-kit.local.md")
+LOCAL_KEYS = frozenset({"theme", "voice", "repo", "audio"})
+
+# macOS `say`: no account, no network, no SDK. Any other provider value is a command
+# template, which is what keeps a vendor out of this file.
+DEFAULT_PROVIDER = "say"
 
 # Block types this renderer implements — the full set found across the real decks in the
 # briefing archives (census, 2026-08-06: 22 decks). Anything outside this set fails loudly
@@ -198,6 +210,118 @@ def load_type(type_id: str) -> dict:
 def list_types() -> list[dict]:
     """Every deliverable type this kit defines, id-sorted."""
     return [load_type(t) for t in _names(TYPES_DIR)]
+
+
+# ---------------------------------------------------------------------------
+# project-local preferences
+
+
+def _warn(message: str) -> None:
+    """A misconfiguration yells to stderr and is then ignored — it never fails a build."""
+    print(f"✗ {message}", file=sys.stderr)
+
+
+def _unquote(value: str) -> str:
+    """Strip surrounding quotes, then any trailing ``# comment``.
+
+    Quotes come off first so a quoted value may itself contain a ``#``.
+    """
+    value = value.strip()
+    if value[:1] in ("'", '"'):
+        close = value.find(value[0], 1)
+        return value[1:close] if close != -1 else value[1:]
+    hash_at = value.find(" #")
+    return value[:hash_at].rstrip() if hash_at != -1 else value
+
+
+def find_local_config(start_dir: str | None) -> str | None:
+    """First ``.claude/comm-kit.local.md`` at or above *start_dir*, else None.
+
+    No directory to start from — the ``types`` subcommand, say, which has no spec — means
+    no project context and therefore no file.
+    """
+    if not start_dir:
+        return None
+    current = os.path.abspath(start_dir)
+    while True:
+        candidate = os.path.join(current, LOCAL_RELPATH)
+        if os.path.isfile(candidate):
+            return candidate
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+def load_local_config(start_dir: str | None) -> dict:
+    """A project's house defaults as a flat ``{key: string}`` map; ``{}`` when there are none.
+
+    The file is markdown with a YAML frontmatter block, parsed here with a deliberately
+    narrow line reader: flat scalars only, nested mappings and sequences skipped. Absent is
+    silent; unreadable, unfenced, or carrying a key this kit does not know warns once and
+    resolves to nothing more. A recognized key holding an unknown VALUE is not checked here
+    — it flows into normal resolution and fails there, where the error can list the
+    alternatives.
+    """
+    path = find_local_config(start_dir)
+    if path is None:
+        return {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError as exc:
+        _warn(f"cannot read {path}: {exc} — ignored")
+        return {}
+    return _parse_local(text, path)
+
+
+def _parse_local(text: str, where: str) -> dict:
+    lines = text.splitlines()
+
+    start = None
+    for index, line in enumerate(lines):
+        stripped = line.lstrip("﻿").strip()
+        if not stripped:
+            continue
+        if stripped == "---":
+            start = index + 1
+        break  # the first non-blank line must be the opening fence
+    if start is None:
+        _warn(f"{where}: no '---' frontmatter block — ignored")
+        return {}
+
+    end = None
+    for index in range(start, len(lines)):
+        if lines[index].strip() in ("---", "..."):
+            end = index
+            break
+    if end is None:
+        _warn(f"{where}: frontmatter block is never closed — ignored")
+        return {}
+
+    config: dict[str, str] = {}
+    unknown: list[str] = []
+    for line in lines[start:end]:
+        item = line.strip()
+        if not item or line[:1].isspace() or item.startswith(("#", "-")):
+            continue  # blank, nested, a comment, or a sequence entry
+        colon = item.find(":")
+        if colon == -1:
+            continue
+        key = item[:colon].strip().lower()
+        value = _unquote(item[colon + 1:])
+        if not value:
+            continue  # a mapping opener; this reader takes flat scalars only
+        if key in LOCAL_KEYS:
+            config[key] = value
+        else:
+            unknown.append(key)
+    if unknown:
+        _warn(
+            f"{where}: unknown key(s) {', '.join(sorted(set(unknown)))} — ignored "
+            f"(recognized: {', '.join(sorted(LOCAL_KEYS))})"
+        )
+    return config
 
 
 def validate_theme(name: str, theme: Any) -> list[str]:
@@ -423,13 +547,20 @@ def _groups(spec: dict, typedef: dict | None) -> list[tuple[str, list]]:
     return [("slide", slides)] if isinstance(slides, list) else []
 
 
-def resolve_context(spec: dict, overrides: dict | None = None) -> tuple[dict, list[str]]:
+def resolve_context(
+    spec: dict, overrides: dict | None = None, local: dict | None = None
+) -> tuple[dict, list[str]]:
     """Resolve type/theme/voice/title/repo, collecting name problems instead of raising.
+
+    Precedence is CLI flag (*overrides*) > spec field > project local (*local*) > type
+    default. The spec is the authored artifact, so it outranks ambient project preference;
+    the project layer only sets house defaults once.
 
     Returns ``(context, problems)``; anything that failed to resolve is ``None`` in the
     context, so a caller can keep validating the rest of the spec.
     """
     over = {k: v for k, v in (overrides or {}).items() if v}
+    loc = {k: v for k, v in (local or {}).items() if isinstance(v, str) and v}
     ctx: dict[str, Any] = {
         "type_name": None, "typedef": None,
         "theme_name": None, "theme": None,
@@ -464,7 +595,8 @@ def resolve_context(spec: dict, overrides: dict | None = None) -> tuple[dict, li
     typedef = ctx["typedef"] or {}
 
     theme_name = (
-        over.get("theme") or _str(spec, "theme") or typedef.get("default_theme") or DEFAULT_THEME
+        over.get("theme") or _str(spec, "theme") or loc.get("theme")
+        or typedef.get("default_theme") or DEFAULT_THEME
     )
     ctx["theme_name"] = theme_name
     try:
@@ -473,7 +605,10 @@ def resolve_context(spec: dict, overrides: dict | None = None) -> tuple[dict, li
         problems.append(str(exc))
 
     # No voice resolves for an untyped or legacy spec, and no voice means no voice lint.
-    voice_name = over.get("voice") or _str(spec, "voice") or typedef.get("default_voice")
+    voice_name = (
+        over.get("voice") or _str(spec, "voice") or loc.get("voice")
+        or typedef.get("default_voice")
+    )
     ctx["voice_name"] = voice_name
     if voice_name:
         try:
@@ -482,7 +617,7 @@ def resolve_context(spec: dict, overrides: dict | None = None) -> tuple[dict, li
             problems.append(str(exc))
 
     ctx["title"] = over.get("title") or _str(spec, "title") or "Deck"
-    ctx["repo"] = over.get("repo") or _str(spec, "repo")
+    ctx["repo"] = over.get("repo") or _str(spec, "repo") or loc.get("repo")
     return ctx, problems
 
 
@@ -550,14 +685,16 @@ def _structure_problems(spec: dict, ctx: dict) -> list[str]:
     return problems
 
 
-def validate_spec(spec: dict, overrides: dict | None = None) -> list[str]:
+def validate_spec(
+    spec: dict, overrides: dict | None = None, local: dict | None = None
+) -> list[str]:
     """Every STRUCTURAL problem with a spec, in one pass: unknown keys, unresolvable
     type/theme/voice names, section membership and page budgets, and slide schema.
 
     Voice lint is deliberately not included — its findings are waivable, so they are
     produced separately by ``voice_lint`` (``analyze_spec`` returns both together).
     """
-    ctx, problems = resolve_context(spec, overrides)
+    ctx, problems = resolve_context(spec, overrides, local)
     return problems + _structure_problems(spec, ctx)
 
 
@@ -671,13 +808,15 @@ def voice_lint(slides: Any, voice: dict, prefix: str = "slide") -> list[tuple[st
     return findings
 
 
-def analyze_spec(spec: dict, overrides: dict | None = None) -> tuple[dict, list[str], list]:
+def analyze_spec(
+    spec: dict, overrides: dict | None = None, local: dict | None = None
+) -> tuple[dict, list[str], list]:
     """Everything ``check`` needs: ``(context, structural problems, voice findings)``.
 
     Findings are returned before waives are applied — the caller decides what to suppress
     and reports how many it suppressed.
     """
-    ctx, problems = resolve_context(spec, overrides)
+    ctx, problems = resolve_context(spec, overrides, local)
     problems += _structure_problems(spec, ctx)
     findings: list[tuple[str, str]] = []
     if ctx["voice"]:
@@ -1064,6 +1203,168 @@ def _reap(proc: subprocess.Popen) -> None:
 
 
 # ---------------------------------------------------------------------------
+# narration
+
+_DRAFT_HEADER = (
+    "# DRAFT — deck text pulled in slide order, not finished prose. Refine it, then render "
+    "audio. Lines opening with '#' are notes to the writer and are dropped before any "
+    "provider speaks the file."
+)
+
+# Blocks that carry sentences. Everything else on a slide is layout or a figure, which a
+# listener cannot see and a skeleton should not pretend to describe. `stat` and `callout`
+# earn their place because a slide can be built from nothing else — dropping them narrates
+# an at-a-glance or a hero-ask slide as a bare kicker.
+_SPOKEN_BLOCKS = ("heading", "subtitle", "lead", "callout", "quote")
+
+_SPANS = re.compile(r"\{(?:chip\.)?(?:ok|warn|info|accent):([^}]*)\}")
+
+
+def _spoken(text: Any) -> str:
+    """Flatten the deck's inline-markup dialect to plain words — a synthesizer would read
+    the asterisks and braces aloud."""
+    out = _SPANS.sub(r"\1", str(text))
+    out = re.sub(r"`([^`]+)`", r"\1", out)
+    out = re.sub(r"\*\*([^*]+)\*\*", r"\1", out)
+    return " ".join(out.split())
+
+
+def _sentence(text: Any) -> str:
+    """Terminate a deck fragment so the pause a slide got from a line break survives."""
+    spoken = _spoken(text)
+    if spoken and spoken[-1] not in ".!?:;,":
+        spoken += "."
+    return spoken
+
+
+def _slide_narration(slide: dict, number: int) -> str:
+    lines = [f"[{number}] {_spoken(slide.get('kicker') or '')}".rstrip()]
+    said: list[str] = []
+    for block, _at in _walk_blocks(slide.get("blocks"), ""):
+        btype = block.get("type")
+        if btype in _SPOKEN_BLOCKS:
+            for key in ("title", "text"):
+                if block.get(key):
+                    said.append(_sentence(block[key]))
+        elif btype == "bullets":
+            said += [
+                _sentence(item) for item in block.get("items") or [] if isinstance(item, str)
+            ]
+        elif btype == "stat":
+            # Label before value: a number read cold means nothing without its noun.
+            label = _spoken(block.get("label") or "")
+            value = _spoken(block.get("value") or "")
+            said.append(_sentence(f"{label}: {value}" if label else value))
+            said += [_sentence(block[k]) for k in ("delta", "sub") if block.get(k)]
+    body = " ".join(s for s in said if s)
+    if body:
+        lines.append(body)
+    notes = _spoken(slide.get("notes") or "")
+    if notes:
+        lines.append(notes)  # verbatim, and last: they are the author's spoken aside
+    return "\n".join(lines)
+
+
+def narration_script(slides: list[dict], guidance: str | None = None) -> str:
+    """A narration skeleton in deck order — one block per slide, inline markup stripped.
+
+    Deliberately a draft: extracted deck text reads like slides, and the refining pass is
+    where it becomes speech. *guidance* is the type's ``audio`` string, emitted as a comment
+    so its spell-out rules travel with the file rather than living in someone's head.
+    """
+    out = [_DRAFT_HEADER]
+    if guidance:
+        out.append(f"# {_spoken(guidance)}")
+    out.append("")
+    for number, slide in enumerate(slides, start=1):
+        if not isinstance(slide, dict):
+            continue
+        out.append(_slide_narration(slide, number))
+        out.append("")
+    return "\n".join(out).rstrip("\n") + "\n"
+
+
+# ---------------------------------------------------------------------------
+# audio
+
+
+def _uncommented(script_path: str, workdir: str) -> str:
+    """Path to *script_path* with its comment lines removed, or the original when it has none.
+
+    The ``#`` convention is this kit's own, so honoring it on the way out is what stops a
+    provider from reading the draft header aloud.
+    """
+    try:
+        with open(script_path, encoding="utf-8") as fh:
+            lines = fh.readlines()
+    except OSError as exc:
+        raise DeckError(f"cannot read narration script {script_path}: {exc}") from exc
+    kept = [line for line in lines if not line.lstrip().startswith("#")]
+    if len(kept) == len(lines):
+        return script_path
+    path = os.path.join(workdir, "spoken.txt")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.writelines(kept)
+    return path
+
+
+def _provider_cmd(provider: str, script_path: str, out_path: str) -> list[str]:
+    """The argv for one provider. Anything but ``say`` is a command template — split with
+    shlex and run as a list, never through a shell."""
+    if provider == DEFAULT_PROVIDER:
+        exe = shutil.which(DEFAULT_PROVIDER)
+        if exe is None:
+            raise DeckError(
+                "macOS `say` is not on PATH, so no audio can be rendered here. Ship the "
+                "deck plus the written script instead, or point the `audio` key in "
+                ".claude/comm-kit.local.md at `none` (audio deliberately off) or at a "
+                "command template using {script} and {out}."
+            )
+        return [
+            exe, "-o", out_path, "--file-format=m4af", "--data-format=aac", "-f", script_path,
+        ]
+    cmd = [
+        part.replace("{script}", script_path).replace("{out}", out_path)
+        for part in shlex.split(provider)
+    ]
+    if not cmd:
+        raise DeckError(f"audio provider {provider!r} is not a runnable command")
+    return cmd
+
+
+def render_audio(script_path: str, out_path: str, provider: str = DEFAULT_PROVIDER) -> str:
+    """Render a narration script to audio through *provider*. Returns the output path.
+
+    The format is whatever the provider writes — ``say`` produces m4a because macOS ships
+    no mp3 encoder, and nothing here transcodes. Keeping every non-``say`` provider a
+    command template is what stops a vendor SDK from ever becoming a dependency of this kit.
+    """
+    if not os.path.isfile(script_path):
+        raise DeckError(f"narration script not found: {script_path}")
+    out_path = os.path.abspath(out_path)
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    if os.path.exists(out_path):
+        os.remove(out_path)  # else a stale file reads as instant success
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cmd = _provider_cmd(provider, _uncommented(script_path, tmp), out_path)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+        except OSError as exc:
+            raise DeckError(f"audio provider will not start: {shlex.join(cmd)} — {exc}") from exc
+
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+        raise DeckError(
+            f"audio provider exited {proc.returncode}: {shlex.join(cmd)}"
+            + (f"\n  {detail[-1]}" if detail else "")
+        )
+    if not os.path.isfile(out_path):
+        raise DeckError(f"audio provider wrote no output: {shlex.join(cmd)}")
+    return out_path
+
+
+# ---------------------------------------------------------------------------
 # scaffolding
 
 
@@ -1207,11 +1508,16 @@ def _describe(ctx: dict, count: int) -> str:
     return ", ".join(bits)
 
 
+def _local_for(path: str) -> dict:
+    """House defaults for whichever project *path* sits in."""
+    return load_local_config(os.path.dirname(os.path.abspath(path)))
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     spec = _read_spec(args.spec)
     if spec is None:
         return 1
-    ctx, problems, findings = analyze_spec(spec)
+    ctx, problems, findings = analyze_spec(spec, local=_local_for(args.spec))
     code = _report(problems, findings, ctx["waive"])
     if code:
         return code
@@ -1229,7 +1535,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
     overrides = {
         "title": args.title, "repo": args.repo, "theme": args.theme, "voice": args.voice,
     }
-    ctx, problems, findings = analyze_spec(spec, overrides)
+    ctx, problems, findings = analyze_spec(spec, overrides, _local_for(args.spec))
     code = _report(problems, findings, ctx["waive"])
     if code:
         return code
@@ -1257,6 +1563,40 @@ def _cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_narrate(args: argparse.Namespace) -> int:
+    if bool(args.script) == bool(args.audio):
+        print(
+            "narrate needs exactly one of --script OUT.txt (a draft, from a spec) or "
+            "--audio OUT.m4a (audio, from a script)",
+            file=sys.stderr,
+        )
+        return 1
+    local = _local_for(args.source)
+
+    if args.script:
+        spec = _read_spec(args.source)
+        if spec is None:
+            return 1
+        # No gate here on purpose: `check` is the gate, and a waivable finding about the
+        # DECK's prose must not stand between an author and a narration draft.
+        ctx, _problems = resolve_context(spec, local=local)
+        slides = resolve_slides(spec, ctx["typedef"])
+        text = narration_script(slides, (ctx["typedef"] or {}).get("audio"))
+        os.makedirs(os.path.dirname(os.path.abspath(args.script)) or ".", exist_ok=True)
+        with open(args.script, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        print(f"✓ script -> {args.script}  ({len(slides)} slide(s), draft)")
+        print(f"  refine the prose, then: narrate {args.script} --audio out.m4a")
+        return 0
+
+    provider = args.provider or local.get("audio") or DEFAULT_PROVIDER
+    if provider == "none":
+        print("✓ audio deliberately off (provider `none`) — ship the written script")
+        return 0
+    print(f"✓ audio  -> {render_audio(args.source, args.audio, provider)}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="deliver.py", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1273,6 +1613,21 @@ def main(argv: list[str] | None = None) -> int:
     p_build.add_argument("--theme", help=f"theme name (overrides the spec): {', '.join(_names(THEMES_DIR))}")
     p_build.add_argument("--voice", help=f"voice name (overrides the spec): {', '.join(_names(VOICES_DIR))}")
 
+    p_narr = sub.add_parser(
+        "narrate", help="draft a narration script from a spec, or render a script to audio"
+    )
+    p_narr.add_argument("source", help="a spec (with --script), or a script (with --audio)")
+    p_narr.add_argument(
+        "--script", metavar="OUT", help="write a narration draft here, reading SOURCE as a spec"
+    )
+    p_narr.add_argument(
+        "--audio", metavar="OUT", help="render SOURCE (a narration script) to audio here"
+    )
+    p_narr.add_argument(
+        "--provider",
+        help="say (default, macOS), none, or a command template using {script} and {out}",
+    )
+
     sub.add_parser("types", help="list the deliverable types, their sections and budgets")
 
     p_new = sub.add_parser("new", help="print a spec scaffold for a type")
@@ -1287,6 +1642,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_new(args)
         if args.command == "check":
             return _cmd_check(args)
+        if args.command == "narrate":
+            return _cmd_narrate(args)
         return _cmd_build(args)
     except DeckError as exc:
         print(f"✗ {exc}", file=sys.stderr)

@@ -17,13 +17,13 @@
       {
         "kicker": "RECOMMENDED TODAY",
         "layout": "top",
-        "footer": "All three route around the first-client gate (epic #NNN)",
+        "footer": "All three route around the first-client gate (epic #141)",
         "blocks": [
           { "type": "heading", "text": "Build the BPT loader; decide signing; everything else is parallel" },
           { "type": "bullets", "items": [
-            "BUILD the BPT loader (#NNN) - highest leverage, makes the payment numbers honest",
-            "DECIDE Developer ID signing (#NNN) - the long pole, has lead time",
-            "PARALLEL: the export path (#NNN) and the ESRD verification tail (#NNN)",
+            "BUILD the BPT loader (#152) - highest leverage, makes the payment numbers honest",
+            "DECIDE Developer ID signing (#149) - the long pole, has lead time",
+            "PARALLEL: the export path (#155) and the ESRD verification tail (#140)",
             "30-second call: keep or discard the uncommitted Stop hook"
           ] }
         ]
@@ -39,17 +39,17 @@
             [
               { "type": "heading", "level": 2, "text": "Install-week blockers" },
               { "type": "bullets", "items": [
-                "The BPT loader (#NNN) - honest payment math",
-                "Developer ID signing (#NNN) - clean install",
-                "The export path (#NNN) - no CSV/PDF today"
+                "The BPT loader (#152) - honest payment math",
+                "Developer ID signing (#149) - clean install",
+                "The export path (#155) - no CSV/PDF today"
               ] }
             ],
             [
               { "type": "heading", "level": 2, "text": "Then: credibility" },
               { "type": "bullets", "items": [
-                "Known-answer proof writeup (#NNN)",
-                "Methodology one-pager (#NNN)",
-                "Sandbox wired to a finding (#NNN)"
+                "Known-answer proof writeup (#157)",
+                "Methodology one-pager (#158)",
+                "Sandbox wired to a finding (#160)"
               ] }
             ]
           ] }
@@ -79,7 +79,7 @@
       {
         "kicker": "WHAT SHIPPED - 1",
         "layout": "top",
-        "footer": "Proven locally; cloud-acceptance tail tracked on #NNN / #NNN",
+        "footer": "Proven locally; cloud-acceptance tail tracked on #162 / #163",
         "blocks": [
           { "type": "heading", "text": "ESRD scoring is graduated and wired through" },
           { "type": "bullets", "items": [

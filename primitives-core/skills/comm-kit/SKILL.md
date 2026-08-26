@@ -1,13 +1,12 @@
 ---
 name: comm-kit
-description: Spec-driven engine for recurring communication deliverables - one YAML/JSON spec in, a validated, voice-linted, themed HTML/PDF deck out. Ships deliverable types (morning briefing so far), 7 named themes, and named voice profiles; a bare legacy slides.json array still renders. Use when asked for a comm-kit deliverable or a spec-driven briefing, status deck, or comm package.
+description: Spec-driven engine for recurring communication deliverables - one YAML/JSON spec in, a validated, voice-linted, themed HTML/PDF deck out, plus an optional spoken companion. Ships deliverable types (morning briefing so far), 7 named themes, and named voice profiles; a bare legacy slides.json array still renders. Use when asked for a comm-kit deliverable or a spec-driven briefing, status deck, comm package, or deck narration/audio.
 ---
 
 # comm-kit
 
-One engine for the workflow every comm shares: structured input -> style/tone config ->
-package -> check -> refine -> present. The agent writes one spec file and selects config by
-name; layout, validation, doctrine, and export are authored once here, never per-use.
+One engine for the workflow every comm shares: structured input -> style/tone config by name
+-> package -> check -> refine -> present. Authored once here, never per-use.
 
 ## Pipeline
 
@@ -20,6 +19,9 @@ name; layout, validation, doctrine, and export are authored once here, never per
    no autofit: content past a 1280x720 slide clips; overflow means the slide does too much.
 4. **Present** - `deliver.py build <spec> --pdf out.pdf` (headless Chrome; if absent, ship
    the self-contained HTML). Deliver with SendUserFile so it opens in a viewer.
+5. **Narrate** (optional) - `deliver.py narrate <spec> --script out.txt` drafts a spoken
+   companion in deck order (markup stripped, the type's audio guidance in a `#` header).
+   Rewrite it as speech, then `narrate out.txt --audio out.m4a`; `#` lines are never spoken.
 
 ## Spec
 
@@ -50,6 +52,11 @@ deck shape) is accepted as-is with defaults, so prior decks still render.
 - **Voices** (`voices/*.json`) - register (fragments vs sentences), id policy
   (plain-English label first, id second), numeric budgets, and guidance strings. Doctrine
   is lint, not prose: every finding carries a rule id and can be waived per-spec.
+- **Project defaults** (`.claude/comm-kit.local.md`) - YAML frontmatter, flat keys `theme` /
+  `voice` / `repo` / `audio`, found by walking up from the spec. Precedence: **CLI flag >
+  spec field > project local > type default**. `audio` picks the narration provider (`say`,
+  `none`, or a `{script}`/`{out}` command template - no vendor SDK ever becomes a
+  dependency). Absent: silent. Unreadable, or an unknown key: warn, then ignore.
 
 ## Output layout
 

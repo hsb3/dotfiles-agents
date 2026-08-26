@@ -119,6 +119,53 @@ class VendoredBaseExemption(unittest.TestCase):
             )
 
 
+class ExamplesIssueRefCarveOut(unittest.TestCase):
+    """The examples/ carve-out exempts the ISSUE-REFERENCE rule only. A bare #NNN in an
+    examples/ file is sample data demonstrating ref-linkify (self-evident, not real
+    personalization); every other identity rule still applies there unchanged."""
+
+    def _scan_at(self, rel, content):
+        d = tempfile.mkdtemp()
+        fp = os.path.join(d, os.path.basename(rel))
+        with open(fp, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        problems = []
+        I.scan_file(fp, rel, set(), problems, skip_issue_ref=I._in_examples_dir(rel))
+        return problems
+
+    def test_bare_issue_ref_in_skill_body_still_flagged(self):
+        probs = self._scan_at("primitives-core/skills/comm-kit/SKILL.md", "fixes #123 today")
+        self.assertTrue(any("issue" in p for p in probs))
+
+    def test_bare_issue_ref_in_scripts_still_flagged(self):
+        probs = self._scan_at(
+            "primitives-core/skills/comm-kit/scripts/deliver.py", "# see #123 for context"
+        )
+        self.assertTrue(any("issue" in p for p in probs))
+
+    def test_bare_issue_ref_in_examples_dir_passes(self):
+        probs = self._scan_at(
+            "primitives-core/skills/comm-kit/examples/morning-briefing.spec.json",
+            '{"footer": "tracked on #123"}',
+        )
+        self.assertFalse(any("issue" in p for p in probs))
+
+    def test_personal_name_in_examples_dir_still_flagged(self):
+        # The carve-out is issue-ref-only — every other identity rule still applies.
+        probs = self._scan_at(
+            "primitives-core/skills/comm-kit/examples/morning-briefing.spec.json",
+            "Produce Henry's report.",
+        )
+        self.assertTrue(any("Henry" in p for p in probs))
+
+    def test_org_token_in_examples_dir_still_flagged(self):
+        probs = self._scan_at(
+            "primitives-core/skills/comm-kit/examples/morning-briefing.spec.json",
+            '{"note": "deploy to raptorxai prod"}',
+        )
+        self.assertTrue(any("raptorxai" in p for p in probs))
+
+
 class Frontmatter(unittest.TestCase):
     def _fm(self, content, is_skill=True):
         d = tempfile.mkdtemp()
