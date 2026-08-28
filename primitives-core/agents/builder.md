@@ -29,13 +29,12 @@ success; an oversized slice ground out silently is the failure mode this replace
 - **Mechanical fixes.** A described root cause plus a fix shape — apply it, verify it.
 - **Bounded multi-file edits.** A change that touches a known, finite set of files
   per an existing pattern.
-- **Judgment-heavy slices.** Coupled logic where a wrong local choice breaks something
-  non-obvious elsewhere; subtle correctness (concurrency, numerical edge cases,
-  security-sensitive paths); acceptance criteria that describe an outcome and require
+<!-- harness:claude-code -->
+- **Judgment-heavy slices, dispatched on opus.** Coupled logic where a wrong local choice
+  breaks something non-obvious elsewhere; subtle correctness (concurrency, numerical edge
+  cases, security-sensitive paths); acceptance criteria that describe an outcome and require
   interpretation, not just execution.
-  <!-- harness:claude-code -->
-  Dispatched on opus.
-  <!-- /harness -->
+<!-- /harness -->
 
 ## Test-first by default
 

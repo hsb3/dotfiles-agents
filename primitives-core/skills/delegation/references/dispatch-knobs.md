@@ -84,6 +84,11 @@ carries the liveness check for telling a dead callee from a slow one.
   own**, because integration is not a worker's job. This is prompt-level policy, not a tool-layer
   block, so it can be violated. Treat a push, a merge, or a commit on a shared branch from below
   the session as a protocol breach and check what else that agent did.
+- **Verify what landed before merging.** Known trap, and the corrected rule above makes it more
+  likely rather than less: a worker's commits on its own worktree branch are now expected, so a
+  session that integrates carelessly is how those commits end up on the main branch unexamined.
+  Integration hygiene belongs to the orchestrating session — read the log and the diff of the
+  branch you are merging against the brief that produced it, before you merge it.
 - **Config is read-only below the strategy layer** unless a brief explicitly hands ownership over.
   Gate, lint, typecheck, coverage thresholds, and CI belong to the strategist, because an agent
   that can edit its own acceptance criteria can satisfy any brief. An unsatisfiable gate is an

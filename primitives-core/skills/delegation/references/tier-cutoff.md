@@ -10,8 +10,8 @@ Claude Code names the tiers haiku / sonnet / opus and picks one per dispatch, so
 
 The kit's economics rest on `scout` on the cheapest tier and `builder` on the middle one, with the
 premium tier reserved for judgment-heavy slices. **Those defaults began as reasoning, not
-evidence** — the lab that produced this kit dispatched opus for every model-bearing call it made
-and never exercised the cheaper tiers. This is the protocol that would settle them. Until it has
+evidence** — the lab that produced this kit dispatched the premium tier for every model-bearing
+call it made and never exercised the cheaper tiers. This is the protocol that would settle them. Until it has
 been run on the harness you are dispatching into, treat the cheat-sheet defaults as `[untested]`
 and keep a strict DoD so an under-powered worker fails loudly.
 
@@ -50,12 +50,12 @@ Cheapest-to-hardest, because the cutoff is expected to sit somewhere in the midd
 
 | Archetype | Example | Prediction to test |
 |---|---|---|
-| Mechanical transform | rename across 30 sites, one codemod | Cheap tier adequate; opus is waste |
+| Mechanical transform | rename across 30 sites, one codemod | Cheap tier adequate; the premium tier is waste |
 | Bounded feature | add a flag, wire it, test it | Cheap tier adequate with a strict DoD |
 | Test authoring | write the suite for an existing module | Unknown — test design is judgment-shaped |
-| Coupled slice | change a signature and everything it touches | Expected to need opus |
-| Underspecified slice | acceptance criteria that need interpretation | Expected to need opus |
-| Read-only synthesis | reconcile evidence across many files (scout tiers) | haiku vs sonnet, separate question |
+| Coupled slice | change a signature and everything it touches | Expected to need the premium tier |
+| Underspecified slice | acceptance criteria that need interpretation | Expected to need the premium tier |
+| Read-only synthesis | reconcile evidence across many files (scout tiers) | Cheapest vs middle tier, separate question |
 
 ## What to record per comparison
 
@@ -78,8 +78,8 @@ same-arm judge spread observed in that run) is `inconclusive`, not a win.
 - **Within-run ranking is the signal; cross-run score levels are not.** Panels differ, and judges
   in a later run dig deeper than judges in an earlier one. Never compare a score from one
   comparison to a score from another and call the difference a finding.
-- **Report the cost ratio next to the quality delta.** "Opus scored +0.24 at 1.9× the output
-  tokens" is a decision; "opus scored higher" is not.
+- **Report the cost ratio next to the quality delta.** "The premium arm scored +0.24 at 1.9× the
+  output tokens" is a decision; "the premium arm scored higher" is not.
 - **A cheap arm that fails its gate is the most useful outcome available.** It tells the
   strategist exactly where the cutoff is without any judging at all, which is also why every brief
   in this protocol needs a gate that has been proved red.

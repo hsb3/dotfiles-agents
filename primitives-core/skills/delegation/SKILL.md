@@ -230,15 +230,19 @@ The model in the session's strategist seat IS the effort signal.
 
 | Session model | Level | Meaning |
 | --- | --- | --- |
-| Opus or below | `standard` | The default — everyday delegation work |
-| Fable | `deep` | A problem hard enough to justify a Fable strategist |
+| The everyday strategist model, or anything below it | `standard` | The default — everyday delegation work |
+| A model deliberately above it | `deep` | A problem hard enough to justify the most expensive seat available |
+
+<!-- harness:claude-code -->
+Concretely here: Opus or below is `standard`; Fable is `deep`.
+<!-- /harness -->
 
 Overrides, highest wins: the user says so; or an `effort:` key in the frontmatter of
 `atelier.local.md` (check for it; absence is normal — `references/activation.md` has the path).
 State the level in effect when proposing an architecture.
 
-At **`deep`**, the session's tokens cost ~2× Opus and Fable measures at ~80–100k tokens just to get
-grounded plus ~50–100k to drive the work — past the context watermark before real work starts
+At **`deep`**, the session's tokens cost roughly 2× the standard seat's, and a deep-tier
+strategist measures at ~80–100k tokens just to get grounded plus ~50–100k to drive the work — past the context watermark before real work starts
 `[cost]`. So: **never self-ground** (dispatch it, read the report, not the tree); **never collapse
 management on a building wave** (collapse condition 3 binds hardest when the strategist's tokens
 are the most expensive in the system, which puts C out of reach, though a scout wave returning
@@ -351,7 +355,7 @@ independent re-derivation.
 | `strategist` | strategy | The floor above — **never a spawned agent** |
 
 **These defaults began as reasoning, not evidence** — the lab that produced this kit dispatched
-opus for every model-bearing call and never exercised the cheaper tiers.
+the premium tier for every model-bearing call and never exercised the cheaper tiers.
 `references/tier-cutoff.md` is the protocol for measuring the cutoff and the record of how far it
 has been measured.
 
@@ -419,10 +423,11 @@ Operating defaults from measured findings `[cost]`. The `context-watermark` (Use
 `handoff` skill are the enforcement layer; this skill decides when.
 
 - **Trigger the `handoff` skill at a self-chosen boundary in the 60–80k band.** The economics
-  optimum is ~40–60k; the buffer buys boundary quality. `context-watermark` does the nudging, and **its
-  thresholds scale with the model's own context window rather than a flat count** — a fixed number
-  means different things on a 200k-window model and a 1M-window one. Each harness's concrete
-  figures are in `references/activation.md`.
+  optimum is ~40–60k; the buffer buys boundary quality. `context-watermark` does the nudging.
+  **Scale its thresholds to the model's own context window rather than fixing them as a flat
+  count** — a fixed number means different things on a 200k-window model and a 1M-window one. How
+  far each harness has taken that is its own business; each states its concrete figures below and
+  in `references/activation.md`.
 - **Prefer handoff + a fresh session over `/compact`** — a fresh session reading the handoff
   restarts at ~10–20k; a compaction summary is similar in size, less curated, and carries a
   re-read tax.

@@ -21,8 +21,8 @@ mid-wave, put one `manager` over the fan-out and take back one package.
 ## 1. Discover and slice the site inventory
 
 Before writing a single brief, produce the **site inventory**: an explicit, enumerated list of
-every file/module/callsite the migration touches, not an estimate. Use `scout` agents (haiku
-default) for the sweep — this is read-only, high-volume, low-judgment work, exactly what scouts
+every file/module/callsite the migration touches, not an estimate. Use `scout` agents (cheapest
+tier by default) for the sweep — this is read-only, high-volume, low-judgment work, exactly what scouts
 are for:
 
 - Grep/AST-search for the old pattern across the whole tree; do not sample.
