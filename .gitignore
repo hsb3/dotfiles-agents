@@ -60,3 +60,4 @@ harness/campaign-logs/
 # has no stamp, so the guard refuses the first manual /compact until /handoff runs — which
 # is the correct answer for a session that has not written a handoff yet.
 .claude/handoff.stamp
+.kata.local.toml
