@@ -60,7 +60,7 @@ its commitment, the other cuts comments that cannot.
 | `manager` | agent | The management layer between strategy and execution — owns a wave or a coupled dependent chain end to end: turns the definition of done into worker briefs, spawns and sequences its own scouts, builders, and reviewers, and reports one proof package upward. The default for non-trivial work. |
 | `comment-hygiene-gate` | hook (`PreToolUse`) | Silent until a Bash command is about to land work (`git commit`, `gh pr create`), then scans the added comment lines of the source files in that change for history markers — issue and board refs, dates, CI run ids, attributions — and names the files and a couple of examples. Skips prose files, where the harvested history is supposed to end up. Advisory; never blocks. |
 | `config-custody` | hook (`PreToolUse`) | Denies **subagent** edits to the config listed under `protected:` in the activation file — the ownership map made machine-readable, so a worker cannot quietly edit the gate that defines its own acceptance. The main session is never restricted; only `enforce: strict` actually denies. |
-| `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (70k) / hard (100k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
+| `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (120k) / hard (160k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
 | `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
@@ -81,7 +81,7 @@ You: "build the export feature — plan it out"
 → delegation sizes the job, picks an architecture, and routes scoped slices through the
   management and execution layers at the right model tier, holding verification for itself.
 
-Context creeps past 70k tokens
+Context creeps past 120k tokens
 → context-watermark nudges: run /handoff, then /clear or /compact.
 
 You: "/handoff"
@@ -199,8 +199,8 @@ machine-local change):
 
 | Env var | Default | Meaning |
 |---|---|---|
-| `CONTEXT_WATERMARK_SOFT` | `70000` | Context tokens before the first nudge |
-| `CONTEXT_WATERMARK_HARD` | `100000` | Context tokens before the hard warning |
+| `CONTEXT_WATERMARK_SOFT` | `120000` | Context tokens before the first nudge |
+| `CONTEXT_WATERMARK_HARD` | `160000` | Context tokens before the hard warning |
 | `DELEGATION_WATERMARK_SOFT` | `25` | Solo-run length (delegable calls, no dispatch) before the first nudge |
 | `DELEGATION_WATERMARK_REFIRE_EVERY` | `15` | Further calls before nudging again |
 | `DELEGATION_WATERMARK_STATE_DIR` | `/tmp/delegation-watermark` | Per-session anti-nag state |
