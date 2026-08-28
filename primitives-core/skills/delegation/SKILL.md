@@ -434,7 +434,7 @@ Operating defaults from measured findings `[cost]`. The `context-watermark` (Use
   DoD so an under-powered crew fails loudly and fast; see `references/tier-cutoff.md`.
 
 <!-- harness:claude-code -->
-Concretely here: `context-watermark` nudges on **absolute tokens** (~70k soft, ~100k hard),
+Concretely here: `context-watermark` nudges on **absolute tokens** (120k soft, 160k hard),
 because percent-of-window thresholds are inert against the ~967k auto-compact default; the fresh
 session is `/clear`; downtiering is a `model:` value on the dispatch; and the handoff skill has no
 slash command — a command would shadow the skill of the same name.

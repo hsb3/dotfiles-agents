@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes
+.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes parity
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,9 @@ readmes: ## Per-unit README gate: every skill dir and every plugin ships a title
 
 manifests: ## Manifest gate: `claude plugin validate --strict` over marketplace + every assembly (needs the claude CLI; NOT in ci)
 	@python3 scripts/check_manifests.py
+
+parity: ## atelier doctrine parity vs the opencode port, per docs/atelier-parity.md — the gate lives in dotfiles-agents-oc; override its location with ATELIER_OC_REPO= (needs that checkout + bun; NOT in ci)
+	@ATELIER_CC_REPO=$(CURDIR) bun --cwd $(or $(ATELIER_OC_REPO),$(HOME)/Developer/dotfiles-agents-oc) gate/parity.ts
 
 members: ## Print each plugin's members, derived live from the symlink assemblies
 	@for p in plugins/*/; do id=$$(basename "$$p"); echo "$$id:"; \
