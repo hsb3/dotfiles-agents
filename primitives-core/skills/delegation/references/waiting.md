@@ -28,10 +28,14 @@ The three commonest producers that do not exist:
 
 ## Messages to a live execution agent are one-way
 
-`manager` is the only shipped agent carrying `SendMessage`; `scout`, `builder`, and `reviewer`
-do not have it (`agents/*.md` frontmatter). So a message to a live execution agent **arrives
-and cannot be answered**. The callee has no tool with which to send anything before it
+`manager` is the only shipped agent with a channel pointing downward; `scout`, `builder`, and
+`reviewer` have none (`agents/*.md` frontmatter). So a message to a live execution agent
+**arrives and cannot be answered**. The callee has no tool with which to send anything before it
 finishes. Waiting on that answer is the deadlock two managers hit in one session `[field]`.
+
+<!-- harness:claude-code -->
+The channel is `SendMessage`, and only `manager` carries it.
+<!-- /harness -->
 
 Grant the tool downward and the layer boundary goes with it: a worker that can message can
 message its siblings, and the negative list in `briefs.md` §3 — the information asymmetry that
@@ -55,9 +59,22 @@ your report is the only thing you can send, and it is sent by finishing.
 ## The liveness check
 
 To tell a dead in-flight agent from a slow one, check whether it is still writing `[untested]`.
-Every running agent appends to its own transcript under the session directory, so the file's
-mtime is the liveness signal — available to a `manager` and to the `strategist` alike, since
-both have Bash:
+Read that signal twice, a few minutes apart:
+
+- **It advanced** → alive and working. Slow is not dead; do not re-dispatch.
+- **Unchanged across two checks** → presumed dead. Stop waiting, and treat the work as not done
+  rather than as done-and-unreported.
+
+**What is not a liveness check:** polling the work product. A test suite is green between
+mutants, a file is complete between edits, and a gate passes on a tree a worker is halfway
+through rewriting. Polling for the outcome is how a session commits over live work. The
+completion notification is the only signal that the work is finished; a liveness signal only
+tells you whether anyone is still there.
+
+<!-- harness:claude-code -->
+The signal is on disk. Every running agent appends to its own transcript under the session
+directory, so the file's mtime is the liveness reading — available to a `manager` and to the
+`strategist` alike, since both have Bash:
 
 ```sh
 # The session's agent transcripts. Slug = the project path with every
@@ -69,12 +86,6 @@ d=$(/bin/ls -dt ~/.claude/projects/"$slug"/*/subagents 2>/dev/null | head -1)
 /bin/ls -lt "$d"/agent-*.jsonl | head
 ```
 
-Read it twice, a few minutes apart:
-
-- **mtime advanced** → alive and working. Slow is not dead; do not re-dispatch.
-- **mtime unchanged across two checks** → presumed dead. Stop waiting, and treat the work as
-  not done rather than as done-and-unreported.
-
 Two things make the reading trustworthy. The `agent-<id>.meta.json` beside each transcript
 carries `agentType`, `description`, and — for a manager's own workers — `spawnDepth: 2` and
 `parentAgentId`, so you can confirm the row you are staring at is the dispatch you made rather
@@ -83,15 +94,10 @@ manager, so one listing covers both layers. Both facts are the on-disk layout th
 `subagent-telemetry` hook already reads and documents; re-verify them there before relying on
 a detail this file does not name.
 
-**What is not a liveness check:** polling the work product. A test suite is green between
-mutants, a file is complete between edits, and a gate passes on a tree a worker is halfway
-through rewriting. Polling for the outcome is how a session commits over live work. The
-completion notification is the only signal that the work is finished; the mtime check only
-tells you whether anyone is still there.
-
 The strategist also has `ListAgents`, which lists the agents it spawned in one call. A manager
 does not carry that tool, which is why the check above is written against the filesystem: it is
 the one form both layers can run.
+<!-- /harness -->
 
 ## File ownership while a worker is live
 
@@ -107,7 +113,7 @@ every owned list it has handed out. While a worker you dispatched holds a file:
 - **Read it freely.** Reading is never the problem.
 - **Do not edit it.** Not a typo, not a one-liner, not a merge of your change with theirs.
 - **Queue the edit on your punch list** and apply it after that worker's completion
-  notification — or fold it into the worker via `SendMessage` as an amendment.
+  notification — or fold it into the worker as an amendment.
 - **A file two live workers both need is a slicing defect.** Serialize them or re-slice;
   parallel workers on one file is the situation the ownership map exists to prevent.
 
@@ -127,9 +133,9 @@ Each ends in termination under the rules above.
    and its bound before the wait starts (§1, item 3). A condition that cannot name what
    satisfies it is rejected as a wait at adoption, and the agent proceeds or escalates.
    **Terminates.**
-3. **A manager cannot tell a dead worker from a slow one.** It runs the liveness check. mtime
-   advancing means keep waiting on a real producer; mtime frozen across two checks means
-   presumed dead, and the work is reported not-done rather than waited on further.
+3. **A manager cannot tell a dead worker from a slow one.** It runs the liveness check. A signal
+   still advancing means keep waiting on a real producer; a signal frozen across two checks
+   means presumed dead, and the work is reported not-done rather than waited on further.
    **Terminates.**
 4. **A manager overwrites its own live builder's file.** The ownership rule denies the edit
    before it happens; the fix goes on the punch list or into the worker as an amendment, and

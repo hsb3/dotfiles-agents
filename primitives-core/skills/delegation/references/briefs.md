@@ -18,7 +18,9 @@ conditions, and it writes its own workers' briefs to this file's rules.
   CI). One file has one owner per wave — including against whoever dispatched the worker; a
   manager does not edit inside its own builder's owned list (`waiting.md`).
 - **Evidence format** to return.
-- **Verification commands** to run, with the instruction to paste actual output.
+- **Verification commands** to run, each with its expected output, and the instruction to paste
+  actual output. A criterion with no command attached is not a criterion — rewrite it until a
+  machine can check it.
 - **Stop conditions** — "if the code does not match this brief, or a command fails after a
   reasonable retry, stop and report; do not improvise."
 
@@ -47,11 +49,15 @@ Best of all: if a tool can check it, make the tool check it and delete the prose
 for what tools cannot see.
 
 **The same rule binds a constraint an agent adopts for itself**, and that half is where the
-damage has actually landed: four reported deadlocks, all of them an agent waiting on a condition
-it invented and never bounded. A stop condition adopted mid-flight names what would satisfy it,
-who produces that, and what the agent does when it does not arrive — or it is not a stop
-condition, it is a deadlock. `waiting.md` carries the rule, the one-way message channel behind
-one of the four, and the liveness check for the other.
+damage has actually landed: every deadlock reported so far was an agent waiting on a condition it
+invented and never bounded. A stop condition adopted mid-flight names what would satisfy it, who
+produces that, and what the agent does when it does not arrive — or it is not a stop condition,
+it is a deadlock. `waiting.md` carries the rule and the one-way message channel behind it.
+
+<!-- harness:claude-code -->
+Four such deadlocks have been reported, all of that shape; `waiting.md` also carries the liveness
+check for the one where a manager could not tell a dead worker from a slow one.
+<!-- /harness -->
 
 ### 2. Test-first is the default, and RED is the evidence
 
@@ -97,9 +103,11 @@ Never put these in a worker brief:
 - **The session's own plan beyond this slice.** In-scope, out-of-scope, and what other owners need
   to know: that is the whole map a worker needs.
 
+<!-- harness:claude-code -->
 Also keep the tree free of stray `CLAUDE.md` files during a fan-out. The harness injects them into
 every worker session, which makes them an uncontrolled side channel into agents that are supposed
 to be reading only the brief.
+<!-- /harness -->
 
 ## Worker brief template
 
@@ -135,4 +143,5 @@ escalation rule.
 A handoff note is a **hypothesis**, not proof. Before accepting it: re-run the gate, check that
 pasted output matches the commands claimed, and confirm the worker stayed inside its file
 ownership (`git diff --stat` against the owned list). A worker that touched read-only config, or
-mutated git, has breached protocol regardless of how green the result looks.
+pushed, merged, or committed outside its own worktree, has breached protocol regardless of how
+green the result looks.

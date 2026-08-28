@@ -18,6 +18,9 @@
   not a directory listing. Schema in `primitives-core/README.md`; `origin: sourced` requires
   non-null `upstream` + `ref`. Plugin membership is NOT a roster field — membership is the
   symlink assemblies.
+- **Atelier's doctrine prose is shared with its opencode port** and must land in both repos in
+  the same wave — the transform, the one-sided artifacts, and why no CI here can catch the
+  drift are in [`docs/atelier-parity.md`](docs/atelier-parity.md).
 - **Tests are stdlib-only** (`python3 -m unittest`) — zero install is an invariant. Fixtures live
   in `tests/` tempdirs, never under `primitives-core/` (the roster guard flags orphans).
 

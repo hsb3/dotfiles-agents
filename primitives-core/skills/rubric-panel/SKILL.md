@@ -27,11 +27,13 @@ failure instead. Judges are read-only.
 
 ## Process
 
-1. Spawn N parallel judge agents, one persona each. **Every judge scores
-   the whole field** — one judge across all targets keeps calibration
-   consistent; N judges average out persona bias. Judge briefs contain:
-   rubric, contract, targets, persona — nothing about other judges'
-   scores, prior rounds, or expected outcomes.
+1. Dispatch N parallel judge agents, one persona each — one dispatch per
+   judge, all in a single turn so they run in parallel. Each is a
+   read-only reviewer subagent with its persona carried in the prompt.
+   **Every judge scores the whole field** — one judge across all targets
+   keeps calibration consistent; N judges average out persona bias. Judge
+   briefs contain: rubric, contract, targets, persona — nothing about
+   other judges' scores, prior rounds, or expected outcomes.
 2. Each score must cite concrete code. Process artifacts (TDD logs,
    commit history) earn no credit.
 3. Aggregate: per-dimension mean, weighted total. A judge spread

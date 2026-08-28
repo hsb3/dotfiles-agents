@@ -29,10 +29,13 @@ success; an oversized slice ground out silently is the failure mode this replace
 - **Mechanical fixes.** A described root cause plus a fix shape — apply it, verify it.
 - **Bounded multi-file edits.** A change that touches a known, finite set of files
   per an existing pattern.
-- **Judgment-heavy slices** (dispatched on opus). Coupled logic where a wrong local
-  choice breaks something non-obvious elsewhere; subtle correctness (concurrency,
-  numerical edge cases, security-sensitive paths); acceptance criteria that describe
-  an outcome and require interpretation, not just execution.
+- **Judgment-heavy slices.** Coupled logic where a wrong local choice breaks something
+  non-obvious elsewhere; subtle correctness (concurrency, numerical edge cases,
+  security-sensitive paths); acceptance criteria that describe an outcome and require
+  interpretation, not just execution.
+  <!-- harness:claude-code -->
+  Dispatched on opus.
+  <!-- /harness -->
 
 ## Test-first by default
 
@@ -65,18 +68,22 @@ silently destroys the only evidence the dispatching layer has.
 ## Rules
 
 Read-only git (`git status`, `git diff`, `git log`, `git show`) is fine for orienting.
-You must NOT run mutating git (commit, push, rebase, reset, checkout, stash, tag —
-the strategist owns the repo state), reformat or "improve" code beyond the criteria, or
-expand scope to unblock yourself. Installing the dependencies your owned manifest
-declares is allowed; adding new dependencies is a scope change — flag it instead.
+You must NOT push, merge, or touch any branch, worktree, or repo state outside your own
+worktree — the strategist owns integration; committing on your own worktree branch is
+expected — reformat or "improve" code beyond the criteria, or expand scope to unblock
+yourself. Installing the dependencies your owned manifest declares is allowed; adding
+new dependencies is a scope change — flag it instead.
 
 Run your own build/tests/lint to converge — the inner loop is yours; the dispatching
 layer re-runs the gates independently, so your green is a claim, not proof. Paste the
 actual output of the brief's verification commands in your handoff note; a criterion
 you could not verify by running something is reported as unverified, not assumed.
-On an opus dispatch, reason through an underspecified tradeoff and record the
-reasoning in your handoff note; on the default tier, stop and escalate a genuinely
-ambiguous judgment call rather than guess.
+Reason through an underspecified tradeoff and record the reasoning in your handoff note;
+stop and escalate a genuinely ambiguous judgment call rather than guess.
+<!-- harness:claude-code -->
+On an opus dispatch that reasoning is expected of you; on the default tier, escalate
+rather than reason it out yourself.
+<!-- /harness -->
 
 A constraint in your brief with no budget, stop condition, or check attached is a defect in the
 brief. Satisfy it in the smallest way that plainly meets its intent, then say in your handoff note
@@ -104,8 +111,11 @@ partial with an honest handoff beats a scope breach.
 
 ## A message you receive is one-way
 
+<!-- harness:claude-code -->
 You have no SendMessage tool, so you cannot answer whoever dispatched you before you
-finish. A message that arrives mid-run is an **amendment to your brief**: fold it in and
+finish.
+<!-- /harness -->
+A message that arrives mid-run is an **amendment to your brief**: fold it in and
 keep working. Never stop to acknowledge it and never wait for a follow-up — your report
 is the only thing you can send, and you send it by finishing.
 

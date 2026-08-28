@@ -7,15 +7,18 @@ allowed-tools: Skill, Bash, Read
 Load the `atelier:activation` skill and drive it. **The procedure lives in the skill.** Read
 it there and follow it; do not restate it here and do not re-derive it from memory.
 
-Target project: `$1` if one was given, otherwise the current project root.
+<!-- harness:claude-code -->
+Target project: `$1` if one was given, otherwise the current project root. Its activation
+file is `.claude/atelier.local.md`.
+<!-- /harness -->
 
 ## What to do
 
 1. Load `atelier:activation`.
-2. If the target's `.claude/atelier.local.md` does **not** exist, run the skill's `create`.
-   If it already exists, leave it as it is — **never pass `--force`** unless the person asked
-   for a reset in this same turn. The file holds hand-tuned local settings, it is gitignored,
-   and overwriting it destroys the only copy.
+2. If the target's activation file does **not** exist, run the skill's `create`. If it
+   already exists, leave it as it is — **never pass `--force`** unless the person asked
+   for a reset in this same turn. The file holds hand-tuned local settings, it is
+   gitignored, and overwriting it destroys the only copy.
 3. Run the skill's `check`.
 4. Report the result in the form below.
 

@@ -4,8 +4,12 @@ Guiding principle: **Fill every section. A section you can't fill is a decision 
 yet — make it before delegating, because the manager will otherwise make it for you, invisibly.**
 
 Spawn one `manager` agent with the brief below. Send follow-ups and escalation answers to the
-SAME manager via SendMessage, never re-brief (a re-brief discards the accumulated context that is
-most of what the manager cost, and absorbing that context is the whole reason the layer exists).
+SAME manager, never re-brief (a re-brief discards the accumulated context that is most of what
+the manager cost, and absorbing that context is the whole reason the layer exists).
+
+<!-- harness:claude-code -->
+The channel is `SendMessage` to the running manager.
+<!-- /harness -->
 
 What goes in this brief is the management layer's whole context: the objective, the DoD verbatim,
 the constraints, and the stop conditions. What stays out is the user's conversation, the plan
@@ -39,9 +43,10 @@ escalation, not an edit.
 - READ-ONLY config (gate, lint, typecheck, coverage, CI): <...>
 
 ## Workers
-Spawn `builder` agents for bounded links. Model guidance (per-dispatch `model` override):
-- the sonnet default for well-specified edits, test writing, mechanical refactors
-- `model: opus` for links where a wrong choice is expensive to unwind
+Judgment-heavy links stay with the manager; `builder` takes the bounded, well-specified ones.
+Run your standard cycle on each building link: build (test-first) → review (the `reviewer` agent
+attacks the diff) → revise (fix briefs, continuing the SAME builder) → simplify (deletion pass,
+then re-run the gates). Size the ceremony to the diff — a trivial link takes a spot-check.
 Verify each worker's output against its sub-brief BEFORE building the next link on it. Their
 reports are hypotheses, not facts. Do not pass a worker your own brief, the wider plan, or
 another worker's output as context — each one gets its slice and nothing more.
@@ -50,7 +55,7 @@ another worker's output as context — each one gets its slice and nothing more.
 1. Per-DoD-criterion: evidence (command + actual output, file:line, diff summary)
 2. What was deliberately deferred, and why
 3. Anything out-of-scope you noticed (report only)
-4. Worker log: which links were delegated, to which model, and what your check found
+4. Worker log: which links were delegated, and what your check found
 If you bounded any coverage (sampled, skipped cases, top-N), say so explicitly — a silent cap
 reads as full coverage.
 
@@ -62,12 +67,19 @@ reads as full coverage.
 Stop, state what you found, and wait for instructions.
 ```
 
+<!-- harness:claude-code -->
+Add model guidance to the template's `## Workers` section, since Claude Code picks the model per
+dispatch: the sonnet default for well-specified edits, test writing, and mechanical refactors;
+`model: opus` for links where a wrong choice is expensive to unwind. Have the worker log say
+which model each link went to.
+<!-- /harness -->
+
 ## Notes for the strategist
 
 - When the package comes back: **spot-check one or two criteria independently, then run the repo
   gates yourself.** Accept nothing on the package's say-so alone. The manager catches worker errors
   cheaply; the session catches the manager's blind spots, and that layering is the point.
-- For an independent re-derivation of a high-impact claim, spawn a `reviewer` rather than
+- For an independent re-derivation of a high-impact claim, spawn the `reviewer` agent rather than
   trusting the manager's own check.
 - Read the package, not the chain. If you find yourself asking the manager for its workers' raw
   output, the material is climbing into the context that never resets, which is exactly the cost

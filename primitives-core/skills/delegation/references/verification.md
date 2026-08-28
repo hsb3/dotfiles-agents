@@ -11,7 +11,7 @@ the closer its producer sits to the work.
 2. **An output differential across independent producers.** Two or more agents produced artifacts
    that should agree observably, and their outputs are identical. This catches what no
    single-producer gate can.
-3. **An independently re-derived check.** A `reviewer` that re-read the source or re-ran the
+3. **An independently re-derived check.** The `reviewer` agent re-read the source or re-ran the
    command, without the producer's rationale.
 4. **A manager's proof package.** Evidence assembled by an agent on the same model tier that also
    drove the work. It catches worker errors; it cannot catch its own blind spots.

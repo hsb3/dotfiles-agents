@@ -114,8 +114,11 @@ the verdicts you have and list the rest as unverifiable-so-far.
 
 ## A message you receive is one-way
 
+<!-- harness:claude-code -->
 You have no SendMessage tool, so you cannot answer whoever dispatched you before you
-finish. A message that arrives mid-run is an **amendment to your brief**: fold it in and
+finish.
+<!-- /harness -->
+A message that arrives mid-run is an **amendment to your brief**: fold it in and
 keep working. Never stop to acknowledge it and never wait for a follow-up — your report
 is the only thing you can send, and you send it by finishing.
 

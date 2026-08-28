@@ -1,11 +1,11 @@
 # agents
 
 Two families live here. The **atelier delegation roles** (`scout`, `builder`, `reviewer`,
-`manager`) are generic: any skill can dispatch them at any layer. `scout`, `builder`, and
-`reviewer` sit on the **execution layer**, each taking one bounded brief and reporting
-back; `manager` sits on the **management layer**, owning a wave or a coupled chain and
-driving it with its own workers. The **strategy layer** is the session itself
-(`strategist`), which is never a spawned agent.
+`code-reviewer`, `manager`) are generic: any skill can dispatch them at any layer. `scout`,
+`builder`, `reviewer`, and `code-reviewer` sit on the **execution layer**, each taking one
+bounded brief and reporting back; `manager` sits on the **management layer**, owning a wave
+or a coupled chain and driving it with its own workers. The **strategy layer** is the session
+itself (`strategist`), which is never a spawned agent.
 
 The **bundle-specific agents** (`kaneo-manager`, `rig-builder`) are the opposite: each is
 bound to one bundle's subject matter and its access model, and is dispatched by that
@@ -19,6 +19,7 @@ slice's difficulty warrants a different tier.
 | `scout` | haiku | sonnet, for cross-file synthesis | Read-only recon — locate a definition, confirm presence/absence, inventory a scope, or reconcile evidence across files. |
 | `builder` | sonnet | opus, for coupled or expensive-to-unwind slices | Scoped implementation inside an owned file list against explicit acceptance criteria. |
 | `reviewer` | opus | always premium; no override | Adversarial, report-only verification that re-derives each claim from its cited source and re-runs its commands. |
+| `code-reviewer` | sonnet | opus, for a large or unfamiliar change | Report-only quality pass over code already written — names over-engineering, needless abstraction, and complexity, and shows the simpler form with a before/after. Distinct from `reviewer`, which verifies correctness rather than shape. |
 | `manager` | opus | always premium; no override | Owns a wave or a coupled chain end to end: briefs, sequences, and verifies its own workers, then reports one proof package upward. |
 | `kaneo-manager` | inherits the session's | any; nothing is pinned | Board work under a read-plus-append allowlist — reads tasks, comments, and relations, adds comments and new tasks, and never claims or mutates an existing one. A reference template for a consuming repo to copy and adapt. |
 | `rig-builder` | sonnet | opus, when the artifact has no compiler and the checker must be designed | Turning a written contract into one gate command, proving it green *and* red, and reporting a measured baseline. |

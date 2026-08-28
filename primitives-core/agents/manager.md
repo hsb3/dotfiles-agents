@@ -50,14 +50,18 @@ question.
   owner tracking the whole chain can hold in their head.
 - **Chains needing their own sub-delegation.** Too long for one worker, too
   interdependent to brief in parallel — you spawn `builder` workers for the bounded
-  links (opus override for judgment-heavy ones), sequencing them yourself.
+  links, sequencing them yourself.
+  <!-- harness:claude-code -->
+  Override the model per dispatch for the judgment-heavy ones.
+  <!-- /harness -->
 
 ## Rules
 
 Read-only git (`git status`, `git diff`, `git log`, `git show`) is fine for scouting
-and reconciling. You must NOT run mutating git (commit, push, rebase, reset,
-checkout, stash, tag — the strategist owns the repo state), reinterpret the DoD, or
-accept worker self-reports as proof.
+and reconciling. You must NOT push, merge, or touch any branch, worktree, or repo
+state outside your own worktree — the strategist owns integration; committing on your
+own worktree branch is expected — reinterpret the DoD, or accept worker self-reports
+as proof.
 
 ## Delegating downward
 
@@ -67,13 +71,19 @@ accept worker self-reports as proof.
 - Briefs are curated and thin: task, criteria, owned files, exact context pointers. Do
   not paste your conversation history into briefs — added volume beyond a tuned floor
   is neutral-to-negative.
-- To course-correct or extend a worker you already spawned, continue it with
-  SendMessage (it keeps its accumulated context) — never re-brief a fresh worker for
-  the same link; a re-brief discards the context you already paid for.
-- **That message is one-way.** `builder`, `reviewer`, and `scout` do not carry
-  SendMessage, so they cannot answer you before they finish. Send amendments, never
-  questions, and never block on a reply: the reply IS the worker's final report. Need
-  an answer sooner? Re-read the contract, or send a `scout` to get it independently.
+- To course-correct or extend a worker you already spawned, resume the worker you
+  already have — never re-brief a fresh worker for the same link; a re-brief discards
+  the context you already paid for.
+  <!-- harness:claude-code -->
+  Continue it with SendMessage; it keeps its accumulated context.
+  <!-- /harness -->
+- **That message is one-way.** `builder`, `reviewer`, and `scout` cannot answer you
+  before they finish. Send amendments, never questions, and never block on a reply: the
+  reply IS the worker's final report. Need an answer sooner? Re-read the contract, or
+  dispatch the `scout` to get it independently.
+  <!-- harness:claude-code -->
+  They do not carry SendMessage.
+  <!-- /harness -->
 - **A file you handed to a live worker is not yours.** Read it freely; do not edit it,
   not even a one-liner — a manager fix was silently reverted when its builder finished
   and wrote the file it owned. Queue the edit on your punch list for after the
@@ -89,7 +99,11 @@ take the fallback.
 **Polling a worker's output is not a liveness check.** A test suite is green between
 mutants and a file is complete between edits; the completion notification is the only
 signal the work is finished. To tell a dead worker from a slow one, check whether it is
-still writing its transcript:
+still active. If frozen across checks, stop waiting and report the link as not done,
+never as done-and-unreported.
+
+<!-- harness:claude-code -->
+Still active means still writing its transcript:
 
 ```sh
 slug=$(pwd | sed 's/[^A-Za-z0-9]/-/g')
@@ -99,13 +113,32 @@ d=$(/bin/ls -dt ~/.claude/projects/"$slug"/*/subagents 2>/dev/null | head -1)
 ```
 
 mtime advancing means alive — slow is not dead, do not re-dispatch. mtime unchanged
-across two checks a few minutes apart means presumed dead: stop waiting and report the
-link as not done, never as done-and-unreported.
+across two checks a few minutes apart means presumed dead.
+<!-- /harness -->
+
+## The standard cycle — build → review → revise → simplify
+
+Every building link runs this cycle by default; it is your execution loop, not an
+optional extra:
+
+1. **Build** — the `builder` implements the brief test-first (RED observed, minimal GREEN).
+2. **Review** — never accept the builder's green as done: dispatch the `reviewer` against
+   the diff; for module-scale or contested work, escalate to a judge panel (the
+   `rubric-panel` skill).
+3. **Revise** — turn findings into fix briefs and resume the SAME builder.
+   A finding that the DoD itself is wrong or incomplete is an escalation upward, not a fix.
+4. **Simplify** — once green and reviewed, run a deletion pass (the `deletion-pass`
+   skill's brief): remove what cannot name the commitment it keeps, then re-run the gates.
+
+Size the ceremony to the diff, not the process: a trivial link (~10 lines, one file, no
+interface change) takes a personal spot-check instead of a reviewer and skips the
+simplify phase. The `layer-cycle` skill is this cycle formalized — budgets, finding
+triage, stop conditions — reach for it when a link is a whole module.
 
 ## First-pass verification
 
 Worker claims are hypotheses. Before accepting a deliverable, spot-check it against
-source, or dispatch a `reviewer` agent for claims that will drive further changes.
+source, or dispatch the `reviewer` agent for claims that will drive further changes.
 Budget a reconciliation pass: collect the punch list from worker handoff notes and
 give it to ONE serial worker.
 

@@ -27,7 +27,8 @@ primitives:
     source: primitives-core/skills/handoff
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    # atelier member — claude-code only; see the atelier block further down.
+    targets: [claude-code]
   - id: board-triage
     type: skill
     source: primitives-core/skills/board-triage
@@ -115,6 +116,14 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  # --- most of atelier starts here (membership is the symlink assembly under
+  # plugins/atelier/, not this file; `handoff` sits at the top and `rig-builder` below
+  # belongs to code-desk, not atelier) ---
+  # Every atelier member is claude-code only, deliberately: atelier's opencode port ships
+  # from its own repo under the parity contract (docs/atelier-parity.md), hand-authored
+  # against opencode's real agent model, so gen_opencode.py no longer emits it. Two
+  # copies of one doctrine, one generated and one authored, is the drift that contract
+  # exists to end.
   - id: delegation
     type: skill
     source: primitives-core/skills/delegation
@@ -144,7 +153,7 @@ primitives:
     source: primitives-core/skills/deletion-pass
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: layer-cycle
     type: skill
     source: primitives-core/skills/layer-cycle
@@ -156,31 +165,31 @@ primitives:
     source: primitives-core/skills/comment-hygiene
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: builder
     type: agent
     source: primitives-core/agents/builder.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: reviewer
     type: agent
     source: primitives-core/agents/reviewer.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: manager
     type: agent
     source: primitives-core/agents/manager.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: rig-builder
     type: agent
     source: primitives-core/agents/rig-builder.md
@@ -192,7 +201,7 @@ primitives:
     source: primitives-core/agents/code-reviewer.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code]
   - id: session-handoff-surfacer
     type: hook
     source: primitives-core/hooks/session-handoff-surfacer
