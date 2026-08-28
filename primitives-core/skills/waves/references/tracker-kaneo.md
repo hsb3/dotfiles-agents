@@ -7,13 +7,14 @@ steps — merge the code on the forge, then close the task on the board.
 ## Inventory
 
 Pull every open task through the `kaneo` skill's tools, never the MCP `list_tasks` tool for a
-full-board read on its own. It fails a wide board two independent ways: it silently clamps
-`limit` to 100 and returns a partial page with no error, so a board over 100 tasks looks
-complete and isn't (measured: a 107-task project returned 100, and a triage count read 21 where
-the truth was 25); and it returns every task description in full, which overflows the reader
-before triage starts. Use the `board-triage` skill's Kaneo adapter export — it reads the board's
-per-project task endpoint, which returns every task unpaginated — or, if the MCP tool is the
-only option, page through `pagination.totalPages` by hand and accept the payload cost.
+full-board read on its own — it returns every task description in full, which overflows the
+reader before triage starts. Use the `board-triage` skill's Kaneo adapter export; it reads the
+board's per-project task endpoint, which returns every task in one flat response.
+
+Whatever path you use, **read the `pagination` block and check `total` against the rows you
+got**. A silent clamp to `pageSize: 100` was reported against an earlier image and did not
+reproduce on a 198-task board, but a short task array carries no other warning, and an
+inventory that quietly loses its tail mis-scopes every wave built on it.
 
 Per task, capture: id (task number), title, lane (column name — read live, never guess a slug
 from the name), and the ranking signals waves needs: labels (including `DECISION`), the priority
@@ -68,8 +69,9 @@ bulk-data-movement mistake that script exists to avoid.
 
 ## Gotchas
 
-- `list_tasks` clamps `limit` to 100 with no error — a wide board silently loses its tail; the
-  Inventory step above must page or use the unpaginated export path, not the raw MCP call.
+- A raw `list_tasks` call returns full task bodies and overflows the reader on any real board;
+  the Inventory step above uses the export path for that reason, and checks `pagination.total`
+  against the rows it actually got.
 - Bulk status writes can be reverted seconds later by an unattributed write and still report as
   applied. A single-field status write plus a delayed re-read is the only proof a lane move
   landed — never trust a writer's own success line for a wave's status moves.
