@@ -16,7 +16,7 @@
       "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, and hold protected config in custody. Run /atelier:activate to arm it in a project and see what each hook resolved. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.21.0"
+      "version": "0.21.1"
     },
     {
       "author": {
@@ -43,7 +43,7 @@
       "description": "Track a repo's work on a live Kaneo board instead of in-repo task files, so parallel sessions stop claiming the same task and no branch grows its own backlog. Ships the workflow skill, the task-authoring skill (write tracker items a cold agent can execute), the board's MCP server definition, a reference manager agent, and hooks that keep claim authority in the root session, block board writes while the config is incomplete, catch a stray MCP registration that would silently authenticate the owner instead of the agent, and stamp every write with its agent and session. Configure with five KANEO_* env vars; nothing about an instance is baked in. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "kaneo",
       "source": "./plugins/kaneo",
-      "version": "0.12.0"
+      "version": "0.13.0"
     },
     {
       "author": {

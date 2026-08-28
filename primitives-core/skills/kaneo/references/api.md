@@ -75,6 +75,8 @@ GET  /auth/get-session                your identity → userId
 GET  /task/tasks/{projectId}          board; shape {"data":{"columns":[{"tasks":[...]}]}}
 GET  /task/{id}                       single task (check assignee before claiming)
 POST /task/{projectId}                create; title/description/status/priority ALL required
+PUT  /task/{id}                       full-object REPLACE; body must carry title, description,
+                                      status, priority, position, projectId (see Gotchas)
 PUT  /task/status/{id}                status = the target column's slug (see below)
 PUT  /task/assignee/{id}              {"userId": ...}
 POST /comment/{taskId}                {"content": ...}
@@ -150,6 +152,13 @@ A label name is not one row. Each name has at most one **definition row** (`task
 `GET /label/workspace/{workspaceId}` returns both kinds mixed together; `taskId` is the
 only thing that tells them apart.
 
+**So the payload scales with labelled tasks, not with the vocabulary**, and the tool's name
+("labels in a workspace") reads as though it returns the latter. Measured on a working
+workspace: 1,233 rows and ~280 KB for 47 distinct names, only 14 of them definition rows —
+about 96% duplication. Through the MCP tool that overflows the result cap and spills to a
+file. When what you want is the vocabulary, `jq 'unique_by(.name)'` over the spill, or filter
+`taskId == null` for the palette proper.
+
 Writes on a definition row apply to the whole name-group, workspace-wide. Measured live
 on image 2.19.1:
 
@@ -177,9 +186,10 @@ does exactly that — `audit` for the workspace's label health, `delete --name X
 refuses a definition-row delete until `--cascade` acknowledges the attachment count it
 printed. Use it rather than hand-rolling the order.
 
-`audit` also reports **attachments with no definition row** — a name live on tasks that
-the palette no longer offers, so the UI cannot re-attach it. The DFA workspace carries two
-(`owner-gated`, `upstream`).
+`audit` also reports **attachments with no definition row** — a name live on tasks that the
+palette no longer offers, so the UI cannot re-attach it. A long-lived workspace accumulates
+these steadily, and names graduate out of the orphan set when someone re-creates the
+definition. Run `audit` for the current set rather than carrying a remembered one.
 
 ## Unattributed status writes can double-step
 
@@ -199,11 +209,33 @@ unattributed write" — that fires on every healthy board.
 ## Gotchas
 
 - Missing task → 400 "Workspace ID could not be determined" (treat as 404). The same 400
-  answers a `DELETE /label/{id}` for a row that is already gone.
+  answers a `DELETE /label/{id}` for a row that is already gone — **and a task id in the
+  board's `PROJ-N` display form**, which is the id the UI shows and the one humans hand you.
+  The error names the workspace and means the id format. `/task/{id}` and `/comment/{taskId}`
+  both want the opaque record id, so build a number → id map once from
+  `GET /task/tasks/{projectId}` and work in record ids after that.
 - **`PATCH /task/{id}` is not a route** — it answers a bare `404 Not Found` and changes
-  nothing. Use `PUT`, echoing a fresh `GET` minus nulls and `{id, number, createdAt,
-  assigneeName}`, and always re-`GET` immediately before the `PUT`: a stale echo silently
-  reverts whatever transitioned in between.
+  nothing. Use `PUT`, which is a **full-object replace, not a merge**: echo a fresh `GET`
+  minus `{id, number, createdAt, assigneeName}`, and **omit null keys rather than echoing
+  them back**. Two measured 400s:
+  - body missing `position` → `Invalid key: Expected "position" but received undefined`.
+    `position` is the field a hand-built body forgets; `projectId` is required too, and
+    neither is obvious from the update you think you are making.
+  - `"userId": null` echoed straight from the `GET` → `Invalid type: Expected string but
+    received null`.
+
+  Always re-`GET` immediately before the `PUT`: a stale echo silently reverts whatever
+  transitioned in between.
+- Reads answer with a `pagination` block — `{total, page, pageSize, totalPages}`. A silent
+  clamp to `pageSize: 100`, returning page 1 of a larger board with no error, was reported
+  against an earlier image; it did **not** reproduce on a 198-task project, which came back
+  whole with accurate pagination and an honoured explicit `limit`. Read
+  `pagination.totalPages` anyway: it is the only tell if the clamp returns, and a short
+  `tasks` array carries no other warning.
+- A busy board can push `list_tasks` past the MCP result cap on shape alone — one long
+  description is enough, even with a `status` filter. The result spills to a file under the
+  session's `tool-results/`; grep that file rather than paging it. The REST board read is the
+  cheaper path when you need to search across lanes.
 - Omit `priority` on create → validation error; default to "medium" only when
   you genuinely can't judge — an honest "medium" beats a fabricated rank.
 - `/api/mcp` rejects `x-api-key` directly (it is OAuth 2.1 Bearer only), but a
