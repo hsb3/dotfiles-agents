@@ -70,12 +70,14 @@ COVENANT_STRICT_CLAUSE = (
     "edit is that escalation, not an obstacle to route around."
 )
 COVENANT_TAIL = (
-    " (2) Never run mutating git (commit, push, rebase, reset, checkout, stash, tag) — "
-    "the orchestrating session owns repo state. (3) If your brief lacks an explicit "
-    "owned-file list or independently checkable acceptance criteria, stop and report "
-    "the gap before doing the work. (4) Verify by running commands and paste actual "
-    "output; a criterion you could not verify is reported as unverified, never "
-    "assumed. (5) Leave no scratch files; stop and report rather than improvising."
+    " (2) Work in your own worktree and commit there as you go — that branch is "
+    "yours. Never push, merge, or touch any branch, worktree, or repo state outside "
+    "it; integration belongs to the orchestrating session. (3) If your brief lacks "
+    "an explicit owned-file list or independently checkable acceptance criteria, "
+    "stop and report the gap before doing the work. (4) Verify by running commands "
+    "and paste actual output; a criterion you could not verify is reported as "
+    "unverified, never assumed. (5) Leave no scratch files; stop and report rather "
+    "than improvising."
 )
 
 

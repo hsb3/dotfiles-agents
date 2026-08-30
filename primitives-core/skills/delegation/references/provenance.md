@@ -43,10 +43,10 @@ overturning something.
 | Rule | Measurement |
 |---|---|
 | Handoff in the 60–80k band; absolute-token watermarks | Economics optimum ~40–60k, buffered to 60–80k for boundary quality. Percent-of-window thresholds are inert against the ~967k auto-compact default |
-| Handoff + `/clear` over `/compact` | Fresh session restarts at ~10–20k; compaction summaries are similar in size, less curated, and carry a model-side re-read tax |
+| Handoff + a fresh session over `/compact` | Fresh session restarts at ~10–20k; compaction summaries are similar in size, less curated, and carry a model-side re-read tax |
 | ≥10-minute idle is a handoff point | Session-break (TTL) tax |
 | Clear after messy debugging | Visible prior errors raise subsequent error rates independent of context length |
-| **A `manager` absorbs management chatter** — the mechanical case for the management layer | Every brief and report in the main session lands in the re-read prefix and is paid for at cache rates on every subsequent turn. At `standard` effort the manager is the same model tier as the session, so the layer buys context absorption, not tier arbitrage |
+| **The `manager` absorbs management chatter** — the mechanical case for the management layer | Every brief and report in the main session lands in the re-read prefix and is paid for at cache rates on every subsequent turn. At `standard` effort the manager is the same model tier as the session, so the layer buys context absorption, not tier arbitrage |
 | Fable-driven grounding costs ~80–100k before work starts | The `deep` effort calibration |
 
 The management-chatter row moved in this revision from a footnote inside the architecture-D
@@ -61,20 +61,31 @@ merged with the `[field]` specialization claim below.
 |---|---|---|
 | **Three layers is the default for anything non-trivial**; collapsing management is the exception (`SKILL.md`, "The three layers") | The repo owner's own practice: for anything except trivial tasks there is good reason to run all three layers, because each layer's job and context differ enough that specialization beats fewer layers with larger prompts. Stated by the owner as empirical, explicitly not as a measurement, with proof deferred to harness and eval runs | Run one non-trivial job under two arms: with a manager layer, and collapsed to strategist plus execution. Hold brief quality and the definition of done constant across arms, or the result measures prompt care rather than layer count. Report wall-clock, total tokens, and defects found in reconciliation per arm. Take per-layer token cost only from a delegation ledger that records each subagent's own agent type, model, and context tokens rather than the parent session's. A backlog card is open for exactly this |
 | **When genuinely torn between C and D, take D** (`SKILL.md`, Step 2) | The tiebreak the default above implies, and the direct inversion of the retired guidance | The same experiment; an inconclusive result leaves the default standing and is recorded as inconclusive rather than resolved toward either prior |
+
+<!-- harness:claude-code -->
+| Rule | The observation | What would settle it |
+|---|---|---|
 | **Agents deadlock on waits nothing can satisfy** (`waiting.md`) | Four reports from the owner's own sessions: two managers blocked on a reply an execution agent had no tool to send; three agents in one session blocked on self-adopted conditions that could never be met; a manager with no way to tell a dead worker from a slow one; a manager fix silently reverted when its own builder finished and wrote the file it owned | Instrument dispatches for elapsed time with no completion, and count blocked runs before and after the rules land. The absence of a time axis in the delegation ledger is the reason this cannot be counted today — a backlog card is open for it |
+<!-- /harness -->
 
 ## `[untested]` rules — change these first
 
 | Rule | Why it is unmeasured | What would settle it |
 |---|---|---|
-| Cheat-sheet model-tier defaults (scout=haiku, builder=sonnet) | The lab dispatched opus for every model-bearing call and never exercised cheaper tiers | `tier-cutoff.md` |
 | The architecture matrix (A–E) | Never A/B'd; no run has compared the same job under two architectures | Run one moderately-complex job as C and as D, compare wall-clock, tokens, and defects found in reconciliation. This is the same experiment the `[field]` rows name, seen from the architecture side |
 | The collapse conditions (work-list final, slices independent in outcome, returns are notes not material, reconciliation mechanical) | Reasoning that operationalizes the `[field]` default. The conditions were derived from the `[cost]` context mechanism, not observed as a set | Record which condition was violated on each job that had to be promoted from C to D mid-flight; a condition that never predicts a promotion is not earning its place |
 | The ceiling list ("delegate these anyway"), including the punch-list discipline | Derived from the lab's transcript record, not from a controlled comparison | Track solo-run length across ten real jobs with the watermark hook; see whether the ~25 line predicts anything a human would call a miss |
 | The ~25-call solo-run threshold | Calibrated, not measured. Observed on real transcripts: delegating sessions' solo runs measured 6–69 (median ~18, mean ~24 across 14 runs; the 36, 47, and 69 stretches were pre-dispatch grounding or closing work done by hand); zero-delegation sessions ran 80, 93, and 103. 25 sits above the typical mid-fan-out run and below every zero-delegation session — it will fire on the long retained-labor stretches inside delegating sessions, which the doctrine reads as correct fires. A defensible starting line and nothing more | Collect the streak distribution the hook logs across a month of real work and move the line to where the clusters actually separate |
 | "Discovery is the first delegation" | Follows from the work-list finding but has not been run as a treatment | Take two comparable emergent-work jobs; scout-first on one, hands-on recon on the other |
-| The waiting rules — no wait without a producer, one-way messages down, the liveness check, ownership against the dispatcher (`waiting.md`) | The four deadlocks are `[field]` above; these are the reasoned fix for them and no run has yet been made under the rules. The liveness check's substrate is verified (agents append to `subagents/agent-<id>.jsonl` and a manager's workers share the session directory), but the mtime threshold that separates "slow" from "dead" is a guess | Run instrumented waves; record every wait an agent adopts and whether it terminated, and record the longest mtime gap observed on an agent that later completed — that gap is the floor under any threshold |
+| The waiting rules — no wait without a producer, one-way messages down, ownership against the dispatcher (`waiting.md`) | Reasoned fixes for reported deadlocks; no run has yet been made under the rules | Run instrumented waves; record every wait an agent adopts and whether it terminated |
 | The custody enforcement model (`activation.md`: worker covenant injection, advisory/strict path custody) | Mechanism proven by fixtures and an adversarial matrix; no real project has run under it, so its effect on worker behavior is unmeasured | Run one project under `advisory` for a month; count would-deny rows and false positives in the `config-custody` stream; graduate to `strict` and watch whether escalations replace route-arounds |
+
+<!-- harness:claude-code -->
+| Rule | Why it is unmeasured | What would settle it |
+|---|---|---|
+| Cheat-sheet model-tier defaults (scout=haiku, builder=sonnet) | The lab dispatched opus for every model-bearing call and never exercised cheaper tiers | `tier-cutoff.md` |
+| The liveness check (`waiting.md`) | Its substrate is verified — agents append to `subagents/agent-<id>.jsonl`, and a manager's workers share the session directory — but the mtime threshold that separates "slow" from "dead" is a guess | Record the longest mtime gap observed on an agent that later completed; that gap is the floor under any threshold |
+<!-- /harness -->
 
 ## What the layer model replaced, and on what evidence
 

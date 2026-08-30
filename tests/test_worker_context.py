@@ -91,6 +91,20 @@ class WorkerContextTests(unittest.TestCase):
         self.assertTrue(context)
         self.assertNotIn("blocked at the tool layer", context)
 
+    def test_covenant_clause_2_is_worktree_not_no_mutating_git(self):
+        self._write_activation(mode="advisory")
+        result = self._run_hook(json.dumps(self._payload()))
+        self.assertEqual(result.returncode, 0)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn(
+            "(2) Work in your own worktree and commit there as you go — that "
+            "branch is yours. Never push, merge, or touch any branch, worktree, "
+            "or repo state outside it; integration belongs to the orchestrating "
+            "session.",
+            context,
+        )
+        self.assertNotIn("Never run mutating git", context)
+
     def test_off_is_silent(self):
         self._write_activation(mode="off")
         result = self._run_hook(json.dumps(self._payload()))

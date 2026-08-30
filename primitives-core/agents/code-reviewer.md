@@ -76,7 +76,9 @@ Structure your review as follows:
 
 **Special Considerations:**
 
+<!-- harness:claude-code -->
 - If you notice the code follows project-specific patterns from CLAUDE.md or other context, respect those patterns while still suggesting improvements within those constraints
+<!-- /harness -->
 - Focus on recently written or modified code unless explicitly asked to review entire files
 - If the code is already quite good, say so - don't invent problems
 - Consider the context and purpose - a quick script has different standards than production code

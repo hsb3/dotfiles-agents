@@ -13,7 +13,7 @@ not do.
 claude plugin marketplace add hsb3/dotfiles-agents
 claude plugin install atelier@dotfiles-agents
 
-# opencode — generated at install time from the source branch
+# opencode — generated non-Atelier lane, built at install time from the source branch
 git clone --branch dev https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
 scripts/install_opencode.sh --global            # ~/.config/opencode/{skills,agents}/
 scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents}/
@@ -22,7 +22,8 @@ scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents
 The opencode clone is pinned to `dev` because the installer lives on the source branch, not
 the published one. That laydown is a subset of the catalog: skills and agents travel, hooks
 do not (opencode has no equivalent event surface), and skills rostered Claude-Code-only stay
-behind.
+behind. **Atelier is deliberately separate:** install its hand-authored opencode port from
+[`hsb3/dotfiles-agents-oc`](https://github.com/hsb3/dotfiles-agents-oc).
 
 ## Start here
 

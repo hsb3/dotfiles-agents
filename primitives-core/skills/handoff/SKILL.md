@@ -10,12 +10,16 @@ file a cold session can read in under ~10k tokens. The handoff is the bridge for
 sessions (not resumes) - write for a reader with zero context.
 
 This skill is the **produce** edge of atelier's handoff loop; its enforcement partners are
-three co-homed hooks that read or gate on the SAME file it writes: `context-watermark` (nudges
-"run /handoff, then /clear or /compact" once context crosses the soft/hard watermark),
-`handoff-freshness-guard` (blocks a manual `/compact` when the handoff is missing or stale), and
-`session-handoff-surfacer` (surfaces the handoff to a fresh cold-start session). All three check
-the SAME candidate paths in the SAME order this skill writes to - keeping that list in sync is
-load-bearing, not cosmetic.
+three co-homed hooks that read or gate on the SAME file it writes: `context-watermark`,
+`handoff-freshness-guard` (blocks a manual `/compact` when the handoff is missing or stale),
+and `session-handoff-surfacer` (surfaces the handoff to a fresh cold-start session). All three
+check the SAME candidate paths in the SAME order this skill writes to - keeping that list in
+sync is load-bearing, not cosmetic.
+
+<!-- harness:claude-code -->
+`context-watermark` nudges "run /handoff, then /clear or /compact" once context crosses the
+soft/hard watermark.
+<!-- /harness -->
 
 ## File location
 
@@ -26,8 +30,12 @@ Do not reorder or add a path here without changing the hooks' `CANDIDATE_PATHS` 
 mismatch means the hooks act on a different file than this skill writes.
 
 **Per-project override - file mode.** A project whose handoff lives somewhere else entirely
-(not one of the candidates above) can say so with a `handoff:` key in
-`.claude/atelier.local.md`:
+(not one of the candidates above) can say so with a `handoff:` key in the project's activation
+file:
+
+<!-- harness:claude-code -->
+That file is `.claude/atelier.local.md`.
+<!-- /harness -->
 
 ```markdown
 ---
@@ -45,28 +53,29 @@ can be spelled as a mapping, `{mode: file, path: docs/HANDOFF.md}` - identical t
 form, just explicit.
 
 **Per-project override - external mode.** A project whose handoff is not a file at all - a
-Kaneo board task, a Linear issue, a wiki page - has nothing here for this skill to write, but
+tracker task, a Linear issue, a wiki page - has nothing here for this skill to write, but
 still needs the freshness guard and the cold-start surfacer to know the handoff exists. Say
 so with the mapping form:
 
+<!-- harness:claude-code -->
 ```markdown
 ---
 handoff:
   mode: external
   stamp: .claude/handoff.stamp
-  location: Kaneo board task DFA-233
+  location: Board task ABC-123
 ---
 ```
+<!-- /harness -->
 
-`stamp` is a project-relative path this skill touches (`touch .claude/handoff.stamp`), never
-writes content to - it is a freshness signal standing in for a file that does not exist.
-`location` is free text pointing at where the real handoff lives; it is never path-resolved
-and never read from disk. **The session's obligation is different from file mode: update the
-external handoff first, then touch the stamp - do not write a HANDOFF.md anywhere.** Gitignore
-the stamp; it carries no content worth tracking, only an mtime. `/handoff init` and the
-"gitignored `_meta/` working desk" default below are file-mode guidance only - external mode
-has no file to initialize, since the handoff already exists on the board before atelier is
-ever pointed at it.
+`stamp` is a project-relative path this skill touches (`touch <stamp>`), never writes content
+to - it is a freshness signal standing in for a file that does not exist. `location` is free
+text pointing at where the real handoff lives; it is never path-resolved and never read from
+disk. **The session's obligation is different from file mode: update the external handoff
+first, then touch the stamp - do not write a HANDOFF.md anywhere.** Gitignore the stamp; it
+carries no content worth tracking, only an mtime. `/handoff init` and the "gitignored `_meta/`
+working desk" default below are file-mode guidance only - external mode has no file to
+initialize, since the handoff already exists on the board before atelier is ever pointed at it.
 
 **Default: a gitignored `_meta/` working desk (file mode).** On `/handoff init`, if the project has no
 handoff: create `_meta/` (`mkdir -p _meta`), ensure `_meta/` is in `.gitignore` (append it
@@ -122,9 +131,12 @@ worktrees must read/write the handoff via the MAIN checkout's absolute path.
 
 ## `/handoff init` - when no handoff exists
 
-Survey the repo first (README, CLAUDE.md, git log, issue board if available). Create the
-gitignored `_meta/` desk per "File location" above (or the committed root file if the
-multi-checkout exception applies), then write the handoff from this skeleton, filling
+<!-- harness:claude-code -->
+Survey the repo first (README, CLAUDE.md, git log, issue board if available).
+<!-- /harness -->
+
+Create the gitignored `_meta/` desk per "File location" above (or the committed root file if
+the multi-checkout exception applies), then write the handoff from this skeleton, filling
 every section with real content or deleting it:
 
 ```markdown
@@ -153,8 +165,15 @@ _Cold-start onboarding. Last updated: YYYY-MM-DD. Keep updated at session bounda
 - Target cost: ~1-2k tokens of writing per boundary. If an update takes much longer, the
   handoff has rotted - distill it as part of the pass.
 - The handoff records ONLY what a fresh session cannot derive from the repo itself (state,
-  intent, decisions, gotchas). **CLAUDE.md / AGENTS.md is HOT-LOADED into every session**, so
-  any convention copied from it is pure wasted context that loads twice. Run a de-dup audit
-  each pass: a gotcha earns a place in the handoff only if CLAUDE.md doesn't already carry
-  it; replace anything duplicated (SDLC rules, wire conventions, doc map, worktree model)
-  with a one-line pointer ("see CLAUDE.md"). README too - link, don't restate.
+  intent, decisions, gotchas). Run a de-dup audit each pass against **whichever durable docs
+  this project actually has** - never against a fixed filename. A gotcha earns a place in the
+  handoff only if no durable doc already carries it; replace anything duplicated (SDLC rules,
+  wire conventions, doc map, worktree model) with a one-line pointer naming the file and
+  section ("see README § Logs").
+
+  <!-- harness:claude-code -->
+  Here that is README, `CLAUDE.md`, reference pages; if `CLAUDE.md` is absent the audit still
+  runs, on what is there. `CLAUDE.md`, where it exists, is **HOT-LOADED into every session**,
+  so duplicating it is wasted context that loads twice - but a README fact restated here is
+  the same debt, just paid on read instead of on load.
+  <!-- /harness -->

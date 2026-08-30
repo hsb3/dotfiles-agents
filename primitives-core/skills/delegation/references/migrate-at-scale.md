@@ -16,13 +16,13 @@ conditions unusually cleanly: the site inventory makes the work-list final, iden
 make the slices independent in outcome, each worker returns a grep-zero line rather than material,
 and the reconciliation is a diff of the inventory against reported files. When the site count is
 large enough that the worker reports themselves must be cross-read, or odd sites need adjudicating
-mid-wave, put a `manager` over the fan-out and take back one package.
+mid-wave, put one `manager` over the fan-out and take back one package.
 
 ## 1. Discover and slice the site inventory
 
 Before writing a single brief, produce the **site inventory**: an explicit, enumerated list of
-every file/module/callsite the migration touches, not an estimate. Use `scout` agents (haiku
-default) for the sweep — this is read-only, high-volume, low-judgment work, exactly what scouts
+every file/module/callsite the migration touches, not an estimate. Use `scout` agents (cheapest
+tier by default) for the sweep — this is read-only, high-volume, low-judgment work, exactly what scouts
 are for:
 
 - Grep/AST-search for the old pattern across the whole tree; do not sample.
@@ -42,8 +42,14 @@ during reconciliation.
 Each worker gets a **disjoint file-ownership slice** from the inventory (one file, or a small
 same-shape cluster) and the *same* transform spec. Because the transform is mechanical and
 identical per site, this is where cheap models earn their keep — default every worker to
-`builder` on its sonnet default; there is rarely a case for `model: opus` here, since "the
-transform needs judgment" is exactly the signal that a site doesn't belong in this fan-out (§4).
+`builder`; "the transform needs judgment" is exactly the signal that a site doesn't belong in
+this fan-out (§4).
+
+<!-- harness:claude-code -->
+Because the model is chosen per dispatch here, there is rarely a case for `model: opus` on a
+migration slice — and where one site genuinely needs judgment, an opus-tier `builder` is the
+alternative to keeping it with the strategist (§4).
+<!-- /harness -->
 
 Brief shape (fill every section — same discipline as the architecture-D manager brief):
 
@@ -124,10 +130,10 @@ Migrate-at-scale is a poor fit. Fall back to architecture A (direct) or D (manag
   it directly, just do it (architecture A's floor applies here too).
 - **Coupled sites.** If site 2's transform depends on how site 1 landed (a shared type threading
   through both, an ordering constraint), this is a dependent chain, not disjoint slices — use
-  architecture D and let a `manager` drive it.
+  architecture D and let one `manager` drive it.
 - **Per-site judgment.** If applying the transform correctly requires different reasoning at
   each site (not just a different literal value, but a different *decision*), workers will
   either improvise inconsistent variants or escalate constantly, defeating the point of cheap
   mechanical dispatch. Route this to architecture D, or split into a small judgment-heavy subset
-  (kept by the strategist or given to an opus-tier `builder`) plus a genuinely mechanical remainder
-  fanned out separately.
+  (kept by the strategist or a manager) plus a genuinely mechanical remainder fanned out
+  separately.

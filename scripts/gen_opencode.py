@@ -23,6 +23,10 @@ tempdir and executes the generated installer; `--out` is the direct entry point:
   README.md               generated lane README incl. the EXCLUSIONS manifest — every
                           primitive that does NOT travel, with its reason (no silent caps)
 
+Atelier is NOT in this lane: its opencode port ships from its own repo, hand-authored against
+opencode's real agent model under the parity contract (docs/atelier-parity.md), so every
+atelier member is rostered `targets: [claude-code]` and this generator no longer emits it.
+
 Hooks and commands are `unsupported` in the matrix (opencode's only event surface is TS-on-Bun
 plugins; opencode does have commands, but the drive-a-skill body needs a per-command authoring
 pass — full reasons in translation.yaml). They appear in the exclusions manifest, never in the

@@ -106,7 +106,7 @@ without asking the session.
 ## Phase 3 — Launch (delegation executes)
 
 Invoke the **delegation** skill for architecture and briefs. The shape that has worked: one
-worktree-isolated crew per parallel wave — typically a `manager` (with its own builders) for
+worktree-isolated crew per parallel wave — typically one `manager` (with its own builders) for
 coupled waves, flat `builder` fan-out for bounded ones. Non-negotiables regardless of
 architecture:
 
@@ -131,12 +131,16 @@ For each wave, as crews report back — the session, personally:
    landed it. Where the tracker cannot close from the forge, closing is a separate step you owe
    at the end of the wave, not the end of the run.
 4. A finding you can fix faster than you can brief, fix yourself; anything larger goes back to
-   the wave's crew via SendMessage (never a re-brief).
+   the wave's crew as an amendment to the crew that is still live — never a re-brief.
+
+<!-- harness:claude-code -->
+Send that amendment with `SendMessage` to the running manager.
+<!-- /harness -->
 
 ## Phase 5 — Reconcile and prove
 
 - **One serial reconciliation pass** over the punch list from crew handoff notes: CHANGELOG,
-  stale counts/refs in docs, CLAUDE.md tables. Never fan out cleanup.
+  stale counts/refs in docs, the repo's standing agent-instructions file. Never fan out cleanup.
 - **Run the full gate battery bare on the final union of the trunk** — landing N individually
   green branches does not prove the union. Watch CI to green on the tip; the run is not done
   until it is.
@@ -156,7 +160,12 @@ For each wave, as crews report back — the session, personally:
   per item. For a multi-item queue, use the **owner-signoff** skill if installed (local HTML
   form); record rulings back onto the items and the handoff, and execute any that unblock
   same-session work.
-- Run **/handoff**; prune worktrees and branches (`git worktree prune`).
+- Run the **`handoff`** skill; prune worktrees and branches (`git worktree prune`).
+
+<!-- harness:claude-code -->
+There is no `/handoff` command: in Claude Code a command silently shadows a same-named skill in
+the same plugin, so atelier ships the skill only (`primitives-core/commands/README.md`).
+<!-- /harness -->
 - Close with session totals: waves landed, items closed, items filed, what remains and *why*
   (owner-gated / parked / next wave).
 

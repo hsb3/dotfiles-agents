@@ -22,9 +22,9 @@ rather than one brief's preference, and under `strict` it is also a tool-layer b
 
 One paragraph, five clauses: (1) configuration that defines acceptance is read-only unless the
 brief grants ownership, and an unsatisfiable gate is an escalation rather than a check to weaken;
-(2) no mutating git; (3) a brief without an owned-file list or checkable criteria is reported
-before the work starts; (4) verify by running commands and paste actual output; (5) leave no
-scratch files.
+(2) work in your own worktree and commit there, but never push, merge, or touch state outside it;
+(3) a brief without an owned-file list or checkable criteria is reported before the work starts;
+(4) verify by running commands and paste actual output; (5) leave no scratch files.
 
 Under `strict` one extra sentence is appended, naming the tool-layer block and telling the worker
 that a denied edit *is* the escalation. It is added only under `strict` on purpose: promising a

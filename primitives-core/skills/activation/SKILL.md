@@ -5,15 +5,20 @@ description: Create and verify the per-project `.claude/atelier.local.md` activa
 
 # Activation
 
-`.claude/atelier.local.md` is the one file that arms atelier's enforcement layer. Absent, it
-means everything is off. This skill creates it and tells you whether it is actually doing
-anything — the two states look identical from the outside otherwise, because every loader in
-atelier fails open (`except Exception: return <inert default>`) by design.
+<!-- harness:claude-code -->
+The activation file is `.claude/atelier.local.md`.
+<!-- /harness -->
+
+It is the one file that arms atelier's enforcement layer. Absent, it means everything is off.
+This skill creates it and tells you whether it is actually doing anything — the two states look
+identical from the outside otherwise, because every loader in atelier fails open
+(`except Exception: return <inert default>`) by design.
 
 ## Procedure
 
 Run from the target project's root:
 
+<!-- harness:claude-code -->
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py"
 python3 "$S" create [--project-dir DIR] [--force]
@@ -23,12 +28,19 @@ python3 "$S" check  [--project-dir DIR]
 Outside the harness `$CLAUDE_PLUGIN_ROOT` is unset — invoke the script by its own path
 instead; it finds the hooks relative to itself, and fails loudly naming what it tried if they
 are not there. `--project-dir` defaults to `$CLAUDE_PROJECT_DIR`, else the cwd.
+<!-- /harness -->
 
 `create` installs the copyable starting point at
-[examples/atelier.local.md](examples/atelier.local.md) into `<project>/.claude/atelier.local.md`
-(refuses to overwrite an existing file unless `--force`). `check` reads the installed file
-*through the hooks' own loader functions* rather than parsing it itself, then reports per key
-what each hook actually resolved. That is why its answer cannot drift from real behavior.
+[examples/atelier.local.md](examples/atelier.local.md), and refuses to overwrite an existing
+file unless `--force`.
+
+<!-- harness:claude-code -->
+It writes `<project>/.claude/atelier.local.md`.
+
+`check` reads the installed file *through the hooks' own loader functions* rather than parsing
+it itself, then reports per key what each hook actually resolved. That is why its answer cannot
+drift from real behavior.
+<!-- /harness -->
 
 The state it exists to expose is **inert**: a key that is present and looks configured, but is set
 to something no hook recognizes, so it is off. Nothing errors, nothing warns, the hook just never
@@ -49,10 +61,9 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 **`effort` is not machine-enforced.** No hook reads it. It only takes effect if the agent
-actually opens `.claude/atelier.local.md` and reads the frontmatter itself — the `delegation`
-skill documents this at `primitives-core/skills/delegation/SKILL.md:215-217`. Setting it is a
-request an agent might honor, not a control a hook applies. Do not describe it as equivalent to
-the hook-enforced keys.
+actually opens the activation file and reads the frontmatter itself — the `delegation` skill
+documents this. Setting it is a request an agent might honor, not a control a hook applies. Do
+not describe it as equivalent to the hook-enforced keys.
 
 **`handoff` has two modes, and each has a failure shape only one side of which is safe.** File
 mode (a bare scalar, or `{mode: file, path: ...}`) behaves as before: a path that resolves
@@ -79,14 +90,16 @@ because it is live - just probably not as intended.
 Edits take effect on the **next tool call** — every hook re-reads the file per call, so there is
 no restart or session reload needed. Gitignore it as a local file:
 
+<!-- harness:claude-code -->
 ```gitignore
 .claude/*.local.md
 ```
+<!-- /harness -->
 
 ## Full semantics
 
 This skill covers create/check mechanics only. For the deep behavioral tables — what each
 `enforce` level actually blocks, which agent roles are never isolated even when listed, and the
 `handoff` fallback matrix — read
-[`primitives-core/skills/delegation/references/activation.md`](../delegation/references/activation.md),
-which is authoritative.
+[`delegation/references/activation.md`](../delegation/references/activation.md), which is
+authoritative.

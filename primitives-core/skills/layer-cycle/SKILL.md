@@ -14,6 +14,12 @@ it owns the contract, the rubric, and the cycle budget, and is the only
 level that knows layering exists. Workers get discrete briefs; findings
 flow up, intentions flow down, nothing else crosses levels.
 
+This is the manager's standard cycle — **build → review → revise →
+simplify** — formalized: create is build, evaluate is review, refine is
+revise plus simplify (`deletion-pass`). A manager runs the lightweight
+form on every building link by default; invoke this skill when the link
+is a whole module and needs budgets, triage, and stop conditions.
+
 ## Inputs (ask only for what's missing)
 
 **target**, **contract**, **rubric**, **gate**; optional cycle budget
@@ -32,9 +38,9 @@ flow up, intentions flow down, nothing else crosses levels.
      the diff for a residual defect.
    - **Module-scale or contested** (a new module, a public
      interface/contract change, or a prior cycle's judge spread > 1.5)
-     → invoke rubric-panel (optionally /code-review for deeper defect
-     hunting). This is the panel's reserved case, not the every-cycle
-     default.
+     → invoke rubric-panel (optionally the code-reviewer agent for
+     deeper defect hunting). This is the panel's reserved case, not the
+     every-cycle default.
 3. **Triage** findings by type:
    - `defect` → L2 fix brief: contract citation + the failing case,
      encoded as a test first (red observed) before the fix.
@@ -44,9 +50,10 @@ flow up, intentions flow down, nothing else crosses levels.
      amendment implies new behavior (→ fix brief).
    - Contested scores (>1.5 judge spread) → targeted re-judge with a
      tiebreaker persona, or a note to the human.
-4. **Refine**: dispatch briefs — fixes first, then deletion-pass and
-   comment-hygiene (code, then the prose around it), then optional
-   hardening (adversarial inputs beyond what the contract names).
+4. **Refine**: dispatch briefs — fixes first, then `deletion-pass` alongside
+   `comment-hygiene` (one cuts code that cannot name its commitment, the
+   other cuts comments that cannot), then optional hardening (adversarial inputs beyond
+   what the contract names).
 5. Re-verify gate + golden behavior; record the cycle's outcome
    (rubric scores, when a panel ran) and diff.
 

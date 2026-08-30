@@ -17,16 +17,20 @@ delicate judgment. Delegation overhead would exceed the labor.
 ## B. Scouts — parallel read-only agents
 
 **Layers: strategy + execution**, management collapsed. Fan out `scout` agents wherever the value
-is the conclusion, not the traversal. Scouts default to haiku; override to sonnet only when the
-question needs real cross-file synthesis.
+is the conclusion, not the traversal.
+
+<!-- harness:claude-code -->
+Scouts default to haiku; override to sonnet only when the question needs real cross-file
+synthesis.
+<!-- /harness -->
 
 Ask for concise evidence: `path:line`, commands run, uncertainties, and any stop condition hit.
-Ask each scout a **question**, not a territory ("does any hook write outside CLAUDE_PROJECT_DIR"
+Ask each scout a **question**, not a territory ("does any hook write outside the project root"
 beats "look at the hooks").
 
 Asking questions is what makes the collapse legitimate: a scout that answers a question returns a
 conclusion, so nothing raw climbs into the session's permanent context. A sweep wide enough that
-the reports must be cross-read before they mean anything has failed that condition — put a
+the reports must be cross-read before they mean anything has failed that condition — put one
 `manager` over the wave and take one synthesis back.
 
 B is also the mandatory first phase of C, D, and E whenever the work-list does not exist yet. A
@@ -45,8 +49,8 @@ chosen as the cheaper option.
    doc or task list) so it survives compaction.
 2. **One slice = one owner = disjoint file scope.** Shared files get a *serialized chain*, never
    parallel writers. State file ownership in every brief, including which config is read-only.
-3. **Pick a model per slice at dispatch.** `builder` on its sonnet default for bounded
-   well-specified edits; `model: opus` where being wrong is expensive to unwind. For
+3. **Pick a role per slice at dispatch.** `builder` for bounded well-specified edits; a slice
+   where being wrong is expensive to unwind stays with the strategist or a manager. For
    audit-and-fix sweeps, split by role: `scout` agents read everything and report violations,
    `builder` fixers touch only the violators. Paying edit-tier rates for read-only scanning is
    the most common silent overspend.
@@ -59,6 +63,11 @@ chosen as the cheaper option.
    the reconciliation a **differential** — diff the outputs, do not read the diffs
    (`verification.md`).
 6. **Validate personally** against the DoD, running the gates yourself.
+
+<!-- harness:claude-code -->
+Step 3 also picks the *model* per slice, not only the role: `builder` on its sonnet default for
+bounded edits, `model: opus` on the dispatch where being wrong is expensive to unwind.
+<!-- /harness -->
 
 **Sign you chose wrong:** workers keep escalating for decisions the brief should have made, or two
 workers need the same file. Both mean the slicing was wrong, which is strategy work, not worker
@@ -79,13 +88,14 @@ Spawn **one `manager`** as the session's proxy with the full brief (`manager-bri
 DoD verbatim, constraints, worker-model guidance, evidence format, stop and escalation conditions.
 
 The manager decomposes the chain, takes the judgment-heavy links itself, and spawns its own
-`builder` workers for bounded links, steering them with SendMessage rather than re-briefing. The
+`builder` workers for bounded links, steering them with a follow-up rather than re-briefing. The
 manager is the **first-pass checker**: it verifies each worker's output before building the next
 link, then assembles a **proof-of-completion package** (per-criterion evidence, commands plus
 actual output).
 
-While the team runs, answer escalations only, and **continue the manager with SendMessage, never
-re-brief** — a re-brief discards the accumulated context that is most of what the manager cost.
+While the team runs, answer escalations only, and **continue the same manager with a follow-up,
+never re-brief** — a re-brief discards the accumulated context that is most of what the manager
+cost.
 
 When the manager reports done, **spot-check, then validate**. The manager catches worker errors
 cheaply; the session catches the manager's blind spots. The classic failure is a plausible proof

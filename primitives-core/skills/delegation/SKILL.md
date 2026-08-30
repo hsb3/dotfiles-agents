@@ -44,15 +44,25 @@ not. The map from rule to measurement is `references/provenance.md`.
 | Management | `manager` | no, escalates | yes | no | one chain; disposable |
 | Execution | `scout`, `builder`, `reviewer` | no, escalates | no | no | one slice; disposable |
 
-Spawn authority is structural, not a rule to be observed: `manager` carries the `Agent` and
-`SendMessage` tools, and the execution agents do not have them. The consequence is easy to miss
-and deadlocks managers: a message to an execution agent cannot be answered, because the callee
-has no tool to answer with (`references/waiting.md`).
+Spawn authority is structural, not a rule to be observed: `manager` carries the dispatch tool and
+the execution agents do not. The consequence is easy to miss and deadlocks managers: a message to
+an execution agent cannot be answered, because the callee has no tool to answer with
+(`references/waiting.md`).
+
+<!-- harness:claude-code -->
+The tools are `Agent` and `SendMessage`.
+<!-- /harness -->
 
 ### Strategy — `strategist`
 
-The session itself, never a spawned agent. The role noun exists because other harnesses let the
-primary agent be set as a named profile; naming it now means that mapping is already made.
+The session itself, never a spawned agent. It pins no model — the model in the seat stays the
+effort signal (Step 0).
+
+<!-- harness:claude-code -->
+The role noun exists because other harnesses let the primary agent be set as a named profile;
+naming it now means that mapping is already made. Claude Code plugins ship subagents only, so
+there is no `strategist` agent file here.
+<!-- /harness -->
 
 **Irreducibly its own — the floor, never delegated at any effort level:**
 
@@ -60,8 +70,8 @@ primary agent be set as a named profile; naming it now means that mapping is alr
    fixed downstream.
 2. **Definition of done** — written before any delegation (Step 3).
 3. **Judging conflicting or high-impact reports.** Subagent findings are **hypotheses**. Anything
-   that changes the plan gets re-derived from the cited source; dispatch a `reviewer` to do the
-   re-derivation, and judge what it returns here.
+   that changes the plan gets re-derived from the cited source; dispatch the `reviewer` agent
+   to do the re-derivation, and judge what it returns here.
 4. **Final validation.** Run the hard gates personally before telling the user it is done. A
    manager's proof package is evidence, not verdict.
 5. **User-facing synthesis** — the user hears one coherent account from the session they hired.
@@ -90,14 +100,19 @@ definition of done to anyone else; let a layer below edit a gate it owns.
 ### Management — `manager`
 
 **Irreducibly its own:** holding the live state of a coupled chain. What link N actually produced,
-whether that output is good enough to build link N+1 on, and which worker to steer with
-SendMessage rather than re-brief. It turns one contract into N sub-briefs and is the **first-pass
+whether that output is good enough to build link N+1 on, and which worker to steer with a
+follow-up rather than re-brief. It turns one contract into N sub-briefs and is the **first-pass
 checker** on everything returned before anything is built on it.
 
 That work cannot move up, because it is high-volume and short-lived and the strategy layer's
 context is the one that never resets. It cannot move down, because a worker is deliberately blind
 to its siblings (the negative list in `references/briefs.md`), so no worker can sequence the chain
 or notice that two of them solved the same sub-problem differently.
+
+Its standard execution loop on every building link is **build → review → revise → simplify**
+`[field]`: builder implements test-first, `reviewer` (or `rubric-panel`) attacks the diff, fix
+briefs continue the same builder, then `deletion-pass` once green. The `layer-cycle` skill is
+that loop formalized for module-scale links.
 
 **Context it needs:** the objective, the DoD verbatim, the constraints, worker-model guidance, the
 evidence format, and the stop conditions — plus everything its own workers return, which is the
@@ -128,9 +143,10 @@ objective, owned files, read-only config, evidence format, verification commands
 rankings; sibling implementations, prior rounds, or git history of the same work; the plan beyond
 this slice.
 
-**Never:** spawn another agent; edit the config that defines its own acceptance criteria; mutate
-git; widen its own scope to unblock itself; improvise past a stop condition; present a self-report
-as proof; wait for an answer to a message it received — it has no channel to ask on, and its
+**Never:** spawn another agent; edit the config that defines its own acceptance criteria; push,
+merge, or touch any branch or worktree outside its own (committing inside its own worktree is
+expected); widen its own scope to unblock itself; improvise past a stop condition; present a
+self-report as proof; wait for an answer to a message it received — it has no channel to ask on, and its
 report is its reply (`references/waiting.md`).
 
 ### Which layer am I on
@@ -214,20 +230,30 @@ The model in the session's strategist seat IS the effort signal.
 
 | Session model | Level | Meaning |
 | --- | --- | --- |
-| Opus or below | `standard` | The default — everyday delegation work |
-| Fable | `deep` | A problem hard enough to justify a Fable strategist |
+| The everyday strategist model, or anything below it | `standard` | The default — everyday delegation work |
+| A model deliberately above it | `deep` | A problem hard enough to justify the most expensive seat available |
+
+<!-- harness:claude-code -->
+Concretely here: Opus or below is `standard`; Fable is `deep`.
+<!-- /harness -->
 
 Overrides, highest wins: the user says so; or an `effort:` key in the frontmatter of
-`.claude/atelier.local.md` (check for it; absence is normal). State the level in effect when
-proposing an architecture.
+`atelier.local.md` (check for it; absence is normal — `references/activation.md` has the path).
+State the level in effect when proposing an architecture.
 
-At **`deep`**, the session's tokens cost ~2× Opus and Fable measures at ~80–100k tokens just to get
-grounded plus ~50–100k to drive the work — past the context watermark before real work starts
+At **`deep`**, the session's tokens cost roughly 2× the standard seat's, and a deep-tier
+strategist measures at ~80–100k tokens just to get grounded plus ~50–100k to drive the work — past the context watermark before real work starts
 `[cost]`. So: **never self-ground** (dispatch it, read the report, not the tree); **never collapse
 management on a building wave** (collapse condition 3 binds hardest when the strategist's tokens
 are the most expensive in the system, which puts C out of reach, though a scout wave returning
-conclusions is still fine); **verify in layers by default**, a `reviewer` on every plan-changing
-claim; **override builders to opus** more liberally.
+conclusions is still fine); **verify in layers by default**, one `reviewer` on every
+plan-changing claim; **run one `reviewer` over every judgment-heavy link**, not just plan-changing
+ones.
+
+<!-- harness:claude-code -->
+At `deep`, also **override builders to opus** more liberally — the per-dispatch `model` knob is
+the cheapest way to buy judgment on a link the strategist cannot afford to take itself.
+<!-- /harness -->
 
 ## Step 1 — Size the job on three axes
 
@@ -248,6 +274,22 @@ across 11+ hours and 278 self-performed tool calls `[lab]`.
 (architecture B), then size and slice from their report. Do not fix while inventorying: a defect
 found during recon goes on the punch list, not into the working tree `[untested]`.
 
+### Slice coupled work as releases from a spine
+
+When complexity reaches `coupled` or `architectural`, do not slice by component — slice as
+**incremental releases building out from a spine** `[field]`. Release 1 is a walking skeleton:
+the thinnest end-to-end path through every layer of the system, one real input to one real
+output, built, wired, and provable by a gate. Each later release widens exactly one dimension of
+it (a behavior, a surface, a hardening pass), and every release ends with the **whole system
+green**, never with a part of it finished.
+
+Waves fall out of that ladder: the spine is wave one, and each increment is a wave whose DoD is a
+machine check on the running whole rather than a promise about parts. The ordering spends
+integration risk first — whether the pipeline connects at all is settled in the cheapest release —
+and an interrupted job ends at its last green release instead of a pile of finished components
+that have never met. The spine choice is floor work (it IS the decomposition, floor item 1); a
+manager sequences links within a release and never re-plans across releases.
+
 ## Step 2 — Pick the architecture
 
 The architectures are shapes the three layers take, not alternatives to them. The layer column is
@@ -266,7 +308,7 @@ Full playbooks, including what choosing wrong looks like in each: **`references/
 **B is not only a destination.** When Step 1 says the slices are unknown, B is the mandatory first
 phase of C, D, and E, not an alternative to them. A small scout wave collapses management cleanly
 because scouts return conclusions rather than material; a wide sweep whose reports have to be
-cross-read is a management job, so put a manager over it.
+cross-read is a management job, so put one `manager` over it.
 
 **The C-vs-D fork now points at D.** C is D with the management layer collapsed into the
 strategist, so it is chosen by satisfying every collapse condition above, not by being torn. When
@@ -278,11 +320,13 @@ architectures, so nothing measured was overturned here.
 
 All three are cheap to write and expensive to retrofit `[lab]`.
 
-1. **A definition of done, as independently verifiable criteria** — a command that passes, a grep
-   that returns zero, an artifact that exists. Never "works well". **Include the error paths and
-   the empty case**: unspecified edge cases are exactly where independent implementations diverge,
-   and every divergence the lab's cross-implementation diffing surfaced traced to a case the
-   contract never named.
+1. **A definition of done, as machine-checkable criteria** — each one written as **a command plus
+   its expected output**: a command that passes, a grep that returns zero, an artifact that
+   exists. Never "works well". A criterion only a human can judge is either rewritten until a
+   machine can check it or explicitly routed to a judged panel (`rubric-panel`) — never left as
+   prose a worker can self-certify. **Include the error paths and the empty case**: unspecified
+   edge cases are exactly where independent implementations diverge, and every divergence the
+   lab's cross-implementation diffing surfaced traced to a case the contract never named.
 2. **A gate that exists and has been proved red.** The DoD's command must actually fail when the
    work is wrong. A gate that cannot fail is decoration. Break something deliberately once, watch
    it fail, restore, then dispatch against it.
@@ -290,31 +334,42 @@ All three are cheap to write and expensive to retrofit `[lab]`.
    strategist. A worker that can edit the coverage threshold, the lint config, or the test that
    defines its own acceptance criteria can satisfy any brief. Workers are told: an unsatisfiable
    gate is an escalation, never a config edit. Where the project has activation on, make the map
-   machine-readable — list the read-only config under `protected:` in `.claude/atelier.local.md`,
-   and the `config-custody` hook enforces it (`references/activation.md`) `[untested]`.
+   machine-readable — list the read-only config under `protected:` in `atelier.local.md`, and the
+   `config-custody` hook enforces it (`references/activation.md`) `[untested]`.
 
 ## Model × task cheat-sheet
 
 Model tier is a separate axis from layer. The layer says what an agent is for; the tier says how
 much judgment is bought for it.
 
-| Agent | Layer | Default model | Override at dispatch | Use for |
-| --- | --- | --- | --- | --- |
-| `scout` | execution | haiku (`effort: low`) | `model: sonnet` for cross-file synthesis | Read-only audit, convention check, presence/absence, log reduction, reconciliation |
-| `builder` | execution | sonnet | `model: opus` for judgment-heavy slices | Scoped edits, test writing, refactors — through coupled, costly-to-unwind slices |
-| `reviewer` | execution | opus | — (verification is where the premium pays) | Independent re-derivation of a high-impact claim or diff |
-| `manager` | management | opus | — | Drives a coupled chain as the session's proxy, spawns builders, verifies |
-| `strategist` | strategy | the session (Opus at `standard`, Fable at `deep`) | — | The floor above — **never a spawned agent** |
+`builder` takes bounded, well-specified implementation links. Coupled, costly-to-unwind, or
+judgment-heavy links remain with the `strategist` or the `manager`, which can use `reviewer` for
+independent re-derivation.
 
-**Tier is a dispatch-time decision, not an agent choice.** Default every scout to haiku and every
-builder to sonnet; pass `model:` on the Agent call only when the slice demonstrably needs the
-judgment. **These defaults are `[untested]`** — the lab that produced this kit dispatched opus for
-every model-bearing call and never exercised the cheaper tiers, so the cutoff between "sonnet is
-fine" and "needs opus" has never been measured. `references/tier-cutoff.md` is the protocol for
-measuring it; run it before defending the defaults.
+| Agent | Layer | Use for |
+| --- | --- | --- |
+| `scout` | execution | Read-only audit, convention check, presence/absence, log reduction, reconciliation |
+| `builder` | execution | Bounded, well-specified implementation links: scoped edits, test writing, refactors |
+| `reviewer` | execution | Independent re-derivation of a high-impact claim or diff |
+| `manager` | management | Drives a coupled chain as the session's proxy, spawns builders, verifies |
+| `strategist` | strategy | The floor above — **never a spawned agent** |
 
-Per-invocation knobs (`isolation: worktree`, `maxTurns`, SendMessage continuation), agent shell
-capabilities, and the git policy are in **`references/dispatch-knobs.md`**.
+**These defaults began as reasoning, not evidence** — the lab that produced this kit dispatched
+the premium tier for every model-bearing call and never exercised the cheaper tiers.
+`references/tier-cutoff.md` is the protocol for measuring the cutoff and the record of how far it
+has been measured.
+
+<!-- harness:claude-code -->
+**Tier is a dispatch-time decision, not an agent choice.** The defaults are scout=haiku (`effort:
+low`), builder=sonnet, reviewer=opus, manager=opus, and the strategist is the session itself (Opus
+at `standard`, Fable at `deep`). Override at dispatch: `model: sonnet` on a scout for cross-file
+synthesis, `model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not
+downtiered — verification is where the premium pays. Pass `model:` on the Agent call only when the
+slice demonstrably needs the judgment.
+<!-- /harness -->
+
+Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent
+shell capabilities, and the git policy are in **`references/dispatch-knobs.md`**.
 
 ## Briefs
 
@@ -355,9 +410,9 @@ termination:
 - **No wait without a producer.** Every wait — including one an agent adopts for itself, which is
   where every reported deadlock came from — names what would satisfy it, who produces that, and
   what happens when it does not arrive `[untested]`.
-- **A message down is one-way.** Only `manager` carries `SendMessage`; an execution agent that
-  receives a message has no tool to answer with, so its reply is its final report. Send amendments,
-  never questions.
+- **A message down is one-way.** Only `manager` carries a channel pointing downward; an execution
+  agent that receives one has no tool to answer with, so its reply is its final report. Send
+  amendments, never questions.
 - **A live worker's owned files are not the dispatcher's**, manager included, and a green poll is
   not a completion signal. Wait for the completion notification, then edit.
 
@@ -367,19 +422,28 @@ Operating defaults from measured findings `[cost]`. The `context-watermark` (Use
 `delegation-watermark` (PostToolUse), and `handoff-freshness-guard` (PreCompact) hooks plus the
 `handoff` skill are the enforcement layer; this skill decides when.
 
-- **Trigger `/handoff` at a self-chosen boundary in the 60–80k band.** The economics optimum is
-  ~40–60k; the buffer buys boundary quality. `context-watermark` nudges on **absolute tokens**
-  (~70k soft, ~100k hard) because percent-of-window thresholds are inert against the ~967k
-  auto-compact default.
-- **Prefer handoff + `/clear` over `/compact`** — a fresh session reading the handoff restarts at
-  ~10–20k; a compaction summary is similar in size, less curated, and carries a re-read tax.
+- **Trigger the `handoff` skill at a self-chosen boundary in the 60–80k band.** The economics
+  optimum is ~40–60k; the buffer buys boundary quality. `context-watermark` does the nudging.
+  **Scale its thresholds to the model's own context window rather than fixing them as a flat
+  count** — a fixed number means different things on a 200k-window model and a 1M-window one. How
+  far each harness has taken that is its own business; each states its concrete figures below and
+  in `references/activation.md`.
+- **Prefer handoff + a fresh session over `/compact`** — a fresh session reading the handoff
+  restarts at ~10–20k; a compaction summary is similar in size, less curated, and carries a
+  re-read tax.
 - **Treat any ≥10-minute idle as a handoff point** — the session-break tax makes long gaps both
   expensive and a natural externalization boundary.
 - **Clear after messy debugging, even below threshold** — visible prior errors raise future error
   rates independent of context length.
 - **Downtier on demonstrably simple work**, gated to clearly simple tasks and paired with a strict
-  DoD so an under-powered crew fails loudly and fast. The cutoff itself is unmeasured; see
-  `references/tier-cutoff.md`.
+  DoD so an under-powered crew fails loudly and fast; see `references/tier-cutoff.md`.
+
+<!-- harness:claude-code -->
+Concretely here: `context-watermark` nudges on **absolute tokens** (120k soft, 160k hard),
+because percent-of-window thresholds are inert against the ~967k auto-compact default; the fresh
+session is `/clear`; downtiering is a `model:` value on the dispatch; and the handoff skill has no
+slash command — a command would shadow the skill of the same name.
+<!-- /harness -->
 
 These watermarks are the strategy layer's budget. A manager spends a context that gets thrown away
 at the end of its chain, so it does not hand off. If a chain outgrows one manager context, that is
@@ -395,9 +459,9 @@ a slicing defect to escalate, not a compaction to ride out.
 - **`references/migrate-at-scale.md`** — one mechanical transform across many sites.
 - **`references/tier-cutoff.md`** — the protocol for measuring where cheap model tiers stop being
   enough.
-- **`references/dispatch-knobs.md`** — `isolation`, `maxTurns`, SendMessage, the git policy.
+- **`references/dispatch-knobs.md`** — worktree isolation, turn caps, continuing an agent, the git policy.
 - **`references/waiting.md`** — the no-wait-without-a-producer rule, one-way messages down, the
   liveness check, and file ownership while a worker is live.
-- **`references/activation.md`** — per-project enforcement: `.claude/atelier.local.md`, the
-  `enforce` modes, the `protected:` map, and the worker covenant.
+- **`references/activation.md`** — per-project enforcement: `atelier.local.md`, the `enforce`
+  modes, the `protected:` map, and the worker covenant.
 - **`references/provenance.md`** — which rule came from which measurement, and which are untested.
