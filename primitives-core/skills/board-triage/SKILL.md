@@ -33,6 +33,7 @@ carry no priority. The board is the source of truth; this keeps it honest.
 |---|---|
 | GitHub Projects (v2) | [`references/adapters/github-projects.md`](references/adapters/github-projects.md) |
 | Kaneo | [`references/adapters/kaneo.md`](references/adapters/kaneo.md) |
+| Kata | [`references/adapters/kata.md`](references/adapters/kata.md) |
 
 No adapter for your board? Write one against §2 — it is two commands and a field map.
 
