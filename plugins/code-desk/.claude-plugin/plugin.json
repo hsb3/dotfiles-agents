@@ -4,5 +4,5 @@
   },
   "description": "Set a project's starting conditions and then run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, audit the repo against a documented structure standard, scaffold the gaps, and plan, track, and report what follows — conformant issues, source-grounded plans, meta-structure and memory upkeep, board triage, recurring status comms, and themed PowerPoint decks. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "code-desk",
-  "version": "0.6.1"
+  "version": "0.6.2"
 }
