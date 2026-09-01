@@ -73,7 +73,6 @@ this plugin on its own, and one that sheds a dependency joins it.
 
 | Skill | What it does |
 |---|---|
-| `repo-meta-structure` | The repo layout standard as reference content: the `_meta/` taxonomy, `.claude/` and `.github/` layout, the checks, and the templates. |
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
 | `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. |
 | `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
@@ -83,7 +82,6 @@ this plugin on its own, and one that sheds a dependency joins it.
 
 | Skill | What it does |
 |---|---|
-| `planning-desk` | A source-grounded planning desk under `_meta/plans/` — conformant issue bodies and deep build plans driven through a draft, review, fix, reconcile loop. |
 | `comms` | Recurring communication deliverables — morning briefing, end-of-day wrap-up, weekly plan, board readout — shipped as a deck to a consistent standard. |
 
 **Obsidian plugin development**
@@ -113,9 +111,12 @@ descriptions, not a set of skill bodies.
 
 **Skills that need company are not here.** Anything that dispatches an agent, requires a
 hook, or reads a sibling skill's files ships in the bundle that carries those pieces:
-delegation and waves in `atelier`; board triage, the repo scaffold, and the compliance
-audit in `code-desk`. Those are not lesser skills, they are skills whose dependencies a
-grab-bag cannot satisfy.
+delegation and waves in `atelier`; board triage in `code-desk`; the repo scaffold and the
+compliance audit in `mise-en-place`. Those are not lesser skills, they are skills whose
+dependencies a grab-bag cannot satisfy. A second, narrower exclusion is deliberate rather
+than derived: a skill that prescribes an opt-in in-repo system (the `_meta/` planning desk
+and its layout standard) ships only in `mise-en-place`, so installing this bundle never
+pushes that system's conventions on a repo that tracks work on a board.
 
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;

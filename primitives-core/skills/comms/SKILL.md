@@ -6,9 +6,10 @@ description: Produce your recurring communication deliverables - a morning statu
 # Comms
 
 Your communication deliverables, produced to one standard so each is fast to make and
-consistent to read. A deliverable is a dated folder under the project's
-`_meta/briefings/<YYYY-MM-DD>-<slug>/` holding the deck source, exported deck, optional audio,
-and a `sources.md` provenance file.
+consistent to read. A deliverable is a dated folder `<briefings-dir>/<YYYY-MM-DD>-<slug>/`
+holding the deck source, exported deck, optional audio, and a `sources.md` provenance file.
+`<briefings-dir>` is `_meta/briefings/` when the repo already has a `_meta/` tree (the
+mise-en-place standard), else `briefings/` at the repo root — never create `_meta/` for this.
 
 The shared machinery lives in **`references/comm-package-standard.md`** (read it first). Each
 comm type has a self-contained playbook + a real worked example in **`examples/<type>/`**.

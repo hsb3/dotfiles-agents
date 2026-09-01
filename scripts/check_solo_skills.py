@@ -32,6 +32,13 @@ The second direction is what keeps the catalog's claim honest as skills are adde
 skill that genuinely should not ship solo must earn that by carrying a real dependency,
 not by being quietly left out.
 
+One narrow escape exists: `SYSTEM_EXEMPTIONS`, for a skill that is standalone-CAPABLE
+(no sibling, agent, or hook need) but prescribes an opt-in in-repo system a consumer
+must choose deliberately — shipping it in the everything-bundle would push that system's
+conventions on every install. Each entry names its reason and the plugin that carries the
+skill instead (owner ruling 2026-09-01, the code-desk split). An exempted skill found
+INSIDE solo-skills is red — the exemption and the membership contradict each other.
+
 Run standalone for a full report on every skill, which is the tool for answering "is this
 new skill standalone-capable?":
 
@@ -70,6 +77,20 @@ AGENT_EXEMPTIONS = {
     ("opencode-expertise", "scout"): (
         "documents opencode's own built-in subagent named `scout`, listed beside "
         "`build`/`plan`/`general`/`explore`; not a dispatch of this repo's scout"
+    ),
+}
+
+# Standalone-capable skills deliberately kept OUT of solo-skills: each prescribes an
+# opt-in in-repo system (owner ruling 2026-09-01 — the code-desk split). Keyed by skill
+# id, value names the reason and the plugin that carries the skill instead.
+SYSTEM_EXEMPTIONS = {
+    "planning-desk": (
+        "stands up a GitHub-issue-backed _meta/plans/ desk in the consuming repo — an "
+        "opt-in planning system, shipped only by the mise-en-place plugin"
+    ),
+    "repo-meta-structure": (
+        "defines the _meta/ directory standard the mise-en-place system enforces — "
+        "opt-in prescriptions, shipped only by the mise-en-place plugin"
     ),
 }
 
@@ -187,6 +208,11 @@ def stale_exemptions(skill_ids, agent_ids):
     """Report exemptions that no longer suppress anything — an exemption must keep earning
     its place, or it becomes a permanent hole nobody remembers opening."""
     out = []
+    for skill_id in sorted(SYSTEM_EXEMPTIONS):
+        if skill_id not in skill_ids:
+            out.append(
+                f"SYSTEM_EXEMPTIONS[{skill_id!r}]: no such skill — remove it"
+            )
     for (skill_id, agent) in sorted(AGENT_EXEMPTIONS):
         if skill_id not in skill_ids:
             out.append(
@@ -239,6 +265,14 @@ def problems():
             )
 
     for sid in eligible:
+        if sid in SYSTEM_EXEMPTIONS:
+            if sid in members:
+                out.append(
+                    f"plugins/solo-skills/skills/{sid}: present but SYSTEM_EXEMPTIONS "
+                    f"excludes it ({SYSTEM_EXEMPTIONS[sid]}) — remove the symlink or "
+                    "the exemption"
+                )
+            continue
         if sid not in members:
             out.append(
                 f"primitives-core/skills/{sid}: standalone-capable but absent from "
@@ -286,7 +320,8 @@ def main():
     print(
         f"✓ solo-skills membership clean — {len(members)} skills, each verified "
         "standalone-capable (no sibling path, no sibling id in bundled code, no agent "
-        "dispatch); every standalone-capable skill is a member"
+        "dispatch); every standalone-capable skill is a member or system-exempted "
+        f"({len(SYSTEM_EXEMPTIONS)} exempted)"
     )
     return 0
 

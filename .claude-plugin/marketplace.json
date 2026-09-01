@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Nine plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (repo standards, planning, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), and plugin-feedback (report a plugin defect without leaving the session).",
-    "version": "0.9.0"
+    "description": "Ten plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (quality contract, focus, board triage, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), and plugin-feedback (report a plugin defect without leaving the session).",
+    "version": "0.10.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -31,10 +31,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Set a project's starting conditions and then run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, audit the repo against a documented structure standard, scaffold the gaps, and plan, track, and report what follows — conformant issues, source-grounded plans, meta-structure and memory upkeep, board triage, recurring status comms, and themed PowerPoint decks. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — mid-session focus and scope checks, weekly board triage through a backend adapter (GitHub Projects, Kaneo, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.6.2"
+      "version": "0.7.0"
     },
     {
       "author": {
@@ -53,6 +53,15 @@
       "name": "kaneo",
       "source": "./plugins/kaneo",
       "version": "0.13.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "An in-repo planning system for repos NOT tracked on an external board (kata, Kaneo, Linear, GitHub Projects): a documented _meta/ directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a GitHub-issue-backed planning desk under _meta/plans/. Everything it prescribes lives in the repo tree — install it only where that is the intended system of record; on a board-tracked repo, skip this plugin and file work on the board. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "mise-en-place",
+      "source": "./plugins/mise-en-place",
+      "version": "0.1.0"
     },
     {
       "author": {
@@ -85,10 +94,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, plus a documented exemption class for skills that prescribe an opt-in in-repo system. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.8.1"
+      "version": "0.9.0"
     }
   ]
 }
