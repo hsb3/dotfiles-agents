@@ -19,11 +19,21 @@ hosted Carbon MCP server.
    error, run `/mcp` and authenticate in the browser, and if no approved account exists,
    say so instead of guessing — approval is requested at
    <https://mcp.carbondesignsystem.com>.
-3. **No MCP access?** Fall back to `references/carbon-llms.txt` — the official index of
-   carbondesignsystem.com documentation URLs — and WebFetch the pages the task needs. Say
-   plainly that the answer came from public docs, not the MCP index, and do not generate
-   component code the base's Context Gathering Rule would have required `code_search` for
-   without flagging that the verification step was unavailable.
+3. **No MCP access** (no approved account, access lost, or server down)? The base's
+   protocol still applies — substitute each tool with its public-docs equivalent and say
+   plainly that answers came from public docs, not the MCP index:
+
+   | Base calls | Substitute |
+   |---|---|
+   | `code_search` (components, variants, props) | WebFetch the component's usage page from `references/carbon-llms.txt`, and its Storybook (`react.carbondesignsystem.com` / `web-components.carbondesignsystem.com`) for live props and variants |
+   | `code_search` (icons/pictograms) | WebFetch the icon library pages in the index; never guess export names — the base's icon-name warning still holds, so if the exact export cannot be verified, say so |
+   | `docs_search` | `references/carbon-llms.txt` is the same docs corpus as an URL index — WebFetch the matching page |
+   | `get_charts` | WebFetch the Carbon Charts docs (`charts.carbondesignsystem.com`) and the examples in `github.com/carbon-design-system/carbon-charts` |
+   | `labs_search` | WebFetch `github.com/carbon-labs` package READMEs |
+   | `code_audit` | Manual pass over `base/references/accessibility-rules.md` + `base/references/implementation-guardrails.md` as the checklist |
+
+   Rules the substitution cannot honor (a mandatory `code_search` verification with no
+   fetchable equivalent) are flagged as unverified in the output, never silently skipped.
 4. **Writing a prompt or brief for Carbon codegen** (for a subagent or for the user)?
    Follow `references/prompting.md` — IBM's prompt-writing guidance for this exact
    MCP + skill pairing, distilled.

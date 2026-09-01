@@ -25,7 +25,7 @@
       "description": "Build and audit IBM Carbon Design System UIs with IBM's own tooling packaged as one install: the official carbon-builder skill (vendored verbatim at a pinned upstream ref) driving the hosted Carbon MCP server this plugin registers — component/variant/prop search, docs and accessibility guidance, Carbon Charts source, Carbon Labs, and code-compliance audits — plus the official docs-index fallback and IBM's prompt-writing guidance for when the server is unreachable. The hosted server requires an IBM-approved account (authenticate via /mcp). Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "carbon",
       "source": "./plugins/carbon",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "author": {
@@ -88,7 +88,7 @@
       "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, planning, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.8.0"
+      "version": "0.8.1"
     }
   ]
 }
