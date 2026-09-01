@@ -240,6 +240,22 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: carbon-builder
+    type: skill
+    source: primitives-core/skills/carbon-builder
+    origin: vendored
+    upstream: https://github.com/carbon-design-system/carbon-mcp
+    ref: 3cbe743d8bc36d6dd3bcfea98ac3ac09bca71f9c
+    disposition: qualified
+    requires: [hosted-mcp]
+    targets: [claude-code]
+  - id: carbon-design-server
+    type: mcp
+    source: primitives-core/mcp/carbon-design.json
+    origin: authored
+    disposition: qualified
+    requires: [hosted-mcp]
+    targets: [claude-code]
   - id: pocketbase-best-practices
     type: skill
     source: primitives-core/skills/pocketbase-best-practices
