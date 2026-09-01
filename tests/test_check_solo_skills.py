@@ -23,13 +23,17 @@ class SoloSkillsGate(unittest.TestCase):
         self.fix = tempfile.mkdtemp(prefix="check-solo-skills-")
         self.saved = {
             k: getattr(S, k)
-            for k in ("REPO", "SKILLS_DIR", "AGENTS_DIR", "SOLO_SKILLS_DIR", "AGENT_EXEMPTIONS")
+            for k in (
+                "REPO", "SKILLS_DIR", "AGENTS_DIR", "SOLO_SKILLS_DIR",
+                "AGENT_EXEMPTIONS", "SYSTEM_EXEMPTIONS",
+            )
         }
         S.REPO = self.fix
         S.SKILLS_DIR = os.path.join(self.fix, "primitives-core", "skills")
         S.AGENTS_DIR = os.path.join(self.fix, "primitives-core", "agents")
         S.SOLO_SKILLS_DIR = os.path.join(self.fix, "plugins", "solo-skills", "skills")
         S.AGENT_EXEMPTIONS = {}
+        S.SYSTEM_EXEMPTIONS = {}
         os.makedirs(S.SKILLS_DIR)
         os.makedirs(S.AGENTS_DIR)
         os.makedirs(S.SOLO_SKILLS_DIR)
@@ -166,6 +170,22 @@ class SoloSkillsGate(unittest.TestCase):
     def test_exemption_for_unknown_agent_is_red(self):
         S.AGENT_EXEMPTIONS = {("alpha", "ghost-agent"): "reason"}
         self.assertProblem("no such agent")
+
+    def test_system_exempted_skill_may_stay_out_of_solo_skills(self):
+        self.skill("beta", "Beta stands alone but prescribes a system.")
+        self.assertProblem("standalone-capable but absent")  # red without the exemption
+        S.SYSTEM_EXEMPTIONS = {"beta": "prescribes an opt-in in-repo system"}
+        self.assertEqual(S.problems(), [])
+
+    def test_system_exempted_skill_present_in_solo_skills_is_red(self):
+        self.skill("beta", "Beta stands alone but prescribes a system.")
+        self.member("beta")
+        S.SYSTEM_EXEMPTIONS = {"beta": "prescribes an opt-in in-repo system"}
+        self.assertProblem("present but SYSTEM_EXEMPTIONS excludes it")
+
+    def test_system_exemption_for_unknown_skill_is_red(self):
+        S.SYSTEM_EXEMPTIONS = {"ghost": "reason"}
+        self.assertProblem("SYSTEM_EXEMPTIONS['ghost']: no such skill")
 
 
 if __name__ == "__main__":

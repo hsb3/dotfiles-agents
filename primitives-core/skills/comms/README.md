@@ -2,8 +2,10 @@
 
 Produce recurring communication deliverables — a morning briefing, end-of-day wrap-up, weekly
 planning briefing, advisor board readout, or client product overview — as a deck, to one
-consistent standard. Each deliverable is a dated folder under `_meta/briefings/` holding the
-deck source, the exported deck, optional audio, and a `sources.md` provenance file.
+consistent standard. Each deliverable is a dated folder under the project's briefings
+directory (`_meta/briefings/` when a `_meta/` tree exists, else `briefings/` at the repo
+root) holding the deck source, the exported deck, optional audio, and a `sources.md`
+provenance file.
 
 ## When it triggers
 

@@ -4,8 +4,10 @@ _The comm-package standard: shared machinery for every comm type. Read with `SKI
 
 A **comm** is a repeatable communication deliverable for one audience at one cadence, produced
 to a standard so each instance is fast to make and consistent to read. Each instance is a
-dated folder under the project's `_meta/briefings/<YYYY-MM-DD>-<slug>/` holding the deck source,
-exported deck, optional audio, and a `sources.md` provenance file.
+dated folder `<briefings-dir>/<YYYY-MM-DD>-<slug>/` holding the deck source, exported deck,
+optional audio, and a `sources.md` provenance file. `<briefings-dir>` resolves once per
+project: `_meta/briefings/` when a `_meta/` tree already exists (the mise-en-place standard),
+else `briefings/` at the repo root. Never create `_meta/` just to file a comm.
 
 This file is the **spine**: the shared toolchains, parameters, voice baseline, pipeline, and
 gotchas live here once. Each per-type playbook (`examples/<type>/playbook.md`) states only what
@@ -43,14 +45,14 @@ Resolve these once at the start of each run so the skill works in any repo:
 | `<owner>/<repo>` | `gh repo view --json nameWithOwner -q .nameWithOwner` (fallback: parse `git remote get-url origin`). The owner may have multiple GitHub accounts - never assume the slug; a wrong one silently breaks #ref links on export. |
 | Handoff file | First that exists of `_meta/HANDOFF.md`, `HANDOFF.md`, `.claude/HANDOFF.md`. The cold-start source for current standing + the delivery story. |
 | Gate scheme | The repo's `gate:<x>` labels if it uses them; otherwise the handoff's "what's next" / readiness section. |
-| Last of this kind | Newest existing `_meta/briefings/<YYYY-MM-DD>-<slug>/` for the same comm type - mirror its layout and use its date as the "since" boundary. |
+| Last of this kind | Newest existing `<briefings-dir>/<YYYY-MM-DD>-<slug>/` for the same comm type - mirror its layout and use its date as the "since" boundary. |
 
 ## Output layout (per project)
 
 The skill is global; outputs are per-project. Each deliverable is a dated folder:
 
 ```
-<project>/_meta/briefings/<YYYY-MM-DD>-<slug>/
+<project>/<briefings-dir>/<YYYY-MM-DD>-<slug>/
   slides.json | deck.js (+ package.json)   # source: render_deck.py OR pptx-themes
   <name>.pdf                                # exported deck (always)
   <name>.pptx                               # pptx-themes only
@@ -60,7 +62,7 @@ The skill is global; outputs are per-project. Each deliverable is a dated folder
 
 Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overview`,
 `-client-overview`. Mirror the most recent prior folder of the same type for file layout.
-(`_meta/` is tracked by default under the standard, ADR-0006; these land in the repo unless the project keeps its `_meta/` local.)
+(Under the mise-en-place standard `_meta/` is tracked by default, ADR-0006; these land in the repo unless the project keeps its briefings dir local.)
 
 ## Voice baseline (all comms; playbooks note deltas)
 
