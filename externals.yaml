@@ -44,6 +44,13 @@ externals:
     ref: c573263e84a2066d0564f428dd8160e74fc54226
     provides: "63 prioritized PocketBase design rules across 9 categories (collection design, API rules and access control, auth, SDK usage, query performance, realtime, file handling, deployment, server-side extending), vendored verbatim in primitives-core/skills/pocketbase-best-practices/base/ under the authored routing + field-notes layer. Supplies the rule corpus only — the authored layer supplies the operational/design split and the verified findings that extend it."
     targets: [claude-code]
+  - id: carbon-builder
+    kind: skill
+    upstream: https://github.com/carbon-design-system/carbon-mcp
+    path: public/skills/carbon-builder
+    ref: 3cbe743d8bc36d6dd3bcfea98ac3ac09bca71f9c
+    provides: "IBM's own Carbon Design System skill (v1.2.0), vendored verbatim in primitives-core/skills/carbon-builder/base/ under an authored routing + fallback layer. Query planning, capability matrix, and mandatory context-gathering/code-audit protocol for the five hosted Carbon MCP tools (code_search, docs_search, get_charts, labs_search, code_audit), plus 13 reference files covering frameworks, grid, accessibility, charts, AI Chat, Carbon Labs, pitfalls, and error recovery. The same repo's public/llms.txt rides in the authored layer as the no-MCP docs-index fallback."
+    targets: [claude-code]
 
 # ── Not externals: recorded here so the absence is deliberate, not an oversight. ──
 #
