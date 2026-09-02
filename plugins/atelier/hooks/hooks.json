@@ -41,6 +41,17 @@
       {
         "hooks": [
           {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/live-worker-git-guard/hook.py\"",
+            "statusMessage": "Checking for live workers...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/config-custody/hook.py\"",
             "statusMessage": "Checking config custody...",
             "timeout": 10,
@@ -106,6 +117,17 @@
           {
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-telemetry/hook.py\"",
             "statusMessage": "Recording delegation telemetry...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/manager-package-gate/hook.py\"",
+            "statusMessage": "Checking the manager's proof package...",
             "timeout": 10,
             "type": "command"
           }

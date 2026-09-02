@@ -52,6 +52,12 @@ reports are hypotheses, not facts. Do not pass a worker your own brief, the wide
 another worker's output as context — each one gets its slice and nothing more.
 
 ## Evidence format (your final message)
+Your turn does not end until you have this package or have hit a stop condition below. A
+progress note is never a final message: every worker you dispatched has already delivered its
+report — that return IS its reply — so once a dispatch comes back there is nothing left to wait
+on. Start the final message with exactly one of these two lines:
+
+`## Proof package`, then:
 1. Per-DoD-criterion: evidence (command + actual output, file:line, diff summary)
 2. What was deliberately deferred, and why
 3. Anything out-of-scope you noticed (report only)
@@ -59,12 +65,16 @@ another worker's output as context — each one gets its slice and nothing more.
 If you bounded any coverage (sampled, skipped cases, top-N), say so explicitly — a silent cap
 reads as full coverage.
 
+`## Stopped: <named condition>`, when one of the stop conditions below fires: what you found,
+what you did verify before stopping, and what remains.
+
 ## Stop & escalate — do not improvise past these
 - The codebase contradicts this brief's assumptions
 - A DoD criterion turns out to be unverifiable as written
 - You need out-of-scope changes to proceed
 - A gate fails twice for the same cause
-Stop, state what you found, and wait for instructions.
+Stop and end your turn with the `## Stopped: <named condition>` message — that hands the
+decision up. Do not sleep, poll, or send a progress note instead.
 ```
 
 <!-- harness:claude-code -->

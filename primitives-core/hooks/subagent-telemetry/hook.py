@@ -41,10 +41,12 @@ cwd, hook_event_name, agent_id, agent_type, permission_mode.
     `subagents/` entry; writing those inflated the ledger ~10x.
   - The sidecar is looked up in the payload's own `subagents/` dir first and,
     only on a miss, in sibling session dirs under the same slug (see
-    `_sidecar_dir`). A `/clear` mid-delegation re-homes the running agent's
-    transcript under a NEW session id and leaves its sidecar behind under the
-    OLD one — measured: one live agent, two session dirs, one sidecar. Without
-    the fallback the delegation with the longest wall clock records nothing.
+    `sidecar_dir` in `_lib/pending.py`, which owns the record layout this hook
+    and `live-worker-git-guard` both read). A `/clear` mid-delegation re-homes
+    the running agent's transcript under a NEW session id and leaves its
+    sidecar behind under the OLD one — measured: one live agent, two session
+    dirs, one sidecar. Without the fallback the delegation with the longest
+    wall clock records nothing.
   - Then the stall scan runs.
 
 Contract (Stop) — measured stdin fields: session_id, transcript_path, cwd,
@@ -80,7 +82,9 @@ delegations:
     is read the other way round — from the payload's own half, the live one
     carrying the delegation's final context.
 
-Stall rule: the STARTED universe is the `agent-*.meta.json` sidecars in the
+Stall rule (the started/settled/pending sets themselves live in
+`_lib/pending.py`; the threshold and the row shape are this hook's): the
+STARTED universe is the `agent-*.meta.json` sidecars in the
 session's `subagents/` dir — deliberately the same predicate that gates a
 delegation row, so a phantom SubagentStop can never enter it. That universe is
 the CURRENT dir only, and the asymmetry with the sidecar fallback above is
@@ -121,49 +125,43 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+from pending import (  # noqa: E402  (same — `_lib` must be on the path first)
+    AGENT_FILE_PREFIX,
+    SIBLING_PROBE_LIMIT,  # noqa: F401  (re-export: the probe knob is read here)
+    SIDECAR_SUFFIX,
+    STALL_EVENT,
+    TAIL_BYTES,
+    TRANSCRIPT_SUFFIX,
+    agent_key as _agent_key,
+    env_int as _env_int,
+    pending_keys as _pending_keys,
+    read_sidecar as _read_sidecar,
+    read_tail as _read_tail,
+    sidecar_dir as _sidecar_dir,
+    sidecar_path as _sidecar_path,
+    subagents_dir as _subagents_dir,
+)
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
-TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB — same window as context-watermark
 # 64 KB is enough to reach the first timestamped line of a subagent transcript:
 # the largest first-line end offset over 44 real transcripts was 16,558 bytes.
 HEAD_BYTES = 64 * 1024
-# How many sibling session directories a sidecar miss may probe (see
-# `_sidecar_dir`). A `/clear` re-homes a live delegation into a NEW session dir
-# adjacent in time to the old one, so the sidecar's dir is among the newest
-# siblings — while a slug can accumulate hundreds of session dirs in total.
-# Twelve covers the re-home with room for the interleaved sessions of a busy
-# day; past it the row is dropped exactly as it was before, silently.
-SIBLING_PROBE_LIMIT = 12
 # A delegation still pending this long after it started is reported as stalled.
 # 15 minutes: longer than any healthy delegation observed, short enough that a
 # wedged worker surfaces inside one working session.
 STALL_SECONDS_DEFAULT = 900
-STALL_EVENT = "stall"
-# Stream name is the stem this ledger already had (`delegation.jsonl`), not
-# the hook name: the rows are the delegation record, and keeping the stem
-# keeps old and new rows queryable as one series.
+# Stream name is the stem this ledger already had (`delegation.jsonl`), not the
+# hook name: the rows are the delegation record, and keeping the stem keeps old
+# and new rows queryable as one series. Bound here as a literal rather than
+# imported from `_lib/pending.py` (which reads the same ledger) because a
+# stream name belongs to the hook that claims it — see the agentlog gate. The
+# two are pinned equal by tests/test_live_worker_git_guard.py.
 LOG_STREAM = "delegation"
 LOG_PATH_ENV = "SUBAGENT_TELEMETRY_LOG_PATH"
-SUBAGENTS_DIRNAME = "subagents"
-AGENT_FILE_PREFIX = "agent-"
-SIDECAR_SUFFIX = ".meta.json"
-TRANSCRIPT_SUFFIX = ".jsonl"
 
-
-def _env_int(name, default):
-    v = os.environ.get(name)
-    if v is None or v == "":
-        return default
-    try:
-        return int(v)
-    except ValueError:
-        return default
-
-
-TAIL_BYTES = _env_int("SUBAGENT_TELEMETRY_TAIL_BYTES", TAIL_BYTES_DEFAULT)
 STALL_SECONDS = _env_int("SUBAGENT_TELEMETRY_STALL_SECONDS", STALL_SECONDS_DEFAULT)
 
 
@@ -176,103 +174,12 @@ def _debug_enabled():
 
 
 # ---------------------------------------------------------------------------
-# Locating the delegation's own records
+# Locating the delegation's own records — `_lib/pending.py` owns this half
+# (`_subagents_dir`, `_agent_key`, `_sidecar_dir`, `_read_sidecar`, plus the
+# started/settled/pending sets below), because `live-worker-git-guard` decides
+# whether the tree is shared with a live worker from the SAME records and the
+# two answers must not be able to disagree.
 # ---------------------------------------------------------------------------
-
-def _subagents_dir(transcript_path):
-    """Candidate `subagents/` directory for the payload's transcript path.
-
-    Two shapes are handled: the parent transcript `<session_id>.jsonl`, whose
-    subagents live in the sibling directory `<session_id>/subagents/`; and a
-    path that already points inside a `subagents/` directory (a nested
-    delegation), in which case that directory is the answer. Returns None when
-    no candidate exists on disk.
-    """
-    if not transcript_path:
-        return None
-    parent = os.path.dirname(transcript_path)
-    if os.path.basename(parent) == SUBAGENTS_DIRNAME and os.path.isdir(parent):
-        return parent
-    candidate = os.path.join(os.path.splitext(transcript_path)[0], SUBAGENTS_DIRNAME)
-    return candidate if os.path.isdir(candidate) else None
-
-
-def _agent_key(agent_id):
-    """Bare agent id usable as a filename component, or None.
-
-    Observed payloads carry the id unprefixed ("a31412cbc7cdb39e8") while the
-    files carry an "agent-" prefix; a prefixed id is accepted too. basename()
-    is what keeps a hostile or malformed id from escaping the subagents dir.
-    """
-    if not isinstance(agent_id, str):
-        return None
-    key = os.path.basename(agent_id.strip())
-    if key.startswith(AGENT_FILE_PREFIX):
-        key = key[len(AGENT_FILE_PREFIX):]
-    if not key or key in (".", ".."):
-        return None
-    return key
-
-
-def _sidecar_dir(subagents_dir, key):
-    """The `subagents/` directory that actually holds this agent's sidecar, or
-    None if no bounded probe finds one.
-
-    Normally it is the payload's own directory. It is NOT after a `/clear`:
-    the session is re-homed under a new id mid-delegation, the agent keeps
-    running, its transcript follows into `<slug>/<new_session>/subagents/` and
-    the sidecar stays behind in the old one (measured: one live agent, two
-    session dirs under one slug, exactly one sidecar). Resolving only in the
-    payload's directory drops that row — and it is the longest-running
-    delegation of the wave, the one most worth measuring.
-
-    `agent_id` is globally unique by design, so it carries the join across
-    directories. The probe is deliberately narrow, and this narrowness is the
-    whole safety argument: it runs only on a miss, looks only for that ONE
-    exact filename, never leaves the slug, and stops after the
-    SIBLING_PROBE_LIMIT most recently modified siblings.
-    """
-    if os.path.isfile(
-        os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
-    ):
-        return subagents_dir
-
-    session_dir = os.path.dirname(subagents_dir)
-    candidates = []
-    try:
-        with os.scandir(os.path.dirname(session_dir)) as entries:
-            for entry in entries:
-                if entry.path == session_dir or not entry.is_dir():
-                    continue
-                try:
-                    # The session dir's own mtime, one stat from the entry we
-                    # already hold. Recency is the right order here because the
-                    # two halves of a re-homed delegation are adjacent in time.
-                    candidates.append((entry.stat().st_mtime, entry.path))
-                except OSError:
-                    continue
-    except OSError:
-        return None
-
-    candidates.sort(reverse=True)
-    for _mtime, path in candidates[:SIBLING_PROBE_LIMIT]:
-        sibling = os.path.join(path, SUBAGENTS_DIRNAME)
-        if os.path.isfile(
-            os.path.join(sibling, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
-        ):
-            return sibling
-    return None
-
-
-def _read_sidecar(path):
-    """Parsed sidecar dict, or None if absent/unreadable/malformed/not an object."""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            obj = json.load(f)
-    except Exception:
-        return None
-    return obj if isinstance(obj, dict) else None
-
 
 def _clean_str(value):
     return value.strip() if isinstance(value, str) and value.strip() else None
@@ -282,24 +189,6 @@ def _clean_str(value):
 # Transcript parsing — same tail-read approach as context-watermark/hook.py,
 # extended to also pull the model off the same assistant message.
 # ---------------------------------------------------------------------------
-
-def _read_tail(path, tail_bytes):
-    """Read only the last `tail_bytes` of the file. Returns a str (may start
-    mid-line; caller splits on newlines and discards the first partial line
-    unless it's the only line)."""
-    size = os.path.getsize(path)
-    with open(path, "rb") as f:
-        if size > tail_bytes:
-            f.seek(size - tail_bytes)
-        else:
-            f.seek(0)
-        data = f.read()
-    if size > tail_bytes:
-        nl = data.find(b"\n")
-        if nl != -1:
-            data = data[nl + 1 :]
-    return data.decode("utf-8", errors="replace")
-
 
 def _read_head(path, head_bytes):
     """Read only the first `head_bytes` of the file. Returns a str whose last
@@ -476,9 +365,7 @@ def _build_row(payload):
     if sidecar_dir is None:
         return None
 
-    meta = _read_sidecar(
-        os.path.join(sidecar_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
-    )
+    meta = _read_sidecar(_sidecar_path(sidecar_dir, key))
     if meta is None:
         return None
 
@@ -521,85 +408,6 @@ def _build_row(payload):
 # Stall detection — a delegation that started and never settled
 # ---------------------------------------------------------------------------
 
-def _settled_ids():
-    """agent_ids already accounted for, per the ledger tail — matched by
-    agent_id ALONE, regardless of which session recorded them.
-
-    Two kinds of row settle an agent: its delegation row (it stopped), and a
-    prior stall row naming it (it was already reported — that is the dedup, so
-    a stalled agent is named once per tail window rather than at every
-    subsequent settle).
-
-    The session is deliberately NOT part of the match. After a `/clear` the
-    stop row lands under the NEW session id while the sidecar stays under the
-    OLD one, so a session-filtered settled set can never see the stop and the
-    orphaned sidecar is reported pending past every threshold, forever.
-    `agent_id` is globally unique by design, which is what makes the id alone a
-    sound join; the worst a collision could cost is one missed stall row, never
-    a false one.
-
-    Bounded at TAIL_BYTES (256 KB, ~800 rows). Edge cost, stated rather than
-    hidden: a delegation whose stop row has aged out of that window looks
-    un-stopped, so a still-present sidecar past the threshold is reported
-    pending once more before the new stall row re-suppresses it.
-    """
-    settled = set()
-    path = agentlog.stream_path(LOG_STREAM, LOG_PATH_ENV)
-    if not path or not os.path.isfile(path):
-        return settled
-    for line in _read_tail(path, TAIL_BYTES).split("\n"):
-        if not line.strip():
-            continue
-        try:
-            obj = json.loads(line)
-        except (json.JSONDecodeError, ValueError):
-            continue
-        if not isinstance(obj, dict):
-            continue
-        if "event" not in obj:
-            # D7 reader rule: no `event` key means a delegation row. A debug
-            # `error` row also lacks one, but carries no agent_id, so the
-            # _agent_key guard below drops it without a second predicate.
-            key = _agent_key(obj.get("agent_id"))
-            if key:
-                settled.add(key)
-        elif obj.get("event") == STALL_EVENT:
-            # Any session's stall row settles it — same uniqueness argument.
-            for entry in obj.get("pending") or []:
-                if isinstance(entry, dict):
-                    key = _agent_key(entry.get("agent_id"))
-                    if key:
-                        settled.add(key)
-    return settled
-
-
-def _sidecar_keys(subagents_dir):
-    """Every agent this session STARTED, from the sidecar files themselves.
-
-    The sidecar directory is deliberately the started universe. It is the exact
-    predicate that gates a delegation row being written, so a phantom
-    SubagentStop (an event for an agent that never got a `subagents/` entry)
-    can neither produce a stop row nor enter the pending set — one predicate,
-    one code path, no join to go wrong.
-
-    THIS DIRECTORY ONLY. Do NOT extend `_sidecar_dir`'s sibling probe to here:
-    that probe is a single-filename lookup for an agent already known to have
-    stopped, whereas widening the started universe would sweep in every
-    historical session under the slug — delegations whose stop rows aged out of
-    the 256 KB ledger tail long ago — and report every one of them as stalled,
-    at every Stop. The asymmetry is the design, not an oversight; it is pinned
-    by test_a_sidecar_only_in_a_sibling_session_is_never_reported_pending.
-    """
-    keys = []
-    for name in os.listdir(subagents_dir):
-        if not (name.startswith(AGENT_FILE_PREFIX) and name.endswith(SIDECAR_SUFFIX)):
-            continue
-        key = name[len(AGENT_FILE_PREFIX):-len(SIDECAR_SUFFIX)]
-        if key:
-            keys.append(key)
-    return keys
-
-
 def _stall_scan(payload, just_stopped_id):
     """Append AT MOST ONE stall row for delegations still pending past the
     threshold. Runs at the tail of both event paths.
@@ -612,22 +420,14 @@ def _stall_scan(payload, just_stopped_id):
         if subagents_dir is None:
             return
         session_id = payload.get("session_id", "unknown")
-        settled = _settled_ids()
-        if just_stopped_id:
-            settled.add(just_stopped_id)
-
         now = datetime.now(timezone.utc)
         pending = []
-        for key in _sidecar_keys(subagents_dir):
-            if key in settled:
-                continue
+        for key in _pending_keys(subagents_dir, [just_stopped_id]):
             started_at = _started_at(subagents_dir, key)
             pending_ms = _elapsed_ms(started_at, now)
             if pending_ms is None or pending_ms < STALL_SECONDS * 1000:
                 continue
-            meta = _read_sidecar(
-                os.path.join(subagents_dir, AGENT_FILE_PREFIX + key + SIDECAR_SUFFIX)
-            ) or {}
+            meta = _read_sidecar(_sidecar_path(subagents_dir, key)) or {}
             pending.append({
                 "agent_id": key,
                 "agent_type": _clean_str(meta.get("agentType")),

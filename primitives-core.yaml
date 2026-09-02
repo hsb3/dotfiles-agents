@@ -214,6 +214,18 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: manager-package-gate
+    type: hook
+    source: primitives-core/hooks/manager-package-gate
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+  - id: live-worker-git-guard
+    type: hook
+    source: primitives-core/hooks/live-worker-git-guard
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: plugin-feedback-session
     type: hook
     source: primitives-core/hooks/plugin-feedback-session
