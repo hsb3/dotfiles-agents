@@ -1,6 +1,6 @@
 ---
 name: task-authoring
-description: Write tracked work items a cold agent can actually execute — titles, acceptance criteria, thresholds, approval gates, scope ownership. Use whenever creating or rewriting a Kaneo task, a GitHub issue, an OpenSpec change, or any tracker item, and when reviewing an existing task for executability.
+description: Write tracked work items a cold agent can actually execute — titles, acceptance criteria, thresholds, approval gates, scope ownership. Use whenever creating or rewriting a Kata issue, a Kaneo task, a GitHub issue, an OpenSpec change, or any tracker item, and when reviewing an existing task for executability.
 ---
 
 # Task authoring
@@ -10,13 +10,13 @@ coin flip you delegated.
 
 ## Titles: for scanning, not describing
 
-- **Shape `area: outcome`** — first token is the component touched (`auth-proxy`, `docs`,
-  `evals`, `ops`). Scanning the lane then groups related items for free.
+- **Shape `area: outcome`** — first token is the component touched (`api`, `docs`,
+  `ci`, `ops`). Scanning the list then groups related items for free.
 - **Outcome, not symptom or activity** — "runs fail loudly on infra errors", not
   "investigate why errors surface as normal replies". A finding-shaped title goes stale the
   moment work starts; an outcome-shaped one *is* the acceptance criterion.
 - **One clause, <=70 chars.** Evidence, issue/PR numbers, and "follow-up to X" belong in
-  the body; past the limit the board UI truncates anyway.
+  the body; past the limit most tracker UIs truncate anyway.
 - **No `feat:`/`fix:`/`chore:` prefixes** — labels carry type; the prefix burns the
   highest-value characters in the title.
 - **Prefix non-work items by kind** (`DECISION:`, `REF:`, `HANDOFF —`) so they never
@@ -49,9 +49,11 @@ given a judgment word produce two results; given a threshold, one.
 
 ## Gates and approvals need a mechanism
 
-- "Apply after owner review" is not executable. Reference the ritual explicitly: post the
-  artifact as a board comment -> set status blocked -> stop -> owner approves by comment ->
-  resume. Otherwise a cold agent blocks forever or self-approves.
+- "Apply after owner review" is not executable. Reference the ritual explicitly, in the
+  tracker's own signal: post the artifact as a comment on the item -> raise its blocked /
+  needs-human state (Kata `work.attention needs-human`, a Kaneo blocked lane, a GitHub label)
+  -> stop -> owner approves by comment -> resume. Otherwise a cold agent blocks forever or
+  self-approves.
 - Say what the task may **not** touch — CI workflows, pre-commit gate scripts, anything
   whose pass/fail meaning other tasks depend on. "Path strings yes, job logic no" is a
   one-line authority statement that prevents a stall.
@@ -59,12 +61,12 @@ given a judgment word produce two results; given a threshold, one.
 ## Scope, sequencing, ownership
 
 - **"Coordinate with task X" is not sequencing.** If two tasks can edit the same files, name
-  one owner per file set and make the ordering a blocking edge on the board.
+  one owner per file set and make the ordering a blocking link in the tracker.
 - **State the delta, not the ideal end state.** If the goal is already mostly true, a cold
   agent can't tell what to change — say what is wrong today.
 - **Classify artifacts by function, not location.** A deploy script living in `scripts/dev/`
   went unclaimed by both the deploy task and the scripts task.
-- **Deliverables need a location and a lifecycle**: where the output goes (board comment vs
+- **Deliverables need a location and a lifecycle**: where the output goes (tracker comment vs
   in-repo file), who consumes it, what happens after approval.
 
 ## Facts and tools named in the task

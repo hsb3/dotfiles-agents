@@ -52,7 +52,7 @@
       "description": "Track a repo's work on a live Kaneo board instead of in-repo task files, so parallel sessions stop claiming the same task and no branch grows its own backlog. Ships the workflow skill, the task-authoring skill (write tracker items a cold agent can execute), the board's MCP server definition, a reference manager agent, and hooks that keep claim authority in the root session, block board writes while the config is incomplete, catch a stray MCP registration that would silently authenticate the owner instead of the agent, and stamp every write with its agent and session. Configure with five KANEO_* env vars; nothing about an instance is baked in. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "kaneo",
       "source": "./plugins/kaneo",
-      "version": "0.13.0"
+      "version": "0.13.1"
     },
     {
       "author": {
@@ -97,7 +97,7 @@
       "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, plus a documented exemption class for skills that prescribe an opt-in in-repo system. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.9.0"
+      "version": "0.9.1"
     }
   ]
 }
