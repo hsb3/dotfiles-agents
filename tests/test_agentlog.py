@@ -39,6 +39,8 @@ EXPECTED_STREAMS = {
     "context-watermark": ("context-watermark", "CONTEXT_WATERMARK_LOG_PATH"),
     "delegation-watermark": ("delegation-watermark", "DELEGATION_WATERMARK_LOG_PATH"),
     "handoff-freshness-guard": ("handoff-guard", "HANDOFF_GUARD_LOG_PATH"),
+    "live-worker-git-guard": ("live-worker-git-guard", "LIVE_WORKER_GIT_GUARD_LOG_PATH"),
+    "manager-package-gate": ("manager-package-gate", "MANAGER_PACKAGE_GATE_LOG_PATH"),
     "session-handoff-surfacer": ("handoff-surfacer", "HANDOFF_SURFACER_LOG_PATH"),
     "subagent-telemetry": ("delegation", "SUBAGENT_TELEMETRY_LOG_PATH"),
     "worktree-isolation": ("worktree-isolation", "WORKTREE_ISOLATION_LOG_PATH"),

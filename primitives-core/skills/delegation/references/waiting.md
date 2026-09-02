@@ -58,12 +58,24 @@ your report is the only thing you can send, and it is sent by finishing.
 
 ## The liveness check
 
-To tell a dead in-flight agent from a slow one, check whether it is still writing `[untested]`.
-Read that signal twice, a few minutes apart:
+**An unconditional fixed-duration sleep loop is a violation, not a wait** `[field]`. It names no
+event, so it cannot end when the event arrives, and it makes the waiter itself look dead.
+Polling with a real break condition and a bound is the degraded-but-honest form; doing other
+work and letting the completion notification arrive beats both.
 
-- **It advanced** → alive and working. Slow is not dead; do not re-dispatch.
-- **Unchanged across two checks** → presumed dead. Stop waiting, and treat the work as not done
-  rather than as done-and-unreported.
+Reading silence wrong costs more than over-waiting — it abandons a live chain and reports
+finished work as not done — so take it in this order:
+
+1. **Live children first.** A parent blocked on a child writes nothing; silence is the correct
+   state of a correctly-waiting parent. Silence only means dead for an agent with no live
+   children, and applied recursively the signal is the leaf.
+2. **Then the last tool call before the gap.** A blocking call of known duration — a sleep, a
+   poll loop, a long build — is a scheduled wake, not death, and it says so. Presuming death
+   before its deadline is always wrong.
+3. **Only then read the signal twice**, a few minutes apart `[untested]`. Advancing → alive and
+   working; slow is not dead, do not re-dispatch. Unchanged across both checks, with no live
+   children and no blocking call in flight → presumed dead. Stop waiting, and treat the work as
+   not done rather than as done-and-unreported.
 
 **What is not a liveness check:** polling the work product. A test suite is green between
 mutants, a file is complete between edits, and a gate passes on a tree a worker is halfway
@@ -71,10 +83,25 @@ through rewriting. Polling for the outcome is how a session commits over live wo
 completion notification is the only signal that the work is finished; a liveness signal only
 tells you whether anyone is still there.
 
+**Why the rule reads this way.** The first version — silence across two reads means dead —
+produced a false positive within the hour, on the exact agent type it was written for `[field]`.
+A live `manager`'s liveness signal was unchanged across two reads 6m13s apart while the harness's
+own listing reported it running, and it resumed normally. Read back from its own transcript, the
+freeze was not a parent politely blocked on a child: the manager had issued
+`for i in $(seq 1 55); do sleep 10; done`, one of five unconditional sleep loops in 52 minutes
+totalling 2750 commanded seconds, and it overslept its own worker's completion by ~5.5 minutes. A
+live-children check alone would have returned the same false verdict at the second read, since
+the child had finished by then; the discriminator was the agent's own last tool call. Only the
+false positive is measured — the corrected rule above is still `[untested]` as a rule.
+
 <!-- harness:claude-code -->
-The signal is on disk. Every running agent appends to its own transcript under the session
-directory, so the file's mtime is the liveness reading — available to a `manager` and to the
-`strategist` alike, since both have Bash:
+The `strategist` reaches for `ListAgents` first: it lists every agent the session spawned and
+whether each is still running, in one call, and it reported the truth in the false positive above
+when the filesystem reading did not.
+
+A `manager` does not carry that tool, so its reading is the fallback, and the signal is on disk.
+Every running agent appends to its own transcript under the session directory, so the file's
+mtime is the liveness reading, and both layers have Bash to take it:
 
 ```sh
 # The session's agent transcripts. Slug = the project path with every
@@ -86,17 +113,13 @@ d=$(/bin/ls -dt ~/.claude/projects/"$slug"/*/subagents 2>/dev/null | head -1)
 /bin/ls -lt "$d"/agent-*.jsonl | head
 ```
 
-Two things make the reading trustworthy. The `agent-<id>.meta.json` beside each transcript
+Two things make the fallback trustworthy. The `agent-<id>.meta.json` beside each transcript
 carries `agentType`, `description`, and — for a manager's own workers — `spawnDepth: 2` and
 `parentAgentId`, so you can confirm the row you are staring at is the dispatch you made rather
 than a sibling's. And a manager's workers land in the **same** session directory as the
 manager, so one listing covers both layers. Both facts are the on-disk layout the
 `subagent-telemetry` hook already reads and documents; re-verify them there before relying on
 a detail this file does not name.
-
-The strategist also has `ListAgents`, which lists the agents it spawned in one call. A manager
-does not carry that tool, which is why the check above is written against the filesystem: it is
-the one form both layers can run.
 <!-- /harness -->
 
 ## File ownership while a worker is live
@@ -133,9 +156,11 @@ Each ends in termination under the rules above.
    and its bound before the wait starts (§1, item 3). A condition that cannot name what
    satisfies it is rejected as a wait at adoption, and the agent proceeds or escalates.
    **Terminates.**
-3. **A manager cannot tell a dead worker from a slow one.** It runs the liveness check. A signal
-   still advancing means keep waiting on a real producer; a signal frozen across two checks
-   means presumed dead, and the work is reported not-done rather than waited on further.
+3. **A manager cannot tell a dead worker from a slow one.** It runs the liveness check in order:
+   live children, then the last tool call before the gap, then the signal twice. Anything
+   unresolved means keep waiting on a real producer while doing other work — never sleeping on a
+   fixed timer. A frozen signal with no live children and no blocking call in flight means
+   presumed dead, and the work is reported not-done rather than waited on further.
    **Terminates.**
 4. **A manager overwrites its own live builder's file.** The ownership rule denies the edit
    before it happens; the fix goes on the punch list or into the worker as an amendment, and

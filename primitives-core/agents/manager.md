@@ -96,11 +96,24 @@ named live dispatch, a running command, or an escalation upward), and what you d
 it does not arrive. Missing any one, you are not waiting, you are deadlocked — stop and
 take the fallback.
 
+**An unconditional sleep loop is not a wait, it is a violation.** `for i in $(seq 1 55);
+do sleep 10; done` names no event, so it cannot end when the event arrives: one manager
+ran five of them in 52 minutes, 2750 commanded seconds, and sat idle 5.5 minutes past its
+own worker's completion. Polling with a real break condition and a bound is the
+degraded-but-honest form. Better than either: do other work and let the completion
+notification arrive.
+
 **Polling a worker's output is not a liveness check.** A test suite is green between
 mutants and a file is complete between edits; the completion notification is the only
-signal the work is finished. To tell a dead worker from a slow one, check whether it is
-still active. If frozen across checks, stop waiting and report the link as not done,
-never as done-and-unreported.
+signal the work is finished.
+
+**Silence is not death**, and the wrong verdict costs more than over-waiting — it abandons
+a live chain and reports finished work as not done. Before presuming a worker dead: it is
+only a candidate if it has no live children of its own, and its last tool call before the
+gap was not a blocking call of known duration (a sleep, a poll, a long build), which is a
+scheduled wake rather than a corpse. Only with those cleared and its signal frozen across
+two checks do you stop waiting and report the link as not done, never as
+done-and-unreported.
 
 <!-- harness:claude-code -->
 Still active means still writing its transcript:
@@ -113,7 +126,8 @@ d=$(/bin/ls -dt ~/.claude/projects/"$slug"/*/subagents 2>/dev/null | head -1)
 ```
 
 mtime advancing means alive — slow is not dead, do not re-dispatch. mtime unchanged
-across two checks a few minutes apart means presumed dead.
+across two checks a few minutes apart, with the two conditions above cleared, means
+presumed dead.
 <!-- /harness -->
 
 ## The standard cycle — build → review → revise → simplify
@@ -160,5 +174,15 @@ externalize state and report up rather than compacting.
 
 ## Proof package upward
 
-Each DoD item with its evidence · punch list disposition · deviations and deferred
-items from worker handoff notes · what remains unverified.
+**Your turn does not end until you have the package or have hit a named stop condition.**
+A progress note is never a final message. Every worker you dispatched has already
+delivered its report — that return IS its reply — so once a dispatch comes back there is
+nothing left to wait for, and "waiting on them" strands the whole wave until someone
+upstream notices.
+
+Your final message therefore starts with exactly one of two lines:
+
+- `## Proof package` — each DoD item with its evidence · punch list disposition ·
+  deviations and deferred items from worker handoff notes · what remains unverified.
+- `## Stopped: <named condition>` — the escalation, naming the condition, what you
+  verified before stopping, and what remains.

@@ -25,6 +25,12 @@ and exits 0/1; `make help` lists the wrapping targets. Run them via make from th
   `gen_opencode.py`, then runs the generated installer (`--global` or `--project <dir>`).
   Re-run after `git pull` to update.
 
+## Analysis (not in `make ci`)
+
+| Script | What it measures |
+|---|---|
+| `agent_gaps.py` | Attributes every 60s+ quiet period in the local subagent transcripts (`~/.claude/projects`) to the tool call preceding it, splits self-commanded sleeps into poll vs unconditional, and states the unexplained remainder. `--json`, `--top N`, `--threshold`. |
+
 ## Harness campaign (not in `make ci`)
 
 - `harness_campaign.sh` — the full eval grid over cased candidates

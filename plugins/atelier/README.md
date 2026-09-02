@@ -31,6 +31,8 @@ flowchart TD
     Mgr -.->|every dispatch| WC[worker-context injects the covenant]
     Workers -.->|every write| CC[config-custody and worktree-isolation]
     Workers -.->|every finish| Tel[subagent-telemetry logs the row]
+    Mgr -.->|turn ends without the package| PG[manager-package-gate sends it back once]
+    Done -.->|git while a worker is live| GG[live-worker-git-guard denies the call]
     Ctx -.->|raised by| CW[context-watermark]
     Hand -.->|stale handoff| FG[handoff-freshness-guard blocks the compact]
 ```
@@ -62,6 +64,8 @@ its commitment, the other cuts comments that cannot.
 | `config-custody` | hook (`PreToolUse`) | Denies **subagent** edits to the config listed under `protected:` in the activation file — the ownership map made machine-readable, so a worker cannot quietly edit the gate that defines its own acceptance. The main session is never restricted; only `enforce: strict` actually denies. |
 | `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (120k) / hard (160k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
 | `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
+| `live-worker-git-guard` | hook (`PreToolUse`) | Denies a mutating git call (`commit`, `push`, `merge`, `pull`, `rebase`, `checkout`, `stash`, `reset`, …) while this session has a live delegation sharing its checkout — a commit mid-run captures a half-applied edit, and a pull or checkout removes a worker's uncommitted files out from under it. Workers in their own worktree do not count. Read-only git never fires. Override, loudly, by prefixing `ATELIER_GIT_GUARD_OVERRIDE=1`; never `git stash` around it. |
+| `manager-package-gate` | hook (`SubagentStop`) | Refuses a `manager`'s turn ending on a progress note: the final message must start `## Proof package` or `## Stopped: <condition>`, or the manager is sent back once to finish — every worker report it was "waiting on" has already been delivered. One nudge, never a loop; other agent types are untouched. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
 | `subagent-telemetry` | hook (`SubagentStop`, `Stop`) | Appends one row per delegation (agent id, agent type, model, context tokens, start time, duration) to a local ledger, so tier usage and per-agent wall clock can be measured offline. On `Stop` it also records delegations still pending past a threshold. Silent — no stdout, never blocks. |

@@ -1,0 +1,6 @@
+{
+  "event": "SubagentStop",
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Checking the manager's proof package..."
+}
