@@ -45,7 +45,7 @@ origin/main` (remove the worktree after).
 Keep changes surgical and match existing style. Get the owner's approval before major
 information-architecture changes (moving/renaming top-level structures, reshaping the roster).
 
-GitHub issues are bug intake only; planned work lives on the Kaneo board (see "Task tracking").
+GitHub issues are bug intake only; planned work lives on the kata board (see "Task tracking").
 
 ### Branch hygiene
 
@@ -58,25 +58,27 @@ pre-restructure archive — never delete it.
 
 ## Task tracking
 
-The tracker is the **Kaneo board** (project `DFA` / "dotfiles-agents", workspace `hsb3`) — a
-live board, not files in this tree. Work it through the `kaneo` plugin's skill: the claim
-ritual, the level rules, and how decisions get recorded are that skill's law, not this page's.
+The tracker is the **kata board** (project `dotfiles-agents`, bound by `.kata.toml`, served by
+the hosted daemon) — a live board, not files in this tree. The kata block below is the law for
+working it. The Kaneo board (project DFA) that preceded it was archived on 2026-09-02 after every
+open task was carried over; a migrated issue carries the old number in `kaneo_task_number`
+metadata (`kata list --meta kaneo_task_number=<N>`), and the `kaneo-status:up-next` label marks
+what sat in the owner's queue at cutover.
 
-**The session handoff is a board task too**: the one labeled `HANDOFF` in the `Document` lane
-(DFA-233). Read it at session start; at session end rewrite its **description** in place under
-the `handoff` skill's content rules. **No handoff file is tracked in this tree, and there is no
-handoff branch — never create either.**
+**The session handoff is a board issue too**: `8xyk` (title "Session Handoff", label
+`handoff`; GitHub #329 mirrors it). Read it at session start; at session end rewrite its
+**body** in place under the `handoff` skill's content rules. **No handoff file is tracked in this
+tree, and there is no handoff branch — never create either.**
 
 `handoff-freshness-guard` knows this via the `handoff: {mode: external, …}` block in
 `.claude/atelier.local.md` (gitignored, per-project): it stats `.claude/handoff.stamp` instead
-of searching for a handoff file. **Update the board task first, touch the stamp last** — the
+of searching for a handoff file. **Update the board issue first, touch the stamp last** — the
 guard reads the stamp's age, never the board's content, so an early touch certifies a handoff
 that has not happened. No stamp yet in a fresh clone means the first manual `/compact` is
 refused until `/handoff` runs, which is the intended answer. Needs atelier ≥ 0.15.0.
 
-Config is the five `KANEO_*` values in `.claude/settings.local.json` (gitignored — they carry a
-credential); missing or wrong, ask the owner rather than guessing. Never create a
-`backlog.md`, a `TODO` file, or any other in-repo task list — file it on the board.
+Never create a `backlog.md`, a `TODO` file, or any other in-repo task list — file it on the
+board.
 
 <!-- BEGIN KATA (managed by `kata init --with-agents`) -->
 Kata is the system of record for intent.

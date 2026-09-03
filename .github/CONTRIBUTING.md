@@ -96,12 +96,12 @@ design smell; raise it before adding one.
 
 ## Where work is tracked
 
-**A live Kaneo board is the task system** — project `DFA` ("dotfiles-agents", workspace
-`hsb3`), not files in this tree. Planned work, its status, and the decisions taken along the
-way all live there; the board replaced the in-repo Backlog.md tree on 2026-08-11 (the retired
-tree is recoverable from git history). Board access is configured per machine via the five
-`KANEO_*` values in `.claude/settings.local.json` (gitignored); the workflow itself — claiming,
-statuses, decision records — is the `kaneo` plugin's skill, and that skill is the law.
+**A live kata board is the task system** — project `dotfiles-agents`, bound by `.kata.toml`
+and served by the hosted daemon, not files in this tree. Planned work and its status live
+there; the board replaced the in-repo Backlog.md tree on 2026-08-11 (via a Kaneo board,
+archived 2026-09-02 once its open tasks were carried over; the retired tree is recoverable
+from git history). The workflow — search first, claim, keep `work.attention` truthful, close
+with evidence — is the kata block in AGENTS.md, and that block is the law.
 
 **GitHub issues stay bug-report intake only** — the bug template is the only one offered. A
 reported bug becomes a board task when it is planned; after the fix merges into `dev`, close

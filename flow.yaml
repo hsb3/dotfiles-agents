@@ -79,8 +79,8 @@ nodes:
     layer: workbench
     class: authored
     status: current
-    paths: [.claude, .vscode, .kata.toml]
-    note: "Project-local session tooling: under .claude/, the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the untracked secrets home (.claude/operations/, decision-8 — ex _meta/operations), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect and the five KANEO_* values pointing this repo at its board are machine-local (settings.local.json, untracked — the tracker itself is off-tree since the Backlog.md retirement, 2026-08-11); under .vscode/, git.branchProtection for main. At the root, .kata.toml binds the workspace to its kata project by name (the per-machine .kata.local.toml override is gitignored). Not roster primitives; never distributed."
+    paths: [.claude, .vscode, .kata.toml, .mcp.json]
+    note: "Project-local session tooling: under .claude/, the pocketbase-best-practices and publish-to-main skills, tracked project memory (.claude/memory/), the untracked secrets home (.claude/operations/, decision-8 — ex _meta/operations), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — the tracker itself is off-tree since the Backlog.md retirement, 2026-08-11; Kaneo until 2026-09-02, kata since); under .vscode/, git.branchProtection for main. At the root, .kata.toml binds the workspace to its kata project by name (the per-machine .kata.local.toml override is gitignored) and .mcp.json runs the kata MCP server through .claude/kata_mcp_shim.py, a copy of the kata-oversight shim that strips root oneOf/allOf from tool schemas so Claude Code does not silently drop kata.close/edit/list/ready/set_deadline/set_schedule. Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime

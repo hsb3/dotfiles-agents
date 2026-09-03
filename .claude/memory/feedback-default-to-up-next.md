@@ -18,5 +18,9 @@ something nobody prioritized while the actual next thing sits untouched.
 **How to apply:** read the lane live at session start — the handoff records intent, not
 inventory. An empty `Up Next` means ask the owner to stock it, not quietly fall back to
 `To Do`; it was empty on 2026-08-18. Everything else about working a card is unchanged: the
-claim ritual and level rules stay the kaneo skill's law, and
+claim ritual is the kata block in AGENTS.md, and
 [[reproduce-before-fixing-a-card]] still governs before building anything you pull.
+
+**Since the kata cutover (2026-09-02):** kata has no lanes. What sat in `Up Next` at cutover
+carries the `kaneo-status:up-next` label (`kata list --label kaneo-status:up-next`); the
+owner's queue going forward is whatever he schedules or prioritizes (`kata next`).
