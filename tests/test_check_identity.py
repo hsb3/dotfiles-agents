@@ -134,18 +134,18 @@ class ExamplesIssueRefCarveOut(unittest.TestCase):
         return problems
 
     def test_bare_issue_ref_in_skill_body_still_flagged(self):
-        probs = self._scan_at("primitives-core/skills/comm-kit/SKILL.md", "fixes #123 today")
+        probs = self._scan_at("primitives-core/skills/comms/SKILL.md", "fixes #123 today")
         self.assertTrue(any("issue" in p for p in probs))
 
     def test_bare_issue_ref_in_scripts_still_flagged(self):
         probs = self._scan_at(
-            "primitives-core/skills/comm-kit/scripts/deliver.py", "# see #123 for context"
+            "primitives-core/skills/comms/scripts/deliver.py", "# see #123 for context"
         )
         self.assertTrue(any("issue" in p for p in probs))
 
     def test_bare_issue_ref_in_examples_dir_passes(self):
         probs = self._scan_at(
-            "primitives-core/skills/comm-kit/examples/morning-briefing.spec.json",
+            "primitives-core/skills/comms/examples/morning-briefing/sample.spec.json",
             '{"footer": "tracked on #123"}',
         )
         self.assertFalse(any("issue" in p for p in probs))
@@ -153,14 +153,14 @@ class ExamplesIssueRefCarveOut(unittest.TestCase):
     def test_personal_name_in_examples_dir_still_flagged(self):
         # The carve-out is issue-ref-only — every other identity rule still applies.
         probs = self._scan_at(
-            "primitives-core/skills/comm-kit/examples/morning-briefing.spec.json",
+            "primitives-core/skills/comms/examples/morning-briefing/sample.spec.json",
             "Produce Henry's report.",
         )
         self.assertTrue(any("Henry" in p for p in probs))
 
     def test_org_token_in_examples_dir_still_flagged(self):
         probs = self._scan_at(
-            "primitives-core/skills/comm-kit/examples/morning-briefing.spec.json",
+            "primitives-core/skills/comms/examples/morning-briefing/sample.spec.json",
             '{"note": "deploy to raptorxai prod"}',
         )
         self.assertTrue(any("raptorxai" in p for p in probs))

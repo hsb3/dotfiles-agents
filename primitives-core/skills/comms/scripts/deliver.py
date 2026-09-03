@@ -45,7 +45,7 @@ DEFAULT_THEME = "boardroom"
 
 # Project-local preferences, discovered by walking up from the spec file. Recognized keys
 # are flat strings only; `audio` names an audio provider, the rest are config names.
-LOCAL_RELPATH = os.path.join(".claude", "comm-kit.local.md")
+LOCAL_RELPATH = os.path.join(".claude", "comms.local.md")
 LOCAL_KEYS = frozenset({"theme", "voice", "repo", "audio"})
 
 # macOS `say`: no account, no network, no SDK. Any other provider value is a command
@@ -235,7 +235,7 @@ def _unquote(value: str) -> str:
 
 
 def find_local_config(start_dir: str | None) -> str | None:
-    """First ``.claude/comm-kit.local.md`` at or above *start_dir*, else None.
+    """First ``.claude/comms.local.md`` at or above *start_dir*, else None.
 
     No directory to start from — the ``types`` subcommand, say, which has no spec — means
     no project context and therefore no file.
@@ -1317,7 +1317,7 @@ def _provider_cmd(provider: str, script_path: str, out_path: str) -> list[str]:
             raise DeckError(
                 "macOS `say` is not on PATH, so no audio can be rendered here. Ship the "
                 "deck plus the written script instead, or point the `audio` key in "
-                ".claude/comm-kit.local.md at `none` (audio deliberately off) or at a "
+                ".claude/comms.local.md at `none` (audio deliberately off) or at a "
                 "command template using {script} and {out}."
             )
         return [

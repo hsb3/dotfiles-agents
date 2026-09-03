@@ -1,4 +1,4 @@
-"""Tests for the comms deck renderer (primitives-core/skills/comms/scripts/render_deck.py).
+"""Tests for the comms deck engine, bare slides.json path (primitives-core/skills/comms/scripts/deliver.py).
 
 Hermetic and stdlib-only: nothing here launches Chrome or touches the network. The PDF path
 is covered only for its guard behavior; the render/validate path — the part that decides
@@ -13,7 +13,7 @@ import unittest
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "primitives-core", "skills", "comms", "scripts"))
 
-import render_deck as rd  # noqa: E402
+import deliver as rd  # noqa: E402
 
 EXAMPLES = os.path.join(REPO, "primitives-core", "skills", "comms", "examples")
 

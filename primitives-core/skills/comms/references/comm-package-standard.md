@@ -18,19 +18,23 @@ Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 ## Two toolchains
 
-| | `render_deck.py` (bundled script) | pptx-themes (skill) |
+| | `deliver.py` (bundled engine) | pptx-themes (skill) |
 | --- | --- | --- |
-| Source | `slides.json` (17 block types: heading / subtitle / lead / bullets / columns / stat / callout / divider / table / steps / timeline / matrix / quote / code / image / svg / chart) | `deck.js` (pptxgenjs) + `package.json` |
-| Theme | the script's built-in boardroom styling | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
-| Output | `.html` + `.pdf` (+ `.mp3` if an audio MCP is available) | `.pptx` + `.pdf` |
-| Strengths | fast, structured, validated, linkifies bare #refs, zero install | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
+| Source | a spec (`spec.json` / `.yaml`: type, title, repo, theme, voice, sections of slides) or a bare `slides.json` array; 17 block types: heading / subtitle / lead / bullets / columns / stat / callout / divider / table / steps / timeline / matrix / quote / code / image / svg / chart | `deck.js` (pptxgenjs) + `package.json` |
+| Theme | `themes/*.json` by name (7 palettes, `boardroom` default) | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
+| Output | `.html` + `.pdf` (+ narration script and `.m4a` via `narrate`) | `.pptx` + `.pdf` |
+| Strengths | fast, structured, validated + voice-linted with rule ids, linkifies bare #refs, zero install | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
 | Use for | internal, frequent, decision-first (morning, EOD, weekly) | external, high-stakes (advisor board, client overview) |
 
-`render_deck.py` is stdlib-only Python and ships inside this skill, so the self-comms need no
-MCP server. PDF export shells out to headless Chrome; if Chrome is absent, render `--html`
-and print from any browser — the HTML is fully self-contained (styles inlined, images
-base64-embedded, no network). Verified against every existing deck under `_meta/briefings/`
-across three repos (22 decks / 256 slides) at the time it replaced the MCP path.
+`deliver.py` is stdlib-only Python and ships inside this skill, so the self-comms need no
+MCP server (YAML specs need PyYAML; JSON needs nothing). PDF export shells out to headless
+Chrome; if Chrome is absent, render `--html` and print from any browser — the HTML is fully
+self-contained (styles inlined, images base64-embedded, no network). Doctrine is config
+selected by name - `types/` (sections, page budgets, gather commands), `themes/`, `voices/` -
+plus per-project defaults in `.claude/comms.local.md` (`theme` / `voice` / `repo` / `audio`;
+CLI flag > spec field > project local > type default). Verified against every existing deck
+under `_meta/briefings/` across three repos (22 decks / 256 slides) when the bare-array path
+replaced the MCP renderer; a bare `slides.json` array still builds today.
 
 For pptx-themes decks, invoke the **`pptx-themes` skill** - it owns the approved palette, semantic
 theme tokens, typography, and the visual-QA workflow. Available token themes: `actuarial-signal`,
@@ -53,10 +57,10 @@ The skill is global; outputs are per-project. Each deliverable is a dated folder
 
 ```
 <project>/<briefings-dir>/<YYYY-MM-DD>-<slug>/
-  slides.json | deck.js (+ package.json)   # source: render_deck.py OR pptx-themes
+  spec.json | slides.json | deck.js (+ package.json)   # source: deliver.py OR pptx-themes
   <name>.pdf                                # exported deck (always)
   <name>.pptx                               # pptx-themes only
-  <name>.mp3                                # audio, if the playbook calls for it
+  <name>.m4a                                # audio, if the playbook calls for it
   sources.md                                # claim-by-claim provenance
 ```
 
@@ -86,29 +90,35 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 **script path** (morning, EOD, weekly):
 
 1. Gather current state - accuracy is the whole job (handoff + live counts + git log; see playbook).
-2. Author `slides.json` to the playbook's structure, mirroring the sample.
-3. Validate:
+2. Author the spec to the playbook's structure, mirroring the sample. A typed comm starts
+   from `deliver.py new <type>`; a comm without a type definition yet is a bare `slides.json`
+   array (no section or voice lint).
+3. Check:
 
    ```
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/render_deck.py" slides.json --validate
+   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/deliver.py" check spec.json
    ```
 
-   Schema errors must be zero. An unsupported block type is a hard error, never a silent
+   Every problem at once, with rule ids: spec schema, sections vs the type, block schema,
+   voice lint. Errors must be zero; a voice finding may be waived per spec (`waive:`), which
+   stays visible in review. An unsupported block type is a hard error, never a silent
    drop - a status deck that quietly loses content is worse than one that fails to build.
 4. Export:
 
    ```
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/render_deck.py" slides.json \
-     --pdf <name>.pdf --repo "<owner>/<repo>" --title "<deck title>"
+   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/deliver.py" build spec.json \
+     --html <name>.html --pdf <name>.pdf --repo "<owner>/<repo>"
    ```
 
-   `--repo` is the resolved slug and linkifies bare `#refs`. Add `--html <name>.html` to keep
-   the browser-openable copy alongside the PDF.
-5. Narrate (if audio, and an audio MCP is available): `mcp__audio__narrate` from a written
-   source in the SAME order as the deck; review the refined script for accuracy.
-6. Export audio: `mcp__audio__export_audio` -> `<name>.mp3`.
+   `--repo` (or the spec's `repo`) linkifies bare `#refs`. Open the HTML first and trim any
+   slide that overflows, then ship the PDF.
+5. Narrate (if audio): `deliver.py narrate spec.json --script <name>.txt` drafts the
+   spoken companion in deck order; rewrite it as speech (spell out ids and acronyms),
+   review for accuracy.
+6. Export audio: `deliver.py narrate <name>.txt --audio <name>.m4a` (macOS `say` by
+   default; `audio` in `.claude/comms.local.md` picks another provider or `none`).
 7. Write `sources.md` (provenance per claim + "board is the live source of truth").
-8. Deliver: `SendUserFile` the PDF (and MP3).
+8. Deliver: `SendUserFile` the PDF (and audio).
 
 **pptx-themes path** (advisor board, client overview):
 
@@ -120,11 +130,10 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 
 ## Gotchas
 
-- **TTS is flaky.** Default provider is Gemini and it intermittently times out
-  (`DEADLINE_EXCEEDED` / connection dropped); it usually succeeds on a later retry. The OpenAI
-  fallback needs `OPENAI_API_KEY`, often unset. If audio is blocked, ship the deck + the written
-  script and note the block in `sources.md`; don't loop on retries.
-- **There is no autofit.** `render_deck.py` renders slides as authored; content that exceeds a
+- **Audio never blocks a deck.** `build` never touches narration; if a provider fails, ship
+  the deck + the written script and note the block in `sources.md`; don't loop on retries.
+  `#` lines in a script are never spoken.
+- **There is no autofit.** `deliver.py` renders slides as authored; content that exceeds a
   1280x720 slide is clipped rather than silently shrunk. Trim the slide instead - overflow is
   a signal the slide is doing too much. Check by opening the `--html` output before shipping.
 - **Chrome must exit on its own terms.** The exporter polls for the finished PDF and then
@@ -139,5 +148,5 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 
 ## Delivery
 
-`SendUserFile` the PDF (and MP3) so they surface in a viewer, not the terminal. the reader reads long
+`SendUserFile` the PDF (and audio) so they surface in a viewer, not the terminal. the reader reads long
 content in a viewer; the terminal is for tap-to-answer decisions.

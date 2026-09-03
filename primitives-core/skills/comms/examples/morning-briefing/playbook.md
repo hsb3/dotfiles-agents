@@ -1,9 +1,9 @@
-_Morning briefing playbook. Shared machinery: `references/comm-package-standard.md`. Worked example: `sample.slides.json`._
+_Morning briefing playbook. Shared machinery: `references/comm-package-standard.md`. Worked examples: `sample.spec.json` (typed spec) and `sample.slides.json` (bare deck)._
 
 # Morning briefing
 
 Daily AM, audience the owner. **The one job: the decision he has to make today, in the first 30
-seconds.** Toolchain `render_deck.py`; audio companion (~2-3 min). Folder slug
+seconds.** Toolchain `deliver.py` (type `morning-briefing`); audio companion (~2-3 min). Folder slug
 `-morning-status`.
 
 ## The one rule

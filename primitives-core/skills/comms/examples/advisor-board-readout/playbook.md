@@ -4,7 +4,7 @@ _Advisor board readout playbook. Shared machinery: `references/comm-package-stan
 
 Monthly or as-called, audience advisors / board. **The one job: show progress against the thesis
 and make the ask of the board** - the open questions are commercial, not technical, which is
-exactly what the board is for. Toolchain pptx-themes (NOT `render_deck.py`); theme `actuarial-signal`;
+exactly what the board is for. Toolchain pptx-themes (NOT `deliver.py`); theme `actuarial-signal`;
 `.pptx` + `.pdf` with a confidential footer; audio optional. Folder slug `-advisor-overview`.
 
 > Invoke the `pptx-themes` skill for palette, tokens, typography, and visual QA. `sample.deck.js`

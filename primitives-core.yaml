@@ -41,12 +41,6 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
-  - id: comm-kit
-    type: skill
-    source: primitives-core/skills/comm-kit
-    origin: authored
-    disposition: qualified
-    targets: [claude-code, opencode]
   - id: github-project-board
     type: skill
     source: primitives-core/skills/github-project-board

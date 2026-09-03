@@ -1,4 +1,4 @@
-"""Tests for the comm-kit deck engine (primitives-core/skills/comm-kit/scripts/deliver.py).
+"""Tests for the comms deck engine (primitives-core/skills/comms/scripts/deliver.py).
 
 Hermetic and stdlib-only: nothing here launches Chrome or touches the network. The PDF path
 is covered only for its guard behavior; the loader/validate/lint/render path — the part that
@@ -18,12 +18,12 @@ import unittest
 from unittest import mock
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(REPO, "primitives-core", "skills", "comm-kit", "scripts"))
+sys.path.insert(0, os.path.join(REPO, "primitives-core", "skills", "comms", "scripts"))
 
 import deliver as dl  # noqa: E402
 
-EXAMPLES = os.path.join(REPO, "primitives-core", "skills", "comm-kit", "examples")
-MORNING_BRIEFING_SPEC = os.path.join(EXAMPLES, "morning-briefing.spec.json")
+EXAMPLES = os.path.join(REPO, "primitives-core", "skills", "comms", "examples")
+MORNING_BRIEFING_SPEC = os.path.join(EXAMPLES, "morning-briefing", "sample.spec.json")
 
 try:
     import yaml as _probe_yaml  # noqa: F401
@@ -73,10 +73,10 @@ def capture(fn, *args, **kwargs):
 
 
 def write_local(tmp: str, text: str) -> str:
-    """Write a project-local preferences file at ``<tmp>/.claude/comm-kit.local.md``."""
+    """Write a project-local preferences file at ``<tmp>/.claude/comms.local.md``."""
     d = os.path.join(tmp, ".claude")
     os.makedirs(d, exist_ok=True)
-    path = os.path.join(d, "comm-kit.local.md")
+    path = os.path.join(d, "comms.local.md")
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(text)
     return path
@@ -409,7 +409,7 @@ class PdfGuards(unittest.TestCase):
 
 
 class LocalPreferences(unittest.TestCase):
-    """`.claude/comm-kit.local.md` — house defaults, ranked below the spec."""
+    """`.claude/comms.local.md` — house defaults, ranked below the spec."""
 
     def spec(self, **top) -> dict:
         spec = {"type": "morning-briefing", "sections": full_morning_sections()}
@@ -714,7 +714,7 @@ class AudioProviderSeam(unittest.TestCase):
                 code, _o, err = run_cli(["narrate", script, "--audio", out])
         self.assertEqual(code, 1)
         self.assertIn("none", err)
-        self.assertIn("comm-kit.local.md", err)
+        self.assertIn("comms.local.md", err)
 
     def test_missing_script_file_is_a_clear_error(self):
         with tempfile.TemporaryDirectory() as tmp:
