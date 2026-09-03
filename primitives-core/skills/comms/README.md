@@ -10,7 +10,7 @@ provenance file.
 ## When it triggers
 
 Ask for any of those five by name, or for a "briefing", "status deck", "status readout",
-"board deck", or "comms package".
+"board deck", "comms package", or deck narration.
 
 ## The split that drives everything
 
@@ -18,7 +18,7 @@ Audience and stakes pick the toolchain, theme, and voice:
 
 | Audience | Comm type | Toolchain |
 |---|---|---|
-| You | morning briefing · end-of-day wrap-up · weekly planning | `scripts/render_deck.py`, fast and decision-first |
+| You | morning briefing · end-of-day wrap-up · weekly planning | `scripts/deliver.py`, fast and decision-first |
 | External | advisor board readout · client product overview | `pptx-themes`, polished and hand-laid |
 
 Each type has a self-contained playbook and a real worked example under `examples/<type>/`;
@@ -31,21 +31,43 @@ before reaching the decision. **Honest framing only** — describe what is actua
 call out gaps explicitly. **Claim-by-claim provenance** in `sources.md`; the board or registry
 is the live truth, not the deck.
 
-## What it needs
+## The engine
 
-**Nothing, for the three self-comms.** `scripts/render_deck.py` is stdlib-only Python bundled
-with the skill: it validates `slides.json`, renders a self-contained HTML document, and prints
-a PDF through headless Chrome. Without Chrome, render the HTML and print from any browser.
+`scripts/deliver.py` is stdlib-only Python bundled with the skill: one YAML/JSON spec in, a
+validated, voice-linted, themed HTML/PDF deck out, plus an optional spoken companion. YAML
+specs need PyYAML; JSON needs nothing. PDF export shells out to headless Chrome; without it,
+ship the self-contained HTML. A bare `slides.json` array (the pre-spec deck shape) still
+builds with defaults.
+
+Doctrine is config selected by name, authored once here and never restated per use:
+
+- **`types/`** — a deliverable's ordered sections with page budgets, guide strings, runnable
+  source-gathering commands, and default theme and voice. A new type is one JSON file and
+  zero engine changes. Shipped so far: `morning-briefing`.
+- **`themes/`** — 7 palettes x 28 semantic tokens (transliterated from the pptx-themes token
+  contract), injected into the deck CSS as custom properties.
+- **`voices/`** — register, id policy, numeric budgets, guidance. Voice doctrine runs as lint
+  with rule ids — all errors at once, waivable per spec.
+
+A `.claude/comms.local.md` in a project sets house defaults (`theme`, `voice`, `repo`, and
+the narration provider `audio`) for every deck built inside it. Precedence: CLI flag > spec
+field > project local > type default. `narrate` drafts a script from the deck, you rewrite it
+as speech, and `--audio` renders it — macOS `say` by default, any other provider as a
+`{script}`/`{out}` command template, so a hosted voice never becomes a dependency.
+
+```sh
+python3 scripts/deliver.py types
+python3 scripts/deliver.py check examples/morning-briefing/sample.spec.json
+python3 scripts/deliver.py build examples/morning-briefing/sample.spec.json --pdf /tmp/briefing.pdf
+python3 scripts/deliver.py narrate examples/morning-briefing/sample.spec.json --script /tmp/vo.txt
+python3 scripts/deliver.py narrate /tmp/vo.txt --audio /tmp/briefing.m4a   # macOS `say`
+```
 
 Composes with two sibling skills without replacing them: `pptx-themes` for the external decks,
 and `handoff` (ships in `atelier`) for the end-of-day wrap-up. Install those alongside it
-if you want the full set — neither arrives by way of this plugin. Audio companions use an
-audio MCP server when one is available and are skipped when it isn't.
+if you want the full set — neither arrives by way of this plugin.
 
 ## Install
 
-```
-claude plugin install comms@dotfiles-agents
-```
-
-Also ships as a member of the `code-desk` bundle.
+Ships in the `solo-skills` and `code-desk` bundles
+(`claude plugin install solo-skills@dotfiles-agents`).

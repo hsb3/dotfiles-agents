@@ -1,6 +1,6 @@
 ---
 name: comms
-description: Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional audio) to a consistent standard. Use when you ask for any of those by name, or for a "briefing", "status deck", "status readout", "board deck", or "comms package". Self-comms render through a bundled stdlib-Python script (no MCP server needed). Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.
+description: Produce your recurring communication deliverables - a morning status briefing, end-of-day wrap-up, weekly planning briefing, advisor board status readout, or client product overview - as a deck (plus optional spoken companion) to a consistent standard. Use when you ask for any of those by name, or for a "briefing", "status deck", "status readout", "board deck", "comms package", or deck narration/audio. Self-comms build through a bundled stdlib-Python engine (spec in, validated, voice-linted, themed HTML/PDF out; no MCP server). Composes with the pptx-themes skill (external decks) and the handoff skill (EOD wrap-up); it does not replace them.
 ---
 
 # Comms
@@ -18,15 +18,15 @@ comm type has a self-contained playbook + a real worked example in **`examples/<
 
 | If you want | Comm type | Toolchain | Audio | Playbook |
 | --- | --- | --- | --- | --- |
-| the decision for today | morning briefing | `render_deck.py` | yes (2-3 min) | `examples/morning-briefing/playbook.md` |
-| to close today, tee up tomorrow | end-of-day wrap-up | `render_deck.py` (light) | optional | `examples/end-of-day-wrapup/playbook.md` |
-| the week's plan + where we stand | weekly planning briefing | `render_deck.py` | yes (3-4 min) | `examples/weekly-planning/playbook.md` |
+| the decision for today | morning briefing | `deliver.py` (type `morning-briefing`) | yes (2-3 min) | `examples/morning-briefing/playbook.md` |
+| to close today, tee up tomorrow | end-of-day wrap-up | `deliver.py` (light) | optional | `examples/end-of-day-wrapup/playbook.md` |
+| the week's plan + where we stand | weekly planning briefing | `deliver.py` | yes (3-4 min) | `examples/weekly-planning/playbook.md` |
 | a board status readout + the ask | advisor board readout | pptx-themes | optional | `examples/advisor-board-readout/playbook.md` |
 | what a client gets + why to trust it | client product overview | pptx-themes | optional | `examples/client-product-overview/playbook.md` |
 
 The split is by **audience and stakes**: the three self-comms are fast, decision-first, and
-render through **`scripts/render_deck.py`** (bundled, stdlib-only Python - no MCP server); the
-two external comms are polished, hand-laid, and use the **pptx-themes** skill. Audience drives
+build through **`scripts/deliver.py`** (bundled, stdlib-only Python - no MCP server); the two
+external comms are polished, hand-laid, and use the **pptx-themes** skill. Audience drives
 toolchain, theme, voice, and how honest framing is phrased.
 
 ## Workflow
@@ -36,13 +36,31 @@ toolchain, theme, voice, and how honest framing is phrased.
 2. **Read `references/comm-package-standard.md`** for the per-project parameters (auto-detect
    `<owner>/<repo>`, handoff file, gates), the toolchain pipeline, voice baseline, and gotchas.
 3. **Gather current state** per the playbook - accuracy is the whole job (handoff + live counts
-   + git log for internal comms; charter + product thesis for external comms).
-4. **Author** the source (`slides.json` for `render_deck.py`, `deck.js` for pptx-themes) to the
-   playbook's structure, mirroring the sample.
-5. **Build**: `render_deck.py --validate` then `--pdf` (self-comms), or render + visual-QA
-   (pptx-themes); narrate + export audio if the comm calls for it.
+   + git log for internal comms; charter + product thesis for external comms). A typed
+   deliverable lists its runnable gather commands under `deliver.py types`.
+4. **Author** the source: a spec (`deliver.py new <type>` scaffolds one; a bare `slides.json`
+   array still builds) or `deck.js` for pptx-themes, to the playbook's structure.
+5. **Build**: `deliver.py check` until clean, `build --html` to trim overflow, then `--pdf`
+   (self-comms); or render + visual-QA (pptx-themes). Narrate if the comm calls for it.
 6. **Write `sources.md`** - claim-by-claim provenance; the board / registry is the live truth.
 7. **Deliver** with `SendUserFile` so it opens in a viewer, not the terminal.
+
+## The engine (`scripts/deliver.py`)
+
+`check <spec>` reports every problem at once with rule ids - spec schema, sections vs the
+type definition, block schema, voice lint. `build <spec> --html/--pdf` renders (headless
+Chrome for PDF; the HTML is self-contained if Chrome is absent). `narrate <spec> --script`
+drafts a spoken companion in deck order; rewrite it as speech, then `narrate <script>
+--audio` renders it (macOS `say` by default). `types` and `new <type>` list and scaffold.
+
+Config is selected by name, never restated per use: **types** (`types/*.json` - sections,
+page budgets, guide strings, gather commands; a new deliverable type is one JSON file),
+**themes** (`themes/*.json` - 7 palettes x 28 semantic tokens), **voices** (`voices/*.json` -
+register, id policy, numeric budgets; doctrine runs as lint, waivable per spec), and
+**project defaults** (`.claude/comms.local.md`, flat keys `theme` / `voice` / `repo` /
+`audio`). Precedence: CLI flag > spec field > project local > type default. Slides use the
+17-block dialect; an unsupported block is a hard error, never a silent drop. There is no
+autofit: content past a 1280x720 slide clips, and overflow means the slide does too much.
 
 ## Hard rules (the standard's spine - never skip)
 
@@ -52,9 +70,9 @@ toolchain, theme, voice, and how honest framing is phrased.
   blanket accuracy or certification claims; never round up. External comms guard this hardest.
 - **Numbers live in systems; the deck points** to the board / registry, as-of the date.
 - **Pitch to the audience.** Self-comms are blunt and may name issue/PR ids — plain-English
-  label first, id second; no bare ids or unexplained shorthand (HB 2026-07-02). External comms
-  (board, client) drop internal jargon and unexplained ids, carry a confidential footer, and
-  commit to no roadmap dates.
+  label first, id second; no bare ids or unexplained shorthand. External comms (board, client)
+  drop internal jargon and unexplained ids, carry a confidential footer, and commit to no
+  roadmap dates.
 
 ## Composes with
 
@@ -70,3 +88,4 @@ toolchain, theme, voice, and how honest framing is phrased.
 - `references/comm-package-standard.md` - shared toolchains, parameters, pipeline, voice, gotchas
 - `examples/<type>/playbook.md` - per-comm one job, deck structure, gather, voice deltas
 - `examples/<type>/sample.*` - a real worked artifact for that comm type (where one exists)
+- `scripts/deliver.py`, `types/`, `themes/`, `voices/` - the engine and its named config
