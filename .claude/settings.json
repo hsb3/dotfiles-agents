@@ -1,34 +1,56 @@
 {
+  "enabledPlugins": {
+    "mcp-server-dev@workbench": true,
+    "plugin-dev@workbench": true,
+    "skill-creator@workbench": true
+  },
+  "extraKnownMarketplaces": {
+    "workbench": {
+      "source": {
+        "path": "./.claude/plugins",
+        "source": "directory"
+      }
+    }
+  },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-main-checkout/hook.py",
+            "statusMessage": "Checking for main-branch checkout",
             "timeout": 10,
-            "statusMessage": "Checking for main-branch checkout"
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook end --source kata-agent-hook-end",
+            "type": "command"
+          }
+        ],
+        "matcher": "logout|prompt_input_exit|bypass_permissions_disabled|other"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook start --source kata-agent-hook-start",
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear"
       }
     ]
   },
   "worktree": {
     "baseRef": "head",
     "bgIsolation": "none"
-  },
-  "enabledPlugins": {
-    "plugin-dev@workbench": true,
-    "skill-creator@workbench": true,
-    "mcp-server-dev@workbench": true
-  },
-  "extraKnownMarketplaces": {
-    "workbench": {
-      "source": {
-        "source": "directory",
-        "path": "./.claude/plugins"
-      }
-    }
   }
 }
