@@ -2,8 +2,11 @@
 id: decision-011
 title: Kaneo board is the task system; Backlog.md retired
 date: '2026-08-11'
-status: accepted
+status: superseded
 ---
+> **SUPERSEDED 2026-09-02 by decision-014** — the kata board replaced the Kaneo board.
+> The issues-are-bug-intake half and the Backlog.md retirement stand; everything Kaneo-specific here is history.
+
 ## Context
 
 Owner ruling, 2026-08-11, delivered in-session in two parts: migrate this repo onto the

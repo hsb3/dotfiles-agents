@@ -55,7 +55,7 @@ harness/campaign-logs/
 # per-project plugin activation (atelier.local.md and friends) — local by convention
 .claude/*.local.md
 
-# handoff freshness signal. The handoff itself is Kaneo task DFA-233; this file carries no
+# handoff freshness signal. The handoff itself is kata issue 8xyk; this file carries no
 # content, only an mtime, and machine-local mtime is not something to share. A fresh clone
 # has no stamp, so the guard refuses the first manual /compact until /handoff runs — which
 # is the correct answer for a session that has not written a handoff yet.
