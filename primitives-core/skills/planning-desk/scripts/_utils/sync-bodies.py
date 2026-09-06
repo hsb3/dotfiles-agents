@@ -31,7 +31,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.append(str(Path(__file__).resolve().parent))
 from reconcile import PLANS_DIR, disk_folders, plan_body_issue  # noqa: E402  (sibling; path set above)
 
 DIFF_CAP = 20  # max unified-diff lines printed per DIFFERS folder

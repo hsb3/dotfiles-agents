@@ -1,7 +1,7 @@
 # Distributing bundles to opencode
 
 _How the `targets/opencode` output of a Claude Code → opencode translation pipeline should be
-laid out and installed. ✅ = verified against https://opencode.ai/docs 2026-07-02._
+laid out and installed. ✅ = verified against https://opencode.ai/docs 2026-09-06._
 
 ## Generated bundle layout (proposal)
 
@@ -28,13 +28,16 @@ cp -r bundles/<b>/skills/*  ~/.config/opencode/skills/       # ✅ path
 # merge opencode-fragment.jsonc into ~/.config/opencode/opencode.jsonc
 ```
 
-**Project install**: same into `.opencode/agents|skills/` + merge fragment into
-`./opencode.jsonc` (or drop as `.opencode/opencode.jsonc` — it's a config level of its own ✅).
+**Project install**: same into `.opencode/agents|skills/` ✅ + merge fragment into
+`./opencode.jsonc` ✅ (a standalone `.opencode/opencode.jsonc` config file is unverified — the
+docs describe `.opencode/` as the directory level for agents/commands/plugins, not as a config
+file location).
 
-**Config merge is safe by design ✅:** arrays concatenate, objects deep-merge, project
-overrides global — so a fragment adds `mcp` servers and `permission.skill` grants without
-clobbering user config. The generator should still emit idempotent merges (check-before-add)
-because *repeated* installs would duplicate array entries.
+**Config merge ✅:** files are merged, not replaced; a later level overrides only conflicting
+keys and project overrides global — so a fragment adds `mcp` servers and `permission.skill`
+grants without clobbering unrelated user config. Whether arrays concatenate or replace is
+unverified, so the generator must emit idempotent merges (check-before-add) and never rely on
+concatenation.
 
 ## The free ride (decide deliberately)
 
@@ -43,7 +46,7 @@ opencode natively reads `~/.claude/skills/` and `.claude/skills/` ✅ and falls 
 bundle installed gets skills + rules in opencode **for free**. Options for the generator:
 
 1. **Rely on the fallback** — emit only agents + config fragment. Smallest output; breaks if
-   `OPENCODE_DISABLE_EXTERNAL_SKILLS` / `OPENCODE_DISABLE_CLAUDE_CODE` is set, and skill
+   `OPENCODE_DISABLE_CLAUDE_CODE` / `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` ✅ is set, and skill
    names that fail OC's stricter regex are silently invisible.
 2. **Emit explicit copies** under `.opencode/skills/` — self-sufficient, survives the disable
    flags, regex enforced at build; costs duplication (mitigated: both copies are generated
@@ -54,8 +57,9 @@ discipline already covers generated duplication.
 
 ## Gotchas
 
-1. **Plural dirs** ✅ (`agents/`, `skills/`, `tools/`, `plugins/`, `commands/`) — older guides
-   say `skill/`/`tool/`; a laydown into singular dirs silently does nothing.
+1. **Plural dirs** ✅ (`agents/`, `skills/`, `tools/`, `plugins/`, `commands/`) — the docs now
+   say singular names are still read for backwards compatibility ✅, but emit plural so the
+   laydown matches every documented example.
 2. **Model IDs need provider prefixes** ✅ (`anthropic/claude-...`) — CC agent frontmatter
    with bare `claude-*` ids fails; the agent translator must remap.
 3. **Skill-name regex is stricter** ✅ — underscores/uppercase (e.g. `langsmith_tracing`)
@@ -67,4 +71,4 @@ discipline already covers generated duplication.
 6. **Bun runtime** — any future tools/plugins run on Bun (not node/deno); `$` shell API
    available; keep to stdlib-equivalents per the hooks decision.
 7. **opencode moves fast** — re-verify paths/fields against `https://opencode.ai/config.json`
-   schema at generator-build time; treat this doc's ✅ marks as dated 2026-07-02.
+   schema at generator-build time; treat this doc's ✅ marks as dated 2026-09-06.

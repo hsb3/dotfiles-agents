@@ -37,7 +37,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.append(str(Path(__file__).resolve().parent))
 from _repo import (  # noqa: E402  (sibling - repo derived from gh)
     graphql,
     owner_name,
@@ -80,7 +80,7 @@ def fetch_open_issues() -> list[dict]:
             "--state",
             "open",
             "--limit",
-            "1000",
+            str(ISSUE_LIST_LIMIT),
             "--json",
             "number,title,body",
         ],

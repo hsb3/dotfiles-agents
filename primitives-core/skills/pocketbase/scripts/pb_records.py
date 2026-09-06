@@ -3,13 +3,13 @@
 PocketBase record management.
 
 Usage:
-  python scripts/pb_records.py list <collection> [--filter "..."] [--sort "..."] [--expand "..."] [--page N] [--perPage N]
-  python scripts/pb_records.py get <collection> <record_id>
-  python scripts/pb_records.py create <collection> '<json>'
-  python scripts/pb_records.py create <collection> --file data.json
-  python scripts/pb_records.py update <collection> <record_id> '<json>'
-  python scripts/pb_records.py update <collection> <record_id> --file data.json
-  python scripts/pb_records.py delete <collection> <record_id>
+  python3 scripts/pb_records.py list <collection> [--filter "..."] [--sort "..."] [--expand "..."] [--page N] [--perPage N]
+  python3 scripts/pb_records.py get <collection> <record_id>
+  python3 scripts/pb_records.py create <collection> '<json>'
+  python3 scripts/pb_records.py create <collection> --file data.json
+  python3 scripts/pb_records.py update <collection> <record_id> '<json>'
+  python3 scripts/pb_records.py update <collection> <record_id> --file data.json
+  python3 scripts/pb_records.py delete <collection> <record_id>
 """
 
 import argparse

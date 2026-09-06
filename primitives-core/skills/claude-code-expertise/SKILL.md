@@ -9,7 +9,7 @@ description:
   changing settings, permissions, or hook wiring in a project - that is claude-code-config.
 metadata:
   version: 0.1.0
-  verified: 2026-07-22
+  verified: 2026-09-06
 ---
 
 # Claude Code Expertise
@@ -33,7 +33,7 @@ Start here. Match the need to the surface, then open the matching reference for 
 | Give the model reusable know-how / a procedure it pulls in **on demand** when a task matches | **Skill** | Model-invoked by description match; loads only when relevant. Not a command (no user keystroke) and not an agent (same context, no separate tool budget). |
 | Run **deterministic code** automatically at a lifecycle moment (before/after a tool, on session start, on stop) | **Hook** | Only surface that executes on an event without the model choosing to. A skill can't fire on an event; a command needs a user to type it. |
 | Offload a **bounded sub-task to a fresh context** with its own tool set and model tier | **Subagent (agent)** | Separate context window + independent tool/model selection. A skill runs in the *same* context; a hook can't reason. |
-| Give the user a **typed slash shortcut** that expands to a prompt/workflow | **Command** | User-initiated by name (`/x`). A skill is model-initiated; use a command when the human must trigger it explicitly. |
+| Give the user a **typed slash shortcut** that expands to a prompt/workflow | **Command** (now a skill) | Commands were merged into skills: `.claude/commands/x.md` and `.claude/skills/x/SKILL.md` both create `/x`. Write new ones as skills; `disable-model-invocation: true` makes a skill user-only. |
 | Connect an **external tool or data source** (API, DB, service) as callable tools | **MCP server** | The protocol for external tools/resources. Not a hook (hooks gate/observe existing tools; they don't add tool servers). |
 | **Package and distribute** several of the above as one installable unit | **Plugin** | The bundling unit. Contains skills/agents/commands/hooks/MCP together. |
 | Let users **discover and install** your plugins by name | **Marketplace** | The registry a plugin is installed *from*. One marketplace lists many plugins. |
@@ -47,7 +47,8 @@ Two frequent confusions, resolved:
   or needs a different tool/tier than the main thread. See `references/subagents.md`.
 - **Hook vs. skill vs. command.** A **hook** is the only surface that fires on an *event* without
   anyone choosing to run it; use it for guardrails, telemetry, and automation. A **skill** fires
-  when the model judges a task relevant; a **command** fires when a user types its name.
+  when the model judges a task relevant *or* when a user types `/<name>`; a legacy **command**
+  file is the same thing with fewer features (no supporting files, no invocation control).
 
 ## Surface map (one-line contracts)
 
@@ -55,9 +56,9 @@ Two frequent confusions, resolved:
 |---|---|---|---|---|
 | Skill | `SKILL.md` + optional `references/`, `scripts/`, `assets/` | `.claude/skills/<name>/` · `~/.claude/skills/<name>/` | model, by description match | `references/surfaces.md` |
 | Subagent | one `.md` with frontmatter | `.claude/agents/<name>.md` · `~/.claude/agents/<name>.md` | model (auto) or explicit request | `references/subagents.md` |
-| Hook | handler script + config | `.claude/settings.json` `hooks` block · plugin hook dir | lifecycle event | `references/surfaces.md` |
-| Command | one `.md`, body is the prompt | `.claude/commands/<name>.md` · `~/.claude/commands/<name>.md` | user types `/<name>` | `references/surfaces.md` |
-| MCP server | server entry in `.mcp.json` / settings | `.mcp.json` (project) · user settings | model calls the server's tools | `references/surfaces.md` |
+| Hook | handler script + config | `settings.json` `hooks` block (user, project, local, managed) · plugin `hooks/hooks.json` · skill/agent frontmatter | lifecycle event | `references/surfaces.md` |
+| Command (legacy) | one `.md`, body is the prompt | `.claude/commands/<name>.md` (a user-scope commands dir is no longer documented; use `~/.claude/skills/`) | user types `/<name>` | `references/surfaces.md` |
+| MCP server | server entry in `.mcp.json` / `~/.claude.json` | `.mcp.json` (project) · `~/.claude.json` (user and local scopes, not `settings.json`) | model calls the server's tools | `references/surfaces.md` |
 | Plugin | `.claude-plugin/plugin.json` + surface dirs | a plugin repo/dir | installed, then its surfaces load | `references/distribution.md` |
 | Marketplace | `.claude-plugin/marketplace.json` | a marketplace repo/dir | `/plugin marketplace add`, then install | `references/distribution.md` |
 | Settings/permissions | `settings.json` | `.claude/settings.json` (+ `.local`) · `~/.claude/settings.json` | always in effect | `references/surfaces.md` |
@@ -66,15 +67,19 @@ Two frequent confusions, resolved:
 
 - **Description quality is the trigger.** For skills and subagents the `description` is what the
   model matches on. Say *what it does AND when to use it*, name the concrete situations, and
-  keep it free of angle-bracket tags (a bracketed tag in a skill `description` can make the skill
-  fail to load). A vague description means the surface never fires. See `references/authoring.md`.
+  keep it free of angle-bracket tags (the docs say Claude Code escapes them; the older claim that a
+  tag makes a skill fail to load is unverified). A vague description means the surface never
+  fires. See `references/authoring.md`.
 - **Progressive disclosure.** Keep the entry file lean; push depth into `references/*.md` the
   entry file *points to*. The model reads the pointer first and pulls a reference only when
   needed — this keeps context small and relevance high.
 - **Least privilege.** Grant a subagent only the tools it needs; scope permissions with `allow` /
   `ask` / `deny`. Broad tool access dilutes intent and raises risk.
-- **Validate before shipping.** Frontmatter present and well-formed, name matches the directory,
+- **Validate before shipping.** Frontmatter present and well-formed, the directory name is the
+  `/name` you expect (`name` is optional and only a display label for project/user skills),
   relative links resolve inside the folder, no machine-specific paths baked in.
+  `claude plugin validate <dir>` checks plugin and marketplace manifests plus skill, agent, and
+  command frontmatter.
 
 ## Read next (progressive disclosure)
 

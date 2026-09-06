@@ -3,8 +3,8 @@
 PocketBase migration file generator.
 
 Usage:
-  python scripts/pb_create_migration.py "create_posts_collection"
-  python scripts/pb_create_migration.py "add_status_field" --dir ./pb_migrations
+  python3 scripts/pb_create_migration.py "create_posts_collection"
+  python3 scripts/pb_create_migration.py "add_status_field" --dir ./pb_migrations
 """
 
 import argparse
