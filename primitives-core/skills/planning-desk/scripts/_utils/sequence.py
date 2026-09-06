@@ -38,7 +38,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.append(str(Path(__file__).resolve().parent))
 import reconcile  # noqa: E402, I001  (sibling toolkit - plan readiness; path set above)
 import conformance  # noqa: E402  (sibling - is_epic_type)
 from _repo import graphql, owner_name  # noqa: E402  (sibling - repo derived from gh)

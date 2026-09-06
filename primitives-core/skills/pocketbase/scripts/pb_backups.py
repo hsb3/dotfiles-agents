@@ -3,10 +3,10 @@
 PocketBase backup management.
 
 Usage:
-  python scripts/pb_backups.py list
-  python scripts/pb_backups.py create [name.zip]
-  python scripts/pb_backups.py restore <key>
-  python scripts/pb_backups.py delete <key>
+  python3 scripts/pb_backups.py list
+  python3 scripts/pb_backups.py create [name.zip]
+  python3 scripts/pb_backups.py restore <key>
+  python3 scripts/pb_backups.py delete <key>
 """
 
 import argparse

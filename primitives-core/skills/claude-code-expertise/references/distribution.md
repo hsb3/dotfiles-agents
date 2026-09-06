@@ -10,26 +10,30 @@ A plugin is a directory (usually a repo) with a manifest and the surface subdire
 ```
 my-plugin/
 ├── .claude-plugin/
-│   └── plugin.json           # manifest: name, version, description, author
-├── skills/<name>/SKILL.md    # bundled skills
+│   └── plugin.json           # manifest: name (the only required field), version, description, author
+├── skills/<name>/SKILL.md    # bundled skills → /<plugin>:<name>
 ├── agents/<name>.md          # bundled subagents
-├── commands/<name>.md        # bundled commands
-├── hooks/<name>/             # bundled hooks (handler + config)
-└── .mcp.json                 # bundled MCP servers (optional)
+├── commands/<name>.md        # bundled flat-file skills (legacy form; prefer skills/)
+├── hooks/hooks.json          # bundled hooks: the same {"hooks": {...}} block as settings.json
+├── hooks/<name>/             # handler scripts, referenced as ${CLAUDE_PLUGIN_ROOT}/hooks/<name>/...
+├── .mcp.json                 # bundled MCP servers (optional)
+└── .lsp.json                 # bundled LSP servers (optional)
 ```
 
 ```jsonc
 // .claude-plugin/plugin.json
 {
-  "name": "my-plugin",         // the id users install; unique within its marketplace
-  "version": "0.1.0",          // semver; bump on every change users should re-pull
+  "name": "my-plugin",         // required; kebab-case; the id users install and the /name: prefix
+  "version": "0.1.0",          // optional semver; if set, users only update when you bump it
   "description": "What the bundle provides.",
   "author": { "name": "Author Name" }
 }
 ```
 
-The manifest's `name` is the install id. `version` is how an update is recognized — bump it
-whenever the shipped surfaces change. `author` is the **sanctioned place for identity**; the
+The manifest's `name` is the install id and the skill namespace (`/my-plugin:hello`). `version`
+is how an update is recognized — bump it whenever the shipped surfaces change (omit it and a
+git source falls back to the commit SHA). Only `plugin.json` goes inside `.claude-plugin/`;
+every surface directory sits at the plugin root. `author` is the **sanctioned place for identity**; the
 surface *bodies* stay identity-neutral (personalization comes from config/data, not the body).
 
 A plugin ships whichever surfaces it contains — a plugin can be a single skill, or a full set of
@@ -49,7 +53,7 @@ marketplace serves many plugins; a user adds the marketplace once, then installs
   "plugins": [
     {
       "name": "my-plugin",
-      "source": "./plugins/my-plugin",   // path (or repo) the plugin is built from
+      "source": "./plugins/my-plugin",   // relative path, or {source: github|url|git-subdir|npm|archive|command, ...}
       "description": "What the bundle provides.",
       "version": "0.1.0",
       "author": { "name": "Author Name" }
@@ -69,9 +73,11 @@ drift-checked, not maintained by hand.
   source so its plugins are discoverable.
 - **Install a plugin:** `/plugin install <plugin-name>@<marketplace-name>` — pulls that plugin's
   surfaces into the session.
-- **Enable in settings (non-interactive):** list the plugin in `settings.json` under
-  `enabledPlugins` as `"<plugin-name>@<marketplace-name>"` so a project turns it on for everyone
-  who trusts the settings.
+- **Enable in settings (non-interactive):** `settings.json` `enabledPlugins` is an **object**,
+  `{ "<plugin-name>@<marketplace-name>": true }`, and `extraKnownMarketplaces` registers the
+  marketplace source; both apply only after each user trusts the folder.
+- **Develop locally:** `claude --plugin-dir ./my-plugin` (repeatable), `/reload-plugins` after
+  edits, `claude plugin validate ./my-plugin` before publishing.
 - **Update:** bump the plugin `version` at the source; users re-pull to get the new surfaces.
 
 ## Standalone vs. bundled
@@ -88,4 +94,5 @@ fork the body per distribution form.
 - A plugin's install id must be **unique within its marketplace**; a one-skill wrapper's plugin id
   is typically the skill id — keep it from clashing with any bundle id so
   `/plugin install <id>@<marketplace>` is unambiguous.
-- Surface `name`s are lowercase-kebab and match their file/folder.
+- Surface `name`s are lowercase-kebab; reserved marketplace names (`claude-plugins-official`,
+  `anthropic-plugins`, …) are refused.

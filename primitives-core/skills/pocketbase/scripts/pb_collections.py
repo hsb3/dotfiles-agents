@@ -3,13 +3,13 @@
 PocketBase collection management.
 
 Usage:
-  python scripts/pb_collections.py list
-  python scripts/pb_collections.py get <name_or_id>
-  python scripts/pb_collections.py create '<json>'
-  python scripts/pb_collections.py create --file schema.json
-  python scripts/pb_collections.py update <name_or_id> '<json>'
-  python scripts/pb_collections.py delete <name_or_id>
-  python scripts/pb_collections.py import --file collections.json
+  python3 scripts/pb_collections.py list
+  python3 scripts/pb_collections.py get <name_or_id>
+  python3 scripts/pb_collections.py create '<json>'
+  python3 scripts/pb_collections.py create --file schema.json
+  python3 scripts/pb_collections.py update <name_or_id> '<json>'
+  python3 scripts/pb_collections.py delete <name_or_id>
+  python3 scripts/pb_collections.py import --file collections.json
 """
 
 import argparse

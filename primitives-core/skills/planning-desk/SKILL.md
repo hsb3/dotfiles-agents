@@ -177,7 +177,7 @@ whatever mode you're in:
 ## The toolkit at a glance
 
 Seven scripts in `_utils/`, each a read-only view (except `sync-bodies.py --push/--pull`), each with
-`--json` and a gating exit code. Full detail + when to run each: `references/toolkit.md`.
+`--json`; most exit non-zero on findings (sequence and deps-suggest are pure views and always exit 0). Full detail + when to run each: `references/toolkit.md`.
 
 | Script              | Answers                                                                  |
 | ------------------- | ------------------------------------------------------------------------ |

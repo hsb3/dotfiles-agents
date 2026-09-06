@@ -1,8 +1,8 @@
 # Mode: govern — the toolkit (backlog grooming, drift audits, "what's next")
 
 Seven dependency-free Python scripts live in `_meta/plans/_utils/`. Each is a generated VIEW over
-`gh` + disk — never hand-maintained state — with a `--json` flag and a non-zero exit on findings, so
-any one can gate a wave (in CI, a pre-push hook, or a loop). Run them from the **main working tree**
+`gh` + disk — never hand-maintained state — with a `--json` flag and, except for `sequence` and `deps-suggest` (pure views, always exit 0),
+a non-zero exit on findings, so any one can gate a wave (in CI, a pre-push hook, or a loop). Run them from the **main working tree**
 where `gh` is authed; they derive the repo from `gh` itself, so they need no per-project config.
 
 Run a script: `python3 _meta/plans/_utils/<script>` (or `uv run …`; the `#!/usr/bin/env -S uv run`

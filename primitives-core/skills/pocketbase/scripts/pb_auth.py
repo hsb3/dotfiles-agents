@@ -4,10 +4,10 @@ PocketBase authentication script.
 
 Usage:
   # Superuser auth (uses env vars)
-  python scripts/pb_auth.py
+  python3 scripts/pb_auth.py
 
   # User auth against a specific collection
-  python scripts/pb_auth.py --collection users --identity user@example.com --password secret
+  python3 scripts/pb_auth.py --collection users --identity user@example.com --password secret
 """
 
 import argparse

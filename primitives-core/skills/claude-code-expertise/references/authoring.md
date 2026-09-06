@@ -7,17 +7,21 @@ specifically see `subagents.md`. This file is about doing any of them *well*.
 
 | Surface | Required frontmatter | Common optional fields |
 |---|---|---|
-| Skill (`SKILL.md`) | `name`, `description` | `allowed-tools`, `metadata` (e.g. `version`) |
-| Subagent (`agents/<name>.md`) | `name`, `description` | `tools`, `model` |
-| Command (`commands/<name>.md`) | — (body is the prompt) | `description`, `argument-hint`, `allowed-tools`, `model` |
+| Skill (`SKILL.md`) | — (`description` strongly recommended; `name` optional) | `allowed-tools`, `disallowed-tools`, `disable-model-invocation`, `user-invocable`, `context`, `paths`, `model`, `hooks`, `metadata` |
+| Subagent (`agents/<name>.md`) | `name`, `description` | `tools`, `disallowedTools`, `model`, `permissionMode`, `skills`, `memory`, `isolation`, `color` |
+| Command (`commands/<name>.md`, legacy) | — (body is the prompt) | same as a skill except `name` and `paths` are ignored |
 
 Rules that hold across surfaces:
 
-- `name` is lowercase-kebab and, for skills, **must equal the folder name**.
-- `description` must be present for skills and subagents — it is not decoration, it is the
-  trigger the model matches on.
-- Keep the `description` free of angle-bracket/XML-style tags. A bracketed tag inside a skill
-  `description` can make the skill fail to load; use a bracket-free placeholder instead.
+- `name` is lowercase-kebab. For subagents it is required and may not contain `:`. For skills it
+  is optional: the **folder name** is the `/name` a user types, and `name` is a display label
+  (plugin skills: it sets the last segment of `/plugin:name`). Keep it equal to the folder.
+- `description` is required for subagents and strongly recommended for skills (without it the
+  first paragraph of the body is used) — it is not decoration, it is the trigger the model
+  matches on.
+- Keep the `description` free of angle-bracket/XML-style tags. Claude Code escapes them in text
+  it shows the model; whether an unescaped tag can still stop a skill loading is unverified —
+  use a bracket-free placeholder anyway.
 
 ## Description / triggering quality (the make-or-break)
 
@@ -51,7 +55,8 @@ the task needs it — smaller context, higher relevance. Guidelines:
 
 ## Validation checklist (run before shipping)
 
-- [ ] Frontmatter present and parseable; `name` matches the folder (skills).
+- [ ] Frontmatter present and parseable; folder name is the intended `/name` (skills);
+      `claude plugin validate <dir>` passes.
 - [ ] `description` says what **and** when; no angle-bracket tags in it.
 - [ ] Every relative markdown link resolves to a file **inside** the folder (no `../`, no dangling
       targets).
@@ -66,7 +71,8 @@ the task needs it — smaller context, higher relevance. Guidelines:
 ## Common failure modes (and the fix)
 
 - **Skill/subagent never activates** → description lacks the "when". Add concrete triggers.
-- **Skill fails to load** → an angle-bracket tag in `description`. Remove it.
+- **Skill fails to load** → run `claude plugin validate <dir>`; historically an angle-bracket
+  tag in `description` was blamed (unverified against current docs). Remove it regardless.
 - **Wrong surface chosen** → re-check the decision table in `SKILL.md`; event→hook, user-typed→
   command, isolated sub-task→subagent, on-demand knowledge→skill.
 - **Broken/escaping links** → keep references inside the folder; fix or inline the target.

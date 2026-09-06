@@ -1,21 +1,27 @@
 # opencode configuration reference
 
-_Verification: ✅ = checked against https://opencode.ai/docs 2026-07-02. Unmarked = from
+_Verification: ✅ = checked against https://opencode.ai/docs 2026-09-06. Unmarked = from
 gathered notes (2026-05/06 era, partly from a private fork) — re-verify before relying._
 
 ## Config file precedence (low → high)
 
-1. `https://org/.well-known/opencode` — remote org defaults
+1. `.well-known/opencode` on the provider host — remote org defaults ✅
 2. `~/.config/opencode/opencode.json{,c}` — global user config ✅
-3. `$OPENCODE_CONFIG` env var file
-4. `./opencode.json{,c}` — project root ✅
-5. `./.opencode/opencode.json{,c}` — project .opencode dir ✅
-6. `$OPENCODE_CONFIG_CONTENT` env var (inline JSON)
-7. `/etc/opencode/opencode.json{,c}` — managed/enterprise (macOS: `/Library/Application Support/opencode`)
+3. `$OPENCODE_CONFIG` env var file ✅
+4. `./opencode.json{,c}` — project root, found by walking up to the nearest git dir ✅
+5. `.opencode/` directories — agents, commands, plugins ✅ (`$OPENCODE_CONFIG_DIR` adds another
+   such directory ✅; a `.opencode/opencode.json` config *file* at this level is unverified)
+6. `$OPENCODE_CONFIG_CONTENT` env var (inline JSON) ✅
+7. `/etc/opencode/opencode.json{,c}` — managed (macOS: `/Library/Application Support/opencode/`,
+   Windows: `%ProgramData%\opencode`) ✅, then macOS MDM `.mobileconfig` ✅
 
-**Merge semantics ✅:** arrays (`plugin`, `instructions`) are **concatenated** across levels;
-objects are **deep-merged**; project overrides global. This is what makes distributed config
-fragments composable.
+TUI-only keys (`theme`, `keybinds`, `tui`) now live in a sibling `tui.json{,c}`; the legacy keys
+in `opencode.json` are deprecated and auto-migrated ✅.
+
+**Merge semantics:** config files are merged, not replaced — later levels override only
+conflicting keys and non-conflicting keys survive ✅. Whether arrays (`plugin`, `instructions`)
+concatenate or replace is **unverified** (the docs do not say); a generator should assume
+replace and emit complete arrays, or check-before-add.
 
 Prefer `.jsonc` — comments allowed. Validate against `"$schema": "https://opencode.ai/config.json"`.
 
@@ -24,10 +30,10 @@ Prefer `.jsonc` — comments allowed. Validate against `"$schema": "https://open
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "anthropic/claude-sonnet-4-5",   // {provider}/{model} — prefix REQUIRED
-  "default_agent": "build",
-  "theme": "opencode",
-  "autoupdate": true,
+  "model": "anthropic/claude-sonnet-4-5",   // {provider}/{model} — prefix REQUIRED ✅
+  "small_model": "anthropic/claude-haiku-4-5", // lightweight tasks ✅
+  "default_agent": "build",                  // must be a primary agent ✅
+  "autoupdate": true,                        // or "notify" ✅ (theme moved to tui.json)
 
   "provider": {                              // API keys / custom endpoints
     "anthropic": { "apiKey": "{env:ANTHROPIC_API_KEY}" },
@@ -52,25 +58,27 @@ Prefer `.jsonc` — comments allowed. Validate against `"$schema": "https://open
   },
 
   "mcp": {
-    "local-server":  { "type": "local",  "command": ["npx", "-y", "some-server"], "environment": { "KEY": "${VAR}" } },
-    "remote-server": { "type": "remote", "url": "https://mcp.example.com", "headers": { "Authorization": "Bearer ${TOKEN}" } }
+    "local-server":  { "type": "local",  "command": ["npx", "-y", "some-server"], "environment": { "KEY": "{env:VAR}" } },
+    "remote-server": { "type": "remote", "url": "https://mcp.example.com", "headers": { "Authorization": "Bearer {env:TOKEN}" } }
   },
 
   "plugin": ["some-npm-plugin@1.0.0"],       // npm plugins; local files auto-load from plugins/ dirs ✅
-  "instructions": ["docs/guidelines.md", ".cursor/rules/*.md"],  // paths, globs, URLs ✅
+  "instructions": ["docs/guidelines.md", ".cursor/rules/*.md"],  // paths, globs, https URLs (5 s timeout) ✅
   "command": { },                            // commands inline (alt to commands/*.md) ✅
 
-  "compaction": { "auto": true, "prune": true },
-  "experimental": { "batch_tool": false, "mcp_timeout": 60000 }
+  "compaction": { "auto": true, "prune": true, "reserved": 10000 },  // ✅
+  "subagent_depth": 1,                       // ✅ 0 = no subagents
+  "experimental": { }                        // exists ✅; specific sub-keys from notes are unverified
 }
 ```
 
 ## Rules / instructions ✅
 
 Read order: project `AGENTS.md` (walking up from cwd; `CLAUDE.md` as claude-code fallback) →
-global `~/.config/opencode/AGENTS.md` → `~/.claude/CLAUDE.md` fallback. All `instructions`
-entries are combined with AGENTS.md content. Disable claude-code fallbacks:
-`OPENCODE_DISABLE_CLAUDE_CODE=1`.
+global `~/.config/opencode/AGENTS.md` → `~/.claude/CLAUDE.md` fallback. First match wins per
+category. All `instructions` entries are combined with AGENTS.md content. Disable claude-code
+fallbacks: `OPENCODE_DISABLE_CLAUDE_CODE=1` (all), `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1`
+(only `~/.claude/CLAUDE.md`), `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` (only `.claude/skills`).
 
 ## Model selection priority (low → high)
 
@@ -85,19 +93,20 @@ entries are combined with AGENTS.md content. Disable claude-code fallbacks:
 | `~/.cache/opencode/` | models cache, Bun packages — safe to delete |
 | `~/.local/state/opencode/` | runtime state |
 
-## Feature flags (env vars; from notes — verify before use)
+## Feature flags (env vars; ✅ = listed on the CLI reference page)
 
 | Flag | Effect |
 |---|---|
-| `OPENCODE_EXPERIMENTAL=1` | master switch: plan mode, Exa, LSP tool |
-| `OPENCODE_ENABLE_EXA=1` | websearch + codesearch tools (no API key) |
-| `OPENCODE_ENABLE_QUESTION_TOOL=1` | question tool in API/ACP clients |
-| `OPENCODE_DISABLE_AUTOCOMPACT=1` / `OPENCODE_DISABLE_PRUNE=1` | context management off-switches |
-| `OPENCODE_DISABLE_PROJECT_CONFIG=1` | skip project-level config |
-| `OPENCODE_DISABLE_EXTERNAL_SKILLS=1` | skip `.claude/` + `.agents/` skill dirs |
-| `OPENCODE_DISABLE_CLAUDE_CODE=1` | skip claude-code skills AND rules fallbacks |
-| `OPENCODE_PERMISSION='{"bash":"allow"}'` | JSON permission override (highest priority) |
-| `OPENCODE_CONFIG` / `OPENCODE_CONFIG_CONTENT` | config path / inline config |
+| `OPENCODE_EXPERIMENTAL=1` ✅ | experimental umbrella flag (individual `OPENCODE_EXPERIMENTAL_PLAN_MODE`, `_EXA`, `_LSP_TOOL`, `_WORKSPACES`, … also exist ✅) |
+| `OPENCODE_ENABLE_EXA=1` ✅ | Exa web search tools |
+| `OPENCODE_ENABLE_QUESTION_TOOL=1` | not on the current CLI page — unverified |
+| `OPENCODE_DISABLE_AUTOCOMPACT=1` / `OPENCODE_DISABLE_PRUNE=1` ✅ | context management off-switches |
+| `OPENCODE_DISABLE_PROJECT_CONFIG=1` | not on the current CLI page — unverified |
+| `OPENCODE_DISABLE_EXTERNAL_SKILLS=1` | not on the current CLI page — unverified; use `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` ✅ for `.claude/skills` |
+| `OPENCODE_DISABLE_CLAUDE_CODE=1` ✅ | skip all `.claude` reading (skills AND rules fallbacks) |
+| `OPENCODE_DISABLE_AUTOUPDATE=1` ✅ | no update checks (containers) |
+| `OPENCODE_PERMISSION='{"bash":"allow"}'` ✅ | inline JSON permission config |
+| `OPENCODE_CONFIG` / `OPENCODE_CONFIG_CONTENT` / `OPENCODE_CONFIG_DIR` ✅ | config path / inline config / extra config directory |
 
 ## Sessions, compaction, worktrees (from notes)
 

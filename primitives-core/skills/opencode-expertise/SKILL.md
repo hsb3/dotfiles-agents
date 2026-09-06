@@ -8,7 +8,7 @@ description:
   Code skill collection, or answering how any opencode surface works.
 metadata:
   version: 0.2.0
-  verified: 2026-07-02
+  verified: 2026-09-06
 ---
 
 # opencode Expertise
@@ -18,16 +18,17 @@ extensible but TypeScript-restrictive**: content surfaces are declarative (markd
 but every *programmatic* surface — plugins, custom tools, and therefore anything
 hook-shaped — must be written in TypeScript/JavaScript running on Bun.
 
-Facts marked ✅ were verified against https://opencode.ai/docs on 2026-07-02. Unmarked
-details come from gathered notes and may be stale or specific to a private fork —
-re-verify before relying on them. opencode moves fast; when a path 404s or a field is
+Facts marked ✅ were verified against https://opencode.ai/docs and the published
+`@opencode-ai/plugin` 1.18.29 type declarations on 2026-09-06. Unmarked details come from
+gathered notes and may be stale or specific to a private fork — re-verify before relying on
+them. opencode moves fast; when a path 404s or a field is
 rejected, check the docs before assuming a bug.
 
 ## Extension-surface map
 
 | Surface | Project location | Global location | Format | TS required? |
 |---|---|---|---|---|
-| Config ✅ | `opencode.json{,c}` (root) + `.opencode/opencode.json{,c}` | `~/.config/opencode/opencode.json{,c}` | JSON/JSONC | No |
+| Config ✅ | `opencode.json{,c}` (root; found by walking up to the nearest git dir). `.opencode/opencode.json{,c}` as a config *file* is unverified — the docs list `.opencode/` as a directory level for agents/commands/plugins | `~/.config/opencode/opencode.json{,c}` | JSON/JSONC | No |
 | Rules ✅ | `AGENTS.md` (walks up; `CLAUDE.md` fallback) | `~/.config/opencode/AGENTS.md` (`~/.claude/CLAUDE.md` fallback) | Markdown | No |
 | Agents ✅ | `.opencode/agents/*.md` | `~/.config/opencode/agents/*.md` | Markdown + frontmatter | No |
 | Skills ✅ | `.opencode/skills/<name>/SKILL.md` (also reads `.claude/skills/`, `.agents/skills/`) | `~/.config/opencode/skills/` (also `~/.claude/skills/`, `~/.agents/skills/`) | SKILL.md | No |
@@ -37,9 +38,9 @@ rejected, check the docs before assuming a bug.
 | Plugins (hooks) ✅ | `.opencode/plugins/*.{ts,js}` | `~/.config/opencode/plugins/` + npm via config `plugin: []` | JS/TS module returning hooks | **Yes** |
 | Providers / themes / keybinds | config fields | config fields | JSON | No |
 
-**Directory naming warning:** current docs use **plural** (`skills/`, `agents/`, `tools/`,
-`plugins/`, `commands/`) ✅. Older notes and some community guides use singular
-(`.opencode/skill/`, `~/.opencode/skill/`, `tool/`) — treat singular paths as stale.
+**Directory naming:** current docs use **plural** (`skills/`, `agents/`, `tools/`, `plugins/`,
+`commands/`, `modes/`, `themes/`) and state that singular names (e.g. `agent/`) are still
+supported for backwards compatibility ✅. Emit plural; read singular as legacy.
 
 ## The TypeScript constraint (plainly)
 
@@ -60,13 +61,15 @@ Full table + per-primitive notes: `references/cc-to-opencode-mapping.md`.
 - **MCP → mechanical config reshape** (`.mcp.json` → config `mcp` block; `type: local|remote`).
 - **Hooks → NOT mechanical, currently deferred.** A CC→opencode capability matrix marks
   hook→opencode **✗ deferred**; the viable design when wanted is an OC **plugin**: generated
-  TS wrapper mapping events (`PreToolUse`→`tool.execute.before`, `PostToolUse`→`tool.execute.after`,
-  `SessionStart`→`session.created`) that shells out to the existing script. Some CC events
-  have no exact equivalent.
+  TS wrapper mapping events (`PreToolUse`→`tool.execute.before`, `PostToolUse`→`tool.execute.after`
+  — real `Hooks` members ✅; `SessionStart`→ the `event` member filtering
+  `event.type === "session.created"` — an SDK *Event* value, not a hook key ✅) that shells out
+  to the existing script. Some CC events have no exact equivalent.
 - **CLAUDE.md → AGENTS.md** (or nothing: CLAUDE.md is read as a fallback ✅). Path-scoped CC
   rules have no direct equivalent — approximate with `instructions` globs ✅.
 - **Plugins/bundles → no marketplace.** Distribution = laying files into the right dirs +
-  merging a config fragment (arrays concatenate, objects deep-merge across config levels ✅).
+  merging a config fragment (config files are merged, later levels override only conflicting
+  keys ✅; whether arrays concatenate or replace is unverified — the docs do not say).
 
 ## Read next (progressive disclosure)
 
