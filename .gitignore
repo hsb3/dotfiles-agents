@@ -6,9 +6,6 @@
 .env*
 !.env*.example
 
-# --- secrets/live-ops home (decision-8; ex _meta/operations per ADR-0006) — content never tracked ---
-.claude/operations/*
-!.claude/operations/.gitkeep
 
 # --- extender-db, at evals/ (evals/_structure/CHARTER.md decisions 2+4):
 # data.db is tracked (small, private repo — state travels with the repo); transient

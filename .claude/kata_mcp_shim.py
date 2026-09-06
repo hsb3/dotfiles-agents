@@ -8,9 +8,12 @@ root is stripped. The server still validates every call against its own
 schema, and the daemon enforces close rules, so nothing is lost but guidance.
 
 Usage in .mcp.json: command python3, args [<this file>, --all-projects].
-Extra args pass straight through to `kata mcp serve`.
+Extra args pass straight through to `kata mcp serve`. `--auto-scope` becomes
+`--all-projects` unless the cwd has a `.kata.toml` binding, in which case the
+server is scoped to that project and bare refs work.
 """
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -54,8 +57,15 @@ def rewrite(line):
     return json.dumps(msg, separators=(",", ":")) + "\n"
 
 
+def scope_args(args, bound):
+    if "--auto-scope" not in args:
+        return args
+    return [a for a in args if a != "--auto-scope"] + ([] if bound else ["--all-projects"])
+
+
 def main():
-    child = subprocess.Popen(["kata", "mcp", "serve", *sys.argv[1:]], stdin=subprocess.PIPE,
+    args = scope_args(sys.argv[1:], os.path.exists(".kata.toml"))
+    child = subprocess.Popen(["kata", "mcp", "serve", *args], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, text=True, bufsize=1)
 
     def pump_in():
