@@ -174,9 +174,20 @@ whole thing down, set `off` or delete the file.
 `isolate:` is a separate axis and does not need `enforce:` — a project can isolate writers without
 arming custody, or the reverse. Two things worth knowing before turning it on: an isolated worker
 cannot see the session's uncommitted changes (commit first, or leave that worker un-isolated), and
-a new worktree branches from `origin/<default-branch>` unless the project sets
-`"worktreeBaseRef": "head"` in settings.json. Where the default branch is a publish-only surface,
-`head` is the setting that hands workers the branch you are actually on.
+a new worktree branches from `origin/<default-branch>` unless the project sets the **nested**
+`worktree.baseRef` key in settings.json. Where the default branch is a publish-only surface,
+`head` is the setting that hands workers the branch you are actually on:
+
+```json
+{
+  "worktree": {
+    "baseRef": "head"
+  }
+}
+```
+
+The key is nested under `worktree`; a flat top-level spelling of it is a `/config` widget id, not
+a settings key, and is silently ignored.
 
 **No restart needed.** The skill and the hooks re-read this file per call, so an edit to
 `enforce:`, `protected:`, or `isolate:` applies to the very next tool call.
