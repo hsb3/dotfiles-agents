@@ -328,6 +328,24 @@ architectures, so nothing measured was overturned here.
 once; past that the work is a wave of narrow slices, each with its own manager
 (`references/chain-width.md`).
 
+### Concurrent Chains
+
+**Nor does it settle how many chains run at once.** When the work-list holds entries that are
+independent in outcome — no chain's result changes another chain's brief — the strategy layer may
+run **two to three architecture-D managers simultaneously**, each in its own worktree and branch,
+rather than working the list one chain at a time `[untested]`. The cap is the strategist's own
+verification capacity, not machine capacity: every returning package still needs a spot-check and
+a gate run, and those land in the context that never resets.
+
+**Assign three things at dispatch time, before the first manager starts** `[untested]`: the merge
+order, ownership of every gated shared resource (version fields, changelogs, generated artifacts —
+anything a gate makes single-writer), and the rebase-or-reorder duty for the second-to-merge
+chain. Skipping this is not caught by CI: concurrent chains each bumping to the same next version
+pass their checks individually, then fail one after another as each predecessor merges `[field]`.
+
+Full conditions, the cap's reasoning, and what does not parallelise:
+**`references/concurrent-chains.md`**.
+
 ## Step 3 — Satisfy three preconditions before the first dispatch
 
 All three are cheap to write and expensive to retrofit `[lab]`.
@@ -399,7 +417,10 @@ negative list of what a worker must never be told (cycle budgets, scores, siblin
 
 **A manager brief carries one more check `[field]`:** if the brief has to tell the manager which of
 its own tasks may run at the same time, the brief **is a wave and not a chain** — split it before
-dispatching.
+dispatching. This does not forbid concurrency below the manager: once the chain is narrow enough
+that the question no longer needs answering in the brief, the manager fans out its own disjoint
+builder slices itself (`references/manager-brief.md`). The line is who decides — the strategist
+sizes the chain, the manager schedules inside it.
 
 ## Verification
 
@@ -474,6 +495,8 @@ a slicing defect to escalate, not a compaction to ride out.
 - **`references/manager-brief.md`** — the fill-in-the-blanks architecture-D manager brief.
 - **`references/chain-width.md`** — how wide one chain may be, retiring a manager between slices,
   and the worked eleven-task anti-example.
+- **`references/concurrent-chains.md`** — running two to three manager chains at once, and the
+  merge-order and shared-resource contracts that makes necessary.
 - **`references/migrate-at-scale.md`** — one mechanical transform across many sites.
 - **`references/tier-cutoff.md`** — the protocol for measuring where cheap model tiers stop being
   enough.

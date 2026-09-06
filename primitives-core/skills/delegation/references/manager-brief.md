@@ -47,6 +47,10 @@ Judgment-heavy links stay with the manager; `builder` takes the bounded, well-sp
 Run your standard cycle on each building link: build (test-first) → review (the `reviewer` agent
 attacks the diff) → revise (fix briefs, continuing the SAME builder) → simplify (deletion pass,
 then re-run the gates). Size the ceremony to the diff — a trivial link takes a spot-check.
+Where links are not coupled, fan out disjoint builder slices concurrently rather than running
+one worker at a time: dispatch them together, then pipeline review behind whichever slice
+finishes first. Reserve sequencing for genuinely coupled links, where one worker's output is the
+next one's input.
 Verify each worker's output against its sub-brief BEFORE building the next link on it. Their
 reports are hypotheses, not facts. Do not pass a worker your own brief, the wider plan, or
 another worker's output as context — each one gets its slice and nothing more.
