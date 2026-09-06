@@ -197,8 +197,12 @@ class Frontmatter(unittest.TestCase):
         self.assertEqual(self._fm(f"---\nname: x\ndescription: {desc}\n---\nbody"), [])
 
     def test_block_scalar_description_measured_folded(self):
-        """A `>-` block scalar folds to one line before measuring, same as gen_opencode."""
-        desc = ("a" * 100 + "\n  ") * 11  # 1111 chars of content once folded
+        """A `>-` block scalar folds to one line before measuring, same as gen_opencode.
+
+        Line count derived from the cap, so the fixture stays over it if the cap moves.
+        """
+        line = "a" * 100
+        desc = "\n  ".join([line] * (I.MAX_DESCRIPTION // len(line) + 2))
         probs = self._fm(f"---\nname: x\ndescription: >-\n  {desc}\n---\nbody")
         self.assertTrue(any(str(I.MAX_DESCRIPTION) in p for p in probs), probs)
 
@@ -244,8 +248,20 @@ class RealTree(unittest.TestCase):
     def test_shipped_tree_is_identity_neutral(self):
         self.assertEqual(I.main(), 0)
 
+    def test_the_two_description_caps_are_the_same_number(self):
+        """check_identity and gen_opencode each hold their own MAX_DESCRIPTION. Nothing but
+        this test stops them drifting: raise one alone and both gates stay green while
+        disagreeing about every description in the gap between them."""
+        import gen_opencode
+        self.assertEqual(I.MAX_DESCRIPTION, gen_opencode.MAX_DESCRIPTION)
+
     def test_every_shipped_skill_description_is_under_the_cap(self):
-        """Derived by walking the tree, never from a recorded file list or count."""
+        """Derived by walking the tree, never from a recorded file list or count.
+
+        A forward-guard with zero real subjects today — the longest shipped description is
+        well under the cap, so this passes even with the check disabled. Red-ability lives in
+        the two Frontmatter fixture tests; this one only catches a future over-long skill.
+        """
         root = os.path.join(I.REPO, "primitives-core", "skills")
         cap = str(I.MAX_DESCRIPTION)
         checked, over = 0, []
