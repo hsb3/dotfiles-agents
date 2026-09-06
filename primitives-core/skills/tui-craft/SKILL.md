@@ -1,18 +1,11 @@
 ---
 name: tui-craft
 description: >-
-  Design, build, test, debug terminal UI apps — layering, state ownership, streaming and
-  repaint discipline, terminal capability handling, key routing, and retrofitting existing
-  codebases. Use for any full-screen terminal or text-mode app when choosing a framework,
-  structuring a new app, adding live/streaming output, or debugging flicker, tearing, resize
-  corruption, broken copy-paste, broken terminal state after exit or crash, or slow output
-  with long content. Also triggers on mentions of Textual, Rich, Ratatui, crossterm, Bubble
-  Tea, Lipgloss, OpenTUI, Ink, prompt_toolkit, curses, ncurses, notcurses, tview, tcell,
-  blessed, alternate screen, raw mode, ANSI escape codes, or building a terminal chat or agent
-  client. Consult before writing the first widget, not after. Not for ordinary CLI work
-  such as argument parsing, printing a table, or a progress bar/spinner in a script that
-  doesn't take the screen. Not for browser-based terminal emulators (xterm.js and similar) or shell-prompt
-  (PS1/starship) customization.
+  Design, build, and debug full-screen terminal UI apps — layering, state ownership, repaint
+  discipline, key routing, retrofits. Triggers: picking a TUI framework; flicker, tearing,
+  resize corruption, broken copy-paste, a terminal left broken after exit; Textual, Rich,
+  Ratatui, crossterm, Bubble Tea, Lipgloss, OpenTUI, Ink, prompt_toolkit, curses, ncurses,
+  notcurses, tview, tcell, blessed, alternate screen, raw mode.
 ---
 
 # TUI craft
@@ -30,6 +23,8 @@ A full-screen alternate-screen app earns its cost only when you need at least tw
 If you need none of them, write a streaming CLI with ANSI colour and stop reading. If you need one, build inline first and keep full-screen as a flag — both major agent CLIs ship non-fullscreen as first-class.
 
 Full decision aid with the price list: **`references/interaction.md` §0**.
+
+Out of scope: ordinary CLI work (argument parsing, printing a table, a progress bar or spinner in a script that doesn't take the screen), browser-based terminal emulators (xterm.js and similar), and shell-prompt (PS1/starship) customization.
 
 ---
 

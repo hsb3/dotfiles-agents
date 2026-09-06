@@ -1,17 +1,11 @@
 ---
 name: delegation
 description: >
-  This skill should be used when a session takes on a substantial task and must decide how to
-  split it across agents: a feature build, refactor, migration, audit, multi-file fix, or anything
-  past ~30 minutes of agent work. It applies even when the user never says "delegate" or
-  "subagent", and even when the work arrived as a goal ("clean this up", "get it published")
-  rather than as a list of slices. Also use it when the user asks how to split work across agents,
-  mentions crews, teams, managers, subagents, or waves, worries about token cost on a big job, or
-  wants to size a job, pick a delegation architecture, choose model tiers, or reserve work for the
-  main session; and when a session has been editing and running commands itself for a long stretch
-  without delegating. Provides the three-layer model, effort calibration, the architecture matrix,
-  pre-dispatch preconditions, the never-delegated floor and its ceiling, brief rules, and the
-  rules that stop an agent waiting on a dead worker.
+  How to split a substantial task across agents: the three-layer model, the architecture matrix,
+  effort and model-tier calibration, brief rules, and the never-delegated floor. Use when sizing
+  a feature build, refactor, migration, audit, or multi-file fix; when crews, teams, managers,
+  subagents, or waves come up; when token cost on a big job is a worry; or when a session has
+  been editing files itself for a long stretch without delegating.
 ---
 
 # Delegation

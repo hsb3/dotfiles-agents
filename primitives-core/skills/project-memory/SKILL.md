@@ -1,18 +1,11 @@
 ---
 name: project-memory
 description: >-
-  The memory taxonomy v1 and the tools that realize it. Use whenever the question is where
-  agent memory lives, how it moves, or how to wire a repo for it: "where does this memory
-  go", "promote a memory", "run a curation pass", "memory vs rule vs skill", "where does
-  agent memory live". Defines the two layers (global dotfiles-managed vs project git-tracked
-  `.claude/memory/`), the two loading modes (always-on index vs situational topic files),
-  the three kinds (memory = facts, rules = directives, skills = procedures), and the
-  secret-only birth rule. Also handles "set up project memory", "make this repo memory
-  travel with it", "opt this repo into tracked memory", "my project memory disappeared after
-  I moved the folder", "migrate/recover my project memory" via `scripts/project_memory.py`
-  (init/status/path/list, never overwrites) and `scripts/migrate_memory.py` (relocate after
-  a move, dry-run by default). Not for repo layout standards (repo-meta-structure) or
-  scaffolding (mise-en-place-scaffold).
+  The agent-memory taxonomy (layers, loading modes, memory vs rule vs skill, the birth rule) and
+  the scripts that wire a repo for it or migrate it after a move. Use for "where does this
+  memory go", "promote a memory", "run a curation pass", "memory vs rule vs skill", "set up
+  project memory", "opt this repo into tracked memory", or "my project memory disappeared after
+  I moved the folder".
 ---
 
 # Project memory — taxonomy and tooling
@@ -172,6 +165,8 @@ path and lists fuzzy candidates.
 - **No layout ownership** — that `.claude/memory/` appears in the repo layout at all is the
   repo-meta-structure standard's row (`CLAUDE-03` / `IGNORE-12`); everything memory-specific
   beyond placement is owned here.
+- **No repo layout or scaffolding** — layout standards are repo-meta-structure, scaffolding is
+  mise-en-place-scaffold.
 - **No cross-harness memory rendering** — this standard is Claude Code-native; a memory
   equivalent for other harnesses is an open question owned by the translation service, and
   this content ships as ordinary skill text on all targets.

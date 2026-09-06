@@ -1,17 +1,11 @@
 ---
 name: claude-code-config
 description: >-
-  THE skill for configuring Claude Code itself - its JSON settings files and the surfaces they
-  govern. Use for any configuration request: "add or move a permission rule", "allow/deny a
-  command", "set up a hook", "run something automatically whenever X happens", "always do Y every
-  time", "add an environment variable", "register an MCP server", "change a setting", or "why isn't
-  my setting taking effect". Covers settings-file precedence (managed policy vs user vs project vs
-  machine-local), permissions at the narrowest scope that works, hooks (a hook is a directory with a
-  config plus a script file, never an inline shell string - the harness executes hooks, so
-  instructions and memory can never satisfy an "always/every time" request), env vars, and MCP
-  registration, and closes every change with JSON-validity and take-effect verification. Changing
-  one existing setting is one workflow within this. Not for authoring skills, subagents, or plugins
-  - that is claude-code-expertise.
+  Configure Claude Code itself — settings-file precedence, permissions, hooks, env vars, and MCP
+  registration, closed by a take-effect check. Use for "allow/deny a command", "add or move a
+  permission rule", "set up a hook", "run something automatically whenever X happens", "always
+  do Y every time", "add an environment variable", "register an MCP server", or "why isn't my
+  setting taking effect".
 ---
 
 # Configure Claude Code
@@ -176,6 +170,7 @@ When in doubt, start a fresh session and re-verify — it is the one reliably cl
   build the harness.
 - **No hook logic authoring beyond the layout** — it teaches the ratified hook *layout* and
   contract; the behavior a specific hook implements is that hook's own concern.
+- **No authoring of skills, subagents, or plugins** — that is claude-code-expertise.
 - **No secret storage** — credentials never go in a committed settings file or a hook body; use
   the machine-local file and environment references (`${VAR}`), and keep the real value out of
   the repo.
