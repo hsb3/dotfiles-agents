@@ -5,8 +5,8 @@ would put a **writing** worker in the orchestrator's own checkout is rewritten t
 `isolation: "worktree"`, so the worker gets its own git worktree instead of sharing the working
 tree and index the session is using.
 
-Stateless: no ledger, no state file, writes nothing anywhere, and fails open on every error path.
-It never denies a dispatch — forcing a worktree is a correction, not a refusal.
+It fails open on every error path and never denies a dispatch — forcing a worktree is a
+correction, not a refusal.
 
 ## Why
 
@@ -102,9 +102,22 @@ Beyond an unarmed activation file, the hook stands down when:
 |---|---|---|
 | `CLAUDE_PROJECT_DIR` | set by Claude Code | Anchor for the activation file and the git check; falls back to the payload `cwd` |
 | `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Activation file location |
+| `WORKTREE_ISOLATION_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/worktree-isolation.jsonl` | Ledger override |
 
-No ledger: the rewrite announces itself with a `systemMessage`, and the worktree path comes back in
-the agent's own result, so a row per dispatch would record nothing new.
+## Ledger
+
+One row per armed dispatch, appended to the `worktree-isolation` stream once the activation file
+is on. Nothing is logged while the hook is inert (unarmed, `isolation`/`cwd` already set, or no
+resolvable project dir) — those paths exit before the logger is even opened.
+
+```
+${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/worktree-isolation.jsonl
+```
+
+Each row carries the identity envelope (`v`, `plugin`, `harness`, `stream`, `ts`, `project`) plus
+`session_id`, `agent_type`, `mode`, `isolated` (bool), and `reason` (`null` when isolated, else
+`"agent type not armed"` or `"project dir is not a git repo"`). A row written from the fail-open
+error path also carries `error` and a truncated `traceback`.
 
 ## Design notes
 

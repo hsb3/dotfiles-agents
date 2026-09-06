@@ -120,18 +120,21 @@ with Diagram(
 '''
 
 
+USAGE = """Usage:
+  python3 scripts/diagram_helper.py validate
+  python3 scripts/diagram_helper.py boilerplate <name> [provider] [direction] [format]
+
+Providers: aws, azure, gcp, k8s, onprem
+Directions: TB (top-bottom), LR (left-right), BT, RL
+Formats: png, svg, pdf, jpg"""
+
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage:")
-        print("  python diagram_helper.py validate")
-        print(
-            "  python diagram_helper.py boilerplate <name> [provider] [direction] [format]"
-        )
-        print()
-        print("Providers: aws, azure, gcp, k8s, onprem")
-        print("Directions: TB (top-bottom), LR (left-right), BT, RL")
-        print("Formats: png, svg, pdf, jpg")
-        sys.exit(1)
+    # Asking what this does is not an error: `--help` and a bare call both answer 0,
+    # so a model can discover the script instead of reading exit 1 as "wrong tool".
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(USAGE)
+        sys.exit(0)
 
     command = sys.argv[1]
 

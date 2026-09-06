@@ -17,8 +17,9 @@ import pathlib
 import sys
 import threading
 
-FORM_DIR = pathlib.Path(sys.argv[1]).resolve()
-PREFERRED_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8737
+USAGE = "usage: python3 serve_signoff.py <form-dir> [port]"
+FORM_DIR = None  # set from argv in __main__; a help call must not bind a port
+PREFERRED_PORT = 8737
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -61,6 +62,13 @@ def bind(port_start):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit(USAGE)
+    if sys.argv[1] in ("-h", "--help"):
+        print(__doc__.strip())
+        sys.exit(0)
+    FORM_DIR = pathlib.Path(sys.argv[1]).resolve()
+    PREFERRED_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8737
     srv, port = bind(PREFERRED_PORT)
     print(f"serving {FORM_DIR} on http://localhost:{port}/ — waiting for submit", flush=True)
     with srv:

@@ -30,6 +30,7 @@ Exit code is always 0 -- this is an advisory harvester, not a gate.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -42,9 +43,6 @@ from _repo import (  # noqa: E402  (sibling - repo derived from gh)
     owner_name,
     repo_slug,
 )
-
-OWNER, NAME = owner_name()
-REPO = repo_slug()
 
 # `gh issue list` page cap; warn if a call saturates it (results may be truncated).
 ISSUE_LIST_LIMIT = 1000
@@ -104,8 +102,9 @@ def fetch_native_edges() -> set[tuple[int, int]]:
     """Existing native (blocked, blocker) edges, paginated through all open issues."""
     edges: set[tuple[int, int]] = set()
     cursor: str | None = None
+    owner, name = owner_name()
     while True:
-        page = graphql(NATIVE_EDGES_QUERY, owner=OWNER, name=NAME, cursor=cursor)[
+        page = graphql(NATIVE_EDGES_QUERY, owner=owner, name=name, cursor=cursor)[
             "data"
         ]["repository"]["issues"]
         for node in page["nodes"]:
@@ -155,12 +154,22 @@ def harvest(issues: list[dict], native: set[tuple[int, int]]) -> list[dict]:
     return candidates
 
 
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse first, so `--help` answers from anywhere -- before any `gh` call."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
+    return parser.parse_args(argv)
+
+
 def main() -> int:
+    args = parse_args(sys.argv[1:])
     issues = fetch_open_issues()
     native = fetch_native_edges()
     candidates = harvest(issues, native)
 
-    if "--json" in sys.argv[1:]:
+    if args.json:
         print(json.dumps(candidates, indent=2))
         return 0
 
@@ -187,7 +196,7 @@ def main() -> int:
         )
     print(
         f"\n{len(candidates)} candidate(s) -- confirm each, then write via "
-        f"`gh api --method POST repos/{REPO}/issues/{{n}}/dependencies/blocked_by`."
+        f"`gh api --method POST repos/{repo_slug()}/issues/{{n}}/dependencies/blocked_by`."
     )
     return 0
 

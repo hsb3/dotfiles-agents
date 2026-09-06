@@ -100,6 +100,7 @@ No activation file: the guard fires wherever the plugin is installed.
 |---|---|---|
 | `ATELIER_GIT_GUARD_OVERRIDE` | unset | `=1` as a command prefix allows one mutating call |
 | `SUBAGENT_TELEMETRY_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/delegation.jsonl` | The delegation ledger it reads to learn who settled |
+| `SUBAGENT_TELEMETRY_TAIL_BYTES` | `262144` | Bounds how much of the delegation ledger's tail is read to compute the settled set |
 | `LIVE_WORKER_GIT_GUARD_LOG_PATH` | `…/agent-logs/claude-code/atelier/live-worker-git-guard.jsonl` | Its own ledger |
 
 ## Design notes

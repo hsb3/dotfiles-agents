@@ -116,3 +116,8 @@ Two consequences, verified by sampler render:
 Add a new entry to `assets/theme-tokens.js` with every required token plus
 `name`, `source`, and `useFor`. The module self-validates on load, so a missing
 or malformed token fails immediately. Then add a row to the table above.
+
+Vet the result before using it in a real deck: `NODE_PATH=<dir-with-node_modules>
+node scripts/build-theme-sampler.js <theme> [outdir]` builds a 3-slide sampler that
+exercises every semantic token, and `scripts/render-pptx.sh` turns it into images to
+look at.

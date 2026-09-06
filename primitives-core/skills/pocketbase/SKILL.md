@@ -1,16 +1,15 @@
 ---
 name: pocketbase
 description: >-
-  Skill for operating PocketBase backend via REST API and Go package mode.
-  Provides collection CRUD, record CRUD, superuser/user authentication,
-  backup & restore, migration file generation (JS and Go), Go hooks,
-  custom routes, and design guidance for API rules, relations, and security
-  patterns. Use for requests related to PocketBase, pb_migrations,
+  Operate a running PocketBase backend via REST API or Go package mode -
+  collection CRUD, record CRUD, superuser and user authentication, backup
+  and restore, migration file generation (JS and Go), Go hooks and custom
+  routes, health checks, and e2e helpers, with bundled stdlib-Python
+  scripts. Use for requests about PocketBase operations, pb_migrations,
   collection management, record operations, Go framework embedding, and
-  backend design.
-license: MIT
-metadata:
-  version: "1.0.1"
+  driving an instance. For schema design, API-rule review,
+  query-performance diagnosis, or a pre-ship backend audit, use the
+  pocketbase-best-practices skill instead.
 ---
 
 # PocketBase Skill
@@ -69,7 +68,7 @@ nohup ./pocketbase serve --http=127.0.0.1:8090 > pb.log 2>&1 &
 5. Health check:
 
 ```bash
-python scripts/pb_health.py
+python3 scripts/pb_health.py
 ```
 
 Never hardcode a latest-version claim: resolve it at run time with the release query in
@@ -113,13 +112,13 @@ Default to `null` and open only what is required.
 Superuser auth:
 
 ```bash
-python scripts/pb_auth.py
+python3 scripts/pb_auth.py
 ```
 
 User auth:
 
 ```bash
-python scripts/pb_auth.py --collection users --identity user@example.com --password secret
+python3 scripts/pb_auth.py --collection users --identity user@example.com --password secret
 ```
 
 ### 2.2 Collections
@@ -127,22 +126,22 @@ python scripts/pb_auth.py --collection users --identity user@example.com --passw
 List / get:
 
 ```bash
-python scripts/pb_collections.py list
-python scripts/pb_collections.py get posts
+python3 scripts/pb_collections.py list
+python3 scripts/pb_collections.py get posts
 ```
 
 Create / update / delete:
 
 ```bash
-python scripts/pb_collections.py create --file schema.json
-python scripts/pb_collections.py update posts --file updates.json
-python scripts/pb_collections.py delete posts
+python3 scripts/pb_collections.py create --file schema.json
+python3 scripts/pb_collections.py update posts --file updates.json
+python3 scripts/pb_collections.py delete posts
 ```
 
 Batch import (recommended for multi-collection setup):
 
 ```bash
-python scripts/pb_collections.py import --file collections.json
+python3 scripts/pb_collections.py import --file collections.json
 ```
 
 Important:
@@ -154,20 +153,20 @@ Important:
 ### 2.3 Records
 
 ```bash
-python scripts/pb_records.py list posts --filter 'status="published"' --sort "-created" --expand "author"
-python scripts/pb_records.py get posts <recordId>
-python scripts/pb_records.py create posts --file record.json
-python scripts/pb_records.py update posts <recordId> '{"status":"published"}'
-python scripts/pb_records.py delete posts <recordId>
+python3 scripts/pb_records.py list posts --filter 'status="published"' --sort "-created" --expand "author"
+python3 scripts/pb_records.py get posts <recordId>
+python3 scripts/pb_records.py create posts --file record.json
+python3 scripts/pb_records.py update posts <recordId> '{"status":"published"}'
+python3 scripts/pb_records.py delete posts <recordId>
 ```
 
 ### 2.4 Backups
 
 ```bash
-python scripts/pb_backups.py list
-python scripts/pb_backups.py create
-python scripts/pb_backups.py restore <backupKey>
-python scripts/pb_backups.py delete <backupKey>
+python3 scripts/pb_backups.py list
+python3 scripts/pb_backups.py create
+python3 scripts/pb_backups.py restore <backupKey>
+python3 scripts/pb_backups.py delete <backupKey>
 ```
 
 Restore replaces all data; always create a backup before restore.
@@ -183,15 +182,15 @@ Primary workflow (both modes):
 Manual migration template generation (only for seed/data transform/raw SQL):
 
 ```bash
-python scripts/pb_create_migration.py "backfill_user_slugs"
-python scripts/pb_create_migration.py "seed_categories" --dir ./pb_migrations
+python3 scripts/pb_create_migration.py "backfill_user_slugs"
+python3 scripts/pb_create_migration.py "seed_categories" --dir ./pb_migrations
 ```
 
 ## 3. Verification
 
 After schema or rule changes, run:
 
-1. `python scripts/pb_collections.py get <collection>`
+1. `python3 scripts/pb_collections.py get <collection>`
 2. CRUD smoke test (create/list/get/update/delete)
 3. Rule test with non-superuser token
 

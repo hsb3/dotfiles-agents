@@ -14,9 +14,11 @@ instead surface a pointer to a handoff that lives outside the repo altogether.
 
 ## Configuration
 
-Env-overridable; shipped wiring leaves both at hook.py's built-in defaults:
+Env-overridable; shipped wiring leaves these at hook.py's built-in defaults:
 - `HANDOFF_SURFACER_HEAD_LINES` — default 15 (lines of the handoff excerpted).
 - `HANDOFF_SURFACER_LOG_PATH` — default `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/handoff-surfacer.jsonl`.
+- `ATELIER_ACTIVATION_FILE` — default `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` (activation file location).
+- `CLAUDE_PROJECT_DIR` — set by Claude Code; anchors the activation file lookup and the ledger's `project` field, falling back to the payload `cwd` when unset.
 
 **Per-project handoff location override.** A project that keeps its handoff somewhere
 other than the standard candidate paths can say so with a `handoff:` key in
@@ -64,6 +66,19 @@ starting. Its freshness stamp is .claude/handoff.stamp.
 user where the handoff lives" — when none is set.) This same key and precedence rule is
 honored by `handoff-freshness-guard` and documented by the `handoff` skill — the three
 must never disagree about where the handoff lives.
+
+## Ledger
+
+One row per `SessionStart` call, appended to the `handoff-surfacer` stream:
+
+```
+${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/handoff-surfacer.jsonl
+```
+
+Each row carries the identity envelope (`v`, `plugin`, `harness`, `stream`, `ts`, `project`)
+plus `session_id`, `source`, `handoff_path`, `handoff_mode`, `surfaced` (bool), and `reason`
+when not surfaced (`"source not eligible for surfacing"` or `"no handoff file found"`). A row
+written from the fail-open error path carries `error` and a truncated `traceback` instead.
 
 ## Install
 

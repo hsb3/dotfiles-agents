@@ -8,6 +8,7 @@ easy to get subtly wrong and impossible to notice when it is.
 
 import importlib.util
 import os
+import subprocess
 import unittest
 
 SCRIPTS = os.path.join(
@@ -117,6 +118,39 @@ class RevertDetection(unittest.TestCase):
         hits = DRIFT.reverts(activity)
         self.assertEqual(len(hits), 1)
         self.assertIsNone(hits[0]["gap_seconds"])
+
+
+USAGE = "usage: MINT_KEY=<agent-api-key> mint-mcp-token.sh <base-url>"
+
+
+class MintTokenUsage(unittest.TestCase):
+    """Both refusals happen before the first curl, so nothing here touches an instance.
+
+    The script's documented contract is `... > token.txt`: a usage error that reached
+    stdout, or that exited 0, would leave a file holding an error message where a token
+    should be and only fail much later, in whatever reads it.
+    """
+
+    def _run(self, args, env_extra=None):
+        env = {k: v for k, v in os.environ.items() if k != "MINT_KEY"}
+        env.update(env_extra or {})
+        return subprocess.run(
+            ["/bin/bash", os.path.join(SCRIPTS, "mint-mcp-token.sh"), *args],
+            capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL, timeout=30,
+        )
+
+    def test_no_base_url_is_refused(self):
+        # A key is supplied so only the missing-URL guard can be what refuses.
+        result = self._run([], {"MINT_KEY": "not-a-real-key"})
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn(USAGE, result.stderr)
+        self.assertEqual("", result.stdout)
+
+    def test_missing_mint_key_is_refused(self):
+        result = self._run(["https://kaneo.example.invalid"])
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn(USAGE, result.stderr)
+        self.assertEqual("", result.stdout, "no network step ran")
 
 
 if __name__ == "__main__":

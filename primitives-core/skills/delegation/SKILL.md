@@ -6,14 +6,12 @@ description: >
   past ~30 minutes of agent work. It applies even when the user never says "delegate" or
   "subagent", and even when the work arrived as a goal ("clean this up", "get it published")
   rather than as a list of slices. Also use it when the user asks how to split work across agents,
-  mentions crews, teams, managers, or subagents, worries about token cost on a big job, or wants
-  to size a job, pick a delegation architecture, choose model tiers, or reserve work for the main
-  session; and when a session notices it has been reading, editing, and running commands itself
-  for a long stretch without delegating. Provides the three-layer model (strategy, management,
-  execution), the effort calibration, the architecture matrix, the pre-dispatch preconditions, the
-  model cheat-sheet, the never-delegated floor and its ceiling, the brief rules, the
-  context-hygiene defaults, and the waiting rules that keep an agent from blocking forever on a
-  reply, a signal, or a worker it cannot tell is dead.
+  mentions crews, teams, managers, subagents, or waves, worries about token cost on a big job, or
+  wants to size a job, pick a delegation architecture, choose model tiers, or reserve work for the
+  main session; and when a session has been editing and running commands itself for a long stretch
+  without delegating. Provides the three-layer model, effort calibration, the architecture matrix,
+  pre-dispatch preconditions, the never-delegated floor and its ceiling, brief rules, and the
+  rules that stop an agent waiting on a dead worker.
 ---
 
 # Delegation

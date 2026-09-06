@@ -3,9 +3,10 @@ name: claude-code-expertise
 description:
   Expert map of Claude Code's extension surfaces for authoring and debugging extenders —
   skills, subagents, hooks, commands, plugins, marketplaces, MCP servers, and
-  settings/permissions. Use to decide which surface fits a need, to look up a surface's
-  frontmatter or config contract, to author or debug a skill, subagent, hook, command, or
-  plugin, or to answer how any Claude Code extension surface works.
+  settings/permissions contracts. Use to decide which surface fits a need, to look up a
+  surface's frontmatter or config contract, to author or debug a skill, subagent, hook,
+  command, or plugin, or to answer how any Claude Code extension surface works. Not for
+  changing settings, permissions, or hook wiring in a project - that is claude-code-config.
 metadata:
   version: 0.1.0
   verified: 2026-07-22

@@ -66,6 +66,7 @@ primitives:
     source: primitives-core/skills/planning-desk
     origin: authored
     disposition: qualified
+    requires: [cli:gh]
     targets: [claude-code, opencode]
   - id: private-fork
     type: skill
@@ -436,7 +437,7 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
-    requires: [hosted-mcp, env:kaneo]
+    requires: [hosted-mcp, env:kaneo, cli:curl, cli:openssl]
   - id: task-authoring
     type: skill
     source: primitives-core/skills/task-authoring

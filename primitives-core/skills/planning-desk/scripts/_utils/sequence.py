@@ -32,6 +32,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -42,7 +43,6 @@ import reconcile  # noqa: E402, I001  (sibling toolkit - plan readiness; path se
 import conformance  # noqa: E402  (sibling - is_epic_type)
 from _repo import graphql, owner_name  # noqa: E402  (sibling - repo derived from gh)
 
-OWNER, NAME = owner_name()
 UNDATED = "9999-99-99"
 
 # `gh issue list` page cap; warn if a call saturates it (results may be truncated).
@@ -96,11 +96,12 @@ def fetch_issues() -> list[dict]:
 
 def fetch_milestone_due() -> dict[str, str]:
     """milestone title -> due date (YYYY-MM-DD), only for dated milestones."""
+    owner, name = owner_name()
     out = subprocess.run(
         [
             "gh",
             "api",
-            f"repos/{OWNER}/{NAME}/milestones",
+            f"repos/{owner}/{name}/milestones",
             "--jq",
             ".[] | select(.due_on != null) | [.title, .due_on] | @tsv",
         ],
@@ -119,8 +120,9 @@ def fetch_graph() -> dict[int, dict]:
     """number -> {blocked_by: [open #], blocking: [#], children: [#]} via GraphQL."""
     graph: dict[int, dict] = {}
     cursor: str | None = None
+    owner, name = owner_name()
     while True:
-        data = graphql(GRAPH_QUERY, owner=OWNER, name=NAME, cursor=cursor)[
+        data = graphql(GRAPH_QUERY, owner=owner, name=name, cursor=cursor)[
             "data"
         ]["repository"]["issues"]
         for n in data["nodes"]:
@@ -213,12 +215,22 @@ def fmt(r: dict) -> str:
     return f"  #{r['number']:<4} [{plan}]{gates}{lev}  {r['title'][:46]}{ms}{due}{blk}"
 
 
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse first, so `--help` answers from anywhere -- before any `gh` call."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
+    return parser.parse_args(argv)
+
+
 def main() -> int:
+    args = parse_args(sys.argv[1:])
     issues = fetch_issues()
     tiers, epics = classify(
         issues, fetch_milestone_due(), fetch_graph(), planned_issues()
     )
-    if "--json" in sys.argv[1:]:
+    if args.json:
         print(json.dumps({"tiers": tiers, "epics": epics}, indent=2))
         return 0
     blurbs = {

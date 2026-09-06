@@ -3,14 +3,16 @@ name: github-project-board
 description: >-
   Stand up and operate a single GitHub Project (v2) board that serves timeline,
   prioritization, and day-to-day task management from one item set sliced into many
-  views — create the project + fields (including ITERATION), edit single-select
+  views - create the project + fields (including ITERATION), edit single-select
   options without orphaning items, seed field values + sub-issue/blocked-by
   dependencies, and run the weekly triage cadence. Knows exactly what is scriptable
-  via gh/GraphQL vs what is genuinely UI-only (views + workflows), and the field-vs-
-  derived-signal discipline that keeps a board from drifting. Use when setting up a
-  new project board, migrating an ad-hoc planning doc/sheet onto a board, deciding
-  the field/view model, or scripting bulk board changes (triage, dependencies,
-  status/iteration assignment) in any repo.
+  via gh/GraphQL vs what is genuinely UI-only (views + workflows), and the
+  field-vs-derived-signal discipline that keeps a board from drifting. Use when
+  setting up a new GitHub Projects board, migrating an ad-hoc planning doc/sheet
+  onto a board, deciding the field/view model, or scripting bulk board changes
+  (triage, dependencies, status/iteration assignment) in any repo. For ranking
+  already-existing items by an Impact x Effort rubric on any board backend, use
+  board-triage instead; this skill owns the board's structure and GraphQL mechanics.
 version: 0.1.0
 ---
 

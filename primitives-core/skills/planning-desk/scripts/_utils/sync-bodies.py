@@ -24,6 +24,7 @@ can gate a wave. --push/--pull exit 0 after acting.
 
 from __future__ import annotations
 
+import argparse
 import difflib
 import json
 import subprocess
@@ -119,21 +120,32 @@ def report(records: list[dict]) -> int:
     return 1 if differ else 0
 
 
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse first, so `--help` answers from anywhere -- before any `gh` call."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--push", action="store_true", help="write local issue-body.md -> GitHub")
+    parser.add_argument("--pull", action="store_true", help="write live GitHub body -> issue-body.md")
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
+    return parser.parse_args(argv)
+
+
 def main() -> int:
-    args = sys.argv[1:]
+    args = parse_args(sys.argv[1:])
     records = [classify(slug) for slug in sorted(disk_folders())]
 
-    if "--push" in args:
+    if args.push:
         for r in records:
             if r["status"] == "DIFFERS":
                 push(r)
         return 0
-    if "--pull" in args:
+    if args.pull:
         for r in records:
             if r["issue"] is not None:
                 pull(r)
         return 0
-    if "--json" in args:
+    if args.json:
         print(
             json.dumps(
                 [

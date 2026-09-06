@@ -1,17 +1,17 @@
 ---
 name: claude-code-config
 description: >-
-  THE skill for configuring Claude Code — shaping how the harness itself behaves through its
-  settings files and the surfaces they govern. Use for any configuration request: "add or move a
-  permission rule", "allow/deny a command", "set up a hook", "run something automatically whenever
-  X happens", "always do Y every time", "add an environment variable", "register an MCP server",
-  "change a setting", or "why isn't my setting taking effect". Covers the whole configuration
-  surface — settings-file precedence (managed policy vs user vs project vs machine-local),
-  permissions at the narrowest scope that works, hooks (a hook is a directory with a config plus a
-  script file, never an inline shell string — the harness executes hooks, so instructions and
-  memory can never satisfy an "always/every time" request), env vars, and MCP server registration
-  — and closes every change with JSON-validity and take-effect verification, including when a fresh
-  session is required. Changing one existing setting is one workflow within this.
+  THE skill for configuring Claude Code itself - its JSON settings files and the surfaces they
+  govern. Use for any configuration request: "add or move a permission rule", "allow/deny a
+  command", "set up a hook", "run something automatically whenever X happens", "always do Y every
+  time", "add an environment variable", "register an MCP server", "change a setting", or "why isn't
+  my setting taking effect". Covers settings-file precedence (managed policy vs user vs project vs
+  machine-local), permissions at the narrowest scope that works, hooks (a hook is a directory with a
+  config plus a script file, never an inline shell string - the harness executes hooks, so
+  instructions and memory can never satisfy an "always/every time" request), env vars, and MCP
+  registration, and closes every change with JSON-validity and take-effect verification. Changing
+  one existing setting is one workflow within this. Not for authoring skills, subagents, or plugins
+  - that is claude-code-expertise.
 ---
 
 # Configure Claude Code

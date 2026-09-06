@@ -9,8 +9,9 @@ wrote them.
 
 ## When it triggers
 
-Creating or rewriting any tracker item — a Kaneo task, a GitHub issue, an OpenSpec
-change — or reviewing an existing task for executability before handing it to an agent.
+Creating or rewriting any tracker item — a Kata issue, a Kaneo task, a GitHub issue, an
+OpenSpec change — or reviewing an existing task for executability before handing it to
+an agent.
 
 ## Install
 

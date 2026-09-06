@@ -28,6 +28,7 @@ Exit code is 1 when any open non-epic issue has no plan, 0 when all are covered.
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import re
@@ -139,9 +140,19 @@ def _grouped(unplanned: list[dict]) -> dict[str, list[dict]]:
     return groups
 
 
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse first, so `--help` answers from anywhere -- before any `gh` call."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
+    return parser.parse_args(argv)
+
+
 def main() -> int:
+    args = parse_args(sys.argv[1:])
     result = compute()
-    if "--json" in sys.argv[1:]:
+    if args.json:
         print(json.dumps(result, indent=2))
         return 1 if result["unplanned"] else 0
 

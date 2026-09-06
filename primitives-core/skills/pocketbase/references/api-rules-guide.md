@@ -436,7 +436,7 @@ For each rule change, verify these four cases:
 
 ```bash
 # Authenticate as a regular user to test rules
-python scripts/pb_auth.py \
+python3 scripts/pb_auth.py \
   --collection users \
   --identity user@example.com \
   --password secret123
@@ -450,7 +450,7 @@ listRule denial returns HTTP 200 with empty items — **not 403**:
 
 ```bash
 # Check count as regular user vs superuser
-python scripts/pb_records.py list posts
+python3 scripts/pb_records.py list posts
 # If items = 0 but you expect records, check the listRule
 ```
 
@@ -460,7 +460,7 @@ Attempt to create a record with a protected field set:
 
 ```bash
 # Should fail or ignore the role field based on your createRule
-python scripts/pb_records.py create users \
+python3 scripts/pb_records.py create users \
   '{"email": "test@example.com", "password": "test1234", "role": "admin"}'
 ```
 

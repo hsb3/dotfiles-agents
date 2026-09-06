@@ -1,19 +1,18 @@
 ---
 name: project-memory
 description: >-
-  The memory taxonomy v1 and the tools that realize it — consult it whenever the question
-  is where agent memory lives, how it moves, or how to wire a repo for it. Answers the
-  reference family: "where does this memory go", "promote a memory", "run a curation pass",
-  "memory vs rule vs skill", "where does agent memory live" — defining the two layers
-  (global dotfiles-managed vs project git-tracked `.claude/memory/`), the two loading modes
-  (always-on `MEMORY.md` index vs situational topic files), the three kinds (memory = facts,
-  rules = directives, skills = procedures), the secret-only birth rule, the curation-time
-  promotion mechanism, and the v1 defaults. Also answers the operational family: "set up
-  project memory", "make this repo's memory travel with it", "opt this repo into tracked
-  memory", "my project memory disappeared after I moved the folder", "migrate/recover my
-  project memory" — via two bundled stdlib scripts, `scripts/project_memory.py`
-  (init/status/path/list, never overwrites) and `scripts/migrate_memory.py` (relocate memory
-  after a move, dry-run by default). The compliance audit reads this skill's checklist.
+  The memory taxonomy v1 and the tools that realize it. Use whenever the question is where
+  agent memory lives, how it moves, or how to wire a repo for it: "where does this memory
+  go", "promote a memory", "run a curation pass", "memory vs rule vs skill", "where does
+  agent memory live". Defines the two layers (global dotfiles-managed vs project git-tracked
+  `.claude/memory/`), the two loading modes (always-on index vs situational topic files),
+  the three kinds (memory = facts, rules = directives, skills = procedures), and the
+  secret-only birth rule. Also handles "set up project memory", "make this repo memory
+  travel with it", "opt this repo into tracked memory", "my project memory disappeared after
+  I moved the folder", "migrate/recover my project memory" via `scripts/project_memory.py`
+  (init/status/path/list, never overwrites) and `scripts/migrate_memory.py` (relocate after
+  a move, dry-run by default). Not for repo layout standards (repo-meta-structure) or
+  scaffolding (mise-en-place-scaffold).
 ---
 
 # Project memory — taxonomy and tooling

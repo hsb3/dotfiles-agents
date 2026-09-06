@@ -14,8 +14,15 @@ fails closed instead of quietly inheriting the right to claim work.
 
 ## Configuration
 
-None. The L2 allowlist is fixed in the handler; tools added by a future image bump
-default to denied.
+The L2 allowlist is fixed in the handler; tools added by a future image bump default to
+denied. Three variables gate every non-diagnostic call — unset any one and the hook denies,
+naming the missing variable:
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `KANEO_API_KEY` | none — required | Denies with `KANEO_API_KEY` named when unset |
+| `KANEO_PROJECT_ID` | none — required | Denies with `KANEO_PROJECT_ID` named when unset |
+| `KANEO_AGENT_NAME` | none — required | Denies with `KANEO_AGENT_NAME` named when unset |
 
 ## The ceiling
 
