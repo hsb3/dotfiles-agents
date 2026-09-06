@@ -49,23 +49,43 @@ composition, so it is hand-authored directly at `plugins/<id>/README.md` (top le
 under `primitives-core/`). All of it ships to a user the same way a skill body does, so all
 of it is in scope for the identity-neutrality lint (`scripts/check_identity.py`).
 
-### Per-item README template (tight scope)
+### Per-item README template
 
-15–25 lines, under 200 words, directive voice. Sections, in order:
+The README is the shop label a person reads before installing; the body is the manual the
+model reads after. Write in directive voice, value first. What every per-item README carries,
+in order:
 
-1. `# <id>` plus one short paragraph — what it does and the outcome it buys, value first.
+1. `# <id>` plus one short paragraph — what it does and the outcome it buys.
 2. `## When it triggers` (skills) / `## When it fires` (hooks) — the asks or events that
    invoke it, in user phrasing.
-3. `## Configuration` — hooks only, and only when env-overridable knobs exist: each
-   variable, its default, and the value the shipped wiring sets.
-4. `## Install` — the `claude plugin install <plugin>@dotfiles-agents` command(s) that
-   deliver it, naming every bundle that carries it (a dual-homed skill lists both).
+3. `## Install` — the `claude plugin install <plugin>@dotfiles-agents` command(s), one per
+   plugin whose assembly carries it. `scripts/check_readmes.py` gates this: the set named
+   must equal the set on disk.
 
-Nothing else: no feature inventories, no API reference, no version history, no restating
-the body. One exception: a skill that is also a standalone plugin's root README carries the
-bundle diagram (`## How it fits together`) the plugin-README standard requires, plus any
-access or attribution section a vendored or hosted-MCP skill owes. A fact that matters only when *editing* the primitive belongs in the source, not
-the README.
+**Skills** stay short — about 25 lines is the norm across the tree, and a skill README that
+outgrows that is usually restating its body. Add a section only when the skill owes one:
+`## Attribution` / `## Provenance` for vendored or sourced content (upstream, pinned ref,
+license), `## Access` for a hosted service with an account gate, and
+`## How it fits together` when the skill is also a standalone plugin's root README (the
+plugin-README standard requires the diagram there).
+
+**Hooks** run longer, and that is correct: a hook's body is code nobody installs a plugin to
+read, so the README is its only human-facing document. The sections the tree has settled on:
+`## Why` (the failure it exists to stop, when the lede cannot carry it), `## When it fires`,
+`## Activation` (what arms it, when it is gated by a per-project file), `## Configuration`
+(every env-overridable knob: variable, default, and the value the shipped wiring sets),
+`## Install`, `## Design notes` (the decisions a reader would otherwise reverse — fail-open,
+what it deliberately does not cover, override paths), and `## Ledger` (stream name and path,
+when it writes one). Omit any section with nothing to say.
+
+**Bundles** (`plugins/<id>/README.md`) follow `docs/readme-diagram-standard.md` instead: lede,
+`## How it fits together`, the member table naming every shipped member (gated), `## Install`,
+and an honest-scope section for the requirements and overlaps a reader hits after installing.
+
+Nothing else: no feature inventories, no API reference, no version history. A fact that
+matters only when *editing* the primitive belongs in the source, not the README. The template
+describes the tree as it is and is revised when the tree outgrows it — measure before
+tightening (`wc -l primitives-core/*/*/README.md`).
 
 ## The pointer invariant
 
