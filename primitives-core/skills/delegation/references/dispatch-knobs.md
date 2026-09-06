@@ -48,6 +48,12 @@ dispatching a fresh agent with a longer brief. A re-brief discards the accumulat
 most of what that agent already cost. This matters most for the `manager`, whose value is
 precisely the chain context it has absorbed.
 
+**This scopes to the contract the agent already holds.** Extending, correcting, or answering an
+escalation within that contract continues the same agent. A *new slice is a new contract*, and it
+goes to a fresh agent — for a manager, that is the retirement rule in `references/chain-width.md`,
+and the two rules do not overlap: one governs the chain in flight, the other what happens after it
+reports.
+
 <!-- harness:claude-code -->
 The channel is `SendMessage` addressed to the agent's id. It reaches an agent that is still
 running as well as one that has finished.
