@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PocketBase health check and connectivity test."""
 
+import argparse
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -12,6 +13,9 @@ from pb_config import (
 
 
 def main():
+    # Parse before the first request: `--help` must not hit the server.
+    argparse.ArgumentParser(description=__doc__).parse_args()
+
     # 1. Health endpoint
     print(f"Checking PocketBase at {PB_URL} ...")
     try:

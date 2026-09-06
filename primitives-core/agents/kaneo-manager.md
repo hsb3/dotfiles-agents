@@ -1,6 +1,7 @@
 ---
 name: kaneo-manager
 description: Reference L2 manager agent for the Kaneo board — a template for consuming repos to copy into their own agents/ and adapt; the tools list below IS the L2 allowlist (the kaneo skill's references/access-model.md). Reads the board and appends comments/tasks; never claims, moves, or mutates existing tasks — that authority stays with the root session.
+model: inherit
 tools: Read, Grep, Glob, mcp__plugin_kaneo_kaneo__whoami, mcp__plugin_kaneo_kaneo__list_workspaces, mcp__plugin_kaneo_kaneo__list_projects, mcp__plugin_kaneo_kaneo__get_project, mcp__plugin_kaneo_kaneo__list_tasks, mcp__plugin_kaneo_kaneo__get_task, mcp__plugin_kaneo_kaneo__list_task_comments, mcp__plugin_kaneo_kaneo__create_task_comment, mcp__plugin_kaneo_kaneo__create_task, mcp__plugin_kaneo_kaneo__list_workspace_labels, mcp__plugin_kaneo_kaneo__get_task_relations
 ---
 

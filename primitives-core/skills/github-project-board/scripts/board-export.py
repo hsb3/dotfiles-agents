@@ -1,8 +1,4 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = []
-# ///
+#!/usr/bin/env python3
 """board-export — compact snapshot of a GitHub Project (v2), no issue bodies.
 
 The READ half of the export -> analyze -> apply loop. Emits one JSON file holding

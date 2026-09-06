@@ -1,6 +1,13 @@
 ---
 name: pptx-themes
-description: Create, edit, and review PowerPoint presentations using a curated set of approved color palettes, semantic theme tokens, monospaced typography, and visual QA workflow. Use for any deck, slide, presentation, or .pptx task you ask for — it overrides the generic pptx skill's palette and font suggestions, especially when choosing colors or themes.
+description: >-
+  Create, edit, and review PowerPoint presentations using a curated set of approved color
+  palettes, semantic theme tokens, monospaced typography, and a render/visual-QA workflow. Use
+  for one-off or external decks, slides, presentations, and .pptx tasks, and whenever colors,
+  fonts, or a theme must be chosen - it overrides the generic pptx skill's palette and font
+  suggestions. Not for the recurring communication deliverables (morning briefing, end-of-day
+  wrap-up, weekly planning briefing, board readout, client overview): those go to the comms
+  skill, which calls this one for the deck itself.
 ---
 
 # PPTX Themes
@@ -124,3 +131,7 @@ scripts/render-pptx.sh output.pptx /tmp/deck-qa
 - `references/typography.md`: font preferences, install checks, generator
   configuration.
 - `scripts/render-pptx.sh`: .pptx → PDF → per-slide JPEGs for visual QA.
+- `scripts/build-theme-sampler.js`: 3-slide sampler deck exercising every token
+  of one theme — vet a new or tuned palette with
+  `NODE_PATH=<dir-with-node_modules> node scripts/build-theme-sampler.js <theme> [outdir]`,
+  then render it with `scripts/render-pptx.sh`.

@@ -1,17 +1,17 @@
 ---
 name: planning-desk
 description: >-
-  Stand up and run a source-grounded planning desk under _meta/plans/ — the workflow for
-  authoring conformant GitHub issue bodies, writing deep build plans, and driving them
-  through a multi-round draft → review → fix → reconcile loop, with a bundled toolkit of
-  governance scripts (conformance, coverage, reconcile, sequence, deps, sync, evidence).
-  Use this whenever the user wants to file or fix a GitHub issue with real acceptance
-  criteria, plan a feature or epic before building, run a planning or backlog-grooming
-  session, organize work in _meta/plans/, audit issue/plan drift, or set up this planning
-  system in a new repo — even if they just say "write me an issue", "plan this out",
-  "groom the backlog", "what should I work on next", or "get this repo's planning organized".
-  Prefer this over ad-hoc issue/plan writing: it enforces deliverables/criteria/parallelism
-  (never timelines), grounds every claim in cited source, and keeps the board and the desk in sync.
+  Stand up and run a source-grounded planning desk under _meta/plans/ - the workflow for authoring
+  conformant GitHub issue bodies, writing deep build plans, and driving them through a multi-round
+  draft -> review -> fix -> reconcile loop, with a bundled toolkit of governance scripts
+  (conformance, coverage, reconcile, sequence, deps, sync, evidence). Use whenever the user wants
+  to file or fix a GitHub issue with real acceptance criteria, plan a feature or epic before
+  building, run a planning or backlog-grooming session, organize work in _meta/plans/, or audit
+  issue/plan drift - even if they just say "write me an issue", "plan this out", "groom the
+  backlog", or "what should I work on next". It enforces deliverables/criteria/parallelism (never
+  timelines) and grounds every claim in cited source. Not for creating a repo's meta-structure or
+  filling audit gaps (mise-en-place-scaffold) or for the layout standard itself
+  (repo-meta-structure).
 ---
 
 # Planning desk
@@ -27,7 +27,7 @@ skill carries the workflow, the standards, and the scripts so any GitHub-backed 
 _meta/plans/                     # the desk — one folder per unit of work
   README.md                      # the live per-plan status index (ACTIVE / ARCHIVED tables)
   _config.md                     # THIS project's gates, issue-template sections, canonical docs
-  _utils/                        # the governance toolkit (7 scripts, gh + disk views)
+  _utils/                        # the governance toolkit (conformance, coverage, reconcile, sequence, deps, sync, evidence; gh + disk views)
   <slug>/
     issue-body.md                # the intended GitHub issue body (staged, reviewable)
     plan.md                      # the deep build plan (deliverables, acceptance, gates, order)

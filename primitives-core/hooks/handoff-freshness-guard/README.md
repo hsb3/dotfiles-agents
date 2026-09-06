@@ -45,7 +45,7 @@ there is no file for this guard to age-check:
 handoff:
   mode: external
   stamp: .claude/handoff.stamp
-  location: Kaneo board task DFA-233
+  location: kata board issue abcd
 ---
 ```
 
@@ -58,14 +58,14 @@ path and, when set, the `location`:
 
 ```
 No handoff signal found (stamp .claude/handoff.stamp has never been touched; the handoff
-lives at: Kaneo board task DFA-233) — update the handoff and touch the stamp, then /compact.
+lives at: kata board issue abcd) — update the handoff and touch the stamp, then /compact.
 ```
 
 or, once the stamp exists but has aged out:
 
 ```
-Handoff signal is stale (stamp .claude/handoff.stamp; the handoff lives at: Kaneo board
-task DFA-233) — update the handoff and touch the stamp, then /compact.
+Handoff signal is stale (stamp .claude/handoff.stamp; the handoff lives at: kata board
+issue abcd) — update the handoff and touch the stamp, then /compact.
 ```
 
 (Both drop the `; the handoff lives at: ...` clause when no `location` is set.) An

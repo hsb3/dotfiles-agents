@@ -163,7 +163,7 @@ Superusers are exempt from all API rules. **Never test rules while authenticated
 Test rule behavior with:
 ```bash
 # Get a regular user token
-python scripts/pb_auth.py \
+python3 scripts/pb_auth.py \
   --collection users --identity user@example.com --password secret
 ```
 
@@ -334,7 +334,7 @@ When expanding back-relations (reverse side of a relation):
 
 ```bash
 # Instead of expanding back-relations on a user, query posts directly
-python scripts/pb_records.py list posts \
+python3 scripts/pb_records.py list posts \
   --filter 'author = "USER_ID"' --sort "-created"
 ```
 
@@ -384,7 +384,7 @@ In addition to underscore-prefixed system collections, PocketBase creates a defa
 
 ```bash
 # Add custom fields to the existing users collection
-python scripts/pb_collections.py update users '{"fields":[...existing fields..., {"name":"role","type":"select","values":["member","admin"]}]}'
+python3 scripts/pb_collections.py update users '{"fields":[...existing fields..., {"name":"role","type":"select","values":["member","admin"]}]}'
 ```
 
 ### Reserved Field Names

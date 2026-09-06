@@ -45,6 +45,9 @@ brew install graphviz          # macOS
 # apt-get install -y graphviz  # Debian/Ubuntu
 ```
 
+Confirm both landed before the first render: `python3 scripts/diagram_helper.py validate`
+reports Graphviz and the `diagrams` library and exits non-zero if either is missing.
+
 ## Workflow
 
 This skill is **self-improving**. Always check the memory file before starting, and record learnings after completing diagrams.

@@ -1,8 +1,4 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = []
-# ///
+#!/usr/bin/env python3
 """board-fields — dump every field of a GitHub Project (v2) with its allowed values.
 
 The ENUM reference for the export -> analyze -> apply loop: the valid field names and,

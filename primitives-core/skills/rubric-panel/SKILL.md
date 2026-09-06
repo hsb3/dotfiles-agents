@@ -1,6 +1,6 @@
 ---
 name: rubric-panel
-description: Score one or more code artifacts against an anchored rubric using a persona-diverse judge panel; produces dimension scores plus findings classified as defect, noise, spec-hole, or undeclared-commitment. Use when asked to evaluate, score, judge, or compare solutions or modules, or when invoked by layer-cycle.
+description: Score one or more code artifacts against an anchored rubric using a persona-diverse judge panel; produces dimension scores plus findings classified as defect, noise, spec-hole, or undeclared-commitment. Use when asked to "score this implementation", "judge these two solutions", "rate this module against a rubric", or compare competing implementations of the same spec, and when invoked by layer-cycle. For choosing between technologies, frameworks, or vendors, use tech-eval-research instead.
 ---
 
 # Rubric panel

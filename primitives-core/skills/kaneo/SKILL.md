@@ -1,6 +1,6 @@
 ---
 name: kaneo
-description: Work tasks on a Kaneo board (live project tracker) - claim tasks, update status, log decisions. Use whenever a session works against a Kaneo board, picks up / claims / completes tracked tasks, or must record a decision. The board replaces in-repo task files (backlog.md, TODO lists).
+description: Work tasks on a Kaneo board (live project tracker) - claim tasks, update status, log decisions, and mint the MCP token. Use whenever a session works against a Kaneo board specifically (KANEO_API_URL / KANEO_PROJECT_ID are set, or the user says Kaneo), picks up / claims / completes tracked tasks there, or must record a decision on it. The board replaces in-repo task files (backlog.md, TODO lists). Not for other trackers - a kata board, a GitHub Project, or Jira has its own skill or project instructions; not for writing the task text itself (task-authoring) or ranking a backlog (board-triage).
 ---
 
 # Kaneo agent workflow

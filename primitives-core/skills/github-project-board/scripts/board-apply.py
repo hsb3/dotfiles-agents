@@ -1,8 +1,4 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = []
-# ///
+#!/usr/bin/env python3
 """board-apply — apply a changeset to a GitHub Project (v2). DRY-RUN by default.
 
 The WRITE half of the export -> analyze -> apply loop. Reads a TSV changeset

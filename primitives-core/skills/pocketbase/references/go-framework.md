@@ -90,7 +90,7 @@ project/
 After starting, verify with:
 
 ```bash
-python scripts/pb_health.py
+python3 scripts/pb_health.py
 ```
 
 > **Production deployment:** For Docker, cross-compilation, CGO trade-offs, and Docker Compose configurations, read the `deployment.md` guide under the `pb-react-spa` skill in this repository.

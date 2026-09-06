@@ -29,6 +29,7 @@ so it can gate a wave.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -100,33 +101,18 @@ def audit(issues: list[dict], since: str | None) -> dict:
 
 
 def parse_args(argv: list[str]) -> tuple[int, str | None, bool]:
-    limit, since, as_json = DEFAULT_LIMIT, None, False
-    i = 0
-    while i < len(argv):
-        arg = argv[i]
-        if arg == "--json":
-            as_json = True
-        elif arg == "--limit":
-            i += 1
-            if i >= len(argv):
-                print("--limit requires a value", file=sys.stderr)
-                sys.exit(2)
-            try:
-                limit = int(argv[i])
-            except ValueError:
-                print(f"--limit requires an integer, got: {argv[i]!r}", file=sys.stderr)
-                sys.exit(2)
-        elif arg == "--since":
-            i += 1
-            if i >= len(argv):
-                print("--since requires a value", file=sys.stderr)
-                sys.exit(2)
-            since = argv[i]
-        else:
-            print(f"unknown arg: {arg}", file=sys.stderr)
-            sys.exit(2)
-        i += 1
-    return limit, since, as_json
+    """Parse first, so `--help` answers from anywhere -- before any `gh` call."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--limit", type=int, default=DEFAULT_LIMIT,
+        help=f"how many recently-closed issues to check (default: {DEFAULT_LIMIT})",
+    )
+    parser.add_argument("--since", help="only issues closed on/after this date (YYYY-MM-DD)")
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
+    args = parser.parse_args(argv)
+    return args.limit, args.since, args.json
 
 
 def main() -> int:

@@ -21,6 +21,7 @@ every repo that does not use a board. The cost there is one hook process per Bas
 | Env var | Default | Meaning |
 |---|---|---|
 | `KANEO_API_URL` | unset | The instance base URL. Unset stands the tripwire down; set, its hostname becomes the thing to watch for. |
+| `KANEO_CLIENT_URL` | unset | Not read for its value — naming this variable in the Bash command is itself one of the strings the tripwire watches for, alongside `KANEO_API_URL`'s literal name and resolved hostname. |
 
 ## Install
 

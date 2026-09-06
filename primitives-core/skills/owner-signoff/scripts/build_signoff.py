@@ -180,9 +180,15 @@ def render(spec: dict) -> str:
     return out
 
 
+USAGE = "usage: python3 build_signoff.py <spec.yaml|spec.json>"
+
+
 def main() -> None:
+    if len(sys.argv) == 2 and sys.argv[1] in ("-h", "--help"):
+        print(USAGE)  # asking for help is not a usage error
+        return
     if len(sys.argv) != 2:
-        raise SystemExit("usage: python3 build_signoff.py <spec.yaml|spec.json>")
+        raise SystemExit(USAGE)
     spec_path = pathlib.Path(sys.argv[1]).resolve()
     spec = load_spec(spec_path)
     errs = validate(spec)
