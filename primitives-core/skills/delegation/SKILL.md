@@ -112,6 +112,16 @@ Its standard execution loop on every building link is **build → review → rev
 briefs continue the same builder, then `deletion-pass` once green. The `layer-cycle` skill is
 that loop formalized for module-scale links.
 
+**Bounded width, retired between slices `[field]`.** A chain is what fits before one report, with
+**two to three tasks** as the working default, and the next slice goes to a **fresh manager**
+rather than the same one continued. (Follow-ups *within* a chain still go to the same running
+manager; that accumulated context is what the layer bought.) Two rules keep the width honest.
+**Decision-gated items never enter a build slice**: an owner call or a pending ruling returns to
+the strategy layer as a question for the user before any worktree opens. **A manager writes each
+task's result to the tracker as it lands**, so a lost manager costs one slice's report rather
+than the wave's. The anchors, and the eleven-task brief that forced them, are in
+**`references/chain-width.md`**.
+
 **Context it needs:** the objective, the DoD verbatim, the constraints, worker-model guidance, the
 evidence format, and the stop conditions — plus everything its own workers return, which is the
 bulk of it and which it exists to absorb rather than forward.
@@ -314,6 +324,10 @@ genuinely torn, take D `[field]`. The guidance this replaces said the opposite (
 architecture") and carried `[untested]`; no run has ever compared the same job under two
 architectures, so nothing measured was overturned here.
 
+**Choosing D does not settle how wide the chain is.** One manager takes what it can report on
+once; past that the work is a wave of narrow slices, each with its own manager
+(`references/chain-width.md`).
+
 ## Step 3 — Satisfy three preconditions before the first dispatch
 
 All three are cheap to write and expensive to retrofit `[lab]`.
@@ -382,6 +396,10 @@ produced a ~90-line wall of mostly single-use constants, costing that solution i
 score, unanimously, on its round's panel `[lab]`. The other two rules are test-first by default
 with the observed failure as evidence (the largest single quality lever the lab measured), and the
 negative list of what a worker must never be told (cycle budgets, scores, sibling work).
+
+**A manager brief carries one more check `[field]`:** if the brief has to tell the manager which of
+its own tasks may run at the same time, the brief **is a wave and not a chain** — split it before
+dispatching.
 
 ## Verification
 
@@ -454,6 +472,8 @@ a slicing defect to escalate, not a compaction to ride out.
 - **`references/verification.md`** — evidence ranking, the differential, the panel escalation,
   aiming verification where the stack is weak.
 - **`references/manager-brief.md`** — the fill-in-the-blanks architecture-D manager brief.
+- **`references/chain-width.md`** — how wide one chain may be, retiring a manager between slices,
+  and the worked eleven-task anti-example.
 - **`references/migrate-at-scale.md`** — one mechanical transform across many sites.
 - **`references/tier-cutoff.md`** — the protocol for measuring where cheap model tiers stop being
   enough.
