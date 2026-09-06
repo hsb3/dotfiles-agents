@@ -27,6 +27,10 @@ real proof. Both must be true.
   that surfaces a real bug is a feature of this process, not a detour.)
 - **Verify before you commit.** Confirm image paths resolve and the README reads
   top-to-bottom for the target audience.
+- **Capture against synthetic data, not a live account.** A committed screenshot ships
+  whatever was on screen into a usually-public README. "Real data over lorem ipsum"
+  means *realistic-looking* — seeded/synthetic content that reads as genuine — never a
+  live account's actual user/client content.
 
 ## Part A — the value proposition
 
@@ -51,7 +55,8 @@ real proof. Both must be true.
    `npm run dev`, `docker compose up`, a dev server). Note required env/keys/
    services. Put secrets only in gitignored `.env` files; never commit them.
 2. **Drive it to meaningful states** worth showing: the entry/empty state, a core
-   feature mid-use, a standout/edge feature. Prefer real data over lorem ipsum.
+   feature mid-use, a standout/edge feature. Prefer realistic seeded/synthetic data
+   over lorem ipsum — not a live account's real content.
 3. **Capture with headless Chromium (Playwright).** A self-contained script that
    logs console errors (0 errors = clean proof) and screenshots full-page at a
    fixed viewport. Gotchas that bite:
@@ -84,10 +89,14 @@ real proof. Both must be true.
 4. **Look at every screenshot** before using it. Confirm it shows the feature
    working and nothing is broken/misleading (placeholder labels, error states,
    empty panels). Drop or recapture bad ones; file/fix real bugs you find.
+   **Before committing, read each image for leaked tokens or identifiers** —
+   names, emails, client names, org slugs, API keys/session ids visible in a
+   URL bar, DevTools, or a notification.
 5. **Save committed** to `docs/images/` (or `.github/assets/`), reference with
    `![alt](docs/images/x.png)`, and verify every ref resolves:
    `grep -oE 'docs/images/[^)]+' README.md | while read p; do [ -f "$p" ] && echo OK $p || echo MISSING $p; done`
-6. **Tear down** the app and any throwaway services. Scrub/rotate any keys used.
+6. **Tear down** the app and any throwaway services. Scrub/rotate any keys used —
+   including any that turn up in the leak check on step 4.
 
 ## Output checklist
 
@@ -97,3 +106,4 @@ real proof. Both must be true.
       working behavior; misleading ones dropped and any bugs filed/fixed.
 - [ ] Images committed, refs resolve, README reads cleanly end-to-end.
 - [ ] No secrets committed; app and temp services torn down.
+- [ ] No real user/client data visible in any committed screenshot.
