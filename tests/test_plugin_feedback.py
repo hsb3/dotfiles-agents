@@ -5,14 +5,18 @@ line on stdout), matching tests/test_worker_context.py: fixtures build into a te
 per test and the child environment is built from scratch with only PATH inherited.
 
 The reporter is imported in process so its body-building logic is covered directly.
-Nothing here shells out to `gh` or touches the network — the one test that exercises
-the filing path substitutes a fake runner and asserts on the argv it was handed.
+Nothing here shells out to `gh` or touches the network by default: every test of the
+filing path substitutes a fake runner and asserts on the argv it was handed. The single
+exception is opt-in and off in `make ci` — `PLUGIN_FEEDBACK_LIVE_TESTS=1` enables the one
+check that the reporter's default labels still exist in the real target repo, and its gh
+probe runs inside that test, never at import.
 """
 
 import io
 import itertools
 import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -39,6 +43,10 @@ _SEQ = itertools.count()
 # dir is copied and symlinked on its own, so the name is duplicated in both hooks
 # rather than imported across them.
 DISABLE_ENV = "PLUGIN_FEEDBACK_DISABLED"
+
+# Opt-in for the one test allowed to reach the network. Unset (the `make ci` case) it
+# skips, and importing this module spawns no subprocess at all.
+LIVE_TESTS_ENV = "PLUGIN_FEEDBACK_LIVE_TESTS"
 
 
 def _session_id():
@@ -411,47 +419,82 @@ class BodyBuildingTests(unittest.TestCase):
                 self.assertEqual(argv[argv.index(flag) + 1], value)
 
 
-class _FakeRunner:
-    """Stands in for subprocess.run; records the argv and never touches the network."""
+class _Completed:
+    """The three attributes the reporter reads off a completed process."""
 
-    def __init__(self, returncode=0):
-        self.calls = []
+    def __init__(self, returncode=0, stdout="", stderr=""):
         self.returncode = returncode
-
-    def __call__(self, argv, **kwargs):
-        self.calls.append((argv, kwargs))
-
-        class _Completed:
-            pass
-
-        done = _Completed()
-        done.returncode = self.returncode
-        done.stdout = "https://example.invalid/issues/1\n"
-        done.stderr = ""
-        return done
+        self.stdout = stdout
+        self.stderr = stderr
 
 
-class _LabelMissingRunner:
-    """gh's actual behaviour when the label does not exist: the whole `issue create`
-    fails, after the body has already been composed. Succeeds on the retry."""
+class _GhFake:
+    """Base for the runner fakes: answers the reporter's read-only `gh` probes — this
+    marketplace's plugin list and the target repo's label set — so a test only has to
+    say what `gh issue create` does. `creates` is that subset of the recorded calls,
+    which is what every filing assertion below counts."""
 
-    MESSAGE = "could not add label: 'type:feature' not found\n"
+    LISTED = ("atelier", "plugin-feedback")
+    LABELS = tuple(R.DEFAULT_LABELS.values())
 
     def __init__(self):
         self.calls = []
 
+    @property
+    def creates(self):
+        return [argv for argv, _kw in self.calls if argv[:3] == ["gh", "issue", "create"]]
+
     def __call__(self, argv, **kwargs):
         self.calls.append((argv, kwargs))
+        if argv[:2] == ["gh", "api"]:
+            return _Completed(
+                stdout=json.dumps({"plugins": [{"name": n} for n in self.LISTED]})
+            )
+        if argv[:3] == ["gh", "label", "list"]:
+            return _Completed(stdout=json.dumps([{"name": n} for n in self.LABELS]))
+        return self._create()
 
-        class _Completed:
-            pass
+    def _create(self):
+        raise NotImplementedError
 
-        done = _Completed()
-        first = len(self.calls) == 1
-        done.returncode = 1 if first else 0
-        done.stdout = "" if first else "https://example.invalid/issues/1\n"
-        done.stderr = self.MESSAGE if first else ""
-        return done
+
+class _FakeRunner(_GhFake):
+    """Stands in for subprocess.run; records the argv and never touches the network."""
+
+    def __init__(self, returncode=0):
+        _GhFake.__init__(self)
+        self.returncode = returncode
+
+    def _create(self):
+        return _Completed(self.returncode, "https://example.invalid/issues/1\n", "")
+
+
+class _LabelMissingRunner(_GhFake):
+    """gh's actual behaviour when the label does not exist: the whole `issue create`
+    fails, after the body has already been composed. Succeeds on the retry.
+
+    It reports the label as PRESENT on the read-only probe, so the reporter's own
+    live-label check cannot save this one — which is the point: the retry stays the
+    backstop for the window between the check and the call, and for every repo whose
+    labels gh could not answer for at all."""
+
+    MESSAGE = "could not add label: 'type:feature' not found\n"
+
+    def _create(self):
+        if len(self.creates) == 1:
+            return _Completed(1, "", self.MESSAGE)
+        return _Completed(0, "https://example.invalid/issues/1\n", "")
+
+
+class _BlindRunner(_FakeRunner):
+    """gh installed but unable to answer a read — no auth, no network, rate limited.
+    Only `issue create` works, which is the case the fail-open path exists for."""
+
+    def __call__(self, argv, **kwargs):
+        if argv[:3] == ["gh", "issue", "create"]:
+            return _FakeRunner.__call__(self, argv, **kwargs)
+        self.calls.append((argv, kwargs))
+        return _Completed(1, "", "gh: could not resolve host\n")
 
 
 class MainTests(unittest.TestCase):
@@ -488,8 +531,8 @@ class MainTests(unittest.TestCase):
     def test_files_through_the_runner_once(self):
         code, _out, runner = self._main(self.BUG_ARGS)
         self.assertEqual(code, 0)
-        self.assertEqual(len(runner.calls), 1)
-        argv = runner.calls[0][0]
+        self.assertEqual(len(runner.creates), 1)
+        argv = runner.creates[0]
         self.assertEqual(argv[:3], ["gh", "issue", "create"])
         self.assertIn("acme/widgets", argv)
         self.assertIn(R.DEFAULT_LABELS[R.KIND_BUG], argv)
@@ -506,8 +549,8 @@ class MainTests(unittest.TestCase):
         runner = _LabelMissingRunner()
         code, out, runner = self._main(self.BUG_ARGS, runner=runner)
         self.assertEqual(code, 0)
-        self.assertEqual(len(runner.calls), 2)
-        retry = runner.calls[1][0]
+        self.assertEqual(len(runner.creates), 2)
+        retry = runner.creates[1]
         self.assertNotIn("--label", retry)
         self.assertIn("--body", retry)  # the report itself survived the retry
         self.assertIn("filing unlabelled", out)
@@ -517,7 +560,7 @@ class MainTests(unittest.TestCase):
         runner = _FakeRunner(returncode=1)
         code, _out, runner = self._main(self.BUG_ARGS, runner=runner)
         self.assertEqual(code, 1)
-        self.assertEqual(len(runner.calls), 1)
+        self.assertEqual(len(runner.creates), 1)
 
     def test_argv_omits_the_flag_entirely_when_the_label_is_falsy(self):
         self.assertNotIn("--label", R.build_argv("acme/widgets", "t", "b", None))
@@ -533,9 +576,12 @@ class MainTests(unittest.TestCase):
         self.assertIn("marketplace", out.lower())
 
     def test_draft_prints_the_body_and_files_nothing(self):
+        """Every gh call a draft makes must be a read, and a cheap one: asserting only
+        `creates` is empty let the label list — a filing-path cost — slip onto this
+        path unnoticed."""
         code, out, runner = self._main(self.BUG_ARGS + ["--draft"])
         self.assertEqual(code, 0)
-        self.assertEqual(runner.calls, [])
+        self.assertEqual([argv[:2] for argv, _kw in runner.calls], [["gh", "api"]])
         self.assertIn("atelier: covenant never injected", out)
         self.assertIn("## What happens", out)
 
@@ -578,7 +624,7 @@ class MainTests(unittest.TestCase):
         del argv[argv.index("--contract"):]
         code, out, runner = self._main(argv)
         self.assertEqual(code, 2)
-        self.assertEqual(runner.calls, [])
+        self.assertEqual(runner.creates, [])
         self.assertIn("--contract", out)
 
     def test_feature_without_a_limitation_is_a_usage_error(self):
@@ -586,13 +632,13 @@ class MainTests(unittest.TestCase):
         del argv[argv.index("--contract"):]
         code, out, runner = self._main(argv)
         self.assertEqual(code, 2)
-        self.assertEqual(runner.calls, [])
+        self.assertEqual(runner.creates, [])
         self.assertIn("--limitation", out)
 
     def test_unresolvable_repo_refuses_and_names_the_env_var(self):
         code, out, runner = self._main(self.BUG_ARGS, env={R.REPO_ENV: ""})
         self.assertEqual(code, 2)
-        self.assertEqual(runner.calls, [])
+        self.assertEqual(runner.creates, [])
         self.assertIn(R.REPO_ENV, out)
 
     def test_draft_works_without_a_resolvable_repo(self):
@@ -607,7 +653,153 @@ class MainTests(unittest.TestCase):
     def test_gh_failure_is_reported_as_nonzero(self):
         code, _out, runner = self._main(self.BUG_ARGS, runner=_FakeRunner(returncode=1))
         self.assertEqual(code, 1)
-        self.assertEqual(len(runner.calls), 1)
+        self.assertEqual(len(runner.creates), 1)
+
+    # -- the scope boundary, checked rather than described ------------------
+
+    def _unlisted(self, *extra):
+        """BUG_ARGS naming a plugin this marketplace's manifest does not list."""
+        argv = list(self.BUG_ARGS)
+        argv[argv.index("--plugin") + 1] = "some-other-marketplaces-plugin"
+        return argv + list(extra)
+
+    def test_a_plugin_this_marketplace_does_not_ship_is_refused(self):
+        """The incident this exists for: a defect in a plugin from somewhere else was
+        filed here, where no maintainer could act on it. Prose said not to; nothing
+        checked. The refusal names what IS shipped so a typo is self-correcting."""
+        code, out, runner = self._main(self._unlisted())
+        self.assertEqual(code, 2)
+        self.assertEqual(runner.creates, [])
+        self.assertIn("atelier", out)
+        self.assertIn("--allow-unlisted", out)
+
+    def test_a_draft_is_refused_the_same_way(self):
+        """A draft is a read of the same boundary, and a dispatcher handed a
+        misdirected draft is exactly the reader this is meant to stop."""
+        code, out, runner = self._main(self._unlisted("--draft"))
+        self.assertEqual(code, 2)
+        self.assertEqual(runner.creates, [])
+        self.assertNotIn("## What happens", out)
+
+    def test_the_override_files_it_anyway(self):
+        """A stale manifest must not be able to hold a real report hostage — the
+        boundary is a check with a documented way past it, not a wall."""
+        code, _out, runner = self._main(self._unlisted("--allow-unlisted"))
+        self.assertEqual(code, 0)
+        self.assertEqual(len(runner.creates), 1)
+
+    def _marketplace_at(self, path, names):
+        """A marketplace manifest on disk, listing `names`."""
+        meta = os.path.join(path, ".claude-plugin")
+        os.makedirs(meta, exist_ok=True)
+        with io.open(os.path.join(meta, "marketplace.json"), "w", encoding="utf-8") as fh:
+            fh.write(json.dumps({"plugins": [{"name": n} for n in names]}))
+
+    def test_a_local_hit_answers_without_asking_gh(self):
+        """A checkout carries the answer already; paying for a network read to learn
+        what is on disk beside you is the cost this fast path exists to avoid."""
+        root = os.path.join(self.tmp.name, "checkout", "plugin")
+        os.makedirs(root)
+        self._marketplace_at(os.path.join(self.tmp.name, "checkout"), ["atelier"])
+        code, _out, runner = self._main(self.BUG_ARGS, env={"CLAUDE_PLUGIN_ROOT": root})
+        self.assertEqual(code, 0)
+        self.assertNotIn(["gh", "api"], [argv[:2] for argv, _kw in runner.calls])
+
+    def test_a_manifest_from_another_tree_cannot_refuse_a_shipped_plugin(self):
+        """The local read may only ever ALLOW. Whatever manifest happens to sit above
+        the plugin root is some other tree's roster, and refusing on it turns a plugin
+        this marketplace really does ship into an unfileable one."""
+        root = os.path.join(self.tmp.name, "outer", "plugin")
+        os.makedirs(root)
+        self._marketplace_at(os.path.join(self.tmp.name, "outer"), ["someone-elses-plugin"])
+        code, out, runner = self._main(self.BUG_ARGS, env={"CLAUDE_PLUGIN_ROOT": root})
+        self.assertEqual(code, 0, out)
+        self.assertEqual(len(runner.creates), 1)
+
+    def test_the_walk_stops_at_the_enclosing_repo_root(self):
+        """A manifest above the repo the plugin lives in is not this marketplace's, so
+        it is never read: with gh unable to answer, the check is undeterminable rather
+        than answered out of a stranger's file."""
+        repo = os.path.join(self.tmp.name, "outer", "repo")
+        root = os.path.join(repo, "plugin")
+        os.makedirs(root)
+        self._marketplace_at(os.path.join(self.tmp.name, "outer"), ["atelier"])
+        with io.open(os.path.join(repo, ".git"), "w", encoding="utf-8") as fh:
+            fh.write("gitdir: elsewhere\n")
+        _code, out, _runner = self._main(
+            self.BUG_ARGS, env={"CLAUDE_PLUGIN_ROOT": root}, runner=_BlindRunner()
+        )
+        self.assertIn("membership check", out)
+
+    def test_an_unreadable_plugin_list_fails_open(self):
+        """No plugin list, no check: a network blip must not swallow a report. The
+        notice is what keeps the waiver visible instead of silent."""
+        code, out, runner = self._main(self._unlisted(), runner=_BlindRunner())
+        self.assertEqual(code, 0)
+        self.assertEqual(len(runner.creates), 1)
+        self.assertIn("membership check", out)
+
+    def test_a_full_page_of_labels_reads_as_unknown(self):
+        """gh pages the label list, so a response filling the page may be a truncated
+        one. Read as complete, it strips a label the repo does carry."""
+        runner = _FakeRunner()
+        runner.LABELS = tuple("label-{0}".format(i) for i in range(R.LABEL_PAGE))
+        code, out, runner = self._main(self.BUG_ARGS, runner=runner)
+        self.assertEqual(code, 0)
+        self.assertIn("--label", runner.creates[0])
+        self.assertNotIn("filing unlabelled", out)
+
+    def test_a_label_the_repo_does_not_carry_is_dropped_before_filing(self):
+        """AC#2's half: the default label is checked against the repo's live set, so a
+        rename costs a notice rather than a failed call the filer has to interpret."""
+        runner = _FakeRunner()
+        runner.LABELS = ("something-else",)
+        code, out, runner = self._main(self.BUG_ARGS, runner=runner)
+        self.assertEqual(code, 0)
+        self.assertNotIn("--label", runner.creates[0])
+        self.assertIn("filing unlabelled", out)
+        self.assertIn(R.LABEL_ENV[R.KIND_BUG], out)
+
+
+@unittest.skipUnless(os.environ.get(LIVE_TESTS_ENV), LIVE_TESTS_ENV + " is not set")
+class LiveLabelTests(unittest.TestCase):
+    """The one network-touching test in this file, and the only thing that can catch a
+    label rename in the target repo: every other assertion here is against a fixture,
+    which is exactly how a hardcoded default stayed wrong through two field filings.
+
+    Opt-in, and the gh probe runs inside the test rather than at import — a probe in a
+    decorator or at module scope shells out just for importing this file, which would put
+    a network call inside `make ci`, where this repo keeps none."""
+
+    def _live_labels(self):
+        """The target repo's real labels, or a skip when gh cannot answer at all."""
+        if not shutil.which("gh"):
+            self.skipTest("gh is not installed")
+        with io.open(PLUGIN_MANIFEST, encoding="utf-8") as fh:
+            repo = R.normalize_repo(json.load(fh).get("repository"))
+        self.assertIsNotNone(repo, "plugin manifest carries no resolvable repository")
+        try:
+            done = subprocess.run(
+                ["gh", "label", "list", "--repo", repo, "--json", "name", "--limit", "200"],
+                capture_output=True, text=True, timeout=10,
+            )
+            labels = {e["name"] for e in json.loads(done.stdout)} if not done.returncode else None
+        except Exception:
+            labels = None
+        if not labels:
+            self.skipTest("gh could not read {0}'s labels".format(repo))
+        return labels
+
+    def test_every_default_label_exists_in_the_target_repo(self):
+        live = self._live_labels()
+        for kind, label in sorted(R.DEFAULT_LABELS.items()):
+            with self.subTest(kind=kind):
+                self.assertIn(
+                    label, live,
+                    "default {0} label {1!r} is not a label the target repo carries".format(
+                        kind, label
+                    ),
+                )
 
 
 if __name__ == "__main__":

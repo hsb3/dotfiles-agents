@@ -16,21 +16,31 @@ Tier rule (ratified doctrine, carried by the two companion hooks):
   - a feature request is filed by the primary session only. A dispatched worker runs
     `--draft`, prints the body, and hands it to its dispatcher to review and file.
 
-`--draft` prints the report and files nothing, so the draft path needs neither the
-network nor a resolved target repo.
+`--draft` prints the report and files nothing, but it does run the membership check
+below, which costs one gh read whenever no marketplace manifest sits near the plugin
+root (the normal case for an installed plugin). A target repo it cannot resolve, or a
+read it cannot make, still gets its draft.
 
-Scope: this reporter files into the marketplace it shipped from, NOT into the repo of
-the plugin being reported. It resolves the target from the REPORTING plugin's manifest,
-so a report about a plugin from somewhere else would land in the wrong tracker — that
-report belongs in that project's own. Both hooks scope their offer the same way, and
-the resolved target is printed with its provenance before anything is filed, so the
-destination is never something the caller has to infer.
+Scope, checked and not merely described: this reporter files into the marketplace it
+shipped from, NOT into the repo of the plugin being reported. `--plugin` is matched
+against that marketplace's own `.claude-plugin/marketplace.json`, and an id it does not
+list is refused (`--allow-unlisted` is the deliberate way past) because such a report
+would land in front of maintainers who cannot fix it. A list that cannot be determined
+at all waives the check with a notice: a network blip must not swallow a report. Both
+hooks scope their offer the same way, and the resolved target is printed with its
+provenance before anything is filed, so the destination is never something the caller
+has to infer.
 
 The target repo is DATA, never a literal in this file: `PLUGIN_FEEDBACK_REPO` wins,
 otherwise it is read from the reporting plugin's own manifest
 (`<plugin-root>/.claude-plugin/plugin.json` -> `repository`), which is the sanctioned
 place for a plugin's authorship and origin metadata. Neither one resolvable is a
 refusal that names the variable, never a guess.
+
+The label is DATA too: the per-kind default is matched against the target repo's live
+label set before filing, so a rename costs a notice and an unlabelled issue rather than
+a failed call. The unlabelled retry below stays the backstop for what that check cannot
+see (a label deleted between the two calls, a repo gh cannot list).
 
 This file must have ZERO third-party dependencies (Python 3 stdlib only) and must
 stay compatible with Python 3.9.
@@ -76,6 +86,15 @@ DEFAULT_LABELS = {KIND_BUG: "type:fix", KIND_FEATURE: "type:feat"}
 # so a stale default costs the filer their report and buys a re-run. Matching this lets the
 # report land unlabelled instead, which is recoverable; a lost report is not.
 LABEL_MISSING = re.compile(r"could not add label", re.I)
+
+# gh pages label lists. A response filling the page may be a truncated one, and a label
+# set read short would strip a label that does exist — so a full page reads as unknown.
+LABEL_PAGE = 200
+
+# The marketplace roster, in the one spelling both readers below need: a relative path
+# under a checkout root, and a path inside the target repo for the gh read.
+MARKETPLACE_MANIFEST = ".claude-plugin/marketplace.json"
+ALLOW_UNLISTED = "--allow-unlisted"
 
 NO_FIX = "None offered."
 NO_REPRO = "Not captured."
@@ -189,6 +208,135 @@ def resolve_label(kind, env, override=None):
         return override
     from_env = (env.get(LABEL_ENV[kind]) or "").strip()
     return from_env or DEFAULT_LABELS[kind]
+
+
+def _gh_json(argv, runner):
+    """Parsed stdout of a read-only gh call, or None on any failure at all."""
+    try:
+        done = runner(argv, text=True, capture_output=True)
+    except Exception:
+        return None
+    if getattr(done, "returncode", 1) != 0:
+        return None
+    try:
+        return json.loads(getattr(done, "stdout", "") or "")
+    except Exception:
+        return None
+
+
+def live_labels(repo, runner):
+    """The labels the target repo actually carries, or None when gh cannot say.
+
+    None is `unknown`, never `empty`: the caller leaves the label alone on it, so an
+    unanswerable read can only ever skip the check, never strip a working label.
+    """
+    names = _gh_json([
+        "gh", "label", "list", "--repo", repo,
+        "--json", "name", "--limit", str(LABEL_PAGE),
+    ], runner)
+    if not isinstance(names, list) or len(names) >= LABEL_PAGE:
+        return None
+    live = set(
+        e["name"] for e in names
+        if isinstance(e, dict) and isinstance(e.get("name"), str)
+    )
+    return live or None
+
+
+def unlabelled_notice(label, repo, kind):
+    """One wording for both ways a label drops out — the pre-check and the retry."""
+    return (
+        "report_issue: label {0!r} not found in {1} — filing unlabelled; "
+        "set {2} to a label that repo carries.\n".format(label, repo, LABEL_ENV[kind])
+    )
+
+
+# ---------------------------------------------------------------------------
+# Marketplace membership — the scope boundary as a check, not a paragraph
+# ---------------------------------------------------------------------------
+
+def _listed_ids(data):
+    """The plugin ids a parsed marketplace manifest carries, or None if it has none."""
+    entries = data.get("plugins") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        return None
+    ids = sorted(set(
+        e["name"] for e in entries
+        if isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"]
+    ))
+    return ids or None
+
+
+def _local_marketplace_ids(root):
+    """Nearest marketplace manifest at or above `root` — free, offline, tried first.
+
+    A source checkout finds the tree's own manifest this way. An installed plugin root
+    (<marketplace>/<plugin>/<version>/) carries a plugin manifest but no marketplace
+    one, so that caller finds nothing here and falls through to the gh read.
+
+    Bounded at the enclosing repo root: a manifest ABOVE the checkout belongs to some
+    other tree that happens to contain this one, and reading it would answer a question
+    about this marketplace with someone else's roster.
+    """
+    path = os.path.abspath(root or os.curdir)
+    while True:
+        candidate = os.path.join(path, *MARKETPLACE_MANIFEST.split("/"))
+        if os.path.isfile(candidate):
+            try:
+                with open(candidate, encoding="utf-8") as fh:
+                    return _listed_ids(json.load(fh))
+            except Exception:
+                return None
+        if os.path.exists(os.path.join(path, ".git")):
+            return None
+        parent = os.path.dirname(path)
+        if parent == path:
+            return None
+        path = parent
+
+
+def _remote_marketplace_ids(repo, runner):
+    """The target repo's own marketplace manifest, read raw through gh.
+
+    gh rather than anything on disk: the target repo is already resolved and gh is
+    already this reporter's hard dependency, while an installed plugin root carries no
+    marketplace manifest to read.
+    """
+    if not repo:
+        return None
+    return _listed_ids(_gh_json([
+        "gh", "api", "-H", "Accept: application/vnd.github.raw",
+        "repos/{0}/contents/{1}".format(repo, MARKETPLACE_MANIFEST),
+    ], runner))
+
+
+def membership(plugin, env, repo, runner):
+    """`(allowed, listed)` — `listed` is None when membership is undeterminable.
+
+    A manifest found on disk may only ever ALLOW: whatever sits near the plugin root on
+    this machine is not necessarily this marketplace, so a local miss consults the target
+    repo before it can cost anyone a refusal. That buys the rare refusal one gh call, and
+    a wrong refusal is far more expensive than the call.
+    """
+    local = _local_marketplace_ids(env.get("CLAUDE_PLUGIN_ROOT") or _default_plugin_root())
+    if local and plugin in local:
+        return True, local
+    listed = _remote_marketplace_ids(repo, runner) or local
+    if listed is None:
+        return True, None
+    return plugin in listed, listed
+
+
+def membership_refusal(plugin, listed):
+    """Why a report about a plugin from elsewhere is not filed here."""
+    return (
+        "report_issue: {0!r} is not a plugin this marketplace ships, so a report about "
+        "it would land in front of maintainers who cannot fix it — file it in that "
+        "project's own tracker instead. Shipped here: {1}. If the id is right and the "
+        "manifest is stale, rerun with {2}.\n".format(
+            plugin, ", ".join(listed), ALLOW_UNLISTED
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -316,6 +464,13 @@ def build_parser():
     p.add_argument("--fix", default="", help="optional suggested fix")
     p.add_argument("--label", default="", help="override the per-kind label")
     p.add_argument(
+        ALLOW_UNLISTED,
+        action="store_true",
+        help="file anyway when --plugin is not in this marketplace's manifest; a plugin "
+             "from elsewhere belongs in its own project's tracker, so use this only when "
+             "the manifest is the thing that is stale",
+    )
+    p.add_argument(
         "--draft",
         action="store_true",
         help="print the report and file nothing (the worker-tier path for a feature request)",
@@ -383,6 +538,18 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
     label = resolve_label(report.kind, env, args.label.strip() or None)
     repo = resolve_repo(env)
 
+    # Before the draft branch on purpose: a draft is a read of the same boundary, and a
+    # dispatcher handed a misdirected draft is the reader this is here to stop.
+    allowed, listed = membership(report.plugin.strip(), env, repo, runner)
+    if listed is None:
+        out.write(
+            "report_issue: cannot read this marketplace's plugin list — filing without "
+            "the membership check.\n"
+        )
+    elif not allowed and not args.allow_unlisted:
+        out.write(membership_refusal(report.plugin.strip(), listed))
+        return 2
+
     if args.draft:
         out.write(render_draft(report, title, body, label, describe_target(repo, env)))
         return 0
@@ -402,6 +569,11 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
             describe_target(repo, env), SCOPE_NOTE
         )
     )
+    live = live_labels(repo, runner)
+    if label and live and label not in live:
+        out.write(unlabelled_notice(label, repo, report.kind))
+        label = None
+
     done = runner(build_argv(repo, title, body, label), text=True, capture_output=True)
     stdout = getattr(done, "stdout", "") or ""
     stderr = getattr(done, "stderr", "") or ""
@@ -409,12 +581,7 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
         # The label is the least important part of the report and the only part that can
         # fail on its own. Retry unlabelled rather than hand back a composed body the
         # filer would have to reconstruct.
-        out.write(
-            "report_issue: label {0!r} not found in {1} — filing unlabelled; "
-            "set {2} to a label that repo carries.\n".format(
-                label, repo, LABEL_ENV[report.kind]
-            )
-        )
+        out.write(unlabelled_notice(label, repo, report.kind))
         done = runner(build_argv(repo, title, body, None), text=True, capture_output=True)
         stdout = getattr(done, "stdout", "") or ""
         stderr = getattr(done, "stderr", "") or ""
