@@ -52,7 +52,14 @@ being reported.** The target is read from *this* plugin's manifest (or
 `PLUGIN_FEEDBACK_REPO`), so it is fixed at install time and does not vary by which plugin
 you are reporting on. A defect in a plugin you installed from somewhere else belongs in
 that project's own tracker — filing it here just puts it in front of maintainers who
-cannot fix it. Both hooks scope their offer accordingly.
+cannot fix it. Both hooks scope their offer accordingly, and the reporter checks rather
+than trusts: `--plugin` is matched against this marketplace's own `marketplace.json`, and
+an id it does not list is refused on both paths, drafts included. A manifest found on
+disk beside the plugin can only ever *allow* — it may belong to whatever tree encloses
+the install — so a miss there is re-checked against the target repo through `gh` before
+anything is refused. `--allow-unlisted` files it anyway, for when the manifest is what is
+stale. If the list cannot be read at all, the report still files under a notice saying
+the check was skipped: a network blip must not swallow a report.
 
 The destination is never silent: the reporter prints the resolved repo and where it came
 from before it files, and `--draft` prints the same line. Read it before you file.
@@ -84,8 +91,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/hooks/plugin-feedback-session/report_issue.py" bu
 ```
 
 Add `--draft` to print the report instead of filing it. `feature` swaps `--contract` for
-`--limitation`. Everything else (project, date, severity, workaround, suggested fix) has a
-default or is optional; `--help` lists them.
+`--limitation`. `--allow-unlisted` overrides the membership check above. Everything else
+(project, date, severity, workaround, suggested fix) has a default or is optional;
+`--help` lists them.
 
 `--severity` defaults to `minor`, the least severe of `blocker`/`major`/`minor`. Raise it
 deliberately: an unconsidered report costs a maintainer one upgrade at read time, while a
@@ -105,10 +113,12 @@ Filing needs the `gh` CLI installed and authenticated against the target repo.
 No repo is hardcoded. With neither the variable nor a manifest `repository` resolvable, the
 reporter refuses and names the variable rather than guessing a target.
 
-A label the target repo does not carry never costs you the report: `gh` fails the whole
-`issue create` over a missing label, so the reporter retries once unlabelled and tells you
-which variable to set. Point the variable at a label that repo actually has to get it
-labelled again.
+A label the target repo does not carry never costs you the report. The resolved label is
+checked against the repo's live label list before filing, and one it does not carry is
+dropped with a notice naming the variable to set. `gh` fails the whole `issue create` over
+a missing label, so the reporter also retries once unlabelled — the backstop for a label
+that vanishes between the check and the call, or a repo whose labels `gh` could not list.
+Point the variable at a label that repo actually has to get it labelled again.
 
 ## Honest scope
 
