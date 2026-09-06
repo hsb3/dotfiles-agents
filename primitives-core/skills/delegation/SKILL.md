@@ -3,9 +3,10 @@ name: delegation
 description: >
   How to split a substantial task across agents: the three-layer model, the architecture matrix,
   effort and model-tier calibration, brief rules, and the never-delegated floor. Use when sizing
-  a feature build, refactor, migration, audit, or multi-file fix; when crews, teams, managers,
-  subagents, or waves come up; when token cost on a big job is a worry; or when a session has
-  been editing files itself for a long stretch without delegating.
+  a feature build, refactor, migration, audit, or multi-file fix; when the work arrived as a
+  goal ("clean this up", "get it published") rather than as a list of slices; when crews, teams,
+  managers, subagents, or waves come up; when token cost on a big job is a worry; or when a
+  session has been editing files itself for a long stretch without delegating.
 ---
 
 # Delegation

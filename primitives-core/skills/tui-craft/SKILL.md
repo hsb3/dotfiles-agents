@@ -2,10 +2,11 @@
 name: tui-craft
 description: >-
   Design, build, and debug full-screen terminal UI apps — layering, state ownership, repaint
-  discipline, key routing, retrofits. Triggers: picking a TUI framework; flicker, tearing,
-  resize corruption, broken copy-paste, a terminal left broken after exit; Textual, Rich,
-  Ratatui, crossterm, Bubble Tea, Lipgloss, OpenTUI, Ink, prompt_toolkit, curses, ncurses,
-  notcurses, tview, tcell, blessed, alternate screen, raw mode.
+  discipline, key routing, retrofits. Triggers: picking a TUI framework; building a terminal
+  chat or agent client; flicker, tearing, resize corruption, broken copy-paste, slow output with
+  long content, a terminal left broken after exit; Textual, Rich, Ratatui, crossterm, Bubble
+  Tea, Lipgloss, OpenTUI, Ink, prompt_toolkit, curses, ncurses, notcurses, tview, tcell,
+  blessed, alternate screen, raw mode.
 ---
 
 # TUI craft

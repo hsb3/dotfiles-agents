@@ -2,10 +2,10 @@
 name: claude-code-config
 description: >-
   Configure Claude Code itself — settings-file precedence, permissions, hooks, env vars, and MCP
-  registration, closed by a take-effect check. Use for "allow/deny a command", "add or move a
-  permission rule", "set up a hook", "run something automatically whenever X happens", "always
-  do Y every time", "add an environment variable", "register an MCP server", or "why isn't my
-  setting taking effect".
+  registration, closed by a take-effect check. Use for "change a setting", "allow/deny a
+  command", "add or move a permission rule", "set up a hook", "run something automatically
+  whenever X happens", "always do Y every time", "add an environment variable", "register an MCP
+  server", or "why isn't my setting taking effect".
 ---
 
 # Configure Claude Code
