@@ -65,6 +65,9 @@ which system is which at Phase 0, and never assume closing a PR closed a backlog
 - Confirm once, at the start, that the session has authority to **commit, push, open PRs, and
   merge** for this run. If the user's launch prompt already says "resolve/close all issues as
   planned", that is the grant — don't re-ask per wave.
+- Default scope is the items the triage view already ranks as ready this run, never the whole
+  open backlog: a bare "run the waves" plans only that ranked set into crews, and never infer
+  "run the backlog" (every buildable issue) from a general request — widen only on explicit say-so.
 
 ## Phase 1 — Triage refresh
 
