@@ -30,7 +30,8 @@ real proof. Both must be true.
 - **Capture against synthetic data, not a live account.** A committed screenshot ships
   whatever was on screen into a usually-public README. "Real data over lorem ipsum"
   means *realistic-looking* — seeded/synthetic content that reads as genuine — never a
-  live account's actual user/client content.
+  live account's actual user/client content. Before committing, read every screenshot
+  for leaked tokens/identifiers too (Part B step 4).
 
 ## Part A — the value proposition
 
