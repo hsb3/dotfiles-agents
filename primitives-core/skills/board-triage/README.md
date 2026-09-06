@@ -21,6 +21,6 @@ prioritization and roadmap views become useful instead of drifting into noise.
 claude plugin install code-desk@dotfiles-agents
 ```
 
-Ships in the code-desk bundle (not standalone). The GitHub Projects adapter additionally
+Ships in the `code-desk` bundle. The GitHub Projects adapter additionally
 needs the `solo-skills` bundle, which is where its export/apply scripts live; the Kaneo
 adapter is self-contained.

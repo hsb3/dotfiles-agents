@@ -35,7 +35,8 @@ theme layer is what this repo maintains.
 ## Install
 
 ```
-claude plugin install pptx-themes@dotfiles-agents
+claude plugin install code-desk@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Also ships as a member of the `code-desk` bundle.
+Ships in the `code-desk` and `solo-skills` bundles.

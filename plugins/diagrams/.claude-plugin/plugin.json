@@ -4,5 +4,5 @@
   },
   "description": "Structural diagrams for repo docs, decks, and briefings, with consistent SVG and PNG output: Mermaid for GitHub-rendered markdown, Python diagrams for cloud architecture with provider icons, draw.io reading and headless export, Excalidraw sketches, and raw Graphviz. Data charts belong to the dataviz skill, deck theming to pptx-themes. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "diagrams",
-  "version": "0.1.5"
+  "version": "0.1.6"
 }

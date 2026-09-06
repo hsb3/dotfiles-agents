@@ -14,7 +14,8 @@ and contract; each finding must cite concrete code.
 
 ```
 claude plugin install atelier@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — layer-cycle invokes it as the evaluate
+Ships in the `atelier` and `solo-skills` bundles — layer-cycle invokes it as the evaluate
 step, ahead of deletion-pass's refine step.

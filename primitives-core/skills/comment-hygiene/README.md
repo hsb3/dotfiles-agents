@@ -15,6 +15,7 @@ work lands, not a ban on thinking in comments.
 
 ```
 claude plugin install atelier@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
 Ships in the atelier bundle, where layer-cycle invokes it as part of the refine phase, and

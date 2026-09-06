@@ -14,7 +14,7 @@ duplicating them, and it does not itself scaffold or install anything.
 ## Install
 
 ```
-claude plugin install claude-code-expertise@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships standalone (one-skill install); not part of a bundle.
+Ships in the `solo-skills` bundle.

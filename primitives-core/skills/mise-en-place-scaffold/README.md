@@ -36,7 +36,7 @@ Measuring compliance is `repo-compliance-audit`; questions about what the standa
 ## Install
 
 ```
-claude plugin install mise-en-place-scaffold@dotfiles-agents
+claude plugin install mise-en-place@dotfiles-agents
 ```
 
-Also ships as a member of the `code-desk` bundle. Needs only `python3` (stdlib).
+Ships in the `mise-en-place` bundle. Needs only `python3` (stdlib).

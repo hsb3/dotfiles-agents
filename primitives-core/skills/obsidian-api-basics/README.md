@@ -17,7 +17,8 @@ settings, register a command or ribbon icon, read or modify vault files, or work
 
 ```
 claude plugin install obsidian-toolkit@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the obsidian-toolkit bundle (not standalone). For chat sidebars, follow up with
+Ships in the `obsidian-toolkit` and `solo-skills` bundles. For chat sidebars, follow up with
 `obsidian-chat-ui`.

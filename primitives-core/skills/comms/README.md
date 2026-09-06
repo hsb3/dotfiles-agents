@@ -69,5 +69,9 @@ if you want the full set — neither arrives by way of this plugin.
 
 ## Install
 
-Ships in the `solo-skills` and `code-desk` bundles
-(`claude plugin install solo-skills@dotfiles-agents`).
+```
+claude plugin install code-desk@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
+```
+
+Ships in the `code-desk` and `solo-skills` bundles.

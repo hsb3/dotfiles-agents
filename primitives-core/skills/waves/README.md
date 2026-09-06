@@ -27,5 +27,5 @@ its code are two steps unless the tracker is GitHub itself.
 claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — composes the delegation skill for each
+Ships in the `atelier` bundle — composes the delegation skill for each
 wave's delegation architecture and the handoff skill to close the session.

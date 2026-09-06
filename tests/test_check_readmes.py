@@ -89,6 +89,54 @@ class ReadmeGate(unittest.TestCase):
         self.assertEqual(R.problems(), [])
 
 
+class InstallAndMembership(ReadmeGate):
+    """Checks 4 and 5 — the install block and the bundle table are derived from the assemblies."""
+
+    def _ship(self, plugin, skill):
+        d = os.path.join(R.PLUGINS_DIR, plugin, "skills")
+        os.makedirs(d, exist_ok=True)
+        os.symlink(os.path.join(R.SKILLS_DIR, skill), os.path.join(d, skill))
+
+    def test_install_block_naming_a_plugin_that_does_not_ship_it_is_red(self):
+        self._unit("skill", "alpha", readme="# alpha\n\n```\nclaude plugin install ghost@dotfiles-agents\n```\n")
+        self.assertIn("install block names ['ghost'] but the skill ships in []", "\n".join(R.problems()))
+
+    def test_install_block_missing_a_second_home_is_red(self):
+        self._unit("skill", "alpha", readme="# alpha\n\n```\nclaude plugin install one@dotfiles-agents\n```\n")
+        self._unit("plugin", "one", readme="# one\n\n`alpha`\n")
+        self._unit("plugin", "two", readme="# two\n\n`alpha`\n")
+        self._ship("one", "alpha")
+        self._ship("two", "alpha")
+        self.assertIn("names ['one'] but the skill ships in ['one', 'two']", "\n".join(R.problems()))
+
+    def test_install_block_matching_both_homes_is_clean(self):
+        self._unit("skill", "alpha", readme="# alpha\n\n```\nclaude plugin install one@dotfiles-agents\nclaude plugin install two@dotfiles-agents\n```\n")
+        self._unit("plugin", "one", readme="# one\n\n`alpha`\n")
+        self._unit("plugin", "two", readme="# two\n\n| `skills/alpha/` | row |\n")
+        self._ship("one", "alpha")
+        self._ship("two", "alpha")
+        self.assertEqual(R.problems(), [])
+
+    def test_bundle_readme_omitting_a_shipped_member_is_red(self):
+        self._unit("skill", "alpha", readme="# alpha\n\n```\nclaude plugin install one@dotfiles-agents\n```\n")
+        self._unit("plugin", "one", readme="# one\n\nNo table here.\n")
+        self._ship("one", "alpha")
+        hooks = os.path.join(R.PLUGINS_DIR, "one", "hooks", "guard")
+        os.makedirs(hooks)
+        os.makedirs(os.path.join(R.PLUGINS_DIR, "one", "hooks", "_lib"))
+        found = "\n".join(R.problems())
+        self.assertIn("never names shipped member `alpha`", found)
+        self.assertIn("never names shipped member `guard`", found)
+        self.assertNotIn("_lib", found)
+
+    def test_standalone_readme_names_itself_by_h1(self):
+        self._unit("skill", "alpha", readme="# alpha\n\n```\nclaude plugin install alpha@dotfiles-agents\n```\n")
+        d = self._unit("plugin", "alpha", readme=None)
+        os.symlink(os.path.join(R.SKILLS_DIR, "alpha", "README.md"), os.path.join(d, "README.md"))
+        self._ship("alpha", "alpha")
+        self.assertEqual(R.problems(), [])
+
+
 class LiveTree(unittest.TestCase):
     def test_repo_is_green(self):
         self.assertEqual(R.problems(), [])

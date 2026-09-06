@@ -93,7 +93,8 @@ remediation is worthless.
 
 `board-triage` assumes a board already stood up with an adapter for it. Its GitHub Projects
 adapter drives scripts that ship in the `solo-skills` bundle, so that backend needs both
-installed; its Kaneo adapter does not.
+installed; its Kaneo adapter does not; its Kata adapter needs the `kata` CLI on PATH, already
+pointed at the right daemon.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already
 carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it does not —

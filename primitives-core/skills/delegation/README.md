@@ -50,5 +50,5 @@ stronger one than it carries.
 claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — it is the delegation doctrine the
+Ships in the `atelier` bundle — it is the delegation doctrine the
 bundle's other skills (layer-cycle, waves) build on.

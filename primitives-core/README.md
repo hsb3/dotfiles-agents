@@ -62,7 +62,9 @@ of it is in scope for the identity-neutrality lint (`scripts/check_identity.py`)
    deliver it, naming every bundle that carries it (a dual-homed skill lists both).
 
 Nothing else: no feature inventories, no API reference, no version history, no restating
-the body. A fact that matters only when *editing* the primitive belongs in the source, not
+the body. One exception: a skill that is also a standalone plugin's root README carries the
+bundle diagram (`## How it fits together`) the plugin-README standard requires, plus any
+access or attribution section a vendored or hosted-MCP skill owes. A fact that matters only when *editing* the primitive belongs in the source, not
 the README.
 
 ## The pointer invariant

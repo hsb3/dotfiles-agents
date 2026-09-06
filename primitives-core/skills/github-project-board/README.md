@@ -17,7 +17,7 @@ field-vs-derived-signal discipline that keeps a board from drifting.
 ## Install
 
 ```
-claude plugin install github-project-board@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle.
+Ships in the `solo-skills` bundle.

@@ -30,7 +30,7 @@ repo" or "scaffold this repo", reach for those instead.
 ## Install
 
 ```
-claude plugin install repo-meta-structure@dotfiles-agents
+claude plugin install mise-en-place@dotfiles-agents
 ```
 
-Also ships as a member of the `code-desk` bundle.
+Ships in the `mise-en-place` bundle.

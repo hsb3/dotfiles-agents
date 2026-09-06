@@ -16,6 +16,7 @@ change — or reviewing an existing task for executability before handing it to 
 
 ```
 claude plugin install kaneo@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
 Ships with the kaneo bundle; the doctrine itself is tracker-agnostic and needs no

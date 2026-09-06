@@ -17,4 +17,4 @@ instance, registering it with `claude mcp add`, and destroying it afterward.
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the solo-skills bundle (not standalone).
+Ships in the `solo-skills` bundle.

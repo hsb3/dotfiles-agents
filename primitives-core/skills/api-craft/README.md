@@ -23,4 +23,4 @@ documentation. `assets/api-layers.html` is a self-contained explainer to hand to
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the solo-skills bundle (not standalone).
+Ships in the `solo-skills` bundle.

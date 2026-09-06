@@ -14,7 +14,8 @@ to strip noise the prior pass introduced.
 
 ```
 claude plugin install atelier@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — layer-cycle invokes it as the refine step
+Ships in the `atelier` and `solo-skills` bundles — layer-cycle invokes it as the refine step
 after rubric-panel evaluates.

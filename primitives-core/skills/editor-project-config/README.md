@@ -15,5 +15,5 @@ file that opens without syntax highlighting (extensionless scripts, odd filename
 ## Install
 
 ```
-claude plugin install editor-project-config@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```

@@ -4,7 +4,7 @@ Every skill in this collection that stands on its own, in one install. A skill b
 here when it needs no agent, no hook, and no sibling skill to do its job — so whichever
 one you reach for works the moment it activates, with nothing else to set up.
 
-Membership is derived rather than curated. `scripts/check_solo_skills.py` re-reads every
+Membership is derived rather than curated. A membership gate in the source repo re-reads every
 skill body and every bundled script on each run and works out which ones qualify, so this
 plugin cannot quietly fall behind the collection or admit a skill that grew a dependency.
 
@@ -17,7 +17,9 @@ on every run:
 ```mermaid
 flowchart TD
     Skill[A skill in this collection] --> Q{Needs an agent, a hook, or a sibling skill}
-    Q -->|no| Solo[Ships in solo-skills]
+    Q -->|no| Sys{Prescribes an opt-in in-repo system}
+    Sys -->|no| Solo[Ships in solo-skills]
+    Sys -->|yes| MEP[Ships in mise-en-place]
     Q -->|dispatches agents, reads the covenant hooks| At[Ships in atelier]
     Q -->|assumes the desk's other pieces| CD[Ships in code-desk]
     Solo --> Gate[The membership gate re-derives this on every run]
@@ -38,12 +40,13 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `opencode-expertise` | opencode's extension surfaces end to end, the TypeScript constraint, and how each Claude Code equivalent translates onto them. |
 | `project-memory` | Where agent memory lives and how it moves — the global/project split, the loading modes, and two scripts to wire a repo for tracked memory or recover it after a move. |
 | `iterm2` | iTerm2 past its silent failures: the preferences model, dynamic profiles, shell integration, and default-terminal bindings that report success while dropping the change. |
+| `opencode-sandbox` | Spin up a disposable, isolated opencode instance and hand it to the session as an MCP server — its workspace is a volume, so it cannot see the host filesystem. |
 
 **Session discipline**
 
 | Skill | What it does |
 |---|---|
-| `handoff` | Maintain the session-handoff file so a cold session can pick the work up — the externalization pass that makes a session safe to clear. |
+| `handoff` | Maintain the session handoff so a cold session can pick the work up — a file this skill writes, or an external tracker it signals via a freshness stamp — the externalization pass that makes a session safe to clear. |
 | `dev-focus` | Mid-session focus check that flags drift from the original task, plus a scope triage that sorts a task list into MUST, DEFER, and CUT. |
 | `layer-cycle` | Drive a module through create, evaluate, and refine cycles until it converges or the budget runs out, turning findings into scoped fix briefs. |
 | `rubric-panel` | Score artifacts against an anchored rubric with a persona-diverse judge panel, classifying each finding as defect, noise, spec-hole, or undeclared commitment. |
@@ -69,6 +72,16 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `dataviz` | Chart design rules to consult *before* writing chart code, in any library: mark selection, the anti-patterns to refuse, and a colorblind-safe palette with a runnable validator. |
 | `pptx-themes` | PowerPoint decks with a curated theme layer — semantic tokens, approved palettes, monospaced typography, and a visual QA pass. |
 
+**Building software**
+
+| Skill | What it does |
+|---|---|
+| `api-craft` | HTTP/REST API servers by layer — route, schema, service, repository, model — with the rejection cascade that maps every failure to a status code and outside-in build order. |
+| `tui-craft` | Full-screen terminal apps — layering, state ownership, repaint and streaming discipline, key routing, and the fixes for flicker, resize corruption, and a terminal left broken after exit. |
+| `pocketbase` | Operate a PocketBase backend over the REST API or in Go package mode — collection and record CRUD, auth, backups, migrations, hooks, and custom routes. |
+| `pocketbase-best-practices` | Design and review rules for a PocketBase backend — schema, API rules, auth flows, query performance, realtime, file handling, and deployment. |
+| `carbon-builder` | IBM Carbon Design System for React and Web Components — components, IBM Products UI, Carbon Charts, design tokens, IBM Plex, and Carbon compliance audits, grounded in the hosted Carbon MCP server. |
+
 **Repos and projects**
 
 | Skill | What it does |
@@ -83,6 +96,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 | Skill | What it does |
 |---|---|
 | `comms` | Recurring communication deliverables — morning briefing, end-of-day wrap-up, weekly plan, board readout — shipped as a deck to a consistent standard. |
+| `task-authoring` | Write tracked work items a cold agent can execute — titles, acceptance criteria, thresholds, approval gates, and scope ownership, on any tracker. |
 
 **Obsidian plugin development**
 
@@ -120,11 +134,13 @@ pushes that system's conventions on a repo that tracks work on a board.
 
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
-`github-project-board` needs `gh` authenticated. Each says so at the point of use.
+`github-project-board` needs `gh` authenticated; `opencode-sandbox` needs the `opencode-sandbox`
+CLI and Docker; `carbon-builder` needs the hosted Carbon MCP server. Each says so at the point of use.
 
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
 skills also ship inside a bundle (`handoff` in `atelier`, the diagram skills in
-`diagrams`, the Obsidian skills in `obsidian-toolkit`, and several in `code-desk`);
+`diagrams`, the Obsidian skills in `obsidian-toolkit`, the PocketBase skills in `pocketbase`,
+`carbon-builder` in `carbon`, `task-authoring` in `kaneo`, and several in `code-desk`);
 installing both homes loads each skill once.

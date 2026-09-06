@@ -17,8 +17,8 @@ structural diagrams belong to a diagramming skill, deck theming to a presentatio
 ## Install
 
 ```
-claude plugin install dataviz@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle. No dependencies; the palette ships
+Ships in the `solo-skills` bundle. No dependencies; the palette ships
 as a reference file with WCAG-verified contrast in both themes.

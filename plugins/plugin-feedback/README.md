@@ -93,6 +93,8 @@ queue where everything arrives `major` carries no priority signal at all.
 
 ## Configuration
 
+Filing needs the `gh` CLI installed and authenticated against the target repo.
+
 | Env var | Default | Meaning |
 |---|---|---|
 | `PLUGIN_FEEDBACK_REPO` | this plugin's manifest `repository` | Where every issue is filed, as `owner/name` — one destination, not per reported plugin |
