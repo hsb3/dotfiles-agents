@@ -123,3 +123,6 @@ regardless of effort.
 - The snapshot file **is** the hand-off seam. An analyst that cannot reach the board reads the
   snapshot and returns a changeset — no special agent, no extra protocol, and the party holding
   the credentials runs both commands.
+
+Done when the changeset has applied cleanly and every item that could be judged carries a
+band, with anything left blank explicitly flagged rather than silently skipped.

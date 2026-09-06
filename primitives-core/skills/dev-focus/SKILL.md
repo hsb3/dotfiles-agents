@@ -61,3 +61,6 @@ Challenge the scope whenever:
 - An item lacks clear acceptance criteria.
 - Total effort exceeds what fits in one focused session.
 - Items depend on infrastructure that isn't built yet.
+
+Done when the focus check names any drift plainly and the scope review leaves every item in
+exactly one bucket with a one-line reason.

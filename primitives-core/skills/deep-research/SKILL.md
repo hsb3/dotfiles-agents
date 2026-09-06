@@ -40,6 +40,10 @@ loop; deep research that never revisits its angles usually missed the real quest
 
 ## Phase 0 — Scope before you search
 
+Default scope is the single refined question the user actually asked, never the widest
+reading of it — never infer a sprawling multi-subject investigation from a general request;
+widen only when the user explicitly asks for broader coverage.
+
 **Do not research an underspecified question.** A vague prompt fans out into vague searches and
 a report that answers a question no one asked. Before anything else, judge whether the question
 is specific enough to have a *checkable* answer.

@@ -186,6 +186,26 @@ class Frontmatter(unittest.TestCase):
     def test_clean_frontmatter_ok(self):
         self.assertEqual(self._fm("---\nname: x\ndescription: a clean one-liner\n---\nbody"), [])
 
+    def test_overlong_description_flagged(self):
+        desc = "a" * (I.MAX_DESCRIPTION + 1)
+        probs = self._fm(f"---\nname: x\ndescription: {desc}\n---\nbody")
+        self.assertTrue(any(str(I.MAX_DESCRIPTION) in p and "description" in p for p in probs),
+                        probs)
+
+    def test_description_at_cap_ok(self):
+        desc = "a" * I.MAX_DESCRIPTION
+        self.assertEqual(self._fm(f"---\nname: x\ndescription: {desc}\n---\nbody"), [])
+
+    def test_block_scalar_description_measured_folded(self):
+        """A `>-` block scalar folds to one line before measuring, same as gen_opencode.
+
+        Line count derived from the cap, so the fixture stays over it if the cap moves.
+        """
+        line = "a" * 100
+        desc = "\n  ".join([line] * (I.MAX_DESCRIPTION // len(line) + 2))
+        probs = self._fm(f"---\nname: x\ndescription: >-\n  {desc}\n---\nbody")
+        self.assertTrue(any(str(I.MAX_DESCRIPTION) in p for p in probs), probs)
+
 
 class PlainScalarParseability(unittest.TestCase):
     """The manager agent shipped published for weeks with an unquoted description
@@ -227,6 +247,35 @@ class PlainScalarParseability(unittest.TestCase):
 class RealTree(unittest.TestCase):
     def test_shipped_tree_is_identity_neutral(self):
         self.assertEqual(I.main(), 0)
+
+    def test_the_two_description_caps_are_the_same_number(self):
+        """check_identity and gen_opencode each hold their own MAX_DESCRIPTION. Nothing but
+        this test stops them drifting: raise one alone and both gates stay green while
+        disagreeing about every description in the gap between them."""
+        import gen_opencode
+        self.assertEqual(I.MAX_DESCRIPTION, gen_opencode.MAX_DESCRIPTION)
+
+    def test_every_shipped_skill_description_is_under_the_cap(self):
+        """Derived by walking the tree, never from a recorded file list or count.
+
+        A forward-guard with zero real subjects today — the longest shipped description is
+        well under the cap, so this passes even with the check disabled. Red-ability lives in
+        the two Frontmatter fixture tests; this one only catches a future over-long skill.
+        """
+        root = os.path.join(I.REPO, "primitives-core", "skills")
+        cap = str(I.MAX_DESCRIPTION)
+        checked, over = 0, []
+        for dirpath, _dirs, files in os.walk(root):
+            for f in files:
+                fp = os.path.join(dirpath, f)
+                if f != "SKILL.md" or os.path.islink(fp):
+                    continue
+                checked += 1
+                problems = []
+                I.check_frontmatter(fp, os.path.relpath(fp, I.REPO), True, problems)
+                over += [p for p in problems if cap in p]
+        self.assertEqual(over, [])
+        self.assertGreater(checked, 0)
 
 
 class CommandScope(unittest.TestCase):

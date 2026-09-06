@@ -76,3 +76,7 @@ is a whole module and needs budgets, triage, and stop conditions.
   accepting a cycle as done.
 - Consult the human only for: contract amendments changing user-visible
   behavior, score regressions, budget increases.
+- If the gate or a check could not run for local reasons (missing tool,
+  no network, a flaky harness), say that plainly with the observed
+  evidence — never report the cycle as verified or claim the artifact
+  passed when what actually happened is that the check didn't run.
