@@ -121,7 +121,8 @@ the agent's own result, so a row per dispatch would record nothing new.
   on its own, so a shared module would be a cross-hook import path that breaks the moment one hook
   is installed without the other.
 - **Base ref is a separate setting.** A new worktree branches from `origin/<default-branch>` unless
-  the project sets `"worktreeBaseRef": "head"` in settings.json. Where the default branch is a
-  publish-only surface, `head` is the one that gives workers the branch the session is actually on.
+  the project sets `{"worktree": {"baseRef": "head"}}` in settings.json (values `fresh`, the
+  default, or `head`). Where the default branch is a publish-only surface, `head` is the one that
+  gives workers the branch the session is actually on.
 - **No restart needed to change policy.** The activation file is read on every dispatch, so edits
   take effect on the next one. Only a change to `hooks.json` requires restarting the session.
