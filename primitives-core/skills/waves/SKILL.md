@@ -66,8 +66,8 @@ which system is which at Phase 0, and never assume closing a PR closed a backlog
   merge** for this run. If the user's launch prompt already says "resolve/close all issues as
   planned", that is the grant — don't re-ask per wave.
 - Default scope is the items the triage view already ranks as ready this run, never the whole
-  open backlog: a bare "run the waves" plans only that ranked set into crews, and never infer
-  planning the entire backlog into crews in one run from a general request — widen only on
+  open backlog: a bare "run the waves" plans only that ranked set into crews. Never infer, from
+  a general request, that the whole backlog should go into crews in one run — widen only on
   explicit say-so.
 
 ## Phase 1 — Triage refresh
