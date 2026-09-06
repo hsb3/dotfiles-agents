@@ -24,7 +24,9 @@ not lost:
     `name` + `description`. Presence is not enough: a plain scalar YAML cannot parse takes
     the whole block down silently, so unquoted values are checked for parseability too.
   - description hygiene — no XML/angle-bracket tag in a SKILL.md `description` (Claude Cowork
-    refuses to load such a skill).
+    refuses to load such a skill), and no `description` over MAX_DESCRIPTION chars once folded
+    (opencode's hard limit, applied here to EVERY skill — `gen_opencode.py` enforces the same
+    number but only sees skills rostered `targets: [.., opencode]`).
   - secret hygiene — no literal credential (token/key) baked into a body.
   - portability — machine-tied content is banned outright (absolute /Users paths, personal
     home-folder locations, personal vault name, non-portable install flags); a machine-local
@@ -122,6 +124,11 @@ SECRET_LITERAL = [
 ]
 
 XML_TAG = re.compile(r"</?[A-Za-z][^>\n]*>")
+
+# Same number as scripts/gen_opencode.py's MAX_DESCRIPTION, which is opencode's own hard
+# limit — but that generator only sees skills rostered `targets: [.., opencode]`, so the cap
+# is repeated here to cover every skill.
+MAX_DESCRIPTION = 1024
 
 
 def _requires_by_source():
@@ -260,6 +267,15 @@ def check_frontmatter(fp, rel, is_skill, problems):
     for key, why in _plain_scalar_faults(fm):
         problems.append(f"{rel}: frontmatter `{key}` {why} — quote the value")
     if is_skill:
+        # Folded to one line with the block-scalar marker dropped — byte-for-byte the
+        # normalization gen_opencode.skill_problems applies, so the two caps cannot
+        # disagree about any one skill's length.
+        desc = " ".join(_fm_value(fm, "description").split()).lstrip(">").strip()
+        if len(desc) > MAX_DESCRIPTION:
+            problems.append(
+                f"{rel}: description is {len(desc)} chars, over the {MAX_DESCRIPTION} cap "
+                f"— trim it to what the skill does plus when it triggers"
+            )
         tags = XML_TAG.findall(_fm_value(fm, "description"))
         if tags:
             found = ", ".join(sorted(set(tags)))
