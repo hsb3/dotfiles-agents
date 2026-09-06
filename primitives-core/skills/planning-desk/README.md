@@ -18,7 +18,7 @@ or "get this repo's planning organized".
 ## Install
 
 ```
-claude plugin install code-desk@dotfiles-agents
+claude plugin install mise-en-place@dotfiles-agents
 ```
 
-Ships in the code-desk bundle (not standalone).
+Ships in the `mise-en-place` bundle.

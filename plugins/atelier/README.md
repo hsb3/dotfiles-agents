@@ -3,7 +3,7 @@
 A context-and-cost optimization kit for multi-agent work: size a task, pick a delegation
 architecture, dispatch to the right model tier, and keep every session clearable instead of
 letting context quietly run out. Skills, hooks, and agents across model tiers, all wired to
-the same handoff file and the same session-discipline loop — including the review-cycle trio
+the same handoff target and the same session-discipline loop — including the review-cycle trio
 (rubric-panel · deletion-pass · layer-cycle) distilled from a controlled agent-development
 lab.
 
@@ -19,7 +19,7 @@ flowchart TD
     Surf --> Work[You bring a substantial task]
     Work --> Del[delegation sizes it and picks an architecture]
     Del --> Mgr[manager owns the wave]
-    Mgr --> Workers[scout and builder and reviewer]
+    Mgr --> Workers[scout and builder and reviewer and code-reviewer]
     Workers --> Done[Verified work comes back]
     Done --> Ctx{Context past the watermark}
     Ctx -->|no| Work
@@ -89,7 +89,8 @@ Context creeps past 120k tokens
 → context-watermark nudges: run /handoff, then /clear or /compact.
 
 You: "/handoff"
-→ handoff externalizes everything load-bearing into the project's HANDOFF.md.
+→ handoff externalizes everything load-bearing into the project's handoff — the HANDOFF.md
+  file, or the tracker item when `handoff:` is in external mode.
 
 You try a manual /compact with a stale handoff
 → handoff-freshness-guard blocks it and tells you to run /handoff first.
@@ -209,7 +210,7 @@ machine-local change):
 | `DELEGATION_WATERMARK_REFIRE_EVERY` | `15` | Further calls before nudging again |
 | `DELEGATION_WATERMARK_STATE_DIR` | `/tmp/delegation-watermark` | Per-session anti-nag state |
 | `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Where the activation file lives |
-| `<HOOK>_LOG_PATH` | the hook's stream under the log root (see **Ledgers** below) | Overrides one stream's path. `CONTEXT_WATERMARK_LOG_PATH` → `context-watermark`; `DELEGATION_WATERMARK_LOG_PATH` → `delegation-watermark`; `ATELIER_CUSTODY_LOG_PATH` → `config-custody`; `HANDOFF_GUARD_LOG_PATH` → `handoff-guard`; `HANDOFF_SURFACER_LOG_PATH` → `handoff-surfacer`; `SUBAGENT_TELEMETRY_LOG_PATH` → `delegation`; `WORKTREE_ISOLATION_LOG_PATH` → `worktree-isolation` |
+| `<HOOK>_LOG_PATH` | the hook's stream under the log root (see **Ledgers** below) | Overrides one stream's path. `CONTEXT_WATERMARK_LOG_PATH` → `context-watermark`; `DELEGATION_WATERMARK_LOG_PATH` → `delegation-watermark`; `ATELIER_CUSTODY_LOG_PATH` → `config-custody`; `HANDOFF_GUARD_LOG_PATH` → `handoff-guard`; `HANDOFF_SURFACER_LOG_PATH` → `handoff-surfacer`; `SUBAGENT_TELEMETRY_LOG_PATH` → `delegation`; `WORKTREE_ISOLATION_LOG_PATH` → `worktree-isolation`; `LIVE_WORKER_GIT_GUARD_LOG_PATH` → `live-worker-git-guard`; `MANAGER_PACKAGE_GATE_LOG_PATH` → `manager-package-gate` |
 | `XDG_DATA_HOME` | `~/.local/share` | Base of the log root. Ignored when relative. |
 
 **These need a fresh session.** Unlike the activation file, `env` is read once at startup, so an

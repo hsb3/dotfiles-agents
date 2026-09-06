@@ -5,5 +5,5 @@
   "description": "An in-repo planning system for repos NOT tracked on an external board (kata, Kaneo, Linear, GitHub Projects): a documented _meta/ directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a GitHub-issue-backed planning desk under _meta/plans/. Everything it prescribes lives in the repo tree — install it only where that is the intended system of record; on a board-tracked repo, skip this plugin and file work on the board. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "mise-en-place",
   "repository": "https://github.com/hsb3/dotfiles-agents",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

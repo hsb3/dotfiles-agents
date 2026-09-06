@@ -15,6 +15,7 @@ session has sprawled past its original goal and needs re-anchoring before more w
 
 ```
 claude plugin install code-desk@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the code-desk bundle (not standalone).
+Ships in the `code-desk` and `solo-skills` bundles.

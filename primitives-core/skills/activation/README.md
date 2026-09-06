@@ -19,5 +19,5 @@ exits nonzero on an inert key — a broken file becomes a failing command, not a
 claude plugin install atelier@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — it arms the hooks the rest of the bundle
+Ships in the `atelier` bundle — it arms the hooks the rest of the bundle
 depends on.

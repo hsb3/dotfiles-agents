@@ -33,7 +33,8 @@ README gets pushed to `docs/` and linked.
 ## Install
 
 ```
-claude plugin install readme-value-and-proof@dotfiles-agents
+claude plugin install code-desk@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Also ships as a member of the `code-desk` bundle.
+Ships in the `code-desk` and `solo-skills` bundles.

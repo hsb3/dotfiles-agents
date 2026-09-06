@@ -15,7 +15,7 @@ ordinary contribute-back GitHub fork whose changes are destined for upstream PRs
 ## Install
 
 ```
-claude plugin install private-fork@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle.
+Ships in the `solo-skills` bundle.

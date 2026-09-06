@@ -28,8 +28,8 @@ default-terminal UTI bindings, and the feature catalog.
 ## Install
 
 ```
-claude plugin install iterm2@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle. macOS only; the shell-integration and
+Ships in the `solo-skills` bundle. macOS only; the shell-integration and
 default-terminal paths assume iTerm2 is installed locally.

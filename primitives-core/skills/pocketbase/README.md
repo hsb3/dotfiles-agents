@@ -29,7 +29,7 @@ Pairs with `pocketbase-best-practices`, which ships in the same plugin: this ski
 This skill was written outside any public repository and reached its consuming projects by
 hand-copying, so it has no resolvable upstream, no license grant from a third party, and no
 ref to track. It therefore fails the "pinnable + attributable" criterion in
-[`docs/vendoring-rule.md`](../../../docs/vendoring-rule.md) and is **not** vendored content —
+the source repo's vendoring rule and is **not** vendored content —
 it is first-party, maintained here.
 
 Consolidated from four hand-copied divergent copies. Three were byte-identical; the fourth
@@ -44,3 +44,12 @@ carried the only substantive edit, which is preserved here:
 The pre-consolidation original is unrecoverable; the earliest surviving copy is the effective
 baseline. Further modifications held in other checkouts are harvested into this copy as they
 surface — this directory is the single source of truth from here on.
+
+## Install
+
+```
+claude plugin install pocketbase@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
+```
+
+Ships in the `pocketbase` and `solo-skills` bundles.

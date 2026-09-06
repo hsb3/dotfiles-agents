@@ -19,6 +19,7 @@ charts and plots are out of scope (the `dataviz` skill owns those), as is deck p
 
 ```
 claude plugin install diagrams@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the diagrams bundle (not standalone).
+Ships in the `diagrams` and `solo-skills` bundles.

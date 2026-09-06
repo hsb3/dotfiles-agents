@@ -23,4 +23,4 @@ streaming, terminal, retrofit, and hard-facts.
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the solo-skills bundle (not standalone).
+Ships in the `solo-skills` bundle.

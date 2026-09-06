@@ -16,7 +16,8 @@ discrete worker brief.
 
 ```
 claude plugin install atelier@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the atelier bundle (not standalone) — pairs with rubric-panel and deletion-pass,
+Ships in the `atelier` and `solo-skills` bundles — pairs with rubric-panel and deletion-pass,
 both also in the bundle.

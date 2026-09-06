@@ -14,7 +14,7 @@ translate or port anything.
 ## Install
 
 ```
-claude plugin install opencode-expertise@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle.
+Ships in the `solo-skills` bundle.

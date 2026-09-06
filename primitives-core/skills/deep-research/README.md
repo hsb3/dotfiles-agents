@@ -18,8 +18,8 @@ did NOT hold up stays on the record.
 ## Install
 
 ```
-claude plugin install deep-research@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Standalone-only — it does not ship inside any bundle. Uses the harness's web-search and
+Ships in the `solo-skills` bundle. Uses the harness's web-search and
 fetch tools; degrades gracefully when subagents are unavailable.

@@ -21,7 +21,8 @@ move, previewing by default and copying only with `--apply`.
 ## Install
 
 ```
-claude plugin install project-memory@dotfiles-agents
+claude plugin install code-desk@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
 Also ships inside the `code-desk` bundle. Needs only `python3` (stdlib) and `git`.

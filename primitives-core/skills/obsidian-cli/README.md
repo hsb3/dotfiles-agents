@@ -16,8 +16,9 @@ external scripts or tools.
 
 ```
 claude plugin install obsidian-toolkit@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the obsidian-toolkit bundle (not standalone). Requires the Obsidian desktop app
+Ships in the `obsidian-toolkit` and `solo-skills` bundles. Requires the Obsidian desktop app
 installed locally. For plugin-side automation instead of CLI scripting, see
 `obsidian-api-basics`.

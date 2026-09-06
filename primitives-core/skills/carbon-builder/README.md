@@ -57,4 +57,5 @@ vendored-drift gate.
 
 ```
 claude plugin install carbon@dotfiles-agents
+claude plugin install solo-skills@dotfiles-agents
 ```
