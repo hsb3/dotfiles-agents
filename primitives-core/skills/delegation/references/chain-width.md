@@ -9,9 +9,12 @@ file is the management layer's.
 
 ## The bound
 
-- **A chain is what fits before one report — two to three tasks as the working default**
-  `[field]`. Width is measured in what the manager must hold live at once, not in file count or
-  diff size.
+- **A chain is what fits before one report** `[field]`. The report is the unit because it is the
+  only artifact the layer produces, so width is measured in what the manager must hold live at
+  once, not in file count or diff size. **Two to three tasks is the working default**
+  `[untested]`: what was observed is one eleven-task chain failing, and no run has located the
+  number. It is calibrated between "one task is not worth a manager" and the incident, and matches
+  the same default in `references/concurrent-chains.md` — one construct, one tag.
 - **The next slice goes to a fresh manager, not the same one continued** `[field]`. A manager's
   context is disposable by design; carrying it across slices converts the cheap layer into a
   second long-lived context competing with the strategist's. This does not contradict
@@ -26,10 +29,14 @@ file is the management layer's.
   final report `[field]`. The report is the artifact that gets lost — to a crash, a stop
   condition, or a context ceiling. Writing through means a lost manager costs one slice's report
   rather than the whole wave's.
-- **The smell test:** if the brief has to tell the manager which of its own tasks may run at the
-  same time, the brief **is a wave and not a chain** — split it before dispatching. Deciding what
-  runs concurrently is the strategy layer's floor (floor item 1), and a brief phrased as guidance
-  to the manager hands that decision down without ever appearing to break the rule.
+- **The smell test `[field]`:** if the brief has to tell the manager which of its own tasks may
+  run at the same time, the brief **is a wave and not a chain** — split it before dispatching.
+  What this claims is narrow. *Task-specific* sequencing, naming which of **these** tasks may run
+  together, is decomposition, and decomposition is the strategy layer's floor (floor item 1); a
+  brief phrased as guidance to the manager hands it down without ever appearing to break the rule.
+  A standing policy about disjoint slices is not that. Once the chain is narrow enough that the
+  question no longer needs answering in the brief, the manager fans out its own disjoint slices —
+  the strategist sizes the chain, the manager schedules inside it (`SKILL.md`, "Briefs").
 
 ## The anchor — eleven tasks that read as one chain `[field]`
 
@@ -44,12 +51,12 @@ shared files must run serially; the manager may PARK an entangled task with a wr
 Every clause was defensible and the whole was wrong:
 
 - **Shared files were read as chain membership.** They do need ordering, but **file overlap is a
-  merge-ordering constraint, not evidence of one chain.** Only 141/152/154 genuinely collided; 159,
-  166 and 167 barely touched the shared files and could have run as concurrent slices in separate
-  worktrees.
+  merge-ordering constraint, not evidence of one chain.** Only 141/152/154 genuinely collided;
+  159, 166 and 167 barely touched the shared files, so overlap never made them one chain with the
+  rest.
 - **"Workers on shared files run serially" is decomposition pushed downward.** It states a real
-  constraint, and what may run concurrently is the strategist's floor — phrased as guidance to the
-  manager, handing it over never looks like a violation.
+  constraint, and deciding which of **these eleven** may run together is the strategist's floor.
+  Phrased as guidance to the manager, handing it over never looks like a violation.
 - **An epic rode with the one-liners.** They are all "tasks": TASK-160 rebuilds the settings area
   and deletes four screens, TASK-154 flips a capability flag. The epic sets the wall-clock for
   everything queued behind it.
@@ -65,14 +72,25 @@ Every clause was defensible and the whole was wrong:
 - **Slice A (2 tasks):** 141 + 152 — admin list chrome and capabilities, same files.
 - **Slice B (2 tasks):** 167 + 168 — show-section prose and the workspace-root landmark.
 - **Slice C (2 tasks):** 154 + 162 — trash/inbox board capabilities, palette copy.
-- A–C are file-disjoint, so they run **concurrently in separate worktrees**; each manager reports
-  and is retired.
+- **A and B are disjoint and run concurrently** in separate worktrees; each manager reports and is
+  retired.
+- **C is not free of A.** 154 collides with 141 and 152 by the collision analysis above, so C
+  either takes an assigned merge order behind A or 154 moves into A's chain. This is the ordinary
+  case, not an exception: concurrency between slices is what is left **after** merge order is
+  assigned for the collisions, never a substitute for assigning it. Merge order and ownership of
+  every gated shared resource are settled before the first dispatch
+  (`references/concurrent-chains.md`).
 - **TASK-160 is its own wave** after its ruling, with its own review.
 - **161 + 178** form a slice briefable only after 160 lands, because where settings lives
   determines how they are entered.
+- **TASK-159 goes unplaced.** The reconstruction never finds a slice for it. It barely touched the
+  shared files, which is what keeps it out of A–C, and the record does not say what it should have
+  been paired with. The gap is left standing rather than filled with an invented slice.
 
-The corrected shape holds three slices of two, one wave of one, and one slice that does not exist
-yet. Nothing was dropped; the sequencing moved up a layer, where it was always due.
+The corrected shape holds three slices of two, one wave of one, one slice that does not exist yet,
+and one task nobody can place. The sequencing moved up a layer, where it was always due — and that
+eleven tasks resist clean slicing even in hindsight, with the whole incident laid out, is itself
+the argument for the bound.
 
 ## Two further shapes `[untested]`
 
@@ -94,11 +112,11 @@ slices are one chain or two waves — never one wave of two.
 
 ## Applying it
 
-At dispatch, three checks in order. Any failure re-slices before a worktree opens.
+At dispatch, three checks in order; any failure re-slices before a worktree opens. The first two
+are "The bound" applied to the brief text; the third is reasoning, not observation `[untested]`.
 
 1. **Strip the decision-gated items out.** They become questions for the user, not tasks.
-2. **Run the smell test on the brief text.** Any sentence sequencing the manager's own tasks means
-   the split is not done.
+2. **Run the smell test on the brief text.**
 3. **Count what is left.** Past two to three tasks, cut at the first point where a task's output
-   stops changing the next task's brief — that boundary is where one chain ends and the next
-   begins, and the next one gets a fresh manager.
+   stops changing the next task's brief `[untested]` — that boundary is where one chain ends and
+   the next begins, and the next one gets a fresh manager.

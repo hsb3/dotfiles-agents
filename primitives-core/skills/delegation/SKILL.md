@@ -113,8 +113,9 @@ briefs continue the same builder, then `deletion-pass` once green. The `layer-cy
 that loop formalized for module-scale links.
 
 **Bounded width, retired between slices `[field]`.** A chain is what fits before one report, with
-**two to three tasks** as the working default, and the next slice goes to a **fresh manager**
-rather than the same one continued. (Follow-ups *within* a chain still go to the same running
+**two to three tasks** as the working default `[untested]` — the eleven-task failure was observed,
+the number was not — and the next slice goes to a **fresh manager** rather than the same one
+continued. (Follow-ups *within* a chain still go to the same running
 manager; that accumulated context is what the layer bought.) Two rules keep the width honest.
 **Decision-gated items never enter a build slice**: an owner call or a pending ruling returns to
 the strategy layer as a question for the user before any worktree opens. **A manager writes each
@@ -496,7 +497,7 @@ a slicing defect to escalate, not a compaction to ride out.
 - **`references/chain-width.md`** — how wide one chain may be, retiring a manager between slices,
   and the worked eleven-task anti-example.
 - **`references/concurrent-chains.md`** — running two to three manager chains at once, and the
-  merge-order and shared-resource contracts that makes necessary.
+  merge-order and shared-resource contracts that running them makes necessary.
 - **`references/migrate-at-scale.md`** — one mechanical transform across many sites.
 - **`references/tier-cutoff.md`** — the protocol for measuring where cheap model tiers stop being
   enough.
