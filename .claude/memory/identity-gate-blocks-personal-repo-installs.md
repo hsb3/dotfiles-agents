@@ -32,5 +32,4 @@ body**, not in a `references/` file — a pointer fails at exactly the moment th
 project was instead of opening it). Expect the agent to still ask permission before installing;
 that is correct behavior, and the goal is that it presents a runnable install rather than an
 unanswerable "where is it?". A real fix means an allowlist in the checker or publishing under a
-namespace the gate does not ban. See [[plugin-enablement-needs-per-project-install]] for why a
-published fix may not be what your test session actually loads.
+namespace the gate does not ban. See [[plugin-enablement-needs-per-project-install]].
