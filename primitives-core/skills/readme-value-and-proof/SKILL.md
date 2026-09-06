@@ -107,3 +107,5 @@ real proof. Both must be true.
 - [ ] Images committed, refs resolve, README reads cleanly end-to-end.
 - [ ] No secrets committed; app and temp services torn down.
 - [ ] No real user/client data visible in any committed screenshot.
+
+Done when every checklist row above is checked, not asserted.

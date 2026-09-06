@@ -89,3 +89,6 @@ autofit: content past a 1280x720 slide clips, and overflow means the slide does 
 - `examples/<type>/playbook.md` - per-comm one job, deck structure, gather, voice deltas
 - `examples/<type>/sample.*` - a real worked artifact for that comm type (where one exists)
 - `scripts/deliver.py`, `types/`, `themes/`, `voices/` - the engine and its named config
+
+Done when `deliver.py check` is clean, the exported deck/PDF is delivered via `SendUserFile`,
+and `sources.md` traces every claim back to a live source.
