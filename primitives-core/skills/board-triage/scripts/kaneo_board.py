@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -266,12 +267,33 @@ def cmd_apply(args):
     if not ops:
         print("nothing to change")
 
-    if args.apply:
-        for call in group(ops):
-            _request("PATCH", "/task/bulk", call)
-        print(f"applied {len(ops)} cell change(s) in {len(group(ops))} call(s)")
-    elif ops:
-        print("\ndry-run — re-run with --apply to write")
+    if not args.apply:
+        if ops:
+            print("\ndry-run — re-run with --apply to write")
+        return 1 if problems else 0
+
+    calls = group(ops)
+    for call in calls:
+        _request("PATCH", "/task/bulk", call)
+    if args.settle_seconds > 0:
+        time.sleep(args.settle_seconds)
+
+    # Re-planning the same rows against a fresh pull is the read-back: plan() emits a cell
+    # only while it still differs, so whatever survives never landed. One board GET, and it
+    # covers labels and due as well as status. Bulk status writes on this instance have been
+    # observed reverting seconds later — see references/adapters/kaneo.md.
+    fresh, fresh_labels = fetch_snapshot()
+    unlanded, _ = plan(fresh, rows, fresh_labels)
+    for *_, description in unlanded:
+        print(f"UNLANDED {description}", file=sys.stderr)
+
+    stuck = {op[-1] for op in unlanded}
+    print(f"applied {sum(1 for op in ops if op[-1] not in stuck)} cell change(s) "
+          f"in {len(calls)} call(s)")
+    if unlanded:
+        print(f"{len(unlanded)} cell(s) did not land — re-issue those single-task",
+              file=sys.stderr)
+        return 2
     return 1 if problems else 0
 
 
@@ -281,9 +303,26 @@ def main(argv=None):
     export = sub.add_parser("export", help="write a contract-shaped snapshot")
     export.add_argument("--out", help="file to write (default: stdout)")
     export.set_defaults(func=cmd_export)
-    apply_ = sub.add_parser("apply", help="apply a changeset TSV (dry-run by default)")
+    apply_ = sub.add_parser(
+        "apply",
+        help="apply a changeset TSV (dry-run by default)",
+        epilog=(
+            "exit codes:\n"
+            "  0  every requested cell was confirmed on the board after the write\n"
+            "  1  some changeset rows were unresolvable (SKIP on stderr); the rest applied\n"
+            "  2  a written cell read back unchanged, so it did not land (UNLANDED on\n"
+            "     stderr). 2 wins over 1 when both hold.\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     apply_.add_argument("--changeset", required=True)
     apply_.add_argument("--apply", action="store_true", help="actually write")
+    apply_.add_argument(
+        "--settle-seconds",
+        type=float,
+        default=2.0,
+        help="pause before re-reading the board to verify the write (default: 2.0; 0 skips)",
+    )
     apply_.set_defaults(func=cmd_apply)
     args = parser.parse_args(argv)
     return args.func(args)

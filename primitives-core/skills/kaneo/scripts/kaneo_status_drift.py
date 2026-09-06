@@ -16,6 +16,13 @@ one is unattributed and its `newStatus` is the earlier one's `oldStatus`. A wide
 heuristic (any unattributed write, any status disagreement) fires on every healthy
 GitHub-driven board and gets ignored within a day.
 
+`PATCH /task/bulk` logs `newStatus` only, with no `oldStatus` key (single-task
+`PUT /task/status/{id}` logs both), so the missing value is reconstructed from the
+preceding `status_changed`. Without that, every revert of a bulk write reads as a move
+somewhere new and is dropped — which is why only non-bulk drift was ever reported. The
+first `status_changed` in a trail has nothing to reconstruct from, so a revert of it
+stays invisible.
+
 Reports drift and exits 1 so a gate can consume it; a clean board exits 0.
 
 Env: KANEO_API_URL, KANEO_API_KEY, KANEO_PROJECT_ID (or --project).
@@ -76,13 +83,20 @@ def reverts(activity, window_seconds=DEFAULT_WINDOW_SECONDS):
     """
     changes = [e for e in activity if e.get("type") == "status_changed"]
     changes = list(reversed(changes))
+    # Bulk writes omit `oldStatus`; carry the previous event's `newStatus` in its place.
+    prior_status, previous = [], None
+    for event in changes:
+        data = event.get("eventData") or {}
+        prior_status.append(data.get("oldStatus") or previous)
+        previous = data.get("newStatus")
     found = []
-    for earlier, later in zip(changes, changes[1:]):
+    for index, (earlier, later) in enumerate(zip(changes, changes[1:])):
         if later.get("userId") is not None:
             continue  # a person did it on purpose
         earlier_data = earlier.get("eventData") or {}
         later_data = later.get("eventData") or {}
-        if later_data.get("newStatus") != earlier_data.get("oldStatus"):
+        earlier_old = prior_status[index]
+        if earlier_old is None or later_data.get("newStatus") != earlier_old:
             continue  # moved somewhere new, not back
         gap = None
         start, end = _parse_ts(earlier.get("createdAt")), _parse_ts(later.get("createdAt"))
@@ -91,7 +105,7 @@ def reverts(activity, window_seconds=DEFAULT_WINDOW_SECONDS):
             if gap > window_seconds:
                 continue
         found.append({
-            "from": earlier_data.get("oldStatus"),
+            "from": earlier_old,
             "to": earlier_data.get("newStatus"),
             "reverted_to": later_data.get("newStatus"),
             "at": later.get("createdAt"),

@@ -206,6 +206,11 @@ pattern (consecutive `status_changed` entries where the later is unattributed an
 the earlier, inside a window) and exits 1 when it finds any. Do not widen it to "any
 unattributed write" — that fires on every healthy board.
 
+One wrinkle the detector has to absorb: a `status_changed` logged by `PATCH /task/bulk`
+carries `newStatus` **only**, while single-task `PUT /task/status/{id}` carries both keys.
+The script reconstructs the missing `oldStatus` from the preceding `status_changed`;
+without that, reverts of bulk writes are invisible.
+
 ## Gotchas
 
 - Missing task → 400 "Workspace ID could not be determined" (treat as 404). The same 400
