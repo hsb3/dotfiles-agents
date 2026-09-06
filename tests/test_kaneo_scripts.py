@@ -65,6 +65,12 @@ def _change(new, old, user=None, at="2026-08-17T20:00:00.000Z"):
             "eventData": {"newStatus": new, "oldStatus": old}}
 
 
+def _bulk_change(new, user=None, at="2026-08-17T20:00:00.000Z"):
+    """`PATCH /task/bulk` logs `newStatus` only — no `oldStatus` key at all."""
+    return {"type": "status_changed", "userId": user, "createdAt": at,
+            "eventData": {"newStatus": new}}
+
+
 class RevertDetection(unittest.TestCase):
     """The endpoint returns newest-first; `reverts` reverses it, so every fixture here is
     written newest-first too — getting that backwards silently finds nothing."""
@@ -118,6 +124,40 @@ class RevertDetection(unittest.TestCase):
         hits = DRIFT.reverts(activity)
         self.assertEqual(len(hits), 1)
         self.assertIsNone(hits[0]["gap_seconds"])
+
+    def test_a_revert_of_a_bulk_write_is_drift(self):
+        """The real DFA-260 trail (task d510), newest-first as the endpoint returned it.
+
+        Three `PATCH /task/bulk` writes to `up-next`, each undone seconds later by an
+        unattributed write back to `to-do`; the fourth move came from
+        `PUT /task/status/{id}` and stuck. The bulk path logs `newStatus` only, so the
+        prior status has to be reconstructed from the preceding event or every one of
+        these reverts reads as a move somewhere new.
+
+        Two hits, not three: the 14:30:24 revert undoes the FIRST `status_changed` in the
+        trail, which has no preceding event to reconstruct a prior status from. That one
+        stays invisible, and detecting it would need the task's creation status.
+        """
+        activity = [
+            _change("up-next", "to-do", user="mtZs", at="2026-08-22T14:34:23.556Z"),
+            _change("to-do", "up-next", user=None, at="2026-08-22T14:31:59.513Z"),
+            _bulk_change("up-next", user="mtZs", at="2026-08-22T14:31:53.471Z"),
+            _change("to-do", "up-next", user=None, at="2026-08-22T14:31:37.002Z"),
+            _bulk_change("up-next", user="mtZs", at="2026-08-22T14:31:32.780Z"),
+            _change("to-do", "up-next", user=None, at="2026-08-22T14:30:24.647Z"),
+            {"type": "priority_changed", "userId": "mtZs",
+             "createdAt": "2026-08-22T14:30:20.230Z", "eventData": {"newPriority": "high"}},
+            _bulk_change("up-next", user="mtZs", at="2026-08-22T14:30:20.066Z"),
+            {"type": "created", "userId": "mtZs", "createdAt": "2026-08-22T14:24:06.882Z",
+             "eventData": {}},
+        ]
+        hits = DRIFT.reverts(activity)
+        self.assertEqual(len(hits), 2)
+        self.assertEqual([h["reverted_to"] for h in hits], ["to-do", "to-do"])
+        self.assertEqual([h["from"] for h in hits], ["to-do", "to-do"])
+        self.assertEqual([h["to"] for h in hits], ["up-next", "up-next"])
+        self.assertEqual([h["at"] for h in hits],
+                         ["2026-08-22T14:31:37.002Z", "2026-08-22T14:31:59.513Z"])
 
 
 USAGE = "usage: MINT_KEY=<agent-api-key> mint-mcp-token.sh <base-url>"

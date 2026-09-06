@@ -9,13 +9,20 @@ GitHub-flavoured procedure against a Kaneo board just produces a wrong changeset
 The Kaneo half is covered where it can be wrong on its own: what the snapshot looks
 like, what a changeset row resolves to, and that a cell already at its target value
 produces no write. The network is not mocked — a mock there asserts only that the
-author's guess about Kaneo's response shape is self-consistent.
+author's guess about Kaneo's response shape is self-consistent. The one exception is
+KaneoApplyReadBack, which fakes the transport to pin apply's own control flow; its
+docstring says why that is not the same bet.
 """
 
+import contextlib
+import copy
+import io
 import json
 import os
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL = os.path.join(ROOT, "primitives-core", "skills", "board-triage")
@@ -238,6 +245,134 @@ class KaneoChangeset(unittest.TestCase):
         calls = kb.group(ops)
         self.assertEqual(2, len(calls))
         self.assertEqual(["t1", "t2"], next(c for c in calls if c["operation"] == "updatePriority")["taskIds"])
+
+
+class FakeKaneo:
+    """In-memory Kaneo over the BOARD fixture: serves the four GETs apply issues and
+    mutates its own copy on a bulk write, except for ops named in `revert`."""
+
+    OP_FIELD = {
+        "updateStatus": "status",
+        "updatePriority": "priority",
+        "updateDueDate": "dueDate",
+        "updateAssignee": "assigneeName",
+    }
+
+    def __init__(self, revert=()):
+        self.columns = copy.deepcopy(BOARD)
+        self.revert = set(revert)  # (task id, operation) the server accepts and then undoes
+        self.writes = []
+
+    def __call__(self, method, path, body=None):
+        if method == "GET":
+            if path.startswith("/project/"):
+                return {"name": "demo", "workspaceId": "ws1"}
+            if path.startswith("/column/"):
+                return copy.deepcopy(COLUMNS)
+            if path.startswith("/task/tasks/"):
+                return {"columns": copy.deepcopy(self.columns)}
+            if path.startswith("/label/workspace/"):
+                return copy.deepcopy(LABELS)
+        if method == "PATCH" and path == "/task/bulk":
+            self.writes.append(body)
+            field = self.OP_FIELD[body["operation"]]
+            for task_id in body["taskIds"]:
+                if (task_id, body["operation"]) not in self.revert:
+                    self._task(task_id)[field] = body["value"]
+            return {}
+        raise AssertionError(f"unexpected request: {method} {path}")
+
+    def _task(self, task_id):
+        return next(t for c in self.columns for t in c["tasks"] if t["id"] == task_id)
+
+
+class KaneoApplyReadBack(unittest.TestCase):
+    """The module's no-mock rule has one exception, and this is it.
+
+    What is asserted here is cmd_apply's own control flow — that a cell which reads back
+    unchanged is not counted as applied, prints, and picks the exit code — not Kaneo's
+    response shape. The shapes the fake serves are the same COLUMNS/BOARD/LABELS fixtures
+    the snapshot tests above already run on, so no new guess about the server is being
+    made; the only new claim is about this script. Measured 2026-08-22 on the real board:
+    three `PATCH /task/bulk` status writes for DFA-260 were each undone 4-6s later, and
+    apply still reported them applied because it counted operations issued.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def run_apply(self, fake, changeset, argv=("--apply", "--settle-seconds", "0")):
+        path = os.path.join(self.tmp.name, "changeset.tsv")
+        with open(path, "w") as handle:
+            handle.write(changeset)
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(kb, "_request", fake))
+            stack.enter_context(mock.patch.dict(os.environ, {"KANEO_PROJECT_ID": "p1"}))
+            slept = stack.enter_context(mock.patch("time.sleep"))
+            stack.enter_context(contextlib.redirect_stdout(out))
+            stack.enter_context(contextlib.redirect_stderr(err))
+            code = kb.main(["apply", "--changeset", path, *argv])
+        self.assertFalse(slept.called, "--settle-seconds 0 must not sleep in a test suite")
+        return code, out.getvalue(), err.getvalue()
+
+    def test_landed_cell_is_counted_and_exits_clean(self):
+        fake = FakeKaneo()
+        code, out, err = self.run_apply(fake, "10\tstatus\tup-next\n")
+        self.assertEqual("up-next", fake._task("t1")["status"])
+        self.assertIn("applied 1 cell change(s)", out)
+        self.assertNotIn("UNLANDED", out + err)
+        self.assertEqual(0, code)
+
+    def test_reverted_cell_is_not_counted_and_exits_2(self):
+        fake = FakeKaneo(revert=[("t1", "updateStatus")])
+        code, out, err = self.run_apply(fake, "10\tstatus\tup-next\n")
+        self.assertEqual([{"operation": "updateStatus", "value": "up-next",
+                           "taskIds": ["t1"]}], fake.writes, "the write must still be issued")
+        self.assertIn("applied 0 cell change(s)", out)
+        report = out + err
+        self.assertIn("UNLANDED", report)
+        self.assertIn("#10", report)
+        self.assertIn("status", report)
+        self.assertIn("up-next", report)
+        self.assertEqual(2, code)
+        self.assertNotEqual(1, code)
+
+    def test_unlanded_beats_problems_in_the_exit_code(self):
+        fake = FakeKaneo(revert=[("t1", "updateStatus")])
+        code, _, err = self.run_apply(fake, "10\tstatus\tup-next\n99\tstatus\tup-next\n")
+        self.assertIn("SKIP", err)
+        self.assertIn("UNLANDED", err)
+        self.assertEqual(2, code, "an unlanded cell outranks an unresolvable row")
+
+    def test_unresolvable_row_alone_still_exits_1(self):
+        code, out, err = self.run_apply(FakeKaneo(), "99\tpriority\tP1\n")
+        self.assertIn("not on this board", err)
+        self.assertNotIn("UNLANDED", out + err)
+        self.assertEqual(1, code, "the pre-existing problems exit path must survive")
+
+    def test_apply_help_documents_both_exit_codes(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            kb.main(["apply", "--help"])
+        text = out.getvalue()
+        self.assertIn("--settle-seconds", text)
+        self.assertIn("exit codes:", text)
+        # "1"/"2" appear in any help text; the codes have to be described, not present.
+        self.assertIn("1  some changeset rows were unresolvable", text)
+        self.assertIn("2  a written cell read back unchanged", text)
+
+
+class KaneoAdapterDoc(unittest.TestCase):
+    def test_apply_section_names_the_trustworthy_status_write_path(self):
+        """A bulk status write that silently reverts is invisible unless the doc says so."""
+        body = read(os.path.join(ADAPTERS, "kaneo.md"))
+        apply_section = body.split("## Apply", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("PUT /task/status/", apply_section)
+        self.assertIn("2026-08-22", apply_section)
+        for code in ("exit 1", "exit 2"):
+            self.assertIn(code, apply_section)
 
 
 if __name__ == "__main__":

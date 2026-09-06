@@ -34,7 +34,7 @@
       "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — mid-session focus and scope checks, weekly board triage through a backend adapter (GitHub Projects, Kaneo, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.8.1"
+      "version": "0.8.2"
     },
     {
       "author": {
@@ -52,7 +52,7 @@
       "description": "Track a repo's work on a live Kaneo board instead of in-repo task files, so parallel sessions stop claiming the same task and no branch grows its own backlog. Ships the workflow skill, the task-authoring skill (write tracker items a cold agent can execute), the board's MCP server definition, a reference manager agent, and hooks that keep claim authority in the root session, block board writes while the config is incomplete, catch a stray MCP registration that would silently authenticate the owner instead of the agent, stamp every write with its agent and session, and deny subagent Bash that reaches the board host directly. Configure with five KANEO_* env vars; nothing about an instance is baked in. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "kaneo",
       "source": "./plugins/kaneo",
-      "version": "0.13.2"
+      "version": "0.13.3"
     },
     {
       "author": {

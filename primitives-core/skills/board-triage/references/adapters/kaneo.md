@@ -43,7 +43,31 @@ python3 "$S/kaneo_board.py" apply --changeset changeset.tsv --apply    # write
 
 Dry-run by default. Cells already at the target value are dropped, so re-runs are free. Writes go
 through `PATCH /task/bulk`, grouped into one call per (operation, value). Unresolvable rows print
-as `SKIP` on stderr and set a non-zero exit; the resolvable rows still apply.
+as `SKIP` on stderr; the resolvable rows still apply.
+
+**Every written cell is verified.** After the writes, apply waits `--settle-seconds` (default
+2.0, `0` skips the wait) and re-pulls the board, then re-plans the same changeset rows against it.
+A row that still wants a change is a cell that did not land: it prints as `UNLANDED <task> <field>:
+<current> -> <requested>` on stderr and is **not** included in the `applied N cell change(s)`
+count, which therefore counts confirmed cells rather than requests issued.
+
+Exit codes:
+
+- **exit 0** — every requested cell read back at its new value.
+- **exit 1** — some changeset rows were unresolvable; everything resolvable applied and verified.
+- **exit 2** — at least one written cell read back unchanged. Takes precedence over exit 1 when
+  both hold, because an unlanded write is a lie about the board and an unresolvable row is not.
+
+### Which write path to trust for bulk status
+
+Measured 2026-08-22 on this instance: three `PATCH /task/bulk` status writes for `DFA-260` were
+each undone by an unattributed write 4–6 seconds later, while the identical change through
+`PUT /task/status/{id}` persisted. Bulk is still the path this adapter uses — it is the only
+batched one, and a one-call-per-cell rewrite trades a real cost for a failure the verification
+now makes loud instead of silent. **A status cell reported `UNLANDED` should be re-issued
+single-task via `PUT /task/status/{id}`** (the `kaneo` skill's REST surface), then re-verified by
+re-running apply, which exits 0 once the board agrees. The `kaneo` skill's
+`scripts/kaneo_status_drift.py` is the detector for the pattern across a whole board.
 
 ## Field map
 
