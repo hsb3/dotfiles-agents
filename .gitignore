@@ -49,8 +49,11 @@ harness/campaign-logs/
 # machine-local agent auto-memory (redirect target differs per machine; tracked store is .claude/memory/)
 .claude/agent-memory/
 
-# per-project plugin activation (atelier.local.md and friends) — local by convention
+# per-project plugin activation — local by convention, except atelier.local.md: tracked
+# (owner ruling 2026-09-07) so worktree-isolated workers and the other Mac get the same
+# enforcement; a gitignored copy left every worktree worker with custody silently off (9r04).
 .claude/*.local.md
+!.claude/atelier.local.md
 
 # handoff freshness signal. The handoff itself is kata issue 8xyk; this file carries no
 # content, only an mtime, and machine-local mtime is not something to share. A fresh clone

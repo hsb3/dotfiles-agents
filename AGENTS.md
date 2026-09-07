@@ -71,7 +71,7 @@ what sat in the owner's queue at cutover.
 tree, and there is no handoff branch — never create either.**
 
 `handoff-freshness-guard` knows this via the `handoff: {mode: external, …}` block in
-`.claude/atelier.local.md` (gitignored, per-project): it stats `.claude/handoff.stamp` instead
+`.claude/atelier.local.md` (tracked since 2026-09-07 by owner ruling, so worktree workers and both Macs share it; the stamp stays ignored): it stats `.claude/handoff.stamp` instead
 of searching for a handoff file. **Update the board issue first, touch the stamp last** — the
 guard reads the stamp's age, never the board's content, so an early touch certifies a handoff
 that has not happened. No stamp yet in a fresh clone means the first manual `/compact` is
