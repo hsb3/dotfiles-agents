@@ -84,8 +84,9 @@ AGENT_EXEMPTIONS = {
 }
 
 # Standalone-capable skills deliberately kept OUT of solo-skills: each prescribes an
-# opt-in in-repo system (owner ruling 2026-09-01 — the code-desk split). Keyed by skill
-# id, value names the reason and the plugin that carries the skill instead.
+# opt-in system, in-repo or external (owner ruling 2026-09-01 — the code-desk split;
+# widened to external systems 2026-09-07). Keyed by skill id, value names the reason and
+# the plugin that carries the skill instead.
 SYSTEM_EXEMPTIONS = {
     "bun": (
         "makes bun the default JS/TS runtime, package manager, test runner and bundler — "
