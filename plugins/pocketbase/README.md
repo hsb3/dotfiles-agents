@@ -1,7 +1,8 @@
 # pocketbase
 
-Two PocketBase skills that split the work by question: how to **build** a backend right, and
-how to **drive** a running one.
+Two PocketBase skills that split the work by question — how to **build** a backend right, and
+how to **drive** a running one — plus three agents that carry the backend laws into a
+delegated brief so no brief has to restate them.
 
 ## How it fits together
 
@@ -23,10 +24,19 @@ flowchart TD
   ops --> change[A changed instance: collection, record, migration, backup]
 
   base -.->|Hand-editing here fails the vendored drift gate| layer
+
+  task -->|Delegate it instead of doing it inline| pbb[pb-builder]
+  pbb --> change
+  pbb -->|Its report is a hypothesis, never proof| pbr[pb-reviewer returns CONFIRMED, REFUTED, or UNPROVEN]
+  pbb -->|Before the rules and routes ship| aud[pocketbase-security-auditor]
+  layer -.->|The laws all three carry| pbb
 ```
 
 The design skill decides *what to build*; the operational skill *builds it*. Each hands off to
-the other when a task crosses the line, so installing one without the other leaves a gap.
+the other when a task crosses the line, so installing one without the other leaves a gap. The
+agents are the same knowledge in dispatchable form: `pb-builder` writes, `pb-reviewer` refuses
+to take its word for anything, and `pocketbase-security-auditor` reads the authorization
+surface for what the other two would not think to question.
 
 ## What you get
 
@@ -45,6 +55,24 @@ design, API rules and access control, auth, SDK usage, query performance, realti
 handling, deployment, server-side extending), each with an incorrect/correct code pair, under
 an authored layer carrying the operational/design routing and **field notes**: verified
 findings that extend the rules, with the evidence that established them.
+
+| Agent | Dispatch it for | Access |
+|---|---|---|
+| `pb-builder` | Scoped backend implementation against explicit acceptance criteria inside an owned file list, with the migration, hook, and rule laws already in its head | read-write |
+| `pb-reviewer` | Adversarial verification of a backend claim, re-derived from its cited source and re-run in the reviewer's own clean room | read-only |
+| `pocketbase-security-auditor` | The authorization surface — collection rules, custom routes, hooks, realtime subscriptions, relation scoping, role boundaries | read-only |
+
+Each boots its own throwaway server on a port it picks per run, so nothing it does touches an
+instance you are using.
+
+## Honest scope
+
+The skills work against any PocketBase instance you can reach. The agents assume more: a
+project with a PocketBase binary they can run and a migrations and hooks layout they can copy
+into a scratch directory, since every claim they make is proved on a server they booted
+themselves. They read the project's own rules and migration laws where it has them, and say so
+when it has none rather than inventing a convention. None of the three commits, pushes, or
+stages; `pb-reviewer` and `pocketbase-security-auditor` do not write to the tree at all.
 
 ## Attribution
 
