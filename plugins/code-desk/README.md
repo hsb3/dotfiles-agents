@@ -104,7 +104,10 @@ remediation is worthless.
 `board-triage` assumes a board already stood up with an adapter for it. Every adapter is
 self-contained in this bundle, and what each needs is the backend's own client: `gh`
 authenticated with `project` scope for GitHub Projects, the `kata` CLI on PATH already pointed
-at the right daemon for Kata, the API url/key/project env values for Kaneo.
+at the right daemon for Kata, the API url/key/project env values for Kaneo. Every adapter
+also answers `apply` the same way: a row it cannot resolve prints as a `SKIP` on stderr and
+exits non-zero, while the rows that did resolve are still applied — so `apply || abort`
+means one thing on all three backends.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already
 carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it does not —

@@ -87,8 +87,8 @@ too, even when it carries no skill at all.
 
 `solo-skills` is the other half of that idea. It carries every skill that needs nothing
 beside it — no agent, no hook, no sibling skill — so its membership is derived rather than
-curated: `scripts/check_solo_skills.py` re-reads the skill bodies and their bundled scripts
-and works out which ones qualify.
+curated: `scripts/check_solo_skills.py` re-reads the skill bodies, their bundled scripts and
+their bundled examples, and works out which ones qualify.
 
 **Per-skill *plugins* are no longer offered — per-skill installs are.** Each of those skills
 used to ship as its own one-skill plugin. A plugin is the unit of installation in Claude Code,

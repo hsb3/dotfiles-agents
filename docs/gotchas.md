@@ -16,7 +16,10 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   by hand before assuming green:
   `scripts/check_version_bump.py` (needs network; changed published bytes must ship under a
   moved version — it caught `solo-skills` shipping two new skills under an unmoved 0.1.8 on
-  2026-08-20), `scripts/check_vendored_drift.py` / `make vendored-drift` (needs network;
+  2026-08-20), `scripts/check_removals.py` (needs network; a unit published on `origin/main`
+  and absent here must be declared by the commit that removed it — the deletion case the
+  version-bump gate says outright it does not cover), `scripts/check_vendored_drift.py` /
+  `make vendored-drift` (needs network;
   every `origin: vendored` `base/` still matches its pinned upstream ref),
   `scripts/check_manifests.py` / `make manifests` (needs the `claude` binary; runs
   `claude plugin validate --strict` over the marketplace and every assembly), and
