@@ -13,3 +13,4 @@
 - [launchd = bash 3.2](launchd-bash32-scripts.md) — verify LaunchAgent scripts with `/bin/bash`, not the interactive shell
 - [opencode deferred, not abandoned](opencode-deferred-not-abandoned.md) — keep the opencode targets and generator; card 63nm
 - [Atelier parity gate after skill edits](atelier-parity-gate-after-skill-edits.md) — atelier doctrine PRs leave dotfiles-agents-oc silently red; run `bun gate/parity.ts` there and port in the same wave
+- [kata sync enable resets the cursor](kata-sync-enable-resets-cursor.md) — re-enabling the GitHub binding re-applies every GitHub title/body/status/priority onto the board; snapshot first, restore by script, close mirrors with cards
