@@ -35,8 +35,9 @@ jobs:
   drift-guards:
     name: drift guards (roster · marketplace · catalog)
     runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
-    # `issues: read` is what the labels REST endpoint is gated on, and this repo is
-    # private, so the workflow-level `contents: read` alone 403s the label gate below.
+    # `gh label list` reads the GraphQL `repository.labels` connection, which is gated on
+    # `issues: read`; this repo is private, so the workflow-level `contents: read` alone
+    # would 403 the label gate below.
     # Declaring permissions here replaces the workflow default for this job, so
     # `contents: read` has to be restated for actions/checkout.
     permissions:

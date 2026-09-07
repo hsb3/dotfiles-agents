@@ -4,9 +4,10 @@
 GitHub mints labels on the side. `gh issue create --label`, a template, an imported
 issue, an action, or a human in the web UI can each add a name nobody declared, and the
 UI shows the result as a flat colourful list with no signal about which entries are
-intentional. That is how this repo accumulated `status:*`, `priority:*`, `bug`,
-`feature`, `chore`, and `docs` alongside the labels actually in use — all of them
-deleted before this gate landed, none of them ever announced. A label vocabulary that
+intentional. That is how this repo accumulated a stale sprawl alongside the labels
+actually in use — `status:*`, `priority:*`, `area:*`, `phase:*`, `bug`, `feature`,
+`chore`, `docs` and more, none of them ever announced, all of them since deleted by
+hand. (The list is illustrative; the live set is whatever `gh` reports.) A vocabulary that
 grows silently stops meaning anything: filters miss issues, two names split one concept,
 and no reader can tell a live convention from a fossil.
 
@@ -54,7 +55,12 @@ which is the intended alarm.
 
 Stdlib-only, deterministic. Exit 0 = clean or unreachable; exit 1 = drift, or a gate that
 could not run.
-Usage: python3 scripts/check_labels.py [--labels-json <file>|-]   (run from anywhere)
+Usage: python3 scripts/check_labels.py [--labels-json <file>|-]
+
+Run the live path from a checkout of the repo you mean to check: `gh` resolves owner/repo
+from the cwd's git remote, so from a fork it checks the FORK's labels, and from outside a
+repo it fails red. `--labels-json` runs from anywhere.
+
 """
 
 import argparse

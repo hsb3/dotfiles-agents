@@ -131,7 +131,14 @@ class NetworkContract(unittest.TestCase):
         return rc, buf.getvalue()
 
     def test_gh_missing_from_path_fails_the_gate(self):
-        with mock.patch.object(L.shutil, "which", return_value=None):
+        """Red even OFFLINE — the ordering in main() is the invariant, not the message.
+
+        `_github_reachable` is forced False on purpose: without it this test passes on any
+        networked machine whether or not main() still checks PATH before the reachability
+        probe, and dropping that check turns a machine with no `gh` into a silent exit 0.
+        """
+        with mock.patch.object(L.shutil, "which", return_value=None), \
+             mock.patch.object(L, "_github_reachable", return_value=False):
             rc, out = self._run()
         self.assertEqual(rc, 1)
         self.assertIn("gh is not on PATH", out)

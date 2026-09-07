@@ -6,8 +6,9 @@ status: accepted
 ---
 ## Context
 
-The repo's GitHub labels had accumulated a stale mixture — `status:*`, `priority:*`, `bug`,
-`feature`, `chore`, `docs` — sitting alongside the taxonomy actually in use. Much of it
+The repo's GitHub labels had accumulated a stale sprawl — `status:*`, `priority:*`, `area:*`,
+`phase:*`, `bug`, `feature`, `chore`, `docs` and more, the issue-event history holds the full
+list — sitting alongside the taxonomy actually in use. Much of it
 arrived because kata's GitHub sync writes labels onto the repo, and nothing constrained what
 could appear there: a label minted by a sync was indistinguishable from one somebody chose.
 No gate read the label set at all, so the taxonomy drifted by accident rather than by
