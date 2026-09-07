@@ -20,10 +20,11 @@ gates) before starting.
 
 ## The cycle
 
-1. **Draft in parallel.** One agent per item, each scoped to its own `_meta/plans/<slug>/` folder,
-   every claim grounded in cited `path:line` source. Each brief states its file-scope ownership;
-   shared files (a single specs module, a Makefile) get a serialized chain of agents, not parallel
-   writers. Run in the main tree (the desk may be invisible in a bare worktree).
+1. **Draft in parallel.** One agent per unit of work, each scoped to its own
+   `_meta/plans/<slug>/` folder, every claim grounded in cited `path:line` source. Each brief
+   states its file-scope ownership; shared files (a single specs module, a Makefile) get a
+   serialized chain of agents, not parallel writers. Run in the main tree (the desk may be
+   invisible in a bare worktree).
 
 2. **Review adversarially against the rubric.** One read-only verifier per plan, told to RE-DERIVE
    the load-bearing claims from source and find what is wrong, overstated, or missing — *not* to
@@ -38,21 +39,21 @@ gates) before starting.
    recurs becomes a new dimension (this is how G and H got added). Re-score; confirm the fixes landed
    and introduced no regressions.
 
-5. **Apply the bodies + update state.** When an issue is being conformed alongside its plan, apply
-   the rewritten body via **issue** mode's `gh issue edit` step and update the README + any triage
-   record — re-verifying any scope-flipping claim against source yourself before it lands. **Gate the
-   wave on `reconcile.py` exiting clean** at the start (trust the table before working off it) and
-   the end (catch rows left stale). When it flags an ACTIVE plan whose issue CLOSED, that's a human
-   call — reopen the issue if acceptance criteria are unmet, or archive the plan if genuinely done.
+5. **Update state.** When a plan changes a tracked item's scope or acceptance, the item's body is
+   rewritten with the `task-authoring` skill and pushed to the tracker by the human or agent who
+   owns that item — re-verify any scope-flipping claim against source yourself before it lands.
+   Update the README + any triage record. **Gate the wave on `reconcile.py` exiting clean** at the
+   start (trust the table before working off it) and the end (catch rows left stale). When it flags
+   an ACTIVE plan whose item CLOSED, that's a human call — reopen it if acceptance criteria are
+   unmet, or archive the plan if genuinely done.
 
 ## Gates over green reports
 
 The run isn't done when the agents say done; it's done when the repo's own hard gates pass and the
 desk reconciles. Before declaring a wave complete, run from the main tree:
 
-- `reconcile.py` — clean (README ↔ live issues ↔ folders agree)
-- `conformance.py` — every issue touched in the wave conforms
-- `sync-bodies.py` — staged bodies match GitHub (or you deliberately haven't pushed yet)
+- `reconcile.py` — clean (README ↔ live tracker state ↔ folders agree)
+- `conformance.py` — every item touched in the wave conforms
 - the project's own test/lint gate from `_config.md`, for any plan that also shipped code
 
 A gate that can fail loudly is worth more than any number of agent self-reports.
