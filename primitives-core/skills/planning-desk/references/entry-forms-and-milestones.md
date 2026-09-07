@@ -150,7 +150,7 @@ views) adopts the set as follows:
 | Milestone set | the P1–P4 promise set above, **mirrored across both repos** (per the board's own description) so a workbench item and a dotfiles-agents item share one promise level |
 | Gate label | `gate:cross-tool` marks what blocks P4 (agnostic base format + cross-vendor parity) |
 | Item source | one item set spanning both repos, sliced into the board's views |
-| Fields | per the `github-project-board` standard (Workstream / Impact / Effort / Priority), sourced from the same skill family |
+| Fields | per the field-map table in board-triage's `references/adapters/github-projects.md` (Workstream / Impact / Effort / Priority) |
 
 New promise-level milestones the board needs are created **once and mirrored to both repos** so the two
 never drift.

@@ -22,7 +22,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/mise-en-place-scaffold/scripts/scaffold.py
 
 `--plan` lists planned creations, conflicts, and non-mechanical items per checklist ID.
 `--init-manifest` writes the commented `_meta/mise-en-place.yml` variance template for
-per-repo deviations and GitHub-side knobs.
+per-repo deviations and GitHub-side knobs a consumer provisions by hand with `gh`.
 
 **Additive-only, by design.** It never overwrites, merges, edits, deletes, or moves an
 existing file, never provisions GitHub-side objects, and never authors README, CLAUDE.md, or
