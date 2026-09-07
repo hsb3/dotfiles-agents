@@ -4,6 +4,8 @@ Present a batch of decisions, approvals, or questions to the project owner as a 
 form in their browser instead of a wall of chat questions. The owner answers inline at
 their own pace — every recommendation preselected, so agreeing with everything is one
 click — and the answers land in a JSON file the session picks up the moment they submit.
+Answers convert into the project's own tracker (a board issue, a GitHub issue, or a
+decision record) — this skill has no tracker of its own.
 
 ## When it triggers
 
