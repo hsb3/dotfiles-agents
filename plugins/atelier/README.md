@@ -169,6 +169,16 @@ What each `enforce` level actually does:
 | `advisory` | injects the worker covenant into every subagent | logs would-be denials to the `config-custody` stream; blocks nothing |
 | `strict` | injects the covenant, naming the tool-layer block | denies subagent edits to `protected:` paths |
 
+**Enforcement follows the main checkout into a linked worktree.** This file is gitignored by
+convention, and a worktree is a clean checkout, so a worker dispatched with `isolation: worktree`
+used to land somewhere the file simply was not — and ran with custody and the covenant off, in
+exactly the dispatch shape isolation exists to protect. Every hook that reads the file now falls
+back to the main checkout's copy when it finds nothing at its own project directory, and the same
+fallback covers what the file *names* (a `handoff:` path, its freshness stamp). The lookup is lazy,
+which has one visible consequence worth knowing: if you **track** this file, a worktree sees it at
+the version committed on that worktree's branch, not as your working tree currently has it — so
+commit a policy change before dispatching against it.
+
 The main session is never restricted at any level: custody is scoped to subagents, so the
 strategist keeps ownership of config and git and lifting a pattern is always available. Run
 `advisory` for a few waves first and read the ledger — it records exactly what `strict` would
