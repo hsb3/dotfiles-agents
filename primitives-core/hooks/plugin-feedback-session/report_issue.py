@@ -42,6 +42,11 @@ label set before filing, so a rename costs a notice and an unlabelled issue rath
 a failed call. The unlabelled retry below stays the backstop for what that check cannot
 see (a label deleted between the two calls, a repo gh cannot list).
 
+gh itself is the one external dependency, and it is checked where it is run rather than
+described: absent from PATH, filing stops with a message naming gh and pointing at
+`--draft`, which still works because a read it cannot make was already allowed to
+degrade to `unknown`.
+
 This file must have ZERO third-party dependencies (Python 3 stdlib only) and must
 stay compatible with Python 3.9.
 
@@ -95,6 +100,15 @@ LABEL_PAGE = 200
 # under a checkout root, and a path inside the target repo for the gh read.
 MARKETPLACE_MANIFEST = ".claude-plugin/marketplace.json"
 ALLOW_UNLISTED = "--allow-unlisted"
+
+# The reporter's one external dependency. Filing without it is impossible, so the
+# message names it and points at the path that still works — a draft the filer can hand
+# to someone who has gh, rather than a report they have to compose again.
+GH_MISSING = (
+    "report_issue: gh is not on PATH, so nothing was filed — this reporter files "
+    "through the GitHub CLI. Install gh (or put it on PATH), or rerun with --draft to "
+    "print the report and file it by hand.\n"
+)
 
 NO_FIX = "None offered."
 NO_REPRO = "Not captured."
@@ -210,10 +224,33 @@ def resolve_label(kind, env, override=None):
     return from_env or DEFAULT_LABELS[kind]
 
 
+class GhUnavailable(Exception):
+    """gh could not be started at all — raised by `_run_gh`, by nothing else."""
+
+
+def _run_gh(argv, runner):
+    """The single place this reporter runs gh. Every call routes through here.
+
+    A runner raises OSError (FileNotFoundError) when the binary is absent, and that is
+    the one failure no caller can tell from gh's own non-zero exit unless it is named
+    here — so it is separated once, at the shared point, rather than guarded at each
+    call site where the next read added would miss the guard.
+
+    The policy on it differs by caller, which is why this raises rather than deciding:
+    a READ degrades to unknown (a missing binary is one more read that cannot be made,
+    like a blip or a rate limit, and a draft is still owed to its filer), while the
+    FILING path stops with the message below because nothing can be filed without gh.
+    """
+    try:
+        return runner(argv, text=True, capture_output=True)
+    except OSError as exc:
+        raise GhUnavailable(exc)
+
+
 def _gh_json(argv, runner):
     """Parsed stdout of a read-only gh call, or None on any failure at all."""
     try:
-        done = runner(argv, text=True, capture_output=True)
+        done = _run_gh(argv, runner)
     except Exception:
         return None
     if getattr(done, "returncode", 1) != 0:
@@ -574,17 +611,24 @@ def main(argv=None, env=None, runner=None, today=None, out=None):
         out.write(unlabelled_notice(label, repo, report.kind))
         label = None
 
-    done = runner(build_argv(repo, title, body, label), text=True, capture_output=True)
-    stdout = getattr(done, "stdout", "") or ""
-    stderr = getattr(done, "stderr", "") or ""
-    if getattr(done, "returncode", 1) != 0 and LABEL_MISSING.search(stderr):
-        # The label is the least important part of the report and the only part that can
-        # fail on its own. Retry unlabelled rather than hand back a composed body the
-        # filer would have to reconstruct.
-        out.write(unlabelled_notice(label, repo, report.kind))
-        done = runner(build_argv(repo, title, body, None), text=True, capture_output=True)
+    try:
+        done = _run_gh(build_argv(repo, title, body, label), runner)
         stdout = getattr(done, "stdout", "") or ""
         stderr = getattr(done, "stderr", "") or ""
+        if getattr(done, "returncode", 1) != 0 and LABEL_MISSING.search(stderr):
+            # The label is the least important part of the report and the only part that
+            # can fail on its own. Retry unlabelled rather than hand back a composed body
+            # the filer would have to reconstruct.
+            out.write(unlabelled_notice(label, repo, report.kind))
+            done = _run_gh(build_argv(repo, title, body, None), runner)
+            stdout = getattr(done, "stdout", "") or ""
+            stderr = getattr(done, "stderr", "") or ""
+    except GhUnavailable:
+        # Same class as an unresolvable target repo, and reported the same way: a
+        # precondition the caller fixes and reruns, caught before anything left the
+        # machine — never confused with `gh ran and the call failed` below.
+        out.write(GH_MISSING)
+        return 2
     if getattr(done, "returncode", 1) != 0:
         out.write("report_issue: gh issue create failed.\n{0}{1}".format(stdout, stderr))
         return 1

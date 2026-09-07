@@ -497,6 +497,16 @@ class _BlindRunner(_FakeRunner):
         return _Completed(1, "", "gh: could not resolve host\n")
 
 
+class _NoGhRunner(_GhFake):
+    """A machine with no gh at all. `subprocess.run` raises FileNotFoundError before any
+    process starts, which is what an absent binary really looks like — not a non-zero
+    exit — so no fake that returns a completed process can stand in for it."""
+
+    def __call__(self, argv, **kwargs):
+        self.calls.append((argv, kwargs))
+        raise FileNotFoundError(2, "No such file or directory", argv[0])
+
+
 class MainTests(unittest.TestCase):
     """The CLI edges, all driven with a fake runner — `gh` is never executed."""
 
@@ -748,6 +758,47 @@ class MainTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("--label", runner.creates[0])
         self.assertNotIn("filing unlabelled", out)
+
+    # -- gh missing from PATH ----------------------------------------------
+
+    def test_gh_missing_is_one_named_message_and_no_traceback(self):
+        """The reporter's one external dependency, absent. Every gh call routes through
+        one runner wrapper, so this is caught wherever it surfaces — an unguarded
+        FileNotFoundError reaches the filer as a traceback with no instruction in it."""
+        runner = _NoGhRunner()
+        code, out, runner = self._main(self.BUG_ARGS, runner=runner)
+        self.assertNotEqual(code, 0)
+        self.assertIn("gh is not on PATH", out)
+        self.assertIn("--draft", out)
+        self.assertNotIn("Traceback", out)
+        # Recorded as an ATTEMPT, not a filing: the process never started. One of them —
+        # the unlabelled retry must not fire on a failure the label cannot explain.
+        self.assertEqual(len(runner.creates), 1)
+
+    def test_draft_still_works_without_gh_when_the_list_is_on_disk(self):
+        """AC: a draft needs no gh at all on the membership fast path — and --draft is
+        what the message above tells the filer to fall back to, so it must not need the
+        binary it is the answer to missing."""
+        root = os.path.join(self.tmp.name, "checkout", "plugin")
+        os.makedirs(root)
+        self._marketplace_at(os.path.join(self.tmp.name, "checkout"), ["atelier"])
+        runner = _NoGhRunner()
+        code, out, runner = self._main(
+            self.BUG_ARGS + ["--draft"], env={"CLAUDE_PLUGIN_ROOT": root}, runner=runner
+        )
+        self.assertEqual(code, 0, out)
+        self.assertIn("## What happens", out)
+        self.assertEqual(runner.calls, [])
+
+    def test_a_draft_that_needs_a_read_still_prints_without_gh(self):
+        """No local list, so membership wants the gh read. A read it cannot make still
+        gets its draft (the documented contract): a missing binary degrades the check
+        exactly like a network blip does, and only the filing path is hard-stopped."""
+        runner = _NoGhRunner()
+        code, out, runner = self._main(self.BUG_ARGS + ["--draft"], runner=runner)
+        self.assertEqual(code, 0, out)
+        self.assertIn("membership check", out)
+        self.assertIn("## What happens", out)
 
     def test_a_label_the_repo_does_not_carry_is_dropped_before_filing(self):
         """AC#2's half: the default label is checked against the repo's live set, so a
