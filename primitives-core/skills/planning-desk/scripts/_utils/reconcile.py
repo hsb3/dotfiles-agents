@@ -46,28 +46,32 @@ ACTIVE_MARKER = "ACTIVE plans"
 ARCHIVED_MARKER = "ARCHIVED ("
 
 # A ref token: alphanumeric, with inner - or _ kept so a hyphenated key survives.
+# Everything else -- `#`, backticks, punctuation -- is a delimiter, which is why a
+# qualified `project#key` splits into `project` and `key` and resolves on the second.
 TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
 # A ref cell that deliberately names nothing, as opposed to naming something unknown.
 NO_REF_RE = re.compile(r"^(|-|--|n/?a|none|tbd|\(?no [a-z ]*\)?)$", re.I)
-# Words that, when they precede the resolved ref on its line, mean the leading key is
-# an epic/relation rather than this plan's own tracking ref -- the convention is that
-# the tracking ref comes FIRST. Warn (non-fatal) when it looks violated.
-EPIC_SIGNAL = re.compile(r"\b(epic|under|child of|relates?|sibling)\b", re.I)
+# Relation words. The ref rule takes the FIRST known key, and a line that also states
+# a relation ("Blocked by ay9p; this plan tracks xmwb") hands it the wrong one. The
+# parse cannot be made right in general, so any relation word ANYWHERE on the ref's
+# own line makes the parse a warning: it may name a relation, not this plan's own ref.
+RELATION_RE = re.compile(
+    r"\b(epic|under|child(ren)? of|relates?|related|sibling|blocked[- ]?by|blocks|"
+    r"depends? on|supersed(es|ed)|duplicate|dup of|see also|part of|parent)\b",
+    re.I,
+)
 
 
-def first_known_ref(text: str, keys: set[str]) -> str | None:
-    """The first token in `text` that is a key in the snapshot, else None.
+def find_known_ref(text: str, keys: set[str]) -> tuple[str | None, int]:
+    """(first token in `text` that is a key in the snapshot, where it starts).
 
-    A qualified form (`project#key`) resolves to its key, since the sub-parts of a
-    token are tried after the token itself.
+    The START is returned, not looked up afterwards: `text.index(ref)` finds the first
+    SUBSTRING, so a `p937` inside `feat/p937x-thing` would be mistaken for the match.
     """
-    for token in TOKEN_RE.findall(text or ""):
-        if token in keys:
-            return token
-        for part in re.split(r"[-_]", token):
-            if part in keys:
-                return part
-    return None
+    for match in TOKEN_RE.finditer(text or ""):
+        if match.group(0) in keys:
+            return match.group(0), match.start()
+    return None, -1
 
 
 def parse_readme_rows() -> tuple[list[dict], list[dict]]:
@@ -100,28 +104,36 @@ def parse_readme_rows() -> tuple[list[dict], list[dict]]:
     return active, archived
 
 
-def plan_tracking_ref(slug: str, keys: set[str]) -> tuple[str | None, str | None]:
-    """(tracking ref, warning) for one plan folder.
+def plan_tracking_refs(slug: str, keys: set[str]) -> tuple[list[str], str | None]:
+    """(every known key named in the `## Tracking` section, warning) for one plan.
 
-    Warn (non-fatal) when the section is missing, names no known key, or the leading
-    key looks epic-flagged -- i.e. the parse should be double-checked by a human
-    rather than trusted as a mismatch.
+    The FIRST entry is the tracking ref by convention. The rest matter when the parse
+    is warned: the true ref is then one of them, and a caller that proposes a write
+    (coverage.py) must treat all of them as possibly-tracked rather than guess.
+
+    Warn (non-fatal) when the section is missing, names no known key, or its ref line
+    also states a relation -- a human should check that one rather than a script
+    reporting a mismatch it invented.
     """
     plan_md = PLANS_DIR / slug / "plan.md"
     if not plan_md.is_file():
-        return None, "no plan.md"
+        return [], "no plan.md"
     text = plan_md.read_text()
     found = re.search(r"^##\s*Tracking\b.*?(?=^##\s|\Z)", text, re.S | re.M)
     if not found:
-        return None, "no `## Tracking` section"
+        return [], "no `## Tracking` section"
     section = found.group(0)
-    ref = first_known_ref(section, keys)
-    if ref is None:
-        return None, "`## Tracking` names no known tracker key"
-    before = section[: section.index(ref)]
-    if EPIC_SIGNAL.search(before.rsplit("\n", 1)[-1]):
-        return ref, f"leading ref {ref} looks epic-flagged; verify it is the tracking ref"
-    return ref, None
+    hits = [m for m in TOKEN_RE.finditer(section) if m.group(0) in keys]
+    if not hits:
+        return [], "`## Tracking` names no known tracker key"
+    refs = list(dict.fromkeys(m.group(0) for m in hits))
+    line = section[section.rfind("\n", 0, hits[0].start()) + 1 :].split("\n", 1)[0]
+    if RELATION_RE.search(line):
+        return refs, (
+            f"ref {refs[0]} sits on a line that states a relation -- verify it is this "
+            "plan's own tracking ref"
+        )
+    return refs, None
 
 
 def disk_folders() -> set[str]:
@@ -131,7 +143,7 @@ def disk_folders() -> set[str]:
 def resolve_row(cell: str, keys: set[str]) -> tuple[str | None, str | None]:
     """(ref, why-not). `why-not` is 'none' when the cell claims nothing and 'unknown'
     when it claims something the tracker has never heard of."""
-    ref = first_known_ref(cell, keys)
+    ref, _at = find_known_ref(cell, keys)
     if ref:
         return ref, None
     stripped = re.sub(r"[`*]", "", cell).strip()
@@ -187,7 +199,8 @@ def run(snapshot: dict) -> dict:
                 }
             )
         # 3. README ref vs the plan.md Tracking ref
-        body, warn = plan_tracking_ref(slug, keys)
+        refs, warn = plan_tracking_refs(slug, keys)
+        body = refs[0] if refs else None
         if warn:
             warns.append({"plan": slug, "detail": warn})
         if ref and body and body != ref:

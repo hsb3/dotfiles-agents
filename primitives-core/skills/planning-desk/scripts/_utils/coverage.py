@@ -14,8 +14,9 @@ Per an owner decision only NON-TRIVIAL work strictly needs a plan -- trivial bug
 docs may be waived -- so likely-trivial items are TAGGED rather than auto-excluded;
 the owner waives them by judgment.
 
-Folder -> ref mapping is reconcile's (`disk_folders()` + `plan_tracking_ref()`), so
-one ref rule governs the whole desk.
+Folder -> ref mapping is reconcile's (`disk_folders()` + `plan_tracking_refs()`), so
+one ref rule governs the whole desk. Where that parse is warned, the item is reported
+but withheld from `--changeset`: an unclear ref must never propose a write.
 
 Usage (from anywhere):
     python3 _utils/coverage.py                            # export from the tracker
@@ -53,14 +54,23 @@ BIG_TITLE_RE = re.compile(
 )
 
 
-def planned_refs(keys: set[str]) -> set[str]:
-    """The tracker keys some plan folder already claims."""
-    planned = set()
-    for slug in reconcile.disk_folders():
-        ref, _warn = reconcile.plan_tracking_ref(slug, keys)
-        if ref is not None:
-            planned.add(ref)
-    return planned
+def planned_refs(keys: set[str]) -> tuple[set[str], set[str], list[dict]]:
+    """(planned, ambiguous, warnings) across the desk's plan folders.
+
+    `planned` is what each folder's Tracking section claims. `ambiguous` is every key
+    named by a folder whose parse came back WARNED: the true ref is one of them and we
+    cannot tell which, so none of them may be proposed a label. The warnings travel so
+    the user sees which folder to fix.
+    """
+    planned, ambiguous, warnings = set(), set(), []
+    for slug in sorted(reconcile.disk_folders()):
+        refs, warn = reconcile.plan_tracking_refs(slug, keys)
+        if refs:
+            planned.add(refs[0])
+        if warn:
+            warnings.append({"plan": slug, "detail": warn})
+            ambiguous |= set(refs)
+    return planned, ambiguous, warnings
 
 
 def maybe_trivial(item: dict) -> bool:
@@ -74,7 +84,7 @@ def maybe_trivial(item: dict) -> bool:
 def compute(snapshot: dict) -> dict:
     """Open non-epic items with no plan folder, tagged and sorted by key."""
     keys = {i["key"] for i in snapshot["items"]}
-    planned = planned_refs(keys)
+    planned, ambiguous, warnings = planned_refs(keys)
     non_epic = [
         i for i in snapshot["items"] if i["state"] == "open" and i.get("kind") != "epic"
     ]
@@ -85,6 +95,9 @@ def compute(snapshot: dict) -> dict:
             "priority": item.get("priority"),
             "labels": sorted(item.get("labels") or []),
             "maybe_trivial": maybe_trivial(item),
+            # A plan folder may already track this one; the parse was too unclear to
+            # say. Reported, never proposed a label.
+            "ambiguous": item["key"] in ambiguous,
         }
         for item in sorted(non_epic, key=lambda i: i["key"])
         if item["key"] not in planned
@@ -93,13 +106,21 @@ def compute(snapshot: dict) -> dict:
         "planned_count": len(planned),
         "non_epic_count": len(non_epic),
         "unplanned": unplanned,
+        "warnings": warnings,
     }
 
 
 def changeset_text(unplanned: list[dict]) -> str:
-    """An apply-ready TSV: the FULL desired label set per uncovered item."""
+    """An apply-ready TSV: the FULL desired label set per uncovered item.
+
+    Ambiguously-tracked items are left out. This is the toolkit's only proposed WRITE
+    and it is fed by its least reliable parse, so an unclear ref costs a missing
+    proposal rather than a label on work that already has a plan.
+    """
     lines = ["key\tfield\tvalue"]
     for row in unplanned:
+        if row["ambiguous"]:
+            continue
         labels = sorted(set(row["labels"]) | {NEEDS_PLAN})
         lines.append(f"{row['key']}\tlabels\t{','.join(labels)}")
     return "\n".join(lines) + "\n"
@@ -137,18 +158,31 @@ def main(argv=None) -> int:
         f"Plan coverage: {len(unplanned)} of {total} open non-epic items have no plan "
         f"({trivial} tagged maybe-trivial)\n"
     )
+    for warning in result["warnings"]:
+        print(f"  WARN {warning['plan']}: {warning['detail']}")
+    if result["warnings"]:
+        print()
     if not unplanned:
         print("Every open non-epic item has a plan folder. The backlog is covered.")
         return 0
     for row in unplanned:
         tag = "[trivial?]" if row["maybe_trivial"] else "          "
-        print(f"  {row['key']:<8} {row['priority'] or '--':<3} {tag}  {row['title'][:54]}")
+        mark = " (ambiguous ref)" if row["ambiguous"] else ""
+        print(
+            f"  {row['key']:<8} {row['priority'] or '--':<3} {tag}  "
+            f"{row['title'][:54]}{mark}"
+        )
     print(
         f"\n{len(unplanned)} open item(s) have no plan. Draft a plan folder for each "
         "non-trivial one (trivial tags are advisory)."
     )
     if args.changeset:
-        print(f"changeset -> {args.changeset}  (dry-run it through the tracker adapter)")
+        withheld = sum(1 for row in unplanned if row["ambiguous"])
+        note = f", {withheld} withheld as ambiguous" if withheld else ""
+        print(
+            f"changeset -> {args.changeset}  (dry-run it through the tracker "
+            f"adapter{note})"
+        )
     return 1
 
 

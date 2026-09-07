@@ -47,7 +47,8 @@ python3 "$A/kata.py" apply --changeset changeset.tsv --apply    # write
 ```
 
 Dry-run by default. `coverage.py --changeset <file>` is the loop's usual producer: it proposes
-a `needs-plan` label on every uncovered issue, and that file goes straight into `apply`.
+a `needs-plan` label on every uncovered issue whose tracking parse was unambiguous, and that
+file goes straight into `apply`.
 
 Each changed cell is its own `kata` subprocess call (`edit`, `label add`/`label rm`,
 `assign`/`unassign`); unresolvable rows print as `SKIP` on stderr and set a non-zero exit,
@@ -67,18 +68,21 @@ on already-archived work still lands.
 | `parent` | `parent.short_id` | null when the issue has no parent |
 | `blocked_by` | `blocked_by[].short_id` | prerequisites only; `blocks` is the mirror edge and is not exported |
 | `priority` | `priority` (int, via `kata edit --priority`) | `0`-`3` map to `P0`-`P3`; blank clears via `-` |
-| `owner` (changeset only) | owner (via `kata assign`/`kata unassign`) | actor name; blank unassigns |
+| `owner` | `owner` (via `kata assign`/`kata unassign`) | actor name; blank unassigns |
 
 **Unmapped and why.** Deliberately not in the snapshot: `metadata` (including the `work.*`
-attention signals and `deadline_on`), `related` edges, `scheduled_on`, `closed_reason`,
-timestamps, and `owner`. The desk's three questions — is this body buildable, does this work
-have a plan, does the plan table still agree with reality — need none of them, and every field
-carried is a field the contract has to keep true across backends. Add one only when a script
-actually reads it.
+attention signals and `deadline_on`), `related` edges, `scheduled_on`, `closed_reason`, and
+timestamps. The desk's three questions — is this body buildable, does this work have a plan,
+does the plan table still agree with reality — need none of them, and every field carried is a
+field the contract has to keep true across backends. Add one only when a script actually reads
+it.
 
-`owner` is a changeset cell without being a snapshot cell, which is the one asymmetry here: an
-owner row therefore always writes, because there is no exported current value to compare it
-against. Everything else is dropped when already at target.
+**A native priority of `4` cannot be cleared through this adapter.** It has no band, so it
+exports as `null`, and a blank `priority` row then compares equal to what is already there and
+is dropped as a no-op. That is the contract's "a value outside the vocabulary is null" rule
+meeting its "no-op cells are dropped" rule, not a bug in either: the desk's vocabulary is
+P0-P3, and a value it cannot name is one it has no business rewriting. Clear it with
+`kata edit <ref> --priority -` directly if you want it gone.
 
 **A `state`/`status` row is refused, never fabricated into a label.** Kata's close is a hard
 state with a required reason and evidence (`kata close --done|--wontfix|...`), so closing or
@@ -88,17 +92,20 @@ reopening is a decision made on the tracker, not a cell an analysis script flips
 
 Verified 2026-09-07 against the `dotfiles-agents` project (303 issues, 101 open):
 
-- **`kata list --json` omits unset scalars entirely** — no `priority` key at all when unset
-  (116 of 303 issues had one), no `parent` key when there is no parent. The adapter normalizes
-  every gap into an explicit `null` / `[]`, per the contract.
-- **`child_counts` is either `null` or `{"open": n, "total": n}`** — it is not an integer and
-  it is not always present, so `kind` is derived through `(child_counts or {}).get("total")`.
-  On this project that made 17 items epics, 11 of them by the `epic` label and the rest by
-  having children alone.
-- **`blocked_by`/`blocks` are `null` when empty**, not `[]`, and their entries are objects
-  (`{uid, short_id, project, qualified_id, status}`) — only `short_id` is exported.
+- **`kata list --json` omits every unset field entirely, and emits no JSON nulls at all.**
+  Counted over that payload: zero `null` values of any kind; `priority` present on 116 issues,
+  `parent` on 105, `labels` on 174, `child_counts` on 17, `blocked_by` on 13, `blocks` on 10,
+  `owner` on 1 — the rest simply have no such key. The adapter normalizes each gap into an
+  explicit `null` / `[]` per the contract, and tolerates an explicit null too, since that is
+  how a different tracker may spell the same thing.
+- **`child_counts` is `{"open": n, "total": n}` when there are children and absent otherwise**
+  — never an integer — so `kind` is derived through `(child_counts or {}).get("total")`. On
+  this project that made 17 items epics, 11 of them by the `epic` label and the rest by having
+  children alone.
+- **`blocked_by`/`blocks` entries are objects** (`{uid, short_id, project, qualified_id,
+  status}`); only `short_id` is exported.
 - **Native priority 4 exists and has no band.** It normalizes to `null` rather than being
-  rounded into `P3`.
+  rounded into `P3` — with the clearing consequence noted in the field map above.
 - **Omitting `--project` resolves the project from the workspace binding.** `export --status
   all` with no project returned all 303 issues and a `tracker.name` of `dotfiles-agents`,
   identical to passing `--project dotfiles-agents`.

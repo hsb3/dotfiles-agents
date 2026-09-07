@@ -72,6 +72,7 @@ def build_snapshot(project, issues):
                     dep["short_id"] for dep in (issue.get("blocked_by") or [])
                 ),
                 "priority": PRIORITY_TO_BAND.get(issue.get("priority")),
+                "owner": issue.get("owner") or None,
             }
         )
     items.sort(key=lambda i: i["key"])
@@ -118,7 +119,11 @@ def parse_changeset(text):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         parts = line.split("\t")
-        if len(parts) < 2:
+        # Three columns, always. A row that lost its trailing tab would otherwise read
+        # as "clear this cell" -- on a labels row that plans a removal of every label
+        # the item has. An EMPTY third column still splits into three, so a deliberate
+        # blank (`key<TAB>labels<TAB>`) keeps working.
+        if len(parts) < 3:
             sys.exit(f"changeset line {lineno}: need key<TAB>field<TAB>value")
         key, field, value = parts[0].strip(), parts[1].strip().lower(), "\t".join(parts[2:])
         if key.lower() == "key" and field == "field":
@@ -162,10 +167,10 @@ def plan(snapshot, rows):
             argv = ["edit", key, "--priority", str(value) if value is not None else "-"]
             ops.append((argv, f"{key} priority: {item['priority']!r} -> {band!r}"))
         elif field == "owner":
-            # The snapshot carries no owner cell (the contract has no such field), so
-            # there is nothing to diff against -- an owner row always writes.
+            if (item["owner"] or None) == (value or None):
+                continue
             argv = ["assign", key, value] if value else ["unassign", key]
-            ops.append((argv, f"{key} owner -> {value!r}"))
+            ops.append((argv, f"{key} owner: {item['owner']!r} -> {value!r}"))
 
     return ops, problems
 
@@ -183,7 +188,14 @@ def _read(args, project):
     )
     if proc.returncode != 0:
         sys.exit(f"{' '.join(args)} -> exit {proc.returncode}: {proc.stderr.strip()}")
-    return json.loads(proc.stdout) if proc.stdout.strip() else {}
+    if not proc.stdout.strip():
+        return {}
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as err:
+        # A notice or progress line on stdout, most likely. Say so rather than
+        # surfacing a decoder traceback from the middle of an export.
+        sys.exit(f"{' '.join(args)} -> output is not JSON ({err}): {proc.stdout[:120]!r}")
 
 
 def _write(args, project):

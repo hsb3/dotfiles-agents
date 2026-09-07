@@ -26,9 +26,10 @@ def add_tracker_args(parser, default_status: str = "open") -> None:
 def load_snapshot(args) -> dict:
     if args.snapshot:
         try:
-            return _validate(json.loads(Path(args.snapshot).read_text()), args.snapshot)
-        except (OSError, json.JSONDecodeError) as err:
+            text = Path(args.snapshot).read_text()
+        except OSError as err:
             sys.exit(f"{args.snapshot}: unreadable snapshot ({err})")
+        return _validate(_parse(text, args.snapshot), args.snapshot)
     adapter = ADAPTERS / f"{args.adapter}.py"
     if not adapter.is_file():
         sys.exit(f"no adapter at {adapter} -- pass --adapter <name> or --snapshot FILE")
@@ -37,7 +38,16 @@ def load_snapshot(args) -> dict:
     proc = subprocess.run(argv, capture_output=True, text=True)
     if proc.returncode != 0:
         sys.exit(f"{adapter.name} export -> exit {proc.returncode}: {proc.stderr.strip()}")
-    return _validate(json.loads(proc.stdout), adapter.name)
+    return _validate(_parse(proc.stdout, adapter.name), adapter.name)
+
+
+def _parse(text, source) -> dict:
+    """Both paths fail the same way: a notice printed onto stdout, or a truncated
+    file, is a sentence naming the source -- never a decoder traceback."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as err:
+        sys.exit(f"{source}: not JSON ({err})")
 
 
 def _validate(snapshot, source) -> dict:

@@ -37,6 +37,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tracker import add_tracker_args, load_snapshot  # noqa: E402
 
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.M)
+# Fenced blocks are stripped BEFORE headings are read: a shell comment is `# like
+# this`, so a body of pure prose plus one bash block reads as fully sectioned
+# otherwise -- `# Accept the defaults` would satisfy the acceptance-criteria rule.
+FENCE_RE = re.compile(r"^(```|~~~).*?(^\1|\Z)", re.S | re.M)
 AC_RE = re.compile(r"accept|definition of done|done when", re.I)
 GATE_RE = re.compile(r"gate|depend", re.I)
 CLOSE_RE = re.compile(r"close when|close criteria", re.I)
@@ -44,7 +48,7 @@ CLOSE_RE = re.compile(r"close when|close criteria", re.I)
 
 def audit_item(item: dict) -> list[str]:
     """The list of missing required sections ([] = conformant)."""
-    headings = HEADING_RE.findall(item.get("body") or "")
+    headings = HEADING_RE.findall(FENCE_RE.sub("", item.get("body") or ""))
     if not headings:
         return ["no headings / no required sections"]
     blob = "\n".join(headings)

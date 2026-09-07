@@ -40,7 +40,8 @@ and bounds it, and it is the only component that has to change when the tracker 
       "body": "## Acceptance criteria\n- ...\n",
       "parent": "p937",
       "blocked_by": ["ay9p"],
-      "priority": "P1"
+      "priority": "P1",
+      "owner": "some-actor"
     }
   ]
 }
@@ -59,6 +60,10 @@ and bounds it, and it is the only component that has to change when the tracker 
 | `parent` | string \| null | the parent's `key` |
 | `blocked_by` | string list | prerequisite `key`s, sorted; `[]` when none |
 | `priority` | `"P0"`–`"P3"` \| null | a value outside the band vocabulary normalizes to null |
+| `owner` | string \| null | the assignee; null when unassigned |
+
+**Every changeset cell has a snapshot cell.** That is what lets `apply` drop no-ops, so a
+field the adapter can write but cannot read back does not belong in the changeset vocabulary.
 
 Invariants an adapter must hold:
 
@@ -81,8 +86,12 @@ second tab is the value).
 key	field	value
 ay9p	labels	documentation,needs-plan
 xmwb	priority	P1
-xmwb	owner
+xmwb	owner	
 ```
+
+**Three columns, always** — the last line above ends in a tab. A row with only two columns
+is a fatal parse error, not an empty value: a trailing tab lost to an editor would otherwise
+read as "clear this cell", and on a `labels` row that means removing every label the item has.
 
 | Field | Value | Semantics |
 | ----- | ----- | --------- |
@@ -96,7 +105,8 @@ Rules every adapter's `apply` must hold:
 - **Re-resolve against a FRESH export every run.** A changeset written an hour ago must not
   clobber a value someone else changed in the meantime.
 - **Cells already at the target value are dropped**, so re-running a changeset is free and an
-  applied changeset re-plans to nothing.
+  applied changeset re-plans to nothing. No exceptions: this is why every changeset cell needs
+  a snapshot cell to compare against.
 - **An unresolvable row is a `SKIP` on stderr and a non-zero exit; the resolvable rows still
   apply.** Unknown key, unknown field, a value outside the vocabulary — all named, never
   guessed.
