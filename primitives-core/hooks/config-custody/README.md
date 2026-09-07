@@ -62,8 +62,22 @@ at the main checkout's working-tree version. `ATELIER_ACTIVATION_FILE` still win
 never re-resolved, and with no `git` on `PATH` — or a project dir that is not a linked worktree —
 behaviour is exactly what it was.
 
-Protected patterns are still matched against paths relative to the worker's own project dir, so
-`Makefile` means the worktree's `Makefile`. Only the policy travels, not the jurisdiction.
+**Policy comes from the main checkout; jurisdiction is the tree the edited file lives in.** Those
+are two separate resolutions, and the second one matters more often than it looks. Claude Code sets
+`CLAUDE_PROJECT_DIR` on the *hook process* even when the worker's own shell has none, and it points
+at the **main checkout** — so for an isolated worker the activation file is usually found at the
+direct path and the fallback above never fires at all. What breaks instead is the pattern match:
+relativizing the edited file against the main checkout turns every path the worker touches into
+`.claude/worktrees/agent-<id>/Makefile`, which no project-relative pattern can match, silently
+exempting exactly the workers custody is aimed at.
+
+So the edited path is relativized against the **worktree root** when it sits inside one:
+`Makefile` means that worktree's `Makefile`. The root is found by walking up from the edited file
+to the first directory holding a `.git` **file** — a linked worktree's `.git` is a file pointing at
+the shared git dir, where an ordinary checkout's is a directory, so a vendored sub-repo nested in
+the project is correctly *not* a jurisdiction. The walk stops at the project dir, so custody can
+never be relocated to a tree outside the project, and a path outside the project is still not
+governed at all. No subprocess: a handful of `os.path` calls on the miss.
 
 ## Install
 

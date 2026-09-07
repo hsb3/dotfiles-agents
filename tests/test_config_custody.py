@@ -92,7 +92,8 @@ class ConfigCustodyTests(unittest.TestCase):
             payload["agent_type"] = "builder"
         return payload
 
-    def _run_hook(self, payload, set_log_env=True, log_path=None, stdin_text=None):
+    def _run_hook(self, payload, set_log_env=True, log_path=None, stdin_text=None,
+                  project_dir=None):
         env = {
             "PATH": os.environ.get("PATH", ""),
             # HOME as well as XDG_DATA_HOME: expanduser("~") falls back to the
@@ -101,6 +102,8 @@ class ConfigCustodyTests(unittest.TestCase):
             "HOME": os.path.join(self.tmp.name, "home"),
             "XDG_DATA_HOME": self.xdg,
         }
+        if project_dir is not None:
+            env["CLAUDE_PROJECT_DIR"] = project_dir
         if set_log_env:
             env["ATELIER_CUSTODY_LOG_PATH"] = log_path if log_path is not None else self.log_path
         stdin_text = json.dumps(payload) if stdin_text is None else stdin_text
@@ -270,6 +273,104 @@ class ConfigCustodyTests(unittest.TestCase):
         plain = os.path.join(self.tmp.name, "plain")
         os.makedirs(plain, exist_ok=True)
         self._assert_silent(self._run_hook(self._payload(file_path="Makefile", cwd=plain)))
+
+    # -- jurisdiction inside a worktree ------------------------------------
+    #
+    # Claude Code sets CLAUDE_PROJECT_DIR on the HOOK process even when the
+    # worker's own shell has none, and it points at the MAIN checkout. So the
+    # activation file is found at the direct path and the worktree fallback
+    # never fires — while the edited path relativizes to
+    # `.claude/worktrees/agent-<id>/Makefile`, which no project-relative
+    # pattern can match. Policy comes from the main checkout; jurisdiction has
+    # to be the tree the edited file actually lives in.
+
+    def _repo(self, patterns=("Makefile",)):
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        main_dir, _worktree_dir = make_worktree(base)
+        self._write_activation(mode="strict", patterns=list(patterns),
+                               project_dir=main_dir)
+        return main_dir
+
+    def _add_worktree(self, main_dir, relpath, branch):
+        """A second linked worktree, at a path this test chooses.
+
+        Local rather than in `worktree_fixture`, which fixes the layout: these
+        cases turn on WHERE the worktree sits relative to the project root.
+        """
+        path = os.path.join(main_dir, relpath)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        proc = subprocess.run(
+            ["git", "worktree", "add", "-q", path, "-b", branch],
+            cwd=main_dir, capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(os.path.isfile(os.path.join(path, ".git")),
+                        "a linked worktree's .git must be a file")
+        return path
+
+    def test_edit_inside_a_worktree_is_judged_against_the_worktree_root(self):
+        """The live defect: with the project dir anchored on the main
+        checkout, every path a worktree-isolated worker touches relativizes
+        to `.claude/worktrees/...`, so no `protected:` pattern can match."""
+        main_dir = self._repo()
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-x", "wt-x")
+
+        payload = self._payload(
+            file_path=os.path.join(worktree, "Makefile"), cwd=worktree,
+        )
+        hso = self._assert_denied(self._run_hook(payload, project_dir=main_dir))
+        self.assertIn("protected pattern 'Makefile'", hso["permissionDecisionReason"])
+        self.assertIn("'Makefile'", hso["permissionDecisionReason"])
+
+    def test_a_worktree_at_a_non_default_location_is_found_by_its_git_file(self):
+        """Found by walking to the first `.git` that is a FILE, never by a
+        hardcoded `.claude/worktrees/` path shape."""
+        main_dir = self._repo()
+        worktree = self._add_worktree(main_dir, "tools/scratch-tree", "wt-scratch")
+
+        payload = self._payload(
+            file_path=os.path.join(worktree, "Makefile"), cwd=worktree,
+        )
+        self._assert_denied(self._run_hook(payload, project_dir=main_dir))
+
+    def test_a_nested_ordinary_repo_is_not_a_jurisdiction(self):
+        """Only a LINKED worktree relocates jurisdiction. A vendored sub-repo
+        has a `.git` DIRECTORY, and treating it as a worktree root would
+        re-anchor `vendor/thing/Makefile` to `Makefile` and deny it."""
+        main_dir = self._repo()
+        nested = os.path.join(main_dir, "vendor", "thing")
+        os.makedirs(nested, exist_ok=True)
+        proc = subprocess.run(["git", "init", "-q", "."], cwd=nested,
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(os.path.isdir(os.path.join(nested, ".git")))
+
+        payload = self._payload(file_path=os.path.join(nested, "Makefile"),
+                                cwd=nested)
+        self._assert_silent(self._run_hook(payload, project_dir=main_dir))
+
+    def test_an_edit_in_the_main_checkout_is_unchanged(self):
+        main_dir = self._repo()
+        payload = self._payload(file_path=os.path.join(main_dir, "Makefile"),
+                                cwd=main_dir)
+        self._assert_denied(self._run_hook(payload, project_dir=main_dir))
+
+    def test_patterns_stay_project_relative_not_basename_matches(self):
+        """`Makefile` must not start matching `docs/Makefile` — in the main
+        checkout or inside a worktree."""
+        main_dir = self._repo()
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-y", "wt-y")
+        os.makedirs(os.path.join(main_dir, "docs"), exist_ok=True)
+        os.makedirs(os.path.join(worktree, "docs"), exist_ok=True)
+
+        for label, root in (("main checkout", main_dir), ("worktree", worktree)):
+            with self.subTest(label):
+                payload = self._payload(
+                    file_path=os.path.join(root, "docs", "Makefile"), cwd=root,
+                )
+                self._assert_silent(self._run_hook(payload, project_dir=main_dir))
 
 
 if __name__ == "__main__":
