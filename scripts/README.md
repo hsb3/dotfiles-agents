@@ -15,6 +15,7 @@ and exits 0/1; `make help` lists the wrapping targets. Run them via make from th
 | `check_roster.py` | `check` | roster ↔ disk drift: every primitive on disk has exactly one `primitives-core.yaml` entry (provenance-manifest schema, ADR 0017) |
 | `check_symlinks.py` | `symlinks` | plugin assemblies: every `plugins/` symlink resolves in-repo; `marketplace.json` ↔ assemblies 1:1 |
 | `check_flow.py` | `flow` | repo-flow DAG: every top-level path homed in `flow.yaml`, automated edges acyclic, the FLOW.md DAG block in sync (regenerate with `--write-doc`) |
+| `check_readme_currency.py` | `readme-currency` (also in `check`) | README currency (decision-015): the last commit touching a skill or plugin also touched that unit's README. Derived from git history — needs a full clone, and a shallow one is a failure, not a skip |
 | `check_harness_coupling.py` | `harness-coupling` | `harness/` stays extraction-clean: the shipped package never imports or references repo files outside `harness/` |
 
 ## Install-time generation (ADR 0017 — nothing generated is tracked)

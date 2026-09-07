@@ -39,6 +39,12 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   deliberately — they exit 0 with a notice when the remote is unreachable, so a network blip
   does not block every PR. A missing binary is not a blip; it is a machine that cannot run
   the check, and a gate that reports green there teaches everyone it is running.
+- **The README-currency gate reads git history, so the CI checkout is `fetch-depth: 0`.** In
+  the default depth-1 checkout every file shares one synthetic commit, so every unit's body
+  and README look like the same change and the gate passes vacuously; it refuses a shallow
+  clone instead. It is also anchored at decision-015's landing commit — 32 of 56 units were
+  stale the day the rule landed, and the anchor keeps it forward-only until those are
+  backfilled (`scripts/check_readme_currency.py`, delete the anchor after the backfill).
 - **`ci.yml` fires on `pull_request` ONLY.** A direct push to `dev` gets ZERO CI, and the owner's
   waiver means `remote: Bypassed rule violations` is expected on the handful of paths it covers.
   Run `make ci` locally first — nothing else will. Code still goes through a PR.

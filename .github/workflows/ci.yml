@@ -36,7 +36,14 @@ jobs:
     name: drift guards (roster · marketplace · catalog)
     runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
     steps:
+      # fetch-depth: 0 is load-bearing for the README-currency gate inside `make check`
+      # (decision-015): it derives currency from `git log` per unit, and in the default
+      # depth-1 checkout every unit's body and README share the one synthetic commit, so
+      # the gate would pass vacuously. It fails loud on a shallow clone rather than
+      # reporting that green — full history here is what keeps it honest.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
