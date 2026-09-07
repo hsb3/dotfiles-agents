@@ -92,13 +92,33 @@ at dispatch time rather than at the end of the wave:
 ```
 … You are standing in a linked worktree yourself, so this one is NESTED under it on its own
 branch — intended, not a misconfiguration. To integrate when it reports: `git worktree list`
-for its path and branch, `git cherry-pick HEAD..<branch>` to take its commits, then
-`git worktree remove <path> && git branch -D <branch>` to clean up.
+for its path and branch, then `picks=$(git cherry HEAD <branch> | sed -n 's/^+ //p');
+[ -z "$picks" ] || git cherry-pick $picks` to take only the commits you have not picked yet
+(safe to re-run each round), then `git worktree remove <path> && git branch -D <branch>`
+to clean up.
 ```
 
-`HEAD..<branch>` is correct under either `worktree.baseRef` setting — with `head` the worker's
-branch starts at the dispatcher's HEAD, with `fresh` it starts at the default branch, and the range
-is "what this branch has that mine does not" in both cases.
+**Why not the obvious `git cherry-pick HEAD..<branch>`, which the notice used to carry.** A worker
+reports more than once, and integration is per-round. Picking a commit rewrites it, so the original
+on the worker's branch stays unreachable from the dispatcher's HEAD and the range still spans it on
+round two; cherry-pick's own patch-id filter then drops every one of them and the command dies with
+`error: empty commit set passed`, exit 128. Measured, not reasoned: `tests/test_worktree_isolation.py`
+drives three rounds against a real nested worktree, and that is the failure the old step produced on
+round two.
+
+`git cherry <upstream> <branch>` answers the same question without the fatal. It prints one line per
+commit, `-` for one whose patch-id is already upstream and `+` for one that is not, so
+`git cherry HEAD <branch>` names exactly the set still to take — correct on round two after round
+one changed the SHAs, and correct under either `worktree.baseRef` setting (with `head` the worker's
+branch starts at the dispatcher's HEAD, with `fresh` at the default branch; the range is "what this
+branch has that mine does not" either way). The `[ -z "$picks" ] ||` guard is load-bearing: an empty
+set must never reach a bare `git cherry-pick`, or a quiet round would trade one confusing failure
+for another. Guarded, the recipe exits 0 having done nothing, which is the whole point.
+
+**The ceiling.** Patch-ids match content, not identity. A commit whose content changed while you
+resolved a conflict on round one no longer matches its original, so `git cherry` still lists it `+`
+and round two re-applies it. Read the `+` lines yourself before running the pick whenever round one
+was not clean.
 
 To sweep for strays after a wave, from the dispatcher's own worktree:
 

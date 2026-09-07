@@ -136,13 +136,23 @@ NOTICE_TEMPLATE = (
 # costs is integration ergonomics, so the dispatcher is handed the integrate
 # step here — at dispatch — instead of meeting a pile of stray branches at the
 # end of the wave.
+#
+# Repeatable by construction: `git cherry` names the still-unpicked commits by
+# patch-id, and the guard keeps an empty set away from a bare `git cherry-pick`
+# — the range form `HEAD..<branch>` exits 128 with `empty commit set passed`
+# once a round has nothing new, which is every second integration round.
+INTEGRATE_RECIPE = (
+    'picks=$(git cherry HEAD <branch> | sed -n \'s/^+ //p\'); '
+    '[ -z "$picks" ] || git cherry-pick $picks'
+)
+
 NESTED_CLAUSE = (
     " You are standing in a linked worktree yourself, so this one is NESTED under it "
     "on its own branch — intended, not a misconfiguration. To integrate when it "
-    "reports: `git worktree list` for its path and branch, "
-    "`git cherry-pick HEAD..<branch>` to take its commits, then "
+    "reports: `git worktree list` for its path and branch, then `{recipe}` to take "
+    "only the commits you have not picked yet (safe to re-run each round), then "
     "`git worktree remove <path> && git branch -D <branch>` to clean up."
-)
+).format(recipe=INTEGRATE_RECIPE)
 
 
 def _resolve_project_dir(payload_cwd):

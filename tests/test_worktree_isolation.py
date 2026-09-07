@@ -12,6 +12,7 @@ worktree-resolution tests at the bottom are the exception: they need a real
 linked worktree, so they shell out to a real `git` and skip without one.
 """
 
+import importlib.util
 import itertools
 import json
 import os
@@ -23,12 +24,19 @@ import unittest
 # Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
 # under `-t .`, so prime the path the same way the hooks prime `_lib`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from worktree_fixture import make_worktree, require_git  # noqa: E402
+from worktree_fixture import _git, make_worktree, require_git  # noqa: E402
 
 HOOK_PATH = os.path.join(
     os.path.dirname(__file__), "..", "primitives-core", "hooks",
     "worktree-isolation", "hook.py",
 )
+
+# Imported as well as run as a subprocess: the integrate recipe the nested
+# notice carries is executed for real below, so the test has to read the same
+# constant the hook emits rather than a copy that can drift from it.
+_spec = importlib.util.spec_from_file_location("worktree_isolation_hook", HOOK_PATH)
+hook = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(hook)
 
 _SEQ = itertools.count()
 
@@ -393,7 +401,7 @@ class WorktreeIsolationTests(unittest.TestCase):
 
         message = body["systemMessage"]
         self.assertIn("NESTED", message)
-        self.assertIn("git cherry-pick HEAD..", message)
+        self.assertIn(hook.INTEGRATE_RECIPE, message)
         self.assertIn("git worktree remove", message)
         self.assertIn("git branch -D", message)
 
@@ -447,6 +455,70 @@ class WorktreeIsolationTests(unittest.TestCase):
             with self.subTest(label):
                 self._run_hook(json.dumps(self._payload(cwd=cwd)))
                 self.assertEqual(self._rows()[-1]["nested"], expected)
+
+    # -- the integrate step, run for real ------------------------------
+
+    def _integration_fixture(self, recipe, branch="worktree-agent-x"):
+        """A dispatcher checkout with a nested worker branch beside it.
+
+        Returns three callables: commit a file as the worker, run `recipe` as
+        the dispatcher (`<branch>` substituted), and read the dispatcher's
+        commit subjects newest-first.
+        """
+        require_git()
+        base = os.path.join(self.tmp.name, "integrate")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(base, branch=branch)
+        # Config lives in the shared git dir, so this covers the worktree too.
+        for key, value in (("user.name", "fixture"),
+                           ("user.email", "fixture@example.invalid"),
+                           ("commit.gpgsign", "false")):
+            _git(main_dir, "config", key, value)
+
+        def worker_commit(name):
+            with open(os.path.join(worktree_dir, name), "w", encoding="utf-8") as fh:
+                fh.write(name)
+            _git(worktree_dir, "add", "--", name)
+            _git(worktree_dir, "commit", "-q", "-m", "worker " + name)
+
+        def integrate():
+            return subprocess.run(
+                ["sh", "-c", recipe.replace("<branch>", branch)],
+                cwd=main_dir, capture_output=True, text=True, timeout=60,
+            )
+
+        def subjects():
+            return _git(main_dir, "log", "--format=%s").splitlines()
+
+        return worker_commit, integrate, subjects
+
+    def test_integrate_recipe_is_safe_to_repeat(self):
+        """The defect, measured: the old `git cherry-pick HEAD..<branch>` step
+        exits 128 with `error: empty commit set passed` the moment a round has
+        nothing new — the range still spans round one's originals (picking them
+        changed their SHAs), and cherry-pick's own patch-id filter then empties
+        it. A dispatcher integrating twice met a fatal, every time."""
+        worker_commit, integrate, subjects = self._integration_fixture(
+            hook.INTEGRATE_RECIPE)
+
+        worker_commit("a.txt")
+        worker_commit("b.txt")
+        first = integrate()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        after_first = subjects()
+        self.assertEqual(after_first[:2], ["worker b.txt", "worker a.txt"])
+
+        # Round two with nothing new: applies nothing, and still exits 0 — an
+        # empty pick set must not reach a bare `git cherry-pick`.
+        second = integrate()
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertEqual(subjects(), after_first)
+
+        # Round three takes exactly what the worker added since, once.
+        worker_commit("c.txt")
+        third = integrate()
+        self.assertEqual(third.returncode, 0, third.stderr)
+        self.assertEqual(subjects(), ["worker c.txt"] + after_first)
 
 
 if __name__ == "__main__":
