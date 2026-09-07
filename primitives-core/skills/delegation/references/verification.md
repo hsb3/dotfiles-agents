@@ -21,6 +21,14 @@ the closer its producer sits to the work.
 **Silent caps read as full coverage.** Any wave that bounded its scope — top-N, sampling, "the
 first twenty files", a skipped case — gets that cap surfaced to the user and added to the backlog.
 
+**Adversarially review the artifact and the report that describes it, and hunt for stale rather
+than wrong** `[field]`. Observed in practice: a reviewer confirmed every mechanical claim in a
+builder's report and still passed an artifact carrying a superseded decision that read as current
+truth. Nothing in it was incorrect — each statement was true when written and had since been
+overtaken — so no per-claim check could fire. Reviewing a newly built artifact therefore means
+reading both, and asking of each claim what has changed since it was written: a decision reversed
+later in the wave, a path since renamed, a constraint since lifted.
+
 ## The differential
 
 **When two or more agents produce artifacts that should agree observably, the reconciliation is a

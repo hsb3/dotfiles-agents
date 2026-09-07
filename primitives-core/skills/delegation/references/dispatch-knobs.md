@@ -24,6 +24,16 @@ through the `isolate:` key in `atelier.local.md`, which the `worktree-isolation`
 
 <!-- harness:claude-code -->
 Per dispatch, the knob is `isolation: worktree` on the Agent call.
+
+**Read the base-ref key's nesting out of the settings file before trusting it** `[field]`. Which
+ref a new worktree branches from is `{"worktree": {"baseRef": "head"}}` in `settings.json` —
+nested under `worktree`, and absent that a worktree branches from `origin/<default-branch>`.
+The flat spelling `"worktreeBaseRef"` is only the config menu's widget id, never a settings
+key, and a file using it fails silently: no error, no warning, isolated writers still branching from
+the default branch while the operator reads the setting as applied. That state held here for an
+extended stretch. Where the default branch is a publish-only surface it reaches you as workers
+reporting that paths their briefs name do not exist — check the nesting first, since nothing else
+in the run will tell you.
 <!-- /harness -->
 
 ## Deliberate turn caps
@@ -101,6 +111,13 @@ carries the liveness check for telling a dead callee from a slow one.
   escalation.
 
 <!-- harness:claude-code -->
+- **A `memory:` key in an agent definition writes to the tree at dispatch time** `[field]`. The
+  runtime creates that directory before the agent takes its first action, so a definition produces
+  tree state as a side effect of merely being dispatched — even if the agent then does nothing. No
+  shipped agent here sets it; the trap is a definition adopted from elsewhere that does, landing a
+  directory under a brief that demanded no scratch files. Read the frontmatter of any definition
+  you did not write.
+
 The tools behind the first bullet: `manager` carries `Agent` and `SendMessage`, and `scout`,
 `builder`, and `reviewer` do not. `scout` additionally lacks `Edit`, `Write`, and `NotebookEdit`.
 <!-- /harness -->
