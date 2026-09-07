@@ -44,6 +44,12 @@ class TestOnly(unittest.TestCase):
     def test_unknown_id_is_an_error(self):
         self.assertEqual(G.main(["--out", self._out(), "--only", "no-such-skill"]), 1)
 
+    def test_empty_parse_is_an_error_not_a_full_install(self):
+        # `--only ,` used to fall through to "no filter": asking for a subset and getting
+        # every skill is the worst possible answer, so it must fail instead.
+        for value in (",", "", " , "):
+            self.assertEqual(G.main(["--out", self._out(), "--only", value]), 1, value)
+
     def test_excluded_skill_reports_its_reason(self):
         # carbon-builder requires hosted-mcp: it is excluded, so --only must fail loudly
         # AND say why, never silently install nothing.
@@ -53,6 +59,17 @@ class TestOnly(unittest.TestCase):
         text = buf.getvalue()
         self.assertIn("carbon-builder", text)
         self.assertIn("hosted-mcp", text)
+
+
+class TestCarriers(unittest.TestCase):
+    """An exclusion reason points somewhere that actually fixes the problem."""
+
+    def test_only_assemblies_providing_the_capability_are_named(self):
+        # solo-skills symlinks carbon-builder but ships no .mcp.json, so installing it
+        # lands the same dead skill the laydown refuses to ship.
+        where = G.carriers("carbon-builder", ["hosted-mcp"])
+        self.assertIn("carbon", where)
+        self.assertNotIn("solo-skills", where)
 
 
 class TestBuild(unittest.TestCase):
@@ -153,6 +170,47 @@ class TestInstaller(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertFalse(os.path.exists(self.dest))
         self.assertNotEqual(self._run("--global", "--wat").returncode, 0)
+
+
+class TestWrapper(unittest.TestCase):
+    """scripts/install_claude_skills.sh — the --only rotation and its usage errors. A
+    ${2:?} bail here exits 0, because the EXIT trap's rm resets $? under macOS sh."""
+
+    WRAPPER = os.path.join(REPO, "scripts", "install_claude_skills.sh")
+
+    def _proj(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        return d
+
+    def _run(self, *args):
+        return subprocess.run([self.WRAPPER, *args], capture_output=True, text=True)
+
+    def test_only_rotates_out_in_either_position(self):
+        for argv in (["--only", "mermaid", "--project", None],
+                     ["--project", None, "--only", "mermaid"]):
+            proj = self._proj()
+            argv = [proj if a is None else a for a in argv]
+            r = self._run(*argv)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            skills = os.path.join(proj, ".claude", "skills")
+            self.assertTrue(os.path.isfile(os.path.join(skills, "mermaid", "SKILL.md")))
+            self.assertEqual(os.listdir(skills), ["mermaid"])
+
+    def test_duplicate_only_is_rejected(self):
+        proj = self._proj()
+        r = self._run("--only", "mermaid", "--only", "diagrams", "--project", proj)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse(os.path.exists(os.path.join(proj, ".claude")))
+
+    def test_only_without_a_value_fails_nonzero(self):
+        self.assertNotEqual(self._run("--only").returncode, 0)
+
+    def test_empty_only_does_not_install_everything(self):
+        proj = self._proj()
+        r = self._run("--only", "", "--project", proj)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse(os.path.exists(os.path.join(proj, ".claude")))
 
 
 if __name__ == "__main__":

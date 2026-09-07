@@ -37,6 +37,9 @@ PLUGINS = os.path.join(REPO, "plugins")
 IGNORE = shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc")
 BLOCKING = ("hooks", "local-mcp", "hosted-mcp")
 
+# What an assembly must itself contain to actually deliver a blocking capability.
+CAP_EVIDENCE = {"hooks": "hooks", "local-mcp": ".mcp.json", "hosted-mcp": ".mcp.json"}
+
 NOT_A_SKILL = ("not a skill — a `.claude/skills/` laydown carries only skills; "
                "install the plugin that ships it")
 NOT_TARGETED = "roster targets do not include claude-code"
@@ -49,18 +52,23 @@ def _list(entry, key):
     return [v] if v else []
 
 
-def carriers(sid):
-    """Plugin assemblies whose skills/<sid> exists — a symlink counts (ADR 0017)."""
+def carriers(sid, caps):
+    """Plugin assemblies that ship skills/<sid> AND the capability it needs. Shipping the
+    body without the capability is the same dead end as the laydown, so it is not a fix."""
     if not os.path.isdir(PLUGINS):
         return []
-    return sorted(p for p in os.listdir(PLUGINS)
-                  if os.path.lexists(os.path.join(PLUGINS, p, "skills", sid)))
+    need = sorted({CAP_EVIDENCE[c] for c in caps})
+    return sorted(
+        p for p in os.listdir(PLUGINS)
+        if os.path.lexists(os.path.join(PLUGINS, p, "skills", sid))
+        and all(os.path.lexists(os.path.join(PLUGINS, p, f)) for f in need)
+    )
 
 
 def blocked_reason(sid, caps):
-    where = carriers(sid)
+    where = carriers(sid, caps)
     via = ("carried by " + ", ".join(f"`{p}`" for p in where) if where
-           else "no plugin assembly ships it today")
+           else "no plugin assembly ships it with that capability today")
     return (f"requires {', '.join(caps)} — a bare skills laydown copies skill bodies only, and "
             f"that capability arrives only with a plugin install; {via}")
 
@@ -98,7 +106,7 @@ case "${1:-}" in
 esac
 HERE="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 MARKER="laid down by scripts/gen_claude_skills.py"
-mkdir -p "$ROOT"
+mkdir -p -- "$ROOT"
 n=0
 for d in "$HERE"/skills/*/; do
   s="$(basename "$d")"
@@ -108,8 +116,8 @@ for d in "$HERE"/skills/*/; do
     echo "refusing to overwrite $t — no .laydown marker (not installed by this installer)" >&2
     exit 1
   fi
-  rm -rf "$t"
-  cp -R "$d" "$t"
+  rm -rf -- "$t"
+  cp -R -- "$d" "$t"
   echo "$MARKER" > "$t/.laydown"
   n=$((n + 1))
 done
@@ -175,8 +183,10 @@ def readme(shipped, excluded, entries):
         "",
         "`git pull` in the clone and re-run the wrapper: it overwrites its own laydowns in place.",
         "Each directory it installs carries a `.laydown` marker file, and it refuses any directory",
-        "that lacks one — so it will not delete a skill you wrote or one it never installed, and it",
-        "removes nothing else. To uninstall, delete the skill directory.",
+        "that lacks one — so it will not touch a skill you wrote or one it never installed, and it",
+        "never removes a directory it is not reinstalling. The guarantee is per **directory**: a",
+        "refresh replaces the whole skill folder, so a file you added inside one goes with it. To",
+        "uninstall, delete the skill directory.",
         "",
     ]
     return "\n".join(lines)
@@ -223,7 +233,14 @@ def main(argv):
     if os.path.isdir(out) and os.listdir(out):
         print(f"✗ claude skills laydown — refusing to build into non-empty dir: {out}")
         return 1
-    only = [s.strip() for s in args.only.split(",") if s.strip()] if args.only else None
+    only = None
+    if args.only is not None:
+        only = [s.strip() for s in args.only.split(",") if s.strip()]
+        # An empty parse must not fall through to "no filter" — asking for a subset and
+        # silently getting every skill is the worst possible answer.
+        if not only:
+            print(f"✗ claude skills laydown — --only {args.only!r} names no skill ids")
+            return 1
     entries = parse_roster(ROSTER)
     os.makedirs(out, exist_ok=True)
     problems = build(out, entries, only)

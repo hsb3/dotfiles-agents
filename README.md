@@ -26,15 +26,19 @@ scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents
 ```
 
 Both clones are pinned to `dev` because the installers live on the source branch, not the
-published one. **To refresh either laydown, pull that clone and re-run the installer:** it
-overwrites its own laydowns in place, refuses any directory it did not lay down (each one it
-owns carries a `.laydown` marker), and removes nothing else. Uninstall by deleting the folder.
+published one. **To refresh either laydown, pull that clone and re-run the installer.**
+Uninstall by deleting the folder.
 
 The skill laydown is the fine-grained alternative to a bundle: `--only <id>[,<id>]` takes a
 subset, and a laid-down skill is invoked as `/<name>` where the same skill from a plugin is
 `/<plugin>:<name>`. It carries **skills only** — agents, hooks, commands, and the MCP servers
 a few skills need arrive with a plugin, and the generated laydown README names every primitive
 that stays behind and why. Plugins still install from the marketplace.
+
+A refresh of the **skill** laydown replaces only the skill folders it installed: each carries
+a `.laydown` marker, and the installer refuses any folder that lacks one rather than
+overwriting a skill you wrote. The older **opencode** installer has no such marker and
+overwrites whatever sits at the destination — check that directory before re-running it.
 
 The opencode laydown is a subset of the catalog: skills and agents travel, hooks do not
 (opencode has no equivalent event surface), and skills rostered Claude-Code-only stay

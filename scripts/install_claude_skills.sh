@@ -17,15 +17,20 @@ trap 'rm -rf "$TMP"' EXIT
 
 # --only is ours, not the installer's: rotate it out of "$@" so quoting survives.
 ONLY=""
+SEEN=0
 n=$#
 while [ "$n" -gt 0 ]; do
   case "$1" in
-    --only) ONLY="${2:?usage: --only <id>[,<id>]}"; shift 2; n=$((n - 2)) ;;
+    --only)
+      # A ${2:?} bail would exit 0 here — the EXIT trap's rm resets $? under macOS sh.
+      [ "$SEEN" -eq 0 ] || { echo "--only given twice; combine ids: --only a,b" >&2; exit 2; }
+      [ $# -ge 2 ] || { echo "usage: --only <id>[,<id>]" >&2; exit 2; }
+      ONLY="$2"; SEEN=1; shift 2; n=$((n - 2)) ;;
     *) set -- "$@" "$1"; shift; n=$((n - 1)) ;;
   esac
 done
 
-if [ -n "$ONLY" ]; then
+if [ "$SEEN" -eq 1 ]; then
   python3 "$HERE/gen_claude_skills.py" --out "$TMP/lane" --only "$ONLY"
 else
   python3 "$HERE/gen_claude_skills.py" --out "$TMP/lane"
