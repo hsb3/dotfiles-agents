@@ -80,6 +80,16 @@ refused until `/handoff` runs, which is the intended answer. Needs atelier ≥ 0
 Never create a `backlog.md`, a `TODO` file, or any other in-repo task list — file it on the
 board.
 
+**Curation rhythm** (7hws, 2026-09-07). At session start, in order: `kata_doctor.py` (wiring —
+binary, daemon, binding, `KATA_AUTHOR`, shim, duplicate server; every warn is wiring debt to
+fix), `audit_issues.py --project dotfiles-agents` (definition and dependency hygiene over open
+issues), then the board-triage kata adapter for whatever the audit leaves unranked. Both scripts
+ship in the kata plugin (`~/.claude/plugins/cache/kata-oversight/kata/<version>/skills/kata-audit/scripts/`).
+Findings to fix: `title-long`, `no-acceptance`, `prose-dep` (add the edge, or reword if it is
+not a real prerequisite), `no-priority` (the frozen kaneo children under `my1a` may stay blank).
+Ignore `unlinked-ref` until kata-oversight `z6gb` filters its noise (closed cards named in prose,
+epics naming their own children).
+
 <!-- BEGIN KATA (managed by `kata init --with-agents`) -->
 Kata is the system of record for intent.
 
