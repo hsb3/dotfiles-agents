@@ -15,7 +15,7 @@ new repo, reviewing an existing one, or checking what belongs where.
 |---|---|
 | Directory layout: `_meta/`, `.claude/`, `.github/`, root files, the AVOID list | `references/layout.md` |
 | A specific compliance check, its ID, or its pass condition | `references/checklist.md` |
-| Planning-doc frontmatter in `_meta/plans/`, or communication-package intake | `references/planning-docs.md` |
+| Planning-doc frontmatter in `_meta/plans/`, which desk files are exempt from it, or communication-package intake | `references/planning-docs.md` |
 
 It also ships the templates the standard describes under `assets/` — `.github/` template set,
 gitignore and lefthook templates, and docs scaffolding.
