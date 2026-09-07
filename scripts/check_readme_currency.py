@@ -21,24 +21,23 @@ that own a README, decision-015 point 5):
 
 Two scope decisions, both taking the narrowest honest reading:
 
-  * **Plugins are read as their own tracked files only** — `plugin.json`, `hooks.json`,
-    the bundle README, and the symlink ENTRIES (a retargeted or added/removed link is a
-    change to `plugins/<id>/`). The gate does NOT follow a symlink into
-    `primitives-core/`. Under ADR 0017 an assembly is a membership statement, and that is
-    what its README documents; a member skill's body change is already answerable by that
-    skill's own unit. Following links would make every bundle stale whenever any member
-    moved, and the plugin README could not honestly acknowledge it.
+  * **A plugin's body is its own tracked files** — `plugin.json`, `hooks.json`, and the
+    symlink ENTRIES (retargeting or adding a link is a change to `plugins/<id>/`). Links
+    are NOT followed into `primitives-core/`: under ADR 0017 an assembly is a membership
+    statement, which is what its README documents, and a member skill's body change is
+    already answerable on that skill's own unit. Following them would make every bundle
+    stale whenever any member moved.
   * **Committed history only.** The working tree and the index are not read: "touched in
     the same change" has no meaning before there is a change. Uncommitted work is
     invisible here and lands red on the next run — CI runs on the PR's checkout, which is
     the authoritative one.
 
-A symlinked README (a standalone plugin points at its member skill's, ADR 0017) is read
-through the link: history for the link entry OR its in-repo target counts, because the
-README a human reads is the target, and editing the entry alone could never clear it.
+The README side DOES follow a link (a standalone plugin points at its member skill's
+README): history for the link entry or for its in-repo target counts, since the file a
+reader opens is the target, and editing the entry alone could never clear the unit.
 
 The gate is anchored at the commit that added decision-015: a unit whose last body change
-predates the ruling is not evaluated, since 32 of 56 units were stale the day the rule
+predates the ruling is not evaluated, since 31 of 56 units were stale the day the rule
 landed and a retroactive gate would just be a mass-touch. The anchor is the OLDEST add
 matching the pathspec, not the newest — a later `decision-015*` file (an addendum, or a
 retitle, since this repo puts the title in the filename) would otherwise move the amnesty
