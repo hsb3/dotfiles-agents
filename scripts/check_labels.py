@@ -35,16 +35,25 @@ pins required checks by job NAME, so adding one would strand every open PR on a 
 that never reports. Same placement, and for the same two reasons, as
 `scripts/check_version_bump.py` and `scripts/check_vendored_drift.py`.
 
-Network and tooling contract, matching those two gates and `docs/gotchas.md`:
+Network and tooling contract — EVERY failure to read the live set is RED, and this gate
+deliberately diverges from `check_version_bump.py` and `check_vendored_drift.py` here.
+Those two skip an unreachable remote with a notice and exit 0. Owner ruling, 2026-09-07
+(decision-016): a gate that cannot measure is red, never green. A step that exits 0
+having measured nothing is indistinguishable in the CI summary from one that measured and
+found the set clean, and the whole cost of that ruling is a re-run when the network blips.
 
   gh missing from PATH        exit 1. "A missing tool is a failed gate, never a skipped
                               one" — a machine that cannot run the check must not report
                               green, or everyone learns to read green as "it ran".
-  gh fails, host unreachable  exit 0 with a loud notice. A network blip is not evidence
-                              of drift, and a gate that hard-fails on one blocks every PR.
+  gh fails, host unreachable  exit 1, saying so. NOT evidence of drift — the message says
+                              that explicitly, so nobody goes hunting for a bad label —
+                              but nothing was measured, so it cannot be green.
   gh fails, host reachable    exit 1, echoing gh's stderr. api.github.com answered and gh
-                              still failed: broken auth, missing scope, rate limit. That
-                              is a gate that cannot run, which is not a blip.
+                              still failed: broken auth, missing scope, rate limit.
+
+The reachability probe therefore decides only WHICH failure gets named, not the exit
+code. It stays because "your network is down" and "your token is bad" are a ten-second
+and a thirty-minute debug respectively.
 
 Deliberately NOT covered: label COLOUR and DESCRIPTION — only the name set is closed, and
 churning on a hex code would make this gate noise. Also not covered: which labels are
@@ -53,8 +62,8 @@ labels, which are a different namespace entirely and only reach this gate if kat
 GitHub sync mints a new label on the repo — at which point it shows up here as an extra,
 which is the intended alarm.
 
-Stdlib-only, deterministic. Exit 0 = clean or unreachable; exit 1 = drift, or a gate that
-could not run.
+Stdlib-only, deterministic. Exit 0 = the live set was read and matches; exit 1 = drift,
+or the live set could not be read at all.
 Usage: python3 scripts/check_labels.py [--labels-json <file>|-]
 
 Run the live path from a checkout of the repo you mean to check: `gh` resolves owner/repo
@@ -160,12 +169,12 @@ def main(argv=None):
     else:
         live, err = gh_labels()
         if err is not None:
-            # A missing binary is a failed gate; an unreachable host is a blip. Anything
-            # else means the host answered and gh still failed, which is also a failure.
+            # Every read failure is red — the probe only picks the message. Guarded on
+            # `gh` being present so a missing binary is never blamed on the network.
             if shutil.which("gh") is not None and not _github_reachable():
-                print(f"  ℹ labels: {err}; api.github.com is unreachable — "
-                      f"not evidence of drift, skipping")
-                return 0
+                err += ("; api.github.com is unreachable — that is a reachability "
+                        "failure, NOT evidence of drift, but nothing was measured and a "
+                        "gate that cannot measure is red (decision-016). Re-run it")
             print(f"✗ labels: {err}")
             return 1
         source = "gh label list"

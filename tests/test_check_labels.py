@@ -117,11 +117,14 @@ class InjectedJson(unittest.TestCase):
 
 
 class NetworkContract(unittest.TestCase):
-    """The three ways the live read can fail resolve to two different exit codes.
+    """Every way the live read can fail is RED — including an unreachable host.
+
+    That is the point of these three tests and the reason they are worth their weight: a
+    step that exits 0 having measured nothing is indistinguishable in a CI summary from
+    one that measured and found the set clean. The sibling network gates skip-and-pass
+    instead; this one diverges by owner ruling (decision-016).
 
     Stubbed at the module boundary, so no test here opens a socket or runs a subprocess.
-    Getting this wrong is silent in the worst direction: a gate that exits 0 whenever it
-    cannot run teaches every reader that green means it ran.
     """
 
     def _run(self):
@@ -131,26 +134,28 @@ class NetworkContract(unittest.TestCase):
         return rc, buf.getvalue()
 
     def test_gh_missing_from_path_fails_the_gate(self):
-        """Red even OFFLINE — the ordering in main() is the invariant, not the message.
-
-        `_github_reachable` is forced False on purpose: without it this test passes on any
-        networked machine whether or not main() still checks PATH before the reachability
-        probe, and dropping that check turns a machine with no `gh` into a silent exit 0.
-        """
+        """Red even OFFLINE, and the message blames PATH rather than the network."""
         with mock.patch.object(L.shutil, "which", return_value=None), \
              mock.patch.object(L, "_github_reachable", return_value=False):
             rc, out = self._run()
         self.assertEqual(rc, 1)
         self.assertIn("gh is not on PATH", out)
+        self.assertNotIn("unreachable", out)
 
-    def test_unreachable_host_skips_with_a_notice(self):
+    def test_unreachable_host_fails_the_gate_but_says_it_is_not_drift(self):
+        """The one the owner ruled on: nothing measured cannot be reported green.
+
+        The message still has to acquit the label set, or the next reader goes hunting
+        for a bad label that was never there.
+        """
         with mock.patch.object(L, "gh_labels", return_value=(None, "gh label list failed")), \
              mock.patch.object(L, "_github_reachable", return_value=False), \
              mock.patch.object(L.shutil, "which", return_value="/usr/bin/gh"):
             rc, out = self._run()
-        self.assertEqual(rc, 0)
-        self.assertIn("ℹ", out)
+        self.assertEqual(rc, 1)
+        self.assertIn("✗", out)
         self.assertIn("unreachable", out)
+        self.assertIn("NOT evidence of drift", out)
 
     def test_reachable_host_with_failing_gh_fails_the_gate(self):
         with mock.patch.object(L, "gh_labels", return_value=(None, "gh label list failed: 401")), \

@@ -79,8 +79,10 @@ jobs:
       # and nothing else constrains what can appear there. Rides this job for the same two
       # reasons as the gates above: it needs `gh` plus network, which `make ci` (offline +
       # zero-install) cannot have, and dev's branch protection pins required checks by job
-      # NAME. Notice-and-exit-0 when api.github.com is unreachable, red when it is reachable
-      # and `gh` still fails (auth, scope, rate limit) — see scripts/check_labels.py.
+      # NAME. UNLIKE the two gates above it does NOT skip-and-pass on an unreachable
+      # remote: every failure to read the live set is red, because a step that exits 0
+      # having measured nothing reads identically to one that measured and found the set
+      # clean (decision-016). A network blip costs a re-run — see scripts/check_labels.py.
       - name: label-vocabulary gate (live labels vs the closed set)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
