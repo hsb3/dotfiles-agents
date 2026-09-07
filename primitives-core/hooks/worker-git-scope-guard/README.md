@@ -83,6 +83,27 @@ Three rules worth stating outright:
 The stash half needs no configuration and has no off switch short of not installing the
 hook. It is armed by the shape of the checkout, not by a setting.
 
+### Where the key is read from
+
+In order, first hit wins:
+
+1. `$ATELIER_ACTIVATION_FILE`, if set. It wins outright and is never second-guessed.
+2. `<project>/.claude/atelier.local.md`.
+3. **The main checkout's copy, when the project directory is a linked worktree.**
+
+That third step exists because without it this half switches itself off precisely where it
+is needed. A linked worktree is a clean checkout and the activation file is conventionally
+gitignored, so a worker dispatched into one finds no file, the list parses empty, and every
+protected branch is open to it — while that same worktree shares the `.git` and the remote
+that make its commit land on the real branch. The main checkout is resolved from the same
+`--git-common-dir` / `--git-dir` pair the shared-tree test uses, and only on the miss: this
+hook runs on every `Bash` call, so it must not shell out on each one. A command with no
+`git` token in it skips the whole lookup, since no invocation can be found in one anyway.
+
+The fallback touches the **read of the key only**. Tree-kind detection is untouched, so a
+worker in its own worktree still stashes freely while now inheriting the main checkout's
+protected branches — the two halves stay independent.
+
 `activation.py check` (via `/atelier:activate`) reports what this key actually resolved to
 — armed, inert, or not configured — by calling this hook's own loader.
 

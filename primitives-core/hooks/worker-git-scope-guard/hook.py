@@ -74,12 +74,30 @@ def _resolve_project_dir(payload_cwd):
 
 
 def _resolve_activation_path(project_dir):
+    """The activation file to read: the env override, else this project's own copy, else
+    the main checkout's copy when `project_dir` is a linked worktree.
+
+    That last hop is what keeps the protected-branch half from switching itself off
+    exactly where it is needed. A linked worktree is a clean checkout and the activation
+    file is conventionally gitignored, so a worker inside one finds no file — while still
+    sharing the `.git` and remote that make its commit land on the real branch.
+
+    The hop shells out to git, so it runs only on the miss.
+    """
     override = os.environ.get("ATELIER_ACTIVATION_FILE")
     if override:
         return override
     if not project_dir:
         return None
-    return os.path.join(project_dir, ACTIVATION_RELPATH)
+    local = os.path.join(project_dir, ACTIVATION_RELPATH)
+    if os.path.isfile(local):
+        return local
+    main_checkout = _main_checkout(project_dir)
+    if main_checkout:
+        inherited = os.path.join(main_checkout, ACTIVATION_RELPATH)
+        if os.path.isfile(inherited):
+            return inherited
+    return local
 
 
 def _unquote(value):
@@ -324,32 +342,48 @@ def current_branch(cwd):
     return name if name and name != "HEAD" else None
 
 
-def shared_tree(cwd):
-    """True when `cwd` is the main checkout, False in a linked worktree, None if unsure.
+def _tree_dirs(cwd):
+    """(common git dir, this tree's git dir) for `cwd`, or (None, None) if unsure.
 
     Measured rather than assumed: `--git-common-dir` alone does NOT identify the main
     checkout, because from a SUBDIRECTORY of it git answers with a relative path
-    (`../../.git`) that looks nothing like the `.git` returned at the root — reading
-    that as a worktree would let the very stash this guard exists to stop straight
-    through. Comparing it with `--git-dir` is what actually separates the two: they are
-    the same directory in a main checkout and differ in a linked worktree, where
-    `--git-dir` points into `.git/worktrees/<name>`.
+    (`../../.git`) that looks nothing like the `.git` returned at the root — reading that
+    as a worktree would let the very stash this guard exists to stop straight through.
+    Comparing it with `--git-dir` is what actually separates the two: they are the same
+    directory in a main checkout and differ in a linked worktree, where `--git-dir`
+    points into `.git/worktrees/<name>`.
 
     A common dir whose basename is not `.git` (a bare repo, a submodule) is reported as
     unsure rather than guessed at.
     """
     out = _git(cwd, "--git-common-dir", "--git-dir")
     if out is None:
-        return None
+        return None, None
     parts = out.split("\n")
     if len(parts) < 2:
-        return None
+        return None, None
     common, gitdir = (_abspath(cwd, p.strip()) for p in parts[:2])
     if not common or not gitdir:
-        return None
+        return None, None
     if os.path.basename(common.rstrip(os.sep)) != ".git":
+        return None, None
+    return common, gitdir
+
+
+def shared_tree(cwd):
+    """True when `cwd` is the main checkout, False in a linked worktree, None if unsure."""
+    common, gitdir = _tree_dirs(cwd)
+    if common is None:
         return None
     return common == gitdir
+
+
+def _main_checkout(cwd):
+    """The main checkout's root when `cwd` is a linked worktree, else None."""
+    common, gitdir = _tree_dirs(cwd)
+    if common is None or common == gitdir:
+        return None
+    return os.path.dirname(common)
 
 
 def _git(cwd, *args):
@@ -450,7 +484,12 @@ def main():
         data = json.load(sys.stdin)
         if not isinstance(data, dict):
             return
-        protected = _load_protected_branches(_resolve_project_dir(data.get("cwd")))
+        # `invocations` can only yield on a literal `git` token, so without one there is
+        # nothing to decide — and this hook runs on EVERY Bash call, so the file read and
+        # the main-checkout lookup behind it must not.
+        command = (data.get("tool_input") or {}).get("command") or ""
+        protected = (_load_protected_branches(_resolve_project_dir(data.get("cwd")))
+                     if "git" in command else frozenset())
         out = decide(data, current_branch, shared_tree, protected)
         if out is not None:
             print(json.dumps(out))

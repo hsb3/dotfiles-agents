@@ -349,6 +349,101 @@ class TreeKindTests(unittest.TestCase):
         self.assertIsNone(hook.shared_tree(os.path.join(self.tmp.name, "nope")))
 
 
+class WorktreeActivationFallbackTests(unittest.TestCase):
+    """A linked worktree is a clean checkout and the activation file is conventionally
+    gitignored, so a worker inside one finds no file — while still sharing the `.git` and
+    remote that make a commit on a protected branch land on the real branch. The half that
+    only matters inside a worktree must not be the half that switches off there.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.main = os.path.join(self.tmp.name, "main")
+        self.wt = os.path.join(self.tmp.name, "wt")
+        env = dict(os.environ,
+                   GIT_CONFIG_GLOBAL=os.path.join(self.tmp.name, "gitconfig"),
+                   GIT_CONFIG_SYSTEM=os.path.join(self.tmp.name, "gitconfig"),
+                   GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.invalid",
+                   GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.invalid")
+        try:
+            for args in (
+                ("git", "init", "-q", "-b", "trunk", self.main),
+                ("git", "-C", self.main, "commit", "-q", "--allow-empty", "-m", "x"),
+                ("git", "-C", self.main, "worktree", "add", "-q", self.wt, "-b", "shipped"),
+            ):
+                subprocess.run(args, check=True, env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("git unavailable")
+
+        saved = {n: os.environ.pop(n, None)
+                 for n in ("CLAUDE_PROJECT_DIR", "ATELIER_ACTIVATION_FILE")}
+
+        def restore():
+            for name, value in saved.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+        self.addCleanup(restore)
+
+    def arm(self, root, *branches):
+        os.makedirs(os.path.join(root, ".claude"), exist_ok=True)
+        with open(os.path.join(root, ".claude", "atelier.local.md"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("---\nprotected-branches: [{0}]\n---\n".format(", ".join(branches)))
+
+    def run_main(self, command, cwd):
+        stdin, stdout = sys.stdin, sys.stdout
+        sys.stdin = io.StringIO(json.dumps(
+            {"agent_id": "a", "cwd": cwd, "tool_input": {"command": command}}))
+        sys.stdout = io.StringIO()
+        try:
+            hook.main()
+            return sys.stdout.getvalue()
+        finally:
+            sys.stdin, sys.stdout = stdin, stdout
+
+    def test_a_worker_in_a_bare_worktree_inherits_the_main_checkouts_list(self):
+        self.arm(self.main, "trunk", "shipped")
+        self.assertEqual(hook._load_protected_branches(self.wt),
+                         frozenset({"trunk", "shipped"}))
+
+    def test_a_commit_on_a_protected_branch_from_a_bare_worktree_is_denied(self):
+        self.arm(self.main, "shipped")
+        out = self.run_main("git commit -m wip", self.wt)
+        self.assertIn("protected branch `shipped`", out)
+
+    def test_the_fallback_does_not_leak_into_the_stash_half(self):
+        """A worker in its own worktree may still stash, however it resolved the list."""
+        self.arm(self.main, "shipped")
+        self.assertEqual(self.run_main("git stash", self.wt), "")
+
+    def test_the_worktrees_own_activation_file_wins(self):
+        self.arm(self.main, "shipped")
+        self.arm(self.wt, "trunk")
+        self.assertEqual(hook._load_protected_branches(self.wt), frozenset({"trunk"}))
+        self.assertEqual(self.run_main("git commit -m wip", self.wt), "")
+
+    def test_the_env_override_wins_over_both(self):
+        self.arm(self.main, "shipped")
+        self.arm(self.wt, "shipped")
+        elsewhere = os.path.join(self.tmp.name, "elsewhere.md")
+        with open(elsewhere, "w", encoding="utf-8") as fh:
+            fh.write("---\nprotected-branches: [trunk]\n---\n")
+        os.environ["ATELIER_ACTIVATION_FILE"] = elsewhere
+        self.assertEqual(hook._load_protected_branches(self.wt), frozenset({"trunk"}))
+
+    def test_the_main_checkout_does_not_walk_anywhere(self):
+        """No fallback applies in the main checkout: no file there means inert."""
+        self.assertEqual(hook._load_protected_branches(self.main), frozenset())
+
+    def test_a_directory_that_is_not_a_repo_is_inert(self):
+        self.assertEqual(hook._load_protected_branches(self.tmp.name), frozenset())
+
+
 class EntryPointTests(unittest.TestCase):
     """main() end to end: stdin in, at most one JSON object out, always exit 0."""
 
