@@ -7,7 +7,9 @@ tempdir per test, and the environment passed to the subprocess is built from
 scratch with only PATH inherited.
 
 The project fixture is a git repo only because the hook stands down outside one
-— a bare `.git` directory is enough, so no git binary is invoked.
+— a bare `.git` directory is enough, so no git binary is invoked. The
+worktree-resolution tests at the bottom are the exception: they need a real
+linked worktree, so they shell out to a real `git` and skip without one.
 """
 
 import itertools
@@ -17,6 +19,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+# Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
+# under `-t .`, so prime the path the same way the hooks prime `_lib`.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
 
 HOOK_PATH = os.path.join(
     os.path.dirname(__file__), "..", "primitives-core", "hooks",
@@ -337,6 +344,32 @@ class WorktreeIsolationTests(unittest.TestCase):
             raw_text="---\nisolate: writers\n---\n" + ("x" * (256 * 1024 + 1)),
         )
         self._assert_silent(self._run_hook(json.dumps(self._payload())))
+
+    # -- worktree resolution -------------------------------------------
+
+    def test_linked_worktree_follows_main_checkout_activation(self):
+        """A session running inside a linked worktree still forces isolation
+        on the writers the main checkout's activation file named."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        _main_dir, worktree_dir = make_worktree(
+            base, files={".claude/atelier.local.md": "---\nisolate: writers\n---\n"},
+        )
+        _body, updated = self._rewrite(self._payload(cwd=worktree_dir))
+        self.assertEqual(updated["isolation"], "worktree")
+
+    def test_worktrees_own_tracked_activation_wins(self):
+        """Resolution is lazy: a tracked activation file in the worktree is
+        read at its committed version, not replaced by the main checkout's."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(
+            base, tracked={".claude/atelier.local.md": "---\nisolate: off\n---\n"},
+        )
+        self._write_activation(isolate="writers", project_dir=main_dir)
+        self._assert_silent(self._run_hook(json.dumps(self._payload(cwd=worktree_dir))))
 
 
 if __name__ == "__main__":
