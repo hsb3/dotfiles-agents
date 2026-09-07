@@ -9,7 +9,9 @@ read or write anything on the host.
 Use it when an agent should work somewhere that cannot touch the real machine: on a copy of
 a project, on generated code, or on a long task that deserves its own scratch space. Covers
 installing the CLI, seeding project context, custom config and plugins, worktrees inside the
-instance, registering it with `claude mcp add`, and destroying it afterward.
+instance, registering it with `claude mcp add`, and destroying it afterward. Also documents
+that neither container ships the GitHub CLI, the non-persistent manual-install workaround,
+and why logging it in as the operator's own account defeats the sandbox's isolation.
 
 ## Install
 
