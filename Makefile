@@ -1,14 +1,15 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes parity
+.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-check: ## Roster <-> disk drift guard (provenance-manifest schema, ADR 0017) + catalog <-> README/marketplace guard + plugin-README diagram guard + per-unit README gate
+check: ## Roster <-> disk drift guard (provenance-manifest schema, ADR 0017) + catalog <-> README/marketplace guard + plugin-README diagram guard + per-unit README gate + README-currency gate
 	@python3 scripts/check_roster.py
 	@python3 scripts/check_catalog.py
 	@python3 scripts/check_plugin_diagrams.py
 	@python3 scripts/check_readmes.py
+	@python3 scripts/check_readme_currency.py
 
 identity: ## Entry-gate floor: identity-neutrality lint (no name/org/repo/issue in shipped bodies)
 	@python3 scripts/check_identity.py
@@ -33,6 +34,9 @@ symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; m
 
 readmes: ## Per-unit README gate: every skill dir and every plugin ships a titled, non-empty README.md
 	@python3 scripts/check_readmes.py
+
+readme-currency: ## README-currency gate (decision-015): the last change to a skill or plugin also touched that unit's README (needs full git history)
+	@python3 scripts/check_readme_currency.py
 
 manifests: ## Manifest gate: `claude plugin validate --strict` over marketplace + every assembly (needs the claude CLI; NOT in ci)
 	@python3 scripts/check_manifests.py
