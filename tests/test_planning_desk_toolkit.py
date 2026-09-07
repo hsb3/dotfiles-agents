@@ -1,15 +1,16 @@
-"""The planning-desk toolkit: parsing, transforms, JSON shapes, and gating exit codes.
+"""The planning-desk toolkit: the Kata adapter, the snapshot loader, and the three
+analysis scripts that read a snapshot.
 
-Both boundaries are faked: `subprocess.run` becomes an argv dispatcher (so a test
-pins the argv a script BUILT, not just the value it got back), and the plans tree is
-a tempdir wired in by patching each module's `PLANS_DIR` / `README`.
+Two boundaries are faked and nothing else: `subprocess.run` becomes an argv dispatcher
+(so a test pins the argv a script BUILT, not just the value it got back), and the plans
+desk is a tempdir wired in by patching each module's `PLANS_DIR` / `README`. Everything
+between the tracker's `list --json` and a mutation's argv is this toolkit's own judgment
+and can be wrong on its own, so it is tested directly.
 
-Those globals are not shared the way the imports suggest -- `coverage.py` loads its
-OWN reconcile/conformance via `_load_sibling` and `sync-bodies.py` rebinds
-`PLANS_DIR` -- so `point_reconcile_at` patches every live copy.
-
-`sequence.py` and `deps-suggest.py` return 0 unconditionally; the tests assert that,
-not SKILL.md's "each with a gating exit code".
+What breaks silently if this drifts: a snapshot field that stops normalizing turns an
+absent value into a KeyError mid-audit, a `state`/`status` row that stops being refused
+writes a lane the tracker does not have, and a ref rule that stops matching makes every
+plan look untracked.
 """
 
 from __future__ import annotations
@@ -29,1017 +30,752 @@ UTILS = ROOT / "primitives-core" / "skills" / "planning-desk" / "scripts" / "_ut
 
 sys.path.insert(0, str(UTILS))
 
-import _repo  # noqa: E402
 import conformance  # noqa: E402
 import reconcile  # noqa: E402
-import sequence  # noqa: E402
+import tracker  # noqa: E402
 
 
-def _load(name: str, filename: str):
-    """Load a script whose filename is not a legal module name (or would shadow a
-    well-known package). Registered in sys.modules before exec so relative state
-    inside the module is stable."""
-    spec = importlib.util.spec_from_file_location(name, UTILS / filename)
+def _load(name: str, path: Path):
+    """Load a bundled script under an explicit module name (`coverage` would collide
+    with the well-known third-party package)."""
+    spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
 
-# `coverage` would collide with the well-known third-party package name.
-pd_coverage = _load("pd_coverage", "coverage.py")
-deps_suggest = _load("deps_suggest", "deps-suggest.py")
-sync_bodies = _load("sync_bodies", "sync-bodies.py")
-evidence_audit = _load("evidence_audit", "evidence-audit.py")
+kata = _load("pd_kata_adapter", UTILS / "adapters" / "kata.py")
+pd_coverage = _load("pd_coverage", UTILS / "coverage.py")
 
-
-# --------------------------------------------------------------------------- fakes
-
-
-class _Completed:
-    def __init__(self, stdout: str = "", returncode: int = 0):
-        self.stdout = stdout
-        self.stderr = ""
-        self.returncode = returncode
-
-
-class FakeGh:
-    """One dispatcher for every `gh` shape the toolkit issues. Records argv."""
-
-    def __init__(
-        self,
-        *,
-        repo: str = "acme/widgets",
-        issues_open=(),
-        issues_closed=(),
-        issues_all=(),
-        bodies=None,
-        milestones_tsv: str = "",
-        graphql_pages=(),
-    ):
-        self.repo = repo
-        self.issues = {
-            "open": list(issues_open),
-            "closed": list(issues_closed),
-            "all": list(issues_all),
-        }
-        self.bodies = bodies or {}
-        self.milestones_tsv = milestones_tsv
-        self.graphql_pages = list(graphql_pages)
-        self.calls: list[list[str]] = []
-
-    def __call__(self, args, **_kwargs):
-        args = list(args)
-        self.calls.append(args)
-        return _Completed(self._stdout(args))
-
-    def argv_starting(self, prefix: list[str]) -> list[list[str]]:
-        return [c for c in self.calls if c[: len(prefix)] == prefix]
-
-    def _stdout(self, args: list[str]) -> str:
-        if args[:3] == ["gh", "repo", "view"]:
-            return self.repo + "\n"
-        if args[:3] == ["gh", "issue", "list"]:
-            state = args[args.index("--state") + 1]
-            return json.dumps(self.issues[state])
-        if args[:3] == ["gh", "issue", "view"]:
-            return self.bodies[int(args[3])]
-        if args[:3] == ["gh", "issue", "edit"]:
-            return ""
-        if args[:3] == ["gh", "api", "graphql"]:
-            return json.dumps(self.graphql_pages.pop(0))
-        if args[:2] == ["gh", "api"] and args[2].endswith("/milestones"):
-            return self.milestones_tsv
-        raise AssertionError(f"unexpected gh call: {args}")
-
-
-def run_main(module, argv: list[str]):
-    """Invoke a script's main() under a faked argv; returns (exit code, stdout)."""
-    buf = io.StringIO()
-    with mock.patch.object(sys, "argv", ["script", *argv]):
-        with contextlib.redirect_stdout(buf):
-            code = module.main()
-    return code, buf.getvalue()
-
-
-class GhCase(unittest.TestCase):
-    """Base: `gh` is never reachable, and `repo_slug`'s cache never leaks between tests."""
-
-    def install_gh(self, fake: FakeGh) -> FakeGh:
-        _repo.repo_slug.cache_clear()
-        self.addCleanup(_repo.repo_slug.cache_clear)
-        patcher = mock.patch("subprocess.run", fake)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        return fake
-
-    def tmpdir(self) -> Path:
-        d = tempfile.TemporaryDirectory()
-        self.addCleanup(d.cleanup)
-        return Path(d.name)
-
-
-# ------------------------------------------------------------------------ fixtures
-
-
-def write_plan(plans: Path, slug: str, tracking: str | None, body: str | None = None):
-    folder = plans / slug
-    folder.mkdir(parents=True, exist_ok=True)
-    text = f"# {slug}\n\n## Context\n\nSome prose.\n"
-    if tracking is not None:
-        text += f"\n## Tracking\n\n{tracking}\n"
-    text += "\n## Scope\n\nMore prose.\n"
-    (folder / "plan.md").write_text(text)
-    if body is not None:
-        (folder / "issue-body.md").write_text(body)
-    return folder
-
-
-DRIFT_README = """# Plans desk
-
-| Plan | Issue | Notes |
-| ---- | ----- | ----- |
-| stray-before-marker | #30 | outside any section, must be ignored |
-
-## ACTIVE plans
-
-| Plan | Issue | Notes |
-| ---- | ----- | ----- |
-| alpha-rollout | #1 | clean |
-| beta-widget | (none yet) | no number |
-| gamma-probe | #7 | unknown issue |
-| delta-sweep | #8 | closed issue |
-| epsilon-ghost | #9 | no folder |
-| zeta-mismatch | #10 | body says another |
-| eta-warned | #12 | epic-flagged lead ref |
-| theta-notrack | #13 | no tracking section |
-
-## ARCHIVED (done)
-
-| Plan (archived path) | Issue | Notes |
-| --- | --- | --- |
-| kappa-old | #20 | properly closed |
-| lambda-open | #21 | still open |
-| mu-none | enablement (no issue) | nothing to check |
-| nu-gone | #22 | unknown issue |
-"""
-
-DRIFT_STATES = [
-    {"number": 1, "state": "OPEN"},
-    {"number": 8, "state": "CLOSED"},
-    {"number": 9, "state": "OPEN"},
-    {"number": 10, "state": "OPEN"},
-    {"number": 11, "state": "OPEN"},
-    {"number": 12, "state": "OPEN"},
-    {"number": 13, "state": "OPEN"},
-    {"number": 14, "state": "OPEN"},
-    {"number": 20, "state": "CLOSED"},
-    {"number": 21, "state": "OPEN"},
+# --------------------------------------------------------------------------- fixtures
+# Shaped like the tracker's `list --json` (captured from a live instance 2026-09-07):
+# unset scalars are ABSENT, not null; `child_counts` is null or {open, total};
+# `parent` is an object or absent; `blocked_by` is a list of objects or null.
+ISSUES = [
+    {
+        "short_id": "xmwb",
+        "title": "Wire the adapter",
+        "body": "## Acceptance criteria\n- it exports\n\n## Dependencies & gates\n- none\n",
+        "status": "open",
+        "priority": 1,
+        "labels": ["infra", "chore"],
+        "parent": {"short_id": "p937", "qualified_id": "demo#p937", "status": "open"},
+        "blocked_by": [{"short_id": "ay9p", "qualified_id": "demo#ay9p"}],
+        "blocks": None,
+        "child_counts": None,
+        "qualified_id": "demo#xmwb",
+    },
+    {
+        "short_id": "p937",
+        "title": "The desk itself",
+        "body": "## Close when\n- every child lands\n",
+        "status": "open",
+        "labels": [],
+        "child_counts": {"open": 1, "total": 2},
+        "blocked_by": None,
+        "qualified_id": "demo#p937",
+    },
+    {
+        # Nothing set: no priority key, no parent key, no child_counts key at all.
+        "short_id": "ay9p",
+        "title": "Prose only",
+        "body": "just a paragraph",
+        "status": "open",
+        "labels": [],
+        "qualified_id": "demo#ay9p",
+    },
+    {
+        "short_id": "epk1",
+        "title": "Epic by label, no children yet",
+        "body": "## Close criteria\n- ships\n",
+        "status": "open",
+        "labels": ["epic"],
+        "child_counts": None,
+        "qualified_id": "demo#epk1",
+    },
+    {
+        "short_id": "c0ld",
+        "title": "Already done",
+        "body": "## Acceptance criteria\n- shipped\n\n## Gates\n- none\n",
+        "status": "closed",
+        "priority": 4,  # off the P0-P3 band vocabulary
+        "labels": ["chore"],
+        "closed_reason": "done",
+        "child_counts": None,
+        "qualified_id": "demo#c0ld",
+    },
 ]
 
 
-def build_drift_tree(base: Path) -> Path:
-    plans = base / "plans"
-    plans.mkdir()
-    (plans / "README.md").write_text(DRIFT_README)
-    write_plan(plans, "alpha-rollout", "Tracking issue: #1")
-    write_plan(plans, "beta-widget", "Tracking issue: #2")
-    write_plan(plans, "gamma-probe", "Tracking issue: #7")
-    write_plan(plans, "delta-sweep", "Tracking issue: #8")
-    write_plan(plans, "zeta-mismatch", "Tracking issue: #11")
-    write_plan(plans, "eta-warned", "Epic #12 owns this stream")
-    write_plan(plans, "theta-notrack", None)
-    write_plan(plans, "iota-orphan", "Tracking issue: #14")
-    return plans
+def snapshot(project="demo", issues=None):
+    return kata.build_snapshot(project, ISSUES if issues is None else issues)
 
 
-def build_clean_tree(base: Path) -> Path:
-    plans = base / "plans"
-    plans.mkdir()
-    (plans / "README.md").write_text(
-        "## ACTIVE plans\n\n"
-        "| Plan | Issue |\n| --- | --- |\n| alpha-rollout | #1 |\n\n"
-        "## ARCHIVED (done)\n\n| Plan (archived path) | Issue |\n| --- | --- |\n"
-    )
-    write_plan(plans, "alpha-rollout", "Tracking issue: #1")
-    return plans
+def item(snap, key):
+    return next(i for i in snap["items"] if i["key"] == key)
 
 
-def point_reconcile_at(case: unittest.TestCase, plans: Path):
-    """Patch every live copy of reconcile's globals -- coverage.py holds its own."""
-    for mod in (reconcile, pd_coverage.reconcile):
-        case.enterContext(mock.patch.object(mod, "PLANS_DIR", plans))
-        case.enterContext(mock.patch.object(mod, "README", plans / "README.md"))
-    case.enterContext(mock.patch.object(sync_bodies, "PLANS_DIR", plans))
-
-
-# ---------------------------------------------------------------------- conformance
-
-
-class ConformanceEpicDetection(unittest.TestCase):
-    def test_epic_label_marks_an_issue_epic_type(self):
-        issue = {"title": "Ship the widget", "labels": [{"name": "epic"}]}
-        self.assertTrue(conformance.is_epic_type(issue))
-
-    def test_tracker_title_marks_an_issue_epic_type_without_a_label(self):
-        self.assertTrue(conformance.is_epic_type({"title": "Tracking: rollout", "labels": []}))
-        self.assertTrue(conformance.is_epic_type({"title": "Epic outline", "labels": []}))
-
-    def test_plain_issue_is_not_epic_type(self):
-        issue = {"title": "Fix the widget latch", "labels": [{"name": "bug"}]}
-        self.assertFalse(conformance.is_epic_type(issue))
-
-
-class ConformanceAudit(unittest.TestCase):
-    def test_body_with_no_headings_reports_missing_structure(self):
-        missing = conformance.audit_issue({"title": "t", "labels": [], "body": "just prose"})
-        self.assertEqual(missing, ["no headings / no template structure"])
-
-    def test_missing_acceptance_criteria_only(self):
-        body = "## Summary\n\nx\n\n## Dependencies & gates\n\n- none\n"
-        missing = conformance.audit_issue({"title": "t", "labels": [], "body": body})
-        self.assertEqual(missing, ["Acceptance criteria"])
-
-    def test_missing_gates_only(self):
-        body = "## Summary\n\nx\n\n## Acceptance criteria\n\n- it works\n"
-        missing = conformance.audit_issue({"title": "t", "labels": [], "body": body})
-        self.assertEqual(missing, ["Dependencies & gates"])
-
-    def test_definition_of_done_counts_as_acceptance_criteria(self):
-        body = "## Definition of done\n\n- x\n\n## Dependencies & gates\n\n- none\n"
-        self.assertEqual(conformance.audit_issue({"title": "t", "labels": [], "body": body}), [])
-
-    def test_epic_is_judged_on_close_when_not_acceptance_criteria(self):
-        epic = {"title": "t", "labels": [{"name": "epic"}], "body": "## Close when\n\n- all children done\n"}
-        self.assertEqual(conformance.audit_issue(epic), [])
-        bare = {"title": "t", "labels": [{"name": "epic"}], "body": "## Summary\n\nx\n"}
-        self.assertEqual(conformance.audit_issue(bare), ["Close when (epic acceptance)"])
-
-
-class ConformanceSeverity(unittest.TestCase):
-    def test_missing_acceptance_or_structure_is_critical(self):
-        self.assertEqual(conformance.severity(["Acceptance criteria"], False), "CRITICAL")
-        self.assertEqual(conformance.severity(["no headings / no template structure"], True), "CRITICAL")
-
-    def test_epic_missing_close_when_is_its_own_band(self):
-        # The band name matters: the string carries a lowercase "acceptance", which
-        # must NOT be read as the CRITICAL "Acceptance criteria" signal.
-        self.assertEqual(conformance.severity(["Close when (epic acceptance)"], True), "EPIC")
-
-    def test_gates_only_gap_is_minor(self):
-        self.assertEqual(conformance.severity(["Dependencies & gates"], False), "MINOR")
-
-
-CONFORMANCE_ISSUES = [
-    {"number": 4, "title": "Fix the latch", "labels": [], "body": "## Acceptance criteria\n\n- x\n"},
-    {"number": 5, "title": "Add a knob", "labels": [], "body": "no structure at all"},
-    {"number": 6, "title": "Tracking: the rollout", "labels": [], "body": "## Summary\n\nx\n"},
-    {"number": 7, "title": "Good one", "labels": [], "body": "## Acceptance criteria\n\n- x\n\n## Dependencies & gates\n\n- none\n"},
-]
-
-
-class ConformanceMain(GhCase):
-    def test_json_shape_and_descending_order(self):
-        gh = self.install_gh(FakeGh(issues_open=CONFORMANCE_ISSUES))
-        code, out = run_main(conformance, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["total"], 4)
-        self.assertEqual([b["number"] for b in payload["bad"]], [6, 5, 4])
+class Snapshot(unittest.TestCase):
+    def test_shape_matches_the_contract(self):
+        snap = snapshot()
+        self.assertEqual({"name": "demo", "backend": "kata"}, snap["tracker"])
         self.assertEqual(
-            payload["bad"][0],
+            ["ay9p", "c0ld", "epk1", "p937", "xmwb"],
+            [i["key"] for i in snap["items"]],
+            "items sort by key",
+        )
+        self.assertEqual(
             {
-                "number": 6,
-                "title": "Tracking: the rollout",
-                "epic": True,
-                "missing": ["Close when (epic acceptance)"],
-                "severity": "EPIC",
+                "key",
+                "title",
+                "state",
+                "kind",
+                "labels",
+                "body",
+                "parent",
+                "blocked_by",
+                "priority",
             },
+            set(item(snap, "xmwb")),
         )
-        self.assertEqual(payload["bad"][2]["missing"], ["Dependencies & gates"])
-        self.assertEqual(payload["bad"][2]["severity"], "MINOR")
-        listed = gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--state") + 1], "open")
-        self.assertEqual(listed[listed.index("--limit") + 1], "1000")
-        self.assertEqual(listed[listed.index("--json") + 1], "number,title,labels,body")
+        json.dumps(snap)  # the snapshot has to survive a round-trip to the analyst
 
-    def test_all_conformant_exits_zero(self):
-        self.install_gh(FakeGh(issues_open=[CONFORMANCE_ISSUES[3]]))
-        code, out = run_main(conformance, ["--json"])
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out)["bad"], [])
+    def test_a_fully_populated_item_reads_back_whole(self):
+        got = item(snapshot(), "xmwb")
+        self.assertEqual("open", got["state"])
+        self.assertEqual("issue", got["kind"])
+        self.assertEqual("P1", got["priority"])
+        self.assertEqual(["chore", "infra"], got["labels"], "labels are sorted")
+        self.assertEqual("p937", got["parent"])
+        self.assertEqual(["ay9p"], got["blocked_by"])
 
-    def test_saturated_issue_list_warns_on_stderr(self):
-        rows = [{"number": n, "title": "t", "labels": [], "body": "## Acceptance criteria\n\n## Gates\n"} for n in (1, 2, 3)]
-        self.install_gh(FakeGh(issues_open=rows))
-        with mock.patch.object(conformance, "ISSUE_LIST_LIMIT", 3):
-            err = io.StringIO()
-            with contextlib.redirect_stderr(err):
-                conformance.fetch_open_issues()
-        self.assertIn("hit the 3-issue limit", err.getvalue())
+    def test_absent_fields_normalize_to_null_and_empty_never_missing(self):
+        got = item(snapshot(), "ay9p")
+        self.assertIsNone(got["priority"])
+        self.assertIsNone(got["parent"])
+        self.assertEqual([], got["blocked_by"])
+        self.assertEqual([], got["labels"])
+        self.assertEqual("issue", got["kind"])
 
-    def test_unsaturated_issue_list_does_not_warn(self):
-        self.install_gh(FakeGh(issues_open=CONFORMANCE_ISSUES))
-        err = io.StringIO()
-        with contextlib.redirect_stderr(err):
-            conformance.fetch_open_issues()
-        self.assertEqual(err.getvalue(), "")
+    def test_children_make_an_epic_even_without_the_label(self):
+        self.assertEqual("epic", item(snapshot(), "p937")["kind"])
 
+    def test_the_label_makes_an_epic_even_without_children(self):
+        self.assertEqual("epic", item(snapshot(), "epk1")["kind"])
 
-# ------------------------------------------------------------------------- coverage
+    def test_closed_items_keep_their_state_rather_than_being_dropped(self):
+        self.assertEqual("closed", item(snapshot(), "c0ld")["state"])
 
+    def test_a_priority_off_the_band_vocabulary_is_null_not_invented(self):
+        self.assertIsNone(item(snapshot(), "c0ld")["priority"], "native 4 has no band")
 
-class CoverageTrivialTagging(unittest.TestCase):
-    def test_documentation_label_is_maybe_trivial(self):
-        self.assertTrue(pd_coverage.maybe_trivial({"title": "Rewrite the guide", "labels": [{"name": "documentation"}]}))
+    def test_the_tracker_name_falls_back_to_what_the_tracker_reported(self):
+        """No --project: the name comes from the items' own qualified ids."""
+        self.assertEqual("demo", snapshot(project=None)["tracker"]["name"])
 
-    def test_small_titled_bug_is_maybe_trivial(self):
-        self.assertTrue(pd_coverage.maybe_trivial({"title": "Latch sticks", "labels": [{"name": "bug"}]}))
-
-    def test_broad_scope_bug_is_not_trivial(self):
-        self.assertFalse(pd_coverage.maybe_trivial({"title": "Refactor the latch engine", "labels": [{"name": "bug"}]}))
-
-    def test_feature_without_labels_is_not_trivial(self):
-        self.assertFalse(pd_coverage.maybe_trivial({"title": "Latch sticks", "labels": []}))
+    def test_an_empty_tracker_still_produces_a_valid_snapshot(self):
+        snap = kata.build_snapshot(None, [])
+        self.assertEqual({"name": "", "backend": "kata"}, snap["tracker"])
+        self.assertEqual([], snap["items"])
 
 
-class CoverageCompute(GhCase):
-    def setUp(self):
-        self.plans = build_drift_tree(self.tmpdir())
-        point_reconcile_at(self, self.plans)
+class Normalize(unittest.TestCase):
+    def test_bands_resolve_to_native_integers(self):
+        self.assertEqual((0, None), kata.normalize("priority", "P0"))
+        self.assertEqual((3, None), kata.normalize("priority", "p3"))
 
-    def test_planned_set_comes_from_plan_folder_tracking_refs(self):
-        self.assertEqual(pd_coverage.planned_issue_numbers(), {1, 2, 7, 8, 11, 12, 14})
+    def test_blank_priority_is_a_clear_not_an_error(self):
+        self.assertEqual((None, None), kata.normalize("priority", "  "))
 
-    def test_json_shape_excludes_epics_and_planned_issues(self):
-        issues = [
-            {"number": 1, "title": "Already planned", "labels": [], "milestone": None},
-            {"number": 25, "title": "Tracking: an epic", "labels": [], "milestone": None},
-            {"number": 26, "title": "Latch sticks", "labels": [{"name": "bug"}], "milestone": {"title": "m1"}},
-            {"number": 27, "title": "Build a new thing", "labels": [], "milestone": None},
-        ]
-        gh = self.install_gh(FakeGh(issues_open=issues))
-        code, out = run_main(pd_coverage, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["planned_count"], 7)
-        self.assertEqual(payload["non_epic_count"], 3)
+    def test_priority_off_the_rubric_is_refused(self):
+        value, problem = kata.normalize("priority", "P9")
+        self.assertIsNone(value)
+        self.assertIn("P9", problem)
+
+    def test_labels_split_strip_and_sort(self):
+        self.assertEqual((["api", "infra"], None), kata.normalize("labels", " infra , api ,"))
+
+    def test_state_and_status_have_no_changeset_cell(self):
+        for field in ("state", "status"):
+            with self.subTest(field=field):
+                value, problem = kata.normalize(field, "closed")
+                self.assertIsNone(value)
+                self.assertIn("not a changeset cell", problem)
+
+    def test_owner_passes_through_with_blank_as_none(self):
+        self.assertEqual(("someone", None), kata.normalize("owner", " someone "))
+        self.assertEqual((None, None), kata.normalize("owner", ""))
+
+
+class Changeset(unittest.TestCase):
+    def test_parses_tsv_and_skips_header_comments_and_blanks(self):
+        rows = kata.parse_changeset("key\tfield\tvalue\n# note\n\nay9p\tpriority\tP1\n")
+        self.assertEqual([("ay9p", "priority", "P1")], rows)
+
+    def test_field_is_lowercased_and_a_tabbed_value_survives(self):
         self.assertEqual(
-            payload["unplanned"],
-            [
-                {"number": 27, "title": "Build a new thing", "milestone": "(no milestone)", "maybe_trivial": False},
-                {"number": 26, "title": "Latch sticks", "milestone": "m1", "maybe_trivial": True},
-            ],
+            [("ay9p", "title", "one\ttwo")], kata.parse_changeset("ay9p\tTitle\tone\ttwo")
         )
-        listed = gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--limit") + 1], "1000")
-        self.assertEqual(listed[listed.index("--json") + 1], "number,title,labels,milestone")
 
-    def test_fully_covered_backlog_exits_zero(self):
-        self.install_gh(FakeGh(issues_open=[{"number": 1, "title": "Planned", "labels": [], "milestone": None}]))
-        code, out = run_main(pd_coverage, ["--json"])
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out)["unplanned"], [])
+    def test_a_row_without_a_field_is_fatal_not_guessed(self):
+        with self.assertRaises(SystemExit) as caught:
+            kata.parse_changeset("ay9p\n")
+        self.assertIn("line 1", str(caught.exception))
 
 
-# ------------------------------------------------------------------------ reconcile
-
-
-class ReconcileReadmeParsing(GhCase):
-    def setUp(self):
-        self.plans = build_drift_tree(self.tmpdir())
-        point_reconcile_at(self, self.plans)
-
-    def test_rows_split_on_the_section_markers(self):
-        active, archived = reconcile.parse_readme_rows()
+class Plan(unittest.TestCase):
+    def test_writes_only_differing_cells(self):
+        ops, problems = kata.plan(
+            snapshot(), [("ay9p", "priority", "P1"), ("xmwb", "priority", "P1")]
+        )
+        self.assertEqual([], problems)
         self.assertEqual(
-            [r["plan"] for r in active],
-            ["alpha-rollout", "beta-widget", "gamma-probe", "delta-sweep",
-             "epsilon-ghost", "zeta-mismatch", "eta-warned", "theta-notrack"],
+            [["edit", "ay9p", "--priority", "1"]],
+            [argv for argv, _ in ops],
+            "xmwb is already P1 -- a no-op row must not produce a write",
         )
-        self.assertEqual([r["plan"] for r in archived], ["kappa-old", "lambda-open", "mu-none", "nu-gone"])
 
-    def test_header_separator_and_pre_marker_rows_are_skipped(self):
-        active, archived = reconcile.parse_readme_rows()
-        names = {r["plan"] for r in active} | {r["plan"] for r in archived}
-        self.assertNotIn("stray-before-marker", names)
-        self.assertNotIn("Plan", names)
-        self.assertNotIn("Plan (archived path)", names)
-        self.assertFalse([n for n in names if set(n) <= {"-", " ", ":"}])
+    def test_replanning_an_applied_changeset_is_empty(self):
+        rows = [("xmwb", "priority", "P1"), ("xmwb", "labels", "chore,infra")]
+        self.assertEqual(([], []), kata.plan(snapshot(), rows), "apply must be idempotent")
 
-    def test_issue_numbers_are_extracted_per_row(self):
-        active, archived = reconcile.parse_readme_rows()
-        by_plan = {r["plan"]: r["issues"] for r in active + archived}
-        self.assertEqual(by_plan["alpha-rollout"], [1])
-        self.assertEqual(by_plan["beta-widget"], [])
-        self.assertEqual(by_plan["mu-none"], [])
-        self.assertEqual(by_plan["nu-gone"], [22])
-
-
-class ReconcilePlanBodyIssue(GhCase):
-    def setUp(self):
-        self.plans = build_drift_tree(self.tmpdir())
-        point_reconcile_at(self, self.plans)
-
-    def test_clean_tracking_section_yields_the_issue_and_no_warning(self):
-        self.assertEqual(reconcile.plan_body_issue("alpha-rollout"), (1, None))
-
-    def test_epic_signal_before_the_lead_ref_still_parses_but_warns(self):
-        issue, warn = reconcile.plan_body_issue("eta-warned")
-        self.assertEqual(issue, 12)
-        self.assertIn("epic-flagged", warn)
-
-    def test_missing_tracking_section_yields_no_issue(self):
-        self.assertEqual(reconcile.plan_body_issue("theta-notrack"), (None, "no `## Tracking` section"))
-
-    def test_missing_folder_yields_no_plan_md(self):
-        self.assertEqual(reconcile.plan_body_issue("epsilon-ghost"), (None, "no plan.md"))
-
-
-class ReconcileDrift(GhCase):
-    def setUp(self):
-        self.plans = build_drift_tree(self.tmpdir())
-        point_reconcile_at(self, self.plans)
-        self.gh = self.install_gh(FakeGh(issues_all=DRIFT_STATES))
-
-    def test_every_drift_kind_is_reported_once(self):
-        code, out = run_main(reconcile, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 1)
-        found = {(d["kind"], d["plan"]) for d in payload["drift"]}
-        self.assertEqual(len(payload["drift"]), 8)  # set() alone would hide a duplicate
+    def test_labels_diff_into_add_and_remove(self):
+        ops, problems = kata.plan(snapshot(), [("xmwb", "labels", "infra,needs-plan")])
+        self.assertEqual([], problems)
         self.assertEqual(
-            found,
-            {
-                ("active-no-issue", "beta-widget"),
-                ("issue-missing", "gamma-probe"),
-                ("active-but-closed", "delta-sweep"),
-                ("row-no-folder", "epsilon-ghost"),
-                ("body-mismatch", "zeta-mismatch"),
-                ("archived-but-open", "lambda-open"),
-                ("issue-missing", "nu-gone"),
-                ("folder-no-row", "iota-orphan"),
-            },
+            [["label", "add", "xmwb", "needs-plan"], ["label", "rm", "xmwb", "chore"]],
+            [argv for argv, _ in ops],
         )
 
-    def test_body_mismatch_names_both_numbers(self):
-        _code, out = run_main(reconcile, ["--json"])
-        d = next(d for d in json.loads(out)["drift"] if d["kind"] == "body-mismatch")
-        self.assertEqual(d["issue"], 10)
-        self.assertIn("#11", d["detail"])
+    def test_a_blank_priority_clears_the_cell(self):
+        ops, _ = kata.plan(snapshot(), [("xmwb", "priority", "")])
+        self.assertEqual([["edit", "xmwb", "--priority", "-"]], [argv for argv, _ in ops])
 
-    def test_json_shape_carries_ok_warns_and_counts(self):
-        _code, out = run_main(reconcile, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(sorted(payload), ["counts", "drift", "ok", "warns"])
-        self.assertEqual(payload["counts"], {"active": 8, "archived": 4, "folders": 8})
+    def test_owner_assigns_and_unassigns(self):
+        ops, problems = kata.plan(snapshot(), [("ay9p", "owner", "you"), ("xmwb", "owner", "")])
+        self.assertEqual([], problems)
         self.assertEqual(
-            {w["plan"] for w in payload["warns"]},
-            {"epsilon-ghost", "eta-warned", "theta-notrack"},
+            [["assign", "ay9p", "you"], ["unassign", "xmwb"]], [argv for argv, _ in ops]
         )
-        # `ok` records only the "tracking issue is OPEN" check, so a row can be OK there
-        # and still carry folder/body drift.
+
+    def test_unknown_key_and_unknown_field_are_reported_not_guessed(self):
+        ops, problems = kata.plan(
+            snapshot(), [("zzzz", "priority", "P1"), ("ay9p", "impact", "High")]
+        )
+        self.assertEqual([], ops)
+        self.assertEqual(2, len(problems))
+        self.assertIn("not on this tracker", problems[0])
+        self.assertIn("no cell for field 'impact'", problems[1])
+
+    def test_a_status_row_is_refused_rather_than_written_somewhere_else(self):
+        ops, problems = kata.plan(snapshot(), [("ay9p", "status", "closed")])
+        self.assertEqual([], ops)
+        self.assertIn("not a changeset cell", problems[0])
+
+    def test_a_closed_item_still_resolves(self):
+        """apply re-resolves against every item, so a label on a closed item lands."""
+        ops, problems = kata.plan(snapshot(), [("c0ld", "labels", "chore,archived")])
+        self.assertEqual([], problems)
+        self.assertEqual([["label", "add", "c0ld", "archived"]], [argv for argv, _ in ops])
+
+
+class TrackerCalls(unittest.TestCase):
+    """The subprocess boundary: the argv built, and exit code as the contract."""
+
+    def completed(self, returncode=0, stdout="", stderr=""):
+        return mock.Mock(returncode=returncode, stdout=stdout, stderr=stderr)
+
+    def test_reads_are_json_and_project_scoped(self):
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed(stdout='{"issues": []}')
+            self.assertEqual({"issues": []}, kata._read(["list"], "demo"))
+        self.assertEqual(["kata", "list", "--project", "demo", "--json"], run.call_args[0][0])
+
+    def test_no_project_means_no_project_flag_at_all(self):
+        """Absent --project, the binary resolves the project from the workspace."""
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed(stdout="{}")
+            kata._read(["list"], None)
+        self.assertEqual(["kata", "list", "--json"], run.call_args[0][0])
+
+    def test_export_asks_for_every_row_not_the_default_page(self):
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed(stdout=json.dumps({"issues": ISSUES}))
+            snap = kata.fetch_snapshot(None, "all")
         self.assertEqual(
-            [line.split()[0] for line in payload["ok"]],
-            ["alpha-rollout", "epsilon-ghost", "zeta-mismatch", "eta-warned", "theta-notrack"],
+            ["kata", "list", "--status", "all", "--limit", "0", "--json"], run.call_args[0][0]
         )
+        self.assertEqual(5, len(snap["items"]))
 
-    def test_it_asks_gh_for_every_state(self):
-        run_main(reconcile, ["--json"])
-        listed = self.gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--state") + 1], "all")
-        self.assertEqual(listed[listed.index("--limit") + 1], "1000")
-        self.assertEqual(listed[listed.index("--json") + 1], "number,state")
+    def test_empty_read_output_is_an_empty_result_not_a_crash(self):
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed(stdout="  ")
+            self.assertEqual({}, kata._read(["list"], "demo"))
 
+    def test_a_failed_read_stops_the_run_and_surfaces_stderr(self):
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed(returncode=2, stderr="no such project")
+            with self.assertRaises(SystemExit) as caught:
+                kata._read(["list"], "demo")
+        self.assertIn("no such project", str(caught.exception))
 
-class ReconcileClean(GhCase):
-    def test_no_drift_exits_zero(self):
-        plans = build_clean_tree(self.tmpdir())
-        point_reconcile_at(self, plans)
-        self.install_gh(FakeGh(issues_all=[{"number": 1, "state": "OPEN"}]))
-        code, out = run_main(reconcile, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 0)
-        self.assertEqual(payload["drift"], [])
-        self.assertEqual(payload["counts"], {"active": 1, "archived": 0, "folders": 1})
-
-
-# ------------------------------------------------------------------------- sequence
-
-
-def _issue(number, title="Work item", labels=(), milestone=None):
-    return {
-        "number": number,
-        "title": title,
-        "labels": [{"name": n} for n in labels],
-        "milestone": {"title": milestone} if milestone else None,
-    }
-
-
-def _graph(blocked_by=(), blocking=(), children=()):
-    return {"blocked_by": list(blocked_by), "blocking": list(blocking), "children": list(children)}
-
-
-class SequenceClassify(unittest.TestCase):
-    DUE = {"m1": "2026-07-01"}
-
-    def test_on_hold_beats_a_blocking_edge(self):
-        tiers, _ = sequence.classify(
-            [_issue(1, labels=("on-hold:owner",), milestone="m1")],
-            self.DUE,
-            {1: _graph(blocked_by=[2])},
-            {1},
+    def test_writes_use_agent_output_and_fail_loudly(self):
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed()
+            kata._write(["label", "add", "ay9p", "needs-plan"], None)
+        self.assertEqual(
+            ["kata", "label", "add", "ay9p", "needs-plan", "--agent"], run.call_args[0][0]
         )
-        self.assertEqual([r["number"] for r in tiers["DEFERRED"]], [1])
-        self.assertEqual(tiers["BLOCKED"], [])
-
-    def test_an_open_blocker_sends_a_dated_planned_issue_to_blocked(self):
-        tiers, _ = sequence.classify([_issue(1, milestone="m1")], self.DUE, {1: _graph(blocked_by=[2])}, {1})
-        self.assertEqual([r["number"] for r in tiers["BLOCKED"]], [1])
-        self.assertEqual(tiers["NOW"], [])
-
-    def test_now_needs_a_dated_milestone_and_a_plan(self):
-        tiers, _ = sequence.classify([_issue(1, milestone="m1")], self.DUE, {}, {1})
-        self.assertEqual([r["number"] for r in tiers["NOW"]], [1])
-
-    def test_dated_milestone_without_a_plan_falls_to_next(self):
-        tiers, _ = sequence.classify([_issue(1, milestone="m1")], self.DUE, {}, set())
-        self.assertEqual([r["number"] for r in tiers["NEXT"]], [1])
-
-    def test_plan_on_an_undated_milestone_falls_to_next(self):
-        tiers, _ = sequence.classify([_issue(1, milestone="m9")], self.DUE, {}, {1})
-        self.assertEqual([r["number"] for r in tiers["NEXT"]], [1])
-
-    def test_epics_are_excluded_from_every_tier_and_listed(self):
-        tiers, epics = sequence.classify(
-            [_issue(1, title="Tracking: the rollout", milestone="m1"), _issue(2, milestone="m1")],
-            self.DUE,
-            {},
-            {1, 2},
-        )
-        self.assertEqual(epics, [1])
-        self.assertEqual([r["number"] for r in tiers["NOW"]], [2])
-
-    def test_row_carries_gates_leverage_and_due(self):
-        tiers, _ = sequence.classify(
-            [_issue(3, labels=("gate:owner", "chore"), milestone="m1")],
-            self.DUE,
-            {3: _graph(blocking=[4, 5], children=[6])},
-            {3},
-        )
-        row = tiers["NOW"][0]
-        self.assertEqual(row["gates"], ["gate:owner"])
-        self.assertEqual(row["leverage"], 3)
-        self.assertEqual(row["due"], "2026-07-01")
-
-    def test_undated_milestone_row_gets_the_sentinel_due(self):
-        tiers, _ = sequence.classify([_issue(1)], self.DUE, {}, set())
-        self.assertEqual(tiers["NEXT"][0]["due"], sequence.UNDATED)
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.completed(returncode=1, stderr="rejected")
+            with self.assertRaises(SystemExit):
+                kata._write(["label", "add", "ay9p", "needs-plan"], None)
 
 
-class SequenceSortKey(unittest.TestCase):
-    def _row(self, number, due=sequence.UNDATED, gates=(), leverage=0, planned=False):
-        return {"number": number, "due": due, "gates": list(gates), "leverage": leverage, "planned": planned}
+class AdapterCli(unittest.TestCase):
+    def listed(self, issues=ISSUES):
+        return mock.Mock(returncode=0, stdout=json.dumps({"issues": issues}), stderr="")
 
-    def test_ordering_is_due_then_gates_then_leverage_then_plan_then_number(self):
-        rows = [
-            self._row(5, due="2026-07-01"),
-            self._row(4, due="2026-06-01"),
-            self._row(3, due="2026-07-01", gates=["gate:owner"]),
-            self._row(2, due="2026-07-01", leverage=9),
-            self._row(1, due="2026-07-01", planned=True),
-        ]
-        self.assertEqual([r["number"] for r in sorted(rows, key=sequence.sort_key)], [4, 3, 2, 1, 5])
+    def test_export_writes_a_file_and_summarises_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "snap.json"
+            with mock.patch.object(kata.subprocess, "run") as run:
+                run.return_value = self.listed()
+                buffer = io.StringIO()
+                with contextlib.redirect_stdout(buffer):
+                    code = kata.main(
+                        ["export", "--project", "demo", "--status", "all", "--out", str(out)]
+                    )
+            self.assertEqual(0, code)
+            self.assertEqual(f"5 items (4 open, 1 closed) -> {out}", buffer.getvalue().strip())
+            self.assertEqual(5, len(json.loads(out.read_text())["items"]))
 
-    def test_number_breaks_an_otherwise_exact_tie(self):
-        rows = [self._row(9), self._row(2)]
-        self.assertEqual([r["number"] for r in sorted(rows, key=sequence.sort_key)], [2, 9])
+    def test_export_without_out_prints_the_snapshot(self):
+        with mock.patch.object(kata.subprocess, "run") as run:
+            run.return_value = self.listed([])
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                kata.main(["export"])
+        self.assertEqual([], json.loads(buffer.getvalue())["items"])
+
+    def test_apply_is_dry_run_unless_asked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            changeset = Path(tmp) / "c.tsv"
+            changeset.write_text("key\tfield\tvalue\nay9p\tlabels\tneeds-plan\n")
+            with mock.patch.object(kata.subprocess, "run") as run:
+                run.return_value = self.listed()
+                buffer = io.StringIO()
+                with contextlib.redirect_stdout(buffer):
+                    code = kata.main(["apply", "--changeset", str(changeset)])
+            self.assertEqual(0, code)
+            self.assertIn("DRY", buffer.getvalue())
+            self.assertEqual(1, run.call_count, "a dry run reads the tracker and writes nothing")
+
+    def test_an_unresolvable_row_exits_non_zero_while_the_rest_are_planned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            changeset = Path(tmp) / "c.tsv"
+            changeset.write_text("zzzz\tlabels\tx\nay9p\tlabels\tneeds-plan\n")
+            with mock.patch.object(kata.subprocess, "run") as run:
+                run.return_value = self.listed()
+                buffer, errors = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(errors):
+                    code = kata.main(["apply", "--changeset", str(changeset)])
+        self.assertEqual(1, code)
+        self.assertIn("SKIP", errors.getvalue())
+        self.assertIn("ay9p +needs-plan", buffer.getvalue())
+
+    def test_a_missing_subcommand_is_a_usage_error(self):
+        for argv in ([], ["apply"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit) as caught:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    kata.main(argv)
+            self.assertEqual(2, caught.exception.code)
+
+    def test_help_needs_no_tracker_binary(self):
+        with self.assertRaises(SystemExit) as caught:
+            with contextlib.redirect_stdout(io.StringIO()):
+                kata.main(["--help"])
+        self.assertEqual(0, caught.exception.code)
 
 
-def _graph_page(nodes, has_next=False, cursor=None):
-    return {
-        "data": {
-            "repository": {
-                "issues": {"nodes": nodes, "pageInfo": {"hasNextPage": has_next, "endCursor": cursor}}
-            }
-        }
-    }
+class SnapshotLoader(unittest.TestCase):
+    """tracker.py: --snapshot wins, otherwise the named adapter is invoked."""
 
+    def args(self, **overrides):
+        defaults = {"snapshot": None, "adapter": "kata", "project": None, "status": "open"}
+        defaults.update(overrides)
+        return mock.Mock(**defaults)
 
-def _graph_node(number, blocked_by=(), blocking=(), children=()):
-    return {
-        "number": number,
-        "blockedBy": {"nodes": [{"number": n, "state": s} for n, s in blocked_by]},
-        "blocking": {"nodes": [{"number": n} for n in blocking]},
-        "subIssues": {"nodes": [{"number": n} for n in children]},
-    }
+    def test_a_snapshot_file_is_read_straight_off_disk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "snap.json"
+            payload = {"tracker": {"name": "demo", "backend": "kata"}, "items": []}
+            path.write_text(json.dumps(payload))
+            self.assertEqual(payload, tracker.load_snapshot(self.args(snapshot=str(path))))
 
-
-class SequenceFetching(GhCase):
-    def test_graph_paginates_and_keeps_only_open_blockers(self):
-        gh = self.install_gh(
-            FakeGh(
-                graphql_pages=[
-                    _graph_page([_graph_node(1, blocked_by=[(2, "OPEN"), (3, "CLOSED")])], has_next=True, cursor="C1"),
-                    _graph_page([_graph_node(4, blocking=[5], children=[6])]),
-                ]
+    def test_without_a_snapshot_the_adapter_is_invoked(self):
+        payload = {"tracker": {"name": "demo", "backend": "kata"}, "items": []}
+        with mock.patch.object(tracker.subprocess, "run") as run:
+            run.return_value = mock.Mock(returncode=0, stdout=json.dumps(payload), stderr="")
+            self.assertEqual(
+                payload, tracker.load_snapshot(self.args(project="demo", status="all"))
             )
-        )
-        graph = sequence.fetch_graph()
-        self.assertEqual(graph[1]["blocked_by"], [2])
-        self.assertEqual(graph[4], {"blocked_by": [], "blocking": [5], "children": [6]})
-        pages = gh.argv_starting(["gh", "api", "graphql"])
-        self.assertEqual(len(pages), 2)
-        self.assertIn("-F", pages[0])
-        self.assertEqual(pages[0][pages[0].index("-F") + 1], "cursor=null")
-        self.assertIn("cursor=C1", pages[1])
+        argv = run.call_args[0][0]
+        self.assertEqual(sys.executable, argv[0])
+        self.assertTrue(argv[1].endswith(str(Path("adapters") / "kata.py")), argv[1])
+        self.assertEqual(["export", "--status", "all", "--project", "demo"], argv[2:])
 
-    def test_milestone_due_dates_are_parsed_from_tsv_and_truncated(self):
-        gh = self.install_gh(FakeGh(milestones_tsv="m1\t2026-07-01T00:00:00Z\nm2\t2026-08-15T12:00:00Z\n"))
-        self.assertEqual(sequence.fetch_milestone_due(), {"m1": "2026-07-01", "m2": "2026-08-15"})
-        api = gh.argv_starting(["gh", "api"])[0]
-        self.assertEqual(api[2], "repos/acme/widgets/milestones")
-
-
-class SequenceMain(GhCase):
-    def test_json_shape_and_exit_zero_even_with_blocked_work(self):
-        plans = build_clean_tree(self.tmpdir())
-        point_reconcile_at(self, plans)
-        gh = self.install_gh(
-            FakeGh(
-                issues_open=[_issue(1, milestone="m1"), _issue(2, title="Tracking: epic")],
-                milestones_tsv="m1\t2026-07-01T00:00:00Z\n",
-                graphql_pages=[_graph_page([_graph_node(1, blocked_by=[(3, "OPEN")])])],
+    def test_no_project_is_not_passed_down_to_the_adapter(self):
+        with mock.patch.object(tracker.subprocess, "run") as run:
+            run.return_value = mock.Mock(
+                returncode=0, stdout='{"tracker": {}, "items": []}', stderr=""
             )
-        )
-        code, out = run_main(sequence, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 0)
-        self.assertEqual(sorted(payload), ["epics", "tiers"])
-        self.assertEqual(payload["epics"], [2])
-        self.assertEqual([r["number"] for r in payload["tiers"]["BLOCKED"]], [1])
-        self.assertEqual(sorted(payload["tiers"]), ["BLOCKED", "DEFERRED", "NEXT", "NOW"])
-        listed = gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--limit") + 1], "1000")
-        self.assertEqual(listed[listed.index("--json") + 1], "number,title,labels,milestone")
+            tracker.load_snapshot(self.args())
+        self.assertEqual(["export", "--status", "open"], run.call_args[0][0][2:])
+
+    def test_a_failing_adapter_stops_the_run(self):
+        with mock.patch.object(tracker.subprocess, "run") as run:
+            run.return_value = mock.Mock(returncode=3, stdout="", stderr="daemon unreachable")
+            with self.assertRaises(SystemExit) as caught:
+                tracker.load_snapshot(self.args())
+        self.assertIn("daemon unreachable", str(caught.exception))
+
+    def test_an_unknown_adapter_names_the_path_it_looked_for(self):
+        with self.assertRaises(SystemExit) as caught:
+            tracker.load_snapshot(self.args(adapter="nope"))
+        self.assertIn("nope.py", str(caught.exception))
+
+    def test_malformed_json_is_loud_rather_than_an_empty_board(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "snap.json"
+            path.write_text("{not json")
+            with self.assertRaises(SystemExit) as caught:
+                tracker.load_snapshot(self.args(snapshot=str(path)))
+        self.assertIn(str(path), str(caught.exception))
+
+    def test_a_snapshot_missing_its_contract_keys_is_refused(self):
+        for payload in ("{}", '{"items": []}', '{"tracker": {}}', '{"tracker": {}, "items": {}}'):
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "snap.json"
+                path.write_text(payload)
+                with self.assertRaises(SystemExit) as caught:
+                    tracker.load_snapshot(self.args(snapshot=str(path)))
+                self.assertIn("not a snapshot", str(caught.exception))
+
+    def test_the_flags_land_on_a_parser_with_the_defaults_the_desk_expects(self):
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        tracker.add_tracker_args(parser)
+        args = parser.parse_args([])
+        self.assertEqual("kata", args.adapter)
+        self.assertEqual("open", args.status)
+        self.assertIsNone(args.snapshot)
+        self.assertIsNone(args.project)
+
+        other = argparse.ArgumentParser()
+        tracker.add_tracker_args(other, default_status="all")
+        self.assertEqual("all", other.parse_args([]).status)
 
 
-# --------------------------------------------------------------------- deps-suggest
+# ------------------------------------------------- the analysis scripts' fixtures
+def make_item(key, **overrides):
+    """One contract-shaped snapshot item, every cell explicit."""
+    base = {
+        "key": key,
+        "title": f"work on {key}",
+        "state": "open",
+        "kind": "issue",
+        "labels": [],
+        "body": "",
+        "parent": None,
+        "blocked_by": [],
+        "priority": None,
+    }
+    base.update(overrides)
+    return base
 
 
-class DepsHarvest(unittest.TestCase):
-    ISSUES = [
-        {"number": 1, "title": "a", "body": "This one is blocked by #1 somehow."},
-        {"number": 2, "title": "b", "body": "It depends on #5 for the latch."},
-        {"number": 3, "title": "c", "body": "Part of it; requires #6 for the latch."},
-        {"number": 4, "title": "d", "body": "Work is blocked by #9 today and still waiting on #9 tomorrow."},
-        {"number": 5, "title": "e", "body": "This one needs #2 before it starts."},
-    ]
+def make_snapshot(*items):
+    return {"tracker": {"name": "demo", "backend": "kata"}, "items": list(items)}
 
-    def harvest(self, native=frozenset()):
-        return deps_suggest.harvest(self.ISSUES, set(native))
 
-    def test_self_reference_is_dropped(self):
-        self.assertNotIn((1, 1), [(c["blocked"], c["blocker"]) for c in self.harvest()])
+CONFORMANT_BODY = "## Acceptance criteria\n- it works\n\n## Dependencies & gates\n- none\n"
 
-    def test_an_existing_native_edge_is_dropped(self):
-        self.assertNotIn((2, 5), [(c["blocked"], c["blocker"]) for c in self.harvest({(2, 5)})])
 
-    def test_the_same_edge_without_a_native_record_is_kept(self):
-        self.assertIn((2, 5), [(c["blocked"], c["blocker"]) for c in self.harvest()])
+def write_snapshot(directory, snapshot):
+    path = Path(directory) / "snapshot.json"
+    path.write_text(json.dumps(snapshot))
+    return str(path)
 
-    def test_hierarchy_phrasing_near_the_ref_is_dropped(self):
-        self.assertNotIn((3, 6), [(c["blocked"], c["blocker"]) for c in self.harvest()])
 
-    def test_a_repeated_edge_is_emitted_once(self):
-        pairs = [(c["blocked"], c["blocker"]) for c in self.harvest()]
-        self.assertEqual(pairs.count((4, 9)), 1)
+@contextlib.contextmanager
+def desk(readme: str, plans: dict):
+    """A plans desk in a tempdir: README.md plus <slug>/plan.md for each entry.
 
-    def test_blocker_open_flag_tracks_the_open_set(self):
-        by_pair = {(c["blocked"], c["blocker"]): c for c in self.harvest()}
-        self.assertFalse(by_pair[(4, 9)]["blocker_open"])
-        self.assertTrue(by_pair[(5, 2)]["blocker_open"])
+    Both `reconcile` globals are patched, and `coverage` reads the desk through the
+    same module object, so one patch covers every caller.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "README.md").write_text(readme)
+        for slug, body in plans.items():
+            (root / slug).mkdir()
+            if body is not None:
+                (root / slug / "plan.md").write_text(body)
+        with mock.patch.object(reconcile, "PLANS_DIR", root), mock.patch.object(
+            reconcile, "README", root / "README.md"
+        ):
+            yield root
 
-    def test_candidates_are_sorted_by_blocked_then_blocker(self):
-        pairs = [(c["blocked"], c["blocker"]) for c in self.harvest()]
-        self.assertEqual(pairs, sorted(pairs))
 
-class DepsSnippet(unittest.TestCase):
-    """The context window is +/-24 chars around the match, and EPIC_RE is applied to
-    that window -- so how far the window reaches decides which candidates survive."""
+def run_main(module, argv):
+    """Run a script's main() in-process; returns (exit code, stdout)."""
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        code = module.main(argv)
+    return code, buffer.getvalue()
 
-    SIGNAL = "blocked by #9"
-    NEAR, FAR = "NEARMARK", "FARMARK"
-    # FAR starts 40 chars before the match, NEAR 20; the newline proves the collapse.
-    BODY = (
-        FAR
-        + "." * (40 - 20 - len(FAR))
-        + NEAR
-        + "." * (20 - len(NEAR) - 1)
-        + "\n"
-        + SIGNAL
-        + " and some trailing prose that runs past the window"
+
+class Conformance(unittest.TestCase):
+    def test_a_body_with_both_required_sections_conforms(self):
+        self.assertEqual([], conformance.audit_item(make_item("a1", body=CONFORMANT_BODY)))
+
+    def test_missing_gates_alone_is_minor(self):
+        item = make_item("a1", body="## Acceptance criteria\n- it works\n")
+        missing = conformance.audit_item(item)
+        self.assertEqual(["Dependencies & gates"], missing)
+        self.assertEqual("MINOR", conformance.severity(missing, epic=False))
+
+    def test_missing_acceptance_criteria_is_critical(self):
+        item = make_item("a1", body="## Dependencies & gates\n- none\n")
+        missing = conformance.audit_item(item)
+        self.assertEqual(["Acceptance criteria"], missing)
+        self.assertEqual("CRITICAL", conformance.severity(missing, epic=False))
+
+    def test_a_body_with_no_headings_at_all_is_critical(self):
+        missing = conformance.audit_item(make_item("a1", body="just a paragraph"))
+        self.assertEqual(1, len(missing))
+        self.assertIn("no headings", missing[0])
+        self.assertEqual("CRITICAL", conformance.severity(missing, epic=False))
+
+    def test_an_epic_is_judged_on_its_close_condition(self):
+        epic = make_item("e1", kind="epic", body="## Close when\n- children land\n")
+        self.assertEqual([], conformance.audit_item(epic))
+        bare = make_item("e2", kind="epic", body="## Acceptance criteria\n- x\n")
+        missing = conformance.audit_item(bare)
+        self.assertEqual("EPIC", conformance.severity(missing, epic=True))
+
+    def test_alternate_wordings_of_the_headings_are_accepted(self):
+        item = make_item("a1", body="### Definition of done\n- x\n\n### Depends on\n- y\n")
+        self.assertEqual([], conformance.audit_item(item))
+
+    def test_closed_items_are_not_audited(self):
+        snapshot = make_snapshot(make_item("c1", state="closed", body="nothing here"))
+        result = conformance.run(snapshot)
+        self.assertEqual({"total": 0, "bad": []}, result)
+
+    def test_exit_codes_and_json_are_the_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            clean = write_snapshot(tmp, make_snapshot(make_item("a1", body=CONFORMANT_BODY)))
+            code, out = run_main(conformance, ["--snapshot", clean])
+            self.assertEqual(0, code)
+            self.assertIn("1/1", out)
+
+            path = Path(tmp) / "dirty.json"
+            path.write_text(json.dumps(make_snapshot(make_item("b2", body="prose"))))
+            code, out = run_main(conformance, ["--snapshot", str(path), "--json"])
+            self.assertEqual(1, code)
+            payload = json.loads(out)
+            self.assertEqual("CRITICAL", payload["bad"][0]["severity"])
+            self.assertEqual("b2", payload["bad"][0]["key"])
+
+
+class Coverage(unittest.TestCase):
+    README = (
+        "ACTIVE plans:\n\n"
+        "| Plan | Tracker ref(s) | Status |\n| ---- | ---- | ---- |\n"
+        "| alpha | `xmwb` | drafting |\n"
     )
 
-    def snippet(self):
-        start = self.BODY.index(self.SIGNAL)
-        self.assertEqual(start, 40)
-        return deps_suggest.snippet(self.BODY, start, start + len(self.SIGNAL))
-
-    def test_context_20_chars_before_the_match_is_kept(self):
-        self.assertIn(self.NEAR, self.snippet())
-
-    def test_context_40_chars_before_the_match_is_outside_the_window(self):
-        self.assertNotIn(self.FAR, self.snippet())
-
-    def test_context_after_the_match_stops_at_the_window_too(self):
-        snip = self.snippet()
-        self.assertIn("and some trailing", snip)
-        self.assertNotIn("past the window", snip)
-
-    def test_the_snippet_is_collapsed_to_one_line(self):
-        self.assertNotIn("\n", self.snippet())
-
-
-class DepsFetchNativeEdges(GhCase):
-    def test_edges_accumulate_across_pages(self):
-        gh = self.install_gh(
-            FakeGh(
-                graphql_pages=[
-                    {"data": {"repository": {"issues": {
-                        "nodes": [{"number": 1, "blockedBy": {"nodes": [{"number": 2}]}}],
-                        "pageInfo": {"hasNextPage": True, "endCursor": "C1"}}}}},
-                    {"data": {"repository": {"issues": {
-                        "nodes": [{"number": 3, "blockedBy": {"nodes": [{"number": 4}, {"number": 5}]}}],
-                        "pageInfo": {"hasNextPage": False, "endCursor": None}}}}},
-                ]
-            )
+    def snapshot(self):
+        return make_snapshot(
+            make_item("xmwb", labels=["chore"]),
+            make_item("ay9p", labels=["documentation"]),
+            make_item("p937", kind="epic"),
+            make_item("c0ld", state="closed"),
+            make_item("bug1", labels=["bug"], title="fix a typo"),
+            make_item("bug2", labels=["bug"], title="refactor the importer"),
         )
-        self.assertEqual(deps_suggest.fetch_native_edges(), {(1, 2), (3, 4), (3, 5)})
-        pages = gh.argv_starting(["gh", "api", "graphql"])
-        self.assertEqual(pages[0][pages[0].index("-F") + 1], "cursor=null")
-        self.assertIn("cursor=C1", pages[1])
 
-
-class DepsMain(GhCase):
-    def test_json_is_the_candidate_list_and_the_advisory_never_gates(self):
-        gh = self.install_gh(
-            FakeGh(
-                issues_open=[{"number": 7, "title": "t", "body": "This is blocked by #8 for now."}],
-                graphql_pages=[{"data": {"repository": {"issues": {
-                    "nodes": [], "pageInfo": {"hasNextPage": False, "endCursor": None}}}}}],
-            )
-        )
-        code, out = run_main(deps_suggest, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 0)
-        self.assertEqual(payload[0]["blocked"], 7)
-        self.assertEqual(payload[0]["blocker"], 8)
-        self.assertFalse(payload[0]["blocker_open"])
-        listed = gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--limit") + 1], "1000")
-        self.assertEqual(listed[listed.index("--json") + 1], "number,title,body")
-
-    def test_exit_is_zero_with_no_candidates_too(self):
-        self.install_gh(
-            FakeGh(
-                issues_open=[{"number": 7, "title": "t", "body": "nothing here"}],
-                graphql_pages=[{"data": {"repository": {"issues": {
-                    "nodes": [], "pageInfo": {"hasNextPage": False, "endCursor": None}}}}}],
-            )
-        )
-        code, out = run_main(deps_suggest, ["--json"])
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out), [])
-
-
-# ---------------------------------------------------------------------- sync-bodies
-
-
-class SyncNormalize(unittest.TestCase):
-    def test_crlf_becomes_lf(self):
-        self.assertEqual(sync_bodies.normalize("a\r\nb\r\n"), "a\nb\n")
-
-    def test_trailing_whitespace_per_line_is_stripped(self):
-        self.assertEqual(sync_bodies.normalize("a   \nb\t\n"), "a\nb\n")
-
-    def test_trailing_blank_lines_collapse_to_one_newline(self):
-        self.assertEqual(sync_bodies.normalize("a\n\n\n\n"), "a\n")
-
-    def test_a_body_with_no_trailing_newline_gains_one(self):
-        self.assertEqual(sync_bodies.normalize("a"), "a\n")
-
-
-class SyncShortDiff(unittest.TestCase):
-    def test_a_long_diff_is_capped_with_a_remainder_line(self):
-        local = "\n".join(f"local {n}" for n in range(40)) + "\n"
-        remote = "\n".join(f"remote {n}" for n in range(40)) + "\n"
-        lines = sync_bodies.short_diff(local, remote)
-        self.assertEqual(len(lines), sync_bodies.DIFF_CAP + 1)
-        self.assertTrue(lines[-1].startswith("... ("))
-        self.assertTrue(lines[-1].endswith("more diff lines)"))
-
-    def test_a_short_diff_is_returned_whole(self):
-        lines = sync_bodies.short_diff("a\n", "b\n")
-        self.assertLessEqual(len(lines), sync_bodies.DIFF_CAP)
-        self.assertIn("+b", lines)
-
-
-def build_sync_tree(base: Path) -> Path:
-    plans = base / "plans"
-    plans.mkdir()
-    (plans / "README.md").write_text("## ACTIVE plans\n")
-    write_plan(plans, "s-clean", "Tracking issue: #1", body="Same body\n")
-    write_plan(plans, "s-drift", "Tracking issue: #2", body="Local body\n")
-    write_plan(plans, "s-nofile", "Tracking issue: #3")
-    write_plan(plans, "s-noissue", None)
-    return plans
-
-
-SYNC_BODIES = {1: "Same body\n", 2: "Remote body\n", 3: "Seeded from remote\n"}
-
-
-class SyncBodies(GhCase):
-    def setUp(self):
-        self.plans = build_sync_tree(self.tmpdir())
-        point_reconcile_at(self, self.plans)
-        self.gh = self.install_gh(FakeGh(bodies=SYNC_BODIES))
-
-    def test_classify_covers_all_four_statuses(self):
-        statuses = {slug: sync_bodies.classify(slug)["status"] for slug in sorted(reconcile.disk_folders())}
+    def test_the_backlog_is_open_non_epic_items_with_no_plan_folder(self):
+        with desk(self.README, {"alpha": "## Tracking\n\n`xmwb`\n"}):
+            result = pd_coverage.compute(self.snapshot())
+        self.assertEqual(["ay9p", "bug1", "bug2"], [u["key"] for u in result["unplanned"]])
+        self.assertEqual(1, result["planned_count"])
         self.assertEqual(
-            statuses,
-            {
-                "s-clean": "in-sync",
-                "s-drift": "DIFFERS",
-                "s-nofile": "no issue-body.md",
-                "s-noissue": "no tracking issue",
-            },
+            4, result["non_epic_count"], "epics and closed items are not planning backlog"
         )
 
-    def test_json_shape_and_gate_on_drift(self):
-        code, out = run_main(sync_bodies, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 1)
-        self.assertEqual(
-            payload,
-            [
-                {"slug": "s-clean", "issue": 1, "status": "in-sync"},
-                {"slug": "s-drift", "issue": 2, "status": "DIFFERS"},
-                {"slug": "s-nofile", "issue": 3, "status": "no issue-body.md"},
-                {"slug": "s-noissue", "issue": None, "status": "no tracking issue"},
-            ],
-        )
+    def test_docs_and_small_bugs_are_tagged_maybe_trivial_not_dropped(self):
+        with desk(self.README, {"alpha": "## Tracking\n\n`xmwb`\n"}):
+            result = pd_coverage.compute(self.snapshot())
+        trivial = {u["key"]: u["maybe_trivial"] for u in result["unplanned"]}
+        self.assertTrue(trivial["ay9p"], "documentation")
+        self.assertTrue(trivial["bug1"], "a small-looking bug")
+        self.assertFalse(trivial["bug2"], "a broad-scope title is not trivial")
 
-    def test_no_drift_exits_zero(self):
-        (self.plans / "s-drift" / "issue-body.md").write_text("Remote body\n")
-        code, _out = run_main(sync_bodies, ["--json"])
-        self.assertEqual(code, 0)
+    def test_a_changeset_proposes_needs_plan_on_the_full_label_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snapshot = write_snapshot(tmp, self.snapshot())
+            changeset = Path(tmp) / "changeset.tsv"
+            with desk(self.README, {"alpha": "## Tracking\n\n`xmwb`\n"}):
+                code, _ = run_main(
+                    pd_coverage, ["--snapshot", snapshot, "--changeset", str(changeset)]
+                )
+            self.assertEqual(1, code)
+            lines = changeset.read_text().splitlines()
+        self.assertEqual("key\tfield\tvalue", lines[0])
+        self.assertIn("ay9p\tlabels\tdocumentation,needs-plan", lines)
+        self.assertIn("bug1\tlabels\tbug,needs-plan", lines)
+        self.assertEqual(4, len(lines), "one row per uncovered item, header aside")
 
-    def test_push_edits_only_the_drifting_issue(self):
-        code, _out = run_main(sync_bodies, ["--push"])
-        edits = self.gh.argv_starting(["gh", "issue", "edit"])
-        self.assertEqual(code, 0)
-        self.assertEqual(len(edits), 1)
-        self.assertEqual(edits[0][3], "2")
-        self.assertEqual(edits[0][edits[0].index("--body-file") + 1], str(self.plans / "s-drift" / "issue-body.md"))
+    def test_a_fully_covered_desk_exits_clean(self):
+        readme = self.README + "| beta | `ay9p` | drafting |\n"
+        plans = {"alpha": "## Tracking\n\n`xmwb`\n", "beta": "## Tracking\n\n`ay9p`\n"}
+        snapshot = make_snapshot(make_item("xmwb"), make_item("ay9p"))
+        with tempfile.TemporaryDirectory() as tmp, desk(readme, plans):
+            code, out = run_main(pd_coverage, ["--snapshot", write_snapshot(tmp, snapshot)])
+        self.assertEqual(0, code)
+        self.assertIn("no plan", out)
 
-    def test_the_body_read_is_the_exact_documented_gh_invocation(self):
-        sync_bodies.classify("s-drift")
-        self.assertEqual(
-            self.gh.argv_starting(["gh", "issue", "view"])[0],
-            ["gh", "issue", "view", "2", "--json", "body", "--jq", ".body"],
-        )
-
-    def test_pull_seeds_every_folder_that_has_a_tracking_issue(self):
-        code, _out = run_main(sync_bodies, ["--pull"])
-        self.assertEqual(code, 0)
-        self.assertEqual((self.plans / "s-drift" / "issue-body.md").read_text(), "Remote body\n")
-        self.assertEqual((self.plans / "s-nofile" / "issue-body.md").read_text(), "Seeded from remote\n")
-        self.assertFalse((self.plans / "s-noissue" / "issue-body.md").exists())
-        self.assertEqual(self.gh.argv_starting(["gh", "issue", "edit"]), [])
+    def test_json_output_is_machine_parseable(self):
+        with tempfile.TemporaryDirectory() as tmp, desk(self.README, {"alpha": "## Tracking\n\n`xmwb`\n"}):
+            code, out = run_main(
+                pd_coverage, ["--snapshot", write_snapshot(tmp, self.snapshot()), "--json"]
+            )
+        self.assertEqual(1, code)
+        self.assertEqual(3, len(json.loads(out)["unplanned"]))
 
 
-# ------------------------------------------------------------------- evidence-audit
+class ReconcileRefs(unittest.TestCase):
+    """The tracker-agnostic ref rule: the first token that is a key in the snapshot."""
+
+    KEYS = {"xmwb", "p937", "ABC-12"}
+
+    def test_a_bare_token_resolves(self):
+        self.assertEqual("xmwb", reconcile.first_known_ref("| `xmwb` | drafting |", self.KEYS))
+
+    def test_a_qualified_ref_resolves_to_its_key(self):
+        self.assertEqual("xmwb", reconcile.first_known_ref("demo#xmwb (epic p937)", self.KEYS))
+
+    def test_a_hyphenated_key_survives_tokenizing(self):
+        self.assertEqual("ABC-12", reconcile.first_known_ref("see ABC-12 for detail", self.KEYS))
+
+    def test_the_first_known_key_wins_over_later_ones(self):
+        self.assertEqual("p937", reconcile.first_known_ref("p937 then xmwb", self.KEYS))
+
+    def test_a_token_that_is_not_a_key_is_not_a_ref(self):
+        self.assertIsNone(reconcile.first_known_ref("tracked on the board, #412", self.KEYS))
 
 
-def _closed(number, closed_at, prs=(), comments=()):
-    return {
-        "number": number,
-        "title": f"Closed item {number}",
-        "closedAt": closed_at,
-        "closedByPullRequestsReferences": [{"number": p} for p in prs],
-        "comments": [{"body": c} for c in comments],
+class Reconcile(unittest.TestCase):
+    README = (
+        "# plans\n\nACTIVE plans (associated with an OPEN item):\n\n"
+        "| Plan | Tracker ref(s) | Status |\n| ---- | ---- | ---- |\n"
+        "| alpha | `xmwb` | drafting |\n"
+        "| beta | `c0ld` | drafting |\n"
+        "| gamma | `ay9p` | drafting |\n"
+        "| delta | `xmwb` | drafting |\n"
+        "| epsilon | `nope1` | drafting |\n"
+        "| zeta | - | drafting |\n\n"
+        "ARCHIVED (item closed; plan moved):\n\n"
+        "| Plan (archived path) | Tracker ref(s) | Why archived |\n| ---- | ---- | ---- |\n"
+        "| old-one | `p937` | shipped |\n"
+        "| enablement | (no ref) | never tracked |\n"
+    )
+    PLANS = {
+        "alpha": "## Tracking\n\ndemo#xmwb\n",
+        "beta": "## Tracking\n\n`c0ld`\n",
+        "delta": "## Tracking\n\n`p937`\n",  # README says xmwb -> mismatch
+        "epsilon": "## Tracking\n\nnot filled in yet\n",
+        "zeta": "## Notes\n\nno tracking section\n",
+        "orphan": "## Tracking\n\n`ay9p`\n",  # on disk, no ACTIVE row
     }
 
-
-CLOSED_ISSUES = [
-    _closed(11, "2026-07-05T10:00:00Z", prs=[100]),
-    _closed(12, "2026-07-04T10:00:00Z", comments=["verified against staging"]),
-    _closed(13, "2026-07-03T10:00:00Z", comments=["looks fine to me"]),
-    _closed(14, "2026-06-01T10:00:00Z"),
-    _closed(15, "2026-07-02T10:00:00Z", comments=[]),
-]
-
-
-class EvidenceDetection(unittest.TestCase):
-    def test_a_closing_pr_is_strong_evidence(self):
-        self.assertTrue(evidence_audit.closed_with_evidence(CLOSED_ISSUES[0]))
-
-    def test_an_evidence_bearing_comment_is_soft_evidence(self):
-        self.assertTrue(evidence_audit.closed_with_evidence(CLOSED_ISSUES[1]))
-
-    def test_a_bare_comment_is_not_evidence(self):
-        self.assertFalse(evidence_audit.closed_with_evidence(CLOSED_ISSUES[2]))
-
-    def test_no_pr_and_no_comments_is_not_evidence(self):
-        self.assertFalse(evidence_audit.closed_with_evidence(CLOSED_ISSUES[4]))
-
-
-class EvidenceAudit(unittest.TestCase):
-    def test_flagged_is_sorted_by_descending_number(self):
-        result = evidence_audit.audit(CLOSED_ISSUES, None)
-        self.assertEqual(result["checked"], 5)
-        self.assertEqual([f["number"] for f in result["flagged"]], [15, 14, 13])
-
-    def test_since_filters_on_the_closed_date(self):
-        result = evidence_audit.audit(CLOSED_ISSUES, "2026-07-01")
-        self.assertEqual(result["checked"], 4)
-        self.assertEqual([f["number"] for f in result["flagged"]], [15, 13])
-
-    def test_the_boundary_date_is_inclusive(self):
-        result = evidence_audit.audit(CLOSED_ISSUES, "2026-06-01")
-        self.assertEqual(result["checked"], 5)
-
-
-class EvidenceMain(GhCase):
-    def test_json_shape_and_gate_on_flags(self):
-        gh = self.install_gh(FakeGh(issues_closed=CLOSED_ISSUES))
-        code, out = run_main(evidence_audit, ["--json"])
-        payload = json.loads(out)
-        self.assertEqual(code, 1)
-        self.assertEqual(sorted(payload), ["checked", "flagged"])
-        self.assertEqual(payload["flagged"][0], {"number": 15, "title": "Closed item 15", "closedAt": "2026-07-02T10:00:00Z"})
-        listed = gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--state") + 1], "closed")
-        self.assertEqual(listed[listed.index("--limit") + 1], str(evidence_audit.DEFAULT_LIMIT))
-        self.assertEqual(
-            listed[listed.index("--json") + 1],
-            "number,title,closedAt,closedByPullRequestsReferences,comments",
+    def snapshot(self):
+        return make_snapshot(
+            make_item("xmwb"),
+            make_item("ay9p"),
+            make_item("p937", state="open"),
+            make_item("c0ld", state="closed"),
         )
 
-    def test_limit_reaches_the_gh_argv(self):
-        gh = self.install_gh(FakeGh(issues_closed=CLOSED_ISSUES))
-        run_main(evidence_audit, ["--limit", "7", "--json"])
-        listed = gh.argv_starting(["gh", "issue", "list"])[0]
-        self.assertEqual(listed[listed.index("--limit") + 1], "7")
+    def drift(self):
+        with desk(self.README, self.PLANS):
+            return reconcile.run(self.snapshot())
 
-    def test_all_covered_exits_zero(self):
-        self.install_gh(FakeGh(issues_closed=[CLOSED_ISSUES[0], CLOSED_ISSUES[1]]))
-        code, out = run_main(evidence_audit, ["--json"])
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out)["flagged"], [])
+    def kinds(self, result, plan):
+        return sorted(d["kind"] for d in result["drift"] if d["plan"] == plan)
 
+    def test_every_drift_kind_is_still_detected(self):
+        result = self.drift()
+        self.assertEqual(["active-but-closed"], self.kinds(result, "beta"))
+        self.assertEqual(["row-no-folder"], self.kinds(result, "gamma"))
+        self.assertEqual(["body-mismatch"], self.kinds(result, "delta"))
+        self.assertEqual(["folder-no-row"], self.kinds(result, "orphan"))
+        self.assertEqual(["archived-but-open"], self.kinds(result, "old-one"))
+        self.assertEqual(["issue-missing"], self.kinds(result, "epsilon"))
+        self.assertEqual(["active-no-issue"], self.kinds(result, "zeta"))
 
-# ---------------------------------------------------------------------------- _repo
+    def test_a_row_that_agrees_with_the_tracker_and_disk_is_ok(self):
+        result = self.drift()
+        self.assertEqual([], self.kinds(result, "alpha"))
+        self.assertEqual(1, len([line for line in result["ok"] if line.startswith("alpha")]))
 
+    def test_an_archived_row_naming_no_ref_is_not_drift(self):
+        self.assertEqual([], self.kinds(self.drift(), "enablement"))
 
-class RepoSlug(GhCase):
-    def test_a_slug_with_no_slash_is_refused(self):
-        self.install_gh(FakeGh(repo="widgets"))
-        with self.assertRaises(RuntimeError):
-            _repo.repo_slug()
+    def test_a_plan_naming_no_known_key_warns_without_failing_the_run(self):
+        warns = {w["plan"]: w["detail"] for w in self.drift()["warns"]}
+        self.assertIn("no known", warns["epsilon"])
+        self.assertIn("`## Tracking`", warns["zeta"])
 
-    def test_owner_and_name_split_on_the_first_slash(self):
-        self.install_gh(FakeGh(repo="acme/widgets"))
-        self.assertEqual(_repo.owner_name(), ("acme", "widgets"))
+    def test_the_counts_describe_what_was_read(self):
+        counts = self.drift()["counts"]
+        self.assertEqual({"active": 6, "archived": 2, "folders": 6}, counts)
 
-    def test_the_slug_read_is_the_exact_documented_gh_invocation(self):
-        gh = self.install_gh(FakeGh(repo="acme/widgets"))
-        _repo.repo_slug()
-        self.assertEqual(
-            gh.calls[0],
-            ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+    def test_a_clean_desk_exits_zero_and_a_dirty_one_exits_one(self):
+        readme = (
+            "ACTIVE plans:\n\n| Plan | Tracker ref(s) | Status |\n| --- | --- | --- |\n"
+            "| alpha | `xmwb` | drafting |\n\nARCHIVED (closed):\n\n"
+            "| Plan (archived path) | Tracker ref(s) | Why |\n| --- | --- | --- |\n"
+            "| old-one | `c0ld` | shipped |\n"
         )
+        with tempfile.TemporaryDirectory() as tmp:
+            snapshot = write_snapshot(tmp, self.snapshot())
+            with desk(readme, {"alpha": "## Tracking\n\n`xmwb`\n"}):
+                code, out = run_main(reconcile, ["--snapshot", snapshot])
+            self.assertEqual(0, code)
+            self.assertIn("No drift", out)
+            with desk(self.README, self.PLANS):
+                code, out = run_main(reconcile, ["--snapshot", snapshot, "--json"])
+        self.assertEqual(1, code)
+        self.assertEqual(7, len(json.loads(out)["drift"]))
 
-    def test_the_slug_is_fetched_once_and_cached(self):
-        gh = self.install_gh(FakeGh(repo="acme/widgets"))
-        _repo.repo_slug()
-        _repo.repo_slug()
-        self.assertEqual(len(gh.argv_starting(["gh", "repo", "view"])), 1)
+    def test_a_missing_desk_readme_says_so_instead_of_raising(self):
+        """Run from somewhere that is not a plans desk, the answer is a sentence."""
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(reconcile, "README", Path(tmp) / "README.md"):
+                with self.assertRaises(SystemExit) as caught:
+                    reconcile.parse_readme_rows()
+        self.assertIn("README.md", str(caught.exception))
+        self.assertIn("plans desk", str(caught.exception))
 
-
-class RepoGraphql(GhCase):
-    def test_none_is_sent_as_typed_null_and_values_as_raw_strings(self):
-        gh = self.install_gh(FakeGh(graphql_pages=[{"data": {}}]))
-        _repo.graphql("query($cursor: String){x}", owner="acme", cursor=None)
-        args = gh.argv_starting(["gh", "api", "graphql"])[0]
-        self.assertEqual(args[:5], ["gh", "api", "graphql", "-f", "query=query($cursor: String){x}"])
-        self.assertEqual(args[5:], ["-f", "owner=acme", "-F", "cursor=null"])
-
-    def test_the_response_is_parsed_as_json(self):
-        self.install_gh(FakeGh(graphql_pages=[{"data": {"ok": True}}]))
-        self.assertEqual(_repo.graphql("{x}"), {"data": {"ok": True}})
+    def test_the_default_status_is_all_so_archived_rows_can_be_checked(self):
+        parser = reconcile.build_parser()
+        self.assertEqual("all", parser.parse_args([]).status)
 
 
 if __name__ == "__main__":
