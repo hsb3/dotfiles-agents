@@ -396,7 +396,8 @@ def decide(data, branch_of, shared_of, protected):
                 return _deny_stash()
         elif sub in WRITE_SUBS:
             if protected and branch_of(where) in protected:
-                return _deny_branch("`git {0}`".format(sub), branch_of(where))
+                return _deny_branch(
+                    "`git {0}` with HEAD on".format(sub), branch_of(where))
         elif sub == "push" and protected:
             targets = target_branches(args)
             hit = next((t for t in targets if t in protected), None)
