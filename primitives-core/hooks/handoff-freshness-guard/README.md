@@ -76,6 +76,27 @@ the handoff and touch the stamp soon — the file-mode equivalent of "run /hando
 This same key and precedence rule is honored by `session-handoff-surfacer` and documented
 by the `handoff` skill — the three must never disagree about where the handoff lives.
 
+## In a linked worktree
+
+Both halves of the configuration follow the main checkout: the activation file, and the
+stamp or handoff file it names. Neither travels into a linked worktree — the activation
+file and the stamp are gitignored, and a handoff file may simply be untracked — so before
+this resolution a session running in a worktree fell all the way back to the standard
+candidate search, found nothing, and blocked every manual `/compact` it ever attempted.
+
+When no file sits at the direct path, the hook asks `git rev-parse --git-common-dir`
+whether the project dir is a linked worktree and, if it is, looks for the same relative
+path under the **main checkout**. The lookup is lazy — one `git` subprocess only on the
+miss — so a file the worktree does have still wins, which means a **tracked** activation
+file or handoff file is read there at the version committed on the worktree's branch.
+`ATELIER_ACTIVATION_FILE` wins outright and is never re-resolved. With no `git` on `PATH`,
+or a project dir that is not a linked worktree, behaviour is exactly what it was.
+
+One visible consequence: a stamp resolved this way is named relative to the worktree, so
+the block message reads `../../handoff.stamp` rather than `.claude/handoff.stamp`. That is
+deliberate — it is the path that actually resolves from where the session is standing, and
+it says out loud that the signal lives outside this checkout.
+
 ## Install
 
 ```

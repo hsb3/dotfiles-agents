@@ -67,6 +67,28 @@ user where the handoff lives" — when none is set.) This same key and precedenc
 honored by `handoff-freshness-guard` and documented by the `handoff` skill — the three
 must never disagree about where the handoff lives.
 
+## In a linked worktree
+
+Both halves of the configuration follow the main checkout: the activation file, and the
+stamp or handoff file it names. Neither travels into a linked worktree — the activation
+file and the stamp are gitignored, and a handoff file may simply be untracked — so before
+this resolution a session started inside a worktree was told there was no handoff at all,
+which is the one thing this hook exists to prevent.
+
+When no file sits at the direct path, the hook asks `git rev-parse --git-common-dir`
+whether the project dir is a linked worktree and, if it is, looks for the same relative
+path under the **main checkout**. The lookup is lazy — one `git` subprocess only on the
+miss — so a file the worktree does have still wins, which means a **tracked** handoff file
+or activation file is read there at the version committed on the worktree's branch.
+`ATELIER_ACTIVATION_FILE` wins outright and is never re-resolved. With no `git` on `PATH`,
+or a project dir that is not a linked worktree, behaviour is exactly what it was. The stamp
+is still only ever stat'ed, never opened.
+
+One visible consequence: a path resolved this way is named relative to the worktree, so the
+surfaced pointer reads `../../handoff.stamp` rather than `.claude/handoff.stamp`. That is
+deliberate — it is the path that actually resolves from where the session is standing, and
+it says out loud that the handoff lives outside this checkout.
+
 ## Ledger
 
 One row per `SessionStart` call, appended to the `handoff-surfacer` stream:

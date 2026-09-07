@@ -45,6 +45,26 @@ ignored. `protected:` also accepts the inline form `protected: ["Makefile", "con
 | `advisory` | logs would-be denials, denies nothing | injects the covenant |
 | `strict` | denies subagent edits to protected paths | injects the covenant + the tool-layer sentence |
 
+### In a linked worktree
+
+Custody follows the main checkout. A worker dispatched with `isolation: "worktree"` lands in a
+linked checkout where the activation file — normally gitignored — does not exist, and before this
+resolution the hook simply went inert there: the isolated worker could edit every protected path.
+When no activation file sits at the project dir, the hook now asks
+`git rev-parse --git-common-dir` whether that dir is a linked worktree and, if it is, reads the
+**main checkout's** activation file instead.
+
+The lookup is lazy — it costs a `git` subprocess only when the direct path holds no file, so the
+ordinary case (custody file present) is unchanged on a hook that runs on every `Edit`/`Write`.
+The consequence of laziness is that an activation file the worktree *does* have wins: a **tracked**
+activation file is read inside a worktree at the version committed on that worktree's branch, not
+at the main checkout's working-tree version. `ATELIER_ACTIVATION_FILE` still wins outright and is
+never re-resolved, and with no `git` on `PATH` — or a project dir that is not a linked worktree —
+behaviour is exactly what it was.
+
+Protected patterns are still matched against paths relative to the worker's own project dir, so
+`Makefile` means the worktree's `Makefile`. Only the policy travels, not the jurisdiction.
+
 ## Install
 
 1. Copy this directory into `primitives-core/hooks/`.

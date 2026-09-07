@@ -55,6 +55,20 @@ This hook reads only `enforce:`; the `protected:` list is config-custody's busin
 | `advisory` | injects the covenant | logs would-be denials, denies nothing |
 | `strict` | injects the covenant + the tool-layer sentence | denies subagent edits to protected paths |
 
+### In a linked worktree
+
+The covenant follows the main checkout. A worker started with its cwd inside a linked worktree
+finds no activation file there — it is normally gitignored — so before this resolution the isolated
+workers, the ones most in need of the covenant, were the ones that never got it. When no activation
+file sits at the project dir, the hook asks `git rev-parse --git-common-dir` whether that dir is a
+linked worktree and, if it is, reads the **main checkout's** activation file instead.
+
+The lookup is lazy — it costs a `git` subprocess only when the direct path holds no file. The
+consequence is that a **tracked** activation file present in the worktree wins, read at the version
+committed on that worktree's branch rather than the main checkout's working-tree version.
+`ATELIER_ACTIVATION_FILE` still wins outright and is never re-resolved, and with no `git` on `PATH`
+— or a project dir that is not a linked worktree — behaviour is exactly what it was.
+
 ## Install
 
 1. Copy this directory into `primitives-core/hooks/`.

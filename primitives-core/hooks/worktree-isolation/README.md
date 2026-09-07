@@ -53,6 +53,23 @@ A plugin-namespaced type matches its bare form, so `atelier:builder` is covered 
 dispatch with no `subagent_type` resolves to `general-purpose`, which carries the full tool set, so
 absence counts as a writer.
 
+### In a linked worktree
+
+Enforcement follows the main checkout's activation file into worktrees. This hook creates the
+situation the others have to survive, and it is not exempt from it: a `manager` that was itself
+isolated fans out its own writers from inside a linked checkout, where the activation file —
+normally gitignored — does not exist. When no activation file sits at the project dir, the hook
+asks `git rev-parse --git-common-dir` whether that dir is a linked worktree and, if it is, reads
+the **main checkout's** activation file instead, so the isolation policy the project armed still
+applies one level down.
+
+The lookup is lazy — it costs a `git` subprocess only when the direct path holds no file. The
+consequence is that a **tracked** activation file is seen at its committed version there: inside a
+worktree, a tracked activation file wins as checked out on that worktree's branch, not as the main
+checkout currently has it in its working tree. `ATELIER_ACTIVATION_FILE` still wins outright and is
+never re-resolved, and with no `git` on `PATH` — or a project dir that is not a linked worktree —
+behaviour is exactly what it was.
+
 ## Inert paths
 
 Beyond an unarmed activation file, the hook stands down when:
