@@ -46,6 +46,11 @@ the tracker's own CLI on `PATH` and already authenticated — the adapter shells
 exports a snapshot, and the three analysis scripts read that snapshot rather than the network.
 Plan mode works with no tracker at all.
 
+Every analysis script is a read-only view. The single write path is a changeset the adapter
+applies, and it dry-runs by default; a plan folder whose tracking ref parses ambiguously is
+withheld from that changeset rather than guessed at, so an unclear desk never writes to the
+tracker.
+
 ## Install
 
 ```
