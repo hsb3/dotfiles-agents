@@ -16,6 +16,7 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import check_agent_refs as A  # noqa: E402
@@ -61,7 +62,6 @@ class Extraction(unittest.TestCase):
     def test_backtick_adjacent_forms(self):
         self.assertEqual(["scout"], _names("Fan out `scout` agents wherever it pays."))
         self.assertEqual(["manager"], _names("a `manager` subagent ends its turn"))
-        self.assertEqual(["reviewer"], _names("dispatch the agent `reviewer` for that"))
 
     def test_bold_wrapped_backticks_are_read(self):
         """The real defect was written `**`board-analyst`** agent`."""
@@ -82,6 +82,17 @@ class Extraction(unittest.TestCase):
         self.assertEqual([], _names("Cite `path:line` and a canonical doc."))
         self.assertEqual([], _names("`default_agent` is an opencode field"))
         self.assertEqual([], _names('agent_type = tool_input.get("subagent_type")'))
+
+    def test_backtick_after_the_noun_is_not_a_reference(self):
+        """`agent `X`` is ambiguous English: the backticked token qualifies nothing."""
+        self.assertEqual([], _names("Each agent `must` obey the covenant."))
+        self.assertEqual([], _names("See the agent `path:line` convention."))
+        self.assertEqual([], _names("dispatch the agent `reviewer` for that"))
+
+    def test_the_noun_matches_case_insensitively(self):
+        self.assertEqual(["scout"], _names("dispatch the `scout` Agent now"))
+        self.assertEqual(["explore"], _names("parallel `explore` AGENTS run"))
+        self.assertEqual(["manager"], _names("a `manager` SubAgent ends its turn"))
 
     def test_line_numbers_are_reported(self):
         refs = A.references("one\ntwo\n`scout` agents\n", "p.md")
@@ -112,6 +123,11 @@ class RedOnADanglingName(unittest.TestCase):
         root, _probs = _tree({"skills/s/SKILL.md": "`board-analyst` agent\n"})
         self.assertEqual(1, A.main(["--root", root]))
 
+    def test_report_exits_nonzero_when_it_prints_a_dangling_row(self):
+        """A --report that always exits 0 is a false green the moment anyone wires it."""
+        root, _probs = _tree({"skills/s/SKILL.md": "`board-analyst` agent\n"})
+        self.assertEqual(1, A.main(["--report", "--root", root]))
+
 
 class GreenOnLegitimateNames(unittest.TestCase):
     def test_roster_agent_is_clean(self):
@@ -134,6 +150,10 @@ class GreenOnLegitimateNames(unittest.TestCase):
         root, _probs = _tree({"skills/s/SKILL.md": "the `scout` agent reads\n"})
         self.assertEqual(0, A.main(["--root", root]))
 
+    def test_report_exits_zero_on_a_clean_fixture(self):
+        root, _probs = _tree({"skills/s/SKILL.md": "the `scout` agent reads\n"})
+        self.assertEqual(0, A.main(["--report", "--root", root]))
+
     def test_unscanned_suffixes_are_ignored(self):
         _root, probs = _tree({"skills/s/schema.xsd": "`board-analyst` agent\n"})
         self.assertEqual([], probs)
@@ -150,6 +170,13 @@ class Exemptions(unittest.TestCase):
 
     def test_every_exemption_still_suppresses_something_live(self):
         self.assertEqual([], A.stale_exemptions())
+
+    def test_a_stale_exemption_is_a_gate_violation(self):
+        """Detecting staleness is useless unless `problems()` actually surfaces it."""
+        bogus = ("primitives-core/skills/nowhere/SKILL.md", "ghost-writer")
+        with unittest.mock.patch.dict(A.EXEMPTIONS, {bogus: "fixture"}):
+            probs = A.problems()
+        self.assertTrue(any("ghost-writer" in p and "stale" in p for p in probs), probs)
 
 
 class RealTree(unittest.TestCase):

@@ -22,15 +22,22 @@ shapes count, and only these two:
      code reading the field, and `settle an agent: its delegation row` is prose with a colon
      in it. Neither names an agent; measured against this tree, dropping the requirement
      turned six such lines into false positives.
-  2. **A backticked name adjacent to the word agent/subagent** — ``​`scout` agents``,
-     ``a `manager` subagent``, ``the agent `reviewer```. Optional `**bold**` wrappers around
-     the backticks are read through, because that is how the original `board-analyst` defect
-     was written. Adjacency is required: `` `strategist`), which is never a spawned agent ``
-     is prose about a role, not a dispatch.
+  2. **A backticked name immediately BEFORE the word agent/subagent** — ``​`scout` agents``,
+     ``a `manager` subagent``. Optional `**bold**` wrappers around the backticks are read
+     through, because that is how the original `board-analyst` defect was written. Adjacency
+     is required: `` `strategist`), which is never a spawned agent `` is prose about a role,
+     not a dispatch. The noun matches case-insensitively (``​`scout` Agent`` counts); the
+     name's own case never mattered, since resolution case-folds.
 
-Unbackticked prose is never a reference, in either direction. That is a deliberate recall
-sacrifice: an agent named only in running text is not something a reader would mistake for a
-wired dispatch either.
+The mirror shape — `` agent `name` `` — is deliberately NOT a rule. Reading in that direction
+the backticked token qualifies nothing, so ordinary prose matches it: `Each agent `must` obey`
+yields `must`, and `See the agent `path:line` convention` yields `line` off this repo's own
+`path:line` idiom. Measured across `primitives-core/`, that rule had zero subjects, so
+dropping it costs no live reference and removes the whole false-positive class.
+
+Unbackticked prose is never a reference either. Both are deliberate recall sacrifices: a false
+red in a gate everyone inherits costs more than a missed reference, and an agent named only in
+running text is not something a reader would mistake for a wired dispatch.
 
 ## What resolves
 
@@ -121,15 +128,18 @@ KEY_QUOTED = re.compile(
 # 1b. YAML frontmatter, where a scalar is bare — but then the key/value IS the whole line,
 #     which prose colons ("Two kinds of row settle an agent: its delegation row") are not.
 KEY_YAML = re.compile(r"^\s*" + _KEYS + r":[ \t]+" + _NAME + r"[ \t]*$")
-# 2a. `name` agent   2b. agent `name`
-BACKTICK_BEFORE = re.compile(_BACKTICKED + r"\*{0,2}\s+(?:sub)?agents?(?![\w-])")
-BACKTICK_AFTER = re.compile(r"(?<![\w-])(?:sub)?agents?\s+" + _BACKTICKED)
+# 2. `name` agent — the qualifier reading only. The mirror (`agent `name``) is NOT a rule:
+#    there the backticked token qualifies nothing, so ordinary prose matches it ("Each agent
+#    `must` obey", "See the agent `path:line` convention" — the latter also splits this
+#    repo's own `path:line` idiom into a bogus `line`). It had zero subjects across
+#    primitives-core, so dropping it costs no live reference and removes the whole class.
+#    The noun is matched case-insensitively; the name's own case never mattered.
+BACKTICK_BEFORE = re.compile(_BACKTICKED + r"\*{0,2}\s+(?i:(?:sub)?agents?)(?![\w-])")
 
 RULES = (
     ("key", KEY_QUOTED),
     ("key", KEY_YAML),
     ("backticked", BACKTICK_BEFORE),
-    ("backticked", BACKTICK_AFTER),
 )
 
 
@@ -215,13 +225,23 @@ def roster_agents():
     return disk_agents() | manifest_agents()
 
 
+def verdict(ref, agents):
+    """Why a reference is fine, or `DANGLING`. The single source both the gate and --report use."""
+    name = ref.name.lower()
+    if ref.key in EXEMPTIONS:
+        return "exempt"
+    if name in agents:
+        return "roster"
+    if name in HARNESS_BUILTINS:
+        return "built-in"
+    return "DANGLING"
+
+
 def check_tree(root, rel_base, agents):
     """Violations under `root`: references naming something outside `agents` or the built-ins."""
-    resolvable = set(agents) | HARNESS_BUILTINS
     problems = []
     for ref in scan(root, rel_base):
-        name = ref.name.lower()
-        if name in resolvable or ref.key in EXEMPTIONS:
+        if verdict(ref, agents) != "DANGLING":
             continue
         problems.append(
             "%s:%d: names agent `%s`, which is no roster agent and no harness built-in "
@@ -242,31 +262,30 @@ def stale_exemptions():
     return out
 
 
-def problems():
-    return sorted(set(check_tree(SCAN_ROOT, REPO, roster_agents()) + stale_exemptions()))
+def problems(root=SCAN_ROOT, rel_base=REPO):
+    """Everything wrong under `root`. Stale exemptions are only meaningful for the live tree."""
+    found = check_tree(root, rel_base, roster_agents())
+    if root == SCAN_ROOT:
+        found = found + stale_exemptions()
+    return sorted(set(found))
 
 
 def report(root, rel_base, agents):
+    """Print every reference and its verdict. Non-zero exit when any row is DANGLING."""
     refs = scan(root, rel_base)
     print("roster agents: %s" % ", ".join(sorted(agents)))
     print("harness built-ins: %s" % ", ".join(sorted(HARNESS_BUILTINS)))
     print("")
     print("%-16s %-12s %-9s %s" % ("name", "resolves", "rule", "site"))
+    dangling = 0
     for ref in sorted(refs, key=lambda r: (r.name.lower(), r.rel, r.lineno)):
-        name = ref.name.lower()
-        if ref.key in EXEMPTIONS:
-            verdict = "exempt"
-        elif name in agents:
-            verdict = "roster"
-        elif name in HARNESS_BUILTINS:
-            verdict = "built-in"
-        else:
-            verdict = "DANGLING"
-        print("%-16s %-12s %-9s %s:%d" % (ref.name, verdict, ref.rule, ref.rel, ref.lineno))
+        how = verdict(ref, agents)
+        dangling += how == "DANGLING"
+        print("%-16s %-12s %-9s %s:%d" % (ref.name, how, ref.rule, ref.rel, ref.lineno))
     print("")
-    print("%d reference(s) over %d distinct name(s)"
-          % (len(refs), len({r.name.lower() for r in refs})))
-    return 0
+    print("%d reference(s) over %d distinct name(s); %d dangling"
+          % (len(refs), len({r.name.lower() for r in refs}), dangling))
+    return 1 if dangling else 0
 
 
 def main(argv=None):
@@ -287,9 +306,7 @@ def main(argv=None):
     if args.report:
         return report(root, rel_base, agents)
 
-    probs = check_tree(root, rel_base, agents)
-    if root == SCAN_ROOT:
-        probs = sorted(set(probs + stale_exemptions()))
+    probs = problems(root, rel_base)
     if probs:
         print("✗ agent-refs: %d dangling agent reference(s)" % len(probs), file=sys.stderr)
         for p in probs:
