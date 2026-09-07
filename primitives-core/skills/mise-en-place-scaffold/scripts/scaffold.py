@@ -441,9 +441,10 @@ def working_tree_dirty(repo):
 def plans_scope(repo):
     """Every *.md under _meta/plans/ (recursive), excluding README.md, any path
     component starting with `_` (desk config such as `_config.md`, `_utils/`), and
-    `issue-body.md` (a staged body is the raw publishable GitHub issue body, kept
-    byte-identical to the live issue — exempt from the frontmatter schema per the
-    owner ruling 2026-07-02)."""
+    `issue-body.md` — exempt from the frontmatter schema per the owner ruling
+    2026-07-02. That exemption is legacy: it covered a staged body kept
+    byte-identical to the live tracked item; planning-desk no longer stages one,
+    so only desks predating that change still carry the file."""
     root = os.path.join(repo, "_meta", "plans")
     docs = []
     if not os.path.isdir(root):

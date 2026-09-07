@@ -13,6 +13,9 @@ conformant", "check this repo's structure/layout compliance", or any request for
 verdict against the repo meta-structure or project-memory standards. Not for questions about
 what the standard says, or for scaffolding missing structure — that's a different skill.
 
+Frontmatter checks over `_meta/plans/` exempt `issue-body.md`: a legacy staged-body file from
+desks that predate `planning-desk`'s tracker adapter, which no longer stages one.
+
 ## Install
 
 ```

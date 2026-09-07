@@ -33,6 +33,9 @@ AGENTS.md content. A conflict is reported, not resolved.
 Measuring compliance is `repo-compliance-audit`; questions about what the standard *says* are
 `repo-meta-structure`. All three read the same standard — it lives in one place.
 
+Frontmatter checks over `_meta/plans/` exempt `issue-body.md`: a legacy staged-body file from
+desks that predate `planning-desk`'s tracker adapter, which no longer stages one.
+
 ## Install
 
 ```
