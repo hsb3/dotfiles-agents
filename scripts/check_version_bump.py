@@ -44,6 +44,15 @@ Also not covered: version ORDERING (a version that moved backwards is a distinct
 so consumers still refetch); file modes; a plugin published on `main` but deleted on `dev`
 (a removal has no version to bump); and anything outside `plugins/`.
 
+**NO SEMVER SEMANTICS, by design (decision-017).** This gate proves MOVEMENT and nothing
+else: it never reads major/minor/patch, so passing here says nothing about whether the digit
+that moved was the right one. Which digit a dual-homed change earns — owning bundle minor,
+carrying bundle patch, both minor for genuinely new capability in both, never "incidental"
+for a breaking change — is convention enforced by review and stated in the `publish-to-main`
+skill, where a session reads it before bumping. Grading a digit would require inferring
+capability from bytes, which this gate cannot see, so it deliberately does not try. Do not
+read a green here as digit coverage, and do not "fix" that by teaching it semver.
+
 Paths matching the ignore rules that can appear in a dereferenced walk (`__pycache__/`,
 `*.pyc`, editor/OS noise) are pruned from BOTH sides — `cp -RL` copies them but `git add`
 never commits them, so leaving them in produces phantom diffs.

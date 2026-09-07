@@ -80,10 +80,11 @@ always appended. Answers come back keyed by item id:
 
 ## After pickup
 
-- Convert answers into their proper records immediately — in a Backlog.md project, via
-  the backlog CLI (decisions, docs, task updates) — and report back what was executed
-  vs what remains the owner's. The records are the trail: **do not keep `answers.json`
-  or `index.html`** — delete the batch dir once the records land.
+- Convert answers into their proper records immediately — via the project's tracker: a
+  board issue, a GitHub issue, or a decision record (decisions, docs, task updates) —
+  and report back what was executed vs what remains the owner's. The records are the
+  trail: **do not keep `answers.json` or `index.html`** — delete the batch dir once the
+  records land.
 - Notes fields may contain new facts that contradict prior findings — correct the
   affected documents in place, dated, when they do.
 

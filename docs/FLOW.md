@@ -87,19 +87,18 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 |---|---|---|---|---|
 | `primitives-core/` | primitive-bodies | source | H | the single source copy of every primitive body |
 | `primitives-core.yaml` | roster | roster | H | authoritative membership; `targets` selects vendor lanes; `disposition` is owner-curated |
-| `plugins.yaml` | bundle-metadata | roster | H | bundle id · kind · version · description |
-| `skill-catalog.yaml` | standalone-catalog | roster | H | skills cleared to ship one-at-a-time |
 | `externals.yaml` | externals | roster | H | third-party by reference; clone-at-build deferred (#36/#122) |
 | `scripts/` | toolchain | generator | H | generators + every checker + campaign runner |
 | `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
-| `dist/` | dist-lanes | dist | **G** | `dist/claude-code/` marketplace surface (`gen_marketplace.py`) lifted to main's root at publish; `dist/opencode/` laydown lane (`gen_opencode.py`) published as `opencode/`; both under `build-check` |
+| `plugins/`, `.claude-plugin/` | plugin-assemblies | dist | H | pointer-based marketplace surface (ADR 0017): hand-authored thin symlink assemblies over `primitives-core/`, dereferenced at install; guarded by `scripts/check_symlinks.py` (`make symlinks`) |
 | `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page live under `docs/`) |
 | `docs/` | repo-law | docs | H | standing law in prose: `docs/decisions/` (ADRs), the extender-dev SOP, the vendoring rule, the diagram standard, this page |
 | `harness/` | harness | workbench | H | uv eval project; own CI lane; `results.jsonl` tracked |
 | `evals/` | evals | workbench | H | extender-db projection — never a source of truth |
-| `.agents/`, `.claude/`, `skills-lock.json` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
+| `.claude/`, `.vscode/`, `.kata.toml` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
 | `logs/` | runtime-logs | runtime | **R** | hook telemetry; must stay untracked |
 | _(branch)_ `main` | publish-main | publish | — | advanced only by the publish workflow |
+| _(virtual)_ | consumers | consumer | — | machines installing via `claude plugin marketplace add` or the laydown installers; nothing tracked here |
 | `translation.yaml` | translation-config | roster | H | capability matrix per primitive type × target, model-alias pins, roster-level exclusions with reasons |
 
 ## What the guard proves (`make flow`)

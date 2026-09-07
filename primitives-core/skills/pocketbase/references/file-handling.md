@@ -159,9 +159,8 @@ const url = pb.files.getURL(record, record.document, { token })
 ### Token Behavior
 
 - Token is valid for approximately **2 minutes**
-- Token is **reusable** for its full lifetime — NOT single-use. Proven live on v0.39.9: the
-  same token fetched a protected file repeatedly, 200 each time (see the `docs/15-files-attachments.md`
-  erratum in this repo)
+- Token is **reusable** for its full lifetime — NOT single-use. Proven live on PocketBase
+  v0.39.9: the same token fetched a protected file repeatedly, 200 each time.
 - The requesting user must be authenticated to obtain a token
 - Token grants access to all protected files for that user's session
 

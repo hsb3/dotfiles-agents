@@ -5,6 +5,10 @@
 # --- secrets ---
 .env*
 !.env*.example
+# any *.env credential file anywhere in the tree (e.g. evals/pb.py's
+# .claude/operations/extender-db.env) — basename-anchored, not just dotfiles at repo root
+*.env
+!*.env.example
 
 
 # --- extender-db, at evals/ (evals/_structure/CHARTER.md decisions 2+4):

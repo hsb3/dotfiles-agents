@@ -497,6 +497,16 @@ class _BlindRunner(_FakeRunner):
         return _Completed(1, "", "gh: could not resolve host\n")
 
 
+class _NoGhRunner(_GhFake):
+    """A machine with no gh at all. `subprocess.run` raises FileNotFoundError before any
+    process starts, which is what an absent binary really looks like — not a non-zero
+    exit — so no fake that returns a completed process can stand in for it."""
+
+    def __call__(self, argv, **kwargs):
+        self.calls.append((argv, kwargs))
+        raise FileNotFoundError(2, "No such file or directory", argv[0])
+
+
 class MainTests(unittest.TestCase):
     """The CLI edges, all driven with a fake runner — `gh` is never executed."""
 
@@ -749,6 +759,47 @@ class MainTests(unittest.TestCase):
         self.assertIn("--label", runner.creates[0])
         self.assertNotIn("filing unlabelled", out)
 
+    # -- gh missing from PATH ----------------------------------------------
+
+    def test_gh_missing_is_one_named_message_and_no_traceback(self):
+        """The reporter's one external dependency, absent. Every gh call routes through
+        one runner wrapper, so this is caught wherever it surfaces — an unguarded
+        FileNotFoundError reaches the filer as a traceback with no instruction in it."""
+        runner = _NoGhRunner()
+        code, out, runner = self._main(self.BUG_ARGS, runner=runner)
+        self.assertNotEqual(code, 0)
+        self.assertIn("gh is not on PATH", out)
+        self.assertIn("--draft", out)
+        self.assertNotIn("Traceback", out)
+        # Recorded as an ATTEMPT, not a filing: the process never started. One of them —
+        # the unlabelled retry must not fire on a failure the label cannot explain.
+        self.assertEqual(len(runner.creates), 1)
+
+    def test_draft_still_works_without_gh_when_the_list_is_on_disk(self):
+        """AC: a draft needs no gh at all on the membership fast path — and --draft is
+        what the message above tells the filer to fall back to, so it must not need the
+        binary it is the answer to missing."""
+        root = os.path.join(self.tmp.name, "checkout", "plugin")
+        os.makedirs(root)
+        self._marketplace_at(os.path.join(self.tmp.name, "checkout"), ["atelier"])
+        runner = _NoGhRunner()
+        code, out, runner = self._main(
+            self.BUG_ARGS + ["--draft"], env={"CLAUDE_PLUGIN_ROOT": root}, runner=runner
+        )
+        self.assertEqual(code, 0, out)
+        self.assertIn("## What happens", out)
+        self.assertEqual(runner.calls, [])
+
+    def test_a_draft_that_needs_a_read_still_prints_without_gh(self):
+        """No local list, so membership wants the gh read. A read it cannot make still
+        gets its draft (the documented contract): a missing binary degrades the check
+        exactly like a network blip does, and only the filing path is hard-stopped."""
+        runner = _NoGhRunner()
+        code, out, runner = self._main(self.BUG_ARGS + ["--draft"], runner=runner)
+        self.assertEqual(code, 0, out)
+        self.assertIn("membership check", out)
+        self.assertIn("## What happens", out)
+
     def test_a_label_the_repo_does_not_carry_is_dropped_before_filing(self):
         """AC#2's half: the default label is checked against the repo's live set, so a
         rename costs a notice rather than a failed call the filer has to interpret."""
@@ -769,12 +820,18 @@ class LiveLabelTests(unittest.TestCase):
 
     Opt-in, and the gh probe runs inside the test rather than at import — a probe in a
     decorator or at module scope shells out just for importing this file, which would put
-    a network call inside `make ci`, where this repo keeps none."""
+    a network call inside `make ci`, where this repo keeps none. The opt-in is what the
+    `drift guards` CI job sets: that job is the one with network and an `issues: read`
+    token, and without it there this would guard nothing a rename could trip."""
 
     def _live_labels(self):
-        """The target repo's real labels, or a skip when gh cannot answer at all."""
+        """The target repo's real labels. Every failure to read them is RED, never a
+        skip: setting the opt-in asks for the live check, and a run that measured
+        nothing reads identically in a CI summary to one that measured and found the
+        labels intact (decision-016 point 4, the contract scripts/check_labels.py
+        already carries). The reason is named so a blip is not mistaken for a rename."""
         if not shutil.which("gh"):
-            self.skipTest("gh is not installed")
+            self.fail("gh is not on PATH, so the live label set could not be read")
         with io.open(PLUGIN_MANIFEST, encoding="utf-8") as fh:
             repo = R.normalize_repo(json.load(fh).get("repository"))
         self.assertIsNotNone(repo, "plugin manifest carries no resolvable repository")
@@ -783,11 +840,17 @@ class LiveLabelTests(unittest.TestCase):
                 ["gh", "label", "list", "--repo", repo, "--json", "name", "--limit", "200"],
                 capture_output=True, text=True, timeout=10,
             )
-            labels = {e["name"] for e in json.loads(done.stdout)} if not done.returncode else None
-        except Exception:
-            labels = None
+            why = done.stderr.strip() or "(no stderr)" if done.returncode else None
+            labels = None if done.returncode else {e["name"] for e in json.loads(done.stdout)}
+        except Exception as exc:
+            labels, why = None, "{0}: {1}".format(type(exc).__name__, exc)
         if not labels:
-            self.skipTest("gh could not read {0}'s labels".format(repo))
+            self.fail(
+                "gh could not read {0}'s labels ({1}) — nothing was measured, which is "
+                "not evidence about the labels but cannot be green either".format(
+                    repo, why or "the repo reports no labels at all"
+                )
+            )
         return labels
 
     def test_every_default_label_exists_in_the_target_repo(self):

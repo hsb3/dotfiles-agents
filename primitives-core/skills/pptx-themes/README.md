@@ -30,7 +30,8 @@ The original files (including `base/SKILL.md`, `base/scripts/`, and `base/LICENS
 in place and unmodified to satisfy the attribution obligation.
 
 Do not edit `base/` — update the pin instead (a new ref, re-vendored verbatim). The authored
-theme layer is what this repo maintains.
+theme layer is what this repo maintains. SKILL.md's "Found an error?" section is where
+corrections land, and where upstream-worthy ones get pointed at the anthropics/skills tracker.
 
 ## Install
 

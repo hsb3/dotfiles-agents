@@ -87,6 +87,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/check_labels.py
+      # plugin-feedback live default-label check (card tk1x): the reporter's per-kind
+      # DEFAULT_LABELS are the labels it puts on every issue it files, and every other
+      # assertion about them is against a fixture — so only a read of this repo's real
+      # label set can catch a rename, and a rename costs a filer their label. The check
+      # is a test in tests/test_plugin_feedback.py, opt-in behind
+      # PLUGIN_FEEDBACK_LIVE_TESTS and skipped without it, which is what keeps `make ci`
+      # offline + zero-install; setting the variable HERE is what makes the guarantee
+      # hold in CI instead of only on an authenticated developer machine. It rides this
+      # job for the same two reasons as the gates above (it needs `gh` plus network, and
+      # dev's branch protection pins required checks by job NAME) and reuses this job's
+      # `issues: read`, which `gh label list` needs on a private repo. Like the label
+      # gate above and unlike the two before it, a read it cannot make is RED, not a
+      # skip (decision-016 point 4).
+      - name: plugin-feedback default labels (live vs the target repo)
+        env:
+          PLUGIN_FEEDBACK_LIVE_TESTS: "1"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 -m unittest -v tests.test_plugin_feedback.LiveLabelTests
       # Manifest gate: the first-party validator over the marketplace and every assembly.
       # `--strict` turns warnings into failures, catching what the runtime tolerates in
       # silence — an unrecognized field (a `changelog:` key nothing reads), missing

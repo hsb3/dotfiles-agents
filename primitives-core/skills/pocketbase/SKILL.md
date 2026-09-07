@@ -233,5 +233,3 @@ Read only what is needed:
 - Go migrations: `references/go-migrations.md`
 - Go hooks/routes: `references/go-hooks-routes.md`
 - E2E testing: `references/e2e-testing.md`
-
-Frontend integration work belongs to `pb-react-spa` skill.

@@ -30,6 +30,24 @@ on `main` any other way — a change is "available" only after this runbook comp
    in #229). Bump the affected plugin's `version:` in BOTH
    `plugins/<id>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` —
    the version-keyed consumer cache makes the bump the release step.
+
+   **Which digit, when a primitive is dual-homed** (decision-017). One skill body can be
+   symlinked into several assemblies, so one edit changes the published bytes of every
+   plugin that ships it. Run `make members` to derive which bundles a given primitive edit
+   implicates — never bump on faith. Then grade each bundle **from the consumer's view of
+   that bundle**, never from which plugin the work was filed under:
+
+   - **owning bundle → minor** — it gained the capability;
+   - **carrying bundle → patch** — the shared primitive improved, the bundle itself does
+     nothing new;
+   - **both minor** when the shared change is genuinely new capability in both;
+   - **never "incidental" for a breaking change** — a break is a break in every bundle
+     that ships it.
+
+   `scripts/check_version_bump.py` proves only that the version MOVED; it has no semver
+   semantics and is not being taught any, because a gate would have to infer capability to
+   grade a digit. This rule is convention enforced by review, so its green says nothing
+   about the digit.
 2. Gate locally — the same checks CI runs, so a red here is a red there:
 
    ```sh

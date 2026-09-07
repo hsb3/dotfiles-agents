@@ -43,7 +43,7 @@
       "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — mid-session focus and scope checks, weekly board triage through a backend adapter (GitHub Projects, Kaneo, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.8.3"
+      "version": "0.8.4"
     },
     {
       "author": {
@@ -97,7 +97,7 @@
       "description": "File a bug or feature request against a plugin you are using without leaving the session. Hooks tell the primary session and its dispatched workers what each may file, and a stdlib reporter writes the issue to a fixed template instead of a free-handed gh call. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "plugin-feedback",
       "source": "./plugins/plugin-feedback",
-      "version": "0.1.6"
+      "version": "0.1.7"
     },
     {
       "author": {
@@ -106,7 +106,7 @@
       "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes), a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment, and three subject-matter agents that carry the backend laws into a delegated brief: a builder, an adversarial reviewer, and a security auditor, each proving its claims from its own clean-room server. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "pocketbase",
       "source": "./plugins/pocketbase",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "author": {
@@ -115,7 +115,7 @@
       "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.10.3"
+      "version": "0.10.4"
     }
   ]
 }
