@@ -52,6 +52,23 @@ externals:
     provides: "IBM's own Carbon Design System skill (v1.2.0), vendored verbatim in primitives-core/skills/carbon-builder/base/ under an authored routing + fallback layer. Query planning, capability matrix, and mandatory context-gathering/code-audit protocol for the five hosted Carbon MCP tools (code_search, docs_search, get_charts, labs_search, code_audit), plus 13 reference files covering frameworks, grid, accessibility, charts, AI Chat, Carbon Labs, pitfalls, and error recovery. The same repo's public/llms.txt rides in the authored layer as the no-MCP docs-index fallback."
     targets: [claude-code]
 
+# `cmux` below is REFERENCE ONLY, and the license is one reason it stays that way. Upstream is
+# GPL-3.0-or-later — the repo-root LICENSE reads "material contributed under the cmux project
+# license is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later)",
+# with a Manaflow carve-out offering separate commercial terms only for material it controls
+# the rights to, and a THIRD_PARTY_LICENSES.md plus file-level notices covering the rest
+# (verified 2026-09-07 via `gh api repos/manaflow-ai/cmux/contents/LICENSE`). Vendoring those
+# bytes would carry a copyleft grant into every install of this marketplace, so the entry
+# records the pin and the shape of the curated set and copies nothing. It has no roster entry
+# and no plugin, so nothing renders or drift-checks it.
+  - id: cmux
+    kind: skill
+    upstream: https://github.com/manaflow-ai/cmux
+    path: skills
+    ref: 2505c9bc5af912b0ae53e22dfb58a25e40945559
+    provides: "The four cmux control skills — `cmux` (window/workspace/pane/surface topology, placement, focus and moves), `cmux-browser` (browser-surface automation: open, snapshot for element refs, act, wait for state, extract), `cmux-workspace` (scoping work to the caller's workspace and terminal without stealing the user's focus), and `cmux-settings` (reading and writing ~/.config/cmux/cmux.json by JSON path against the published schema) — 4 of the 20 skill directories in upstream's `skills/` tree at this ref, the subset that drives a running cmux app rather than developing cmux itself. Reference only: nothing is vendored here and no roster entry, plugin, or marketplace listing projects it. The ref is the commit at which four locally-held copies were verified byte-identical to upstream `skills/<name>/`; upstream `main` has since moved."
+    targets: [claude-code]
+
 # ── Not externals: recorded here so the absence is deliberate, not an oversight. ──
 #
 # `pocketbase` (the operational skill, primitives-core/skills/pocketbase) has NO entry above

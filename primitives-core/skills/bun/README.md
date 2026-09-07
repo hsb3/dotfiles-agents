@@ -39,5 +39,4 @@ The `bun` binary on PATH. Nothing else — the references are plain markdown.
 
 ```
 claude plugin install bun@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```

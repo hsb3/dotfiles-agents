@@ -50,5 +50,4 @@ redistributed here. Full reasoning in the "Not externals" note in `externals.yam
 
 ```
 claude plugin install kenn-forge@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
