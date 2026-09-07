@@ -13,6 +13,11 @@ organize work under `_meta/plans/`, audit plan/tracker drift, or set the desk up
 even phrased loosely as "plan this out", "groom the backlog", or "get this repo's planning
 organized".
 
+It also carries two standing standards the desk cites (`references/entry-forms-and-milestones.md`):
+the queue-entry forms a unit of work takes to enter a backlog or an incubator, and the ordered
+`P<n> — <promise>` milestone and `gate:<promise>` label vocabulary a board speaks — the latter
+written as one board's worked example, not a claim that every tracker has milestones.
+
 **Writing the body of a tracked work item is not this skill's job.** Title, acceptance criteria,
 thresholds, and scope belong to `task-authoring`. A desk folder holds `plan.md` and nothing else:
 the tracked item is the contract, the plan is the build detail.

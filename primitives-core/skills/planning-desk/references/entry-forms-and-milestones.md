@@ -98,6 +98,11 @@ qualification.
 A project's board should speak a **consistent gate/milestone vocabulary** so cross-project status
 reads the same and dependencies line up. Two layers, from existing practice:
 
+**Scope:** everything below is a worked example of one board's adoption, on a tracker that has
+milestones as a first-class object. The doctrine is the ordered-promise discipline, not the
+milestone object — a tracker without milestones expresses the same `P<n> — <promise>` vocabulary
+as labels or a priority band.
+
 ### Layer 1 — milestones name promise levels (the "P-N" set)
 
 A project adopts an ordered set of milestones, each a **promise level** — what becomes true when that
