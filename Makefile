@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels
+.PHONY: help check identity provenance hook-layout agent-refs floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -19,6 +19,9 @@ provenance: ## Entry-gate floor: provenance/externals conformance (primitives-co
 
 hook-layout: ## Entry-gate floor: hooks use the ratified hooks/<name>/hook.py layout
 	@python3 scripts/check_hook_layout.py
+
+agent-refs: ## Agent-reference gate: no shipped body names an agent that is neither a roster agent nor a harness built-in (--report lists every reference)
+	@python3 scripts/check_agent_refs.py
 
 floor: identity test provenance hook-layout ## The Tier-1 entry-gate machine floor (required on PRs into dev)
 
@@ -54,9 +57,10 @@ test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check 
 
 # All gates. The Tier-1 entry-gate machine floor (identity · tests · provenance · hook-layout)
 # is required CI on every PR into dev; check (roster drift) + symlinks (assembly lint, ADR 0017)
-# guard the distribution surface; harness-coupling keeps harness/ extraction-clean
+# guard the distribution surface; agent-refs keeps shipped bodies from routing through an
+# agent nobody ships; harness-coupling keeps harness/ extraction-clean
 # (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
+ci: check identity provenance hook-layout agent-refs symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
 
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).
