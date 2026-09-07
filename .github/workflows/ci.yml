@@ -82,6 +82,6 @@ jobs:
         with:
           node-version: "22"
       - name: Install the Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code@2.1.231
+        run: npm install -g @anthropic-ai/claude-code@2.1.263
       - name: manifest gate (claude plugin validate --strict)
         run: make manifests
