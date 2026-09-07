@@ -37,10 +37,13 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   silent about symlinks), CI installed 2.1.240 (which warns). Any gate shelling out to a
   vendored binary inherits that binary's release cadence — pin it, and bump deliberately.
 - **A missing tool is a failed gate, never a skipped one.** `make manifests` exits 1 when
-  `claude` is not on PATH rather than passing with a notice. The two network gates differ
+  `claude` is not on PATH rather than passing with a notice. The network gates differ
   deliberately — they exit 0 with a notice when the remote is unreachable, so a network blip
   does not block every PR. A missing binary is not a blip; it is a machine that cannot run
-  the check, and a gate that reports green there teaches everyone it is running.
+  the check, and a gate that reports green there teaches everyone it is running. `make labels`
+  splits the two cases explicitly: unreachable host is a notice, but a reachable host with
+  `gh` still failing (auth, scope, rate limit) is red, because that is also a machine that
+  cannot run the check.
 - **The README-currency gate reads git history, so `drift-guards` checks out at
   `fetch-depth: 0`.** In the default depth-1 checkout every file shares one synthetic commit,
   so every unit's body and README look like the same change and the gate would pass
