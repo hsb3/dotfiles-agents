@@ -78,6 +78,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 |---|---|
 | `api-craft` | HTTP/REST API servers by layer — route, schema, service, repository, model — with the rejection cascade that maps every failure to a status code and outside-in build order. |
 | `tui-craft` | Full-screen terminal apps — layering, state ownership, repaint and streaming discipline, key routing, and the fixes for flicker, resize corruption, and a terminal left broken after exit. |
+| `bun` | The bun toolchain as the default JS/TS runtime, package manager, test runner, and bundler — command mapping off npm habits, built-ins that replace dependencies, and the measured install traps. |
 | `pocketbase` | Operate a PocketBase backend over the REST API or in Go package mode — collection and record CRUD, auth, backups, migrations, hooks, and custom routes. |
 | `pocketbase-best-practices` | Design and review rules for a PocketBase backend — schema, API rules, auth flows, query performance, realtime, file handling, and deployment. |
 | `carbon-builder` | IBM Carbon Design System for React and Web Components — components, IBM Products UI, Carbon Charts, design tokens, IBM Plex, and Carbon compliance audits, grounded in the hosted Carbon MCP server. |
@@ -89,6 +90,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
 | `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. |
 | `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
+| `kenn-forge` | Maintainer triage over a running kenn-forge daemon — review candidates, item context, diffs and CI, stack awareness, local review state, and coding-agent handoff. |
 | `github-project-board` | Stand up and operate one GitHub Project (v2) board — fields including iterations, many views over one item set, dependencies, and the triage cadence. |
 
 **Planning and comms**
@@ -135,12 +137,14 @@ pushes that system's conventions on a repo that tracks work on a board.
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
 `github-project-board` needs `gh` authenticated; `opencode-sandbox` needs the `opencode-sandbox`
-CLI and Docker; `carbon-builder` needs the hosted Carbon MCP server. Each says so at the point of use.
+CLI and Docker; `carbon-builder` needs the hosted Carbon MCP server; `bun` needs the `bun`
+binary; `kenn-forge` needs a kenn-forge daemon running locally. Each says so at the point of use.
 
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
 skills also ship inside a bundle (`handoff` in `atelier`, the diagram skills in
 `diagrams`, the Obsidian skills in `obsidian-toolkit`, the PocketBase skills in `pocketbase`,
-`carbon-builder` in `carbon`, `task-authoring` in `kaneo`, and several in `code-desk`);
+`carbon-builder` in `carbon`, `task-authoring` in `kaneo`, `bun` in `bun`, `kenn-forge` in
+`kenn-forge`, and several in `code-desk`);
 installing both homes loads each skill once.

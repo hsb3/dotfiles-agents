@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Ten plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (quality contract, focus, board triage, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), and plugin-feedback (report a plugin defect without leaving the session).",
-    "version": "0.10.1"
+    "description": "Twelve plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (quality contract, focus, board triage, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
+    "version": "0.11.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -17,6 +17,15 @@
       "name": "atelier",
       "source": "./plugins/atelier",
       "version": "0.24.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Bun as the default JS/TS runtime, package manager, test runner, and bundler — command mapping from npm/node habits, built-ins that replace dependencies, measured traps (bunfig exclusions, PATH order, mise interop), and a worked npm→bun migration. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "bun",
+      "source": "./plugins/bun",
+      "version": "0.1.0"
     },
     {
       "author": {
@@ -53,6 +62,15 @@
       "name": "kaneo",
       "source": "./plugins/kaneo",
       "version": "0.13.3"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Maintainer-workflow triage over a running kenn-forge daemon — PR/issue review, diffs and CI checks, local review state, and coding-agent handoff. Two surfaces over the same daemon API: the kenn_forge_* MCP tools for an agent driving its own loop, and the kenn-forge CLI for shell, scripts, and humans. The daemon must be running locally; the MCP surface additionally needs it enabled in the daemon config. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "kenn-forge",
+      "source": "./plugins/kenn-forge",
+      "version": "0.1.0"
     },
     {
       "author": {
@@ -97,7 +115,7 @@
       "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, plus a documented exemption class for skills that prescribe an opt-in in-repo system. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.10.2"
+      "version": "0.11.0"
     }
   ]
 }

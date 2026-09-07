@@ -62,3 +62,15 @@ externals:
 # roster — first-party content this repo maintains, not third-party content awaiting a pin.
 # This is the specific reason required by the vendored-skill provenance-coverage work, not a
 # bare "skipped".
+#
+# `kenn-forge` (primitives-core/skills/kenn-forge) has NO entry above for the same reason,
+# reached from the other direction: the upstream project EXISTS but carries no such skill. An
+# enumeration of every path in the forge repo at main found 13 internal development-tooling
+# skills under its `skills/`, none of them this one and none matching these bytes; no package
+# and no formula publishes it either. What ships here is hand-authored operator prose ABOUT a
+# third-party daemon — the tool surface, the triage flow, and the failure modes — not a copy
+# of anything upstream. There is nothing to pin, so it fails criterion 3 of
+# docs/vendoring-rule.md (pinnable + attributable) and is classified `origin: authored`.
+# The upstream repo's own license is unresolved by GitHub's classifier, which is a second
+# reason not to redistribute its bytes here; the skill's earlier `license: MIT` frontmatter
+# was dropped rather than ship an unverifiable third-party claim over authored prose.
