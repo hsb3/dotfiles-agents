@@ -56,7 +56,11 @@ and never runs `git add` or `git commit` — you review the plan, you apply, you
 Conflicts are reported for a human to resolve, not resolved automatically.
 
 Per-repo variance belongs in `_meta/mise-en-place.yml`, never as a silent exception to the
-standard. If a repo legitimately deviates, record it there.
+standard. If a repo legitimately deviates, record it there. Three of that manifest's fields —
+`gh_issue_labels`, `gh_milestones`, `board_title` — are **declared, never provisioned**:
+nothing in this marketplace creates them, so a consumer runs `gh label create` /
+`gh api …/milestones` by hand. The declaration is there so the intended set is written down
+and reviewable, not so a script will apply it.
 
 One cross-plugin note: `comms` (in the `code-desk` bundle) writes its dated briefing
 folders into `_meta/briefings/` when a repo carries this structure. It reads the layout but

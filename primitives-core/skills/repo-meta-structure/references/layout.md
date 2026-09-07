@@ -42,8 +42,8 @@ must carry anything a headless run depends on.
 - `ISSUE_TEMPLATE/` — `config.yml`, `bug.yml`, `feature.yml`, `epic.yml`. The issue forms
   ship **label-less by design**: a hardcoded label name assumes a taxonomy the target repo
   may not have (and the scaffold neither creates nor verifies labels). Labels are declared
-  per-repo in `_meta/mise-en-place.yml` (`gh_issue_labels`), provisioned by the
-  github-project-board skill, and applied at issue creation.
+  per-repo in `_meta/mise-en-place.yml` (`gh_issue_labels`), provisioned manually
+  via `gh`, and applied at issue creation.
 - `workflows/` — `ci.yml`, `claude-review.yml` (Claude reviews PRs), `claude.yml` (tag
   Claude in issues/comments); `release.yml` only if the repo publishes releases. These ship
   as **templates** (see [`../assets/github/workflows/`](../assets/github/workflows/));

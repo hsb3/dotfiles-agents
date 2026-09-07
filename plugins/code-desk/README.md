@@ -91,10 +91,10 @@ gate catch it, and reverting the sabotage. Neither fixes what the baseline finds
 writing the contract and satisfying it are separate jobs, and a baseline taken after
 remediation is worthless.
 
-`board-triage` assumes a board already stood up with an adapter for it. Its GitHub Projects
-adapter drives scripts that ship in the `solo-skills` bundle, so that backend needs both
-installed; its Kaneo adapter does not; its Kata adapter needs the `kata` CLI on PATH, already
-pointed at the right daemon.
+`board-triage` assumes a board already stood up with an adapter for it. Every adapter is
+self-contained in this bundle, and what each needs is the backend's own client: `gh`
+authenticated with `project` scope for GitHub Projects, the `kata` CLI on PATH already pointed
+at the right daemon for Kata, the API url/key/project env values for Kaneo.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already
 carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it does not —

@@ -26,9 +26,9 @@ required_files: []
 | `owner` | scalar | (declared) | GitHub owner (user or org) |
 | `repo` | scalar | (declared) | Repository name |
 | `default_branch` | scalar | audit + scaffold | Recorded variance (e.g. `dev` in some orgs); must be non-empty if present |
-| `gh_issue_labels` | list of `{name, color, description}` | github-project-board | Declared, never provisioned by the scaffold |
-| `gh_milestones` | list of `{title, description}` | github-project-board | Declared, never provisioned by the scaffold |
-| `board_title` | scalar | github-project-board | Declared, never provisioned by the scaffold |
+| `gh_issue_labels` | list of `{name, color, description}` | (declared) | Declared, never provisioned by the scaffold |
+| `gh_milestones` | list of `{title, description}` | (declared) | Declared, never provisioned by the scaffold |
+| `board_title` | scalar | (declared) | Declared, never provisioned by the scaffold |
 | `required_folders` | list | audit + scaffold | Repo-specific folders beyond the standard — audited as `VAR-xx` rows, created by the scaffold if missing |
 | `required_files` | list | audit + scaffold | Repo-specific files beyond the standard — audited as `VAR-xx` rows, created empty by the scaffold if missing |
 

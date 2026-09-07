@@ -6,8 +6,13 @@ context, and applies only the diff rather than guessing a rank it can't justify.
 board full of captured-but-unranked items into a workable, ranked backlog.
 
 The judgment is backend-agnostic and lives in `SKILL.md`. The board's I/O lives in a thin
-adapter under `references/adapters/` — **GitHub Projects (v2)** and **Kaneo** ship. A new
-backend is a new adapter file: two commands and a field map, no edit to the rubric.
+adapter under `references/adapters/` — **GitHub Projects (v2)**, **Kaneo**, and **Kata**
+ship, each with its own export/apply script in `scripts/`. A new backend is a new adapter
+file: two commands and a field map, no edit to the rubric.
+
+Every adapter writes only on `--apply`. The default run is a preview you read first, and it
+refuses the same rows the write would, so an unresolvable changeset is caught before it
+touches the board.
 
 ## When it triggers
 
@@ -21,6 +26,9 @@ prioritization and roadmap views become useful instead of drifting into noise.
 claude plugin install code-desk@dotfiles-agents
 ```
 
-Ships in the `code-desk` bundle. The GitHub Projects adapter additionally
-needs the `solo-skills` bundle, which is where its export/apply scripts live; the Kaneo
-adapter is self-contained.
+Ships in the `code-desk` bundle. Every adapter is self-contained — no second plugin to
+install. What each one needs is the backend's own client: the GitHub Projects adapter wants
+`gh` authenticated with `project` scope (`gh auth refresh -s project`), the Kata adapter
+wants the `kata` binary pointed at the right daemon, and the Kaneo adapter wants the API
+url, key, and project id it already takes from the environment. Each adapter says so at the
+top of its own file.

@@ -63,8 +63,8 @@ Outside the harness pass `--plugin-root <dir>` pointing at a root that contains
   hook-composition standard), and authored docs — README.md
   (readme-value-and-proof), CLAUDE.md / AGENTS.md (agent-dot-md-authoring).
 - **No GitHub-side provisioning** — `gh_issue_labels` / `gh_milestones` / `board_title`
-  are declared in the manifest for the github-project-board skill; the scaffold touches
-  only in-repo files.
+  are declared in the manifest for a consumer to provision by hand with `gh`; the
+  scaffold touches only in-repo files.
 - **No checklist content of its own** — it fills gaps the standards define and the
   audit reports (plus the same sanctioned HOOK-01 exception the audit carries).
 

@@ -51,6 +51,10 @@ applies, and it dry-runs by default; a plan folder whose tracking ref parses amb
 withheld from that changeset rather than guessed at, so an unclear desk never writes to the
 tracker.
 
+Board-facing conventions — the issue entry forms, the milestone promise levels, and the
+GitHub Projects field set the desk maps onto — live in
+`references/entry-forms-and-milestones.md`.
+
 ## Install
 
 ```

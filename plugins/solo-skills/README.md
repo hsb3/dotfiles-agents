@@ -89,7 +89,6 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
 | `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. |
 | `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
-| `github-project-board` | Stand up and operate one GitHub Project (v2) board — fields including iterations, many views over one item set, dependencies, and the triage cadence. |
 
 **Planning and comms**
 
@@ -136,8 +135,8 @@ and its layout standard, in `mise-en-place`) or external (the `bun` toolchain, t
 
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
-`github-project-board` needs `gh` authenticated; `opencode-sandbox` needs the `opencode-sandbox`
-CLI and Docker; `carbon-builder` needs the hosted Carbon MCP server. Each says so at the point of use.
+`opencode-sandbox` needs the `opencode-sandbox` CLI and Docker; `carbon-builder` needs the hosted
+Carbon MCP server. Each says so at the point of use.
 
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`

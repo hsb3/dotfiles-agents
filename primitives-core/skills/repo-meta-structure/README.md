@@ -18,7 +18,9 @@ new repo, reviewing an existing one, or checking what belongs where.
 | Planning-doc frontmatter in `_meta/plans/`, which desk files are exempt from it, or communication-package intake | `references/planning-docs.md` |
 
 It also ships the templates the standard describes under `assets/` — `.github/` template set,
-gitignore and lefthook templates, and docs scaffolding.
+gitignore and lefthook templates, and docs scaffolding. The issue forms ship label-less on
+purpose: labels are declared per-repo in `_meta/mise-en-place.yml` and provisioned by hand
+with `gh`, since nothing in this marketplace creates them for you.
 
 ## Reference only
 

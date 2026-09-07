@@ -25,7 +25,7 @@ Properties (by construction):
     content (agent-dot-md-authoring, readme-value-and-proof); inline-hook migration is
     deferred to the hook-composition standard.
   - No GitHub-side provisioning: `gh_*` / `board_title` manifest fields are declared for
-    the github-project-board skill; this script touches only in-repo files.
+    a consumer to provision by hand with `gh`; this script touches only in-repo files.
   - No `git add` / `git commit`: staging the scaffolded files is the owner's call.
 
 Checklist + manifest contract: rows come from the standards' checklist files (same
@@ -215,12 +215,12 @@ MANIFEST_TEMPLATE = """\
 # Field reference: the mise-en-place-scaffold skill's references/manifest.md.
 # Readers: repo-compliance-audit + mise-en-place-scaffold consume default_branch,
 # required_folders, required_files; the gh_* / board_title fields are declared here for
-# the github-project-board skill. Unknown fields are tolerated by both readers.
+# manual, out-of-band provisioning via gh. Unknown fields are tolerated by both readers.
 owner: ""            # e.g. your GitHub owner
 repo: ""
 default_branch: main # e.g. dev in some orgs
-gh_issue_labels: []  # [{name, color, description}] — consumed by github-project-board
-gh_milestones: []    # [{title, description}] — consumed by github-project-board
+gh_issue_labels: []  # [{name, color, description}] — declared for manual gh provisioning
+gh_milestones: []    # [{title, description}] — declared for manual gh provisioning
 board_title: ""
 required_folders: [] # repo-specific additions beyond the standard
 required_files: []
@@ -273,12 +273,12 @@ def parse_checklist(text):
 # Scaffold-side field set. The audit consumes only AUDIT_KNOWN fields; everything the
 # audit does not know it tolerates silently. This reader knows the full manifest schema
 # (owned here), parses the same audit-side fields with identical semantics, tolerates
-# the github-project-board fields without deep-parsing them, and WARNS on truly unknown
+# the gh_* provisioning fields without deep-parsing them, and WARNS on truly unknown
 # top-level keys instead of skipping silently.
 
 KNOWN_SCALAR_KEYS = {"default_branch", "owner", "repo", "board_title"}
 KNOWN_LIST_KEYS = {"required_folders", "required_files"}
-KNOWN_BLOCK_KEYS = {"gh_issue_labels", "gh_milestones"}  # github-project-board's fields
+KNOWN_BLOCK_KEYS = {"gh_issue_labels", "gh_milestones"}  # manual gh-provisioning fields
 AUDIT_STRICT_KEYS = {
     "default_branch"
 } | KNOWN_LIST_KEYS  # keys audit.py parses strictly
@@ -342,7 +342,7 @@ def load_manifest(repo):
                         manifest[key] = manifest.get(key, [])
                         current_key = key
                 elif key in KNOWN_BLOCK_KEYS:
-                    # declared for github-project-board; not consumed here, block tolerated
+                    # declared for manual gh provisioning; not consumed here, block tolerated
                     in_tolerated_block = True
                 else:
                     warnings.append(

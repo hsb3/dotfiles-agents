@@ -41,12 +41,6 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
-  - id: github-project-board
-    type: skill
-    source: primitives-core/skills/github-project-board
-    origin: authored
-    disposition: qualified
-    targets: [claude-code, opencode]
   - id: mise-en-place-scaffold
     type: skill
     source: primitives-core/skills/mise-en-place-scaffold

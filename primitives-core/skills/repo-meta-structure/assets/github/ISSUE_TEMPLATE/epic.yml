@@ -3,7 +3,7 @@ description: A rollup that tracks a set of child issues toward one promise.
 title: "epic: "
 # Label-less by design: templates ship to repos with their own label taxonomies, so a
 # hardcoded name may not exist there. Labels are declared per-repo in
-# _meta/mise-en-place.yml (gh_issue_labels) and provisioned by github-project-board;
+# _meta/mise-en-place.yml (gh_issue_labels) and provisioned manually via gh;
 # apply them at issue creation.
 body:
   - type: textarea
