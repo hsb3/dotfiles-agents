@@ -70,6 +70,50 @@ checkout currently has it in its working tree. `ATELIER_ACTIVATION_FILE` still w
 never re-resolved, and with no `git` on `PATH` — or a project dir that is not a linked worktree —
 behaviour is exactly what it was.
 
+## Nesting is intended
+
+A dispatcher that is itself in a linked worktree — a `manager` that was isolated on the way in —
+gets its writers put in **nested** worktrees, one per worker, each on its own branch. That is the
+designed outcome, not a misconfiguration, and the hook does not stand down there. Two reasons,
+recorded so this is not re-litigated:
+
+1. **Sharing the dispatcher's worktree reintroduces the exact hazard this hook exists for.** A
+   manager runs builders in parallel; standing them all in its single worktree gives them one index
+   and one working tree. The dispatcher being one level down does not make two concurrent writers
+   safe — it only moves the shared tree.
+2. **It would contradict how the activation file is resolved.** The resolver above deliberately
+   follows policy *into* a worktree. A hook that reads its policy through a worktree and then
+   stands down inside one is incoherent.
+
+What nesting actually costs is integration ergonomics: the dispatcher has to collect each worker's
+commits and clean up the leftovers. So the notice on a nested rewrite carries the integrate step,
+at dispatch time rather than at the end of the wave:
+
+```
+… You are standing in a linked worktree yourself, so this one is NESTED under it on its own
+branch — intended, not a misconfiguration. To integrate when it reports: `git worktree list`
+for its path and branch, `git cherry-pick HEAD..<branch>` to take its commits, then
+`git worktree remove <path> && git branch -D <branch>` to clean up.
+```
+
+`HEAD..<branch>` is correct under either `worktree.baseRef` setting — with `head` the worker's
+branch starts at the dispatcher's HEAD, with `fresh` it starts at the default branch, and the range
+is "what this branch has that mine does not" in both cases.
+
+To sweep for strays after a wave, from the dispatcher's own worktree:
+
+```sh
+git worktree list --porcelain | sed -n 's,^branch refs/heads/,,p' \
+  | grep '^worktree-agent-' | grep -vx "$(git branch --show-current)"
+```
+
+(The harness names each worker's branch after its worktree, so the prefix filter finds them; the
+second `grep` drops the dispatcher's own branch, which the same listing includes.)
+
+Deliberately three commands rather than one loop: `git cherry-pick` can stop on a conflict, and a
+loop fanning out over branches would keep going past it and leave a half-integrated tree with no
+one having read the failure. The dispatcher should see each worker's result.
+
 ## Inert paths
 
 Beyond an unarmed activation file, the hook stands down when:
@@ -135,6 +179,19 @@ Each row carries the identity envelope (`v`, `plugin`, `harness`, `stream`, `ts`
 `session_id`, `agent_type`, `mode`, `isolated` (bool), and `reason` (`null` when isolated, else
 `"agent type not armed"` or `"project dir is not a git repo"`). A row written from the fail-open
 error path also carries `error` and a truncated `traceback`.
+
+Rewrite rows carry one more field, `nested` (bool): whether the **dispatcher** was itself standing
+in a linked worktree, which is what makes the worker's worktree a nested one. It answers the
+stray-branch audit — how many leftover worker branches a wave should have produced, and under whom
+— from the ledger instead of from `git branch`. It appears only on rewrite rows: it costs a `git`
+subprocess and every non-rewrite row is a path where no worktree was created, so there is nothing
+to audit.
+
+The question is answered by comparing `git rev-parse --git-dir` against `--git-common-dir` (equal
+in a main checkout, `<common>/worktrees/<name>` vs `<common>` in a linked one), with both sides
+resolved through symlinks first. Not by the common dir's literal value: that is `.git` only at a
+main checkout's *root* and a relative `../../.git` from any subdirectory of the same checkout, so a
+string test reports every subdirectory as a worktree.
 
 ## Design notes
 
