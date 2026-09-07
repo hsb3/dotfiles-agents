@@ -101,7 +101,9 @@ queue where everything arrives `major` carries no priority signal at all.
 
 ## Configuration
 
-Filing needs the `gh` CLI installed and authenticated against the target repo.
+Filing needs the `gh` CLI installed and authenticated against the target repo. Without `gh`
+on PATH the reporter stops with one message naming it and files nothing; `--draft` still
+prints the report so you can file it by hand.
 
 | Env var | Default | Meaning |
 |---|---|---|

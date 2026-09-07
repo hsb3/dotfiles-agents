@@ -70,7 +70,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `drawio` | Read, convert, and headlessly export draw.io files — compressed and uncompressed mxGraph XML, legacy-to-Mermaid conversion, and CLI export to PNG/SVG. |
 | `excalidraw` | Sketch-style diagrams as `.excalidraw` files, using the Excalidraw MCP tools when a session exposes them and authoring the scene JSON directly when it does not. |
 | `dataviz` | Chart design rules to consult *before* writing chart code, in any library: mark selection, the anti-patterns to refuse, and a colorblind-safe palette with a runnable validator. |
-| `pptx-themes` | PowerPoint decks with a curated theme layer — semantic tokens, approved palettes, monospaced typography, and a visual QA pass. |
+| `pptx-themes` | PowerPoint decks with a curated theme layer — semantic tokens, approved palettes, monospaced typography, and a visual QA pass, over a vendored base that is never hand-edited. |
 
 **Building software**
 
@@ -78,7 +78,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 |---|---|
 | `api-craft` | HTTP/REST API servers by layer — route, schema, service, repository, model — with the rejection cascade that maps every failure to a status code and outside-in build order. |
 | `tui-craft` | Full-screen terminal apps — layering, state ownership, repaint and streaming discipline, key routing, and the fixes for flicker, resize corruption, and a terminal left broken after exit. |
-| `pocketbase` | Operate a PocketBase backend over the REST API or in Go package mode — collection and record CRUD, auth, backups, migrations, hooks, and custom routes. |
+| `pocketbase` | Operate a PocketBase backend over the REST API or in Go package mode — collection and record CRUD, auth, backups, migrations, hooks, and custom routes; design calls route to `pocketbase-best-practices`. |
 | `pocketbase-best-practices` | Design and review rules for a PocketBase backend — schema, API rules, auth flows, query performance, realtime, file handling, and deployment. |
 | `carbon-builder` | IBM Carbon Design System for React and Web Components — components, IBM Products UI, Carbon Charts, design tokens, IBM Plex, and Carbon compliance audits, grounded in the hosted Carbon MCP server. |
 

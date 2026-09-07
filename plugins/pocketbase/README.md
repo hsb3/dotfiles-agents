@@ -42,7 +42,7 @@ surface for what the other two would not think to question.
 
 | Skill | Answers | Origin |
 |---|---|---|
-| `pocketbase` | Create the collection, run the migration, take a backup, wire a Go hook or custom route | authored |
+| `pocketbase` | Create the collection, run the migration, take a backup, wire a Go hook or custom route (design calls route to `pocketbase-best-practices`) | authored |
 | `pocketbase-best-practices` | Should this be an auth or base collection? What rule expresses owner-or-admin? Why is this query slow? | authored layer over a vendored rule set |
 
 **`pocketbase`** — mode detection (standalone binary vs Go package), bootstrap, and eight

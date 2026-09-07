@@ -101,7 +101,8 @@ carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it
 it never creates the wider meta-structure to get there.
 
 `pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a full
-authoring replacement for it.
+authoring replacement for it — and it names where to report an error in that base, since the
+vendored copy is never hand-edited.
 
 ## Install
 
