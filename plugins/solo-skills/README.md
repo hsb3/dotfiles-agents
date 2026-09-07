@@ -17,9 +17,9 @@ on every run:
 ```mermaid
 flowchart TD
     Skill[A skill in this collection] --> Q{Needs an agent, a hook, or a sibling skill}
-    Q -->|no| Sys{Prescribes an opt-in in-repo system}
+    Q -->|no| Sys{Prescribes an opt-in system, in-repo or external}
     Sys -->|no| Solo[Ships in solo-skills]
-    Sys -->|yes| MEP[Ships in mise-en-place]
+    Sys -->|yes| MEP[Ships only in that system's own plugin]
     Q -->|dispatches agents, reads the covenant hooks| At[Ships in atelier]
     Q -->|assumes the desk's other pieces| CD[Ships in code-desk]
     Solo --> Gate[The membership gate re-derives this on every run]
@@ -128,9 +128,11 @@ hook, or reads a sibling skill's files ships in the bundle that carries those pi
 delegation and waves in `atelier`; board triage in `code-desk`; the repo scaffold and the
 compliance audit in `mise-en-place`. Those are not lesser skills, they are skills whose
 dependencies a grab-bag cannot satisfy. A second, narrower exclusion is deliberate rather
-than derived: a skill that prescribes an opt-in in-repo system (the `_meta/` planning desk
-and its layout standard) ships only in `mise-en-place`, so installing this bundle never
-pushes that system's conventions on a repo that tracks work on a board.
+than derived: a skill that prescribes a system the consumer opts into deliberately ships
+only in that system's own plugin, so installing this bundle never pushes those conventions
+on a repo that has not chosen them. The system can be in-repo (the `_meta/` planning desk
+and its layout standard, in `mise-en-place`) or external (the `bun` toolchain, the
+`kenn-forge` daemon, each in a plugin of that name).
 
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
@@ -140,7 +142,7 @@ CLI and Docker; `carbon-builder` needs the hosted Carbon MCP server. Each says s
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
-skills also ship inside a bundle (`handoff` in `atelier`, the diagram skills in
+skills also ship inside another plugin (`handoff` in `atelier`, the diagram skills in
 `diagrams`, the Obsidian skills in `obsidian-toolkit`, the PocketBase skills in `pocketbase`,
 `carbon-builder` in `carbon`, `task-authoring` in `kaneo`, and several in `code-desk`);
 installing both homes loads each skill once.

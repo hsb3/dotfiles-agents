@@ -33,11 +33,14 @@ skill that genuinely should not ship solo must earn that by carrying a real depe
 not by being quietly left out.
 
 One narrow escape exists: `SYSTEM_EXEMPTIONS`, for a skill that is standalone-CAPABLE
-(no sibling, agent, or hook need) but prescribes an opt-in in-repo system a consumer
-must choose deliberately — shipping it in the everything-bundle would push that system's
-conventions on every install. Each entry names its reason and the plugin that carries the
-skill instead (owner ruling 2026-09-01, the code-desk split). An exempted skill found
-INSIDE solo-skills is red — the exemption and the membership contradict each other.
+(no sibling, agent, or hook need) but prescribes a system the consumer must opt into
+deliberately — either an in-repo system this marketplace defines, or an external one (a
+daemon, an app, a toolchain) they have to stand up and choose. What is prescribed is
+still a property of the skill; shipping it in the everything-bundle would push that
+system's conventions on every install. Each entry names its reason and the plugin that
+carries the skill instead (owner ruling 2026-09-01, the code-desk split; widened to
+external systems by owner ruling 2026-09-07). An exempted skill found INSIDE solo-skills
+is red — the exemption and the membership contradict each other.
 
 Run standalone for a full report on every skill, which is the tool for answering "is this
 new skill standalone-capable?":
@@ -81,9 +84,18 @@ AGENT_EXEMPTIONS = {
 }
 
 # Standalone-capable skills deliberately kept OUT of solo-skills: each prescribes an
-# opt-in in-repo system (owner ruling 2026-09-01 — the code-desk split). Keyed by skill
-# id, value names the reason and the plugin that carries the skill instead.
+# opt-in system, in-repo or external (owner ruling 2026-09-01 — the code-desk split;
+# widened to external systems 2026-09-07). Keyed by skill id, value names the reason and
+# the plugin that carries the skill instead.
 SYSTEM_EXEMPTIONS = {
+    "bun": (
+        "makes bun the default JS/TS runtime, package manager, test runner and bundler — "
+        "a toolchain policy a consumer adopts per repo, shipped only by the bun plugin"
+    ),
+    "kenn-forge": (
+        "drives a kenn-forge daemon the consumer must have running on their own machine — "
+        "an opt-in external system, shipped only by the kenn-forge plugin"
+    ),
     "planning-desk": (
         "stands up a GitHub-issue-backed _meta/plans/ desk in the consuming repo — an "
         "opt-in planning system, shipped only by the mise-en-place plugin"
