@@ -6,8 +6,7 @@ helpers and on-demand references.
 ## When it triggers
 
 Any PocketBase operational task: collection and record CRUD, superuser/user auth, backups,
-migration file generation (JS and Go), Go hooks and custom routes, and design guidance for
-API rules, relations, and security patterns.
+migration file generation (JS and Go), and Go hooks and custom routes.
 
 Pairs with `pocketbase-best-practices`, which ships in the same plugin: this skill is the
 **operational** surface (how to drive a running instance); that one is the **design** surface
