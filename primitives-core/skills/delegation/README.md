@@ -16,7 +16,10 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   the definition of done, judging high-impact reports, final validation, what the user
   hears, and amending the contract.
 - **Management — `manager`**, one agent driving a coupled chain as the session's proxy.
-  Sub-briefs, first-pass checking, and a proof package back.
+  Sub-briefs, first-pass checking, and a proof package back. A chain is sized twice before
+  it is dispatched — how wide it may be, and whether one manager context can pay for it to
+  the end. A brief too long for one manager is pre-split, or told to hand its remainder to
+  a successor; it is never compacted mid-chain.
 - **Execution — `scout`, `builder`, `reviewer`**, each working from a brief and nothing else.
 
 ## Waiting
@@ -55,8 +58,9 @@ implying containment it does not have.
 
 Every rule carries a provenance tag: `[lab]` and `[cost]` were measured, `[field]` was
 observed in practice but not reproduced under measurement, and `[untested]` is reasoning.
-`references/provenance.md` maps each rule to what backs it. No tag is ever defended as a
-stronger one than it carries.
+`references/provenance.md` maps each rule to what backs it. The ranking is part of the
+doctrine: `[field]` outranks `[untested]` and never outranks the measured two, and no tag is
+ever defended as a stronger one than it carries.
 
 ## Install
 
