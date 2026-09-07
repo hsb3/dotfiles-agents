@@ -3,19 +3,26 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Reconcile the _meta/plans/README.md status table against live GitHub issue
-state and the plan folders on disk.
+"""Reconcile the plans README status table against tracker state and the folders on
+disk.
 
-The README table is hand-maintained, so it drifts: a plan stays in the ACTIVE
-section after its tracking issue closes, a folder appears with no row, the row
-names a different issue than the plan body. This script catches all of that in
-one batched `gh` call. No third-party deps.
+The README table is hand-maintained, so it drifts: a plan stays in the ACTIVE section
+after its tracked item closes, a folder appears with no row, the row names a different
+item than the plan body. This answers "do the table, the tracker, and the disk still
+agree?" in one pass over an exported snapshot.
+
+The tracking ref is deliberately backend-agnostic: **the first whitespace- or
+punctuation-delimited token that is a key in the snapshot**, in the README's ref column
+and in each `plan.md`'s `## Tracking` section alike. No per-backend ref syntax, so a
+desk keeps working when the tracker changes underneath it.
 
 Usage (from anywhere):
-    uv run _meta/plans/reconcile.py          # or: python3 _meta/plans/reconcile.py
-    ./_meta/plans/reconcile.py --json        # machine-readable drift list
+    python3 _utils/reconcile.py                            # export from the tracker
+    python3 _utils/reconcile.py --snapshot snapshot.json   # read an export
+    python3 _utils/reconcile.py --json                     # machine-readable drift list
 
-Exit code is 1 when any drift is found, 0 when clean -- so it can gate a wave.
+Reads `--status all` by default: an ARCHIVED row can only be checked against a closed
+item. Exit 1 when any drift is found, 0 when clean -- so it can gate a wave.
 """
 
 from __future__ import annotations
@@ -23,25 +30,57 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-# This script lives in _meta/plans/_utils/; the plans desk it scans is the parent dir.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from tracker import add_tracker_args, load_snapshot  # noqa: E402
+
+# This script lives in <desk>/_utils/; the plans desk it scans is the parent dir.
 PLANS_DIR = Path(__file__).resolve().parent.parent
 README = PLANS_DIR / "README.md"
-ISSUE_RE = re.compile(r"#(\d+)")
 
 # Section markers in README.md (substring match on the line).
 ACTIVE_MARKER = "ACTIVE plans"
 ARCHIVED_MARKER = "ARCHIVED ("
 
-# `gh issue list` page cap; warn if a call saturates it (results may be truncated).
-ISSUE_LIST_LIMIT = 1000
+# A ref token: alphanumeric, with inner - or _ kept so a hyphenated key survives.
+# Everything else -- `#`, backticks, punctuation -- is a delimiter, which is why a
+# qualified `project#key` splits into `project` and `key` and resolves on the second.
+TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
+# A ref cell that deliberately names nothing, as opposed to naming something unknown.
+NO_REF_RE = re.compile(r"^(|-|--|n/?a|none|tbd|\(?no [a-z ]*\)?)$", re.I)
+# Relation words. The ref rule takes the FIRST known key, and a line that also states
+# a relation ("Blocked by ay9p; this plan tracks xmwb") hands it the wrong one. The
+# parse cannot be made right in general, so any relation word ANYWHERE on the ref's
+# own line makes the parse a warning: it may name a relation, not this plan's own ref.
+RELATION_RE = re.compile(
+    r"\b(epic|under|child(ren)? of|relates?|related|sibling|blocked[- ]?by|blocks|"
+    r"depends? on|supersed(es|ed)|duplicate|dup of|see also|part of|parent)\b",
+    re.I,
+)
+
+
+def find_known_ref(text: str, keys: set[str]) -> tuple[str | None, int]:
+    """(first token in `text` that is a key in the snapshot, where it starts).
+
+    The START is returned, not looked up afterwards: `text.index(ref)` finds the first
+    SUBSTRING, so a `p937` inside `feat/p937x-thing` would be mistaken for the match.
+    """
+    for match in TOKEN_RE.finditer(text or ""):
+        if match.group(0) in keys:
+            return match.group(0), match.start()
+    return None, -1
 
 
 def parse_readme_rows() -> tuple[list[dict], list[dict]]:
-    """Return (active_rows, archived_rows). Each row: {plan, issues:[int], raw}."""
+    """Return (active_rows, archived_rows). Each row: {plan, cell}."""
+    if not README.is_file():
+        sys.exit(
+            f"no {README.name} at {README} -- run this from a plans desk, where the "
+            "scripts live in <desk>/_utils/ beside the desk's own README"
+        )
     active: list[dict] = []
     archived: list[dict] = []
     mode: str | None = None
@@ -57,128 +96,99 @@ def parse_readme_rows() -> tuple[list[dict], list[dict]]:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) < 2:
             continue
-        plan, issue_cell = cells[0], cells[1]
+        plan, cell = cells[0], cells[1]
         # Skip the header and separator rows.
         if plan in ("Plan", "Plan (archived path)") or set(plan) <= {"-", " ", ":"}:
             continue
-        issues = [int(n) for n in ISSUE_RE.findall(issue_cell)]
-        (active if mode == "active" else archived).append(
-            {"plan": plan, "issues": issues, "issue_cell": issue_cell}
-        )
+        (active if mode == "active" else archived).append({"plan": plan, "cell": cell})
     return active, archived
 
 
-# Words that, when they precede the first `#` in the Tracking section, mean the
-# leading issue is an EPIC/relation, not this plan's tracking issue -- which would
-# make the "first #" heuristic grab the wrong number. The convention is: the
-# tracking issue comes FIRST, epics/relations after. We warn if that's violated.
-EPIC_SIGNAL = re.compile(r"\b(epic|under|child of|relates?|sibling)\b", re.I)
+def plan_tracking_refs(slug: str, keys: set[str]) -> tuple[list[str], str | None]:
+    """(every known key named in the `## Tracking` section, warning) for one plan.
 
+    The FIRST entry is the tracking ref by convention. The rest matter when the parse
+    is warned: the true ref is then one of them, and a caller that proposes a write
+    (coverage.py) must treat all of them as possibly-tracked rather than guess.
 
-def plan_body_issue(slug: str) -> tuple[int | None, str | None]:
-    """(tracking issue, warning). The tracking issue is the first `#NNN` in the
-    plan.md `## Tracking` section. Warn (non-fatal) if the section is missing or
-    the leading issue looks epic-flagged -- i.e. the convention may be violated and
-    the parse should be double-checked against the README issue."""
+    Warn (non-fatal) when the section is missing, names no known key, or its ref line
+    also states a relation -- a human should check that one rather than a script
+    reporting a mismatch it invented.
+    """
     plan_md = PLANS_DIR / slug / "plan.md"
     if not plan_md.is_file():
-        return None, "no plan.md"
+        return [], "no plan.md"
     text = plan_md.read_text()
-    m = re.search(r"^##\s*Tracking\b.*?(?=^##\s|\Z)", text, re.S | re.M)
-    if not m:
-        return None, "no `## Tracking` section"
-    section = m.group(0)
-    found = ISSUE_RE.search(section)
+    found = re.search(r"^##\s*Tracking\b.*?(?=^##\s|\Z)", text, re.S | re.M)
     if not found:
-        return None, "`## Tracking` names no issue"
-    issue = int(found.group(1))
-    # Is the leading `#` preceded by an epic-signal word on the same line?
-    line_start = section.rfind("\n", 0, found.start()) + 1
-    if EPIC_SIGNAL.search(section[line_start : found.start()]):
-        return (
-            issue,
-            f"leading issue #{issue} looks epic-flagged; verify it is the tracking issue",
+        return [], "no `## Tracking` section"
+    section = found.group(0)
+    hits = [m for m in TOKEN_RE.finditer(section) if m.group(0) in keys]
+    if not hits:
+        return [], "`## Tracking` names no known tracker key"
+    refs = list(dict.fromkeys(m.group(0) for m in hits))
+    line = section[section.rfind("\n", 0, hits[0].start()) + 1 :].split("\n", 1)[0]
+    if RELATION_RE.search(line):
+        return refs, (
+            f"ref {refs[0]} sits on a line that states a relation -- verify it is this "
+            "plan's own tracking ref"
         )
-    return issue, None
-
-
-def fetch_issue_states() -> dict[int, str]:
-    """number -> 'OPEN'|'CLOSED' for every issue in the repo (one gh call)."""
-    out = subprocess.run(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--state",
-            "all",
-            "--limit",
-            str(ISSUE_LIST_LIMIT),
-            "--json",
-            "number,state",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
-    items = json.loads(out)
-    if len(items) >= ISSUE_LIST_LIMIT:
-        print(
-            f"WARNING: issue list hit the {ISSUE_LIST_LIMIT}-issue limit; "
-            "results may be incomplete",
-            file=sys.stderr,
-        )
-    return {it["number"]: it["state"] for it in items}
+    return refs, None
 
 
 def disk_folders() -> set[str]:
-    return {
-        p.name for p in PLANS_DIR.iterdir() if p.is_dir() and (p / "plan.md").is_file()
-    }
+    return {p.name for p in PLANS_DIR.iterdir() if p.is_dir() and (p / "plan.md").is_file()}
 
 
-def run() -> dict:
+def resolve_row(cell: str, keys: set[str]) -> tuple[str | None, str | None]:
+    """(ref, why-not). `why-not` is 'none' when the cell claims nothing and 'unknown'
+    when it claims something the tracker has never heard of."""
+    ref, _at = find_known_ref(cell, keys)
+    if ref:
+        return ref, None
+    stripped = re.sub(r"[`*]", "", cell).strip()
+    return None, ("none" if NO_REF_RE.match(stripped) else "unknown")
+
+
+def run(snapshot: dict) -> dict:
     active, archived = parse_readme_rows()
-    states = fetch_issue_states()
+    states = {i["key"]: i["state"] for i in snapshot["items"]}
+    keys = set(states)
     folders = disk_folders()
     drift: list[dict] = []
     warns: list[dict] = []
     ok: list[str] = []
 
-    active_slugs = {r["plan"] for r in active}
+    active_slugs = {row["plan"] for row in active}
 
     for row in active:
-        slug, issues = row["plan"], row["issues"]
-        tracking = issues[0] if issues else None
-        # 1. tracking issue should be OPEN
-        if tracking is None:
+        slug = row["plan"]
+        ref, why = resolve_row(row["cell"], keys)
+        # 1. the tracked item should be open
+        if ref is None and why == "none":
             drift.append(
-                {
-                    "kind": "active-no-issue",
-                    "plan": slug,
-                    "detail": "ACTIVE row names no issue number",
-                }
+                {"kind": "active-no-issue", "plan": slug, "detail": "ACTIVE row names no ref"}
             )
-        elif tracking not in states:
+        elif ref is None:
             drift.append(
                 {
                     "kind": "issue-missing",
                     "plan": slug,
-                    "issue": tracking,
-                    "detail": f"#{tracking} not found in repo",
+                    "detail": f"ACTIVE row names no item the tracker knows: {row['cell']}",
                 }
             )
-        elif states[tracking] == "CLOSED":
+        elif states[ref] == "closed":
             drift.append(
                 {
                     "kind": "active-but-closed",
                     "plan": slug,
-                    "issue": tracking,
-                    "detail": f"#{tracking} is CLOSED -> human decision: "
-                    "reopen the issue (criteria unmet) OR archive the plan (done)",
+                    "ref": ref,
+                    "detail": f"{ref} is CLOSED -> human decision: reopen the item "
+                    "(criteria unmet) OR archive the plan (done)",
                 }
             )
         else:
-            ok.append(f"{slug:<30} #{tracking} OPEN")
+            ok.append(f"{slug:<30} {ref} open")
         # 2. folder must exist on disk
         if slug not in folders:
             drift.append(
@@ -188,41 +198,41 @@ def run() -> dict:
                     "detail": "ACTIVE row has no plan folder on disk",
                 }
             )
-        # 3. README issue vs plan.md Tracking issue
-        body, warn = plan_body_issue(slug)
+        # 3. README ref vs the plan.md Tracking ref
+        refs, warn = plan_tracking_refs(slug, keys)
+        body = refs[0] if refs else None
         if warn:
             warns.append({"plan": slug, "detail": warn})
-        if tracking and body and body != tracking:
+        if ref and body and body != ref:
             drift.append(
                 {
                     "kind": "body-mismatch",
                     "plan": slug,
-                    "issue": tracking,
-                    "detail": f"README says #{tracking}, plan.md says #{body}",
+                    "ref": ref,
+                    "detail": f"README says {ref}, plan.md says {body}",
                 }
             )
 
     for row in archived:
-        slug, issues = row["plan"], row["issues"]
-        first = issues[0] if issues else None
-        if first is None:  # 'enablement (no issue)', 'repo hygiene' -- nothing to check
-            continue
-        if first not in states:
+        slug = row["plan"]
+        ref, why = resolve_row(row["cell"], keys)
+        if ref is None and why == "none":
+            continue  # 'enablement (no ref)', 'repo hygiene' -- nothing to check
+        if ref is None:
             drift.append(
                 {
                     "kind": "issue-missing",
                     "plan": slug,
-                    "issue": first,
-                    "detail": f"#{first} not found in repo",
+                    "detail": f"ARCHIVED row names no item the tracker knows: {row['cell']}",
                 }
             )
-        elif states[first] == "OPEN":
+        elif states[ref] == "open":
             drift.append(
                 {
                     "kind": "archived-but-open",
                     "plan": slug,
-                    "issue": first,
-                    "detail": f"#{first} is OPEN but plan is archived",
+                    "ref": ref,
+                    "detail": f"{ref} is open but the plan is archived",
                 }
             )
 
@@ -248,38 +258,38 @@ def run() -> dict:
     }
 
 
-def parse_args(argv: list[str]) -> argparse.Namespace:
-    """Parse first, so `--help` answers from anywhere -- before any `gh` call."""
+def build_parser() -> argparse.ArgumentParser:
+    """Parse first, so `--help` answers from anywhere -- before the tracker is read."""
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--json", action="store_true", help="machine-readable output")
-    return parser.parse_args(argv)
+    add_tracker_args(parser, default_status="all")
+    return parser
 
 
-def main() -> int:
-    args = parse_args(sys.argv[1:])
-    result = run()
+def main(argv=None) -> int:
+    args = build_parser().parse_args(argv)
+    result = run(load_snapshot(args))
     if args.json:
         print(json.dumps(result, indent=2))
         return 1 if result["drift"] else 0
 
-    c = result["counts"]
+    counts = result["counts"]
     print(
-        f"Reconcile _meta/plans/README.md vs GitHub  "
-        f"({c['active']} active rows, {c['archived']} archived, "
-        f"{c['folders']} folders)\n"
+        f"Reconcile {README} vs the tracker  ({counts['active']} active rows, "
+        f"{counts['archived']} archived, {counts['folders']} folders)\n"
     )
     for line in result["ok"]:
         print(f"  OK   {line}")
-    for w in result.get("warns", []):
-        print(f"  WARN {w['plan']}: {w['detail']}")
+    for warn in result["warns"]:
+        print(f"  WARN {warn['plan']}: {warn['detail']}")
     if not result["drift"]:
-        print("\nNo drift. README table agrees with live issue state and disk.")
+        print("\nNo drift. The README table agrees with tracker state and disk.")
         return 0
     print(f"\n{len(result['drift'])} drift item(s):")
-    for d in result["drift"]:
-        print(f"  DRIFT [{d['kind']}] {d['plan']}: {d['detail']}")
+    for item in result["drift"]:
+        print(f"  DRIFT [{item['kind']}] {item['plan']}: {item['detail']}")
     return 1
 
 

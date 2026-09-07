@@ -1,29 +1,31 @@
 # mise-en-place
 
-An in-repo planning system for repos that are **not** tracked on an external board. Every
-artifact it prescribes lives in the repo tree, under `_meta/`: a documented directory
-standard, a read-only audit against it, an additive-only scaffolder, and a planning desk
-that stages GitHub issue bodies and build plans as files you review before they ship.
+An in-repo planning system built on `_meta/`: a documented directory standard, a read-only
+audit against it, an additive-only scaffolder, and a planning desk that holds one build plan
+per unit of work as a file you review before anything ships.
 
-**Do not install it on a board-tracked repo.** If work for that repo is filed on kata,
-Kaneo, Linear, or GitHub Projects, the board is the system of record and these
-prescriptions fight it — you get a second, silently diverging queue in the tree. Install
-this only where the repo itself is the intended system of record.
+The standard, the audit, and the scaffold prescribe artifacts that live in the repo tree, so
+install them where the tree is the intended system of record; on a repo that keeps its
+structure somewhere else they just add a second, silently diverging set of prescriptions. The
+desk is the exception - it reads work items from a tracker through a pluggable adapter, and a
+Kata adapter ships.
 
 ## How it fits together
 
-The standard is reference content, not a step you run: the audit and the scaffold both
-read it. Audit and scaffold are a tight loop you repeat until the gaps close; the planning
-desk is what you run on the structure once it exists.
+The standard is reference content, not a step you run: the audit and the scaffold both read
+it. Audit and scaffold are a tight loop you repeat until the gaps close; the planning desk is
+what you run on the structure once it exists, against whatever tracker the adapter resolves.
 
 ```mermaid
 flowchart TD
-    Repo[A repo with no external board] --> Audit[repo-compliance-audit prints pass and gap]
+    Repo[A repo whose tree is the system of record] --> Audit[repo-compliance-audit prints pass and gap]
     Audit --> Scaf[mise-en-place-scaffold fills only the gaps]
     Scaf --> Audit
     Scaf --> Desk[planning-desk stands up the plans desk]
-    Desk --> Work[Issue bodies and build plans staged in the tree]
-    Work --> GH[Filed as GitHub issues once reviewed]
+    Tracker[Work items read through a tracker adapter] --> Desk
+    Desk --> Plan[One build plan per unit of work, staged in the tree]
+    Plan --> Gates[Conformance coverage and reconcile gate the wave]
+    Gates --> Tracker
 
     Std[repo-meta-structure supplies the standard] -.-> Audit
     Std -.-> Scaf
@@ -37,14 +39,16 @@ flowchart TD
 | `repo-meta-structure` | Reference content, read by the other three. Defines the `_meta/{_archive,briefings,plans,operations,research}/` taxonomy, `_meta/HANDOFF.md`, the `_meta/mise-en-place.yml` variance manifest, the `.claude/` and `.github/` layout, required root files, and the gitignore conventions. Answers "what is the standard for X" from the reference files, never from memory. |
 | `repo-compliance-audit` | Read-only. Runs one bundled script from the repo root and presents its `ID \| Area \| Verdict \| Detail` table plus the `N pass / M gap` summary verbatim. Never writes to the audited repo, never fixes a gap, and defines no checks of its own — every row comes from a standard's checklist. |
 | `mise-en-place-scaffold` | Fill-only. `--plan` is the default and writes nothing: it shows the creations, conflicts, and manual items per checklist ID. `--apply` creates only those planned items. There is no overwrite mode — a file that differs from a template is reported as a conflict with a diff and left byte-identical. |
-| `planning-desk` | Stands up `_meta/plans/`: a `_config.md` for this repo's gates and issue-template sections, seven dependency-free utility scripts under `_utils/`, and a folder per unit of work holding `issue-body.md` and `plan.md`. Explicitly GitHub-issue-backed — the issue body is the contract, the plan is the build detail, and the scripts are generated views over `gh` plus disk. |
+| `planning-desk` | Stands up `_meta/plans/`: a `_config.md` for this repo's gates and tracker binding, a tracker adapter plus three dependency-free analysis scripts under `_utils/`, and a folder per unit of work holding `plan.md`. Tracker-adapter-backed, with a Kata adapter shipped — the tracked item is the contract, the plan is the build detail, and the scripts are generated views over a tracker snapshot plus disk. |
 
 ## Honest scope
 
-The desk assumes **GitHub issues**. It predates board tracking and its governance scripts
-read `gh`; it has no kata or Kaneo adapter and is not getting one here. That is exactly why
-these four skills are isolated in their own plugin: a board-tracked repo installing the
-wider desk would absorb an in-repo planning system it does not want.
+The desk reads a tracker through an adapter and does not care which one, but only **one
+adapter ships** (Kata); a second backend means writing one against the snapshot contract in
+the skill's `references/adapters/contract.md`. The rest of the plugin - the `_meta/` standard,
+the audit, the scaffold - is still for repos where the tree is the system of record, which is
+why these four skills are isolated in their own plugin rather than folded into a general
+bundle.
 
 Everything is additive or read-only by design. The audit never writes to the repo it
 audits. The scaffold never overwrites, merges, edits, deletes, or moves an existing file,

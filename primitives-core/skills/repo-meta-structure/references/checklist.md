@@ -138,9 +138,10 @@ ignore behavior, not a byte-match against the template.
 
 Scope: every `*.md` under `_meta/plans/` (recursive, including `inbox/`), **excluding**
 `README.md` (the desk index), files whose name starts with `_` (desk config such as
-`_config.md`), anything under `_utils/`, and `issue-body.md` files. Staged `issue-body.md`
-files are exempt from the frontmatter schema: a staged issue body is the raw publishable
-GitHub body, kept byte-identical to the live issue (owner ruling 2026-07-02). Field
+`_config.md`), anything under `_utils/`, and `issue-body.md` files. The `issue-body.md`
+exemption is legacy: a staged body was the raw publishable tracker body, kept byte-identical
+to the live item (owner ruling 2026-07-02). `planning-desk` no longer stages one — the tracked
+item is the contract — so the exemption only covers desks that predate that change. Field
 semantics and the `type` vocabulary — including the two intake extensions — are defined in
 [`planning-docs.md`](planning-docs.md). Gaps are reported at field granularity (file +
 missing field).

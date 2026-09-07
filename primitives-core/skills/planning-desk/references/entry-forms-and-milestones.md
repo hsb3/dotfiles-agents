@@ -2,13 +2,13 @@
 
 Two cross-project standards the planning desk enforces. They answer *what shape a unit of work takes
 to enter a queue* (the entry forms) and *what gate/milestone vocabulary a board speaks* (the shared
-milestone set). Cite them from issue/plan authoring and from board setup; do not restate their fields
+milestone set). Cite them from item/plan authoring and from board setup; do not restate their fields
 inline elsewhere — link here.
 
 - **Origin:** the ratified `use-case-driven-backlog` decision (an extender enters a queue because a
   named project or workflow needs it, ranked by how soon the need is real; the vendor/resources list
-  is a sourcing catalog, not a backlog). Formalizes what `dotfiles-agents#84` asked for; the bench
-  form is the owner amendment (2026-07-11).
+  is a sourcing catalog, not a backlog). Formalizes what the originating backlog request asked for;
+  the bench form is the owner amendment (2026-07-11).
 - **Status:** the entry-form core fields and the milestone-set vocabulary are grounded in shipped
   practice below; the unranked-wishlist rule was ratified by owner ruling 2026-07-12.
 
@@ -29,35 +29,36 @@ bench-entry form (a candidate entering `<incubator-repo>/incubator/`).
 | Deliverables | what gets built, named to file/target/endpoint so no rediscovery is needed | each deliverable names a concrete artifact |
 | Acceptance criteria | how it is judged, each check independently verifiable by someone who did not build it | "X returns Y", "test Z passes", "gate fails on drift" — never "works well" |
 | Known overlaps | existing primitives/candidates this duplicates or supersedes; if it supersedes one, which | a reader can check the named item is or is not a near-duplicate |
-| Source pointers | where the driving material lives — `path:line`, a linked issue, a decision record | each pointer resolves |
+| Source pointers | where the driving material lives — `path:line`, a linked tracker ref, a decision record | each pointer resolves |
 
-**Machine-agnostic:** source pointers and deliverables use repo-relative paths or issue refs, never
+**Machine-agnostic:** source pointers and deliverables use repo-relative paths or tracker refs, never
 machine-absolute paths (`/Users/...`), personal vault names, or `~/Documents|Desktop` locations.
 
 ### Application A — backlog-entry form (a use case enters a project backlog)
 
-A use case enters the backlog as a **GitHub issue** conforming to the repo's `feature` (or `bug`)
-template — the same conformance bar `references/issue-body.md` and `_utils/conformance.py` enforce, so
-the entry form and the issue-body standard are the same gate. The shared core maps onto the template:
+A use case enters the backlog as a **tracked work item** whose body carries the sections the desk's
+conformance gate keys on — the same bar `_utils/conformance.py` enforces and the `task-authoring`
+skill writes to, so the entry form and the item-body standard are the same gate. The shared core maps
+onto the item body:
 
-| Core field | Lands in the issue as | Notes |
+| Core field | Lands in the item body as | Notes |
 | --- | --- | --- |
 | Driving use case | opening framing / `> Tracking:` blockquote | the "why now"; cites the decision or the requesting project |
 | Deliverables | **Deliverables** section | file/endpoint targets named |
 | Acceptance criteria | **Acceptance criteria** section (required) | conformance gate keys on this heading |
-| Known overlaps | **Dependencies & gates** (required) or Deliverables | name superseded/near-dup issues or primitives |
-| Source pointers | inline `path:line` / linked issue throughout | grounds every load-bearing claim |
+| Known overlaps | **Dependencies & gates** (required) or Deliverables | name superseded/near-dup items or primitives |
+| Source pointers | inline `path:line` / a linked tracker ref throughout | grounds every load-bearing claim |
 
-**Representation choice — which shape:** an entry is a **project-task issue** (the default: a `feature`
-issue on the board). A **user story** is the *framing inside* the Driving-use-case field ("as \<role\>
-I need \<capability\> so \<outcome\>"), not a separate artifact. A **feature-spec link** is used when
-the deliverable is large enough to warrant its own plan — the issue links to `_meta/plans/<slug>/`
-rather than inlining the detail. One issue is the unit; the story frames it; the spec link carries the
-depth.
+**Representation choice — which shape:** an entry is a **project-task item** (the default: one
+feature-sized item on the board). A **user story** is the *framing inside* the Driving-use-case field
+("as \<role\> I need \<capability\> so \<outcome\>"), not a separate artifact. A **feature-spec link**
+is used when the deliverable is large enough to warrant its own plan — the item links to
+`_meta/plans/<slug>/` rather than inlining the detail. One item is the unit; the story frames it; the
+spec link carries the depth.
 
 **Ranked-vs-unranked:** an idea with no driving use case yet claimed enters as an *unranked
 wishlist* entry — one line, "no use case claimed yet; per `use-case-driven-backlog` it waits until one
-does" — not as a ready issue. It is promoted to a full backlog issue only when a named near-term use
+does" — not as a ready item. It is promoted to a full backlog item only when a named near-term use
 case claims it. (Grounded in the backlog-seed plan's owner-decision default; ratified as a
 standing rule by owner ruling 2026-07-12.)
 
@@ -85,8 +86,8 @@ qualification.
 - **Backlog seed**: the backlog-seed workflow references this form for entry shape + minimum
   fields (use case, deliverables, overlaps, source pointers) — see the pointer in
   `_meta/plans/extender-ideas-backlog-seed/`.
-- **Issue authoring** (`references/issue-body.md`): the backlog-entry form IS the issue-body
-  conformance bar; that reference is authoritative for the mechanics.
+- **Item authoring** (the `task-authoring` skill): the backlog-entry form IS the item-body
+  conformance bar; that skill is authoritative for the mechanics.
 - **Bench intake** (`<incubator-repo>/docs/extender-lifecycle.md`, Stage 1): intake
   references this form for the scope-doc requirement.
 
@@ -96,6 +97,11 @@ qualification.
 
 A project's board should speak a **consistent gate/milestone vocabulary** so cross-project status
 reads the same and dependencies line up. Two layers, from existing practice:
+
+**Scope:** everything below is a worked example of one board's adoption, on a tracker that has
+milestones as a first-class object. The doctrine is the ordered-promise discipline, not the
+milestone object — a tracker without milestones expresses the same `P<n> — <promise>` vocabulary
+as labels or a priority band.
 
 ### Layer 1 — milestones name promise levels (the "P-N" set)
 
@@ -115,8 +121,8 @@ promises to its own arc; it keeps the "ordered promise, not a date" discipline.
 
 ### Layer 2 — gate labels answer "what blocks the next promise?"
 
-Alongside milestones, a `gate:<promise>` label marks the issues that **block reaching the next promise
-level**. An empty gate means that promise is safe to make — you check the gate, not the raw issue
+Alongside milestones, a `gate:<promise>` label marks the items that **block reaching the next promise
+level**. An empty gate means that promise is safe to make — you check the gate, not the raw item
 count. (From the project protocol: gate labels answer "what blocks the next promise level" and live
 separately from the backlog.) Example in use: `dotfiles-agents` tracks P4 with the `gate:cross-tool`
 label (per the P4 milestone description).
@@ -129,7 +135,7 @@ the *blocker set* for the next hop. A milestone with an empty gate is ready to c
 1. Create the ordered `P<n> — <promise>` milestones (rename promises to the project's arc; keep them
    ordered and dependency-sequenced).
 2. Add a `gate:<promise>` label per promise level whose readiness you want to track separately from the
-   backlog; tag the blocking issues.
+   backlog; tag the blocking items.
 3. On a **shared board** (one item set, many repos), milestones **mirror across the repos** so an item
    from either repo lands under the same promise level — the board is the single source of promise
    state.

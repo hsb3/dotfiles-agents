@@ -1,21 +1,22 @@
 # Mode: plan — author a deep, source-grounded build plan
 
 You are writing a **proper build plan** — the deep, source-grounded detail a builder (human or agent
-crew) executes from. It lands at `_meta/plans/<slug>/plan.md`. The board tracks STATE; this plan
-holds the build DETAIL.
+crew) executes from. It lands at `_meta/plans/<slug>/plan.md`. The tracker holds STATE and the
+item's contract; this plan holds the build DETAIL.
 
-Read `_meta/plans/_config.md` first for this project's gate menu and canonical docs. Study an
-existing `_meta/plans/*/plan.md` for the house pattern if any exist; otherwise apply the schema below
-literally.
+Read `_meta/plans/_config.md` first for this project's gate menu, tracker binding, and canonical
+docs. Study an existing `_meta/plans/*/plan.md` for the house pattern if any exist; otherwise apply
+the schema below literally.
 
 ## What "proper" means — the plan shape
 
-- **Title** = the issue title, then an _italic one-paragraph scope summary_ — especially the
+- **Title** = the tracked item's title, then an _italic one-paragraph scope summary_ — especially the
   **RESIDUAL** if part already shipped (don't re-plan built code).
 - **Status header:** `Status: draft` and `Date: <today>` (pass today's date in — don't invent one).
-- **## Tracking** — issue #, origin (who asked / which audit), relation to epics, and contract
-  impact (does it touch an API / DB / codegen / other source-of-truth surface?). Put the tracking
-  issue FIRST; epics/relations after (the reconcile script keys on the first `#NNN`).
+- **## Tracking** — the tracker ref, origin (who asked / which audit), relation to epics, and
+  contract impact (does it touch an API / DB / codegen / other source-of-truth surface?). Put the
+  tracking item's ref FIRST; epics and relations after (the reconcile script keys on the first ref
+  the tracker snapshot knows).
 - **## The problem (grounded in source)** — what EXISTS today vs what's MISSING, every claim cited
   to `path:line`. This is the load-bearing section: no guesses.
 - **## Deliverables** — units **A / B / C**, each with its own `Acceptance:` sub-criteria that are
@@ -31,11 +32,12 @@ literally.
 ## Procedure
 
 1. **Resolve the target + read the source.**
-   - **issue number** → `gh issue view <n> --json number,title,body,labels`.
-   - **slug** (no digits) → read `_meta/plans/<slug>/issue-body.md`; take its `> **Tracking:** #<n>`
-     as the issue and `gh issue view <n>` for live state.
-   - **description** → no existing issue; plan from scratch (consider running **issue** mode first so
-     a tracked issue + body exist). Also read any existing `issue-body.md`; note its acceptance + gates.
+   - **a tracker ref** → resolve it through the desk's adapter (`references/adapters/`) and read
+     the item's title, body, labels, and links from the snapshot.
+   - **a desk slug** → read `_meta/plans/<slug>/plan.md`; its `## Tracking` section's first known
+     ref is the tracked item, and the snapshot carries that item's live state.
+   - **a description** → nothing is tracked yet; plan from scratch, and file the item first (its
+     body is written with the `task-authoring` skill) so the plan has something to track against.
 
 2. **Ground everything in source — this is the bulk of the work.** Establish what already exists (the
    seams, call sites, shapes), what's missing, and the exact files a builder will touch. Cite
@@ -55,8 +57,9 @@ literally.
 6. **Surface owner decisions** as numbered open questions, each with a recommended default.
 
 7. **Write** `_meta/plans/<slug>/plan.md` (create the folder if new). Add a row to the README's
-   ACTIVE table. Then keep the tracker in sync: if the issue-body's scope/acceptance drifts from this
-   plan, offer to refresh it via **issue** mode so the board and the plan agree.
+   ACTIVE table. Then keep the tracker in sync: if the tracked item's scope or acceptance drifts
+   from this plan, offer to rewrite its body with the `task-authoring` skill so the tracker and the
+   plan agree.
 
 ## The review rubric (for the loop, and as a self-check)
 

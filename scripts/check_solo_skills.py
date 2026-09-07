@@ -97,8 +97,8 @@ SYSTEM_EXEMPTIONS = {
         "an opt-in external system, shipped only by the kenn-forge plugin"
     ),
     "planning-desk": (
-        "stands up a GitHub-issue-backed _meta/plans/ desk in the consuming repo — an "
-        "opt-in planning system, shipped only by the mise-en-place plugin"
+        "stands up a _meta/plans/ desk in the consuming repo, read through a tracker "
+        "adapter — an opt-in planning system, shipped only by the mise-en-place plugin"
     ),
     "repo-meta-structure": (
         "defines the _meta/ directory standard the mise-en-place system enforces — "

@@ -66,7 +66,7 @@ primitives:
     source: primitives-core/skills/planning-desk
     origin: authored
     disposition: qualified
-    requires: [cli:gh]
+    requires: [cli:kata]
     targets: [claude-code, opencode]
   - id: private-fork
     type: skill

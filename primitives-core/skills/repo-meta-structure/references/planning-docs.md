@@ -1,17 +1,18 @@
 # Planning-doc frontmatter and communication-package intake
 
 The conventions for documents on the code planning desk (`_meta/plans/`). The desk workflow
-itself (authoring issue bodies, build plans, the governance toolkit) is the sibling
-`planning-desk` skill; this file owns only the **document contract**: the frontmatter schema
-and the intake location/types for communication packages.
+itself (build plans, the review loop, the governance toolkit) is the sibling `planning-desk`
+skill; this file owns only the **document contract**: the frontmatter schema and the intake
+location/types for communication packages.
 
 ## Frontmatter schema
 
 Every planning doc in `_meta/plans/` (recursive, including `inbox/`) carries this
 frontmatter. Out of scope: `README.md` (the desk index), files starting with `_` (desk
-config), `_utils/` (scripts), and `issue-body.md` files. Staged `issue-body.md` files are
-exempt from the frontmatter schema: a staged issue body is the raw publishable GitHub
-body, kept byte-identical to the live issue (owner ruling 2026-07-02).
+config), `_utils/` (scripts), and `issue-body.md` files. The `issue-body.md` exemption is
+legacy: a staged body was the raw publishable tracker body, kept byte-identical to the live
+item (owner ruling 2026-07-02). `planning-desk` no longer stages one — the tracked item is
+the contract — so the exemption only covers desks that predate that change.
 
 ```yaml
 ---

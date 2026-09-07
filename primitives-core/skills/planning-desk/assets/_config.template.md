@@ -1,30 +1,34 @@
 # Planning desk — project config
 
 _The project-specific bindings the planning-desk authoring modes read. Written once at setup by
-detecting this repo's gates and templates; update it when the project's gates change. Where a value
-couldn't be determined at setup, it's left as `TODO(owner):` — fill it in rather than guessing._
+detecting this repo's tracker and gates; update it when either changes. Where a value couldn't be
+determined at setup, it's left as `TODO(owner):` — fill it in rather than guessing._
 
 Repo: `<owner>/<name>`  ·  Set up: `<YYYY-MM-DD>`
 
-## Issue templates
+## Tracker binding
 
-The conformance gate keys on the load-bearing sections, not exact wording:
+Which tracker the desk scripts read, and how they reach it. The scripts never talk to a tracker
+directly: they read a snapshot exported by an adapter under `_utils/adapters/`, so a project swaps
+backends by swapping this block.
 
-- **feature / bug** (non-epic): an **Acceptance criteria** section + a **Dependencies & gates** section.
-- **epic / tracker**: a **Close when** section.
+| Setting | Value |
+| ------- | ----- |
+| Adapter | `TODO(owner): the adapter file under _utils/adapters/, e.g. the default one` |
+| Project | `TODO(owner): the project name, or "resolved from the workspace binding"` |
+| Snapshot | `TODO(owner): path of the checked-in export, if the desk keeps one; otherwise live` |
 
-| Template | Path | Required sections present |
-| -------- | ---- | ------------------------- |
-| feature | `.github/ISSUE_TEMPLATE/feature.md` | Acceptance criteria; Dependencies & gates |
-| bug | `.github/ISSUE_TEMPLATE/bug.md` | Acceptance criteria; Dependencies & gates |
-| epic | `.github/ISSUE_TEMPLATE/epic.md` | Close when |
+> "Resolved from the workspace binding" means no project is passed at all and the tracker resolves
+> it from this working tree's own config — the usual case for a desk living in its project's repo.
 
-> If this repo had no templates at setup, generic ones were seeded from the skill. Replace them with
-> the project's real templates if/when they exist, keeping the required sections above.
+The task-authoring bar the conformance gate keys on (load-bearing sections, not exact wording):
+
+- **normal item**: an **Acceptance criteria** section + a **Dependencies & gates** section.
+- **epic** (an item with children, or one labelled `epic`): a **Close when** section.
 
 ## Gate menu
 
-The gates a change must account for in an issue's **Dependencies & gates** and a plan's **Gate &
+The gates a change must account for in an item's **Dependencies & gates** and a plan's **Gate &
 contract hygiene** — the commands it must pass and the source-of-truth artifacts it must keep in
 sync. A plan picks the subset its change surface actually touches; it's explicit about which do NOT
 fire. (Detected from the Makefile / package.json / pyproject / CI workflows — verify and prune.)
@@ -47,6 +51,7 @@ The spine docs a plan should ground itself in (a claim cites `path:line` OR one 
 ## Conventions / gotchas
 
 - ASCII-only inside markdown table cells (avoids the common prettier/markdown format-check trap).
-- Outward-facing GitHub edits get owner approval before publishing; staging on the desk is free.
-- Run the `_utils/` scripts from the main working tree (they read live `gh` state + disk).
+- Outward-facing tracker edits get owner approval before writing; staging on the desk is free, and
+  the adapter's `apply` is dry-run until `--apply` is passed.
+- Run the `_utils/` scripts from the main working tree (they read the tracker + disk).
 - `TODO(owner):` add any repo-specific gotchas (branch/commit conventions, required CI checks, etc.).
