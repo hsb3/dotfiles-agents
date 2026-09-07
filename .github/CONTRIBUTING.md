@@ -51,6 +51,53 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
   and drives it rather than restating one — decision-010), `hooks/<id>/hook.py`
   (+ `config.json`) — the ratified hook-dir layout.
 
+## Removing a primitive or a plugin
+
+Deletions are the one publish-surface change nothing else can see: a removal moves no
+version, breaks no symlink and orphans no roster entry, so every gate stays green while a
+skill leaves the marketplace with no record a consumer can read. `scripts/check_removals.py`
+closes that — it diffs the published unit set (`origin/main`) against this tree and requires
+each missing unit to be **declared by the commit that removed it**.
+
+Removing a unit is four things in one PR:
+
+1. Delete the body under `primitives-core/` and the symlink(s) in every `plugins/<id>/`
+   assembly that shipped it (a whole plugin: the assembly directory plus its
+   `.claude-plugin/marketplace.json` entry).
+2. Drop its `primitives-core.yaml` roster entry.
+3. Bump the `version` of every plugin that shipped it — the published bytes changed
+   (`scripts/check_version_bump.py`).
+4. **Declare it.** The commit message must name the removed unit and say it went. Both:
+   the id on its own reads as a refactor, a bare "removed some cruft" names nothing.
+   Say where the capability went, or that it has none — that sentence is what lands on the
+   release page, so write it for the person who was using the thing.
+
+```
+refactor(board-triage): collapse github-project-board into a GitHub Projects adapter script
+
+Retires the standalone skill…: its three scripts merge into one contract-shaped
+export/apply adapter beside kata_board.py, and the skill, its roster entry, and its
+solo-skills symlink are deleted.
+```
+
+The declaration must survive the **squash**: PRs land on `dev` as one squashed commit, so
+the sentence has to be in the PR title/description that becomes that commit's message — a
+declaration written only in an intermediate branch commit is gone by the time the gate looks.
+The gate matches the unit id plus a removal verb (`remove*`/`delete*`/`retire*`/`fold*`)
+anywhere in subject or body, case-insensitively. That match is *evidence* of a declaration,
+not proof of one; it is deliberately loose because the declaration is prose (decision-013),
+and what it actually stops is the removal nobody wrote a sentence about.
+
+`python3 scripts/check_removals.py --notes` renders the same set as the "Removed in this
+publish" section of the release page, so the removal reaches consumers and not only CI.
+
+**Recovering something removed before this gate existed** — the history is the record:
+
+```bash
+git log --diff-filter=D --name-only -- primitives-core/skills primitives-core/agents
+git show <commit>^:primitives-core/skills/<name>/SKILL.md    # read a deleted body
+```
+
 ## What `make ci` enforces
 
 `make ci` runs the machine floor plus the drift guards; each is also a standalone target:
