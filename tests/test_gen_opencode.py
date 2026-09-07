@@ -227,6 +227,27 @@ class TestMcpRender(unittest.TestCase):
         problems = G.build(out, entries, self.MATRIX)
         self.assertTrue(any("odd-server" in p and "demo" in p for p in problems), problems)
 
+    def test_spec_declaring_no_servers_is_a_problem(self):
+        out = self._out()
+        entries = [{"id": "empty-server", "type": "mcp",
+                    "source": self._spec(json.dumps({"mcpServers": {}})),
+                    "targets": "[opencode]"}]
+        problems = G.build(out, entries, self.MATRIX)
+        self.assertTrue(any("empty-server" in p for p in problems), problems)
+
+    def test_a_colliding_server_name_is_a_problem(self):
+        """opencode's `mcp` block is one flat namespace; a second `demo` would overwrite."""
+        spec = json.dumps({"mcpServers": {"demo": {"type": "http", "url": "x"}}})
+        out = self._out()
+        entries = [
+            {"id": "one-server", "type": "mcp", "source": self._spec(spec),
+             "targets": "[opencode]"},
+            {"id": "two-server", "type": "mcp", "source": self._spec(spec),
+             "targets": "[opencode]"},
+        ]
+        problems = G.build(out, entries, self.MATRIX)
+        self.assertTrue(any("collides" in p and "two-server" in p for p in problems), problems)
+
     def test_fragment_is_stable_regardless_of_entry_order(self):
         a = self._spec(json.dumps({"mcpServers": {"zed": {"type": "http", "url": "z"}}}))
         b = self._spec(json.dumps({"mcpServers": {"abe": {"type": "http", "url": "a"}}}))

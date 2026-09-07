@@ -232,6 +232,8 @@ def render_mcp(eid, path):
             items = sorted(json.load(fh)["mcpServers"].items())
     except (OSError, ValueError, KeyError, AttributeError) as exc:
         return {}, [f"{eid}: mcp spec {path} has no readable `mcpServers` object — {exc}"]
+    if not items:
+        return {}, [f"{eid}: mcp spec {path} declares no servers — nothing to render"]
     servers, problems = {}, []
     for name, cfg in items:
         cfg = cfg if isinstance(cfg, dict) else {}
@@ -312,8 +314,8 @@ def build(out_root, entries, translation):
             servers, mcp_problems = render_mcp(eid, src)
             problems.extend(mcp_problems)
             problems.extend(
-                f"{eid}: server name {name!r} collides with one another mcp entry already "
-                "rendered — opencode's `mcp` block is one flat namespace"
+                f"{eid}: server name {name!r} collides with one an earlier mcp entry has "
+                "already rendered — opencode's `mcp` block is one flat namespace"
                 for name in servers if name in mcp_servers
             )
             mcp_servers.update(servers)
