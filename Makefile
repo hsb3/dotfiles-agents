@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity
+.PHONY: help check identity provenance hook-layout floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -63,6 +63,9 @@ ci: check identity provenance hook-layout symlinks harness-coupling flow test ##
 .PHONY: harness-test harness-eval harness-report
 vendored-drift: ## Vendored base/ vs pinned upstream ref (needs network; NOT in ci)
 	@python3 scripts/check_vendored_drift.py
+
+labels: ## GitHub label set vs the closed vocabulary, decision-016 (needs gh + network; NOT in ci)
+	@python3 scripts/check_labels.py
 
 harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
 	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q

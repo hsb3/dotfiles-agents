@@ -35,6 +35,13 @@ jobs:
   drift-guards:
     name: drift guards (roster · marketplace · catalog)
     runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
+    # `issues: read` is what the labels REST endpoint is gated on, and this repo is
+    # private, so the workflow-level `contents: read` alone 403s the label gate below.
+    # Declaring permissions here replaces the workflow default for this job, so
+    # `contents: read` has to be restated for actions/checkout.
+    permissions:
+      contents: read
+      issues: read
     steps:
       # fetch-depth: 0 is load-bearing for the README-currency gate inside `make check`
       # (decision-015): it derives currency from `git log` per unit, and in the default
@@ -66,6 +73,17 @@ jobs:
       # a base/ that no longer matches, is red.
       - name: vendored-drift gate (base/ vs pinned upstream ref)
         run: python3 scripts/check_vendored_drift.py
+      # Label-vocabulary gate (decision-016): the repo's GitHub label set is CLOSED, so an
+      # extra or a missing label is drift — kata's GitHub sync writes labels onto this repo,
+      # and nothing else constrains what can appear there. Rides this job for the same two
+      # reasons as the gates above: it needs `gh` plus network, which `make ci` (offline +
+      # zero-install) cannot have, and dev's branch protection pins required checks by job
+      # NAME. Notice-and-exit-0 when api.github.com is unreachable, red when it is reachable
+      # and `gh` still fails (auth, scope, rate limit) — see scripts/check_labels.py.
+      - name: label-vocabulary gate (live labels vs the closed set)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/check_labels.py
       # Manifest gate: the first-party validator over the marketplace and every assembly.
       # `--strict` turns warnings into failures, catching what the runtime tolerates in
       # silence — an unrecognized field (a `changelog:` key nothing reads), missing
