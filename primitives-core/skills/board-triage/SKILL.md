@@ -73,7 +73,9 @@ Values are option **names**, not ids. An empty value clears the cell.
 
 **Apply** — the adapter's writer re-pulls a fresh snapshot, resolves each `field` token against
 the board's live fields, writes **only cells that differ**, is **dry-run by default**, is
-idempotent, and exits non-zero on any failure.
+idempotent, and exits non-zero on any failure. A row it cannot resolve **is** such a failure:
+it prints as a `SKIP` on **stderr** and the run exits non-zero, while every row that did
+resolve is still applied — so `apply || abort` means the same thing on every backend.
 
 **Field map** — each adapter states where every rubric output lands on that backend, and names
 any output the backend has no home for. An unmapped output is **reported, never fabricated into

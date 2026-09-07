@@ -346,6 +346,16 @@ class KaneoApplyReadBack(unittest.TestCase):
         self.assertIn("UNLANDED", err)
         self.assertEqual(2, code, "an unlanded cell outranks an unresolvable row")
 
+    def test_a_skip_is_a_failure_on_stderr_and_the_rest_still_applies(self):
+        """The contract's SKIP ruling, pinned on this adapter as it is on the other two."""
+        fake = FakeKaneo()
+        code, out, err = self.run_apply(fake, "99\tstatus\tup-next\n10\tstatus\tup-next\n")
+        self.assertEqual(1, code, out + err)
+        self.assertIn("SKIP #99: not on this board", err)
+        self.assertNotIn("SKIP", out, "a refusal belongs on stderr, not in the row log")
+        self.assertIn("applied 1 cell change(s)", out, "the resolvable row still applies")
+        self.assertEqual("up-next", fake._task("t1")["status"])
+
     def test_unresolvable_row_alone_still_exits_1(self):
         code, out, err = self.run_apply(FakeKaneo(), "99\tpriority\tP1\n")
         self.assertIn("not on this board", err)

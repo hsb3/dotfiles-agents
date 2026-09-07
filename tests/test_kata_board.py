@@ -12,9 +12,12 @@ a whole board, a cell that no longer compares equal turns every re-run into fres
 and a `status` row that stops being refused writes a lane that does not exist here.
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -212,6 +215,56 @@ class KataCalls(unittest.TestCase):
             run.return_value = self.completed(returncode=1, stderr="rejected")
             with self.assertRaises(SystemExit):
                 kb._kata_write(["label", "add", "a1", "docs"], "demo")
+
+
+class ApplyExitContract(unittest.TestCase):
+    """cmd_apply end to end: a SKIP is a failure, on stderr, and the rest still applies.
+
+    Pinned per adapter rather than once, because each adapter owns its own reporting and
+    the three drifted apart unnoticed: an operator scripting `apply || abort` has to get
+    the same answer from all of them, and has to be able to tee stdout without the
+    refusals vanishing into it.
+    """
+
+    def run_apply(self, changeset):
+        writes = []
+
+        def run(cmd, capture_output=False, text=False, **_):
+            if "list" in cmd:
+                return mock.Mock(returncode=0, stdout=json.dumps({"issues": ISSUES}), stderr="")
+            if "labels" in cmd:
+                return mock.Mock(returncode=0, stdout=json.dumps({"labels": LABELS}), stderr="")
+            writes.append(list(cmd))
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "changeset.tsv")
+        with open(path, "w") as handle:
+            handle.write(changeset)
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(kb.subprocess, "run", run), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = kb.main(["apply", "--project", "demo", "--changeset", path, "--apply"])
+        return code, out.getvalue(), err.getvalue(), writes
+
+    def test_a_skip_is_a_failure_on_stderr_and_the_rest_still_applies(self):
+        code, out, err, writes = self.run_apply(
+            "key\tfield\tvalue\nzz\tpriority\tP1\na1\tpriority\tP1\n"
+        )
+        self.assertEqual(1, code, out + err)
+        self.assertIn("SKIP zz: not on this board", err)
+        self.assertNotIn("SKIP", out, "a refusal belongs on stderr, not in the row log")
+        self.assertIn("APPLY a1 priority", out, "the resolvable row still applies")
+        self.assertEqual(
+            [["kata", "edit", "a1", "--priority", "1", "--project", "demo", "--agent"]], writes
+        )
+
+    def test_a_wholly_resolvable_changeset_exits_clean(self):
+        code, out, err, writes = self.run_apply("key\tfield\tvalue\na1\tpriority\tP1\n")
+        self.assertEqual(0, code, out + err)
+        self.assertNotIn("SKIP", out + err)
+        self.assertEqual(1, len(writes))
 
 
 class Cli(unittest.TestCase):

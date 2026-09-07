@@ -43,9 +43,10 @@ python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset edges.tsv -
 ```
 
 Dry-run by default. One line per row on stdout (`DRY   would set #<key> priority=P1 (was None)`, `OK`
-already at target, `SET` written, `SKIP` not guessed at, `FAIL` errored), then a tally on stderr.
-Only differing cells are written, so re-runs are free; exit 1 if any row FAILed, and a SKIP is not a
-failure. The dry run resolves every value against the live fields before previewing it, so it exits
+already at target, `SET` written, `FAIL` errored), with unresolvable rows printing as `SKIP` on
+stderr next to the tally. Only differing cells are written, so re-runs are free; exit 1 if any row
+FAILed or SKIPped, the resolvable rows still apply.
+The dry run resolves every value against the live fields before previewing it, so it exits
 non-zero on a row the write would reject rather than promising a change that cannot land. Blank lines and `#` comments are ignored, and a header row is dropped whether its first
 column reads `key` or `issue`. `--repo` is needed only for `blocked_by` / `blocking` rows. Pass the
 same `--owner-type` you exported with — the snapshot does not record it.
