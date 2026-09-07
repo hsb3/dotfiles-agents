@@ -39,6 +39,7 @@ must stay compatible with Python 3.9.
 import fnmatch
 import json
 import os
+import subprocess
 import sys
 import traceback
 
@@ -94,13 +95,66 @@ def _resolve_project_dir(payload_cwd):
         return None
 
 
+def _main_checkout(path):
+    """A linked worktree resolves to its main checkout; anything else returns
+    `path` unchanged.
+
+    `git rev-parse --git-common-dir` names the shared git dir: a bare `.git`
+    from a main checkout's root, a path ending in `/.git` from anywhere inside
+    a linked worktree. Every other answer — no git binary, not a repository, a
+    bare repo or a submodule whose common dir is not `<root>/.git` — is treated
+    as "not a linked worktree", so a machine without git behaves exactly as it
+    did before.
+
+    Duplicated across the atelier hooks by design, like the activation parser
+    below: each hook dir is copied and symlinked on its own, so a shared module
+    would be a cross-hook import that breaks the moment one of them is
+    installed without the other.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return path
+    if proc.returncode != 0:
+        return path
+    common = proc.stdout.decode("utf-8", "replace").strip()
+    if not common or common == ".git":
+        return path  # a main checkout's own root
+    if not os.path.isabs(common):
+        common = os.path.join(path, common)
+    common = os.path.abspath(common)
+    if os.path.basename(common) != ".git":
+        return path
+    return os.path.dirname(common)
+
+
 def _resolve_activation_path(project_dir):
+    """The activation file this hook reads.
+
+    ATELIER_ACTIVATION_FILE wins outright — an explicit override is never
+    re-resolved. Otherwise it is the project dir's own copy, falling back to
+    the main checkout's copy when no file sits at the direct path and the
+    project dir is a linked worktree: custody follows the checkout that armed
+    it, so a worker handed its own worktree is not un-governed just because a
+    gitignored config did not travel. The fallback is lazy — it costs a `git`
+    subprocess only on the miss, and an activation file that IS present in the
+    worktree (a tracked one, at its committed version) still wins.
+    """
     override = os.environ.get("ATELIER_ACTIVATION_FILE")
     if override:
         return override
     if not project_dir:
         return None
-    return os.path.join(project_dir, ACTIVATION_RELPATH)
+    path = os.path.join(project_dir, ACTIVATION_RELPATH)
+    if os.path.isfile(path):
+        return path
+    main_dir = _main_checkout(project_dir)
+    if main_dir == project_dir:
+        return path
+    return os.path.join(main_dir, ACTIVATION_RELPATH)
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +305,28 @@ def _load_activation(project_dir):
 # Path handling
 # ---------------------------------------------------------------------------
 
+def _worktree_root(abs_path, project_dir):
+    """Innermost linked-worktree root containing `abs_path`, or None.
+
+    A linked worktree's `.git` is a FILE pointing at the shared git dir, where
+    an ordinary checkout's is a directory — the same distinction `_is_git_repo`
+    relies on elsewhere. Walking up from the edited file to the first such file
+    finds the tree that file actually lives in, innermost first, which is the
+    right answer when worktrees are nested.
+
+    The walk stops at `project_dir` rather than at the filesystem root, so a
+    worktree outside the project can never become a jurisdiction: custody
+    governs this project's trees, nothing above them.
+    """
+    prefix = project_dir + os.sep
+    current = os.path.dirname(abs_path)
+    while current.startswith(prefix):
+        if os.path.isfile(os.path.join(current, ".git")):
+            return current
+        current = os.path.dirname(current)
+    return None
+
+
 def _normalize(raw_path, project_dir):
     """Return (abs_path, relpath) or (None, None) when out of jurisdiction.
 
@@ -260,6 +336,15 @@ def _normalize(raw_path, project_dir):
     depending on an unrelated `cd`. Matching is lexical (normpath, not realpath)
     — a symlink aimed at a protected file is not caught. This is a guardrail on
     honest tool calls, not a sandbox.
+
+    Patterns are relative to the tree the edited file lives in, which is not
+    always the project dir. Claude Code sets CLAUDE_PROJECT_DIR on the hook
+    process to the MAIN checkout even when the worker was given a linked
+    worktree, so relativizing everything against it turns every path an
+    isolated worker touches into `.claude/worktrees/agent-<id>/...` — a shape
+    no project-relative pattern matches, which silently exempts exactly the
+    workers custody is aimed at. Policy comes from the main checkout;
+    jurisdiction is the worktree.
     """
     try:
         abs_path = raw_path if os.path.isabs(raw_path) else os.path.join(project_dir, raw_path)
@@ -270,6 +355,12 @@ def _normalize(raw_path, project_dir):
     first = relpath.split(os.sep)[0]
     if first == "..":
         return None, None
+    try:
+        root = _worktree_root(abs_path, project_dir)
+        if root is not None:
+            relpath = os.path.relpath(abs_path, root)
+    except Exception:
+        pass  # fail open to the project-relative form
     return abs_path, relpath
 
 

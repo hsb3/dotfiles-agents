@@ -5,9 +5,9 @@ Two subcommands:
 
   create   copy the shipped example into <project-dir>/.claude/ and make sure
            `.claude/*.local.md` is gitignored.
-  check    report, key by key, what the five hooks actually resolve — separating
-           "not configured" (fine) from "written but inert" (the silent failure
-           this tool exists to surface).
+  check    report, key by key, what the enforcement hooks actually resolve —
+           separating "not configured" (fine) from "written but inert" (the silent
+           failure this tool exists to surface).
 
 `check` owns **no frontmatter parser**. Every value it prints comes from calling the
 hooks' own loader functions, loaded by path, so the report cannot drift from the
@@ -27,7 +27,7 @@ import os
 import shutil
 import sys
 
-KEYS = ("enforce", "protected", "isolate", "handoff", "effort")
+KEYS = ("enforce", "protected", "protected-branches", "isolate", "handoff", "effort")
 EFFORT_VALUES = ("standard", "deep")
 
 HOOK_NAMES = (
@@ -36,6 +36,7 @@ HOOK_NAMES = (
     "worktree-isolation",
     "session-handoff-surfacer",
     "handoff-freshness-guard",
+    "worker-git-scope-guard",
 )
 
 ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
@@ -80,7 +81,8 @@ def _hook_roots():
 
 
 def load_hooks():
-    """Import all five hook modules. Returns (modules, tried_paths).
+    """Import every hook module that reads the activation file. Returns
+    (modules, tried_paths).
 
     Each gets a unique module name: every hook file is called `hook.py`, and
     colliding names in sys.modules would hand back the wrong module.
@@ -216,6 +218,7 @@ def evaluate(project_dir, modules):
         modules["worker-context"], modules["config-custody"], modules["worktree-isolation"])
     surfacer, freshness = (
         modules["session-handoff-surfacer"], modules["handoff-freshness-guard"])
+    scope_guard = modules["worker-git-scope-guard"]
 
     # The hooks all resolve the activation path the same way (ATELIER_ACTIVATION_FILE
     # first, else <project-dir>/.claude/atelier.local.md), so ask one of them rather
@@ -293,6 +296,26 @@ def evaluate(project_dir, modules):
     else:
         result["rows"].append(_row(
             "protected", "armed", ", ".join(patterns), ["config-custody"]))
+
+    # -- protected-branches (worker-git-scope-guard; independent of enforce) -
+    # A DIFFERENT key from `protected` above: branch names, not file paths. Its hook
+    # never reads `enforce`, so unlike `protected` there is no armed-but-never-consulted
+    # state to report - written and parsed means live.
+    branches = sorted(scope_guard._load_protected_branches(project_dir))
+    if "protected-branches" not in present:
+        result["rows"].append(_row(
+            "protected-branches", "not configured",
+            "the stash half of this hook is live regardless; only the "
+            "protected-branch half needs this key", ["worker-git-scope-guard"]))
+    elif not branches:
+        result["rows"].append(_row(
+            "protected-branches", "inert",
+            "written, but no branch names were parsed - a trailing comment on the "
+            "`protected-branches:` line, or an empty list", ["worker-git-scope-guard"]))
+    else:
+        result["rows"].append(_row(
+            "protected-branches", "armed", ", ".join(branches),
+            ["worker-git-scope-guard"]))
 
     # -- isolate (worktree-isolation) ---------------------------------------
     isolate_mode, isolate_types = isolation._load_activation(project_dir)

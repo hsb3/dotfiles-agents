@@ -15,6 +15,15 @@ protected:
 # the strategist's working tree. Independent of `enforce`.
 isolate: writers           # off (default when absent) | writers | [builder, my-writer]
 
+# worker-git-scope-guard: branch names a SUBAGENT may not commit, merge, rebase, or push
+# onto. Separate from `protected:` above, which is file paths for config-custody. There is
+# no built-in list, on purpose — {main, master} is the wrong guess here. `dev` is absent
+# deliberately: it is this repo's working branch and workers are expected to commit on it.
+# The other half of that hook — the ban on `git stash` from a subagent in a tree it shares
+# with peers — needs no key and is live wherever the hook is installed.
+protected-branches:
+  - main
+
 # session-handoff-surfacer + handoff-freshness-guard read this instead of searching
 # _meta/HANDOFF.md, HANDOFF.md, .claude/HANDOFF.md. A path outside the project root is
 # rejected and the standard search runs as usual.

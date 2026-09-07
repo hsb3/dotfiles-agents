@@ -74,6 +74,7 @@ must stay compatible with Python 3.9.
 
 import json
 import os
+import subprocess
 import sys
 import traceback
 
@@ -128,6 +129,21 @@ NOTICE_TEMPLATE = (
     "uncommitted work in this tree is NOT visible to it."
 )
 
+# Appended when the DISPATCHER is itself standing in a linked worktree. Nesting
+# is the intended outcome, not a misconfiguration: two concurrent writers
+# sharing one index is the hazard this hook exists to prevent, and the
+# dispatcher being one level down does not make it safe. What nesting actually
+# costs is integration ergonomics, so the dispatcher is handed the integrate
+# step here — at dispatch — instead of meeting a pile of stray branches at the
+# end of the wave.
+NESTED_CLAUSE = (
+    " You are standing in a linked worktree yourself, so this one is NESTED under it "
+    "on its own branch — intended, not a misconfiguration. To integrate when it "
+    "reports: `git worktree list` for its path and branch, "
+    "`git cherry-pick HEAD..<branch>` to take its commits, then "
+    "`git worktree remove <path> && git branch -D <branch>` to clean up."
+)
+
 
 def _resolve_project_dir(payload_cwd):
     """Env anchor first, else the payload cwd, else None (hook goes inert).
@@ -145,13 +161,102 @@ def _resolve_project_dir(payload_cwd):
         return None
 
 
+def _main_checkout(path):
+    """A linked worktree resolves to its main checkout; anything else returns
+    `path` unchanged.
+
+    `git rev-parse --git-common-dir` names the shared git dir: a bare `.git`
+    from a main checkout's root, a path ending in `/.git` from anywhere inside
+    a linked worktree. Every other answer — no git binary, not a repository, a
+    bare repo or a submodule whose common dir is not `<root>/.git` — is treated
+    as "not a linked worktree", so a machine without git behaves exactly as it
+    did before.
+
+    Duplicated across the atelier hooks by design, like the activation parser
+    below: each hook dir is copied and symlinked on its own, so a shared module
+    would be a cross-hook import that breaks the moment one of them is
+    installed without the other.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return path
+    if proc.returncode != 0:
+        return path
+    common = proc.stdout.decode("utf-8", "replace").strip()
+    if not common or common == ".git":
+        return path  # a main checkout's own root
+    if not os.path.isabs(common):
+        common = os.path.join(path, common)
+    common = os.path.abspath(common)
+    if os.path.basename(common) != ".git":
+        return path
+    return os.path.dirname(common)
+
+
 def _resolve_activation_path(project_dir):
+    """The activation file this hook reads.
+
+    ATELIER_ACTIVATION_FILE wins outright — an explicit override is never
+    re-resolved. Otherwise it is the project dir's own copy, falling back to
+    the main checkout's copy when no file sits at the direct path and the
+    project dir is a linked worktree: a manager that is itself running in a
+    worktree still fans out writers, and the isolation policy is armed in the
+    gitignored file that did not travel with it. The fallback is lazy — it
+    costs a `git` subprocess only on the miss, and an activation file that IS
+    present in the worktree (a tracked one, at its committed version) still
+    wins.
+    """
     override = os.environ.get("ATELIER_ACTIVATION_FILE")
     if override:
         return override
     if not project_dir:
         return None
-    return os.path.join(project_dir, ACTIVATION_RELPATH)
+    path = os.path.join(project_dir, ACTIVATION_RELPATH)
+    if os.path.isfile(path):
+        return path
+    main_dir = _main_checkout(project_dir)
+    if main_dir == project_dir:
+        return path
+    return os.path.join(main_dir, ACTIVATION_RELPATH)
+
+
+def _in_linked_worktree(path):
+    """True when `path` sits inside a LINKED worktree rather than a main checkout.
+
+    `--git-dir` and `--git-common-dir` name the same directory in a main
+    checkout and differ (`<common>/worktrees/<name>` vs `<common>`) inside a
+    linked one, so comparing them answers the question from anywhere in the
+    tree. The common dir's literal value cannot: it is `.git` only at a main
+    checkout's root and a relative `../../.git` from any subdirectory of the
+    same checkout, so a string test would call an ordinary subdirectory a
+    worktree. Both sides are realpath'd because git returns one of them already
+    resolved — an unresolved compare mismatches wherever the path runs through
+    a symlink, and a mismatch reads as "linked".
+
+    Anything it cannot answer is False: no git binary, not a repository, or a
+    bare repo or submodule whose common dir is not `<root>/.git`.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--git-dir", "--git-common-dir"],
+            capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    if proc.returncode != 0:
+        return False
+    lines = [ln.strip() for ln in
+             proc.stdout.decode("utf-8", "replace").splitlines() if ln.strip()]
+    if len(lines) != 2:
+        return False
+    git_dir, common = (os.path.realpath(os.path.join(path, ln)) for ln in lines)
+    if os.path.basename(common) != ".git":
+        return False
+    return git_dir != common
 
 
 def _is_git_repo(project_dir):
@@ -425,6 +530,13 @@ def main():
         updated = dict(tool_input)
         updated["isolation"] = WORKTREE
 
+        # Asked only here, on the one path that actually rewrites: it is a git
+        # subprocess, and every inert exit above has already returned.
+        nested = _in_linked_worktree(project_dir)
+        notice = NOTICE_TEMPLATE.format(agent_type=agent_type, mode=mode)
+        if nested:
+            notice += NESTED_CLAUSE
+
         _emit({
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
@@ -433,11 +545,9 @@ def main():
             # Announced rather than silent: the rewrite moves the worker to a
             # checkout where the session's uncommitted work does not exist, and
             # a surprised reader should be able to trace that to this hook.
-            "systemMessage": NOTICE_TEMPLATE.format(
-                agent_type=agent_type, mode=mode,
-            ),
+            "systemMessage": notice,
         })
-        log(dict(row, isolated=True, reason=None))
+        log(dict(row, isolated=True, reason=None, nested=nested))
         sys.exit(0)
 
     except Exception as e:

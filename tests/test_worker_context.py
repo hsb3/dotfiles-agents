@@ -15,6 +15,11 @@ import sys
 import tempfile
 import unittest
 
+# Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
+# under `-t .`, so prime the path the same way the hooks prime `_lib`.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
 HOOK_PATH = os.path.join(
     os.path.dirname(__file__), "..", "primitives-core", "hooks",
     "worker-context", "hook.py",
@@ -133,6 +138,36 @@ class WorkerContextTests(unittest.TestCase):
         for root, _dirs, files in os.walk(self.tmp.name):
             found.extend(os.path.join(root, f) for f in files)
         self.assertEqual(found, [])
+
+    # -- worktree resolution ---------------------------------------------
+
+    def test_linked_worktree_follows_main_checkout_activation(self):
+        """A worker started with its cwd in a linked worktree still gets the
+        covenant the main checkout armed."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        _main_dir, worktree_dir = make_worktree(
+            base, files={".claude/atelier.local.md": "---\nenforce: strict\n---\n"},
+        )
+        result = self._run_hook(json.dumps(self._payload(cwd=worktree_dir)))
+        self.assertEqual(result.returncode, 0)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("blocked at the tool layer", context)
+
+    def test_worktrees_own_tracked_activation_wins(self):
+        """Resolution is lazy: a tracked activation file in the worktree is
+        read at its committed version, not replaced by the main checkout's."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(
+            base, tracked={".claude/atelier.local.md": "---\nenforce: off\n---\n"},
+        )
+        self._write_activation(mode="strict", project_dir=main_dir)
+        result = self._run_hook(json.dumps(self._payload(cwd=worktree_dir)))
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
 
 
 if __name__ == "__main__":

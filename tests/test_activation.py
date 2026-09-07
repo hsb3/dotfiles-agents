@@ -198,6 +198,44 @@ class CheckTests(_Base):
         # ...and the real key reads as absent, which is the silent failure.
         self.assertIn("not configured", self.row(output, "enforce"))
 
+    def test_protected_branches_reports_armed_when_set(self):
+        self.write("---\nprotected-branches:\n  - main\n  - release\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "protected-branches")
+        self.assertIn("armed", row)
+        self.assertIn("main, release", row)
+        self.assertIn("worker-git-scope-guard", row)
+
+    def test_protected_branches_reports_not_configured_when_absent(self):
+        self.write("---\nenforce: strict\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("not configured", self.row(output, "protected-branches"))
+
+    def test_protected_branches_written_but_unparseable_is_inert(self):
+        self.write("---\nprotected-branches: []\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 1, output)
+        self.assertIn("inert", self.row(output, "protected-branches"))
+
+    def test_protected_branches_is_armed_without_enforce(self):
+        """Unlike `protected`, its hook never consults `enforce`."""
+        self.write("---\nprotected-branches: [main]\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("armed", self.row(output, "protected-branches"))
+
+    def test_the_two_protected_keys_do_not_bleed_into_each_other(self):
+        self.write("---\nenforce: strict\nprotected:\n  - Makefile\n"
+                   "protected-branches:\n  - main\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("Makefile", self.row(output, "protected"))
+        self.assertNotIn("Makefile", self.row(output, "protected-branches"))
+        self.assertIn("main", self.row(output, "protected-branches"))
+        self.assertNotIn("main", self.row(output, "protected"))
+
     def test_text_before_the_fence_means_the_file_is_ignored(self):
         self.write("# my project notes\n\n---\nenforce: strict\n---\n")
         code, output = self.check()
@@ -425,6 +463,17 @@ class AgreementTests(_Base):
         self.assertEqual(code, 0, output)
         self.assertIn(" {0}".format(mode), self.row(output, "enforce"))
         self.assertIn(", ".join(patterns), self.row(output, "protected"))
+
+    def test_protected_branches_matches_the_hook_loader(self):
+        self.write("---\nprotected-branches:\n  - main\n  - release\n---\n")
+        code, output = self.check()
+
+        branches = self._hook("worker-git-scope-guard")._load_protected_branches(
+            self.project)
+
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "protected-branches")
+        self.assertIn(", ".join(sorted(branches)), row)
 
     def test_isolate_and_handoff_match_the_hook_loaders(self):
         os.makedirs(os.path.join(self.project, "docs"))

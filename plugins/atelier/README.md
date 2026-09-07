@@ -65,6 +65,7 @@ its commitment, the other cuts comments that cannot.
 | `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (120k) / hard (160k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
 | `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
 | `live-worker-git-guard` | hook (`PreToolUse`) | Denies a mutating git call (`commit`, `push`, `merge`, `pull`, `rebase`, `checkout`, `stash`, `reset`, …) while this session has a live delegation sharing its checkout — a commit mid-run captures a half-applied edit, and a pull or checkout removes a worker's uncommitted files out from under it. Workers in their own worktree do not count. Read-only git never fires. Override, loudly, by prefixing `ATELIER_GIT_GUARD_OVERRIDE=1`; never `git stash` around it. |
+| `worker-git-scope-guard` | hook (`PreToolUse`) | Denies a **subagent's** mutating git that would destroy work it does not own. Two halves. A mutating `git stash` from a worker sharing the session's checkout is always denied — a stash takes the whole tree, so it sweeps up every sibling's uncommitted work and a conflicted pop plus a drop loses it; a worker in its own worktree is untouched, and `stash list` / `stash show` are reads. Separately, `commit`/`merge`/`rebase`/`cherry-pick`/`revert`/`am` with HEAD on a branch named in `protected-branches:`, and any `push` aimed at one, are denied — a worktree shares `.git` and the remote, so isolation is no protection there. The complement of `live-worker-git-guard`, which covers the orchestrator-versus-its-own-children case instead. |
 | `manager-package-gate` | hook (`SubagentStop`) | Refuses a `manager`'s turn ending on a progress note: the final message must start `## Proof package` or `## Stopped: <condition>`, or the manager is sent back once to finish — every worker report it was "waiting on" has already been delivered. One nudge, never a loop; other agent types are untouched. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
@@ -137,6 +138,8 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - .github/workflows/*
   - "*.config.js"
   - configs/*
+protected-branches:   # branch NAMES, matched exactly; a different key from protected:
+  - main
 isolate: writers      # off (default when absent) | writers | a list of agent types
 handoff: docs/HANDOFF.md   # optional — override where the handoff lives; set it only once
                            # that file exists (or use a {mode: external} mapping for a
@@ -154,6 +157,7 @@ this project's gate is drawn where it is.
 | `effort` | nothing — no hook reads this key | Prose-only signal for the `delegation` skill: it forces `standard` or `deep` **only if the agent opens this file and reads it**. Unlike the other four keys, nothing enforces it per call; you saying so in the session still outranks it. |
 | `enforce` | `worker-context`, `config-custody` hooks | Arms the enforcement layer. Absent, `off`, an unrecognized value, or an unparseable file all mean off. |
 | `protected` | `config-custody` hook | fnmatch globs naming the config that defines acceptance. Also accepts the inline form `protected: ["Makefile", "configs/*"]`. `*` crosses `/`, so `configs/*` covers the whole subtree — if you want direct children only, name them. |
+| `protected-branches` | `worker-git-scope-guard` hook | Branch **names** a subagent may not commit, merge, rebase, cherry-pick, revert, or `am` onto, and may not push at. Matched exactly, never as globs; block or inline (`protected-branches: ["main", "release"]`) form. A **distinct key** from `protected:` above — that one names file paths for `config-custody`, and a file glob must never be read as a branch name. There is deliberately **no built-in list**: absent, empty, or unparseable leaves this half inert, because a hardcoded `main`/`master` default guards the wrong thing in every project whose default branch is a publish-only surface. Independent of `enforce:`. The same hook's stash half needs no key at all. A worker dispatched into a linked **worktree** finds no activation file there (a fresh checkout, and the file is gitignored) and so inherits the main checkout's list — without that fallback this key would switch itself off in the one place a worktree's shared `.git` makes it matter. |
 | `isolate` | `worktree-isolation` hook | Gives writing workers their own git worktree. `writers` covers `builder`, `manager`, `general-purpose`; a list (block or inline) names your own set. `scout`, `reviewer`, `Explore`, `Plan`, and `fork` are never isolated, even if listed — a worktree cannot see uncommitted work, which is exactly what a reviewer was sent to read. |
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` hooks | Overrides where the project's handoff lives. Two modes. **File** (a bare project-relative path, or `{mode: file, path: ...}`): an existing in-root file wins over the standard `_meta/HANDOFF.md` → `HANDOFF.md` → `.claude/HANDOFF.md` search; an in-root file that does not exist is still authoritative and turns handoff surfacing off (the trap); a path outside the project root is rejected and the standard search runs unchanged. **External** (`{mode: external, stamp: ..., location: ...}`), for a handoff kept on a tracker or board: `stamp` is a freshness signal judged by mtime, never the handoff itself; a missing/blank/out-of-root `stamp`, or an unrecognized `mode`, leaves the key inert and the standard search runs; once armed the surfacer always points a cold session at `location`, even before the stamp is first touched. |
 
@@ -164,6 +168,16 @@ What each `enforce` level actually does:
 | absent / `off` | silent | silent |
 | `advisory` | injects the worker covenant into every subagent | logs would-be denials to the `config-custody` stream; blocks nothing |
 | `strict` | injects the covenant, naming the tool-layer block | denies subagent edits to `protected:` paths |
+
+**Enforcement follows the main checkout into a linked worktree.** This file is gitignored by
+convention, and a worktree is a clean checkout, so a worker dispatched with `isolation: worktree`
+used to land somewhere the file simply was not — and ran with custody and the covenant off, in
+exactly the dispatch shape isolation exists to protect. Every hook that reads the file now falls
+back to the main checkout's copy when it finds nothing at its own project directory, and the same
+fallback covers what the file *names* (a `handoff:` path, its freshness stamp). The lookup is lazy,
+which has one visible consequence worth knowing: if you **track** this file, a worktree sees it at
+the version committed on that worktree's branch, not as your working tree currently has it — so
+commit a policy change before dispatching against it.
 
 The main session is never restricted at any level: custody is scoped to subagents, so the
 strategist keeps ownership of config and git and lifting a pattern is always available. Run
@@ -190,7 +204,8 @@ The key is nested under `worktree`; a flat top-level spelling of it is a `/confi
 a settings key, and is silently ignored.
 
 **No restart needed.** The skill and the hooks re-read this file per call, so an edit to
-`enforce:`, `protected:`, or `isolate:` applies to the very next tool call.
+`enforce:`, `protected:`, `protected-branches:`, or `isolate:` applies to the very next
+tool call.
 
 It is a local file, so ignore it:
 
@@ -264,8 +279,23 @@ subagent's own transcript reports, plus a scan for still-pending delegations on 
 delegation agents (`scout`/`builder`/`reviewer`/`manager`) are personas for the `delegation`
 skill to dispatch; they don't run unless something explicitly delegates to them.
 
-`config-custody` is the one hook that can genuinely block a call, and its limits are worth
-knowing. It only denies when a project opts in with `enforce: strict` (`advisory` logs would-be
+`worker-git-scope-guard` is a **tripwire, not containment**, and the distinction matters
+because the thing it guards is unrecoverable. It reads the `Bash` command about to run, so
+a worker that writes a shell script and executes that, or that drives git through any other
+tool, is not caught; its parser splits on raw text, so a separator inside a quoted argument
+can still hide an invocation. That is the same ceiling `kaneo-bash-tripwire` states, and
+the same reasoning: catching the path agents actually take and leaving a refusal in the
+transcript is worth far more than the partial coverage costs. **Server-side branch
+protection is the layer above it** — a local hook cannot stop a novel path to the remote,
+a protected-branch rule on the forge can, so where a branch genuinely matters, configure
+both. It is also the complement of `live-worker-git-guard`, never a replacement: that one
+protects an orchestrator from clobbering its own live children, this one protects peer
+workers from each other and protects named branches. Each is blind exactly where the other
+looks, so running only one leaves a real loss unguarded. Both fail open on every error
+path.
+
+`config-custody` is the one hook that can genuinely block a call by matching paths, and its
+limits are worth knowing. It only denies when a project opts in with `enforce: strict` (`advisory` logs would-be
 denials but blocks nothing), it never restricts the main session, and it matches paths lexically
 — a symlink pointed at a protected file is not caught. That makes it a guardrail on honest tool
 calls rather than a sandbox, which is also why its deny message names the correct move (stop and

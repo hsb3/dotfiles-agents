@@ -45,6 +45,40 @@ ignored. `protected:` also accepts the inline form `protected: ["Makefile", "con
 | `advisory` | logs would-be denials, denies nothing | injects the covenant |
 | `strict` | denies subagent edits to protected paths | injects the covenant + the tool-layer sentence |
 
+### In a linked worktree
+
+Custody follows the main checkout. A worker dispatched with `isolation: "worktree"` lands in a
+linked checkout where the activation file — normally gitignored — does not exist, and before this
+resolution the hook simply went inert there: the isolated worker could edit every protected path.
+When no activation file sits at the project dir, the hook now asks
+`git rev-parse --git-common-dir` whether that dir is a linked worktree and, if it is, reads the
+**main checkout's** activation file instead.
+
+The lookup is lazy — it costs a `git` subprocess only when the direct path holds no file, so the
+ordinary case (custody file present) is unchanged on a hook that runs on every `Edit`/`Write`.
+The consequence of laziness is that an activation file the worktree *does* have wins: a **tracked**
+activation file is read inside a worktree at the version committed on that worktree's branch, not
+at the main checkout's working-tree version. `ATELIER_ACTIVATION_FILE` still wins outright and is
+never re-resolved, and with no `git` on `PATH` — or a project dir that is not a linked worktree —
+behaviour is exactly what it was.
+
+**Policy comes from the main checkout; jurisdiction is the tree the edited file lives in.** Those
+are two separate resolutions, and the second one matters more often than it looks. Claude Code sets
+`CLAUDE_PROJECT_DIR` on the *hook process* even when the worker's own shell has none, and it points
+at the **main checkout** — so for an isolated worker the activation file is usually found at the
+direct path and the fallback above never fires at all. What breaks instead is the pattern match:
+relativizing the edited file against the main checkout turns every path the worker touches into
+`.claude/worktrees/agent-<id>/Makefile`, which no project-relative pattern can match, silently
+exempting exactly the workers custody is aimed at.
+
+So the edited path is relativized against the **worktree root** when it sits inside one:
+`Makefile` means that worktree's `Makefile`. The root is found by walking up from the edited file
+to the first directory holding a `.git` **file** — a linked worktree's `.git` is a file pointing at
+the shared git dir, where an ordinary checkout's is a directory, so a vendored sub-repo nested in
+the project is correctly *not* a jurisdiction. The walk stops at the project dir, so custody can
+never be relocated to a tree outside the project, and a path outside the project is still not
+governed at all. No subprocess: a handful of `os.path` calls on the miss.
+
 ## Install
 
 1. Copy this directory into `primitives-core/hooks/`.

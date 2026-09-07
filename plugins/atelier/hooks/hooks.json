@@ -52,6 +52,17 @@
       {
         "hooks": [
           {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-git-scope-guard/hook.py\"",
+            "statusMessage": "Checking worker git scope...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/config-custody/hook.py\"",
             "statusMessage": "Checking config custody...",
             "timeout": 10,
