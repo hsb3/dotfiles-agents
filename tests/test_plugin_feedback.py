@@ -820,12 +820,18 @@ class LiveLabelTests(unittest.TestCase):
 
     Opt-in, and the gh probe runs inside the test rather than at import — a probe in a
     decorator or at module scope shells out just for importing this file, which would put
-    a network call inside `make ci`, where this repo keeps none."""
+    a network call inside `make ci`, where this repo keeps none. The opt-in is what the
+    `drift guards` CI job sets: that job is the one with network and an `issues: read`
+    token, and without it there this would guard nothing a rename could trip."""
 
     def _live_labels(self):
-        """The target repo's real labels, or a skip when gh cannot answer at all."""
+        """The target repo's real labels. Every failure to read them is RED, never a
+        skip: setting the opt-in asks for the live check, and a run that measured
+        nothing reads identically in a CI summary to one that measured and found the
+        labels intact (decision-016 point 4, the contract scripts/check_labels.py
+        already carries). The reason is named so a blip is not mistaken for a rename."""
         if not shutil.which("gh"):
-            self.skipTest("gh is not installed")
+            self.fail("gh is not on PATH, so the live label set could not be read")
         with io.open(PLUGIN_MANIFEST, encoding="utf-8") as fh:
             repo = R.normalize_repo(json.load(fh).get("repository"))
         self.assertIsNotNone(repo, "plugin manifest carries no resolvable repository")
@@ -834,11 +840,17 @@ class LiveLabelTests(unittest.TestCase):
                 ["gh", "label", "list", "--repo", repo, "--json", "name", "--limit", "200"],
                 capture_output=True, text=True, timeout=10,
             )
-            labels = {e["name"] for e in json.loads(done.stdout)} if not done.returncode else None
-        except Exception:
-            labels = None
+            why = done.stderr.strip() or "(no stderr)" if done.returncode else None
+            labels = None if done.returncode else {e["name"] for e in json.loads(done.stdout)}
+        except Exception as exc:
+            labels, why = None, "{0}: {1}".format(type(exc).__name__, exc)
         if not labels:
-            self.skipTest("gh could not read {0}'s labels".format(repo))
+            self.fail(
+                "gh could not read {0}'s labels ({1}) — nothing was measured, which is "
+                "not evidence about the labels but cannot be green either".format(
+                    repo, why or "the repo reports no labels at all"
+                )
+            )
         return labels
 
     def test_every_default_label_exists_in_the_target_repo(self):
