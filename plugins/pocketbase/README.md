@@ -27,8 +27,8 @@ flowchart TD
 
   task -->|Delegate it instead of doing it inline| pbb[pb-builder]
   pbb --> change
-  pbb -->|Its report is a hypothesis, never proof| pbr[pb-reviewer returns CONFIRMED, REFUTED, or UNPROVEN]
-  pbb -->|Before the rules and routes ship| aud[pocketbase-security-auditor]
+  change -->|Every claim about it is a hypothesis| pbr[pb-reviewer returns CONFIRMED, REFUTED, or UNPROVEN]
+  change -->|Before the rules and routes ship| aud[pocketbase-security-auditor]
   layer -.->|The laws all three carry| pbb
 ```
 
@@ -68,8 +68,8 @@ instance you are using.
 ## Honest scope
 
 The skills work against any PocketBase instance you can reach. The agents assume more: a
-project with a PocketBase binary they can run and a migrations and hooks layout they can copy
-into a scratch directory, since every claim they make is proved on a server they booted
+project with a PocketBase entrypoint they can run, standalone or Go-extended, and a layout
+they can copy into a scratch directory, since every claim they make is proved on a server they booted
 themselves. They read the project's own rules and migration laws where it has them, and say so
 when it has none rather than inventing a convention. None of the three commits, pushes, or
 stages; `pb-reviewer` and `pocketbase-security-auditor` do not write to the tree at all.

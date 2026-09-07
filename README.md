@@ -35,7 +35,7 @@ behind. **Atelier is deliberately separate:** install its hand-authored opencode
 | Plan work in the repo tree itself, on a repo with no external board | [`mise-en-place`](plugins/mise-en-place/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
-| Build a PocketBase backend, or drive a running one from the terminal | [`pocketbase`](plugins/pocketbase/README.md) |
+| Build a PocketBase backend, drive a running one from the terminal, or delegate the build to agents that already carry the backend laws | [`pocketbase`](plugins/pocketbase/README.md) |
 | Report a defect in a plugin you are using, without leaving the session | [`plugin-feedback`](plugins/plugin-feedback/README.md) |
 
 ## Catalog

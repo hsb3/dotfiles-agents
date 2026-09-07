@@ -44,13 +44,19 @@ suite is already running.
 
     cp -R pb_migrations "$scratch/mig"
     cp -R pb_hooks "$scratch/hooks"
-    ./pocketbase serve --http=127.0.0.1:$port --dir "$scratch/pb_data" \
+    $pb superuser create probe@example.com not-a-real-password --dir "$scratch/pb_data"
+    $pb serve --http=127.0.0.1:$port --dir "$scratch/pb_data" \
       --migrationsDir "$scratch/mig" --hooksDir "$scratch/hooks"
-    ./pocketbase superuser create probe@example.com not-a-real-password --dir "$scratch/pb_data"
+
+`$pb` is the project's own PocketBase entrypoint, which is not always a binary on PATH: a
+standalone project usually keeps one in its root, and a Go-extended app is `go run .` with
+no hooks directory to copy at all. The `pocketbase` skill detects which mode a project is
+in; do that before you write the recipe. Create the superuser BEFORE serving — serving an
+empty data directory first prints an installer link and can open a browser.
 
 Drop from the copied migration set any migration that provisions machine-local superuser
 or MFA state, so the clean room boots unattended. Pick `$port` per run — a free high port,
-never the instance's default, and never one the project's dev server, test battery, or e2e
+never the instance's default, and never one the project's dev server, test suite, or e2e
 run already binds; if the project documents a port allocation, take yours from there.
 
 ## Working rules
