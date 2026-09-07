@@ -5,5 +5,5 @@
   "description": "File a bug or feature request against a plugin you are using without leaving the session. Hooks tell the primary session and its dispatched workers what each may file, and a stdlib reporter writes the issue to a fixed template instead of a free-handed gh call. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "plugin-feedback",
   "repository": "https://github.com/hsb3/dotfiles-agents",
-  "version": "0.1.6"
+  "version": "0.1.7"
 }
