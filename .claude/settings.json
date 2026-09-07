@@ -1,10 +1,17 @@
 {
   "enabledPlugins": {
+    "kata@kata-oversight": true,
     "mcp-server-dev@workbench": true,
     "plugin-dev@workbench": true,
     "skill-creator@workbench": true
   },
   "extraKnownMarketplaces": {
+    "kata-oversight": {
+      "source": {
+        "repo": "hsb3/kata-oversight",
+        "source": "github"
+      }
+    },
     "workbench": {
       "source": {
         "path": "./.claude/plugins",
