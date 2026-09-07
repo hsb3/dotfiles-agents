@@ -172,8 +172,39 @@ class ReadmeCurrencyGate(unittest.TestCase):
         finally:
             shutil.rmtree(C.REPO, ignore_errors=True)
 
+    def test_a_later_matching_doc_does_not_move_the_anchor(self):
+        self._skill("alpha")
+        self._commit("add alpha")
+        self._write("docs/decisions/decision-015 - README currency.md", "the ruling\n")
+        self._commit("land decision-015")
+        self._write("primitives-core/skills/alpha/SKILL.md", "v2\n")
+        self._commit("rewrite alpha")
+        self.assertEqual(len(C.problems()), 1)
+        # An addendum (or a retitle — this repo puts the title in the filename) adds a
+        # second matching path; the amnesty must stay pinned to the original ruling.
+        self._write("docs/decisions/decision-015a - addendum.md", "more\n")
+        self._commit("add an addendum")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_symlinked_readme_is_acknowledged_through_its_target(self):
+        self._skill("alpha")
+        self._write("plugins/kit/plugin.json", '{"name": "kit"}\n')
+        os.symlink("../../primitives-core/skills/alpha/README.md",
+                   os.path.join(self.fix, "plugins", "kit", "README.md"))
+        self._commit("add alpha and a kit that reuses its README")
+        self._write("plugins/kit/plugin.json", '{"name": "kit", "version": "0.2.0"}\n')
+        self._commit("bump kit")
+        self.assertEqual(len(C.problems()), 1)
+        # Editing the file a reader actually opens clears it; editing the link entry
+        # alone could not, so a symlinked README would otherwise be unclearable.
+        self._write("primitives-core/skills/alpha/README.md", "# alpha\n\nAnd the kit.\n")
+        self._commit("re-review the shared README")
+        self.assertEqual(C.problems(), [])
+
     def test_live_tree_is_clean(self):
         C.REPO = self.saved
+        if C._git("rev-parse", "--is-shallow-repository") == "true":
+            self.skipTest("shallow clone — the gate refuses one; nothing to assert here")
         self.assertEqual(C.problems(), [])
 
 

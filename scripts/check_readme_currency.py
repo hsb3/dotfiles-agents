@@ -33,12 +33,19 @@ Two scope decisions, both taking the narrowest honest reading:
     invisible here and lands red on the next run — CI runs on the PR's checkout, which is
     the authoritative one.
 
-The gate is anchored at the commit that added decision-015 (found by pathspec, not by a
-recorded SHA): a unit whose last body change predates the ruling is not evaluated, since
-32 of 56 units were stale the day the rule landed and a retroactive gate would just be a
-mass-touch. Delete the anchor once those are backfilled. No anchor found on disk (a fresh
-fixture, or the doc renamed) means full history is evaluated — the strict direction, so a
-rename fails loud rather than quietly disabling the gate.
+A symlinked README (a standalone plugin points at its member skill's, ADR 0017) is read
+through the link: history for the link entry OR its in-repo target counts, because the
+README a human reads is the target, and editing the entry alone could never clear it.
+
+The gate is anchored at the commit that added decision-015: a unit whose last body change
+predates the ruling is not evaluated, since 32 of 56 units were stale the day the rule
+landed and a retroactive gate would just be a mass-touch. The anchor is the OLDEST add
+matching the pathspec, not the newest — a later `decision-015*` file (an addendum, or a
+retitle, since this repo puts the title in the filename) would otherwise move the amnesty
+forward and turn a red unit green. It is read out of history, so renaming or deleting the
+doc does not lift the amnesty; that takes deleting these lines, which is the intended move
+once the backlog is backfilled. A repo with no such commit (any fixture) evaluates all of
+history.
 
 Needs real history: a shallow clone is a hard failure, not a skip, because every unit
 would trivially pass in one (`actions/checkout` is depth-1 unless told otherwise).
@@ -86,23 +93,44 @@ def _units():
     return out
 
 
-def problems():
+def _readme_pathspecs(rel):
+    """The unit's README, plus its in-repo target when that README is a symlink."""
+    link = f"{rel}/README.md"
+    # realpath both sides: on macOS /tmp is itself a symlink, and a half-resolved
+    # comparison reads every fixture's link as pointing outside the repo.
+    target = os.path.relpath(
+        os.path.realpath(os.path.join(REPO, link)), os.path.realpath(REPO)
+    )
+    return [link] if target == link or target.startswith("..") else [link, target]
+
+
+def _anchor():
+    """The OLDEST commit adding a decision-015 doc — '' when the repo has none."""
+    adds = _git("log", "--diff-filter=A", "--format=%H", "--", ANCHOR_PATHSPEC).splitlines()
+    return adds[-1] if adds else ""
+
+
+def audit():
+    """(problems, evaluated, skipped) — skipped = untracked body, or anchored out."""
     if not _git("rev-parse", "--git-dir"):
-        return [f"{REPO} is not a git repository — currency is derived from history"]
+        return [f"{REPO} is not a git repository — currency is derived from history"], 0, 0
     if _git("rev-parse", "--is-shallow-repository") == "true":
         return [
             "shallow clone: every unit would pass vacuously — fetch full history "
             "(`git fetch --unshallow`, or `fetch-depth: 0` on the CI checkout)"
-        ]
-    anchor = _git("log", "--diff-filter=A", "-1", "--format=%H", "--", ANCHOR_PATHSPEC)
-    out = []
+        ], 0, 0
+    anchor = _anchor()
+    out, evaluated, skipped = [], 0, 0
     for kind, name, rel in _units():
         body = _git("log", "-1", "--format=%H", "--", rel, f":(exclude){rel}/README.md")
-        if not body:
-            continue  # no tracked body — check_readmes.py owns what a unit must contain
-        if anchor and _is_ancestor(body, anchor):
-            continue  # predates decision-015; not this gate's business
-        readme = _git("log", "-1", "--format=%H", "--", f"{rel}/README.md")
+        if not body:  # no tracked body — check_readmes.py owns what a unit must contain
+            skipped += 1
+            continue
+        if anchor and _is_ancestor(body, anchor):  # predates decision-015
+            skipped += 1
+            continue
+        evaluated += 1
+        readme = _git("log", "-1", "--format=%H", "--", *_readme_pathspecs(rel))
         if readme and _is_ancestor(body, readme):
             continue
         out.append(
@@ -110,20 +138,27 @@ def problems():
             f"left {rel}/README.md untouched — verify that README against the unit and "
             f"touch it in the same change"
         )
-    return out
+    return out, evaluated, skipped
+
+
+def problems():
+    return audit()[0]
 
 
 def main(argv):
     global REPO
     if len(argv) > 1:
         REPO = os.path.abspath(argv[1])
-    found = problems()
+    found, evaluated, skipped = audit()
     if found:
-        print(f"✗ README-currency gate: {len(found)} stale unit(s)")
+        print(f"✗ README-currency gate: {len(found)} problem(s)")
         for p in found:
             print(f"  - {p}")
         return 1
-    print(f"✓ README-currency gate clean — {len(_units())} unit(s), each README acknowledged")
+    print(
+        f"✓ README-currency gate clean — {evaluated} unit(s) evaluated, {skipped} not "
+        f"(last change predates decision-015, or no tracked body)"
+    )
     return 0
 
 
