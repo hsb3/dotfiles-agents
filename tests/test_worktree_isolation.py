@@ -371,6 +371,83 @@ class WorktreeIsolationTests(unittest.TestCase):
         self._write_activation(isolate="writers", project_dir=main_dir)
         self._assert_silent(self._run_hook(json.dumps(self._payload(cwd=worktree_dir))))
 
+    # -- nesting -------------------------------------------------------
+    #
+    # A manager that was itself isolated dispatches its writers from inside a
+    # linked worktree. Nesting is the intended outcome (see the README), so
+    # the rewrite still happens; what the dispatcher gets is the integrate
+    # step, at dispatch time rather than at stray-branch-audit time.
+
+    def _armed_worktree(self):
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        return make_worktree(
+            base, files={".claude/atelier.local.md": "---\nisolate: writers\n---\n"},
+        )
+
+    def test_nested_dispatch_is_still_isolated_and_names_the_integrate_step(self):
+        _main_dir, worktree_dir = self._armed_worktree()
+        body, updated = self._rewrite(self._payload(cwd=worktree_dir))
+        self.assertEqual(updated["isolation"], "worktree")
+
+        message = body["systemMessage"]
+        self.assertIn("NESTED", message)
+        self.assertIn("git cherry-pick HEAD..", message)
+        self.assertIn("git worktree remove", message)
+        self.assertIn("git branch -D", message)
+
+        rows = self._rows()
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0]["isolated"])
+        self.assertTrue(rows[0]["nested"])
+
+    def test_a_main_checkout_dispatch_message_is_unchanged(self):
+        """The non-nested notice must not grow an integrate step it does not
+        need — the baseline the nested clause is measured against."""
+        self._write_activation(isolate="writers")
+        body, _updated = self._rewrite(self._payload())
+        self.assertEqual(
+            body["systemMessage"],
+            "atelier worktree-isolation: 'builder' dispatched with isolation:worktree "
+            "(isolate: writers in .claude/atelier.local.md). It gets its own checkout, "
+            "so uncommitted work in this tree is NOT visible to it.",
+        )
+        self.assertFalse(self._rows()[0]["nested"])
+
+    def test_a_subdirectory_of_a_main_checkout_is_not_nested(self):
+        """`--git-common-dir` answers a relative `../../.git` from a
+        subdirectory, so a string test against `.git` calls an ordinary
+        subdirectory a worktree and tells the dispatcher to cherry-pick from
+        worktrees that do not exist."""
+        main_dir, _worktree_dir = self._armed_worktree()
+        subdir = os.path.join(main_dir, "scripts", "deep")
+        os.makedirs(subdir, exist_ok=True)
+        body, _updated = self._rewrite(self._payload(cwd=subdir))
+        self.assertNotIn("NESTED", body["systemMessage"])
+        self.assertFalse(self._rows()[0]["nested"])
+
+    def test_a_symlinked_path_is_resolved_before_comparing(self):
+        """git resolves one side of the comparison already, so an unresolved
+        compare mismatches wherever the path runs through a symlink — and a
+        mismatch is read as "linked worktree"."""
+        main_dir, worktree_dir = self._armed_worktree()
+        os.makedirs(os.path.join(main_dir, "scripts"), exist_ok=True)
+        links = os.path.join(self.tmp.name, "links")
+        os.makedirs(links, exist_ok=True)
+        main_link = os.path.join(links, "main")
+        worktree_link = os.path.join(links, "worktree")
+        os.symlink(main_dir, main_link)
+        os.symlink(worktree_dir, worktree_link)
+
+        for label, cwd, expected in (
+            ("main subdir via symlink", os.path.join(main_link, "scripts"), False),
+            ("worktree via symlink", worktree_link, True),
+        ):
+            with self.subTest(label):
+                self._run_hook(json.dumps(self._payload(cwd=cwd)))
+                self.assertEqual(self._rows()[-1]["nested"], expected)
+
 
 if __name__ == "__main__":
     unittest.main()
