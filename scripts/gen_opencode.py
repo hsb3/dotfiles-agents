@@ -19,7 +19,9 @@ tempdir and executes the generated installer; `--out` is the direct entry point:
                           CC-only keys (effort, color) dropped, maxTurns -> steps; body verbatim
   opencode.jsonc          the mergeable config fragment (schema ref; mcp entries would
                           render here — none rostered yet)
-  install.sh              the laydown installer: --global or --project <dir>
+  install.sh              the laydown installer: --global or --project <dir>; it copies the
+                          README below into $ROOT as dotfiles-agents-laydown.md, since the
+                          lane's tempdir dies with the wrapper
   README.md               generated lane README incl. the EXCLUSIONS manifest — every
                           primitive that does NOT travel, with its reason (no silent caps)
 
@@ -168,16 +170,27 @@ case "${1:-}" in
   *) echo "usage: install.sh --global | --project <dir>" >&2; exit 2 ;;
 esac
 HERE="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
+RECORD=dotfiles-agents-laydown.md
 mkdir -p "$ROOT/skills" "$ROOT/agents"
+ns=0
 for d in "$HERE"/skills/*/; do
+  [ -d "$d" ] || continue
   n="$(basename "$d")"
   rm -rf "$ROOT/skills/$n"
   cp -R "$d" "$ROOT/skills/$n"
+  ns=$((ns + 1))
 done
+na=0
 for f in "$HERE"/agents/*.md; do
+  [ -f "$f" ] || continue
   cp "$f" "$ROOT/agents/$(basename "$f")"
+  na=$((na + 1))
 done
-echo "opencode laydown complete -> $ROOT (skills/ + agents/). Restart opencode to discover."
+# The lane is built in a tempdir the wrapper deletes on exit, so the exclusions manifest
+# has to land in $ROOT here or nobody ever reads it.
+cp "$HERE/README.md" "$ROOT/$RECORD"
+echo "opencode laydown complete -> $ROOT (skills: $ns, agents: $na). Hooks do not travel through this laydown; $ROOT/$RECORD lists every primitive left behind and why."
+echo "Restart opencode to discover."
 """
 
 FRAGMENT = """// opencode.jsonc — mergeable config fragment for this lane.
@@ -233,6 +246,9 @@ def build(out_root, entries, translation):
             with open(os.path.join(out_root, "agents", f"{eid}.md"), "w", encoding="utf-8") as fh:
                 fh.write(transform_agent(text, aliases))
             shipped["agent"].append(eid)
+        # No `ptype == "command"` branch by design (matrix: unsupported). Adding one means
+        # never laying a command down while a skill it names is absent from this same
+        # laydown — ship the skill with it, or give the command a documented fallback.
 
     with open(os.path.join(out_root, "install.sh"), "w", encoding="utf-8") as fh:
         fh.write(INSTALL_SH)
