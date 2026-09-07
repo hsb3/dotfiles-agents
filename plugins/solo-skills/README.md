@@ -143,8 +143,8 @@ binary; `kenn-forge` needs a kenn-forge daemon running locally. Each says so at 
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
-skills also ship inside a bundle (`handoff` in `atelier`, the diagram skills in
+skills also ship inside another plugin (`handoff` in `atelier`, the diagram skills in
 `diagrams`, the Obsidian skills in `obsidian-toolkit`, the PocketBase skills in `pocketbase`,
-`carbon-builder` in `carbon`, `task-authoring` in `kaneo`, `bun` in `bun`, `kenn-forge` in
-`kenn-forge`, and several in `code-desk`);
+`carbon-builder` in `carbon`, `task-authoring` in `kaneo`, and several in `code-desk`), and
+`bun` and `kenn-forge` each ship as a standalone plugin of the same name;
 installing both homes loads each skill once.

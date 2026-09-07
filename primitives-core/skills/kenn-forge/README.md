@@ -39,10 +39,12 @@ the skill has nothing to read — it is a client, not a data store.
 
 ## Provenance
 
-**Self-authored (`origin: authored`). No upstream exists to pin.** The kenn-forge project
-publishes no such skill: its own `skills/` directory carries internal development tooling
-only, and there is no package or formula shipping this content. It is operator prose about
-a third-party daemon, written here — see the "Not externals" note in `externals.yaml`.
+**Self-authored (`origin: authored`). No upstream to pin.** The forge project documents the
+same tool surface in its own repo docs; what ships here is a re-authored condensation of
+those facts into an operator surface, not a copy of them — measured against both upstream
+documents, zero verbatim sentences of eight or more words and a longest shared token run of
+eight. Upstream is Elastic License 2.0, source-available, and none of its bytes are
+redistributed here. Full reasoning in the "Not externals" note in `externals.yaml`.
 
 ## Install
 

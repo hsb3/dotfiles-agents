@@ -1,7 +1,6 @@
 ---
 name: kenn-forge
 description: Triage pull requests and issues, inspect diffs and CI checks, set local review workflow state, manage the daemon/repos/docs folders, and hand off work to a coding agent — via the kenn-forge MCP companion (agent workflows) or the kenn-forge CLI (scripts, shell, humans). Use when the user wants to find PRs/issues worth reviewing, check what's waiting on them, look at a diff or stack context, mark something reviewing/waiting/merged, spawn a coding-agent workspace, or run any `kenn-forge` subcommand. Read-only unless a tool/command below is explicitly a write.
-compatibility: Requires a running kenn-forge daemon (`kenn-forge daemon status`). MCP tools additionally need [mcp].enabled = true in ~/.kenn/forge/config.toml and the server registered with the client (claude mcp add --transport http kenn-forge http://127.0.0.1:8092/mcp).
 ---
 
 # kenn-forge

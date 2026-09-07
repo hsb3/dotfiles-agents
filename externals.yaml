@@ -63,14 +63,24 @@ externals:
 # This is the specific reason required by the vendored-skill provenance-coverage work, not a
 # bare "skipped".
 #
-# `kenn-forge` (primitives-core/skills/kenn-forge) has NO entry above for the same reason,
-# reached from the other direction: the upstream project EXISTS but carries no such skill. An
-# enumeration of every path in the forge repo at main found 13 internal development-tooling
-# skills under its `skills/`, none of them this one and none matching these bytes; no package
-# and no formula publishes it either. What ships here is hand-authored operator prose ABOUT a
-# third-party daemon — the tool surface, the triage flow, and the failure modes — not a copy
-# of anything upstream. There is nothing to pin, so it fails criterion 3 of
-# docs/vendoring-rule.md (pinnable + attributable) and is classified `origin: authored`.
-# The upstream repo's own license is unresolved by GitHub's classifier, which is a second
-# reason not to redistribute its bytes here; the skill's earlier `license: MIT` frontmatter
-# was dropped rather than ship an unverifiable third-party claim over authored prose.
+# `kenn-forge` (primitives-core/skills/kenn-forge) has NO entry above either, and its reason is
+# the opposite shape: an upstream exists, but these are not its bytes. The forge project
+# documents the same tool surface itself, in docs/kenn-forge-mcp.md (146 lines) and
+# internal/mcpserver/guidance.md (65 lines) — the same tools, the same triage order, the same
+# failure modes. What ships here is a RE-AUTHORED condensation of those facts into an operator
+# surface. Measured against both upstream files concatenated: 0 verbatim sentences of 8 or more
+# words, and a longest shared token run of 8 — `use force true only for a deliberate override`,
+# which is a parameter name plus a generic instruction. ADR 0015 names exactly this route:
+# "Promotion of an external into first-party status means re-authoring it as an original for
+# the same job (origin: authored, no upstream), not copying the shipped body." So there is no
+# ref to pin and no third-party grant to carry, and it fails criterion 3 of
+# docs/vendoring-rule.md (pinnable + attributable).
+#
+# Upstream's license is the Elastic License 2.0 — GitHub reports NOASSERTION only because ELv2
+# is not OSI-listed in its classifier — and the repo's NOTICE keeps contributions up to and
+# including commit 4b28941c under MIT, everything after under ELv2. ELv2 is source-available,
+# and none of those bytes are redistributed here. The skill's inherited `license: MIT`
+# frontmatter was dropped for that specific reason: the project has since relicensed, so the
+# line asserted a grant that no longer exists upstream and was never ours to make. (An authored
+# skill MAY carry a license line — readme-value-and-proof does — so the drop is about this
+# inherited claim being false, not about the key.)
