@@ -49,7 +49,7 @@ class SoloSkillsGate(unittest.TestCase):
 
     # --- fixture helpers -------------------------------------------------
 
-    def skill(self, sid, body="Body.", ref=None, script=None):
+    def skill(self, sid, body="Body.", ref=None, script=None, example=None):
         d = os.path.join(S.SKILLS_DIR, sid)
         os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, "SKILL.md"), "w") as fh:
@@ -62,6 +62,10 @@ class SoloSkillsGate(unittest.TestCase):
             os.makedirs(os.path.join(d, "scripts"), exist_ok=True)
             with open(os.path.join(d, "scripts", "run.py"), "w") as fh:
                 fh.write(script + "\n")
+        if example is not None:
+            os.makedirs(os.path.join(d, "examples", "demo"), exist_ok=True)
+            with open(os.path.join(d, "examples", "demo", "sample.js"), "w") as fh:
+                fh.write(example + "\n")
 
     def member(self, sid):
         os.symlink(
@@ -117,6 +121,27 @@ class SoloSkillsGate(unittest.TestCase):
         self.skill("beta", "Beta.", script='P = os.path.join("skills", "alpha", "x.md")')
         self.member("beta")
         self.assertProblem("bundled script names sibling skill `alpha`")
+
+    def test_sibling_id_in_bundled_example_code_is_red(self):
+        # examples/ ships runnable code the same way scripts/ does — a cross-skill
+        # require in a bundled sample is a dependency a consumer hits on first run.
+        self.skill(
+            "beta", "Beta.",
+            example='const { T } = require("~/.claude/skills/alpha/assets/t.js");',
+        )
+        self.member("beta")
+        self.assertProblem("bundled script names sibling skill `alpha`")
+
+    def test_non_code_example_asset_is_not_scanned(self):
+        # Only source extensions are read: sample DATA carrying a sibling id is not
+        # shipped code and cannot import anything.
+        self.skill("beta", "Beta.")
+        d = os.path.join(S.SKILLS_DIR, "beta", "examples", "demo")
+        os.makedirs(d)
+        with open(os.path.join(d, "sample.slides.json"), "w") as fh:
+            fh.write('{"note": "alpha"}\n')
+        self.member("beta")
+        self.assertEqual(S.problems(), [])
 
     # --- rule 3: named-agent dispatch ------------------------------------
 

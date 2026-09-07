@@ -22,7 +22,10 @@ Audience and stakes pick the toolchain, theme, and voice:
 | External | advisor board readout · client product overview | `pptx-themes`, polished and hand-laid |
 
 Each type has a self-contained playbook and a real worked example under `examples/<type>/`;
-the shared machinery lives in `references/comm-package-standard.md`.
+the shared machinery lives in `references/comm-package-standard.md`. The examples run on a
+bare install of this skill alone — the advisor-board `sample.deck.js` takes its palette from
+`themes/actuarial-signal.json` here rather than reaching into a sibling skill's install
+directory, so nothing in `examples/` breaks when only this skill is present.
 
 ## Hard rules
 

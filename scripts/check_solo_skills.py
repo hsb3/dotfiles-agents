@@ -17,8 +17,11 @@ scripts, and it reads them differently because the two carry dependencies differ
      `SKILL.md` or `references/`. A path is a dependency; a prose mention of another
      skill by name is not, so only path- and wikilink-shaped references count here.
   2. **Sibling id in bundled code** — any other skill's id appearing anywhere under
-     `scripts/`. Code does not mention skills conversationally, so an id in a script is
-     a dependency even when it never forms a literal path.
+     `scripts/` or `examples/`. Code does not mention skills conversationally, so an id
+     in a script is a dependency even when it never forms a literal path. `examples/`
+     counts because a bundled sample is code a consumer runs: `comms`' advisor-board
+     sample required `~/.claude/skills/pptx-themes/...` for its palette, so the sample
+     was broken on any install without that sibling while the skill shipped solo.
   3. **Named-agent dispatch** — a roster agent id in backticks. A skill that dispatches
      this repo's agents cannot run without them.
 
@@ -59,10 +62,11 @@ SOLO_SKILLS_DIR = os.path.join(REPO, "plugins", "solo-skills", "skills")
 
 PROSE_NAMES = ("SKILL.md",)
 PROSE_DIRS = ("references",)
-CODE_DIRS = ("scripts",)
+CODE_DIRS = ("scripts", "examples")
 
-# Text extensions worth scanning inside scripts/ — a dependency lives in source, not in
-# a compiled artifact or a binary asset.
+# Text extensions worth scanning inside the code dirs — a dependency lives in source,
+# not in a compiled artifact or a binary asset. Sample DATA (`.json`, `.md`) is excluded
+# by the same reasoning: it imports nothing.
 CODE_SUFFIXES = (".py", ".sh", ".bash", ".zsh", ".js", ".ts", ".rb", ".pl")
 
 # Documented false positives for the agent rule, keyed (skill_id, agent_id).
