@@ -43,7 +43,8 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   next bullet). A missing binary is not a blip; it is a machine that cannot run
   the check, and a gate that reports green there teaches everyone it is running.
 - **`make labels` takes that further: it is red on an unreachable remote too, where the
-  older network gates skip and pass.** Owner ruling 2026-09-07 (decision-016) — a gate that
+  older network gates skip and pass.** House rule (decision-016 point 4; consistency is card
+  x8nf) — a gate that
   cannot measure is red, never green, because a CI step that exits 0 having measured nothing
   is indistinguishable in the summary from one that measured and found nothing wrong. It
   still names WHICH failure it hit (unreachable host vs. `gh` failing against a host that

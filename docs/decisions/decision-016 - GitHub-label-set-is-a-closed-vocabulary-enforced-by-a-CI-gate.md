@@ -29,7 +29,10 @@ Owner ruling, 2026-09-07 (on `z1xy`):
    an existing job rather than getting its own because `dev`'s branch protection pins
    required checks by job NAME. Same placement, same two reasons, as `check_version_bump.py`
    and `check_vendored_drift.py`.
-4. **A gate that cannot measure is red, never green.** Every failure to read the live set
+4. **A gate that cannot measure is red, never green.** (This point is not part of the
+   `z1xy` ruling: the coordinating session applied it before merge from the repo's standing
+   rules, invariants belong in the gate and enabled means intended; whether the two older
+   network gates follow is card `x8nf`.) Every failure to read the live set
    exits 1 — `gh` missing from PATH, `gh` failing against a host that answered, and an
    unreachable `api.github.com` alike. This diverges from `check_version_bump.py` and
    `check_vendored_drift.py`, which skip an unreachable remote with a notice and exit 0.

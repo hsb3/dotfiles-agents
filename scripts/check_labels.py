@@ -37,8 +37,9 @@ that never reports. Same placement, and for the same two reasons, as
 
 Network and tooling contract — EVERY failure to read the live set is RED, and this gate
 deliberately diverges from `check_version_bump.py` and `check_vendored_drift.py` here.
-Those two skip an unreachable remote with a notice and exit 0. Owner ruling, 2026-09-07
-(decision-016): a gate that cannot measure is red, never green. A step that exits 0
+Those two skip an unreachable remote with a notice and exit 0. House rule, applied
+2026-09-07 (decision-016 point 4; gate consistency is card x8nf): a gate that cannot
+measure is red, never green. A step that exits 0
 having measured nothing is indistinguishable in the CI summary from one that measured and
 found the set clean, and the whole cost of that ruling is a re-run when the network blips.
 
