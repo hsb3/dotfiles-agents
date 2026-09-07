@@ -71,6 +71,7 @@ flowchart TD
   N_harness -->|ingests| N_evals
   N_publish_main -.->|installs| N_consumers
   N_primitive_bodies -.->|installs| N_consumers
+  N_primitive_bodies -.->|installs| N_consumers
   N_evals -.->|curates| N_roster
   N_evals -.->|curates| N_primitive_bodies
   classDef planned stroke-dasharray: 6 4
