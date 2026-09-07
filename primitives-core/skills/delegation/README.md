@@ -37,6 +37,18 @@ model tier or a delegation architecture. It applies especially when the work arr
 goal rather than a list of slices, which is the documented case where sessions stop
 delegating altogether.
 
+## Per-project enforcement
+
+The doctrine is prose until a project arms it. `references/activation.md` is the one page that
+says which keys exist, which hook reads each, and what each one does when it is absent or
+malformed — `enforce` and `protected` (config custody over file paths), `isolate` (writing
+workers get their own checkout), `protected-branches` (a worker may not commit or push onto a
+named branch, and may not `git stash` in a tree it shares with a peer), `handoff`, and `effort`.
+It also records which copy of the activation file a hook reads when the worker is running inside
+a linked worktree, and the design commitments behind the enforcement layer — fail-open
+everywhere, custody scoped to subagents so the strategy layer is never restricted, and each
+guard stating its own ceiling instead of implying containment it does not have.
+
 ## Reading the evidence
 
 Every rule carries a provenance tag: `[lab]` and `[cost]` were measured, `[field]` was

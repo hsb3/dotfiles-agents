@@ -17,6 +17,8 @@ protected:            # fnmatch patterns, project-relative; * crosses /
   - .github/workflows/*
   - "*.config.js"
 isolate: writers      # optional: off (default when absent) | writers | a list of agent types
+protected-branches:   # optional: branch names a subagent may not commit or push onto.
+  - main              # No default — an unset key leaves that half of the guard inert.
 handoff: docs/HANDOFF.md   # optional: override the project's handoff location — a file
                            # path (above), or a {mode: external} mapping for a tracker
                            # or board (see below)
@@ -33,6 +35,21 @@ handoff: docs/HANDOFF.md   # optional: override the project's handoff location �
 <!-- harness:claude-code -->
 `worker-context` runs on SubagentStart and `config-custody` on PreToolUse.
 <!-- /harness -->
+
+## Which copy of the file a hook reads
+
+**Enforcement follows the main checkout into a linked worktree.** A worktree is a clean checkout
+of a ref, and the activation file is conventionally ignored, so a worker running inside one used
+to find no file at all and run with custody and the covenant silently off — in exactly the
+dispatch shape isolation exists to protect. Every hook that reads the file now falls back to the
+main checkout when it finds nothing at the worktree's own path, so a project that keeps the file
+local keeps its enforcement.
+
+**A tracked activation file is seen at its committed version there.** When the file *is* tracked,
+the worktree carries its own copy at the worktree's base ref, and that copy is what the hooks
+read — the fallback never fires. Uncommitted edits to a tracked activation file therefore do not
+reach workers until they are committed. Tracking the file is still worth it (it travels to a
+fresh clone and to a second machine); just commit a policy change before dispatching against it.
 
 `isolate` is read by `worktree-isolation`, which fires before a dispatch, and is independent of
 `enforce` — a project can isolate writers without arming custody, or the reverse. It rewrites the
@@ -66,6 +83,36 @@ forcing isolation is a hard error rather than a no-op).
 <!-- harness:claude-code -->
 The harness's own `Explore`, `Plan`, and `fork` agents are on the never-isolated list too.
 <!-- /harness -->
+
+`protected-branches` is read by `worker-git-scope-guard` and is a **separate key from
+`protected:`**, which means protected file *paths* and is read by `config-custody`. Overloading
+one key for two different kinds of thing would make both harder to read; they are independent and
+either can be armed alone. The guard binds subagents only — the strategy layer owns integration,
+so a hook that denied the session its own merge would be denying the layer that is supposed to do
+it — and it covers two failures that were measured, not imagined:
+
+| `protected-branches:` | Effect on a subagent's Bash command |
+|---|---|
+| absent, empty, or unparseable | the branch half is inert; the shared-tree half below still applies |
+| a list, block or inline (`[main, release]`) | `commit`/`merge`/`rebase`/`cherry-pick`/`revert`/`am` are denied while HEAD is on a listed branch, and `push` is denied when its refspec targets one (falling back to the current branch when the push names no refspec) |
+
+There is **no default list, deliberately.** `{main, master}` is wrong for any project whose working
+branch is `main`, and equally wrong for one where `main` is a publish-only surface and the real
+working branch is something else. A project that has not named its branches has not made the
+decision, and the guard stays out of it.
+
+The second half needs no key at all and cannot be turned off by one: a subagent working in a
+**shared, un-isolated tree** — the parent's own checkout, not a linked worktree of its own — is
+denied the mutating `git stash` forms outright. There is only one tree, so "stay inside your own
+worktree" has nothing to bind, and a conflicted `stash pop` followed by a `drop` has already
+destroyed a sibling's work irrecoverably. Inside its own linked worktree a worker may stash
+freely, which is exactly the isolation `isolate:` buys. `stash list` and `stash show` are reads
+and never fire.
+
+`worker-git-scope-guard` is the peer-to-peer sibling of `live-worker-git-guard`, not a duplicate
+of it: that one stops an *orchestrator* from clobbering the uncommitted state of children it
+started, keyed off its own pending set, and it exempts an agent holding its own worktree. Two peer
+builders are nobody's children, so their pending sets are empty and it never fires for them.
 
 `handoff` names where the project's handoff lives, read by `session-handoff-surfacer`,
 `handoff-freshness-guard`, and the `handoff` skill — all three otherwise search
@@ -121,12 +168,19 @@ in force before quoting a number.
   subagents, never to the main session. The strategist owns config and git; no mode changes that.
   The `manager` is a subagent, so custody binds the management layer too, which is the intended
   reading: only the layer that wrote the definition of done may edit what checks it.
-- **No command matching.** Path custody is fnmatch against a list the project wrote — Step 3's
-  ownership map made machine-readable. Git stays advisory (the injected covenant plus the
-  reconciliation check in `briefs.md`), because blocking a push or a merge would require matching
-  Bash command strings, which is brittle by design. A project that wants a hard block on the
-  operations reserved to the session can add deny rules to its own harness config — noting that
-  permission rules are not role-scoped and bind the main session too.
+- **Path custody does no command matching; the git guards do, and say so.** Path custody is
+  fnmatch against a list the project wrote — Step 3's ownership map made machine-readable, with no
+  command string anywhere in it. Git was left advisory for a long time on the grounds that
+  blocking a push or a merge means matching Bash command strings, which is brittle. Two losses
+  measured in the field overrode that: sibling workers in one shared tree destroying each other's
+  uncommitted work with `git stash`, and a worker whose HEAD sat on a publish-only branch
+  committing to the real one. `protected-branches:` therefore arms a guard that *does* parse the
+  command, and it states its own ceiling rather than pretending to contain anything: a shell
+  script, or git driven through some other tool, walks straight past it. Server-side branch
+  protection is the layer that actually contains those; this one catches the path agents take and
+  leaves a refusal in the transcript. A project that wants a broader hard block can still add deny
+  rules to its own harness config — noting that permission rules are not role-scoped and bind the
+  main session too.
 - **Fail-open.** A missing, malformed, or unrecognized activation file means `off`. A hook error
   can never produce a deny.
 - **Escape hatches.** Drop to `advisory` (or remove the key) to stop blocking everywhere; lift a
