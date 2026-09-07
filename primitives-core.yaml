@@ -62,6 +62,13 @@ primitives:
     disposition: qualified
     requires: [cli:kata]
     targets: [claude-code, opencode]
+  - id: pull-request
+    type: skill
+    source: primitives-core/skills/pull-request
+    origin: authored
+    disposition: qualified
+    requires: [cli:gh]
+    targets: [claude-code, opencode]
   - id: private-fork
     type: skill
     source: primitives-core/skills/private-fork
@@ -463,6 +470,13 @@ primitives:
     source: primitives-core/commands/activate.md
     origin: authored
     disposition: qualified
+    targets: [claude-code]
+  - id: pr-findings
+    type: command
+    source: primitives-core/commands/pr-findings.md
+    origin: authored
+    disposition: qualified
+    requires: [cli:gh]
     targets: [claude-code]
   # claude-code only, deliberately. The skill's contract is the MCP tools and the two
   # policy hooks; neither reaches the opencode lane (mcp targets claude-code, hooks are
