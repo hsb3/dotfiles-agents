@@ -11,16 +11,18 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
 - **`make ci`'s `✗` lines are passing tests' own output. Judge by exit code only.** Fixture runs
   print "1 primitives"; the real repo says 59. This trap produced a false "3 pre-existing
   failures" handoff claim on 2026-08-11 — re-run before inheriting any red-tree claim.
-- **`make ci` is not the whole gate.** Three guards run in CI only, because `make ci` is
-  offline-and-zero-install by design and each needs something it cannot have. Run all three
+- **`make ci` is not the whole gate.** Several guards run in CI only, because `make ci` is
+  offline-and-zero-install by design and each needs something it cannot have. Run them all
   by hand before assuming green:
   `scripts/check_version_bump.py` (needs network; changed published bytes must ship under a
   moved version — it caught `solo-skills` shipping two new skills under an unmoved 0.1.8 on
   2026-08-20), `scripts/check_vendored_drift.py` / `make vendored-drift` (needs network;
-  every `origin: vendored` `base/` still matches its pinned upstream ref), and
+  every `origin: vendored` `base/` still matches its pinned upstream ref),
   `scripts/check_manifests.py` / `make manifests` (needs the `claude` binary; runs
-  `claude plugin validate --strict` over the marketplace and every assembly).
-  All three ride the `drift guards` CI job rather than getting their own, because branch
+  `claude plugin validate --strict` over the marketplace and every assembly), and
+  `scripts/check_labels.py` / `make labels` (needs `gh` + network; the repo's GitHub label
+  set is a closed vocabulary per decision-016, and an extra or missing label is red).
+  They all ride the `drift guards` CI job rather than getting their own, because branch
   protection pins required checks by job NAME.
 - **`claude plugin validate --strict` cannot see through a symlink assembly, so the gate
   validates a dereferenced copy.** From CLI 2.1.240 the validator warns "N entries here are
@@ -35,10 +37,21 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   silent about symlinks), CI installed 2.1.240 (which warns). Any gate shelling out to a
   vendored binary inherits that binary's release cadence — pin it, and bump deliberately.
 - **A missing tool is a failed gate, never a skipped one.** `make manifests` exits 1 when
-  `claude` is not on PATH rather than passing with a notice. The two network gates differ
-  deliberately — they exit 0 with a notice when the remote is unreachable, so a network blip
-  does not block every PR. A missing binary is not a blip; it is a machine that cannot run
+  `claude` is not on PATH rather than passing with a notice. The version-bump and
+  vendored-drift gates differ deliberately — they exit 0 with a notice when the remote is
+  unreachable, so a network blip does not block every PR (`make labels` does NOT, see the
+  next bullet). A missing binary is not a blip; it is a machine that cannot run
   the check, and a gate that reports green there teaches everyone it is running.
+- **`make labels` takes that further: it is red on an unreachable remote too, where the
+  older network gates skip and pass.** House rule (decision-016 point 4; consistency is card
+  x8nf) — a gate that
+  cannot measure is red, never green, because a CI step that exits 0 having measured nothing
+  is indistinguishable in the summary from one that measured and found nothing wrong. It
+  still names WHICH failure it hit (unreachable host vs. `gh` failing against a host that
+  answered vs. no `gh` at all), and the unreachable message says outright that it is not
+  evidence of drift, so nobody goes hunting for a bad label. The cost is a re-run on a blip;
+  the ruling says that is the cheaper mistake. Do not "fix" this by copying the older gates'
+  skip-and-pass onto it.
 - **The README-currency gate reads git history, so `drift-guards` checks out at
   `fetch-depth: 0`.** In the default depth-1 checkout every file shares one synthetic commit,
   so every unit's body and README look like the same change and the gate would pass

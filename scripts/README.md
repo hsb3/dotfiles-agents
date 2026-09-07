@@ -18,6 +18,24 @@ and exits 0/1; `make help` lists the wrapping targets. Run them via make from th
 | `check_readme_currency.py` | `readme-currency` (also in `check`) | README currency (decision-015): the last commit touching a skill or plugin also touched that unit's README. Derived from git history — needs a full clone, and a shallow one is a failure, not a skip |
 | `check_harness_coupling.py` | `harness-coupling` | `harness/` stays extraction-clean: the shipped package never imports or references repo files outside `harness/` |
 
+## CI-only gates (not in `make ci`)
+
+Each of these needs network or a binary that `make ci`'s offline-and-zero-install contract
+forbids, so they run in CI and by hand rather than under `make ci`. They ride the `drift
+guards` CI job.
+
+They do not agree on what an unreachable remote means. `check_version_bump.py` and
+`check_vendored_drift.py` skip with a notice and exit 0, so a blip does not block every PR.
+`check_labels.py` is red instead (decision-016): a gate that cannot measure is red, never
+green. Both behaviours are deliberate; check the script before assuming either.
+
+| Script | Make target | Proves |
+|---|---|---|
+| `check_version_bump.py` | none — CI step only | changed published bytes ship under a moved version (compares against `origin/main`) |
+| `check_vendored_drift.py` | `vendored-drift` | every `origin: vendored` `base/` still matches its pinned upstream ref |
+| `check_manifests.py` | `manifests` | `claude plugin validate --strict` over the marketplace and every assembly (needs the `claude` binary) |
+| `check_labels.py` | `labels` | the repo's live GitHub label set is exactly the closed vocabulary (decision-016); names the `gh label delete`/`create` fix for each difference. Red — not skipped — whenever it cannot read the live set |
+
 ## Install-time generation (ADR 0017 — nothing generated is tracked)
 
 - `gen_opencode.py` — builds the opencode laydown from the roster's `targets:` membership
