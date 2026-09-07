@@ -51,6 +51,7 @@ break the moment one hook is installed without the other.
 
 import json
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -115,11 +116,62 @@ def _resolve_project_dir(cwd):
         return cwd
 
 
+def _main_checkout(path):
+    """A linked worktree resolves to its main checkout; anything else returns
+    `path` unchanged.
+
+    `git rev-parse --git-common-dir` names the shared git dir: a bare `.git`
+    from a main checkout's root, a path ending in `/.git` from anywhere inside
+    a linked worktree. Every other answer — no git binary, not a repository, a
+    bare repo or a submodule whose common dir is not `<root>/.git` — is treated
+    as "not a linked worktree", so a machine without git behaves exactly as it
+    did before.
+
+    Duplicated across the atelier hooks by design, like the activation parser
+    below: each hook dir is copied and symlinked on its own, so a shared module
+    would be a cross-hook import that breaks the moment one of them is
+    installed without the other.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return path
+    if proc.returncode != 0:
+        return path
+    common = proc.stdout.decode("utf-8", "replace").strip()
+    if not common or common == ".git":
+        return path  # a main checkout's own root
+    if not os.path.isabs(common):
+        common = os.path.join(path, common)
+    common = os.path.abspath(common)
+    if os.path.basename(common) != ".git":
+        return path
+    return os.path.dirname(common)
+
+
 def _resolve_activation_path(project_dir):
+    """The activation file this hook reads.
+
+    ATELIER_ACTIVATION_FILE wins outright — an explicit override is never
+    re-resolved. Otherwise it is the project dir's own copy, falling back to
+    the main checkout's copy when no file sits at the direct path and the
+    project dir is a linked worktree. The fallback is lazy — it costs a `git`
+    subprocess only on the miss, and an activation file that IS present in the
+    worktree (a tracked one, at its committed version) still wins.
+    """
     override = os.environ.get("ATELIER_ACTIVATION_FILE")
     if override:
         return override
-    return os.path.join(project_dir, ACTIVATION_RELPATH)
+    path = os.path.join(project_dir, ACTIVATION_RELPATH)
+    if os.path.isfile(path):
+        return path
+    main_dir = _main_checkout(project_dir)
+    if main_dir == project_dir:
+        return path
+    return os.path.join(main_dir, ACTIVATION_RELPATH)
 
 
 def _unquote(value):
@@ -283,6 +335,14 @@ def _resolve_override_path(value, project_dir):
     An escaping value is treated as if no override were set (same fail-open
     posture as an absent key) — this hook must never read outside its
     project's jurisdiction on an untrusted or misconfigured path.
+
+    The same lazy worktree fallback the activation file gets applies to what
+    the activation file NAMES: a stamp is gitignored and a handoff file may be
+    untracked, so neither travels into a linked worktree, and stat'ing the
+    absent copy would block every compaction a worktree session attempts. The
+    main checkout's copy is used only when the direct path holds no file, and
+    the returned path is reported as-is — a `../` in the block message is the
+    honest statement that the signal lives outside this checkout.
     """
     if not value:
         return None
@@ -294,6 +354,13 @@ def _resolve_override_path(value, project_dir):
         return None
     if relpath.split(os.sep)[0] == "..":
         return None
+    if os.path.isfile(abs_path):
+        return abs_path
+    main_dir = _main_checkout(project_dir)
+    if main_dir != project_dir:
+        candidate = os.path.normpath(os.path.join(main_dir, relpath))
+        if os.path.isfile(candidate):
+            return candidate
     return abs_path
 
 

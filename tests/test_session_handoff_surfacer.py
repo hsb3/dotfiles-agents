@@ -25,6 +25,11 @@ sys.path.insert(
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
 
+# Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
+# under `-t .`, so prime the path the same way.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
 _SEQ = itertools.count()
 
 STAMP = ".claude/handoff.stamp"
@@ -91,12 +96,12 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         with open(self.log_path, encoding="utf-8") as fh:
             return [json.loads(line) for line in fh if line.strip()]
 
-    def _payload(self, source="startup", session_id=None):
+    def _payload(self, source="startup", session_id=None, cwd=None):
         return {
             "session_id": session_id or _session_id(),
             "hook_event_name": "SessionStart",
             "source": source,
-            "cwd": self.cwd,
+            "cwd": self.cwd if cwd is None else cwd,
         }
 
     def _run_hook(self, payload):
@@ -358,6 +363,47 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             timeout=30,
         )
         self._assert_silent(result)
+
+    # -- worktree resolution -----------------------------------------------
+
+    def test_linked_worktree_surfaces_the_main_checkouts_pointer(self):
+        """The activation file is gitignored, so a session started inside a
+        linked worktree only sees the external pointer if the hook follows
+        the main checkout."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(base, files={
+            ".claude/atelier.local.md": (
+                "---\nhandoff:\n  mode: external\n  stamp: {0}\n"
+                "  location: {1}\n---\n".format(STAMP, LOCATION)
+            ),
+            STAMP: SENTINEL + "\n",
+        })
+        context, _msg = self._surfaced(self._run_hook(self._payload(cwd=worktree_dir)))
+        self.assertIn(LOCATION, context)
+        self.assertNotIn(SENTINEL, context)
+        # The stamp is named relative to the worktree, so it escapes with a
+        # `../` — cryptic-looking, but it is the path that actually resolves
+        # from where the session is standing.
+        named = context.rsplit("stamp is ", 1)[1].rstrip(".")
+        self.assertEqual(
+            os.path.normpath(os.path.join(worktree_dir, named)),
+            os.path.join(main_dir, STAMP),
+        )
+
+    def test_linked_worktree_surfaces_the_main_checkouts_handoff_file(self):
+        """File mode: an untracked handoff file in the main checkout is read
+        rather than reported missing."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        _main_dir, worktree_dir = make_worktree(base, files={
+            ".claude/atelier.local.md": "---\nhandoff: docs/HANDOFF.md\n---\n",
+            "docs/HANDOFF.md": "# Handoff\nfrom the main checkout\n",
+        })
+        context, _msg = self._surfaced(self._run_hook(self._payload(cwd=worktree_dir)))
+        self.assertIn("from the main checkout", context)
 
 
 if __name__ == "__main__":

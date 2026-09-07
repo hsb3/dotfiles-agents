@@ -27,6 +27,11 @@ sys.path.insert(
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
 
+# Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
+# under `-t .`, so prime the path the same way.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
 _SEQ = itertools.count()
 
 STALE_SECONDS = 60 * 60  # well past the 30-minute default freshness window
@@ -100,12 +105,12 @@ class HandoffFreshnessGuardOverrideTests(unittest.TestCase):
         with open(self.log_path, encoding="utf-8") as fh:
             return [json.loads(line) for line in fh if line.strip()]
 
-    def _payload(self, trigger="manual", session_id=None):
+    def _payload(self, trigger="manual", session_id=None, cwd=None):
         return {
             "session_id": session_id or _session_id(),
             "hook_event_name": "PreCompact",
             "trigger": trigger,
-            "cwd": self.cwd,
+            "cwd": self.cwd if cwd is None else cwd,
         }
 
     def _run_hook(self, payload):
@@ -431,6 +436,43 @@ class HandoffFreshnessGuardOverrideTests(unittest.TestCase):
             timeout=30,
         )
         self._assert_silent(result)
+
+    # -- worktree resolution -----------------------------------------------
+    #
+    # Both halves are gitignored in practice — the activation file and the
+    # stamp it names — so a linked worktree has neither, and both have to
+    # resolve through the main checkout or the guard blocks every compaction
+    # a worktree session attempts.
+
+    def _worktree(self, stamp_stale=False, **children):
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        lines = ["---", "handoff:"]
+        lines.extend("  {0}: {1}".format(k, v) for k, v in children.items())
+        lines.append("---")
+        main_dir, worktree_dir = make_worktree(base, files={
+            ".claude/atelier.local.md": "\n".join(lines) + "\n",
+            STAMP: "touched\n",
+        })
+        if stamp_stale:
+            old = time.time() - STALE_SECONDS
+            os.utime(os.path.join(main_dir, STAMP), (old, old))
+        return main_dir, worktree_dir
+
+    def test_linked_worktree_reads_the_main_checkouts_stamp(self):
+        _main_dir, worktree_dir = self._worktree(
+            mode="external", stamp=STAMP, location=LOCATION,
+        )
+        self._assert_silent(self._run_hook(self._payload(cwd=worktree_dir)))
+
+    def test_linked_worktree_blocks_on_the_main_checkouts_stale_stamp(self):
+        _main_dir, worktree_dir = self._worktree(
+            mode="external", stamp=STAMP, location=LOCATION, stamp_stale=True,
+        )
+        body = self._assert_blocked(self._run_hook(self._payload(cwd=worktree_dir)))
+        self.assertIn("Handoff signal is stale", body["reason"])
+        self.assertIn(LOCATION, body["reason"])
 
 
 if __name__ == "__main__":
