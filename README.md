@@ -35,7 +35,7 @@ behind. **Atelier is deliberately separate:** install its hand-authored opencode
 | Plan work in the repo tree itself, on a repo with no external board | [`mise-en-place`](plugins/mise-en-place/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
-| Build a PocketBase backend, or drive a running one from the terminal | [`pocketbase`](plugins/pocketbase/README.md) |
+| Build a PocketBase backend, drive a running one from the terminal, or delegate the build to agents that already carry the backend laws | [`pocketbase`](plugins/pocketbase/README.md) |
 | Report a defect in a plugin you are using, without leaving the session | [`plugin-feedback`](plugins/plugin-feedback/README.md) |
 
 ## Catalog
@@ -49,7 +49,7 @@ behind. **Atelier is deliberately separate:** install its hand-authored opencode
 | [`kaneo`](plugins/kaneo/README.md) | bundle | Track a repo's work on a live Kaneo board instead of in-repo task files, with board authority narrowing down the delegation chain. | 2 skills · 1 agent · 3 hooks |
 | [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | An in-repo _meta planning system for repos with no external board: layout standard, read-only audit, fill-only scaffold, planning desk. | 4 skills |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
-| [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills |
+| [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents |
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill |
 | [`plugin-feedback`](plugins/plugin-feedback/README.md) | bundle | Tell every session and worker that plugin defects are reportable, then file one to a fixed template instead of a free-handed gh call. | 2 hooks |
 

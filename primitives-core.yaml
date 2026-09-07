@@ -271,6 +271,27 @@ primitives:
     ref: c573263e84a2066d0564f428dd8160e74fc54226
     disposition: qualified
     targets: [claude-code, opencode]
+  - id: pb-builder
+    type: agent
+    source: primitives-core/agents/pb-builder.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
+    requires: [cli:pocketbase]
+  - id: pb-reviewer
+    type: agent
+    source: primitives-core/agents/pb-reviewer.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
+    requires: [cli:pocketbase]
+  - id: pocketbase-security-auditor
+    type: agent
+    source: primitives-core/agents/pocketbase-security-auditor.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, opencode]
+    requires: [cli:pocketbase]
   - id: pptx-themes
     type: skill
     source: primitives-core/skills/pptx-themes
