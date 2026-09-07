@@ -40,9 +40,12 @@ a `.laydown` marker, and the installer refuses any folder that lacks one rather 
 overwriting a skill you wrote. The older **opencode** installer has no such marker and
 overwrites whatever sits at the destination — check that directory before re-running it.
 
-The opencode laydown is a subset of the catalog: skills and agents travel, hooks do not
-(opencode has no equivalent event surface), and skills rostered Claude-Code-only stay
-behind. **Atelier is deliberately separate:** install its hand-authored opencode port from
+The opencode laydown is a subset of the catalog: skills and agents travel; hooks and commands
+do not travel through this laydown (opencode's event surface is TS-on-Bun plugins, so this
+repo's script+config hooks would need a per-hook wrapper — deferred, not impossible), and
+skills rostered Claude-Code-only stay behind. The installer copies the generated manifest to
+`<root>/dotfiles-agents-laydown.md`, which names every primitive left behind and why.
+**Atelier is deliberately separate:** install its hand-authored opencode port from
 [`hsb3/dotfiles-agents-oc`](https://github.com/hsb3/dotfiles-agents-oc).
 
 ## Start here
@@ -52,7 +55,7 @@ behind. **Atelier is deliberately separate:** install its hand-authored opencode
 | Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, set up a repo, or ship a recurring briefing — anything that works on its own | [`solo-skills`](plugins/solo-skills/README.md) |
 | Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
 | Decide what a repo's quality gate must enforce, then run focus checks, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
-| Plan work in the repo tree itself, on a repo with no external board | [`mise-en-place`](plugins/mise-en-place/README.md) |
+| Run a planning desk over a tracker (kata first), or lay out/audit/scaffold a repo's in-repo _meta/ structure | [`mise-en-place`](plugins/mise-en-place/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
 | Build a PocketBase backend, drive a running one from the terminal, or delegate the build to agents that already carry the backend laws | [`pocketbase`](plugins/pocketbase/README.md) |
@@ -62,12 +65,12 @@ behind. **Atelier is deliberately separate:** install its hand-authored opencode
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 35 skills |
-| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: focus checks, board triage, and status comms. | 7 skills · 1 agent |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 36 skills |
+| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: focus checks, board triage, and status comms. | 8 skills · 1 agent · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 12 hooks · 1 command |
 | [`kaneo`](plugins/kaneo/README.md) | bundle | Track a repo's work on a live Kaneo board instead of in-repo task files, with board authority narrowing down the delegation chain. | 2 skills · 1 agent · 3 hooks |
-| [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | An in-repo _meta planning system for repos with no external board: layout standard, read-only audit, fill-only scaffold, planning desk. | 4 skills |
+| [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout standard, read-only audit, fill-only scaffold, and desk config skills. | 4 skills |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
 | [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents |
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill |

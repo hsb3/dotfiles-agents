@@ -41,6 +41,11 @@ flowchart TD
 | `mise-en-place-scaffold` | Fill-only. `--plan` is the default and writes nothing: it shows the creations, conflicts, and manual items per checklist ID. `--apply` creates only those planned items. There is no overwrite mode — a file that differs from a template is reported as a conflict with a diff and left byte-identical. |
 | `planning-desk` | Stands up `_meta/plans/`: a `_config.md` for this repo's gates and tracker binding, a tracker adapter plus three dependency-free analysis scripts under `_utils/`, and a folder per unit of work holding `plan.md`. Tracker-adapter-backed, with a Kata adapter shipped — the tracked item is the contract, the plan is the build detail, and the scripts are generated views over a tracker snapshot plus disk. |
 
+One legacy carve-out survives in both the audit and the scaffold: the frontmatter checks over
+`_meta/plans/` skip `issue-body.md`. That exemption covered a staged body kept byte-identical
+to the live tracked item; `planning-desk` no longer stages one, so only desks predating the
+tracker-adapter change still carry the file.
+
 ## Honest scope
 
 The desk reads a tracker through an adapter and does not care which one, but only **one

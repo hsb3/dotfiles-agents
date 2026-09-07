@@ -89,6 +89,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
 | `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. |
 | `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
+| `pull-request` | Work a PR's review findings after the checks go green — collect the inline, review, and summary comments the status check never shows, then split them into what this PR must answer and the pre-existing rot it names as deferred. |
 
 **Planning and comms**
 

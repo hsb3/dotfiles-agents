@@ -9,6 +9,7 @@ Each is one `.md` with frontmatter, named by its filename, and reachable as
 | Command | Invocation | Does |
 |---|---|---|
 | `activate` | `/atelier:activate` | Arms atelier in a project: creates `.claude/atelier.local.md` if missing, then reports what each hook actually resolved, naming any key that is present but silently doing nothing. |
+| `pr-findings` | `/code-desk:pr-findings [<n>]` | Loads `pull-request` and drives it over one PR — the current branch's open PR when no number is given. Reports each review finding as actionable or as pre-existing rot it names rather than drops. |
 
 **A command stays thin.** It loads the skill that holds the procedure and drives it; it
 never restates the procedure. Two copies of a procedure is how the shipped schema drifted
