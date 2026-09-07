@@ -24,7 +24,16 @@ and exits 0/1; `make help` lists the wrapping targets. Run them via make from th
   and the `translation.yaml` capability matrix, at install time only.
 - `install_opencode.sh` — the consumer entry point: builds the laydown to a tempdir via
   `gen_opencode.py`, then runs the generated installer (`--global` or `--project <dir>`).
-  Re-run after `git pull` to update.
+  Re-run after pulling to update.
+- `gen_claude_skills.py` — builds the Claude Code **skill** laydown: every roster skill
+  targeting claude-code that a bare `.claude/skills/` tree can actually satisfy, copied
+  verbatim, plus a generated `install.sh` and a README whose exclusions manifest names every
+  primitive that stays behind and why. `--only <id>[,<id>]` builds a subset.
+- `install_claude_skills.sh` — the consumer entry point for per-skill installs with no
+  marketplace: builds to a tempdir via `gen_claude_skills.py`, then runs the generated
+  installer (`--global` into `~/.claude/skills/`, or `--project <dir>`; `--only` forwards to
+  the generator). Re-run after pulling to refresh; it only ever replaces its own laydowns
+  (each carries a `.laydown` marker) and refuses any directory it did not install.
 
 ## Analysis (not in `make ci`)
 

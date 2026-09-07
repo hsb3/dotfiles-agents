@@ -13,15 +13,31 @@ not do.
 claude plugin marketplace add hsb3/dotfiles-agents
 claude plugin install atelier@dotfiles-agents
 
-# opencode — generated non-Atelier lane, built at install time from the source branch
+# Both laydown installers generate at install time, so they run from a clone of the source branch
 git clone --branch dev https://github.com/hsb3/dotfiles-agents && cd dotfiles-agents
+
+# Claude Code, skill by skill — no marketplace
+scripts/install_claude_skills.sh --global                        # ~/.claude/skills/
+scripts/install_claude_skills.sh --project <dir> --only handoff  # <dir>/.claude/skills/
+
+# opencode — generated non-Atelier lane
 scripts/install_opencode.sh --global            # ~/.config/opencode/{skills,agents}/
 scripts/install_opencode.sh --project <dir>     # <dir>/.opencode/{skills,agents}/
 ```
 
-The opencode clone is pinned to `dev` because the installer lives on the source branch, not
-the published one. That laydown is a subset of the catalog: skills and agents travel, hooks
-do not (opencode has no equivalent event surface), and skills rostered Claude-Code-only stay
+Both clones are pinned to `dev` because the installers live on the source branch, not the
+published one. **To refresh either laydown, pull that clone and re-run the installer:** it
+overwrites its own laydowns in place, refuses any directory it did not lay down (each one it
+owns carries a `.laydown` marker), and removes nothing else. Uninstall by deleting the folder.
+
+The skill laydown is the fine-grained alternative to a bundle: `--only <id>[,<id>]` takes a
+subset, and a laid-down skill is invoked as `/<name>` where the same skill from a plugin is
+`/<plugin>:<name>`. It carries **skills only** — agents, hooks, commands, and the MCP servers
+a few skills need arrive with a plugin, and the generated laydown README names every primitive
+that stays behind and why. Plugins still install from the marketplace.
+
+The opencode laydown is a subset of the catalog: skills and agents travel, hooks do not
+(opencode has no equivalent event surface), and skills rostered Claude-Code-only stay
 behind. **Atelier is deliberately separate:** install its hand-authored opencode port from
 [`hsb3/dotfiles-agents-oc`](https://github.com/hsb3/dotfiles-agents-oc).
 
@@ -65,11 +81,14 @@ beside it — no agent, no hook, no sibling skill — so its membership is deriv
 curated: `scripts/check_solo_skills.py` re-reads the skill bodies and their bundled scripts
 and works out which ones qualify.
 
-**Per-skill installs are no longer offered.** Each of those skills used to ship as its own
-one-skill plugin. A plugin is the unit of installation in Claude Code, so consolidating them
-means taking the set rather than picking from it. Progressive disclosure is what makes that
-cheap: the model reads each skill's one-line description to decide what to activate and only
-loads a body when it fires.
+**Per-skill *plugins* are no longer offered — per-skill installs are.** Each of those skills
+used to ship as its own one-skill plugin. A plugin is the unit of installation in Claude Code,
+so taking `solo-skills` means taking the set rather than picking from it, and progressive
+disclosure is what makes that cheap: the model reads each skill's one-line description to
+decide what to activate and only loads a body when it fires. When a subset is what you
+actually want, `scripts/install_claude_skills.sh --only <id>[,<id>]` copies those skill
+folders straight into `~/.claude/skills/` or a project's `.claude/skills/`, with no
+marketplace in the loop.
 
 Some skills are dual-homed, shipping in `solo-skills` and in a bundle. Each is one source
 symlinked into both assemblies, not a copy, so both ship identical bytes and installing both

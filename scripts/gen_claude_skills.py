@@ -61,8 +61,8 @@ def blocked_reason(sid, caps):
     where = carriers(sid)
     via = ("carried by " + ", ".join(f"`{p}`" for p in where) if where
            else "no plugin assembly ships it today")
-    return (f"requires {', '.join(caps)} — a bare skills laydown copies skill bodies only, and a "
-            f"`hooks` primitive or an MCP server arrives only with a plugin install; {via}")
+    return (f"requires {', '.join(caps)} — a bare skills laydown copies skill bodies only, and "
+            f"that capability arrives only with a plugin install; {via}")
 
 
 def classify(entries):
