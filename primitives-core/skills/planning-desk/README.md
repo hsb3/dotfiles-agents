@@ -34,6 +34,13 @@ loop, the governance scripts — is kept and now runs over a tracker adapter, Ka
   itself and which the `board-triage` skill prioritizes. `_repo.py` derived a GitHub repo and had
   no callers left. The generic issue templates the desk used to seed went with them.
 
+## What it needs
+
+The scripts are stdlib-only Python with no install step. The govern mode additionally needs
+the tracker's own CLI on `PATH` and already authenticated — the adapter shells out to it,
+exports a snapshot, and the three analysis scripts read that snapshot rather than the network.
+Plan mode works with no tracker at all.
+
 ## Install
 
 ```

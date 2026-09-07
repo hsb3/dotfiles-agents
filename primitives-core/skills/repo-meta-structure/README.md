@@ -22,10 +22,11 @@ gitignore and lefthook templates, and docs scaffolding.
 
 ## Reference only
 
-This skill answers questions; it does not act. Two sibling skills read this same content and
-do the work: `repo-compliance-audit` measures a repo against `references/checklist.md`, and
-`mise-en-place-scaffold` creates missing structure from `assets/`. If the ask is "check this
-repo" or "scaffold this repo", reach for those instead.
+This skill answers questions; it does not act. Sibling skills read this same content and do
+the work: `repo-compliance-audit` measures a repo against `references/checklist.md`,
+`mise-en-place-scaffold` creates missing structure from `assets/`, and `planning-desk` runs
+inside the `_meta/plans/` desk this standard defines. If the ask is "check this repo",
+"scaffold this repo", or "plan this out", reach for those instead.
 
 ## Install
 

@@ -16,7 +16,7 @@ Desk content is clone-survivable by default; deliberately-local scratch belongs 
 |---|---|
 | `_archive/` | Superseded working material — moved, never deleted |
 | `briefings/` | Dated readouts (`yyyy-mm-dd-subject/`) |
-| `plans/` | The **code planning desk** — issue bodies and build plans authored by coding agents (the `planning-desk` skill's workspace). Also holds `inbox/` for communication-package intake — see [`planning-docs.md`](planning-docs.md) |
+| `plans/` | The **code planning desk** — build plans authored by coding agents (the `planning-desk` skill's workspace; the tracked work item itself lives on the tracker, not here). Also holds `inbox/` for communication-package intake — see [`planning-docs.md`](planning-docs.md) |
 | `operations/` | Live URLs, credentials, runbooks with secrets — never tracked, never in `docs/` |
 | `research/` | Live investigations; findings graduate to `docs/` or issues |
 | `HANDOFF.md` | Cold-start bridge — tracked, secret-free |
