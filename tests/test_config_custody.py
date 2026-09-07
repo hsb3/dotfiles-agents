@@ -15,6 +15,11 @@ import sys
 import tempfile
 import unittest
 
+# Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
+# under `-t .`, so prime the path the same way the hooks prime `_lib`.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
 HOOK_PATH = os.path.join(
     os.path.dirname(__file__), "..", "primitives-core", "hooks",
     "config-custody", "hook.py",
@@ -208,6 +213,63 @@ class ConfigCustodyTests(unittest.TestCase):
         # payload survives alongside the envelope
         self.assertEqual(row["path"], "Makefile")
         self.assertTrue(row["denied"])
+
+
+    # -- worktree resolution ---------------------------------------------
+
+    def test_linked_worktree_follows_main_checkout_activation(self):
+        """A subagent working in a linked worktree is still bound by the
+        custody file that lives, gitignored, in the main checkout."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(
+            base,
+            files={".claude/atelier.local.md": "---\nenforce: strict\nprotected:\n  - Makefile\n---\n"},
+        )
+        self.assertFalse(
+            os.path.exists(os.path.join(worktree_dir, ".claude", "atelier.local.md")),
+            "fixture leaked the activation file into the worktree",
+        )
+
+        payload = self._payload(file_path="Makefile", cwd=worktree_dir)
+        hso = self._assert_denied(self._run_hook(payload))
+        self.assertIn("protected pattern 'Makefile'", hso["permissionDecisionReason"])
+
+        # Control: resolution imports the patterns, not a blanket denial.
+        self._assert_silent(
+            self._run_hook(self._payload(file_path="notes.md", cwd=worktree_dir))
+        )
+        # Control: the main checkout itself is unaffected.
+        self._assert_denied(
+            self._run_hook(self._payload(file_path="Makefile", cwd=main_dir))
+        )
+
+    def test_worktrees_own_tracked_activation_wins(self):
+        """Resolution is lazy: a tracked activation file is read at the
+        version committed on the worktree's branch, not at the main
+        checkout's working-tree version."""
+        require_git()
+        base = os.path.join(self.tmp.name, "repo")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(
+            base,
+            tracked={".claude/atelier.local.md": "---\nenforce: off\nprotected:\n  - Makefile\n---\n"},
+        )
+        # Main checkout arms custody after the commit the worktree branched from.
+        self._write_activation(mode="strict", patterns=["Makefile"], project_dir=main_dir)
+
+        self._assert_denied(self._run_hook(self._payload(file_path="Makefile", cwd=main_dir)))
+        self._assert_silent(
+            self._run_hook(self._payload(file_path="Makefile", cwd=worktree_dir))
+        )
+
+    def test_non_worktree_cwd_without_git_is_unchanged(self):
+        """A plain directory that is not a repo resolves to itself: absent
+        activation file stays absent, no deny, no crash."""
+        plain = os.path.join(self.tmp.name, "plain")
+        os.makedirs(plain, exist_ok=True)
+        self._assert_silent(self._run_hook(self._payload(file_path="Makefile", cwd=plain)))
 
 
 if __name__ == "__main__":
