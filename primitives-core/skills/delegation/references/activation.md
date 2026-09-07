@@ -51,6 +51,13 @@ read — the fallback never fires. Uncommitted edits to a tracked activation fil
 reach workers until they are committed. Tracking the file is still worth it (it travels to a
 fresh clone and to a second machine); just commit a policy change before dispatching against it.
 
+The fallback also covers what the file *names*, not only the file: a `handoff:` path and its
+freshness stamp resolve through the main checkout too, so a worker in a worktree is neither told
+there is no handoff nor refused a compaction over a stamp that only ever existed one directory
+up. An explicit environment override of the activation file's location still wins outright and is
+never re-resolved. With no `git` available, or a project directory that is not a worktree,
+nothing about any of this changes.
+
 `isolate` is read by `worktree-isolation`, which fires before a dispatch, and is independent of
 `enforce` — a project can isolate writers without arming custody, or the reverse. It rewrites the
 dispatch to run a writing worker in its own git worktree instead of sharing the strategist's
