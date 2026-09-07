@@ -224,7 +224,7 @@ def parse_changeset(text):
         key, field = parts[0].strip(), parts[1].strip().lower()
         value = "\t".join(parts[2:]).strip()
         if field == "field" and key.lower() in ("key", "issue"):
-            continue  # header, in the contract's spelling or board-apply.py's
+            continue  # header; `issue` is the older spelling, kept so old changesets still run
         rows.append((key, field, value))
     return rows
 
@@ -369,15 +369,16 @@ def cmd_apply(args):
             print(f"OK    {tag}: unchanged")
             tally["unchanged"] += 1
             continue
-        if not args.apply:
-            print(f"DRY   would set {tag} (was {current})")
-            tally["changed"] += 1
-            continue
-
+        # Resolved before the dry-run branch: a preview that green-lights a write the
+        # board will reject is worse than no preview at all.
         query, extra, raw = mutation(fdef, project_id, items[issue]["id"], value)
         if query is None:
             print(f"FAIL  {tag}: {extra}")
             tally["failed"] += 1
+            continue
+        if not args.apply:
+            print(f"DRY   would set {tag} (was {current})")
+            tally["changed"] += 1
             continue
         try:
             _graphql(query, *raw, **extra)

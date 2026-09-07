@@ -151,16 +151,21 @@ def run_main(argv, gh):
     return code, out.getvalue(), err.getvalue()
 
 
-def board_gh(items_pages, rest=None, project=project_ok):
+def board_gh(items_pages, rest=None, project=project_ok, fields=FIELDS, mutations=MUTATION_OK):
     return Gh(
         graphql=[
             ("projectV2(number:$n)", project),
-            ("fields(first:50", FIELDS),
+            ("fields(first:50", fields),
             ("items(first:100", items_pages),
-            ("mutation(", MUTATION_OK),
+            ("mutation(", mutations),
         ],
         rest=rest,
     )
+
+
+def fields_without_priority():
+    nodes = [n for n in FIELDS["data"]["node"]["fields"]["nodes"] if not n or n["name"] != "Priority"]
+    return {"data": {"node": {"fields": {"nodes": nodes}}}}
 
 
 def item(number, state="OPEN", status="Todo", priority="P0", effort=3.0, notes="seed"):
@@ -241,6 +246,18 @@ class Helpers(unittest.TestCase):
             "Sprint 1", gpb.field_value({"__typename": "ProjectV2ItemFieldIterationValue", "title": "Sprint 1"})
         )
         self.assertIsNone(gpb.field_value({"__typename": "ProjectV2ItemFieldLabelValue"}))
+
+
+class GhBoundary(unittest.TestCase):
+    def test_a_non_zero_gh_is_fatal_unless_the_caller_opts_out(self):
+        """The INSUFFICIENT_SCOPES gotcha has to stop the run, not return an empty answer."""
+        failed = mock.Mock(return_value=subprocess.CompletedProcess([], 1, "", "INSUFFICIENT_SCOPES"))
+        with mock.patch("subprocess.run", failed):
+            with self.assertRaises(SystemExit) as cm:
+                gpb._gh("api", "graphql", "-f", "query=x")
+            self.assertEqual((1, "", "INSUFFICIENT_SCOPES"), gpb._gh("api", "repos/x", check=False))
+        self.assertIn("INSUFFICIENT_SCOPES", str(cm.exception.code))
+        self.assertIn("gh api graphql failed", str(cm.exception.code))
 
 
 class Changeset(unittest.TestCase):
@@ -360,6 +377,15 @@ class Export(unittest.TestCase):
         self.assertIn("2 items (1 untriaged)", out)
         self.assertIn(path, out)
 
+    def test_a_board_with_no_priority_field_reports_no_untriaged_count(self):
+        gh = board_gh([page(item(1))], fields=fields_without_priority())
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "snapshot.json")
+            code, out, err = run_main(["export", "-o", "acme", "-n", "8", "--out", path], gh)
+        self.assertEqual(0, code, out + err)
+        self.assertIn("1 items ->", out)
+        self.assertNotIn("untriaged", out, "a board with nowhere to store a band has nothing to count")
+
     def test_project_lookup_argv_carries_the_owner_and_number(self):
         _, gh = self.snapshot()
         lookup = gh.matching("projectV2(number:$n)")[0]
@@ -464,6 +490,34 @@ class Apply(unittest.TestCase):
         self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", out)
         self.assertEqual([], gh.mutations())
 
+    def test_a_dry_run_fails_the_same_row_the_write_would(self):
+        """A preview that green-lights an impossible write is worse than no preview."""
+        gh = board_gh([page(item(1))])
+        code, out, err = run_main(self.argv(self.changeset(("1", "status", "Shipped"))), gh)
+        self.assertEqual(1, code, out + err)
+        self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", out)
+        self.assertNotIn("DRY", out)
+        self.assertEqual([], gh.mutations(), "a dry run still writes nothing")
+
+    def test_a_failed_write_does_not_abort_the_remaining_rows(self):
+        gh = board_gh(
+            [page(item(1))],
+            mutations=[{"errors": [{"message": "rate limited"}]}, MUTATION_OK],
+        )
+        cs = self.changeset(("1", "status", "Done"), ("1", "notes", "hello"))
+        code, out, err = run_main(self.argv(cs, "--apply"), gh)
+        self.assertEqual(1, code, out + err)
+        self.assertIn("FAIL  #1 status=Done: graphql: no data", out)
+        self.assertIn("SET   #1 notes=hello", out)
+        self.assertEqual(2, len(gh.mutations()), "the second row is still attempted")
+
+    def test_apply_honours_the_org_owner_type(self):
+        gh = board_gh([page(item(1))])
+        cs = self.changeset(("1", "status", "Todo"))
+        code, out, err = run_main(self.argv(cs, "--owner-type", "org"), gh)
+        self.assertEqual(0, code, out + err)
+        self.assertIn("organization(login", gh.query_of(gh.matching("projectV2(number:$n)")[0]))
+
     def test_iteration_value_resolves_against_completed_buckets_too(self):
         gh = board_gh([page(item(1))])
         cs = self.changeset(("1", "sprint", "sprint 1"))
@@ -530,6 +584,19 @@ class Apply(unittest.TestCase):
             gh.rest_calls(),
         )
         self.assertEqual([], gh.mutations())
+
+    def test_a_dry_run_never_touches_the_dependency_graph(self):
+        """The one path that writes outside the project — a dry run that POSTs is unrecoverable."""
+        gh = board_gh([page(item(1))], rest={"repos/acme/widgets/issues/2": (0, "77\n")})
+        cs = self.changeset(("1", "blocked_by", "2"))
+        code, out, err = run_main(self.argv(cs, "--repo", "acme/widgets"), gh)
+        self.assertEqual(0, code, out + err)
+        self.assertIn("DRY   would POST blocked_by: #1 <- #2", out)
+        self.assertEqual(
+            [["gh", "api", "repos/acme/widgets/issues/2", "--jq", ".id"]],
+            gh.rest_calls(),
+            "the blocker lookup is a read; nothing is POSTed",
+        )
 
     def test_a_missing_blocker_fails_the_run(self):
         gh = board_gh([page(item(1))])

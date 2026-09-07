@@ -10,6 +10,10 @@ adapter under `references/adapters/` — **GitHub Projects (v2)**, **Kaneo**, an
 ship, each with its own export/apply script in `scripts/`. A new backend is a new adapter
 file: two commands and a field map, no edit to the rubric.
 
+Every adapter writes only on `--apply`. The default run is a preview you read first, and it
+refuses the same rows the write would, so an unresolvable changeset is caught before it
+touches the board.
+
 ## When it triggers
 
 Use it to "run board triage", "triage the backlog", "prioritize the issues", "rank the

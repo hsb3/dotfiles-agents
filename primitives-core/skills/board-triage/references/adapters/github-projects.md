@@ -30,7 +30,9 @@ python3 "$S/github_projects_board.py" export -o acme -n 8 --out board-snapshot.j
 Prints `<n> items (<n> untriaged) -> board-snapshot.json`, the untriaged count only when the board
 has a Priority field; without `--out` the snapshot goes to stdout and there is no count line. Add
 `--owner-type org` for an org-owned board (default `user`). The snapshot's top-level `fields` block
-carries each field's legal values, so triage needs no second read command.
+carries the legal values for every single-select and iteration field, so triage needs no second read
+command; text, number, and date fields get a format hint (`<text>`, `<number>`, `YYYY-MM-DD`) there
+instead, since their legal values are not an enumerable set.
 
 ## Apply
 
@@ -43,7 +45,8 @@ python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset edges.tsv -
 Dry-run by default. One line per row on stdout (`DRY   would set #<key> priority=P1 (was None)`, `OK`
 already at target, `SET` written, `SKIP` not guessed at, `FAIL` errored), then a tally on stderr.
 Only differing cells are written, so re-runs are free; exit 1 if any row FAILed, and a SKIP is not a
-failure. Blank lines and `#` comments are ignored, and a header row is dropped whether its first
+failure. The dry run resolves every value against the live fields before previewing it, so it exits
+non-zero on a row the write would reject rather than promising a change that cannot land. Blank lines and `#` comments are ignored, and a header row is dropped whether its first
 column reads `key` or `issue`. `--repo` is needed only for `blocked_by` / `blocking` rows. Pass the
 same `--owner-type` you exported with — the snapshot does not record it.
 
@@ -67,8 +70,9 @@ field matches 'impact'` rather than inventing one; provision them once, below.
 
 `blocked_by` / `blocking` are not project cells at all: they route to the REST
 issue-dependencies endpoint and need `--repo`. Labels, Milestone, and Assignees are
-issue-native and not settable through the project API — absent from both the `fields` block
-and the item grid, and apply names the refusing dataType.
+issue-native and not settable through the project API — they are absent from the `fields` block
+and from each item's `fields` grid, and apply names the refusing dataType. Each item still
+carries its `labels`, `milestone`, and `parent` as plain read-only context.
 
 ## Provisioning the fields
 
