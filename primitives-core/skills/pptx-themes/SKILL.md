@@ -135,3 +135,10 @@ scripts/render-pptx.sh output.pptx /tmp/deck-qa
   of one theme — vet a new or tuned palette with
   `NODE_PATH=<dir-with-node_modules> node scripts/build-theme-sampler.js <theme> [outdir]`,
   then render it with `scripts/render-pptx.sh`.
+
+## Found an error?
+
+`base/` is vendored verbatim and must never be hand-edited — an edit there registers as
+upstream drift and fails the vendored-drift gate. Corrections go here in the authored
+layer, with evidence; upstream-worthy ones belong on
+<https://github.com/anthropics/skills/issues>.
