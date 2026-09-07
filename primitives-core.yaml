@@ -237,6 +237,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: worker-git-scope-guard
+    type: hook
+    source: primitives-core/hooks/worker-git-scope-guard
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: plugin-feedback-session
     type: hook
     source: primitives-core/hooks/plugin-feedback-session

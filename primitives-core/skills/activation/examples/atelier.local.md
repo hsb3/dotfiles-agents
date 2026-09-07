@@ -11,6 +11,18 @@ protected:
   - .github/workflows/*
   - "*.config.js"
 
+# worker-git-scope-guard: branch NAMES a subagent may not commit, merge, rebase or push
+# onto. A different key from `protected` above (that one is file paths) and independent of
+# `enforce`. Keep the key line bare, same trap as `protected`.
+#
+# Ships commented out on purpose: there is no sensible default. Name your own publish-only
+# or release branches here — a built-in main/master guard protects the wrong branch in any
+# project whose default branch is publish-only and whose real work happens elsewhere. The
+# same hook's other half — refusing a stash from a worker sharing this checkout — is live
+# regardless and needs no key at all.
+# protected-branches:
+#   - main
+
 # worktree-isolation: a writing subagent gets its own checkout instead of sharing
 # the strategist's working tree. Independent of `enforce`.
 isolate: writers           # off (default when absent) | writers | [builder, my-writer]
