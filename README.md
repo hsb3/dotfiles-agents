@@ -85,10 +85,11 @@ code desk's audit reads the same standard its scaffold writes from, and `atelier
 are useless without the agents beside them. Anything shipping agents or hooks is a bundle
 too, even when it carries no skill at all.
 
-`solo-skills` is the other half of that idea. It carries every skill that needs nothing
-beside it — no agent, no hook, no sibling skill — so its membership is derived rather than
-curated: `scripts/check_solo_skills.py` re-reads the skill bodies, their bundled scripts and
-their bundled examples, and works out which ones qualify.
+`solo-skills` is the other half of that idea. It is the home for skills that need nothing
+beside them — no agent, no hook, no sibling skill — and that no topical plugin already owns,
+so its membership is derived rather than curated: `scripts/check_solo_skills.py` re-reads the
+skill bodies, their bundled scripts and their bundled examples, works out which ones qualify,
+and reads the other assemblies to see which already have a home of their own.
 
 **Per-skill *plugins* are no longer offered — per-skill installs are.** Each of those skills
 used to ship as its own one-skill plugin. A plugin is the unit of installation in Claude Code,
@@ -99,9 +100,10 @@ actually want, `scripts/install_claude_skills.sh --only <id>[,<id>]` copies thos
 folders straight into `~/.claude/skills/` or a project's `.claude/skills/`, with no
 marketplace in the loop.
 
-Some skills are dual-homed, shipping in `solo-skills` and in a bundle. Each is one source
-symlinked into both assemblies, not a copy, so both ship identical bytes and installing both
-loads the skill once.
+Some skills are still dual-homed, shipping in `solo-skills` and in a bundle. Each is one
+source symlinked into both assemblies, not a copy, so both ship identical bytes — but a
+session with both plugins enabled lists that skill twice, which is why a skill a topical
+plugin owns now ships only from that plugin (decision-020).
 
 ## How this repo is built
 

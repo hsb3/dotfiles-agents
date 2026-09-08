@@ -34,4 +34,6 @@ install. What each one needs is the backend's own client: the GitHub Projects ad
 wants the `kata` binary pointed at the right daemon, and the Kaneo adapter wants the API
 url, key, and project id it already takes from the environment. Each adapter says so at the
 top of its own file, and carries its backend's one-time setup (project/board creation, field
-provisioning, views and workflows) alongside the day-to-day export/apply commands.
+provisioning, views and workflows) alongside the day-to-day export/apply commands. Where a
+setup step is a board write rather than a read, the adapter says so at that step and names
+the legal values, so a snippet is never copied blind.

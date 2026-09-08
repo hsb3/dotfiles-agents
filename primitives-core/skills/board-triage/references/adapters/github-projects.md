@@ -189,10 +189,14 @@ with `actions/add-to-project`.
 A project-level status update (the project's overview page, not a per-item field):
 
 ```bash
-gh api graphql -f query='mutation($p:ID!){ createProjectV2StatusUpdate(input:{ projectId:$p,
-  status: ON_TRACK, body:"Weekly triage run; N items promoted to Up Next." }){
-  statusUpdate{ id } } }' -f p="<PROJECT_NODE_ID>"
+gh api graphql -f query='mutation($p:ID!,$b:String!){ createProjectV2StatusUpdate(input:{
+  projectId:$p, body:$b, status:ON_TRACK }){ statusUpdate{ id } } }' \
+  -f p="<PROJECT_NODE_ID>" -f b="<markdown>"
 ```
+
+`status` ∈ `INACTIVE ON_TRACK AT_RISK OFF_TRACK COMPLETE`. This is a board write — confirm
+before sending. Pass the body as the `$b` variable rather than inlining it: a status update is
+markdown, and inlining it into the query string breaks on the first quote.
 
 ## Notes verified against a live board
 
