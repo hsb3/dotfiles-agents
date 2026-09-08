@@ -110,15 +110,15 @@ because every citation of the pair contains the id, so such an anchor can never 
 and the self-invalidation never fires. A defective anchor is reported AND deactivates the
 entry — an exemption nobody can trust must not suppress anything meanwhile.
 
-Five entries are an AMNESTY, not a clearance — real cross-bundle dependencies that predate
-the gate, tracked on kata `kw60` ("three shipped skills cite a sibling their bundle does not
-ship"; the two path-form pairs were appended to it). Two of the five break at runtime, not
+The entries marked AMNESTY are not a clearance — real cross-bundle dependencies that predate
+the gate, tracked on kata `kw60` ("shipped skills cite a sibling their bundle does not
+ship"; the two path-form pairs were appended to it). Two of them break at runtime, not
 merely on the page: `repo-compliance-audit`'s `audit.py` refuses to run against a
 `mise-en-place` root because `project-memory`'s checklist is not there. Resolving them means
 changing a distribution surface (adding a symlink cascades plugin version bumps), which is
 an owner decision, not a gate's. This mirrors `check_readme_currency.py`'s landing-commit
-anchor: forward-only, with the backlog named out loud. When `kw60` closes, those five
-entries are deleted outright.
+anchor: forward-only, with the backlog named out loud. When `kw60` closes, every AMNESTY
+entry is deleted outright.
 
 Run standalone to see every citation the extractor pulls, with its verdict — the tool for
 auditing the rule rather than trusting it:
@@ -184,7 +184,7 @@ EXEMPTIONS = {
     # --- amnesty: pre-existing and UNRESOLVED, tracked on kata kw60 -----------------
     # Real cross-bundle dependencies. They are recorded here so the gate can be
     # forward-only; fixing them changes a distribution surface (owner decision). Delete
-    # these five entries when kw60 closes — the gate will then be red until the
+    # every entry in this block when kw60 closes — the gate will then be red until the
     # memberships or the bodies change, which is the point.
     ("planning-desk", "task-authoring"): (
         "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency: the desk "
