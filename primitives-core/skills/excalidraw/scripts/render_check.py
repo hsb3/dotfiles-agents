@@ -1,30 +1,16 @@
 #!/usr/bin/env python3
 """Render an .excalidraw scene headless, screenshot it, and lint it for defects.
 
-An authored scene is written blind: the model that emits the JSON never sees the canvas,
-so a label that escaped its box or an arrow bound to an id that no longer exists ships
-looking fine in the diff and broken on the whiteboard. This closes the loop offline —
-render, screenshot, lint, fix, render again — with no network, no install, and no
-upstream renderer.
+Three stages, each usable alone: ``render_svg`` draws the scene, ``lint_scene`` reads it
+as data, ``screenshot`` rasterizes through headless Chromium. The loop and its fidelity
+limits are documented in this skill's SKILL.md; exit 0 = rendered clean, 1 = rendered
+with findings.
 
-Three stages, each usable alone:
-
-  * ``render_svg`` walks the scene's ``elements`` and draws the supported subset
-    (rectangle, ellipse, diamond, line, arrow, text, container labels, frame) to a
-    self-contained SVG. First-party and deliberately plain: geometry and layout are
-    exact, the hand-drawn wobble is not reproduced. It answers "is this laid out right",
-    not "is this pretty".
-  * ``lint_scene`` reads the scene as data and reports the defects a renderer cannot
-    show you a cause for: overlapping shapes, a binding naming a missing element, a
-    label with no back-reference, an element escaping its frame, text too wide for its
-    container.
-  * ``screenshot`` rasterizes the SVG through headless Chromium via Playwright, which
-    must be resolvable by node (globally installed is fine — see ``--node-path``).
-
-Outputs go to a scratch directory, never next to the scene: a render is a derived
-artifact and tracking it invites a stale one. Exit 0 = rendered and clean; exit 1 = it
-rendered but the lint found defects (both files are still written, which is the point —
-you look at the picture and read the finding side by side).
+A scene is UNTRUSTED input — `.excalidraw` files arrive from other people, and this
+script's whole pitch is running it on one before you trust it. Every scene value that
+reaches the SVG goes through ``_num``, ``_color`` or ``_esc``: the page is loaded with a
+file:// origin, so an unescaped attribute is remote-fetch and script execution, not a
+cosmetic bug.
 """
 
 from __future__ import annotations
@@ -33,6 +19,7 @@ import argparse
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -42,11 +29,37 @@ SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLE = os.path.join(SKILL_ROOT, "examples", "request-path.excalidraw")
 
 SHAPES = ("rectangle", "ellipse", "diamond", "image")
+LINEAR = ("arrow", "line")
 PAD = 24
 # Virgil is wider than a system sans; 0.55em per character tracks it closely enough to
-# catch overflow without pulling in a font metrics library.
+# catch overflow when the app's own measured `width` is absent.
 CHAR_EM = 0.55
 LABEL_PAD = 8
+
+# A colour, and nothing else: hex or a bare CSS keyword. `url(#x)`, a quote, or anything
+# with a scheme in it is not a colour, and in an SVG attribute it is an outbound request.
+COLOR_RE = re.compile(r"\A(#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,20})\Z")
+
+
+# --- untrusted values ----------------------------------------------------------------
+
+
+def _num(value, default=0.0):
+    """A scene number, or the default — never a string that lands in the SVG."""
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return out if math.isfinite(out) else float(default)
+
+
+def _color(value, default):
+    return value if isinstance(value, str) and COLOR_RE.match(value) else default
+
+
+def _esc(text):
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
 
 
 # --- geometry ----------------------------------------------------------------------
@@ -58,24 +71,34 @@ def _live(scene):
 
 def _box(el):
     """(x0, y0, x1, y1) in scene coordinates, points included for linear elements."""
-    x, y = float(el.get("x", 0)), float(el.get("y", 0))
+    x, y = _num(el.get("x")), _num(el.get("y"))
     pts = el.get("points")
     if pts:
-        xs = [x + float(p[0]) for p in pts]
-        ys = [y + float(p[1]) for p in pts]
+        xs = [x + _num(p[0]) for p in pts]
+        ys = [y + _num(p[1]) for p in pts]
         return min(xs), min(ys), max(xs), max(ys)
-    return x, y, x + float(el.get("width", 0)), y + float(el.get("height", 0))
+    return x, y, x + _num(el.get("width")), y + _num(el.get("height"))
 
 
 def _overlap(a, b):
     ax0, ay0, ax1, ay1 = _box(a)
     bx0, by0, bx1, by1 = _box(b)
-    return ax0 < bx1 and bx0 < ax1 and ay0 < by1 and by0 < ay1
+    if not (ax0 < bx1 and bx0 < ax1 and ay0 < by1 and by0 < ay1):
+        return False
+    # Full containment is composition, not collision: a zone background with boxes on
+    # it, a card stack, a corner badge. Only partial intersection is the accident.
+    a_in_b = bx0 <= ax0 and by0 <= ay0 and ax1 <= bx1 and ay1 <= by1
+    b_in_a = ax0 <= bx0 and ay0 <= by0 and bx1 <= ax1 and by1 <= ay1
+    return not (a_in_b or b_in_a)
 
 
 def _text_width(el):
+    """The app's own measured width when the element carries one, else a char estimate."""
+    measured = _num(el.get("width"))
+    if measured > 0:
+        return measured
     longest = max((len(line) for line in str(el.get("text", "")).splitlines()), default=0)
-    return longest * float(el.get("fontSize", 20)) * CHAR_EM
+    return longest * _num(el.get("fontSize"), 20) * CHAR_EM
 
 
 def scene_bounds(elements):
@@ -112,15 +135,21 @@ def lint_scene(scene):
                 ))
 
     for el in els:
-        if el.get("type") not in ("arrow", "line"):
-            continue
-        for side in ("startBinding", "endBinding"):
-            binding = el.get(side) or {}
-            target = binding.get("elementId")
+        if el.get("type") in LINEAR:
+            for side in ("startBinding", "endBinding"):
+                target = (el.get(side) or {}).get("elementId")
+                if target and target not in by_id:
+                    out.append((
+                        "dangling-arrow",
+                        f"{el['id']}.{side} names `{target}`, which is not in the scene",
+                    ))
+        for ref in el.get("boundElements") or []:
+            target = ref.get("id")
             if target and target not in by_id:
                 out.append((
-                    "dangling-arrow",
-                    f"{el['id']}.{side} names `{target}`, which is not in the scene",
+                    "dangling-ref",
+                    f"{el['id']}.boundElements names `{target}`, which is not in the "
+                    "scene — the app drops the link on load",
                 ))
 
     for el in els:
@@ -143,7 +172,10 @@ def lint_scene(scene):
                 f"{el['id']} is bound to {container_id}, but {container_id}."
                 "boundElements has no back-reference — the label will float free",
             ))
-        room = float(container.get("width", 0)) - 2 * LABEL_PAD
+        # A label on an arrow floats over the line and is not clipped by its span.
+        if container.get("type") in LINEAR:
+            continue
+        room = _num(container.get("width")) - 2 * LABEL_PAD
         if _text_width(el) > room:
             out.append((
                 "text-overflow",
@@ -153,13 +185,22 @@ def lint_scene(scene):
 
     for el in els:
         frame_id = el.get("frameId")
-        if not frame_id:
+        # An arrow crossing between stacked frames is the Layers pattern, not an escape;
+        # containment only means anything for shapes.
+        if not frame_id or el.get("type") in LINEAR:
             continue
         frame = by_id.get(frame_id)
         if frame is None:
             out.append((
                 "frame-escape",
                 f"{el['id']}.frameId names `{frame_id}`, which is not in the scene",
+            ))
+            continue
+        if frame.get("type") != "frame":
+            out.append((
+                "frame-escape",
+                f"{el['id']}.frameId names `{frame_id}`, which is a "
+                f"{frame.get('type')}, not a frame",
             ))
             continue
         ex0, ey0, ex1, ey1 = _box(el)
@@ -181,7 +222,10 @@ def _find(elements, eid):
     for el in elements:
         if el.get("id") == eid:
             return el
-    return None
+    raise SystemExit(
+        f"--defect needs the bundled sample: no element `{eid}` in this scene. "
+        f"Run it without a scene argument, or against {SAMPLE}."
+    )
 
 
 def introduce_defect(scene, kind):
@@ -205,6 +249,8 @@ def introduce_defect(scene, kind):
         long_text = "Postgres 17 primary with read replica"
         lab = _find(els, "db-label")
         lab["text"] = lab["originalText"] = long_text
+        # The app re-measures on edit; without that the width still says it fits.
+        lab["width"] = len(long_text) * lab["fontSize"] * CHAR_EM
     else:
         raise SystemExit(f"unknown defect: {kind}")
     return scene
@@ -218,19 +264,16 @@ DEFECTS = ("overlap", "orphan-label", "dangling-arrow", "frame-escape", "text-ov
 
 FONT_STACK = "Chalkboard SE, Bradley Hand, Segoe Print, Comic Sans MS, cursive"
 DASHES = {"dashed": "12 8", "dotted": "2 6"}
-
-
-def _esc(text):
-    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+ARROWHEAD = 12
 
 
 def _stroke(el):
     out = [
-        f'stroke="{el.get("strokeColor") or "#1e1e1e"}"',
-        f'stroke-width="{el.get("strokeWidth", 2)}"',
+        f'stroke="{_color(el.get("strokeColor"), "#1e1e1e")}"',
+        f'stroke-width="{_num(el.get("strokeWidth"), 2):.1f}"',
         'stroke-linecap="round"',
         'stroke-linejoin="round"',
-        f'opacity="{float(el.get("opacity", 100)) / 100:.2f}"',
+        f'opacity="{_num(el.get("opacity"), 100) / 100:.2f}"',
     ]
     dash = DASHES.get(el.get("strokeStyle"))
     if dash:
@@ -239,43 +282,51 @@ def _stroke(el):
 
 
 def _fill(el):
-    bg = el.get("backgroundColor")
-    if not bg or bg == "transparent":
-        return 'fill="none"'
     # `hachure` and `cross-hatch` are scribbled fills upstream; flat fill is the honest
     # stand-in — it shows the same coverage without pretending to be the real texture.
-    return f'fill="{bg}"'
+    bg = _color(el.get("backgroundColor"), "transparent")
+    return 'fill="none"' if bg == "transparent" else f'fill="{bg}"'
 
 
-def _arrowhead(x1, y1, x2, y2, color, size=12):
+def _rotate(el):
+    angle = _num(el.get("angle"))
+    if not angle:
+        return ""
+    x0, y0, x1, y1 = _box(el)
+    deg = math.degrees(angle)
+    return f' transform="rotate({deg:.2f} {(x0 + x1) / 2:.1f} {(y0 + y1) / 2:.1f})"'
+
+
+def _arrowhead(x1, y1, x2, y2, color):
     angle = math.atan2(y2 - y1, x2 - x1)
     pts = [
         (x2, y2),
-        (x2 - size * math.cos(angle - 0.42), y2 - size * math.sin(angle - 0.42)),
-        (x2 - size * math.cos(angle + 0.42), y2 - size * math.sin(angle + 0.42)),
+        (x2 - ARROWHEAD * math.cos(angle - 0.42), y2 - ARROWHEAD * math.sin(angle - 0.42)),
+        (x2 - ARROWHEAD * math.cos(angle + 0.42), y2 - ARROWHEAD * math.sin(angle + 0.42)),
     ]
     joined = " ".join(f"{px:.1f},{py:.1f}" for px, py in pts)
     return f'<polygon points="{joined}" fill="{color}" />'
 
 
 def _draw_text(el, by_id):
-    size = float(el.get("fontSize", 20))
+    size = _num(el.get("fontSize"), 20)
     lines = str(el.get("text", "")).splitlines() or [""]
-    color = el.get("strokeColor") or "#1e1e1e"
+    color = _color(el.get("strokeColor"), "#1e1e1e")
     container = by_id.get(el.get("containerId"))
     if container is not None:
         cx0, cy0, cx1, cy1 = _box(container)
         anchor, tx = "middle", (cx0 + cx1) / 2
         ty = (cy0 + cy1) / 2 - (len(lines) - 1) * size * 0.625 + size * 0.35
     else:
-        anchor, tx = "start", float(el.get("x", 0))
-        ty = float(el.get("y", 0)) + size * 0.9
+        anchor, tx = "start", _num(el.get("x"))
+        ty = _num(el.get("y")) + size * 0.9
+    rot = _rotate(el)
     out = []
     for n, line in enumerate(lines):
         out.append(
             f'<text x="{tx:.1f}" y="{ty + n * size * 1.25:.1f}" fill="{color}" '
-            f'font-size="{size}" font-family="{FONT_STACK}" '
-            f'text-anchor="{anchor}">{_esc(line)}</text>'
+            f'font-size="{size:.1f}" font-family="{FONT_STACK}" '
+            f'text-anchor="{anchor}"{rot}>{_esc(line)}</text>'
         )
     return out
 
@@ -284,6 +335,7 @@ def _draw(el, by_id):
     kind = el.get("type")
     x0, y0, x1, y1 = _box(el)
     w, h = x1 - x0, y1 - y0
+    rot = _rotate(el)
     if kind == "frame":
         name = _esc(el.get("name") or "")
         return [
@@ -295,25 +347,28 @@ def _draw(el, by_id):
     if kind == "rectangle":
         rx = 12 if el.get("roundness") else 0
         return [f'<rect x="{x0}" y="{y0}" width="{w}" height="{h}" rx="{rx}" '
-                f'{_fill(el)} {_stroke(el)} />']
+                f'{_fill(el)} {_stroke(el)}{rot} />']
     if kind == "ellipse":
         return [f'<ellipse cx="{x0 + w / 2}" cy="{y0 + h / 2}" rx="{w / 2}" '
-                f'ry="{h / 2}" {_fill(el)} {_stroke(el)} />']
+                f'ry="{h / 2}" {_fill(el)} {_stroke(el)}{rot} />']
     if kind == "diamond":
         pts = f"{x0 + w / 2},{y0} {x1},{y0 + h / 2} {x0 + w / 2},{y1} {x0},{y0 + h / 2}"
-        return [f'<polygon points="{pts}" {_fill(el)} {_stroke(el)} />']
-    if kind in ("arrow", "line"):
-        ex, ey = float(el.get("x", 0)), float(el.get("y", 0))
-        pts = [(ex + float(p[0]), ey + float(p[1])) for p in el.get("points") or []]
+        return [f'<polygon points="{pts}" {_fill(el)} {_stroke(el)}{rot} />']
+    if kind in LINEAR:
+        ex, ey = _num(el.get("x")), _num(el.get("y"))
+        pts = [(ex + _num(p[0]), ey + _num(p[1])) for p in el.get("points") or []]
         if len(pts) < 2:
             return []
         joined = " ".join(f"{px:.1f},{py:.1f}" for px, py in pts)
-        color = el.get("strokeColor") or "#1e1e1e"
+        color = _color(el.get("strokeColor"), "#1e1e1e")
         out = [f'<polyline points="{joined}" fill="none" {_stroke(el)} />']
         if el.get("endArrowhead"):
             out.append(_arrowhead(*pts[-2], *pts[-1], color))
         if el.get("startArrowhead"):
             out.append(_arrowhead(*pts[1], *pts[0], color))
+        if rot:
+            # The head must turn with the line, and it is a sibling element.
+            out = [f"<g{rot}>", *out, "</g>"]
         return out
     if kind == "text":
         return _draw_text(el, by_id)
@@ -337,7 +392,7 @@ def render_svg(scene):
     by_id = {e.get("id"): e for e in els}
     x0, y0, x1, y1 = scene_bounds(els)
     width, height = x1 - x0, y1 - y0
-    bg = (scene.get("appState") or {}).get("viewBackgroundColor") or "#ffffff"
+    bg = _color((scene.get("appState") or {}).get("viewBackgroundColor"), "#ffffff")
     body = []
     for el in els:
         body.extend(_draw(el, by_id))
@@ -360,7 +415,7 @@ const { chromium } = require('playwright');
   const browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: Number(process.env.EXC_W), height: Number(process.env.EXC_H) },
-    deviceScaleFactor: Number(process.env.EXC_SCALE),
+    deviceScaleFactor: 2,
   });
   await page.goto('file://' + process.env.EXC_SVG);
   await page.screenshot({ path: process.env.EXC_PNG });
@@ -388,24 +443,29 @@ def node_path(explicit=None):
     return out.stdout.strip()
 
 
-def screenshot(svg_path, png_path, width, height, scale=2, explicit_node_path=None):
+def shot_env(svg_path, png_path, width, height, explicit_node_path=None):
+    """The environment the driver reads. Pure, so the wiring is testable without a browser."""
+    env = dict(os.environ)
+    env.update(
+        NODE_PATH=node_path(explicit_node_path),
+        EXC_SVG=svg_path,
+        EXC_PNG=png_path,
+        EXC_W=str(int(width)),
+        EXC_H=str(int(height)),
+    )
+    return env
+
+
+def screenshot(svg_path, png_path, width, height, explicit_node_path=None):
     """Rasterize the SVG with headless Chromium. Returns the png path."""
     node = shutil.which("node")
     if not node:
         raise SystemExit("node not found on PATH — needed to drive Playwright")
+    env = shot_env(svg_path, png_path, width, height, explicit_node_path)
     with tempfile.TemporaryDirectory() as work:
         driver = os.path.join(work, "shot.js")
         with open(driver, "w", encoding="utf-8") as fh:
             fh.write(DRIVER)
-        env = dict(os.environ)
-        env.update(
-            NODE_PATH=node_path(explicit_node_path),
-            EXC_SVG=svg_path,
-            EXC_PNG=png_path,
-            EXC_W=str(int(width)),
-            EXC_H=str(int(height)),
-            EXC_SCALE=str(scale),
-        )
         run = subprocess.run(
             [node, driver], env=env, capture_output=True, text=True, timeout=180
         )
@@ -452,7 +512,6 @@ def main(argv=None):
     ap.add_argument("--lint-only", action="store_true", help="skip render and screenshot")
     ap.add_argument("--no-screenshot", action="store_true",
                     help="write the SVG but skip Playwright")
-    ap.add_argument("--scale", type=int, default=2, help="screenshot pixel ratio (default 2)")
     ap.add_argument("--node-path", help="NODE_PATH for resolving playwright "
                                         "(default: $EXCALIDRAW_NODE_PATH, else `npm root -g`)")
     ap.add_argument("--self-test", action="store_true",
@@ -487,7 +546,7 @@ def main(argv=None):
         if not args.no_screenshot:
             x0, y0, x1, y1 = scene_bounds(_live(scene))
             png = screenshot(svg_path, os.path.join(out, stem + ".png"),
-                             x1 - x0, y1 - y0, args.scale, args.node_path)
+                             x1 - x0, y1 - y0, args.node_path)
             print(f"png   {png}")
 
     if findings:

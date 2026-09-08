@@ -12,8 +12,11 @@ a scene to SVG, screenshots it through Playwright's Chromium, and lints it for t
 author cannot see in JSON — overlapping shapes, a binding naming a missing element, a label
 with no back-reference, an element outside its frame, text too wide for its container. Fully
 offline, nothing installed into the project, renders written to a scratch dir rather than the
-repo. A sample scene ships in `examples/`, and `--self-test` checks the loop against five
-injected defects. Alongside it, the methodology in `SKILL.md`: evidence artifacts, depth
+repo. Scenes are treated as untrusted input — every value that reaches the SVG is a checked
+number or an allowlisted colour, because the render page has a file:// origin. A sample scene
+ships in `examples/`, `--self-test` checks the loop against five injected defects, and
+`tests/test_excalidraw_render.py` covers the lint boundaries, the SVG geometry and the
+screenshot wiring without launching a browser. Alongside it, the methodology in `SKILL.md`: evidence artifacts, depth
 assessment, a visual pattern library, a section-by-section workflow for large diagrams, and a
 handover checklist.
 

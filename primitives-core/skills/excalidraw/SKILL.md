@@ -91,17 +91,19 @@ Writes `<stem>.svg` and `<stem>.png` to the out dir, prints both paths, and exit
 
 - Playwright must be resolvable by node. The script uses `$EXCALIDRAW_NODE_PATH`, else `npm root -g`; `--node-path DIR` overrides both. A global install is enough — nothing is installed into the project.
 - `--no-screenshot` writes SVG only (no node needed); `--lint-only` skips rendering; `--defect <kind>` injects a known defect into a copy to exercise the loop; `--self-test` runs the built-in checks.
-- **Fidelity:** first-party renderer, geometry and layout exact, hand-drawn wobble and hachure texture not reproduced. It answers "is this laid out right", not "is this pretty". Offline, deterministic, no network at any point.
+- **Fidelity:** first-party renderer. Position, size and rotation are exact; the hand-drawn wobble and hachure texture are not reproduced, and the `overlap` rule compares axis-aligned boxes, so it does not see a collision that only rotation creates. It answers "is this laid out right", not "is this pretty".
+- **Offline and deterministic.** Nothing is fetched at any point: the page is a local file, and every colour a scene supplies is checked against a hex/keyword allowlist before it reaches an attribute. A scene from someone else cannot make the render call out — treat that as the reason to run this on a file you were sent, not a reason to skip it.
 
 What the lint catches:
 
 | Code | Meaning |
 |---|---|
-| `overlap` | two shapes' boxes intersect — one is drawn over the other |
+| `overlap` | two shapes partly cover each other. Full containment is composition (a zone background, a badge) and is not flagged |
 | `dangling-arrow` | a binding names an element id that is not in the scene |
+| `dangling-ref` | a `boundElements` entry names an id that is not in the scene — the app drops the link on load |
 | `orphan-label` | a `containerId` with no `boundElements` back-reference (or no container at all) |
-| `frame-escape` | an element sits outside the frame it claims |
-| `text-overflow` | a label needs more width than its container offers |
+| `frame-escape` | a shape sits outside the frame it claims, or its `frameId` is not a frame. Arrows are exempt — crossing frames is the Layers pattern |
+| `text-overflow` | a label is wider than its container. Uses the app's measured `width` when the element has one, a character estimate otherwise |
 
 **Export for delivery** is a separate step: Excalidraw MCP tools when available, otherwise the user opens the file at excalidraw.com and exports PNG/SVG (2x for decks); the `@excalidraw/utils` npm package exposes `exportToSvg(scene)` for a Node one-off with the real renderer. Exported pairs follow the SVG+PNG output-pipeline conventions in the `diagrams` skill (numbered files in the artifact's `diagrams/` folder). The `.excalidraw` JSON is the source of truth — commit it next to the exports.
 
@@ -135,7 +137,7 @@ Encode meaning in the palette, not just prettiness: one fill per role (blue = cl
 
 **Quality checklist** — before handing over:
 
-- [ ] `render_check.py` exits 0 on the final scene
+- [ ] `render_check.py` ran on the final scene, and every finding it printed is either fixed or one you looked at in the PNG and accepted on purpose (say which, and why, when you hand over)
 - [ ] you looked at the PNG, not just the exit code
 - [ ] every arrow is bound at both ends, with back-references
 - [ ] every label sits inside its container and fits
