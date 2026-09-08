@@ -46,7 +46,12 @@ DEFAULT_THEME = "boardroom"
 # Project-local preferences, discovered by walking up from the spec file. Recognized keys
 # are flat strings only; `audio` names an audio provider, the rest are config names.
 LOCAL_RELPATH = os.path.join(".claude", "comms.local.md")
-LOCAL_KEYS = frozenset({"theme", "voice", "repo", "audio"})
+LOCAL_KEYS = frozenset({"theme", "voice", "repo", "audio", "briefings_dir"})
+
+# Type default when nothing overrides it: `_meta/briefings/` when a `_meta/` tree already
+# exists at the resolution root (the mise-en-place standard), else `briefings/` there.
+_META_DIRNAME = "_meta"
+_BRIEFINGS_DIRNAME = "briefings"
 
 # macOS `say`: no account, no network, no SDK. Any other provider value is a command
 # template, which is what keeps a vendor out of this file.
@@ -67,7 +72,9 @@ LAYOUTS = frozenset({"center", "top", "fill"})
 CALLOUT_VARIANTS = frozenset({"info", "accent", "warn", "success"})
 TRENDS = {"up": "▲", "down": "▼", "flat": "→"}
 
-TOP_KEYS = frozenset({"type", "title", "repo", "theme", "voice", "waive", "sections", "slides"})
+TOP_KEYS = frozenset(
+    {"type", "title", "repo", "theme", "voice", "waive", "sections", "slides", "briefings_dir"}
+)
 
 # Every theme file must carry all 28 semantic roles, whether or not this renderer paints
 # with them: a theme is a portable palette contract, not a stylesheet fragment.
@@ -324,6 +331,30 @@ def _parse_local(text: str, where: str) -> dict:
     return config
 
 
+def resolve_briefings_dir(
+    start_dir: str,
+    override: str | None = None,
+    spec: dict | None = None,
+    local: dict | None = None,
+) -> str:
+    """The directory a comm package should be written into.
+
+    Precedence: CLI flag (*override*) > spec field (``briefings_dir``) > project local
+    (``briefings_dir`` in ``.claude/comms.local.md``) > type default — ``_meta/briefings/``
+    when *start_dir* already has a ``_meta/`` tree (the mise-en-place standard), else
+    ``briefings/`` there. A relative value from any of the first three sources resolves
+    against *start_dir*; *local* is loaded from *start_dir* when not supplied.
+    """
+    root = os.path.abspath(start_dir)
+    loc = local if local is not None else load_local_config(start_dir)
+    value = override or (spec or {}).get("briefings_dir") or loc.get("briefings_dir")
+    if isinstance(value, str) and value:
+        return value if os.path.isabs(value) else os.path.join(root, value)
+    if os.path.isdir(os.path.join(root, _META_DIRNAME)):
+        return os.path.join(root, _META_DIRNAME, _BRIEFINGS_DIRNAME)
+    return os.path.join(root, _BRIEFINGS_DIRNAME)
+
+
 def validate_theme(name: str, theme: Any) -> list[str]:
     """Return a list of problems with one theme; empty means the palette is complete."""
     if not isinstance(theme, dict) or not isinstance(theme.get("tokens"), dict):
@@ -575,7 +606,7 @@ def resolve_context(
         problems.append(
             f"unknown top-level key {key!r} (allowed: {', '.join(sorted(TOP_KEYS))})"
         )
-    for key in ("type", "title", "repo", "theme", "voice"):
+    for key in ("type", "title", "repo", "theme", "voice", "briefings_dir"):
         if key in spec and not isinstance(spec[key], str):
             problems.append(f"{key}: must be a string")
 
@@ -1597,6 +1628,16 @@ def _cmd_narrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_briefings_dir(args: argparse.Namespace) -> int:
+    spec = None
+    if args.spec:
+        spec = _read_spec(args.spec)
+        if spec is None:
+            return 1
+    print(resolve_briefings_dir(args.dir, override=args.override, spec=spec))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="deliver.py", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1628,6 +1669,13 @@ def main(argv: list[str] | None = None) -> int:
         help="say (default, macOS), none, or a command template using {script} and {out}",
     )
 
+    p_bdir = sub.add_parser(
+        "briefings-dir", help="resolve <briefings-dir> for a project and print it"
+    )
+    p_bdir.add_argument("dir", help="project directory to resolve from")
+    p_bdir.add_argument("--spec", metavar="SPEC", help="a spec file — its 'briefings_dir' field outranks project local")
+    p_bdir.add_argument("--override", metavar="DIR", help="CLI override — outranks everything else")
+
     sub.add_parser("types", help="list the deliverable types, their sections and budgets")
 
     p_new = sub.add_parser("new", help="print a spec scaffold for a type")
@@ -1644,6 +1692,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_check(args)
         if args.command == "narrate":
             return _cmd_narrate(args)
+        if args.command == "briefings-dir":
+            return _cmd_briefings_dir(args)
         return _cmd_build(args)
     except DeckError as exc:
         print(f"✗ {exc}", file=sys.stderr)

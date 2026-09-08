@@ -10,6 +10,8 @@ consistent to read. A deliverable is a dated folder `<briefings-dir>/<YYYY-MM-DD
 holding the deck source, exported deck, optional audio, and a `sources.md` provenance file.
 `<briefings-dir>` is `_meta/briefings/` when the repo already has a `_meta/` tree (the
 mise-en-place standard), else `briefings/` at the repo root — never create `_meta/` for this.
+A `briefings_dir` key in `.claude/comms.local.md` overrides the auto-detect (precedence
+below); `deliver.py briefings-dir <dir>` prints what actually resolves.
 
 The shared machinery lives in **`references/comm-package-standard.md`** (read it first). Each
 comm type has a self-contained playbook + a real worked example in **`examples/<type>/`**.
@@ -58,7 +60,9 @@ page budgets, guide strings, gather commands; a new deliverable type is one JSON
 **themes** (`themes/*.json` - 7 palettes x 28 semantic tokens), **voices** (`voices/*.json` -
 register, id policy, numeric budgets; doctrine runs as lint, waivable per spec), and
 **project defaults** (`.claude/comms.local.md`, flat keys `theme` / `voice` / `repo` /
-`audio`). Precedence: CLI flag > spec field > project local > type default. Slides use the
+`audio` / `briefings_dir`). Precedence: CLI flag > spec field > project local > type default —
+`briefings_dir` follows the same chain to resolve `<briefings-dir>`, ranked below a spec's own
+`briefings_dir` field and above the `_meta/`-presence auto-detect. Slides use the
 17-block dialect; an unsupported block is a hard error, never a silent drop. There is no
 autofit: content past a 1280x720 slide clips, and overflow means the slide does too much.
 

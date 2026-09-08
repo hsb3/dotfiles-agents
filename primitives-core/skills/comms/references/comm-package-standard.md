@@ -7,7 +7,9 @@ to a standard so each instance is fast to make and consistent to read. Each inst
 dated folder `<briefings-dir>/<YYYY-MM-DD>-<slug>/` holding the deck source, exported deck,
 optional audio, and a `sources.md` provenance file. `<briefings-dir>` resolves once per
 project: `_meta/briefings/` when a `_meta/` tree already exists (the mise-en-place standard),
-else `briefings/` at the repo root. Never create `_meta/` just to file a comm.
+else `briefings/` at the repo root. Never create `_meta/` just to file a comm. A project can
+override this with a `briefings_dir` key in `.claude/comms.local.md` (same precedence as the
+other local keys — see below); `deliver.py briefings-dir <dir>` prints the resolved path.
 
 This file is the **spine**: the shared toolchains, parameters, voice baseline, pipeline, and
 gotchas live here once. Each per-type playbook (`examples/<type>/playbook.md`) states only what
@@ -31,8 +33,8 @@ MCP server (YAML specs need PyYAML; JSON needs nothing). PDF export shells out t
 Chrome; if Chrome is absent, render `--html` and print from any browser — the HTML is fully
 self-contained (styles inlined, images base64-embedded, no network). Doctrine is config
 selected by name - `types/` (sections, page budgets, gather commands), `themes/`, `voices/` -
-plus per-project defaults in `.claude/comms.local.md` (`theme` / `voice` / `repo` / `audio`;
-CLI flag > spec field > project local > type default). Verified against every existing deck
+plus per-project defaults in `.claude/comms.local.md` (`theme` / `voice` / `repo` / `audio` /
+`briefings_dir`; CLI flag > spec field > project local > type default). Verified against every existing deck
 under `_meta/briefings/` across three repos (22 decks / 256 slides) when the bare-array path
 replaced the MCP renderer; a bare `slides.json` array still builds today.
 

@@ -540,6 +540,56 @@ class LocalPreferences(unittest.TestCase):
         self.assertIn("bogus", err)
 
 
+class BriefingsDir(unittest.TestCase):
+    """`<briefings-dir>` resolution: CLI flag > spec field > project local > type default."""
+
+    def test_recognized_as_a_local_key_with_no_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\nbriefings_dir: comms-out\n---\n")
+            value, _out, err = capture(dl.load_local_config, tmp)
+        self.assertEqual(value, {"briefings_dir": "comms-out"})
+        self.assertEqual(err, "")
+
+    def test_default_with_no_meta_tree_is_briefings_at_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            resolved = dl.resolve_briefings_dir(tmp)
+        self.assertEqual(resolved, os.path.join(tmp, "briefings"))
+
+    def test_meta_tree_present_routes_under_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "_meta"))
+            resolved = dl.resolve_briefings_dir(tmp)
+        self.assertEqual(resolved, os.path.join(tmp, "_meta", "briefings"))
+
+    def test_local_override_beats_the_auto_detect_with_no_meta_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\nbriefings_dir: comms-out\n---\n")
+            resolved = dl.resolve_briefings_dir(tmp)
+        self.assertEqual(resolved, os.path.join(tmp, "comms-out"))
+        self.assertNotEqual(resolved, os.path.join(tmp, "briefings"))
+
+    def test_spec_field_beats_project_local(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\nbriefings_dir: comms-out\n---\n")
+            resolved = dl.resolve_briefings_dir(tmp, spec={"briefings_dir": "spec-out"})
+        self.assertEqual(resolved, os.path.join(tmp, "spec-out"))
+
+    def test_cli_flag_beats_spec_and_local(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\nbriefings_dir: comms-out\n---\n")
+            resolved = dl.resolve_briefings_dir(
+                tmp, override="/explicit/out", spec={"briefings_dir": "spec-out"}
+            )
+        self.assertEqual(resolved, "/explicit/out")
+
+    def test_cli_subcommand_prints_the_resolved_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_local(tmp, "---\nbriefings_dir: comms-out\n---\n")
+            code, out, err = run_cli(["briefings-dir", tmp])
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out.strip(), os.path.join(tmp, "comms-out"))
+
+
 class NarrationScript(unittest.TestCase):
     SLIDES = [
         {

@@ -178,6 +178,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: test-quality
+    type: skill
+    source: primitives-core/skills/test-quality
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md

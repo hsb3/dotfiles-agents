@@ -55,6 +55,7 @@ joins it.
 | `rubric-panel` | Score artifacts against an anchored rubric with a persona-diverse judge panel, classifying each finding as defect, noise, spec-hole, or undeclared commitment. |
 | `deletion-pass` | Reduce a module to irreducible against its contract — remove every line that cannot name the commitment it keeps, without changing observable behavior. |
 | `comment-hygiene` | Strip history and commentary out of source comments before the work lands — harvest the reasoning onto its tracker item first, then keep only what a competent reader would break something without. |
+| `test-quality` | Check that a test can actually fail — the pre-write gate ("what production change should make this fail?"), the five-mutation check for tests that already exist, and the four shapes that stay green no matter what the production code does. |
 
 **Research and decisions**
 
