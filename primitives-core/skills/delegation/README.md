@@ -24,6 +24,29 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   committed as it lands.
 - **Execution — `scout`, `builder`, `reviewer`**, each working from a brief and nothing else.
 
+## Sizing a brief
+
+A job is sized on four axes, and the fourth is the brief itself: how much material its
+owned-file list actually is. `scripts/scope.py` totals that list — files, bytes, lines, and how
+many are binary — before anything is dispatched, and folds in nothing it cannot measure: a glob,
+a directory, a missing or unreadable path is named with its reason and turns the exit code red,
+so the number reads as a floor rather than a total. `SKILL.md` carries the threshold above which
+a brief is split, and the one answer each unresolved entry gets.
+
+Preconditions are checked the same way, at dispatch time rather than at authoring time: a gate
+has to be shown red on a break inside the very files the worker will change, since a gate with
+no subjects and a gate with fifty report the same green, and every factual premise a brief rests
+on is re-derived against the tree as it stands when the brief goes out.
+
+## Findings outside a brief's scope
+
+A finding a worker or a manager turns up outside its own file scope folds before it is filed. A
+sibling site of the same defect is fixed in the same landing; a finding that belongs to an open
+item is commented onto that item; a finding with no home goes on the wave's hardening list; and
+only what survives all three is filed as one new item, never in draft. `SKILL.md`,
+`references/manager-brief.md`, and the `manager` and `reviewer` agent contracts state that order
+in the same words, so the four cannot drift apart.
+
 ## Waiting
 
 A separate failure the layer model alone does not prevent: an agent blocking on something
@@ -70,6 +93,15 @@ maps each rule to what backs it. The ranking is part of the doctrine: `[field]` 
 carries; and no tag is ever defended as a stronger one than it carries. A run that measured
 something but did not settle the rule it aimed at is recorded there as inconclusive, keeping its
 old tag — an experiment is not an upgrade.
+
+The change-scope split threshold is the standing worked example of a rule whose evidence and
+whose prescription carry different weight. Both halves of its boundary are measured — a bimodal
+file-count distribution across merged history, and a worker-context median that runs out around
+the same place — while the rule drawn across them is not, because nothing has compared a split
+brief against an unsplit one. The two datasets cannot even be joined: the delegation ledger
+records no owned-file list, so brief scope and worker context share no key. Adding that field is
+what would upgrade the tag, and until it exists the rule stays `[untested]` however often it is
+applied.
 
 ## Shared with the opencode port
 
