@@ -1,11 +1,11 @@
 # task-authoring
 
 Write tracked work items a cold agent can actually execute. The executor has none of the
-author's context, so this skill turns implicit judgment into explicit contract: scannable
-`area: outcome` titles, acceptance criteria that could actually fail against today's
-baseline, thresholds instead of judgment words, approval gates with a named mechanism, and
-one owner per file set. The payoff is tasks that run without a round trip back to whoever
-wrote them.
+author's context, so this skill turns implicit judgment into explicit contract:
+outcome-in-one-clause titles with area and type carried in labels, acceptance criteria
+that could actually fail against today's baseline, thresholds instead of judgment words,
+approval gates with a named mechanism, and one owner per file set. The payoff is tasks
+that run without a round trip back to whoever wrote them.
 
 ## When it triggers
 
