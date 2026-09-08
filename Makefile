@@ -82,8 +82,8 @@ board-reconcile: ## Open GitHub issues vs the kata board; APPLY=1 closes stale m
 	@python3 scripts/reconcile_github.py $(if $(APPLY),--apply,)
 
 # Curation rhythm step 3. Same measurement the SessionStart hook prints, run on demand and
-# with a real exit code: 0 clean, 1 findings, 2 could not measure. The vocabulary is the
-# core label set (decision-023) — without it the fossil check is SKIPped every run.
+# non-zero when a pass is due. The vocabulary is the core label set (decision-023) — without
+# it the fossil check is SKIPped every run.
 board-health: ## Board decay checks vs the core label vocabulary; PROJECT= overrides (needs kata + the daemon; NOT in ci)
 	@python3 primitives-core/skills/board-triage/scripts/kata_board.py export \
 	  --project $(or $(PROJECT),dotfiles-agents) \
