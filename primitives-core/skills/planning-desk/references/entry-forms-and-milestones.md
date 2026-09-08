@@ -37,9 +37,9 @@ machine-absolute paths (`/Users/...`), personal vault names, or `~/Documents|Des
 ### Application A — backlog-entry form (a use case enters a project backlog)
 
 A use case enters the backlog as a **tracked work item** whose body carries the sections the desk's
-conformance gate keys on — the same bar `_utils/conformance.py` enforces and the `task-authoring`
-skill writes to, so the entry form and the item-body standard are the same gate. The shared core maps
-onto the item body:
+conformance gate keys on. The `task-authoring` skill is the standard for what those sections must
+SAY; `_utils/conformance.py` only checks that they are PRESENT, by heading, so a body can satisfy
+the standard and still be flagged for want of a heading. The shared core maps onto the item body:
 
 | Core field | Lands in the item body as | Notes |
 | --- | --- | --- |
@@ -150,7 +150,7 @@ views) adopts the set as follows:
 | Milestone set | the P1–P4 promise set above, **mirrored across both repos** (per the board's own description) so a workbench item and a dotfiles-agents item share one promise level |
 | Gate label | `gate:cross-tool` marks what blocks P4 (agnostic base format + cross-vendor parity) |
 | Item source | one item set spanning both repos, sliced into the board's views |
-| Fields | per the field-map table in board-triage's `references/adapters/github-projects.md` (Workstream / Impact / Effort / Priority) |
+| Fields | Workstream / Impact / Effort / Priority, named exactly so, since the board's own triage pass keys on those four |
 
 New promise-level milestones the board needs are created **once and mirrored to both repos** so the two
 never drift.

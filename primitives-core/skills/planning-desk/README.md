@@ -4,7 +4,9 @@ Stands up and runs a source-grounded planning desk under `_meta/plans/`: deep bu
 through a multi-round draft -> review -> fix -> reconcile loop, over a tracker read through a
 pluggable adapter, with three analysis scripts (conformance, coverage, reconcile) that can gate a
 wave. Every claim is grounded in cited source, and plans state deliverables, acceptance criteria,
-and parallelism — never timelines.
+and parallelism — never timelines. `conformance.py` checks that a tracked item's body carries the
+required sections by heading; what those sections must SAY is the item-body standard's job, not
+this desk's, so an item can satisfy that standard and still be flagged for want of a heading.
 
 ## When it triggers
 
