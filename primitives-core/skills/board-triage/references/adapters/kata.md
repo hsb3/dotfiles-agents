@@ -16,8 +16,8 @@ Kata also ships an MCP server (`kata mcp serve`) — this adapter goes around it
 the CLI directly instead. Both surfaces return full issue bodies from `list`/`show` alike
 (verified 2026-08-31: `kata list --json` includes every `body` in full), so neither is
 free of the overflow problem the export/analyze/apply loop exists to avoid — the adapter
-is the one stripping bodies, in `build_snapshot()`, same as the Kaneo adapter does for its
-own backend.
+is the one stripping bodies, in `build_snapshot()`, same as every other adapter does for
+its own backend.
 
 ## Key
 
@@ -81,9 +81,9 @@ start, or whenever `board_health.py` says a pass is due:
 |---|---|---|---|
 | 1 | `kata_doctor.py` | kata plugin | Is this checkout even wired to the board? Every warn is wiring debt. |
 | 2 | `audit_issues.py` | kata plugin | Is each card *defined* — a title that fits, acceptance text, real edges instead of prose? |
-| 3 | `board_health.py` | this skill | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
+| 3 | `board_health.py --vocabulary` | this skill | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
 | 4 | this skill, §5 | this skill | The pass itself, when step 3 says one is due. |
-| 5 | `board_health.py` | this skill | Did the pass take? Exit 0 or it did not. |
+| 5 | `board_health.py --vocabulary` | this skill | Did the pass take? Exit 0 or it did not. |
 
 Steps 2 and 3 look redundant and are not, and the difference is the whole reason step 3
 exists. `audit_issues.py` reads one card at a time and asks whether its fields are
@@ -96,6 +96,28 @@ distribution, so run both.
 
 Step 1 is a gate, not a suggestion — a FAIL there means every later step is reading or
 writing the wrong board.
+
+### Steps 3 and 5 run with a declared vocabulary
+
+```bash
+python3 "$S/board_health.py" --vocabulary "$S/core-labels.txt" <(python3 "$S/kata_board.py" export --project <name>)
+```
+
+`core-labels.txt` ships next to the scripts and is the default declaration. Without
+`--vocabulary` the `vocabulary-fossils` check reports SKIP on every run: the only label set a
+snapshot carries is `fields.labels.options`, which the adapter derives from the board's whole
+history, so retired names live in it forever and it can never go green. A declaration is the
+only input that makes the check answerable, and passing one is what turns a permanent SKIP
+into a verdict.
+
+The core vocabulary is a closed set of names plus one family (decision-023): exactly one
+type label per item from type:feat, type:fix or type:chore; the container and behaviour
+labels epic, decision, handoff, meta, needs-review and up-next; and exactly one area label,
+whose values each project defines for itself — which is why no area name is in the file, as
+a fixed one would be a fossil on every board that spells its areas differently. A project
+adds labels **on top of** the core, never instead of it, and points `--vocabulary` at its
+own copy once it does. The grouping lives in these labels, never in a title prefix — a
+prefix is the smell `check_grouping_latent` reports.
 
 **If the project imports GitHub issues** (`kata sync github`), know that the sync is
 **import-only by design** — a card never becomes an issue, and a kata close never closes one.

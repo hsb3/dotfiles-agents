@@ -26,6 +26,14 @@ that answer whether the board has rotted enough to be worth a pass, and afterwar
 pass took. It reads the same §2 snapshot every adapter already emits, so it is backend-agnostic
 for free and talks to no board itself.
 
+One of the six needs an input the board cannot supply: `--vocabulary` takes a declared label
+list, one name per line, and `scripts/core-labels.txt` ships as that declaration. Without it
+the fossil check reports SKIP on every run, because the only label set a snapshot carries is
+derived from the board's whole history and so can never go green. The shipped file holds the
+core vocabulary — one type label, the container and behaviour names — and deliberately no area
+name, since areas are each project's own. A project that adds labels on top of the core points
+`--vocabulary` at its own copy.
+
 It measures whether a field **discriminates**, not just whether it is filled — a priority band
 holding most of the backlog, items with no band or no label at all, a grouping convention living
 in title prefixes that no filter can reach, and two spellings of one concept splitting it across
