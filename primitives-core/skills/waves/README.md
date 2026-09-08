@@ -15,7 +15,7 @@ a project that lacks one.
 
 The campaign loop is tracker-agnostic. It needs three operations from whatever holds the
 backlog — an inventory, a rewritable triage view that lives off commit history, and a way to
-land a wave and close its items. Bindings ship for GitHub issues, kata, and Kaneo under
+land a wave and close its items. Bindings ship for GitHub issues and kata under
 `references/`; a tracker without one is usable by naming those three operations up front.
 
 Under the kata binding, note that its GitHub sync is import-only: an imported mirror is an epic to

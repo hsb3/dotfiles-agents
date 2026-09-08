@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Twelve plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (quality contract, focus, board triage, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), kaneo (work tracked on a live Kaneo board), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
+    "description": "Eleven plugins for coding sessions: solo-skills (every skill that stands alone, in one install), code-desk (quality contract, focus, board triage, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
     "version": "0.11.0"
   },
   "name": "dotfiles-agents",
@@ -16,7 +16,7 @@
       "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, hold protected config in custody, and refuse a worker git call that would sweep away a sibling's uncommitted work or land on a protected branch. Enforcement follows the main checkout into a linked worktree, so an isolated worker is no longer an unguarded one. Run /atelier:activate to arm it in a project and see what each hook resolved. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.28.2"
+      "version": "0.28.3"
     },
     {
       "author": {
@@ -40,10 +40,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kaneo, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.11.4"
+      "version": "0.11.5"
     },
     {
       "author": {
@@ -53,15 +53,6 @@
       "name": "diagrams",
       "source": "./plugins/diagrams",
       "version": "0.2.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Track a repo's work on a live Kaneo board instead of in-repo task files, so parallel sessions stop claiming the same task and no branch grows its own backlog. Ships the workflow skill, the task-authoring skill (write tracker items a cold agent can execute), the board's MCP server definition, a reference manager agent, and hooks that keep claim authority in the root session, block board writes while the config is incomplete, catch a stray MCP registration that would silently authenticate the owner instead of the agent, stamp every write with its agent and session, and deny subagent Bash that reaches the board host directly. Configure with five KANEO_* env vars; nothing about an instance is baked in. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
-      "name": "kaneo",
-      "source": "./plugins/kaneo",
-      "version": "0.13.3"
     },
     {
       "author": {
@@ -115,7 +106,7 @@
       "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.14.0"
+      "version": "0.14.1"
     }
   ]
 }

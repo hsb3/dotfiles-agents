@@ -41,7 +41,7 @@ flowchart TD
 | Skill | What it does |
 |---|---|
 | `starting-conditions` | Interview-first. Decides what is being built, in what language, and which rules a machine enforces, then writes a `RULES.md` contract, one gate command that proves it, and the baseline of what that gate says about the tree today. Measures; never remediates. |
-| `board-triage` | The weekly routine that ranks the un-ranked items on a task board so its prioritization and roadmap views stay useful instead of drifting into noise. The Impact×Effort judgment is backend-agnostic; a thin adapter does the board's I/O (GitHub Projects v2, Kaneo, and Kata ship). `board_health.py` decides whether a pass is due at all, and confirms afterwards that it took, by checking whether the board's fields still discriminate rather than merely being filled. The Kata adapter writes out the full maintenance rhythm the pass sits inside and how an import-only GitHub sync constrains it; every check that can fail judges open items only, so label history never holds it red. |
+| `board-triage` | The weekly routine that ranks the un-ranked items on a task board so its prioritization and roadmap views stay useful instead of drifting into noise. The Impact×Effort judgment is backend-agnostic; a thin adapter does the board's I/O (GitHub Projects v2 and Kata ship). `board_health.py` decides whether a pass is due at all, and confirms afterwards that it took, by checking whether the board's fields still discriminate rather than merely being filled. The Kata adapter writes out the full maintenance rhythm the pass sits inside and how an import-only GitHub sync constrains it; every check that can fail judges open items only, so label history never holds it red. |
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
 | `pptx-themes` | Builds the decks `comms` ships as, with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill. |
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app, not mockups. |
@@ -103,10 +103,10 @@ remediation is worthless.
 `board-triage` assumes a board already stood up with an adapter for it. Every adapter is
 self-contained in this bundle, and what each needs is the backend's own client: `gh`
 authenticated with `project` scope for GitHub Projects, the `kata` CLI on PATH already pointed
-at the right daemon for Kata, the API url/key/project env values for Kaneo. Every adapter
+at the right daemon for Kata. Every adapter
 also answers `apply` the same way: a row it cannot resolve prints as a `SKIP` on stderr and
 exits non-zero, while the rows that did resolve are still applied — so `apply || abort`
-means one thing on all three backends. Rejections the backend itself raises print as a
+means one thing on both backends. Rejections the backend itself raises print as a
 `FAIL`, on stderr too, which leaves stdout as nothing but the row log.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already

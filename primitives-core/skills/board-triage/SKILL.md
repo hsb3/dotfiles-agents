@@ -7,8 +7,8 @@ description: >-
   task board classified so the prioritization/now/roadmap views become useful. It runs
   the export -> analyze -> apply loop: pull a snapshot, find the un-ranked/blank/stale
   items, rank them by the Impact x Effort rubric, and apply only the diffs. The
-  judgment is backend-agnostic; a thin adapter does the board's I/O (kata, GitHub
-  Projects v2, and Kaneo adapters ship; any board with items and fields can have one).
+  judgment is backend-agnostic; a thin adapter does the board's I/O (kata and GitHub
+  Projects v2 adapters ship; any board with items and fields can have one).
 version: 0.2.0
 ---
 
@@ -54,7 +54,6 @@ extra declared name can only ever make a prefix look more reachable, never less.
 | Backend | Adapter |
 |---|---|
 | GitHub Projects (v2) | [`references/adapters/github-projects.md`](references/adapters/github-projects.md) |
-| Kaneo | [`references/adapters/kaneo.md`](references/adapters/kaneo.md) |
 | Kata | [`references/adapters/kata.md`](references/adapters/kata.md) |
 
 No adapter for your board? Write one against §2 — it is two commands and a field map.

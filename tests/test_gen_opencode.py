@@ -120,10 +120,10 @@ class TestTransformAgent(unittest.TestCase):
     def test_mcp_tool_matches_the_prefix_row(self):
         _, problems, notices = self._t(
             CC_AGENT.replace("tools: Read, Grep, Glob",
-                             "tools: Read, mcp__plugin_kaneo_kaneo__whoami"),
-            agent_id="kaneo-manager")
+                             "tools: Read, mcp__plugin_widget_widget__whoami"),
+            agent_id="widget-manager")
         self.assertEqual(problems, [])  # the declared `prefix: mcp__` blanket covers it
-        self.assertTrue(any("mcp__plugin_kaneo_kaneo__whoami" in n for n in notices), notices)
+        self.assertTrue(any("mcp__plugin_widget_widget__whoami" in n for n in notices), notices)
 
     def test_notices_are_deterministic(self):
         self.assertEqual(self._t()[2], self._t()[2])

@@ -7,7 +7,7 @@ FILLED, not that it DISCRIMINATES. On 2026-09-08 one reported all-clear on a boa
 55 open items shared a single priority band, 16 carried no label, and the real grouping lived
 only in title prefixes no query could reach.
 
-Reads the §2 adapter snapshot — never a backend — so it works for kata, Kaneo and GitHub
+Reads the §2 adapter snapshot — never a backend — so it works for kata and GitHub
 Projects alike with no adapter change. Every check reads OPEN items only, and that includes
 the label ones: an adapter builds `fields.labels.options` from the board's whole history, so a
 label surviving on closed cards is not a live vocabulary and no edit to open work could clear
