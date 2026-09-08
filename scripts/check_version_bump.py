@@ -34,7 +34,12 @@ Network contract — uniform across every CI-only gate here (decision-016 point 
 that cannot measure is red, never green, so no usable `origin/main` at all exits 1 saying
 outright that it is not evidence of a missing bump. `origin/main` is fetched best-effort,
 then resolved; a fetch failure with a locally cached ref falls back to that ref and warns,
-because something real was still compared. A full local clone is never shallow-marked as a
+because something real was still compared — but only while that ref is younger than
+`MAX_CACHED_REF_AGE_DAYS` (7). Past that the fallback is red on the same rule: a ref last
+refreshed weeks ago is not a reading of what is published today, so an indefinitely stale
+cache could otherwise mask a real unbumped change forever without the gate going red. The
+age is the cached commit's own committer date, and an age that cannot be read is red too —
+freshness unproven is freshness unmeasured. A full local clone is never shallow-marked as a
 side effect (`--depth=1` is used only where the repo is already shallow, as in a CI
 checkout).
 
@@ -69,6 +74,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGINS_DIR = os.path.join(REPO, "plugins")
@@ -79,6 +85,11 @@ PUBLISHED_REF = f"{PUBLISHED_REMOTE}/{PUBLISHED_BRANCH}"
 PUBLISHED_PREFIX = "plugins"
 MANIFEST_REL = os.path.join(".claude-plugin", "plugin.json")
 GIT_TIMEOUT_SECONDS = 120
+# How long a cached `origin/main` may stand in for a refreshed one after a failed fetch.
+# Longer than any plausible offline stretch, short enough that a cache cannot silently
+# outlive the published tree it claims to represent.
+MAX_CACHED_REF_AGE_DAYS = 7
+SECONDS_PER_DAY = 86400
 
 # Mirrors the .gitignore rules that can surface inside a dereferenced plugins/ walk:
 # `cp -RL` copies them onto the publish tree, `git add -A` then drops them, so they are
@@ -232,6 +243,14 @@ class GitPublishedTree:
         try:
             self._fetch()
             rc, out, _ = self._git(["rev-parse", "--verify", "--quiet", f"{self.ref}^{{commit}}"])
+            if rc != 0 or not out.strip():
+                detail = f" ({self._fetch_error})" if self._fetch_error else ""
+                return f"{self.ref} could not be resolved{detail}"
+            self._sha = out.decode("ascii", "replace").strip()
+            # A refreshed ref is current by definition, so its age is only worth reading —
+            # and only capable of declining — on the fallback path.
+            if self._fetch_error:
+                return self._stale_cache_reason()
         except FileNotFoundError:
             return "git is not available on PATH, so the published tree cannot be read"
         except subprocess.TimeoutExpired:
@@ -239,10 +258,35 @@ class GitPublishedTree:
                 f"reading {self.ref} timed out after {GIT_TIMEOUT_SECONDS}s — the published "
                 "tree could not be read"
             )
-        if rc != 0 or not out.strip():
-            detail = f" ({self._fetch_error})" if self._fetch_error else ""
-            return f"{self.ref} could not be resolved{detail}"
-        self._sha = out.decode("ascii", "replace").strip()
+        return None
+
+    def _stale_cache_reason(self):
+        """Reason string when the cached ref is too old to stand in for a refreshed one.
+
+        Also finishes the fallback warning with the measured age, so a reader of the green
+        path can judge what the comparison was worth.
+        """
+        rc, out, err = self._git(["log", "-1", "--format=%ct", self._sha])
+        try:
+            committed = int(out.decode("ascii", "replace").strip()) if rc == 0 else None
+        except ValueError:
+            committed = None
+        if committed is None:
+            detail = _one_line(err) if err else "no parseable commit date"
+            return (
+                f"{self.ref} could not be refreshed ({self._fetch_error}) and the cached "
+                f"ref's age could not be read ({detail}), so its freshness is unproven"
+            )
+        age_days = (time.time() - committed) / SECONDS_PER_DAY
+        if age_days > MAX_CACHED_REF_AGE_DAYS:
+            return (
+                f"{self.ref} could not be refreshed ({self._fetch_error}) and the cached ref "
+                f"is {age_days:.1f} days old, past the {MAX_CACHED_REF_AGE_DAYS}-day limit — "
+                "too stale to stand in for what is published now"
+            )
+        self.note += (
+            f" ({age_days:.1f} days old, within the {MAX_CACHED_REF_AGE_DAYS}-day limit)"
+        )
         return None
 
     def _fetch(self):
