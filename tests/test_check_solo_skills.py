@@ -170,6 +170,19 @@ class SoloSkillsGate(unittest.TestCase):
         self.member("beta")
         self.assertProblem("references sibling skill `alpha` by wikilink")
 
+    def test_sibling_path_in_example_markdown_is_red(self):
+        # examples/*.md is a playbook/write-up (comms' playbook.md, activation's
+        # atelier.local.md) — narrative prose like SKILL.md and references/, not
+        # bundled code. A sibling path there is the same signal rule 1 already catches
+        # elsewhere, just currently blind to this directory.
+        self.skill("beta", "Beta.")
+        d = os.path.join(S.SKILLS_DIR, "beta", "examples", "demo")
+        os.makedirs(d)
+        with open(os.path.join(d, "playbook.md"), "w") as fh:
+            fh.write("Shared machinery: `skills/alpha/references/x.md`.\n")
+        self.member("beta")
+        self.assertProblem("references sibling skill `alpha` by path")
+
     # --- rule 2: sibling id in bundled code ------------------------------
 
     def test_sibling_id_in_script_is_red_even_without_a_literal_path(self):

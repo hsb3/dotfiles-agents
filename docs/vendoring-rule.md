@@ -71,11 +71,13 @@ Every vendored body must carry, at minimum:
   or dropped off the vendored content.
 - Subjection to the **drift checker** — [`scripts/check_vendored_drift.py`](../scripts/check_vendored_drift.py),
   a step in the `drift guards` CI job (it needs network, so it is not in `make ci`; run it by
-  hand with `make vendored-drift`). It reports `up_to_date | behind | diverged | not_found`
+  hand with `make vendored-drift`). It reports `up_to_date | behind | diverged | not_found | unreachable`
   against the pinned ref. `diverged` (upstream rewrote history at the ref, or our copy was
   hand-edited outside the compose layer) and `not_found` (a reachable upstream no longer
   carrying the ref) are failures; `behind` is informational, since the pin is deliberate. An
-  unreachable upstream is skipped with a notice — a network blip is not evidence of drift.
+  unreachable upstream is `unreachable`, also a failure: nothing was compared, so it is not
+  evidence of drift, but a gate that cannot measure is red rather than green
+  (decision-016 point 4).
 
 A vendored entry whose upstream later disappears is not deleted — it is reclassified
 `disposition: orphaned` and reviewed under task-11 (vendored-skill quality).

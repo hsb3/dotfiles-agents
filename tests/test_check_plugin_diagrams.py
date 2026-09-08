@@ -209,6 +209,28 @@ class DiagramGuard(unittest.TestCase):
             fh.write("{}")
         self.assertNotIn("hooks.json", D._assembly_members("alpha"))
 
+    # --- parser gaps: inline-labelled edges (`A[x] --writes--> B[y]`) -------------
+
+    def test_scan_shape_labels_keeps_the_target_node_across_a_dashed_edge_label(self):
+        # was: the identifier match swallowed the arrow's trailing `--`, then read the
+        # arrowhead `>` as an asymmetric-shape opener and garbled everything up to B's
+        # own `]`, losing B's label entirely.
+        labels = [lab for lab, _ in D._scan_shape_labels("A[x] --writes--> B[y]")]
+        self.assertEqual(labels, ["x", "y"])
+
+    def test_node_after_a_dashed_inline_edge_label_keeps_its_own_label(self):
+        self._write(HEALTHY.replace("S -->|needs recon| Scout[probe]", "S --writes--> Scout[probe]"))
+        self.assertEqual(D.problems(), [])
+
+    def test_edge_labels_sees_dashed_and_dotted_inline_forms(self):
+        body = "flowchart LR\n  A --writes--> B\n  B -.calls.-> C\n  C -->|ok| D\n"
+        self.assertEqual(sorted(D._edge_labels(body)), ["calls", "ok", "writes"])
+
+    def test_unlabelled_dotted_edge_contributes_no_edge_label(self):
+        # `-.->` matches EDGE_INLINE_LABEL_RE with an empty middle group; an unlabelled
+        # arrow is not a label and must not show up as one.
+        self.assertEqual(D._edge_labels("flowchart LR\n  Mem -.-> Repo\n"), [])
+
     # --- shape of the report ------------------------------------------------------
 
     def test_every_problem_is_reported_not_just_the_first(self):

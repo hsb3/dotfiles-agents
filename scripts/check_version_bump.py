@@ -30,11 +30,13 @@ job was equally unavailable because `dev`'s branch protection pins required chec
 NAME, so adding one would strand every open PR on a check that never reports (owner
 ruling, TASK-032).
 
-Network contract: `origin/main` is fetched best-effort, then resolved. A fetch failure with
-a locally cached ref falls back to that ref and says so; no reachable ref at all SKIPS the
-check and exits 0 with a loud notice, because a gate that hard-fails on a network blip
-blocks every PR. A full local clone is never shallow-marked as a side effect (`--depth=1`
-is used only where the repo is already shallow, as in a CI checkout).
+Network contract — uniform across every CI-only gate here (decision-016 point 4): a gate
+that cannot measure is red, never green, so no usable `origin/main` at all exits 1 saying
+outright that it is not evidence of a missing bump. `origin/main` is fetched best-effort,
+then resolved; a fetch failure with a locally cached ref falls back to that ref and warns,
+because something real was still compared. A full local clone is never shallow-marked as a
+side effect (`--depth=1` is used only where the repo is already shallow, as in a CI
+checkout).
 
 Deliberately NOT covered: parity between `plugin.json` and the root
 `.claude-plugin/marketplace.json` entry, which `scripts/check_catalog.py` already enforces
@@ -57,7 +59,8 @@ Paths matching the ignore rules that can appear in a dereferenced walk (`__pycac
 `*.pyc`, editor/OS noise) are pruned from BOTH sides — `cp -RL` copies them but `git add`
 never commits them, so leaving them in produces phantom diffs.
 
-Stdlib-only, deterministic. Exit 0 = clean or skipped; exit 1 = violations (prints every one).
+Stdlib-only, deterministic. Exit 0 = the published tree was read and every plugin is clean;
+exit 1 = violations (prints every one), or a published tree that could not be read at all.
 Usage: python3 scripts/check_version_bump.py   (run from anywhere)
 """
 
@@ -355,10 +358,12 @@ def main(plugins_dir=None, tree=None, out=print):
     reason = tree.prepare()
     if reason:
         out(
-            f"⚠ version-bump guard skipped — {reason}. Nothing was compared; a network blip "
-            "must not block every PR."
+            f"✗ version-bump guard: {reason}. Nothing was compared, so this is NOT evidence "
+            "of a missing version bump — it is a gate that could not measure, which "
+            "decision-016 point 4 makes red rather than green. Re-run once the published "
+            "tree is readable."
         )
-        return 0
+        return 1
     if getattr(tree, "note", ""):
         out(f"⚠ version-bump guard: {tree.note}")
 

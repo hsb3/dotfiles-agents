@@ -106,7 +106,8 @@ authenticated with `project` scope for GitHub Projects, the `kata` CLI on PATH a
 at the right daemon for Kata, the API url/key/project env values for Kaneo. Every adapter
 also answers `apply` the same way: a row it cannot resolve prints as a `SKIP` on stderr and
 exits non-zero, while the rows that did resolve are still applied — so `apply || abort`
-means one thing on all three backends.
+means one thing on all three backends. Rejections the backend itself raises print as a
+`FAIL`, on stderr too, which leaves stdout as nothing but the row log.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already
 carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it does not —

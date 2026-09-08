@@ -16,9 +16,11 @@ docstring says why that is not the same bet.
 
 import contextlib
 import copy
+import importlib.util
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -31,6 +33,14 @@ ADAPTERS = os.path.join(SKILL, "references", "adapters")
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 
 import kaneo_board as kb  # noqa: E402
+
+# Loaded by path (not sys.path import) so this file's fixture module name can't collide
+# with test_github_projects_board.py's own load of the same script.
+_gpb_spec = importlib.util.spec_from_file_location(
+    "github_projects_board_stderr_pin", os.path.join(SKILL, "scripts", "github_projects_board.py")
+)
+gpb = importlib.util.module_from_spec(_gpb_spec)
+_gpb_spec.loader.exec_module(gpb)
 
 # Naming any of these on the rubric page means the judgment has been re-coupled to one
 # board. Lowercased substring match, so "gh " catches the CLI without catching "high".
@@ -372,6 +382,55 @@ class KaneoApplyReadBack(unittest.TestCase):
         # "1"/"2" appear in any help text; the codes have to be described, not present.
         self.assertIn("1  some changeset rows were unresolvable", text)
         self.assertIn("2  a written cell read back unchanged", text)
+
+
+class GithubProjectsFailIsOnStderr(unittest.TestCase):
+    """SKIP already moved to stderr for this adapter (see the fix on 5c9f095); FAIL must
+    match, same as the Kaneo adapter's own SKIP-is-a-failure pin above."""
+
+    @staticmethod
+    def _stub_gh(cmd, capture_output=False, text=False, env=None):
+        query = next((a for a in cmd if a.startswith("query=")), "")
+        if "projectV2(number:$n)" in query:
+            payload = {"data": {"user": {"projectV2": {"id": "PVT_1", "title": "t"}}}}
+        elif "fields(first:50" in query:
+            payload = {
+                "data": {"node": {"fields": {"nodes": [
+                    {"id": "F_status", "name": "Status", "dataType": "SINGLE_SELECT",
+                     "options": [{"id": "opt_todo", "name": "Todo"}]},
+                ]}}}
+            }
+        elif "items(first:100" in query:
+            payload = {
+                "data": {"node": {"items": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "nodes": [{
+                        "id": "PVTI_1",
+                        "content": {
+                            "__typename": "Issue", "number": 1, "title": "x", "state": "OPEN",
+                            "repository": {"nameWithOwner": "acme/widgets"},
+                            "labels": {"nodes": []}, "milestone": None, "parent": None,
+                        },
+                        "fieldValues": {"nodes": []},
+                    }],
+                }}}
+            }
+        else:
+            raise AssertionError(f"unexpected query: {query[:80]}")
+        return subprocess.CompletedProcess(cmd, 0, json.dumps(payload), "")
+
+    def test_an_unresolvable_option_fails_on_stderr_not_stdout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "changeset.tsv")
+            with open(path, "w") as handle:
+                handle.write("1\tstatus\tShipped\n")
+            out, err = io.StringIO(), io.StringIO()
+            with mock.patch("subprocess.run", self._stub_gh):
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    code = gpb.main(["apply", "-o", "acme", "-n", "8", "--changeset", path])
+        self.assertEqual(1, code)
+        self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", err.getvalue())
+        self.assertNotIn("FAIL", out.getvalue(), "a refusal belongs on stderr, not the row log")
 
 
 class KaneoAdapterDoc(unittest.TestCase):

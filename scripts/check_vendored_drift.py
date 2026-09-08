@@ -26,6 +26,9 @@ What this proves, per `origin: vendored` roster entry:
        not_found  — the upstream is reachable but the ref is gone (history rewritten, or the
                     repo/path removed). Failure: the rule says such an entry is reclassified
                     `disposition: orphaned` by a human, so the gate holds until one does.
+       unreachable — the upstream could not be reached. Failure, but NOT evidence of drift:
+                    nothing was compared, and a gate that cannot measure is red rather than
+                    green (decision-016 point 4).
 
 Which subtree to compare comes from `externals.yaml`, indexed by (upstream, ref) rather
 than by id — the roster id and the externals id are NOT the same string in general (the
@@ -38,17 +41,18 @@ equally unavailable because `dev`'s branch protection pins required checks by jo
 adding one would strand every open PR on a check that never reports. Same placement, and
 for the same two reasons, as `scripts/check_version_bump.py`.
 
-Network contract, matching the version-bump gate: a fetch failure that leaves NO usable
-upstream at all SKIPS that entry and exits 0 with a loud notice, because a gate that
-hard-fails on a network blip blocks every PR. Being unable to reach a host is not evidence
-of drift. A reachable upstream missing the ref IS evidence, and fails.
+Network contract — uniform across every CI-only gate here (decision-016 point 4): a gate
+that cannot measure is red, never green, so an unreachable upstream exits 1 saying outright
+that it is not evidence of drift. A reachable upstream missing the ref is a different
+failure, and the message names which one was hit.
 
 Deliberately NOT covered: whether the pin SHOULD move (`behind` is informational — bumping
 a pin is a deliberate act, per the rule); file modes; anything outside `base/`; and the
 authored layer composed on top, which is ours to edit freely and is the whole point of
 vendoring rather than referencing.
 
-Stdlib-only, deterministic. Exit 0 = clean, behind, or skipped; exit 1 = diverged/not_found.
+Stdlib-only, deterministic. Exit 0 = up_to_date or behind; exit 1 = diverged, not_found, or
+an upstream that could not be reached at all.
 Usage: python3 scripts/check_vendored_drift.py   (run from anywhere)
 """
 
@@ -140,8 +144,8 @@ def _fetch_at_ref(upstream, ref, dest):
     if rc != 0:
         return "no_net"
     _git(["remote", "add", "origin", upstream], cwd=dest)
-    # Is the host reachable at all? Distinguishes a network blip (skip) from a
-    # rewritten/removed ref (fail) — the whole point of the network contract.
+    # Is the host reachable at all? Both branches fail; this only decides WHICH
+    # failure is named, an unreachable host or a rewritten/removed ref.
     rc, _ = _git(["ls-remote", "--exit-code", "origin", "HEAD"], cwd=dest)
     if rc != 0:
         return "no_net"
@@ -179,7 +183,10 @@ def drift_status(entry, ext_paths, tmproot):
     dest = os.path.join(tmproot, eid)
     state = _fetch_at_ref(upstream, ref, dest)
     if state == "no_net":
-        return "skipped", f"[{eid}] upstream unreachable ({upstream}) — not evidence of drift"
+        return ("unreachable",
+                f"[{eid}] upstream unreachable ({upstream}) — NOT evidence of drift, but "
+                f"nothing was compared, and a gate that could not measure is red rather "
+                f"than green (decision-016 point 4). Re-run once the upstream answers")
     if state == "no_ref":
         return ("not_found",
                 f"[{eid}] {upstream} is reachable but ref {ref} is gone (history rewritten, "
@@ -227,9 +234,9 @@ def main():
     with tempfile.TemporaryDirectory() as tmproot:
         for e in sorted(vendored, key=lambda x: x.get("id", "")):
             status, detail = drift_status(e, ext_paths, tmproot)
-            if status in ("diverged", "not_found"):
+            if status in ("diverged", "not_found", "unreachable"):
                 failures.append(f"{status}: {detail}")
-            elif status in ("behind", "skipped"):
+            elif status == "behind":
                 notices.append(f"{status}: {detail}")
             else:
                 clean.append(detail)
@@ -237,12 +244,12 @@ def main():
     for n in notices:
         print(f"  ℹ {n}")
     if failures:
-        print(f"✗ vendored-drift: {len(failures)} violation(s)")
+        print(f"✗ vendored-drift: {len(failures)} failure(s)")
         for f in failures:
             print(f"  - {f}")
         return 1
     print(f"✓ vendored-drift clean — {len(clean) + len(notices)} vendored base(s) verified "
-          f"against their pinned refs ({len(clean)} up_to_date, {len(notices)} behind/skipped)")
+          f"against their pinned refs ({len(clean)} up_to_date, {len(notices)} behind)")
     return 0
 
 

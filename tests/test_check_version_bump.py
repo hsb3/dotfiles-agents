@@ -8,7 +8,8 @@ tests need no git binary and no network.
 
 Two narrower groups sit alongside those:
   * `PublishedRefResolution` drives GitPublishedTree with a FAKE command runner, pinning
-    what the gate does when `origin/main` cannot be fetched (the network-blip contract).
+    what the gate does when `origin/main` cannot be fetched (the network contract: a
+    cached ref still measures and warns, no usable ref at all is red).
   * `GitPublishedTreeIntegration` runs the real git plumbing against a throwaway clone of a
     throwaway origin (file transport, no network). It SKIPS when git is absent, so the rest
     of the suite still passes on a bare machine.
@@ -274,14 +275,20 @@ class MainEntryPoint(ComparisonBase):
         self.assertIn("plugins/beta", text)
         self.assertIn("2.3.4", text)
 
-    def test_unreachable_published_ref_skips_clean(self):
-        """A network blip must not block every PR: report and pass."""
+    def test_unreachable_published_ref_is_red(self):
+        """A gate that cannot measure is red, never green (decision-016 point 4).
+
+        The message has to acquit the version: nothing was compared, so a reader must not
+        read this as a missing bump.
+        """
         self.write_local("plugins/beta/README.md", b"# beta\n\nchanged\n")
         tree = self.FakeTree(self.published_files, reason="could not reach origin/main (offline)")
         rc, text = self.run_main(tree)
-        self.assertEqual(rc, 0, text)
-        self.assertIn("skipped", text)
+        self.assertEqual(rc, 1, text)
+        self.assertIn("✗", text)
         self.assertIn("offline", text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+        self.assertNotIn("plugins/beta", text)
 
     def test_stale_ref_note_is_surfaced(self):
         tree = self.FakeTree(self.published_files, note="fetch failed; using a cached origin/main")
@@ -445,7 +452,8 @@ class PublishedRefResolution(unittest.TestCase):
         self.assertIsNotNone(reason)
         self.assertIn("timed out", reason)
 
-    def test_unavailable_tree_makes_main_pass(self):
+    def test_unavailable_tree_makes_main_red(self):
+        """Even with nothing to compare, an unreadable published tree cannot report green."""
         def run(args):
             raise FileNotFoundError("git")
 
@@ -458,8 +466,8 @@ class PublishedRefResolution(unittest.TestCase):
             tree=V.GitPublishedTree(run=run),
             out=lines.append,
         )
-        self.assertEqual(rc, 0)
-        self.assertIn("skipped", "\n".join(lines))
+        self.assertEqual(rc, 1)
+        self.assertIn("NOT evidence of a missing version bump", "\n".join(lines))
 
 
 GIT = shutil.which("git")
@@ -573,17 +581,19 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         )
         self.assertEqual(len(problems), 1, problems)
 
-    def test_unreachable_origin_with_no_cached_ref_skips_clean(self):
-        """Real fetch failure, no cached ref: skip and exit 0 rather than block the PR."""
+    def test_unreachable_origin_with_no_cached_ref_is_red(self):
+        """Real fetch failure, no cached ref: red, and it does not blame the version."""
         self._break_origin()
         self.git(self.work, "update-ref", "-d", "refs/remotes/origin/main")
         with open(self.body, "wb") as fh:
-            fh.write(b"edited body\n")  # a real violation that must NOT be reported
+            fh.write(b"edited body\n")  # a real violation that must NOT be reported as one
         self.assertIsNotNone(self.tree().prepare())
         lines = []
         rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
-        self.assertEqual(rc, 0, "\n".join(lines))
-        self.assertIn("skipped", "\n".join(lines))
+        text = "\n".join(lines)
+        self.assertEqual(rc, 1, text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+        self.assertNotIn("plugins/alpha", text)
 
 
 if __name__ == "__main__":

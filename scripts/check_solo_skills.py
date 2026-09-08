@@ -14,14 +14,21 @@ which never forms the literal substring `skills/<id>`). So this gate reads bodie
 scripts, and it reads them differently because the two carry dependencies differently:
 
   1. **Sibling path in prose** — `skills/<other-id>` or a `[[other-id]]` wikilink inside
-     `SKILL.md` or `references/`. A path is a dependency; a prose mention of another
-     skill by name is not, so only path- and wikilink-shaped references count here.
+     `SKILL.md`, `references/`, or `examples/*.md`. A path is a dependency; a prose
+     mention of another skill by name is not, so only path- and wikilink-shaped
+     references count here. `examples/*.md` (a playbook, a worked write-up) is prose the
+     same way `references/` is — comms' own advisor-board playbook says "Invoke the
+     `pptx-themes` skill for palette..." as authoring guidance, not a requirement the
+     worked example needs to run, exactly the conversational case this rule is built to
+     let through.
   2. **Sibling id in bundled code** — any other skill's id appearing anywhere under
-     `scripts/` or `examples/`. Code does not mention skills conversationally, so an id
-     in a script is a dependency even when it never forms a literal path. `examples/`
-     counts because a bundled sample is code a consumer runs: `comms`' advisor-board
-     sample required `~/.claude/skills/pptx-themes/...` for its palette, so the sample
-     was broken on any install without that sibling while the skill shipped solo.
+     `scripts/` or `examples/`, in a file with a source extension (`.md` is not one — see
+     `CODE_SUFFIXES`). Code does not mention skills conversationally, so an id in a
+     script is a dependency even when it never forms a literal path. `examples/` counts
+     because a bundled sample is code a consumer runs: `comms`' advisor-board sample
+     once required `~/.claude/skills/pptx-themes/...` for its palette, so the sample was
+     broken on any install without that sibling while the skill shipped solo (it now
+     reads its own theme tokens instead, and the code rule catches a regression).
   3. **Named-agent dispatch** — a roster agent id in backticks. A skill that dispatches
      this repo's agents cannot run without them.
   4. **Hook coupling in bundled code** — a `primitives-core/hooks/` directory name
@@ -85,7 +92,7 @@ SOLO_SKILLS_DIR = os.path.join(REPO, "plugins", "solo-skills", "skills")
 PLUGINS_DIR = os.path.join(REPO, "plugins")
 
 PROSE_NAMES = ("SKILL.md",)
-PROSE_DIRS = ("references",)
+PROSE_DIRS = ("references", "examples")
 CODE_DIRS = ("scripts", "examples")
 
 # Text extensions worth scanning inside the code dirs — a dependency lives in source,

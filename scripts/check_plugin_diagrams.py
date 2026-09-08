@@ -112,6 +112,11 @@ def _scan_shape_labels(body):
         j = m.end()
         for opener, closer in SHAPE_PAIRS:
             if body.startswith(opener, j):
+                if opener == ">" and j > 0 and body[j - 1] in "-=":
+                    # an identifier can swallow an arrow's trailing `-` as a valid
+                    # continuation char (`writes--`); the `>` that follows is the
+                    # arrowhead of `-->`/`==>`, not an `id>label]` asymmetric shape.
+                    break
                 k = body.find(closer, j + len(opener))
                 if k != -1:
                     labels.append((body[j + len(opener):k], j + len(opener)))
@@ -122,8 +127,16 @@ def _scan_shape_labels(body):
 
 
 def _edge_labels(body):
-    """Return every `|label|` edge label in a fence body."""
-    return [seg for seg in re.findall(r"\|([^|\n]*)\|", body)]
+    """Return every edge label: `|label|` pipe form and inline `--text-->`/`-.text.->` form.
+
+    The inline regex's middle group also matches a bare unlabelled arrow (`-.->`) with an
+    empty capture; that is not a label, so empty (after stripping) matches are dropped.
+    """
+    labels = re.findall(r"\|([^|\n]*)\|", body)
+    labels += [
+        m.group(2) for m in EDGE_INLINE_LABEL_RE.finditer(body) if m.group(2).strip()
+    ]
+    return labels
 
 
 def _mask_labels(body):

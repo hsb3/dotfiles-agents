@@ -307,7 +307,7 @@ def _dependency_row(args, issue, field, value, tag):
         return "skipped"
     rc, out, _ = _gh("api", f"repos/{args.repo}/issues/{value}", "--jq", ".id", check=False)
     if rc != 0:
-        print(f"FAIL  {tag}: issue #{value} not found in {args.repo}")
+        print(f"FAIL  {tag}: issue #{value} not found in {args.repo}", file=sys.stderr)
         return "failed"
     if not args.apply:
         print(f"DRY   would POST {field}: #{issue} <- #{value}")
@@ -319,7 +319,7 @@ def _dependency_row(args, issue, field, value, tag):
         check=False,
     )
     if rc != 0:
-        print(f"FAIL  {tag}: {err.strip()}")
+        print(f"FAIL  {tag}: {err.strip()}", file=sys.stderr)
         return "failed"
     print(f"SET   {tag}")
     return "changed"
@@ -374,7 +374,7 @@ def cmd_apply(args):
         # board will reject is worse than no preview at all.
         query, extra, raw = mutation(fdef, project_id, items[issue]["id"], value)
         if query is None:
-            print(f"FAIL  {tag}: {extra}")
+            print(f"FAIL  {tag}: {extra}", file=sys.stderr)
             tally["failed"] += 1
             continue
         if not args.apply:
@@ -384,7 +384,7 @@ def cmd_apply(args):
         try:
             _graphql(query, *raw, **extra)
         except SystemExit as exc:
-            print(f"FAIL  {tag}: {exc}")
+            print(f"FAIL  {tag}: {exc}", file=sys.stderr)
             tally["failed"] += 1
             continue
         print(f"SET   {tag} (was {current})")
