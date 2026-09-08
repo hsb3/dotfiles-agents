@@ -49,11 +49,14 @@ jobs:
           # Watermark lookup mirrors upstream-digest.sh — keep the two in sync,
           # or the issue's commit count can disagree with the digest it carries.
           watermark="$(grep -m1 '^Last-reviewed-upstream-commit:' docs/upstream-review-log.md | awk '{print $2}')"
+          # `refs/heads/<name>` outranks `refs/remotes/<name>`, so every RESOLUTION names the
+          # tracking ref in full; `upstream-{{BRANCH}}` is the local mirror, `range` is display.
           if [[ -z "$watermark" ]]; then
-            watermark="$(git rev-parse upstream-{{BRANCH}} 2>/dev/null || git rev-parse upstream/{{BRANCH}})"
+            watermark="$(git rev-parse upstream-{{BRANCH}} 2>/dev/null || git rev-parse refs/remotes/upstream/{{BRANCH}})"
           fi
           range="${watermark}..upstream/{{BRANCH}}"
-          count="$(git rev-list --count "$range")"
+          resolved_range="${watermark}..refs/remotes/upstream/{{BRANCH}}"
+          count="$(git rev-list --count "$resolved_range")"
 
           {
             echo "count=${count}"
