@@ -5,5 +5,5 @@
   "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "mise-en-place",
   "repository": "https://github.com/hsb3/dotfiles-agents",
-  "version": "0.3.0"
+  "version": "0.3.1"
 }

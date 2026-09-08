@@ -22,6 +22,13 @@ gitignore and lefthook templates, and docs scaffolding. The issue forms ship lab
 purpose: labels are declared per-repo in `_meta/mise-en-place.yml` and provisioned by hand
 with `gh`, since nothing in this marketplace creates them for you.
 
+A couple of `references/checklist.md` rows (`CLAUDE-07`, the `HOOK-01` note) embed
+worked-example paths from this repo itself — `dotfiles-agents/docs/decisions/...` — inside
+their otherwise generic Detail text, since they cite this repo's own ADRs as the illustration.
+Those literal paths drift silently if this repo's own ADR location ever moves; the generic
+`path-exists-any: docs/decisions/ · backlog/decisions/` guidance in `DOCS-03/04/05` is the
+actual checkable rule and is unaffected by that drift.
+
 ## Reference only
 
 This skill answers questions; it does not act. Sibling skills read this same content and do
