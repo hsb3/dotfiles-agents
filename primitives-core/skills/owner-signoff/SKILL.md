@@ -12,9 +12,18 @@ session is notified the moment they submit.
 
 ## The loop
 
-1. **Write the spec** — a YAML or JSON file in a dated batch dir inside the project's
-   working area (convention: `_meta/signoff/YYYY-MM-DD-<topic>/signoff.yaml`; any
-   project-appropriate dir works). Schema below. Never hand-write the HTML.
+1. **Write the spec** — a YAML or JSON file in a dated batch dir under the project's
+   batch root: `<batch-root>/YYYY-MM-DD-<topic>/signoff.yaml`. Ask for the root instead
+   of assuming it (from the project root):
+
+   ```bash
+   python3 <skill-dir>/scripts/build_signoff.py --batch-root
+   ```
+
+   It prints the root and builds nothing: `_meta/signoff` unless the project sets a
+   `signoff:` key in `.claude/owner-signoff.local.md` (project-relative; blank, absent,
+   or outside the project root leaves the default in force). Schema below. Never
+   hand-write the HTML.
 2. **Build the form** (foreground, so validation errors surface immediately):
 
    ```bash

@@ -100,6 +100,8 @@ Decide this before running `create`, not after:
 
 - `references/config.md` — pinning a model or provider, giving the instance its own MCP
   servers, loading plugins, and what to edit after creation. Note there is no theme setting.
+  Also covers `gh`: neither container ships it, the manual-install workaround, and why
+  `gh auth login` with the operator's own account defeats the isolation.
 - `references/project-context.md` — seeding whole repos, tracked files only, or one
   subdirectory; getting work back out with `fetch-url` and `export`, `docker cp` for
   pushing a loose file in.

@@ -10,6 +10,10 @@ Stdlib-only for JSON specs; YAML specs need PyYAML (falls back with a clear
 error if it is missing).
 
 Usage: python3 build_signoff.py <spec.yaml|spec.json>
+       python3 build_signoff.py --batch-root [project-root]
+
+The second form prints where this project's dated batch dirs live and builds
+nothing — `_meta/signoff` unless a `signoff:` key overrides it.
 """
 
 import datetime
@@ -21,11 +25,58 @@ import sys
 
 TEMPLATE = pathlib.Path(__file__).resolve().parent.parent / "assets" / "template.html"
 
+LOCAL_RELPATH = pathlib.Path(".claude") / "owner-signoff.local.md"
+DEFAULT_BATCH_ROOT = "_meta/signoff"
+
 DEFAULT_CHOICES = ["Approve", "Modify (note below)"]
 DEFAULT_CATEGORY = "Decision"
 ITEM_KEYS = {"id", "category", "question", "context", "recommendation", "choices", "text_field"}
 # Z is the general-notes section the template always appends.
 AUTO_IDS = string.ascii_uppercase[:25]
+
+
+def _frontmatter_value(text: str, key: str) -> str | None:
+    """The scalar *key* holds in a leading `---` frontmatter block, else None.
+
+    Deliberately narrow: flat scalars only, first match wins, quotes and a trailing
+    ` #` comment stripped. Anything richer belongs in the spec file, not here.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].lstrip("﻿").strip() != "---":
+        return None
+    for line in lines[1:]:
+        if line.strip() in ("---", "..."):
+            break
+        name, sep, value = line.partition(":")
+        if not sep or name.strip() != key:
+            continue
+        value = value.strip()
+        if value[:1] in ("'", '"'):
+            close = value.find(value[0], 1)
+            return (value[1:close] if close != -1 else value[1:]) or None
+        hash_at = value.find(" #")
+        return (value[:hash_at].rstrip() if hash_at != -1 else value) or None
+    return None
+
+
+def resolve_batch_root(project_root) -> pathlib.Path:
+    """Where this project's dated sign-off batch dirs live.
+
+    `<project-root>/_meta/signoff` unless a `signoff:` key in
+    `.claude/owner-signoff.local.md` names another project-relative dir. The key
+    absent, blank, or resolving outside the project root leaves the default in
+    force. Fail-open on purpose: an override is never a way to switch the skill off.
+    """
+    root = pathlib.Path(project_root).resolve()
+    try:
+        override = _frontmatter_value((root / LOCAL_RELPATH).read_text(encoding="utf-8"), "signoff")
+    except OSError:
+        override = None
+    if override:
+        candidate = (root / override).resolve()
+        if candidate.is_relative_to(root):
+            return candidate
+    return root / DEFAULT_BATCH_ROOT
 
 
 def load_spec(path: pathlib.Path):
@@ -180,12 +231,18 @@ def render(spec: dict) -> str:
     return out
 
 
-USAGE = "usage: python3 build_signoff.py <spec.yaml|spec.json>"
+USAGE = (
+    "usage: python3 build_signoff.py <spec.yaml|spec.json>\n"
+    "       python3 build_signoff.py --batch-root [project-root]"
+)
 
 
 def main() -> None:
     if len(sys.argv) == 2 and sys.argv[1] in ("-h", "--help"):
         print(USAGE)  # asking for help is not a usage error
+        return
+    if len(sys.argv) in (2, 3) and sys.argv[1] == "--batch-root":
+        print(resolve_batch_root(sys.argv[2] if len(sys.argv) == 3 else "."))
         return
     if len(sys.argv) != 2:
         raise SystemExit(USAGE)

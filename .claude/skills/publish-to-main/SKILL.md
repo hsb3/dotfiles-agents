@@ -42,7 +42,9 @@ on `main` any other way — a change is "available" only after this runbook comp
      nothing new;
    - **both minor** when the shared change is genuinely new capability in both;
    - **never "incidental" for a breaking change** — a break is a break in every bundle
-     that ships it.
+     that ships it;
+   - **a fix that adds no capability → patch everywhere, owning bundle included** — the
+     owning bundle's minor is reserved for new capability, not for a fix.
 
    `scripts/check_version_bump.py` proves only that the version MOVED; it has no semver
    semantics and is not being taught any, because a gate would have to infer capability to

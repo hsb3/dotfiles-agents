@@ -20,7 +20,8 @@ Owner ruling, 2026-09-07 (via the sign-off form on `9x2r`):
    description.
 3. The acknowledgement is the README being touched in the same change; no commit trailers
    (this repo squash-merges, so a trailer gate would have to parse what lands on `dev`,
-   recorded on card `7sv8`).
+   recorded on card `7sv8`). Restating already-true facts in the README counts as that
+   acknowledgement — the touch is the review, not whether the edit changed the wording.
 4. The gate runs under `make ci`, which has repo history and needs no network.
 5. Scope is skills and plugins only, since those are the two surfaces that own a README.
 

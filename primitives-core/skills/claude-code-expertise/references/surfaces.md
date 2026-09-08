@@ -1,8 +1,10 @@
 # Claude Code extension surfaces — contracts + minimal examples
 
-Each surface below lists: where files live, the frontmatter/config contract, a minimal working
-example, and the trigger model. Subagents get their own reference (`subagents.md`); plugins and
-marketplaces get theirs (`distribution.md`).
+Each surface below lists what you need to **choose** it: where files live and the trigger
+model, with the contract and a worked example where authoring it is this skill's job. Hooks,
+MCP servers, and settings/permissions are covered here only far enough to pick one — their
+config contracts, wiring, and examples belong to `claude-code-config`. Subagents get their own
+reference (`subagents.md`); plugins and marketplaces get theirs (`distribution.md`).
 
 Paths use `.claude/` for the **project** scope and `~/.claude/` for the **user** (personal)
 scope. Plugins carry the same surfaces in their own subdirectories (see `distribution.md`).
@@ -46,49 +48,14 @@ Code escapes them; whether an unescaped tag can still prevent loading is unverif
 
 ## 2. Hooks — deterministic code on a lifecycle event
 
-Hooks are the only surface that runs **without the model choosing to**. Configure them in a
-`settings.json` (user, project, local, or managed) under a `hooks` block, keyed by event, with a
-matcher and a command; plugins ship the same block in `hooks/hooks.json`, and a skill or agent can
-carry a `hooks:` frontmatter map. Use a committed handler *script*, never inline shell — this is
-non-negotiable, not a style preference, so the logic stays testable and reviewable.
+Hooks are the only surface that runs **without the model choosing to** — deterministic code fires
+on a lifecycle event (a tool call, a prompt, session start, etc.), regardless of what the model
+decides. They can live in `settings.json`, in a plugin's `hooks/hooks.json`, or inline as a
+`hooks:` frontmatter map on a skill or agent.
 
-Events (the commonly used subset; the reference lists 30+): `PreToolUse`, `PostToolUse`,
-`PostToolUseFailure` (around a tool call; `PreToolUse` can block) · `PermissionRequest` ·
-`UserPromptSubmit` (before a prompt is processed; can block) · `Notification` · `Stop`,
-`SubagentStart`, `SubagentStop` · `PreCompact`, `PostCompact` · `SessionStart`, `SessionEnd` ·
-`ConfigChange`, `FileChanged`, `InstructionsLoaded`, `WorktreeCreate`, `WorktreeRemove`.
-Hook `type` is one of `command`, `http`, `mcp_tool`, `prompt`, `agent`. The `matcher` is a tool
-name or regex for tool events (`Edit|Write`, `mcp__.*`); empty matches everything.
-
-```jsonc
-// .claude/settings.json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",                       // tool name / pattern this rule applies to
-        "hooks": [
-          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash/hook.py\"" }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Hook I/O contract: a command handler receives the event payload as JSON on **stdin** and signals
-outcome via **exit code** — `0` is success; `2` is a **blocking** error (stderr is fed back to
-the agent and the action is blocked, where the event supports blocking; it cannot be overridden
-by JSON); any other non-zero is a **non-blocking** error (the action proceeds) — and/or a JSON
-object on **stdout** for structured control (`hookSpecificOutput`, `systemMessage`,
-`additionalContext`, `updatedInput`). Handlers see `CLAUDE_PROJECT_DIR`, `CLAUDE_PLUGIN_ROOT`,
-and `CLAUDE_PLUGIN_DATA`. Keep handlers fast and side-effect aware — they run inline on the
-lifecycle.
-
-Required layout: a **hook directory** — `hooks/<name>/` holding the handler (e.g. `hook.py`)
-plus any config — rather than raw shell embedded in `settings.json`. A directory is versionable,
-unit-testable, and portable into a plugin (a plugin ships hooks the same way; see
-`distribution.md`). Keep handlers dependency-light so they run anywhere.
+Trigger: the configured lifecycle event fires; there is no model judgment in the loop. Reach for
+a hook when the requirement is "always do X on event Y" — the full event list, wiring format, and
+I/O contract are covered in `claude-code-config`.
 
 ## 3. Commands — user-typed slash shortcuts
 
@@ -122,67 +89,30 @@ human-only trigger write a skill with `disable-model-invocation: true`; for a mo
 
 ## 4. MCP servers — external tools and data
 
-MCP (Model Context Protocol) servers expose external tools/resources the model can call. Declare
-them in a project `.mcp.json` (project scope, shared via git); user and local scopes are stored in
-`~/.claude.json` by `claude mcp add`, not in `settings.json`. A plugin can bundle its own
-`.mcp.json` (or inline `mcpServers` in `plugin.json`).
+MCP (Model Context Protocol) servers expose external tools/resources the model can call, adding
+new capability rather than changing how existing tools are used. A plugin can bundle its own
+server too.
 
-```jsonc
-// .mcp.json (project)
-{
-  "mcpServers": {
-    "files": {                                   // stdio server: `type` optional (default)
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./data"],
-      "env": { "LOG_LEVEL": "info" }
-    },
-    "api": {                                      // remote: `type` REQUIRED with a url
-      "type": "http",                             // http (sse is deprecated; ws also accepted)
-      "url": "https://mcp.example.com",
-      "headers": { "Authorization": "Bearer ${API_TOKEN}" }   // ${VAR} and ${VAR:-default}
-    }
-  }
-}
-```
-
-An MCP server's tools appear to the model as `mcp__<server>__<tool>` (plugin-bundled:
-`mcp__plugin_<plugin>_<server>__<tool>`).
-Reach for MCP when you need to *add* capabilities/data; reach for a **hook** when you need to
-*gate or observe* the tool calls that already exist.
+Trigger: the model calls an MCP tool like any other tool, whenever its description matches the
+task — no lifecycle event required. Reach for MCP when you need to *add* capabilities/data; reach
+for a **hook** when you need to *gate or observe* the tool calls that already exist. Where servers
+are declared, scoped, and registered is covered in `claude-code-config`.
 
 ## 5. Settings & permissions — the control plane
 
-Precedence (highest first): managed settings → `claude --settings` CLI → `.claude/settings.local.json`
-(project, personal, git-ignored) → `.claude/settings.json` (project, shared) →
-`~/.claude/settings.json` (user). Settings wire the other surfaces on and constrain them.
+Settings files (managed, project, project-local, and user, layered by precedence) wire every
+other surface on and constrain what the agent may do — which tools run without asking, which are
+denied outright, which plugins are enabled, and what hooks/env/model apply.
 
-```jsonc
-// .claude/settings.json
-{
-  "permissions": {
-    "allow": ["Read", "Grep", "Bash(git status:*)", "Bash(git diff:*)"],
-    "ask":   ["Bash(git push:*)"],
-    "deny":  ["Read(./.env)", "Bash(rm -rf:*)"],
-    "defaultMode": "acceptEdits"
-  },
-  "enabledPlugins": { "my-plugin@my-marketplace": true },   // object, not an array
-  "hooks": { /* see §2 */ },
-  "env": { "SOME_FLAG": "1" },
-  "model": "sonnet"
-}
-```
-
-Permission rules match `Tool(pattern)`: `allow` runs without prompting, `ask` prompts, `deny`
-blocks outright. Rules are evaluated **deny, then ask, then allow** — the first match wins and
-specificity does not reorder them, so a broad deny cannot carry allow exceptions. `Bash(git status *)`
-and `Bash(git status:*)` are equivalent trailing-wildcard forms. `defaultMode` accepts `default`
-(`manual`), `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions`; `auto` and
-`bypassPermissions` are ignored from project/local files. Scope tightly — a permission is the
-guardrail that lets a subagent or hook run unattended safely. This is also where you turn plugins
-on (`enabledPlugins`) and register `hooks`.
+Trigger: settings apply continuously, not on a discrete event — they are the layer every other
+surface's behavior is read through. Reach for settings when the ask is "always allow/deny/ask
+this tool", "turn a plugin on", or "set this for every session". File precedence, the permission
+rule grammar, and default modes are covered in `claude-code-config`.
 
 ## Cross-references
 
 - Subagents (the sixth surface) — `subagents.md`.
 - Description/triggering quality, frontmatter validation, common failures — `authoring.md`.
 - Bundling surfaces into a plugin and shipping via a marketplace — `distribution.md`.
+- Actually wiring a hook, an MCP server, or a permission rule once you have chosen it —
+  `claude-code-config`, which owns those contracts.

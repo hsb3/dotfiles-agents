@@ -21,6 +21,11 @@
 - **Atelier's doctrine prose is shared with its opencode port** and must land in both repos in
   the same wave — the transform, the one-sided artifacts, and why no CI here can catch the
   drift are in [`docs/atelier-parity.md`](docs/atelier-parity.md).
+- **A shipped primitive that hardcodes a consuming repo's convention gets an override**, and there
+  is one convention for how — an env var with a shell-expanded default for a hook, a
+  `.claude/<id>.local.md` frontmatter key for a skill, detection for anything derivable from the
+  tree. Both shipped mechanisms and the rule for choosing between them are in
+  [`docs/override-convention.md`](docs/override-convention.md); do not invent a third.
 - **Tests are stdlib-only** (`python3 -m unittest`) — zero install is an invariant. Fixtures live
   in `tests/` tempdirs, never under `primitives-core/` (the roster guard flags orphans).
 

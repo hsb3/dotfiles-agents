@@ -39,6 +39,8 @@ filed under:
 - **Both minor** when the shared change is genuinely new capability in both bundles.
 - **Never "incidental" for a breaking change** to a shared primitive — a break is a break in
   every bundle that ships it.
+- **A fix that adds no capability is patch in every bundle it ships in, owning bundle
+  included** — the owning bundle's minor is reserved for new capability, not for a fix.
 
 **`check_version_bump.py` stays deliberately dumb.** Encoding "which digit" in a gate would
 require the gate to infer capability, which it cannot see. This rule is convention enforced by

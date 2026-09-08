@@ -7,8 +7,9 @@ comms ship as, an honest value-and-proof README, and the memory taxonomy the rep
 
 The in-repo `_meta/` planning system that used to live here — the layout standard, the
 compliance audit, the scaffold, and the planning desk — now ships as the separate
-[`mise-en-place`](../mise-en-place/README.md) plugin, for repos not tracked on an external
-board.
+[`mise-en-place`](../mise-en-place/README.md) plugin, whose desk runs over a tracker adapter
+while its layout standard, audit, and scaffold still assume the repo tree is the system of
+record.
 
 ## How it fits together
 
@@ -24,6 +25,8 @@ flowchart TD
     Rig --> Build[Next release work]
     Build --> Focus[dev-focus flags drift and triages scope]
     Focus --> Build
+    Build --> PR[pull-request triages the review findings a green check hides]
+    PR --> Build
     Build --> Board[board-triage ranks the external board weekly]
     Board --> Comms[comms assembles the recurring deck]
     Comms --> PPT[pptx-themes renders it to the house theme]
@@ -44,11 +47,18 @@ flowchart TD
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
 | `pptx-themes` | Builds the decks `comms` ships as, with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill. |
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app, not mockups. |
+| `pull-request` | The pass that runs after the checks go green: collect a PR's inline review comments, its review and summary comments, and its gate statuses, then classify each finding as actionable (it sits on a line this PR changed, or it is a failing hard gate) or as pre-existing rot named as deferred rather than dropped. |
 | `project-memory` | The memory taxonomy and the tooling that realizes it — where agent memory lives (global vs. project-level), memory vs. rules vs. skills, and when a fact is worth promoting up a layer, plus opting a repo into tracked, in-repo auto-memory (wires `.claude/memory/` as the memory directory; never overwrites) and recovering memory after a folder move (dry-run by default). Pure Python 3 stdlib. |
 
 The bundle also ships an agent: `rig-builder`, which `starting-conditions` dispatches once
 the contract exists to scaffold the gate, prove it fails when a rule is broken, and report
 the baseline.
+
+And one command:
+
+| Command | What it does |
+|---|---|
+| `/pr-findings [<n>]` | Loads `pull-request` and drives it over one PR — the current branch's open PR when no number is given. |
 
 Per-skill plugins have been retired: the members that stand alone outside this desk —
 `comms`, `dev-focus`, `pptx-themes`, `project-memory`, `readme-value-and-proof` — ship

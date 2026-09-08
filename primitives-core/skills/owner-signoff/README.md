@@ -16,6 +16,32 @@ a small YAML/JSON file, it validates and renders the HTML) and a one-shot localh
 server (binds 127.0.0.1 only, accepts exactly one submit, then exits), plus a download
 fallback for much-later submits.
 
+## Project override — where batch dirs live
+
+Each sign-off gets its own dated batch dir under a batch root that defaults to
+`_meta/signoff/` (so `_meta/signoff/2026-09-07-plugin-restructure/`). A project that keeps
+them somewhere else says so once, with a `signoff:` key in the project-local activation
+file `.claude/owner-signoff.local.md`:
+
+```markdown
+---
+signoff: docs/signoff
+---
+```
+
+The value is project-relative. Absent, blank, or resolving outside the project root leaves
+the default in force — the override never turns the skill off. Nothing has to guess: run
+`python3 <skill-dir>/scripts/build_signoff.py --batch-root` from the project root and it
+prints the resolved root without building anything. This is the same project-local
+frontmatter-key shape the `handoff` skill's `handoff:` key uses, so a project that already
+carries one reads the other on sight.
+
+**The server's port deliberately has no key.** `serve_signoff.py <batch-dir> [port]` already
+takes the port as an optional positional argument and walks forward to the next free port
+when the default (8737) is busy, so a stated preference already has somewhere to go and a
+collision resolves itself. A second override mechanism for it would configure a value that
+is per-run rather than per-project.
+
 ## Install
 
 Ships inside the `solo-skills` bundle:
