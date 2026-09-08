@@ -29,8 +29,10 @@ its code are two steps unless the tracker is GitHub itself.
 A finding outside a wave's scope folds before it is filed: a sibling site of what the wave
 already fixed is fixed in the same wave, a finding that belongs to an open item becomes a
 comment on it, one with no home rides the wave's hardening list, and only what none of those
-hold is filed. Each landing records what the wave closed against what it filed, so the run's
-totals show whether a wave shrank the backlog or grew it.
+hold is filed, never as a draft. Triage intake runs the same order, so a finding a previous run
+left on a hardening list is re-routed rather than filed on sight. Each landing records what the
+wave closed against what it filed, so the run's totals show whether a wave shrank the backlog or
+grew it.
 
 ## Install
 

@@ -75,12 +75,14 @@ Reconcile the view with the truth before planning anything. Run the **Inventory*
 the tracker binding, then:
 
 - Close what's actually done (epics whose children all shipped); merge green dependency-bump PRs.
-- File items for anything known-but-untracked (deferred items from prior runs, findings).
-  Tracked-in-the-backlog is the bar for "will not be forgotten".
+- Route anything known-but-untracked (deferred items from prior runs, findings, a previous
+  run's hardening list) through Phase 6's fold order before filing it — a line a previous run
+  deliberately left unfiled is not intake.
 - **Split the backlog into two queues:** *buildable* (crews can close it) and **owner-gated**
   (needs a ruling, sign-off, or missing decision). Crews never pick up owner-gated items — a
   crew "resolving" an undecided question is the workflow's worst failure mode. If a cited
-  decision can't be found in the repo, that's a triage find: file it as an owner-gated item.
+  decision can't be found in the repo, that's a triage find: comment it onto the open item that
+  cites it, or file it as an owner-gated item when none does.
 - Rank by the binding's ranking chain, then by owner rulings in the handoff.
 
 The inventory is the source of truth and the triage view is a view of it. When they disagree,
@@ -151,11 +153,13 @@ Send that amendment with `SendMessage` to the running manager.
 
 ## Phase 6 — Externalize (the run isn't done without this)
 
-- **Dispose of every deferred thing and new finding by the fold order, filing last**: a sibling
-  site of what a wave already fixed is fixed inside that wave; a finding that belongs to an open
-  item becomes a comment on it; one with no home rides the wave's hardening list; only what none
-  of those hold is filed, with the reason. Tracked is still the bar for "will not be forgotten" —
-  a new item is the last rung of it, not the first.
+- **Dispose of the undisposed remainder by the fold order, filing last.** Each wave's proof
+  package says what its manager already fixed, commented, or filed; that is placed, and filing it
+  again is the double this order prevents. For the rest: a sibling site of what a wave fixed goes
+  into that wave, a finding that belongs to an open item becomes a comment on it, one with no home
+  rides the wave's hardening list, and only what none of those hold is filed, with the reason.
+  Never file a draft for someone else to finish. Tracked is still the bar for "will not be
+  forgotten" — a new item is the last rung of it, not the first.
 - **Update the triage view**: mark the delivery plan **EXECUTED** with the actual landing table,
   refresh the ranking and date — then **move the plan below the open sections** into the
   delivery-history block and collapse it. Position is the reader's only done/outstanding cue; an

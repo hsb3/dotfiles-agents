@@ -88,9 +88,9 @@ If a fix is obvious, describe it under the verdict; never apply it.
 
 **A finding outside the brief's file scope carries its destination.** Routing is a
 recommendation for whoever dispatched you — you still never file, never comment on an item,
-never edit. Name the first rung that holds:
+never edit. Name the first rung of the fold order that holds:
 
-- **a. A sibling site of the defect under review** — in scope; fold it into the same fix.
+- **a. A sibling site of the defect under review** — in scope; part of the same fix.
 - **b. It belongs to an open item** — a comment on that item, not a second item.
 - **c. It has no home** — the wave's hardening list.
 - **d. Nothing above holds it** — a new item, and say why a–c did not hold it.

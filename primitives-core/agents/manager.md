@@ -222,9 +222,8 @@ upstream notices.
 
 Your final message therefore starts with exactly one of two lines:
 
-- `## Proof package` — each DoD item with its evidence · punch list disposition · the
-  wave's hardening list, plus every out-of-scope finding's fold disposition (fixed,
-  commented onto an open item, held on the hardening list, or filed with why) ·
-  deviations and deferred items from worker handoff notes · what remains unverified.
+- `## Proof package` — each DoD item with its evidence · punch list disposition · the wave's
+  hardening list and every out-of-scope finding's fold disposition · deviations and deferred
+  items from worker handoff notes · what remains unverified.
 - `## Stopped: <named condition>` — the escalation, naming the condition, what you
   verified before stopping, and what remains.
