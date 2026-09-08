@@ -20,6 +20,12 @@ my-plugin/
 └── .lsp.json                 # bundled LSP servers (optional)
 ```
 
+A server bundled this way is namespaced by the plugin that carries it: its tools appear as
+`mcp__plugin_<plugin>_<server>__<tool>`, not the bare `mcp__<server>__<tool>` a
+project-level `.mcp.json` produces. Any permission rule or `allowed-tools` entry naming
+such a tool has to use the long form, and the mismatch is silent — the rule simply never
+matches.
+
 ```jsonc
 // .claude-plugin/plugin.json
 {

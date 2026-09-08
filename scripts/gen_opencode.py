@@ -264,9 +264,13 @@ def build(out_root, entries, translation):
         "by laydown:_",
         "",
         "```sh",
-        "./install.sh --global            # ~/.config/opencode/{skills,agents}/",
-        "./install.sh --project <dir>     # <dir>/.opencode/{skills,agents}/",
+        "sh scripts/install_opencode.sh --global          # ~/.config/opencode/{skills,agents}/",
+        "sh scripts/install_opencode.sh --project <dir>   # <dir>/.opencode/{skills,agents}/",
         "```",
+        "",
+        "_If you are reading this file inside an installed tree, it was copied here as the",
+        "record of that laydown — the `install.sh` that placed it lived in a build tempdir",
+        "that is already gone. Re-run the command above from a checkout to update._",
         "",
         f"Ships {len(shipped['skill'])} skills (verbatim; opencode also reads `.claude/skills/`"
         " natively — this lane is the explicit, deterministic copy) and"

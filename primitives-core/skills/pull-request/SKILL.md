@@ -25,8 +25,13 @@ deferred** — never with a silent drop.
 With a number, use it. Without one, resolve the current branch's PR:
 
 ```bash
-gh pr view --json number,url,headRefName --jq '.number, .url'
+gh pr list --head "$(git branch --show-current)" --state open --json number,url --jq '.[0]'
 ```
+
+**Filter on state, and do not use bare `gh pr view` to resolve.** `gh pr view` returns the
+branch's PR whatever its state, so on a branch whose PR already merged it hands you a
+merged PR and you triage its stale threads believing they are live. Selecting `state` and
+checking it is `OPEN` works equally well; what does not work is trusting the lookup.
 
 No PR for this branch is an answer, not an error: say the branch has no open PR, show
 `gh pr status` so the person can see whether one exists elsewhere, and stop. Do not open
@@ -65,6 +70,13 @@ hunk header `@@ -a,b +c,d @@` gives the new-side range `c`..`c+d-1` for the file
 the preceding `+++ b/<path>` line. A finding is on a touched line when its `path` matches
 and its `line` falls in one of that file's ranges.
 
+Two parsing details that silently misfile a finding as pre-existing if you skip them:
+
+- **An omitted count means 1.** Git really emits `@@ -1 +1 @@` for a single-line hunk, so
+  a formula that requires `+c,d` drops that hunk and the file looks untouched.
+- **A path containing a space gets a trailing TAB** on its `+++ b/<path>` line. Split on
+  the tab before using the name, or every finding in that file reads as pre-existing.
+
 **PRE-EXISTING** otherwise — a finding on code this PR did not change. Real, and not this
 PR's job.
 
@@ -91,8 +103,15 @@ Report in exactly this shape, both sets always present, each with its count:
 - **DEFERRED — pre-existing (n)** — per finding: `path:line` and one line on why it is out
   of this PR's scope. An empty set is stated as "none", never omitted.
 
-Then fix the actionable set, reply on each thread you addressed or rejected, push, and
-re-read — the reviewers run again on the new commit.
+Never collapse this to "CI is green" or "no blockers". A missing **DEFERRED** section is
+indistinguishable from a triage that never looked, which is the failure this exists to
+stop. If a finding was ambiguous and you called it actionable by default, say so rather
+than presenting the call as clean.
+
+**Then stop.** Reporting is the deliverable. Fix the actionable set in the same turn only
+if the person asked for that — "address the review feedback" is such an ask, "check the PR
+comments" is not. If you do fix: reply on each thread you addressed or rejected, push, then
+re-read every surface, because the reviewers run again on the new commit.
 
 ## Traps
 

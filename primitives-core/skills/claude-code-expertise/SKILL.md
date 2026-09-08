@@ -83,8 +83,10 @@ Two frequent confusions, resolved:
 
 ## Read next (progressive disclosure)
 
-- `references/surfaces.md` — every surface with its frontmatter/config contract, a minimal
-  working example, and where files live (skills, hooks, commands, MCP, settings/permissions).
+- `references/surfaces.md` — every surface with where its files live and what triggers it, plus
+  the frontmatter contract and a worked example for the ones this skill authors (skills,
+  commands). For hooks, MCP servers, and settings/permissions it carries only what you need to
+  choose between them; their config contracts and wiring belong to `claude-code-config`.
 - `references/subagents.md` — authoring subagents end to end: scaffold, tool selection, model /
   tier choice, and writing the when-to-use description that makes delegation fire.
 - `references/authoring.md` — frontmatter contracts, description/triggering quality, progressive

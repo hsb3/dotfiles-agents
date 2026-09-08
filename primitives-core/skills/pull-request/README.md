@@ -11,7 +11,8 @@ makes you name the deferred set instead of quietly dropping it.
 Right after opening a PR and watching CI go green; when asked to "check the PR comments",
 "address the review feedback", "what did the review bots say", or "is this PR ready to
 merge". The `/pr-findings` command drives it against a PR number, or against the current
-branch's PR when given none.
+branch's PR when given none — the open one, since a branch whose PR already merged would
+otherwise hand you its stale threads.
 
 ## Install
 

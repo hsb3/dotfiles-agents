@@ -7,8 +7,9 @@ comms ship as, an honest value-and-proof README, and the memory taxonomy the rep
 
 The in-repo `_meta/` planning system that used to live here — the layout standard, the
 compliance audit, the scaffold, and the planning desk — now ships as the separate
-[`mise-en-place`](../mise-en-place/README.md) plugin, for repos not tracked on an external
-board.
+[`mise-en-place`](../mise-en-place/README.md) plugin, whose desk runs over a tracker adapter
+while its layout standard, audit, and scaffold still assume the repo tree is the system of
+record.
 
 ## How it fits together
 
@@ -24,6 +25,8 @@ flowchart TD
     Rig --> Build[Next release work]
     Build --> Focus[dev-focus flags drift and triages scope]
     Focus --> Build
+    Build --> PR[pull-request triages the review findings a green check hides]
+    PR --> Build
     Build --> Board[board-triage ranks the external board weekly]
     Board --> Comms[comms assembles the recurring deck]
     Comms --> PPT[pptx-themes renders it to the house theme]

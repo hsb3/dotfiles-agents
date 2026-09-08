@@ -18,21 +18,6 @@ there and follow it; do not restate it here and do not re-derive it from memory.
    rule over every finding it returned.
 4. Report in the skill's shape.
 
-## How to report
-
-This runs because a green check hides unaddressed comments, so a report that leads with the
-check status has answered the wrong question. Lead with the findings.
-
-Both sets are always present with their counts, including empty ones — a missing
-**DEFERRED — pre-existing** section is indistinguishable from a triage that never looked,
-which is the exact failure this exists to stop. State it as "none" when it is empty.
-
-Never collapse the result to "CI is green" or "no blockers". Say how many findings were
-read, how many are actionable, and name each deferred one with its location and the
-one-line reason it is out of this PR's scope. If a finding was ambiguous and you called it
-actionable by default, say so rather than presenting the call as clean.
-
-Stop after reporting. Fix the actionable set only if the person asks in the same turn, or
-if the ask that invoked this was already "address the review feedback" — and if you do,
-report what you pushed and re-read afterwards, because the reviewers run again on the new
-commit.
+A report that leads with the check status has answered the wrong question — this runs
+because a green check hides unaddressed comments. Lead with the findings, in the shape the
+skill's report step fixes.

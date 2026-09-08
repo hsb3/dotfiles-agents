@@ -1,8 +1,10 @@
 # Claude Code extension surfaces — contracts + minimal examples
 
-Each surface below lists: where files live, the frontmatter/config contract, a minimal working
-example, and the trigger model. Subagents get their own reference (`subagents.md`); plugins and
-marketplaces get theirs (`distribution.md`).
+Each surface below lists what you need to **choose** it: where files live and the trigger
+model, with the contract and a worked example where authoring it is this skill's job. Hooks,
+MCP servers, and settings/permissions are covered here only far enough to pick one — their
+config contracts, wiring, and examples belong to `claude-code-config`. Subagents get their own
+reference (`subagents.md`); plugins and marketplaces get theirs (`distribution.md`).
 
 Paths use `.claude/` for the **project** scope and `~/.claude/` for the **user** (personal)
 scope. Plugins carry the same surfaces in their own subdirectories (see `distribution.md`).
@@ -112,3 +114,5 @@ rule grammar, and default modes are covered in `claude-code-config`.
 - Subagents (the sixth surface) — `subagents.md`.
 - Description/triggering quality, frontmatter validation, common failures — `authoring.md`.
 - Bundling surfaces into a plugin and shipping via a marketplace — `distribution.md`.
+- Actually wiring a hook, an MCP server, or a permission rule once you have chosen it —
+  `claude-code-config`, which owns those contracts.

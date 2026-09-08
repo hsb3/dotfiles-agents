@@ -13,7 +13,7 @@ this page existed; the page names the rule they were already following.
 | **neither — the value is derivable from the tree** | nothing; detect it | an override key that only ever restates what is already on disk is a second source of truth for the same fact |
 
 Naming: the `.local.md` file is named for the **owning bundle** when the setting is
-bundle-wide (`.claude/atelier.local.md`, `.claude/foreman-kit.local.md`) and for the
+bundle-wide (`.claude/atelier.local.md`) and for the
 **skill** when it is one skill's business (`.claude/comms.local.md`,
 `.claude/owner-signoff.local.md`). The key inside is named for what it configures.
 
@@ -52,9 +52,9 @@ handoff: docs/HANDOFF.md
 ```
 
 The same key also takes a mapping (`{mode: file, path: …}`, or `{mode: external, stamp: …,
-location: …}`) for a handoff that is not a file at all. Three hooks read the same key from
-the same file — `handoff-freshness-guard`, `session-handoff-surfacer`, `context-watermark`
-— which is the reason the mechanism is a file and not an env var: the skill and its
+location: …}`) for a handoff that is not a file at all. Two hooks read the same key from
+the same file — `handoff-freshness-guard` and `session-handoff-surfacer` — which is the
+reason the mechanism is a file and not an env var: the skill and its
 enforcement hooks have to agree on one project-level fact, and a shared committed file is
 what makes them agree.
 
