@@ -434,6 +434,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: branch-activity-surfacer
+    type: hook
+    source: primitives-core/hooks/branch-activity-surfacer
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: comment-hygiene-gate
     type: hook
     source: primitives-core/hooks/comment-hygiene-gate

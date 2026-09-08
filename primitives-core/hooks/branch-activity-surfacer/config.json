@@ -1,0 +1,12 @@
+{
+  "event": "SessionStart",
+  "matcher": "*",
+  "timeout": 12,
+  "statusMessage": "Checking for other sessions on this branch...",
+  "env": {
+    "BRANCH_ACTIVITY_PEER_TTL_SECONDS": "3600",
+    "BRANCH_ACTIVITY_MAX_BYTES": "1048576",
+    "BRANCH_ACTIVITY_LOG_COMMITS": "5",
+    "BRANCH_ACTIVITY_GH": "1"
+  }
+}

@@ -33,6 +33,7 @@ flowchart TD
     Workers -.->|every finish| Tel[subagent-telemetry logs the row]
     Mgr -.->|turn ends without the package| PG[manager-package-gate sends it back once]
     Done -.->|git while a worker is live| GG[live-worker-git-guard denies the call]
+    Cold -.->|another session was on this branch| BA[branch-activity-surfacer names what changed]
     Ctx -.->|raised by| CW[context-watermark]
     Hand -.->|stale handoff| FG[handoff-freshness-guard blocks the compact]
 ```
@@ -70,6 +71,7 @@ its commitment, the other cuts comments that cannot.
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
 | `lane-snapshot` | hook (`SessionStart`) | Starts a background daemon that commits every agent worktree's working tree to `refs/lane-snapshots/<name>` every few minutes, so a worker's uncommitted output survives a crash or a mistaken prune. `pgrep`-guarded, so concurrent sessions share one daemon per repo. Recover with `git show refs/lane-snapshots/<name>:<path>`; check it is actually running with `python3 .../lane-snapshot/snapshot_lanes.py --check`. Adds refs only, never prunes. |
 | `session-handoff-surfacer` | hook (`SessionStart`) | On a genuine cold start (startup or `/clear`), surfaces the existing handoff as a pointer plus a capped excerpt so a fresh session picks up prior work. Silent no-op on resume/compact or when no handoff exists. |
+| `branch-activity-surfacer` | hook (`SessionStart`) | Warns a starting session that another session has been on the same branch, and names what changed: the old and new tip, the commits between them with their authors, the merged PR carrying the new tip when `gh` finds one, and how long ago the peer session started. Derived from a local ledger plus git, so a move made on another machine or by a merge on GitHub counts too — nothing is pushed and nothing is fetched. Silent on `compact`, in a subagent, on a detached HEAD, and when nothing changed. |
 | `subagent-telemetry` | hook (`SubagentStop`, `Stop`) | Appends one row per delegation (agent id, agent type, model, context tokens, start time, duration) to a local ledger, so tier usage and per-agent wall clock can be measured offline. On `Stop` it also records delegations still pending past a threshold. Silent — no stdout, never blocks. |
 | `worker-context` | hook (`SubagentStart`) | Injects the delegation covenant into every subagent, so the rules a worker is judged by arrive with the worker instead of depending on the dispatching session restating them in each brief. Inert until a project activates it. |
 | `worktree-isolation` | hook (`PreToolUse`) | Rewrites a dispatch so a **writing** worker gets its own git worktree instead of sharing the session's checkout. Read-only roles are left alone on purpose — a worktree cannot see uncommitted work. Never denies; inert until a project sets `isolate:`. |
@@ -266,8 +268,10 @@ machine-local change):
 | `LANE_SNAPSHOT_INTERVAL` | `180` | Seconds between lane snapshots |
 | `LANE_SNAPSHOT_WORKTREES` | `.claude/worktrees/agent-*` | Glob, relative to the repo root, matching the worktrees to snapshot. Deliberately unfenced, because worktrees legitimately live outside a repo: `../sibling-*` or an absolute pattern snapshots directories outside the root, and their refs still land in the root's namespace. |
 | `LANE_SNAPSHOT_ROOT` | derived (hook payload `cwd`, else the script's own repo) | Repo whose lanes are snapshotted; overrides the derivation |
+| `BRANCH_ACTIVITY_PEER_TTL_SECONDS` | `3600` | How recently another session must have started on this branch to be reported as possibly live. `0` reports moves only |
+| `BRANCH_ACTIVITY_GH` | `1` | `0` skips the merged-PR lookup entirely (offline, or no `gh`) |
 | `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Where the activation file lives |
-| `<HOOK>_LOG_PATH` | the hook's stream under the log root (see **Ledgers** below) | Overrides one stream's path. `CONTEXT_WATERMARK_LOG_PATH` → `context-watermark`; `DELEGATION_WATERMARK_LOG_PATH` → `delegation-watermark`; `ATELIER_CUSTODY_LOG_PATH` → `config-custody`; `HANDOFF_GUARD_LOG_PATH` → `handoff-guard`; `HANDOFF_SURFACER_LOG_PATH` → `handoff-surfacer`; `SUBAGENT_TELEMETRY_LOG_PATH` → `delegation`; `WORKTREE_ISOLATION_LOG_PATH` → `worktree-isolation`; `LIVE_WORKER_GIT_GUARD_LOG_PATH` → `live-worker-git-guard`; `MANAGER_PACKAGE_GATE_LOG_PATH` → `manager-package-gate`; `LANE_SNAPSHOT_LOG_PATH` → `lane-snapshot` |
+| `<HOOK>_LOG_PATH` | the hook's stream under the log root (see **Ledgers** below) | Overrides one stream's path. `CONTEXT_WATERMARK_LOG_PATH` → `context-watermark`; `DELEGATION_WATERMARK_LOG_PATH` → `delegation-watermark`; `ATELIER_CUSTODY_LOG_PATH` → `config-custody`; `HANDOFF_GUARD_LOG_PATH` → `handoff-guard`; `HANDOFF_SURFACER_LOG_PATH` → `handoff-surfacer`; `SUBAGENT_TELEMETRY_LOG_PATH` → `delegation`; `WORKTREE_ISOLATION_LOG_PATH` → `worktree-isolation`; `LIVE_WORKER_GIT_GUARD_LOG_PATH` → `live-worker-git-guard`; `MANAGER_PACKAGE_GATE_LOG_PATH` → `manager-package-gate`; `LANE_SNAPSHOT_LOG_PATH` → `lane-snapshot`; `BRANCH_ACTIVITY_LOG_PATH` → `branch-activity` |
 | `XDG_DATA_HOME` | `~/.local/share` | Base of the log root. Ignored when relative. |
 
 **These need a fresh session.** Unlike the activation file, `env` is read once at startup, so an
