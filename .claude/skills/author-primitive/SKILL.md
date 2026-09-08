@@ -23,26 +23,32 @@ python3 .claude/skills/author-primitive/scripts/scaffold.py agent <id> [--descri
 
 This creates:
 
-- **skill**: `primitives-core/skills/<id>/SKILL.md` + `README.md`, plus a `type: skill`
-  roster row appended to `primitives-core.yaml`.
-- **agent**: `primitives-core/agents/<id>.md`, plus a `type: agent` roster row.
+- **skill**: `primitives-core/skills/<id>/SKILL.md` + `README.md`, a `type: skill` roster
+  row, and a `plugins/solo-skills/skills/<id>` symlink — a fresh skill is dependency-free
+  by construction, so `solo-skills` is its derived home
+  (`scripts/check_solo_skills.py`: membership is derived, not curatorial).
+- **agent**: `primitives-core/agents/<id>.md`, plus a `type: agent` roster row. No
+  symlink — there is no assembly that derives agent membership.
 
 Both roster rows default `origin: authored`, `disposition: untriaged`,
-`targets: [claude-code]`. Fails loudly (no overwrite) if the id already exists on disk or
-in the roster.
+`targets: [claude-code]`. Fails loudly (no overwrite) if the id already exists on disk, in
+the roster, or (skill) in `plugins/solo-skills/skills/`.
 
 ## After scaffolding
 
-Write the real `SKILL.md`/agent body and README content, then run `make ci`. Shipping the
-primitive in a plugin is a separate, hand-authored step (ADR 0017: plugin membership is
-symlink assemblies, not a roster field) — add `skills/<id>` (or `agents/<id>.md`) to the
-chosen `plugins/<id>/` assembly and update the README's `## Install` line. A brand-new
-standalone skill with no plugin yet will fail `make symlinks`' solo-skills membership
-check until it is wired into a plugin (`solo-skills` for a dependency-free skill).
+Write the real `SKILL.md`/agent body and README content, then run `make ci`. If the skill
+should NOT ship solo, it must earn that by carrying a real dependency (a sibling skill
+path, an agent dispatch, a hook) or a `SYSTEM_EXEMPTIONS` entry in
+`scripts/check_solo_skills.py` — remove the symlink to match. Shipping in any OTHER plugin
+is a separate, hand-authored step (ADR 0017: membership is symlink assemblies, not a
+roster field) — add `skills/<id>` (or `agents/<id>.md`) to that `plugins/<id>/` assembly
+and add its `## Install` line. Shipping the `solo-skills` bump for real also needs a
+version bump there (`scripts/check_version_bump.py`, CI-only) — a human call at ship time.
 
 ## Removing a scaffolded primitive
 
 ```sh
-rm -rf primitives-core/skills/<id>      # or primitives-core/agents/<id>.md
+rm -rf primitives-core/skills/<id> plugins/solo-skills/skills/<id>  # skill
+rm -f primitives-core/agents/<id>.md                                # agent
 git checkout -- primitives-core.yaml    # restores the roster row byte-for-byte
 ```

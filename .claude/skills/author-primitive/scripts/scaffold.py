@@ -12,8 +12,11 @@ import os
 import re
 import sys
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+# this file lives 4 levels under the repo root: .claude/skills/author-primitive/scripts/
+_HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.abspath(os.path.join(_HERE, "..", "..", "..", ".."))
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
+SOLO_SKILLS_LINK_DIR = os.path.join(REPO, "plugins", "solo-skills", "skills")
 ID_RX = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 
 DEFAULT_DESCRIPTION = "TODO — describe what this does and when to use it."
@@ -39,10 +42,14 @@ TODO — the asks or events that invoke it, in user phrasing.
 
 ## Install
 
-Not yet added to a plugin assembly. Shipping it in a plugin is a separate, hand-authored
-step (CONTRIBUTING.md: "Shipping a primitive in another plugin = one more symlink in that
-assembly + nothing else") — add `skills/{id}` to the chosen `plugins/<id>/` and update this
-section with the resulting `claude plugin install <id>@dotfiles-agents` line(s).
+```
+claude plugin install solo-skills@dotfiles-agents
+```
+
+Shipping it in another plugin too is a separate, hand-authored step (CONTRIBUTING.md:
+"Shipping a primitive in another plugin = one more symlink in that assembly + nothing
+else") — add `skills/{id}` to the chosen `plugins/<id>/` and add its
+`claude plugin install <id>@dotfiles-agents` line here.
 """
 
 AGENT_MD = """---
@@ -107,7 +114,21 @@ def scaffold_skill(id_, description):
     with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as fh:
         fh.write(SKILL_README.format(id=id_))
     _append_roster(ROSTER_SKILL_ENTRY.format(id=id_))
+
+    # A freshly scaffolded skill is dependency-free by construction, so solo-skills is its
+    # derived home (scripts/check_solo_skills.py: membership is derived, not curatorial).
+    link = os.path.join(SOLO_SKILLS_LINK_DIR, id_)
+    if os.path.lexists(link):
+        _fail(f"{link} already exists")
+    os.symlink(os.path.join("..", "..", "..", "primitives-core", "skills", id_), link)
+
     print(f"scaffolded primitives-core/skills/{id_}/ (SKILL.md, README.md) + roster row")
+    print(f"linked plugins/solo-skills/skills/{id_} -> primitives-core/skills/{id_}")
+    print(
+        "shipping this for real also needs a plugins/solo-skills version bump "
+        "(scripts/check_version_bump.py, CI-only, not in make ci) — a semantic call for a "
+        "human to make at ship time, not this script"
+    )
 
 
 def scaffold_agent(id_, description):
