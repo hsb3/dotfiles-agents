@@ -4,12 +4,13 @@
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-check: ## Roster <-> disk drift guard (provenance-manifest schema, ADR 0017) + catalog <-> README/marketplace guard + plugin-README diagram guard + per-unit README gate + README-currency gate
+check: ## Roster <-> disk drift guard (provenance-manifest schema, ADR 0017) + catalog <-> README/marketplace guard + plugin-README diagram guard + per-unit README gate + README-currency gate + cross-bundle skill-citation gate
 	@python3 scripts/check_roster.py
 	@python3 scripts/check_catalog.py
 	@python3 scripts/check_plugin_diagrams.py
 	@python3 scripts/check_readmes.py
 	@python3 scripts/check_readme_currency.py
+	@python3 scripts/check_skill_refs.py
 
 identity: ## Entry-gate floor: identity-neutrality lint (no name/org/repo/issue in shipped bodies)
 	@python3 scripts/check_identity.py
