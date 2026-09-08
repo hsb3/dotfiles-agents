@@ -102,10 +102,19 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   that (`tests/test_nested_worktree_edits.py` pins both as allow-or-visible-deny). Two more
   edges of the same guard: a `git` command it cannot statically prove stays in-tree is refused
   whole (`too complex to verify`), and it reads the command TEXT, so a heredoc merely
-  *containing* such a command is refused too — write that file with the Write tool. And an
-  agent resumed after its worktree was removed has `pwd` and `git rev-parse --show-toplevel`
-  silently re-resolve to the DISPATCHER's tree, with the guard then naming that tree as the
-  one it is isolated in.
+  *containing* such a command is refused too — write that file with the Write tool.
+- **Rule (2026-09-08): remove a worker's worktree only after its last message; once removed,
+  never resume that worker again.** A resumed orphan's `pwd` and `git rev-parse
+  --show-toplevel` silently re-resolve to the DISPATCHER's tree, with no error, and the guard
+  then names that tree as the one the agent is isolated in — so an obedient agent would write
+  there. Two facts drive the rule: **(a)** removal is not always a deliberate operator act — an
+  unchanged worker worktree is auto-removed by the harness on completion, so the orphan state
+  can arrive without anyone choosing it; **(b)** the resumed agent is not merely disoriented,
+  it is aimed at the dispatcher's own tree and branch. Reproduced twice: 2026-09-07 (probe,
+  PR #484) and 2026-09-08 (live, this repo). Owner ruling 2026-09-08: this is reasonable
+  default harness behavior, not a defect — do not file it upstream. The practical defense is
+  committing to your own branch as you go: a worker's committed work survives its worktree
+  being removed; uncommitted work does not.
 
 ## Editing this repo
 

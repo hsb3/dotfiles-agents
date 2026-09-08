@@ -90,6 +90,11 @@ as proof.
   not even a one-liner — a manager fix was silently reverted when its builder finished
   and wrote the file it owned. Queue the edit on your punch list for after the
   completion notification, or fold it into that worker as an amendment.
+- **Retire a worker only in this order: integrate, confirm no further resume, then
+  remove.** Read out or merge its committed result first, confirm you will not need to
+  send it another amendment, and only then let its worktree go — reversing the order
+  risks resuming an agent whose workspace has already changed hands (`waiting.md`,
+  "Retiring a worker's worktree").
 
 ## Waiting — never on something that cannot arrive
 
