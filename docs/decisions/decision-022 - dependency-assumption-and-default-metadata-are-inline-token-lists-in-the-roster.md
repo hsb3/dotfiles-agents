@@ -2,10 +2,11 @@
 id: decision-022
 title: dependency, assumption and default metadata are inline token lists in the roster
 date: '2026-09-08'
-status: proposed
+status: accepted
 ---
-`status: proposed` — a ballot, not law (`docs/decisions/README.md:27-28`). Nothing here is
-implemented: no roster row, no gate, no script changed.
+`status: accepted` — accepted by owner sign-off 2026-09-08 (item A): `assumes:` becomes an
+optional roster field. **Nothing here is implemented yet.** No roster row, no gate and no script
+has changed; the four passes this record scopes under "Migration" are the work that follows.
 
 ## Context
 
@@ -387,7 +388,7 @@ that point it is not paying for itself; or a real assumption appears needing str
 token cannot carry, at which point the honest move is to replace `parse_roster` for every consumer
 at once rather than smuggle a nested block past a line parser that drops it silently.
 
-## Open question for the owner
+## Open question for the owner — answered 2026-09-08
 
 **Adopt `assumes:` as a new optional roster field alongside `requires:`, or leave dependency and
 assumption metadata in the bodies, discoverable only by reading them?**
@@ -395,3 +396,7 @@ assumption metadata in the bodies, discoverable only by reading them?**
 The vote is on the field existing, not on the token grammar, which can be amended as subjects
 accumulate. Yes commits to the four passes above. No is defensible; its cost is that Q2, Q3 and
 Q4 stay unanswerable without opening 74 files one at a time.
+
+**Answer: yes, adopt the field.** Owner sign-off 2026-09-08, item A, which commits to the four
+passes above. The question is kept rather than deleted because it is the provenance of the vote —
+what was actually put, and what a no would have cost.
