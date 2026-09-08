@@ -182,8 +182,10 @@ from the tree the *edited file* sits in before it consults `CLAUDE_PROJECT_DIR`,
 sets on the hook process to the main checkout even for an isolated worker. So if you **track** this
 file, a worktree is held to the version committed on its own branch — read at that worktree's
 `HEAD`, so an uncommitted edit to it changes nothing and an untracked copy governs nothing. A
-permissive copy **committed** there does un-govern that worktree, deliberately: the change is
-diffable and a reviewer sees it. It reaches no further, because policy is resolved from the tree
+permissive copy **committed** there does un-govern that worktree, deliberately: the change is a
+commit rather than a live edit. Read that as "whatever commit the worktree's `HEAD` resolves to",
+not "the branch you will review" — a detached `HEAD` is not the branch tip. It reaches no further,
+because policy is resolved from the tree
 the edited file sits in and nothing else — an edit aimed at the main checkout or at a second
 worktree is judged by that tree's copy. Full precedence order in
 [`hooks/config-custody/README.md`](hooks/config-custody/README.md).
