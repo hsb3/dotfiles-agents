@@ -7,6 +7,8 @@ the network boundary stubbed. The live check is a CI step and `make vendored-dri
 Stdlib-only; every fixture is a tempdir, never under primitives-core/.
 """
 
+import contextlib
+import io
 import os
 import sys
 import tempfile
@@ -122,9 +124,16 @@ class StatusClassification(unittest.TestCase):
         self.assertEqual(status, "diverged")
         self.assertIn("only upstream", detail)
 
-    def test_unreachable_upstream_skips_rather_than_failing(self):
-        """A network blip is not evidence of drift; hard-failing on one blocks every PR."""
-        self.assertEqual(self._run({}, fetch="no_net")[0], "skipped")
+    def test_unreachable_upstream_is_red_not_a_skip(self):
+        """A gate that cannot measure is red, never green (decision-016 point 4).
+
+        The message still has to acquit `base/` — nothing was compared, so this is not
+        evidence of drift, and a reader must not go hunting for a hand-edit.
+        """
+        status, detail = self._run({}, fetch="no_net")
+        self.assertEqual(status, "unreachable")
+        self.assertIn("NOT evidence of drift", detail)
+        self.assertIn("could not measure", detail)
 
     def test_reachable_upstream_missing_ref_is_not_found(self):
         """Distinct from a blip: the host answered and the ref is gone."""
@@ -137,6 +146,55 @@ class StatusClassification(unittest.TestCase):
 
     def test_unpinned_subtree_is_not_found(self):
         self.assertEqual(D.drift_status(self.entry, {}, tempfile.mkdtemp())[0], "not_found")
+
+
+class MainExitCode(unittest.TestCase):
+    """main()'s exit CODE on an unreachable upstream — the exit code is the verdict.
+
+    Every network boundary is stubbed at the module level, so nothing here opens a socket.
+    """
+
+    def setUp(self):
+        self.saved = (D.REPO, D.parse_roster, D._externals_paths,
+                      D._fetch_at_ref, D._upstream_head)
+        self.tmp = tempfile.mkdtemp()
+        src = os.path.join(self.tmp, "primitives-core", "skills", "thing")
+        os.makedirs(os.path.join(src, "base"))
+        _tree(os.path.join(src, "base"), {"SKILL.md": "vendored\n"})
+        D.REPO = self.tmp
+        self.entry = {"id": "thing", "source": "primitives-core/skills/thing",
+                      "origin": "vendored", "upstream": "https://example.invalid/x",
+                      "ref": "a" * 40}
+        D.parse_roster = lambda path: [self.entry]
+        D._externals_paths = lambda: {(self.entry["upstream"], self.entry["ref"]): ""}
+        D._upstream_head = lambda upstream, dest: self.entry["ref"]
+
+    def tearDown(self):
+        (D.REPO, D.parse_roster, D._externals_paths,
+         D._fetch_at_ref, D._upstream_head) = self.saved
+
+    def _main(self, fetch):
+        def fake_fetch(upstream, ref, dest):
+            if fetch == "ok":
+                os.makedirs(dest, exist_ok=True)
+                _tree(dest, {"SKILL.md": "vendored\n"})
+            return fetch
+        D._fetch_at_ref = fake_fetch
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = D.main()
+        return rc, buf.getvalue()
+
+    def test_unreachable_upstream_exits_one(self):
+        rc, out = self._main("no_net")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("\u2717", out)
+        self.assertIn("NOT evidence of drift", out)
+
+    def test_reachable_matching_upstream_still_exits_zero(self):
+        rc, out = self._main("ok")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("\u2713", out)
 
 
 if __name__ == "__main__":

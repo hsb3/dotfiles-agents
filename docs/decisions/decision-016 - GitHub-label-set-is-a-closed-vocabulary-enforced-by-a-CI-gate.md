@@ -29,19 +29,12 @@ Owner ruling, 2026-09-07 (on `z1xy`):
    an existing job rather than getting its own because `dev`'s branch protection pins
    required checks by job NAME. Same placement, same two reasons, as `check_version_bump.py`
    and `check_vendored_drift.py`.
-4. **A gate that cannot measure is red, never green.** (This point is not part of the
-   `z1xy` ruling: the coordinating session applied it before merge from the repo's standing
-   rules, invariants belong in the gate and enabled means intended; whether the two older
-   network gates follow is card `x8nf`.) Every failure to read the live set
-   exits 1 — `gh` missing from PATH, `gh` failing against a host that answered, and an
-   unreachable `api.github.com` alike. This diverges from `check_version_bump.py` and
-   `check_vendored_drift.py`, which skip an unreachable remote with a notice and exit 0.
-   The reason is what a CI summary shows: a step that exits 0 having measured nothing is
-   indistinguishable there from one that measured and found the set clean, and a green
-   check nobody can distinguish from a real one is worse than no check. The failure
-   message still names which of the three it hit, and the unreachable one says outright
-   that it is not evidence of drift. The cost is a re-run on a network blip; that is the
-   cheaper mistake.
+4. **A gate that cannot measure is red, never green** — every CI-only gate here exits 1 when
+   it cannot read what it checks, naming which failure it hit and saying outright that it is
+   not evidence of drift, because a step that exits 0 having measured nothing is
+   indistinguishable in the CI summary from one that measured and found nothing wrong —
+   extended to the skip-and-pass holdouts `check_version_bump.py` and
+   `check_vendored_drift.py` by owner ruling 2026-09-08 on card `x8nf`.
 5. The vocabulary is declared as a constant in the checker. No new tracked config file:
    nothing generated is tracked (ADR 0017), and a one-line YAML would be a file that exists
    only to be read by one script.

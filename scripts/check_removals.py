@@ -48,14 +48,14 @@ equally unavailable because `dev`'s branch protection pins required checks by jo
 new one would strand every open PR on a check that never reports. Same placement, same two
 reasons, as `check_version_bump.py`, `check_vendored_drift.py` and `check_labels.py`.
 
-Network contract — an unreadable published tree is RED, and this DIVERGES from
-`check_version_bump.py` / `check_vendored_drift.py`, which skip with a notice and exit 0.
-decision-016 point 4: a gate that cannot measure is red, never green — a step that exits 0
-having measured nothing is indistinguishable in the CI summary from one that measured and
-found nothing missing. The failure names which case it hit and says outright that it is not
-evidence of a removal, so nobody goes hunting for one. A fetch that fails while a cached
-`origin/main` still resolves is NOT that case: something real was compared, so it warns and
-proceeds. The cost of the ruling is a re-run on a network blip; that is the cheaper mistake.
+Network contract — an unreadable published tree is RED, the same house rule every CI-only
+gate here follows (decision-016 point 4): a gate that cannot measure is red, never green,
+because a step that exits 0 having measured nothing is indistinguishable in the CI summary
+from one that measured and found nothing missing. The failure names which case it hit and
+says outright that it is not evidence of a removal, so nobody goes hunting for one. A fetch
+that fails while a cached `origin/main` still resolves is NOT that case: something real was
+compared, so it warns and proceeds. The cost of the ruling is a re-run on a network blip;
+that is the cheaper mistake.
 
 Deliberately NOT covered: whether a removal was a GOOD idea (that is review), whether the
 declaring sentence is honest (see above), a unit renamed rather than removed (it reads as one

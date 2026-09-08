@@ -35,13 +35,11 @@ pins required checks by job NAME, so adding one would strand every open PR on a 
 that never reports. Same placement, and for the same two reasons, as
 `scripts/check_version_bump.py` and `scripts/check_vendored_drift.py`.
 
-Network and tooling contract — EVERY failure to read the live set is RED, and this gate
-deliberately diverges from `check_version_bump.py` and `check_vendored_drift.py` here.
-Those two skip an unreachable remote with a notice and exit 0. House rule, applied
-2026-09-07 (decision-016 point 4; gate consistency is card x8nf): a gate that cannot
-measure is red, never green. A step that exits 0
-having measured nothing is indistinguishable in the CI summary from one that measured and
-found the set clean, and the whole cost of that ruling is a re-run when the network blips.
+Network and tooling contract — EVERY failure to read the live set is RED, the same house
+rule every CI-only gate here follows (decision-016 point 4): a gate that cannot measure is
+red, never green, because a step that exits 0 having measured nothing is indistinguishable
+in the CI summary from one that measured and found the set clean, and the whole cost of
+that ruling is a re-run when the network blips.
 
   gh missing from PATH        exit 1. "A missing tool is a failed gate, never a skipped
                               one" — a machine that cannot run the check must not report

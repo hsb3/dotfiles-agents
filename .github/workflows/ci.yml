@@ -62,8 +62,8 @@ jobs:
       # `make ci` because it needs network to reach origin/main and `make ci` is offline +
       # zero-install by design; and rather than a job of its own because dev's branch
       # protection pins required checks by job NAME (a new one would strand open PRs on a
-      # check that never reports). It fetches origin/main itself and exits 0 with a notice
-      # when that ref is unreachable, so a network blip does not block every PR.
+      # check that never reports). It fetches origin/main itself and is RED when that ref
+      # cannot be read at all: a gate that cannot measure is red (decision-016 point 4).
       - name: version-bump gate (published bytes vs origin/main)
         run: python3 scripts/check_version_bump.py
       # Removal gate (card 7sv8): a unit published on origin/main and absent from this tree
@@ -71,18 +71,18 @@ jobs:
       # removal moves no version, breaks no symlink and orphans no roster entry, so the
       # version-bump gate above says outright that it does not cover one. Rides this job for
       # the same two reasons as the gates around it (needs network to reach origin/main; dev's
-      # branch protection pins required checks by job NAME). UNLIKE the two gates above it does
-      # NOT skip-and-pass on an unreadable published tree: that is red (decision-016 point 4),
-      # and the failure says outright that it is not evidence of a removal. Needs this job's
-      # fetch-depth: 0 — the declaration is read from the commit that deleted the unit.
+      # branch protection pins required checks by job NAME). An unreadable published tree is
+      # red here as everywhere (decision-016 point 4), and the failure says outright that it
+      # is not evidence of a removal. Needs this job's fetch-depth: 0 — the declaration is
+      # read from the commit that deleted the unit.
       - name: removal gate (published units absent here must be declared)
         run: python3 scripts/check_removals.py
       # Vendored-drift gate: every `origin: vendored` base/ against its pinned upstream ref
       # (docs/vendoring-rule.md). Rides this job for the same two reasons as the gate above
       # — it needs network to reach the upstream, and dev's branch protection pins required
-      # checks by job NAME. Skips an entry with a notice when the upstream is unreachable,
-      # so a network blip does not block every PR; a reachable upstream missing the ref, or
-      # a base/ that no longer matches, is red.
+      # checks by job NAME. An unreachable upstream is red (decision-016 point 4), naming
+      # itself as a gate that could not measure rather than as drift; a reachable upstream
+      # missing the ref, or a base/ that no longer matches, is red as drift.
       - name: vendored-drift gate (base/ vs pinned upstream ref)
         run: python3 scripts/check_vendored_drift.py
       # Label-vocabulary gate (decision-016): the repo's GitHub label set is CLOSED, so an
@@ -90,10 +90,9 @@ jobs:
       # and nothing else constrains what can appear there. Rides this job for the same two
       # reasons as the gates above: it needs `gh` plus network, which `make ci` (offline +
       # zero-install) cannot have, and dev's branch protection pins required checks by job
-      # NAME. UNLIKE the two gates above it does NOT skip-and-pass on an unreachable
-      # remote: every failure to read the live set is red, because a step that exits 0
-      # having measured nothing reads identically to one that measured and found the set
-      # clean (decision-016). A network blip costs a re-run — see scripts/check_labels.py.
+      # NAME. Every failure to read the live set is red, as in the gates above, because a
+      # step that exits 0 having measured nothing reads identically to one that measured
+      # and found the set clean (decision-016 point 4).
       - name: label-vocabulary gate (live labels vs the closed set)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
