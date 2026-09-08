@@ -90,6 +90,27 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   conclusion came from inferring via a YAML library instead.
 - **Run `git worktree list` at session start.** A stale worktree hides finished work while
   `git status` stays clean.
+- **Concurrent sessions on one branch are detected from a local ledger, not from a pushed
+  `coord/<date>` branch.** The 2026-07-27 field convention was a live `coord/<date>` branch of
+  empty marker commits, and it is **rejected here**: nothing in this repo mints a `coord/*`
+  branch. Pushing a marker at every session start wants network and push rights before any work
+  is planned, writes to shared repo state from a hook, leaves a branch per day to sweep, and only
+  ever helps a session that remembered to push. What ships instead is `branch-activity-surfacer`,
+  a `SessionStart` hook that records `(repo, branch, tip SHA, session id, ts)` and — before
+  writing its own row — warns when a prior row for the same repo and branch came from a different
+  session, naming the move `old -> new` with the commits, their authors, and the merged PR when
+  `gh` can find one.
+  **Naming:** the coordination surface is a ledger stream, so its name is that stream,
+  `branch-activity.jsonl` under `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/`;
+  the repo key is `git rev-parse --git-common-dir`, which makes a main checkout and its linked
+  worktrees one repo rather than several.
+  **Pruning:** the ledger is append-only and disposable. Reads are capped to the last
+  `BRANCH_ACTIVITY_MAX_BYTES` of the file and the peer warning ages out after
+  `BRANCH_ACTIVITY_PEER_TTL_SECONDS`, so nothing has to be swept and deleting the file costs
+  exactly one missed warning.
+  **The ceiling:** the ledger is per-machine, so "a session is live *right now* on the other Mac"
+  is not detected. The tip-move half still is — it is derived from git rather than from the
+  ledger, so a merge made anywhere surfaces as soon as this checkout has the commit.
 - **A worktree-isolated agent's cross-tree write is refused LOUDLY, but a relative path is
   not refused at all.** Probed on Claude Code 2.1.263 (2026-09-07) from a nested worktree,
   `CLAUDE_PROJECT_DIR` empty. An Edit or Write at an absolute path under the dispatcher's
