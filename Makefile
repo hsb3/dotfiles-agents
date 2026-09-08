@@ -71,6 +71,9 @@ vendored-drift: ## Vendored base/ vs pinned upstream ref (needs network; NOT in 
 labels: ## GitHub label set vs the closed vocabulary, decision-016 (needs gh + network; NOT in ci)
 	@python3 scripts/check_labels.py
 
+board-reconcile: ## Open GitHub issues vs the kata board; APPLY=1 closes stale mirrors (needs gh + the daemon; NOT in ci)
+	@python3 scripts/reconcile_github.py $(if $(APPLY),--apply,)
+
 harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
 	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q
 
