@@ -52,11 +52,12 @@ Doctrine is config selected by name, authored once here and never restated per u
 - **`voices/`** — register, id policy, numeric budgets, guidance. Voice doctrine runs as lint
   with rule ids — all errors at once, waivable per spec.
 
-A `.claude/comms.local.md` in a project sets house defaults (`theme`, `voice`, `repo`, and
-the narration provider `audio`) for every deck built inside it. Precedence: CLI flag > spec
-field > project local > type default. `narrate` drafts a script from the deck, you rewrite it
-as speech, and `--audio` renders it — macOS `say` by default, any other provider as a
-`{script}`/`{out}` command template, so a hosted voice never becomes a dependency.
+A `.claude/comms.local.md` in a project sets house defaults (`theme`, `voice`, `repo`, the
+narration provider `audio`, and `briefings_dir` to override the auto-detected briefings
+directory) for every deck built inside it. Precedence: CLI flag > spec field > project local >
+type default. `narrate` drafts a script from the deck, you rewrite it as speech, and `--audio`
+renders it — macOS `say` by default, any other provider as a `{script}`/`{out}` command
+template, so a hosted voice never becomes a dependency.
 
 ```sh
 python3 scripts/deliver.py types
@@ -64,6 +65,7 @@ python3 scripts/deliver.py check examples/morning-briefing/sample.spec.json
 python3 scripts/deliver.py build examples/morning-briefing/sample.spec.json --pdf /tmp/briefing.pdf
 python3 scripts/deliver.py narrate examples/morning-briefing/sample.spec.json --script /tmp/vo.txt
 python3 scripts/deliver.py narrate /tmp/vo.txt --audio /tmp/briefing.m4a   # macOS `say`
+python3 scripts/deliver.py briefings-dir .                                # resolved <briefings-dir>
 ```
 
 Composes with two sibling skills without replacing them: `pptx-themes` for the external decks,
