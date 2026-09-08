@@ -12,8 +12,9 @@ Status: active
 
 - Branch model: single trunk `main` (= upstream + our changes); `upstream/main` is the
   pristine reference, fetch-only, push-blocked (`push upstream` → DISABLED).
-- Sync: `git merge upstream/main` on demand — never rebase `main`. Lockfiles: take
-  upstream's, re-run the generator.
+- Sync: `git merge refs/remotes/upstream/main` on demand — the full refname, because a
+  local branch named `upstream/main` would resolve first and merge the wrong commits.
+  Never rebase `main`. Lockfiles: take upstream's, re-run the generator.
 - Every divergence commit is prefixed `fork:` and updates this ledger in the same commit.
 - Verify gate after every sync or fork change: {{VERIFY_GATE — e.g. "make restart && make health; manual poke at http://localhost:PORT"}}
 

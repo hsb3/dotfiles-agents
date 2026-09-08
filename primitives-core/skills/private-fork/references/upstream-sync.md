@@ -3,8 +3,8 @@
 ## Step 0 — Review (full tier: reviewing is mandatory, merging is optional)
 
 **Light tier:** on demand — before starting new fork work, or when upstream ships
-something wanted. Skim `git log --oneline main..upstream/main` and
-`git diff --stat main...upstream/main`; no ledger of verdicts required.
+something wanted. Skim `git log --oneline main..refs/remotes/upstream/main` and
+`git diff --stat main...refs/remotes/upstream/main`; no ledger of verdicts required.
 
 **Full tier:** fixed cadence (monthly, or when upstream tags a wanted release —
 whichever comes first). Run the digest script (`make upstream-review`), which covers
@@ -25,11 +25,15 @@ session may verdict everything and merge nothing; if nothing warrants adoption, 
 
 ## Merge
 
+Upstream refs are spelled in full (`refs/remotes/upstream/<branch>`) because
+`refs/heads/<name>` resolves first: a local branch named `upstream/main` would
+otherwise merge, and advance the mirror to, the wrong commits.
+
 Light tier:
 
 ```bash
 git fetch upstream
-git merge upstream/main        # merge, NOT rebase — trunk is published
+git merge refs/remotes/upstream/main   # merge, NOT rebase — trunk is published
 # resolve conflicts (below), run verify gate, then:
 git push origin main
 ```
@@ -39,11 +43,11 @@ Full tier:
 ```bash
 git fetch upstream
 git checkout <trunk> && git checkout -b uat
-git merge upstream/<branch>    # or cherry-pick the adopted subset
+git merge refs/remotes/upstream/<branch>   # or cherry-pick the adopted subset
 # resolve conflicts, run the FULL post-merge checklist, then promote:
 git checkout <trunk> && git merge uat && git push origin <trunk>
 git branch -d uat
-git checkout upstream-<branch> && git merge --ff-only upstream/<branch> && git checkout <trunk>
+git checkout upstream-<branch> && git merge --ff-only refs/remotes/upstream/<branch> && git checkout <trunk>
 ```
 
 Merge-commit message records what was merged: `merge upstream v1.2.15 (eb64ce0..b4d0090)`.

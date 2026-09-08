@@ -23,7 +23,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # ── CONFIG — edit per fork ────────────────────────────────────────────────────
-LOG_FILE="docs/upstream-review-log.md"
+LOG_FILE="docs/upstream-review-log.md"   # its Last-reviewed-upstream-commit: must be a SHA; a ref name there re-opens the shadow at the other end of the range
 # Full refname, not `upstream/{{BRANCH}}`: `refs/heads/<name>` resolves before
 # `refs/remotes/<name>`, so a local ref of that name would shadow the tracking ref.
 UPSTREAM_REF="refs/remotes/upstream/{{BRANCH}}"   # e.g. refs/remotes/upstream/main

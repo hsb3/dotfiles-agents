@@ -12,7 +12,7 @@ Last-reviewed-upstream-commit: {{SHA — the upstream commit the fork was create
 - Cadence and procedure live in the merge SOP (Step 0).
 - `scripts/upstream-digest.sh` (or `make upstream-review`) generates a pre-triaged
   digest of everything between the `Last-reviewed-upstream-commit:` watermark above and
-  `upstream/{{BRANCH}}`.
+  `refs/remotes/upstream/{{BRANCH}}` — the full refname the digest script resolves.
 - A review session fills the digest's Verdict column, pastes the finished block below
   (newest first), and advances the watermark line. **The watermark only advances when
   every commit in the range has a verdict.**
