@@ -27,13 +27,24 @@ Board bookkeeping can hide the opportunity: a session that claims one tracker ta
 work-list of one by construction. That is an artifact of how the work is recorded, not a property
 of the work `[untested]`.
 
+**So claim the epic, not each chain** (owner ruling, 2026-09-07). One claim goes on the parent or
+epic issue the concurrent chains hang under; each chain's own child card carries its own
+`work.branch`. One claim per wave rather than one per chain, and every chain's branch still
+discoverable from the card that owns it — the tracker stops arguing that the work-list is one item
+long, and no two chains contend over the same claim.
+
 ## The cap, and what bounds it
 
 **Two to three concurrent chains** `[untested]`. The bound is not machine capacity or dispatch
 limits — it is the strategist's own verification capacity. Every returning chain costs a
 spot-check of a criterion or two plus a gate run, and those land in the one context that never
-resets. Chains also return whenever they return, so packages arrive interleaved with each other
-and with escalations from chains still running.
+resets. Chains also return whenever they return, so packages arrive interleaved with each other.
+
+<!-- harness:claude-code -->
+Escalations interleave with them too: a live manager carries `SendMessage` and can reach the
+strategist mid-run, so a chain still running is a second source of arrivals and not merely a
+pending package.
+<!-- /harness -->
 
 That number is a working default reasoned from the argument above, not a measurement. Take fewer
 when two packages would be hard to tell apart on inspection, and never take more merely because

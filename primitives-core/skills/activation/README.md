@@ -13,6 +13,15 @@ activation file and a typo'd one are indistinguishable from the outside. `check`
 installed file through the hooks' own loader functions rather than parsing it itself, and
 exits nonzero on an inert key — a broken file becomes a failing command, not a hunch.
 
+## One key is Claude Code only
+
+`protected-branches:` is read by `worker-git-scope-guard`, which exists only here. The opencode
+port's activation parser does not read it and that bundle ships no git guard at all, so the key
+and its explanation sit in `<!-- harness:claude-code -->` blocks rather than in the shared key
+table — a GFM table cannot carry a harness marker, so that row lives below the table. Do not
+confuse it with `protected:`, the file-glob key, which both harnesses read. See
+`docs/atelier-parity.md`.
+
 ## Install
 
 ```
