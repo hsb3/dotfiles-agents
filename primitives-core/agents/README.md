@@ -64,8 +64,8 @@ vendored in-tree because `make ci` is offline by design and an in-tree catalog i
 an invented id detectable with no network:
 
 ```sh
-python3 scripts/check_model_tiers.py            # offline gate; the one wired into make ci
-python3 scripts/check_model_tiers.py --drift    # needs network; NOT in make ci
+make model-tiers                                # offline gate; the one wired into make ci
+make models-drift                               # needs network; NOT in make ci
 python3 scripts/check_model_tiers.py --refresh  # needs network; rewrites the projection
 ```
 
