@@ -95,6 +95,14 @@ not a real prerequisite), `no-priority` (the frozen kaneo children under `my1a` 
 Ignore `unlinked-ref` until kata-oversight `z6gb` filters its noise (closed cards named in prose,
 epics naming their own children).
 
+**`audit_issues.py` is the definition bar for this board; planning-desk's `conformance.py` is
+advisory** (owner ruling 2026-09-08, `bxer`). They disagree because they check different things:
+kata-audit reads a card's substance (a title that fits, acceptance text present, a prose dependency
+that should be a real edge, a priority), while conformance checks for named markdown HEADINGS —
+`Acceptance criteria` and `Dependencies & gates`, or `Close when` on an epic. A card can be fully
+buildable and still fail conformance for want of a heading, so conformance gates nothing here; use
+it when briefing a wave, where the headings are what a worker reads.
+
 <!-- BEGIN KATA (managed by `kata init --with-agents`) -->
 Kata is the system of record for intent.
 
