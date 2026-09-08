@@ -5,9 +5,8 @@ description: Use when writing a test, reviewing a test file or a test diff, enco
 
 # Test quality
 
-A test earns its place by failing. One that cannot name the production
-change that would break it is a green light wired to nothing: it costs a
-run on every commit and catches nothing on any of them.
+A test earns its place by failing: one that cannot name the production
+change that would break it pins nothing.
 
 ## The pre-write gate
 
@@ -34,6 +33,14 @@ A mutation the suite survives is a hole: fix the test, then revert the
 mutation. Apply this to the specific code the test names — a whole-file
 mutation run is a different and much slower tool.
 
+**On a defect, the defect is the mutation.** The test goes red against the
+unfixed production code, and red again when the fix is reverted. That pair
+is what "red observed" means; a suite inherited green earns the same check
+before anyone trusts it.
+
+Coverage counts lines executed, not behavior pinned. A covered line with no
+mutation that turns it red is uncovered in the only sense that matters.
+
 ## Four shapes that stay green forever
 
 - **Mocking the subject under test.** A double standing in for the thing
@@ -50,20 +57,3 @@ mutation run is a different and much slower tool.
   a route, an ORM persists a field, or a library validator rejects the
   wrong type tests the library, which is already tested. Test the branch
   you wrote, not the one they wrote.
-
-## When it runs
-
-Before writing tests; on any test diff under review; and on a defect,
-where the failing test comes first and is observed red — the pre-write
-gate plus one mutation is the bar for what "red observed" means. A suite
-inherited green gets the mutation check before anyone trusts it.
-
-## Guardrails
-
-- Never weaken a test, loosen an assertion, or lower a threshold to make a
-  suite pass. A test that cannot be made to fail on purpose is deleted or
-  rewritten, not relaxed.
-- Report a hole found in a test you do not own as a finding, with the
-  mutation that survived; do not silently patch it mid-task.
-- Coverage counts lines executed, not behavior pinned. A covered line with
-  no mutation that turns it red is uncovered in the only sense that matters.

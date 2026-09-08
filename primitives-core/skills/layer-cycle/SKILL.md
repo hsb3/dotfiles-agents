@@ -42,9 +42,9 @@ is a whole module and needs budgets, triage, and stop conditions.
      deeper defect hunting). This is the panel's reserved case, not the
      every-cycle default.
 3. **Triage** findings by type:
-   - `defect` → L2 fix brief: contract citation + the failing case,
-     encoded as a test first, red observed to the `test-quality` bar,
-     before the fix.
+   - `defect` → L2 fix brief: contract citation + the failing case, encoded
+     as a test first — red observed against the unfixed code, red again when
+     the fix is reverted. Fuller bar in `test-quality`.
    - `noise` → fold into one deletion-pass invocation.
    - `spec-hole` / `undeclared-commitment` → amend the contract. This is
      an L1 act — only this level edits the spec. Then decide whether the

@@ -8,8 +8,9 @@ that stay green no matter what the production code does.
 
 Use it when writing a test, reviewing a test file or a test diff, encoding a defect as a
 failing test before the fix, or when a suite is green and nobody can say what production
-change would break it. It is also the bar layer-cycle's defect branch cites for what "red
-observed" means.
+change would break it. On a defect the defect is the mutation: the test goes red against
+the unfixed code and red again when the fix is reverted, which is the bar layer-cycle's
+defect branch states for "red observed".
 
 ## Install
 
