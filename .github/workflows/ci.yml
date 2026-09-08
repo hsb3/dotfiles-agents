@@ -107,9 +107,8 @@ jobs:
       # hold in CI instead of only on an authenticated developer machine. It rides this
       # job for the same two reasons as the gates above (it needs `gh` plus network, and
       # dev's branch protection pins required checks by job NAME) and reuses this job's
-      # `issues: read`, which `gh label list` needs on a private repo. Like the label
-      # gate above and unlike the two before it, a read it cannot make is RED, not a
-      # skip (decision-016 point 4).
+      # `issues: read`, which `gh label list` needs on a private repo. As in every gate
+      # here, a read it cannot make is RED, not a skip (decision-016 point 4).
       - name: plugin-feedback default labels (live vs the target repo)
         env:
           PLUGIN_FEEDBACK_LIVE_TESTS: "1"
