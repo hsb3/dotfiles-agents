@@ -30,14 +30,26 @@ def _session_id():
     return f"test-session-{next(_SEQ)}"
 
 
-def _record(tool_name, sidechain=False):
+def _record(tool_name, sidechain=False, tool_input=None):
     rec = {
         "type": "assistant",
-        "message": {"content": [{"type": "tool_use", "name": tool_name, "input": {}}]},
+        "message": {
+            "content": [
+                {"type": "tool_use", "name": tool_name, "input": tool_input or {}}
+            ]
+        },
     }
     if sidechain:
         rec["isSidechain"] = True
     return rec
+
+
+def _bash(command):
+    return _record("Bash", tool_input={"command": command})
+
+
+def _skill(skill):
+    return _record("Skill", tool_input={"skill": skill})
 
 
 def _write_transcript(path, records):
@@ -169,6 +181,172 @@ class DelegationWatermarkTests(unittest.TestCase):
         payload_3 = self._payload(records_45, session_id=session_id)
         result_3 = _run_hook(payload_3, self.state_dir, self.log_path)
         self.assertIn("hookSpecificOutput", result_3.stdout)
+
+    def test_floor_only_session_stays_silent(self):
+        # A session that did nothing but merge-review, board triage and handoff:
+        # the never-delegated floor. 36 Bash calls, well past SOFT=25 under the
+        # pre-floor hook, and none of it is work a worker could have been given.
+        records = [_skill("atelier:merge-review")]
+        records += [
+            _bash(c) for c in (
+                "gh pr view 512",
+                "gh pr checks 512",
+                "gh pr diff 512",
+                "gh pr view 512 --json reviews,statusCheckRollup",
+                "git log --oneline -20",
+                "git diff origin/dev...HEAD --stat",
+                "git show 4ce1eaa",
+                "git fetch origin",
+                "git rev-list --count origin/dev..HEAD",
+                "make ci",
+                "gh run view 4211 --log-failed",
+                "git merge --ff-only feat/w3b",
+            )
+        ]
+        records.append(_skill("board-triage"))
+        records += [
+            _bash(c) for c in (
+                "kata list --open",
+                "kata show 02e7",
+                "kata show 8xyk",
+                "kata comment 02e7 'landed on the branch'",
+                "kata meta set 02e7 work.attention ok",
+                "kata label add 02e7 needs-review",
+                "kata ready",
+                "kata next",
+                "kata list --meta kaneo_task_number=41",
+                "kata show my1a",
+                "kata comment my1a 'children frozen'",
+                "kata schedule my1a -",
+            )
+        ]
+        records.append(_skill("atelier:handoff"))
+        records += [
+            _bash(c) for c in (
+                "git status --short",
+                "git branch --show-current",
+                "git worktree list",
+                "kata show 8xyk",
+                "kata comment 8xyk 'session wrap'",
+                "kata meta set 8xyk work.attention ok",
+                "git log --oneline -5",
+                "gh pr list --state merged --limit 5",
+                "git rev-parse HEAD",
+                "kata list --label handoff",
+                "git push origin HEAD",
+                "make help",
+            )
+        ]
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "")
+        self.assertEqual(_last_log_row(self.log_path)["streak"], 0)
+
+    def test_under_delegated_session_still_fires(self):
+        # The README's own zero-delegation calibration shape (80-103 solo calls,
+        # no dispatch, no floor marker). The floor rule must not mute this.
+        cycle = [
+            _record("Read"),
+            _record("Grep"),
+            _record("Edit"),
+            _bash("python3 -m unittest tests.test_thing"),
+            _bash("rg --files-with-matches watermark primitives-core"),
+            _record("Write"),
+        ]
+        records = [cycle[i % len(cycle)] for i in range(93)]
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hookSpecificOutput", result.stdout)
+        self.assertEqual(_last_log_row(self.log_path)["streak"], 93)
+
+    def test_interleaved_floor_skill_cannot_hide_labor(self):
+        # Regression: while a floor Skill reset the streak, touching the board
+        # every 24 edits kept 288 genuine labor calls permanently silent. Floor
+        # work never resets — it only fails to count.
+        records = []
+        for _ in range(12):
+            records += [_record("Edit") for _ in range(24)]
+            records.append(_skill("board-triage"))
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hookSpecificOutput", result.stdout)
+        self.assertEqual(_last_log_row(self.log_path)["streak"], 288)
+
+    def test_floor_head_with_labor_subcommand_counts(self):
+        # Regression: a bare-head match made `kata create`, `gh workflow run`
+        # and `make deploy` free. Only the review/coordination subcommands of a
+        # floor head are floor.
+        records = [_bash(f"kata create 'issue {i}' --priority p2") for i in range(30)]
+        records += [_bash("gh workflow run deploy.yml") for _ in range(30)]
+        records += [_bash("make deploy") for _ in range(30)]
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hookSpecificOutput", result.stdout)
+        self.assertEqual(_last_log_row(self.log_path)["streak"], 90)
+
+    def test_gh_api_mutation_is_not_floor(self):
+        # `gh api graphql` is the second non-flag token, so noun-verb matching
+        # keeps a GraphQL mutation out of the floor.
+        records = [
+            _bash("gh api graphql -f query='mutation { serviceConnect }'")
+            for _ in range(30)
+        ]
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertIn("hookSpecificOutput", result.stdout)
+
+    def test_malformed_tool_input_does_not_abort_scan(self):
+        # An `input` that is not a dict must not throw out of the per-block loop:
+        # the exception used to escape to main() and silently abandon the whole
+        # scan, losing every genuine call in the transcript.
+        records = [_record("Bash", tool_input=["not", "a", "dict"])]
+        records.append(_record("Bash", tool_input="a bare string"))
+        records += [_record("Edit") for _ in range(30)]
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hookSpecificOutput", result.stdout)
+        row = _last_log_row(self.log_path)
+        self.assertNotIn("error", row)
+        self.assertEqual(row["streak"], 32)
+
+    def test_mixed_floor_and_labor_command_counts(self):
+        # Conservative direction: a compound command that does real work behind a
+        # floor-looking head is labor, so the nudge stays honest.
+        records = [_bash("git status && python3 scripts/build.py") for _ in range(30)]
+        payload = self._payload(records)
+        result = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hookSpecificOutput", result.stdout)
+
+    def test_floor_commands_env_override(self):
+        records = [_bash("uv run pytest -q") for _ in range(30)]
+        payload = self._payload(records)
+
+        result_default = _run_hook(payload, self.state_dir, self.log_path)
+        self.assertIn("hookSpecificOutput", result_default.stdout)
+
+        payload_2 = self._payload(records)
+        result_override = _run_hook(
+            payload_2, self.state_dir, self.log_path,
+            extra_env={"DELEGATION_WATERMARK_FLOOR_COMMANDS": "uv,git"},
+        )
+        self.assertEqual(result_override.stdout.strip(), "")
+
+    def test_empty_floor_commands_override_means_no_floor(self):
+        # For a list, "" plainly means none — not "restore the default".
+        records = [_bash("kata list --open") for _ in range(30)]
+        payload = self._payload(records)
+        result = _run_hook(
+            payload, self.state_dir, self.log_path,
+            extra_env={"DELEGATION_WATERMARK_FLOOR_COMMANDS": ""},
+        )
+        self.assertIn("hookSpecificOutput", result.stdout)
+        self.assertEqual(_last_log_row(self.log_path)["streak"], 30)
 
     def test_fail_open_on_garbage_stdin(self):
         env = _sandbox_env(self.state_dir, self.log_path)

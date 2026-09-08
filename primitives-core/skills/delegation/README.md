@@ -61,11 +61,14 @@ implying containment it does not have.
 
 ## Reading the evidence
 
-Every rule carries a provenance tag: `[lab]` and `[cost]` were measured, `[field]` was
-observed in practice but not reproduced under measurement, and `[untested]` is reasoning.
-`references/provenance.md` maps each rule to what backs it. The ranking is part of the
-doctrine: `[field]` outranks `[untested]` and never outranks the measured two, and no tag is
-ever defended as a stronger one than it carries.
+Every rule carries a provenance tag: `[lab]` and `[cost]` were measured, `[measured]` was
+reproduced under controlled measurement outside the lab rig, `[field]` was observed in practice
+but not reproduced under measurement, and `[untested]` is reasoning. `references/provenance.md`
+maps each rule to what backs it. The ranking is part of the doctrine: `[field]` outranks
+`[untested]`; `[measured]` outranks `[field]` but lacks the cross-round comparability `[lab]`
+carries; and no tag is ever defended as a stronger one than it carries. A run that measured
+something but did not settle the rule it aimed at is recorded there as inconclusive, keeping its
+old tag — an experiment is not an upgrade.
 
 ## Install
 

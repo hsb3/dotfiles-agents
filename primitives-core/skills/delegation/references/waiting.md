@@ -61,12 +61,12 @@ your report is the only thing you can send, and it is sent by finishing.
 ## Where a worker's completion actually goes
 
 **A worker's completion reaches the agent that dispatched it only if that agent is still mid-turn
-when the worker finishes** `[field]`. An agent whose turn has already ended is never re-invoked by
+when the worker finishes** `[measured]`. An agent whose turn has already ended is never re-invoked by
 its child's completion. Delivery is therefore a race against the dispatcher's own turn ending, and
 a manager that dispatches in the background and then stops talking loses it by construction. This
-was established by a controlled headless probe rather than by unreproduced observation, so the
-`[field]` tag understates the evidence behind it — but the probe ran on one harness, so the
-mechanism it measured is recorded as that harness's rather than as doctrine.
+was established by a controlled headless probe rather than by unreproduced observation — but the
+probe ran on one harness, so the mechanism it measured is recorded as that harness's rather than as
+doctrine.
 
 <!-- harness:claude-code -->
 **The mechanism, measured here.** Every completion is enqueued to the top-level session first and
@@ -87,7 +87,7 @@ only in what the manager was doing at that moment:
 
 **So never let a completion notification be the thing you are blocked on.**
 
-- **Dispatch synchronously unless you actually need concurrency** `[field]`. A synchronous
+- **Dispatch synchronously unless you actually need concurrency** `[measured]`. A synchronous
   dispatch hands the worker's result back as an ordinary tool result — no queue, no notification,
   no race — and it is the only route measured on this harness to deliver every time. It is the
   default; a background dispatch is the deviation and needs a reason.
@@ -106,7 +106,7 @@ relays the report down, in full and verbatim, to the manager that dispatched the
 manager's own channel. This is the field workaround already in use, and it stays the recovery
 path for a race that has already been lost `[field]`.
 
-**A manager's word that "the result came back" is not evidence** `[field]`. In the probe the
+**A manager's word that "the result came back" is not evidence** `[measured]`. In the probe the
 manager reported the expected result while already holding that same text in its own briefing, so
 its line would have read identically had nothing been delivered. Delivery is proven by the
 receiving transcript's record of it, never by the receiver's summary — the evidence ranking in
@@ -223,6 +223,39 @@ every owned list it has handed out. While a worker you dispatched holds a file:
 The same rule read upward: the strategist does not edit inside a live manager's chain either,
 and does not commit while any dispatch is in flight — a commit taken mid-run captures whatever
 the tree happened to be, including a half-applied edit or a worker's sabotage fixture `[field]`.
+
+## Retiring a worker's worktree
+
+**Do not remove a worker's workspace while it may still be resumed, and once removed, never
+resume that worker again** `[field]`. The two halves are the same rule read from either end:
+tear-down and "can this worker still answer" end together, in that order — resuming into a
+workspace whose custody has already changed hands is what produces an orphan.
+
+<!-- harness:claude-code -->
+Concretely: remove a worker's worktree only after its last message, and once removed, never
+`SendMessage` that agent again.
+<!-- /harness -->
+
+**A removed workspace is not always a deliberate act.** An unchanged worker workspace is
+auto-removed by the harness when that worker finishes, with nobody choosing it — the orphan
+state can arrive from ordinary completion, not only from an operator tearing one down early.
+
+**A resumed orphan is not merely disoriented — it is aimed at the dispatcher's own workspace.**
+
+<!-- harness:claude-code -->
+Its `pwd` and `git rev-parse --show-toplevel` silently re-resolve to the DISPATCHER's tree and
+branch, with no error, and the worktree-isolation guard then names that tree as the one it is
+"isolated in." An agent that trusts those readings and proceeds writes into a tree its
+dispatcher is actively using. Reproduced twice (2026-09-07, 2026-09-08) on Claude Code 2.1.263.
+This is reasonable default harness behavior, not a defect — do not file it upstream; design
+around it instead.
+<!-- /harness -->
+
+**The practical consequence is why the order is integrate, confirm no further resume, then
+remove:** a worker that commits its own work to its own branch survives having its workspace
+removed — the commit is durable, independent of the tree — while a worker that leaves work
+uncommitted does not. Integrate the worker's committed result first, confirm you will not need
+to resume that worker again, and only then remove its workspace.
 
 ## The reports, walked
 

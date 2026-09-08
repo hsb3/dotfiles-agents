@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "DELEGATION_WATERMARK_SOFT=\"${DELEGATION_WATERMARK_SOFT:-25}\" DELEGATION_WATERMARK_REFIRE_EVERY=\"${DELEGATION_WATERMARK_REFIRE_EVERY:-15}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/delegation-watermark/hook.py\"",
+            "command": "DELEGATION_WATERMARK_SOFT=\"${DELEGATION_WATERMARK_SOFT:-25}\" DELEGATION_WATERMARK_REFIRE_EVERY=\"${DELEGATION_WATERMARK_REFIRE_EVERY:-15}\" DELEGATION_WATERMARK_FLOOR_COMMANDS=\"${DELEGATION_WATERMARK_FLOOR_COMMANDS:-kata,gh,make,git}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/delegation-watermark/hook.py\"",
             "statusMessage": "Checking delegation watermark...",
             "timeout": 10,
             "type": "command"
@@ -89,6 +89,17 @@
           {
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/session-handoff-surfacer/hook.py\"",
             "statusMessage": "Checking for a project handoff...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "LANE_SNAPSHOT_INTERVAL=\"${LANE_SNAPSHOT_INTERVAL:-180}\" LANE_SNAPSHOT_WORKTREES=\"${LANE_SNAPSHOT_WORKTREES:-.claude/worktrees/agent-*}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lane-snapshot/hook.py\"",
+            "statusMessage": "Starting the lane-snapshot daemon...",
             "timeout": 10,
             "type": "command"
           }

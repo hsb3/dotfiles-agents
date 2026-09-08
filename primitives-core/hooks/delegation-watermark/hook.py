@@ -37,6 +37,7 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only).
 
 import json
 import os
+import re
 import sys
 import traceback
 
@@ -74,6 +75,33 @@ DELEGABLE_TOOLS = {
 }
 DISPATCH_TOOLS = {"Task", "Agent"}
 
+# The never-delegated floor: work the doctrine assigns to the session itself, so
+# it is not retained labor. Detected from the transcript record — the tool name
+# and that call's own input — never from the model declaring its phase.
+#
+# Floor work never RESETS the streak, it only fails to count. A reset would let
+# any periodic floor call hide unbounded labor between them (measured: 12 cycles
+# of 24 edits + one board touch = 288 uncounted calls, silent forever).
+#
+# `kata` is a consuming-repo convention, hence the override
+# (docs/override-convention.md).
+FLOOR_COMMANDS_DEFAULT = "kata,gh,make,git"
+
+# Which subcommands of a floor head are actually coordination or review. The int
+# is which non-flag token to read: `gh` is noun-verb (`gh pr view`), so it is the
+# second, which is what keeps `gh workflow run` and `gh api graphql` labor. A
+# head with no entry here is floor for any subcommand — that is what makes the
+# override usable for a tracker other than kata.
+FLOOR_SUBCOMMANDS = {
+    "git": ({"status", "log", "diff", "show", "fetch", "branch", "worktree",
+             "rev-list", "rev-parse", "merge", "push"}, 1),
+    "gh": ({"view", "list", "checks", "diff", "status", "watch"}, 2),
+    "make": ({"", "ci", "test", "check", "help", "lint"}, 1),
+    "kata": ({"list", "show", "ready", "next", "board", "search", "comment",
+              "meta", "label", "schedule", "deadline"}, 1),
+}
+_SEGMENT_SPLIT = re.compile(r"[;&|\n]+")
+
 
 def _env_int(name, default):
     v = os.environ.get(name)
@@ -85,10 +113,66 @@ def _env_int(name, default):
         return default
 
 
+def _env_set(name, default):
+    """Comma-separated list knob. Unlike `_env_int`, an empty value is
+    meaningful: for a list it says "none", not "use the default"."""
+    raw = os.environ.get(name)
+    if raw is None:
+        raw = default
+    return {item.strip() for item in raw.split(",") if item.strip()}
+
+
 SOFT = _env_int("DELEGATION_WATERMARK_SOFT", SOFT_DEFAULT)
 REFIRE_EVERY = _env_int("DELEGATION_WATERMARK_REFIRE_EVERY", REFIRE_EVERY_DEFAULT)
 MAX_BYTES = _env_int("DELEGATION_WATERMARK_MAX_BYTES", MAX_BYTES_DEFAULT)
 STATE_DIR = os.environ.get("DELEGATION_WATERMARK_STATE_DIR") or STATE_DIR_DEFAULT
+FLOOR_COMMANDS = _env_set(
+    "DELEGATION_WATERMARK_FLOOR_COMMANDS", FLOOR_COMMANDS_DEFAULT
+)
+
+
+def _is_floor_command(command):
+    """True only when EVERY segment of the command is coordination/review shell.
+
+    A command that mixes floor and labor (`git status && python3 build.py`, or
+    anything with a substitution) counts as labor: the nudge is worth more kept
+    honest than kept quiet.
+    """
+    if not isinstance(command, str) or not command.strip():
+        return False
+    if "$(" in command or "`" in command:
+        return False
+    for segment in _SEGMENT_SPLIT.split(command):
+        tokens = segment.split()
+        if not tokens:
+            continue
+        if tokens[0] not in FLOOR_COMMANDS:
+            return False
+        allowed = FLOOR_SUBCOMMANDS.get(tokens[0])
+        if allowed and _positional(tokens[1:], allowed[1]) not in allowed[0]:
+            return False
+    return True
+
+
+def _positional(tokens, index):
+    """The index-th non-flag token, "" when absent.
+
+    `-C`/`-c` take a value, so `git -C <dir> status` and `make -C <dir> ci` read
+    their subcommand rather than the directory.
+    """
+    skip_next = False
+    seen = 0
+    for token in tokens:
+        if skip_next:
+            skip_next = False
+            continue
+        if token.startswith("-"):
+            skip_next = token in ("-C", "-c")
+            continue
+        seen += 1
+        if seen == index:
+            return token
+    return ""
 
 
 def _emit(obj):
@@ -162,6 +246,16 @@ def _scan(path):
                     dispatches += 1
                     streak = 0           # a dispatch resets the streak
                 elif name in DELEGABLE_TOOLS:
+                    tool_input = block.get("input")
+                    # `input` is not guaranteed to be a dict; a raised
+                    # AttributeError here escapes to main() and abandons the
+                    # whole scan, losing every call in the transcript silently.
+                    command = (
+                        tool_input.get("command")
+                        if isinstance(tool_input, dict) else None
+                    )
+                    if name == "Bash" and _is_floor_command(command):
+                        continue         # coordination shell: neither counts nor resets
                     delegable_total += 1
                     streak += 1
 
