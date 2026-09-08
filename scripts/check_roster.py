@@ -127,15 +127,27 @@ def parse_translation(path):
 
 
 def split_frontmatter(text):
-    """Split a `---`-delimited frontmatter block into (dict, body); raises on a file without."""
+    """Split a `---`-delimited frontmatter block into (dict, body); raises on a file without.
+
+    A YAML block sequence (`tools:` then `  - Read` lines) folds into the same comma-joined
+    string an inline `tools: Read, Bash` produces, so callers see one shape. Read as an empty
+    scalar instead, it would hand the permission inversion a WRONG answer, not a missing one.
+    """
     m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
     if not m:
         raise ValueError("agent file has no frontmatter block")
-    fm = {}
+    fm, seq_key = {}, None
     for line in m.group(1).splitlines():
-        km = re.match(r"^([A-Za-z_-]+):\s*(.*)$", line)
+        km = re.match(r"^([A-Za-z0-9_-]+):\s*(.*)$", line)
         if km:
-            fm[km.group(1)] = km.group(2).strip()
+            key, value = km.group(1), km.group(2).strip()
+            fm[key] = value
+            seq_key = None if value else key
+            continue
+        im = re.match(r"^\s+- (.*)$", line)
+        if im and seq_key:
+            item = im.group(1).strip()
+            fm[seq_key] = f"{fm[seq_key]}, {item}" if fm[seq_key] else item
     return fm, m.group(2)
 
 
@@ -171,6 +183,10 @@ def check_matrix_completeness(agents_dir=None, translation_path=None):
                 f"translation.yaml: tool_capabilities row {name!r} has capability "
                 f"{row.get('capability')!r} (must be one of {sorted(TOOL_CAPABILITIES)})")
     for row in tr["field_treatments"]:
+        if row.get("treatment") == "map" and not row.get("opencode"):
+            problems.append(
+                f"translation.yaml: field_treatments row {row.get('field')!r} is "
+                "`treatment: map` with no `opencode:` target key")
         if row.get("treatment") not in FIELD_TREATMENTS:
             problems.append(
                 f"translation.yaml: field_treatments row {row.get('field')!r} has treatment "

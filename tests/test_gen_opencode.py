@@ -7,6 +7,7 @@ guard, build determinism against the real roster (two temp builds must be byte-i
 the --out CLI contract, and check_roster's matrix-completeness gate.
 """
 
+import copy
 import json
 import os
 import shutil
@@ -126,6 +127,98 @@ class TestTransformAgent(unittest.TestCase):
 
     def test_notices_are_deterministic(self):
         self.assertEqual(self._t()[2], self._t()[2])
+
+
+class TestEveryDeclaredRowTravels(unittest.TestCase):
+    """A declared `map` row that the emitter has no branch for used to validate clean and
+    then vanish — a silent drop wearing a passing gate, which is what tdx3 exists to kill."""
+
+    def _with_row(self, **row):
+        tr = copy.deepcopy(TR)
+        tr["field_treatments"].append(row)
+        return tr
+
+    def test_map_row_outside_the_known_emitters_is_emitted(self):
+        tr = self._with_row(field="temperature", treatment="map", opencode="temperature")
+        out, problems, notices = G.transform_agent(
+            CC_AGENT.replace("effort: low", "temperature: 0.7"), tr, "scout")
+        self.assertEqual(problems, [])
+        self.assertIn("temperature: 0.7", out)
+
+    def test_map_row_with_no_target_key_is_a_problem(self):
+        tr = self._with_row(field="temperature", treatment="map")
+        _, problems, _ = G.transform_agent(
+            CC_AGENT.replace("effort: low", "temperature: 0.7"), tr, "scout")
+        self.assertTrue(any("temperature" in p for p in problems), problems)
+
+    def test_pinned_keys_keep_their_positions(self):
+        """description / mode / model / steps order is load-bearing; an extra map row
+        appends after them rather than shuffling the block."""
+        tr = self._with_row(field="temperature", treatment="map", opencode="temperature")
+        out, _, _ = G.transform_agent(
+            CC_AGENT.replace("effort: low", "temperature: 0.7"), tr, "scout")
+        head = out.split("---")[1].strip().splitlines()
+        self.assertEqual(head[:4], ["description: Read-only recon.", "mode: subagent",
+                                    "model: anthropic/claude-haiku-4-5", "steps: 15"])
+        self.assertEqual(head[4], "temperature: 0.7")
+
+    def test_empty_mapped_value_is_not_silence(self):
+        _, problems, _ = G.transform_agent(
+            CC_AGENT.replace("description: Read-only recon.", "description:"), TR, "scout")
+        self.assertTrue(any("description" in p for p in problems), problems)
+
+
+class TestFrontmatterParser(unittest.TestCase):
+    """split_frontmatter feeds BOTH the transform and the completeness gate, so a shape it
+    misreads is a wrong answer in two places at once."""
+
+    BLOCK = """---
+name: scout
+description: Read-only recon.
+model: haiku
+tools:
+  - Read
+  - Bash
+---
+
+Body.
+"""
+
+    def test_block_sequence_tools_are_parsed_not_read_as_empty(self):
+        fm, _ = CR.split_frontmatter(self.BLOCK)
+        self.assertEqual(fm["tools"], "Read, Bash")
+
+    def test_block_sequence_tools_reach_the_permission_map(self):
+        out, problems, _ = G.transform_agent(self.BLOCK, TR, "scout")
+        self.assertEqual(problems, [])
+        self.assertIn("read: allow", out)
+        self.assertIn("bash: allow", out)
+        self.assertIn("write: deny", out)
+
+    def test_block_sequence_tools_are_gated(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        with open(os.path.join(d, "drifter.md"), "w", encoding="utf-8") as fh:
+            fh.write(self.BLOCK.replace("  - Bash", "  - Telepathy"))
+        problems = CR.check_matrix_completeness(agents_dir=d)
+        self.assertTrue(any("Telepathy" in p for p in problems), problems)
+
+    def test_key_with_a_digit_is_not_invisible(self):
+        fm, _ = CR.split_frontmatter(CC_AGENT.replace("effort: low", "model2: opus"))
+        self.assertIn("model2", fm)
+
+    def test_key_with_a_digit_reaches_the_transform(self):
+        _, problems, _ = G.transform_agent(
+            CC_AGENT.replace("effort: low", "model2: opus"), TR, "scout")
+        self.assertTrue(any("model2" in p for p in problems), problems)
+
+    def test_key_with_a_digit_reaches_the_gate(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        with open(os.path.join(d, "drifter.md"), "w", encoding="utf-8") as fh:
+            fh.write(CC_AGENT.replace("effort: low", "model2: opus"))
+        problems = CR.check_matrix_completeness(agents_dir=d)
+        self.assertTrue(any("model2" in p for p in problems), problems)
 
 
 class TestSkillValidators(unittest.TestCase):

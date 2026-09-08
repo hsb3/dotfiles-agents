@@ -97,18 +97,43 @@ def _model_row(translation, alias):
     return next((r for r in translation["model_aliases"] if r.get("alias") == alias), None)
 
 
+def _resolve_model(translation, agent_id, model):
+    """A CC `model:` value -> the ref opencode needs. Returns (ref-or-None, problems, notices)."""
+    if "/" in model:
+        return model, [], []
+    row = _model_row(translation, model)
+    if row is None:
+        return None, [f"{agent_id}: model alias `{model}` has no translation.yaml "
+                      "model_aliases row — pin it or declare it unsupported"], []
+    if row.get("ref"):
+        return row["ref"], [], []
+    if row.get("opencode") == "unsupported":
+        return None, [], [f"{agent_id}: model `{model}` does not travel, so the agent runs on "
+                          f"opencode's default — {row.get('reason', 'no reason declared')}"]
+    return None, [f"{agent_id}: model_aliases row for `{model}` declares neither a `ref` "
+                  "nor `opencode: unsupported`"], []
+
+
+#: opencode keys whose position in the emitted block is pinned (byte-stability for the agents
+#: already laid down); every other declared `map` target appends after them, in field order.
+PINNED_KEYS = ("model", "steps")
+
+
 def transform_agent(text, translation, agent_id):
     """CC agent .md -> opencode agent .md, driven entirely by translation.yaml's matrix.
 
     Returns (text, problems, notices): anything the matrix does not name is a PROBLEM, and
     anything it declares does not travel is a printed NOTICE — never a silent drop
-    (decision-009). Notice order follows the frontmatter, so builds stay diff-identical.
+    (decision-009). Emission is driven FROM the `field_treatments` rows, so a declared `map`
+    row the emitter has no special case for still travels. Notice order follows the
+    frontmatter, so builds stay diff-identical.
     """
     fm, body = split_frontmatter(text)
     problems, notices = [], []
     rows = {r["field"]: r for r in translation["field_treatments"] if "field" in r}
+    values, tools = {}, ""
 
-    for key in fm:
+    for key, raw in fm.items():
         row = rows.get(key)
         if row is None:
             problems.append(
@@ -120,48 +145,49 @@ def transform_agent(text, translation, agent_id):
             problems.append(
                 f"{agent_id}: frontmatter key `{key}` is `treatment: unsupported` for "
                 f"opencode — {why}")
-        elif treatment == "drop-with-notice":
+            continue
+        if treatment == "drop-with-notice":
             notices.append(f"{agent_id}: dropped `{key}` — {why}")
-        elif treatment != "map":
+            continue
+        if treatment != "map":
             problems.append(
                 f"{agent_id}: frontmatter key `{key}` has unknown treatment {treatment!r}")
-
-    def target(field):
-        """The opencode key `field` maps to, or "" when the matrix does not carry it."""
-        row = rows.get(field) or {}
-        return row.get("opencode", "") if row.get("treatment") == "map" else ""
+            continue
+        to = row.get("opencode", "")
+        if not to:
+            problems.append(
+                f"{agent_id}: field_treatments row `{key}` is `treatment: map` with no "
+                "`opencode:` target key — nothing says where it lands")
+            continue
+        if to == "filename":
+            continue  # identity travels as agents/<id>.md, never as a key
+        if not raw:
+            problems.append(
+                f"{agent_id}: frontmatter key `{key}` is empty, so opencode's `{to}` would "
+                "be written blank — give it a value or drop the key")
+            continue
+        if to == "permission":
+            tools = raw
+        elif key == "model":
+            ref, mp, mn = _resolve_model(translation, agent_id, raw)
+            problems.extend(mp)
+            notices.extend(mn)
+            if ref:
+                values[to] = ref
+        else:
+            values[to] = raw
 
     out = ["---"]
-    if fm.get("description") and target("description"):
-        out.append(f"{target('description')}: {fm['description']}")
+    if "description" in values:
+        out.append(f"description: {values.pop('description')}")
     out.append("mode: subagent")
-
-    model, model_key = fm.get("model", "").strip(), target("model")
-    if model and model_key:
-        if "/" in model:
-            out.append(f"{model_key}: {model}")
-        else:
-            row = _model_row(translation, model)
-            if row is None:
-                problems.append(
-                    f"{agent_id}: model alias `{model}` has no translation.yaml "
-                    "model_aliases row — pin it or declare it unsupported")
-            elif row.get("ref"):
-                out.append(f"{model_key}: {row['ref']}")
-            elif row.get("opencode") == "unsupported":
-                notices.append(
-                    f"{agent_id}: model `{model}` does not travel, so the agent runs on "
-                    f"opencode's default — {row.get('reason', 'no reason declared')}")
-            else:
-                problems.append(
-                    f"{agent_id}: model_aliases row for `{model}` declares neither a `ref` "
-                    "nor `opencode: unsupported`")
-
-    if fm.get("maxTurns") and target("maxTurns"):
-        out.append(f"{target('maxTurns')}: {fm['maxTurns']}")
+    for key in PINNED_KEYS:
+        if key in values:
+            out.append(f"{key}: {values.pop(key)}")
+    out.extend(f"{k}: {v}" for k, v in values.items())
 
     granted, seen = {"read": False, "write": False, "bash": False}, []
-    for tool in (t.strip() for t in fm.get("tools", "").split(",")):
+    for tool in (t.strip() for t in tools.split(",")):
         if tool and tool not in seen:
             seen.append(tool)
     for tool in seen:
