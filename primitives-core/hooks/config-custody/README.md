@@ -55,34 +55,37 @@ activation file supplies the patterns (**policy**), and what the edited path is 
 Policy resolves in this order, first hit wins:
 
 1. `ATELIER_ACTIVATION_FILE` — an explicit override, never re-resolved.
-2. `.claude/atelier.local.md` in the linked worktree the **edited file** sits in.
-3. `.claude/atelier.local.md` in the linked worktree the payload `cwd` sits in — consulted only
-   for a **relative** tool path, which names no tree of its own.
-4. `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md`, falling back to the payload `cwd`'s.
-5. The **main checkout's** copy, when 4 holds no file and that dir is a linked worktree — asked via
+2. `.claude/atelier.local.md` in the linked worktree the **edited file** sits in, read at
+   `HEAD` — the version committed on that worktree's branch, via `git show`.
+3. `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` on disk, falling back to the payload `cwd`'s.
+4. The **main checkout's** copy, when 3 holds no file and that dir is a linked worktree — asked via
    `git rev-parse --git-common-dir`, so an activation file that is gitignored and therefore never
    travelled still governs the worktree it did not reach.
 
-Steps 2 and 3 fire only when that worktree holds a file of its own, and only step 5 spends a
-subprocess, so the ordinary case is unchanged on a hook that runs on every `Edit`/`Write`. With no
-`git` on `PATH`, behaviour is exactly what it was.
+Step 2 is tried only when that worktree holds a copy on disk, so a tree with no copy costs nothing
+extra; when it does hold one, the `git show` is one subprocess per `Edit`/`Write` (measured at
+~50 ms end to end on a live worktree, against a declared hook timeout of 10 s). Both subprocesses
+are bounded at 5 s and fail toward the next step, so with no `git` on `PATH` policy comes from
+step 3 on disk — which is where it came from before any of this resolution existed.
 
-A worktree's copy is read from disk, so on a clean tree it is read at the version committed on
-that branch — which is the point: the policy a reviewer sees on the branch is the policy the worker
-was held to. The residual is that an *uncommitted* edit to that file is read at its working-tree
-version; the hook reads no git objects.
+**The committed version is what governs, deliberately, and an uncommitted one has no effect at
+all.** Editing your own `.claude/atelier.local.md` is a permitted `Edit` in most projects, so
+reading it from disk would let a worker turn the gate off for the rest of the session with one
+tool call and no trace. Anything that is not a committed copy — untracked, deleted, unborn `HEAD`,
+no `git` — falls through to step 3, so the failure direction is always *toward* the upstream
+policy.
 
-**So a worker can un-govern its own tree** by committing a permissive activation file on its own
-branch — `enforce: off`, a shorter `protected:` list, or a file mangled past parsing, all of which
-mean "off". That is intended: policy inside a worktree belongs to that branch, and the change is
-committed, diffable, and visible in review, which prose in a brief is not. What it cannot do is
-reach further. An edit aimed at the main checkout, or at a second worktree, is judged by *that*
-tree's copy and never by the caller's.
+**A worker can still un-govern its own tree, by committing** a permissive activation file on its
+branch: `enforce: off`, a shorter `protected:` list, or a file mangled past parsing all mean "off"
+there. That is intended — policy inside a worktree belongs to that branch, and unlike a disk edit
+the change is a commit, diffable and visible in review. It reaches no further than that tree:
+policy is resolved from the worktree of the **edited file**, never from the caller's cwd, so an
+edit aimed at the main checkout or at a second worktree is judged by that tree's own policy.
 
 Jurisdiction is the second resolution, and it matters more often than it looks. Claude Code sets
 `CLAUDE_PROJECT_DIR` on the *hook process* even when the worker's own shell has none, and it points
 at the **main checkout** — so an isolated worker whose worktree carries no copy of its own is
-governed at step 4, with nothing below it firing. What breaks then is the pattern match:
+governed at step 3, with nothing below it firing. What breaks then is the pattern match:
 relativizing the edited file against the main checkout turns every path the worker touches into
 `.claude/worktrees/agent-<id>/Makefile`, which no project-relative pattern can match, silently
 exempting exactly the workers custody is aimed at.
