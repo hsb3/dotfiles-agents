@@ -15,6 +15,14 @@ exits nonzero on an inert key — a broken file becomes a failing command, not a
 key, `watermark`, overrides rather than arms: each sub-key it omits stays computed, so the
 report calls it inert only when nothing under it is readable at all.
 
+Reporting through the loaders is what keeps `check` honest, and the loaders now sit on one
+frontmatter parser (`hooks/_lib/atelier_local.py`) instead of seven private copies — so two
+hooks can no longer read the same key differently with no error on either side, which is the
+failure `check` exists to expose. Each hook still owns which BYTES it reads: `config-custody`
+governs a linked worktree by the copy committed on its branch, and the others fall back to the
+main checkout's copy, so `check` run in a worktree can legitimately differ from `check` run in
+the main tree.
+
 ## Two keys are Claude Code only
 
 `protected-branches:` is read by `worker-git-scope-guard`, which exists only here. The opencode
