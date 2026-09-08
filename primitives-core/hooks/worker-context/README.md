@@ -121,9 +121,10 @@ would record only that a constant string was emitted.
 - **Advisory still injects.** Telling workers the covenant costs nothing and is worth doing while
   `config-custody` is still gathering evidence in advisory mode; only the tool-layer sentence
   waits for `strict`.
-- **The activation parser is duplicated, on purpose.** Each hook directory is copied and symlinked
-  on its own, so a shared module would be a cross-hook import path that breaks the moment one hook
-  is installed without the other. Two short readers beat one fragile dependency.
+- **The activation parser is shared; the sourcing is not.** Parsing lives in
+  `hooks/_lib/atelier_local.py` — `_lib/` is a member of every hooks assembly (ADR 0017), so
+  importing it is safe where importing another hook's module is not. This hook keeps its own path
+  resolution, size cap and fail-open default.
 - **Escape hatches.** Set `enforce: advisory` to keep the briefing without the tool-layer sentence,
   or `off` (or delete the activation file) to stand both hooks down.
 - **No restart needed to change policy.** The activation file is read on every subagent start, so

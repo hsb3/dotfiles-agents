@@ -44,6 +44,14 @@ import os
 import subprocess
 import sys
 
+# The shared modules live beside the hook dirs, at `<hooks-root>/_lib/`. That
+# relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import atelier_local  # noqa: E402  (path must be primed before this import)
+
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
@@ -163,69 +171,20 @@ def _resolve_activation_path(project_dir):
 
 
 # ---------------------------------------------------------------------------
-# Activation file (tolerant hand parser — stdlib only, no PyYAML)
-#
-# Duplicated from config-custody by design: each hook directory is copied and
-# symlinked on its own, so a shared module would be a cross-hook import path
-# that breaks the moment one of them is installed without the other.
+# Activation file — sourced here, parsed by `_lib/atelier_local.py`
 # ---------------------------------------------------------------------------
 
-def _unquote(value):
-    """Strip surrounding quotes and any trailing YAML comment.
-
-    Quote handling comes first: `enforce: "strict"  # armed` must yield `strict`.
-    """
-    value = value.strip()
-    if value[:1] in ("'", '"'):
-        quote = value[0]
-        close = value.find(quote, 1)
-        return value[1:close] if close != -1 else value[1:]
-    hash_at = value.find(" #")
-    if hash_at != -1:
-        value = value[:hash_at].rstrip()
-    return value
+# `activation.py check` calls this to read `effort:`, the one key no hook parses.
+_unquote = atelier_local.unquote
 
 
-def _parse_frontmatter(text):
-    """Return the `enforce` mode from a YAML frontmatter block.
-
-    Anything unparseable — no fences, no closing fence, an unknown value —
-    returns "off". This hook does not need the `protected:` list; only
-    config-custody acts on individual patterns.
-    """
-    lines = text.splitlines()
-
-    start = None
-    for index, line in enumerate(lines):
-        stripped = line.lstrip("\ufeff").strip()
-        if not stripped:
-            continue
-        if stripped == "---":
-            start = index + 1
-        break  # the first non-blank line must be the opening fence
-    if start is None:
+def _mode(text):
+    """The `enforce` mode. Anything but advisory/strict — including a sequence or a
+    mapping where a scalar belongs — reads as "off"."""
+    value = atelier_local.parse_key(text, "enforce")
+    if not isinstance(value, str):
         return OFF
-
-    end = None
-    for index in range(start, len(lines)):
-        if lines[index].strip() in ("---", "..."):
-            end = index
-            break
-    if end is None:
-        return OFF
-
-    mode = OFF
-    for line in lines[start:end]:
-        if not line.strip() or line[:1].isspace() or line.strip().startswith("#"):
-            continue
-        item = line.strip()
-        colon = item.find(":")
-        if colon == -1:
-            continue
-        if item[:colon].strip().lower() == "enforce":
-            candidate = _unquote(item[colon + 1:]).lower()
-            mode = candidate if candidate in ACTIVE_MODES else OFF
-    return mode
+    return value.lower() if value.lower() in ACTIVE_MODES else OFF
 
 
 def _load_mode(project_dir):
@@ -241,7 +200,7 @@ def _load_mode(project_dir):
     except Exception:
         return OFF
     try:
-        return _parse_frontmatter(text)
+        return _mode(text)
     except Exception:
         return OFF
 

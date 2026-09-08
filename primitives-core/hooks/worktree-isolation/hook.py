@@ -78,13 +78,14 @@ import subprocess
 import sys
 import traceback
 
-# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# The shared modules live beside the hook dirs, at `<hooks-root>/_lib/`.
 # That relative hop resolves both here in primitives-core/ and in an installed
 # plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import atelier_local  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -292,136 +293,30 @@ def _is_git_repo(project_dir):
 
 
 # ---------------------------------------------------------------------------
-# Activation file (tolerant hand parser — stdlib only, no PyYAML)
-#
-# Duplicated from config-custody by design: each hook directory is copied and
-# symlinked on its own, so a shared module would be a cross-hook import path
-# that breaks the moment one of them is installed without the other.
+# Activation file — sourced here, parsed by `_lib/atelier_local.py`
 # ---------------------------------------------------------------------------
 
-def _unquote(value):
-    """Strip surrounding quotes and any trailing YAML comment.
-
-    Quote handling comes first: `isolate: "writers"  # armed` must yield
-    `writers`, while a quoted agent type is allowed to contain a `#`.
-    """
-    value = value.strip()
-    if value[:1] in ("'", '"'):
-        quote = value[0]
-        close = value.find(quote, 1)
-        return value[1:close] if close != -1 else value[1:]
-    hash_at = value.find(" #")
-    if hash_at != -1:
-        value = value[:hash_at].rstrip()
-    return value
-
-
-def _split_inline_list(raw):
-    """`["a", "b"]` / `[a, b]` -> ["a", "b"]. Commas inside quotes are respected."""
-    inner = raw.strip()[1:-1]
-    items = []
-    buf = []
-    quote = None
-    for ch in inner:
-        if quote:
-            if ch == quote:
-                quote = None
-            else:
-                buf.append(ch)
-        elif ch in ("'", '"'):
-            quote = ch
-        elif ch == ",":
-            items.append("".join(buf).strip())
-            buf = []
-        else:
-            buf.append(ch)
-    items.append("".join(buf).strip())
-    return [item for item in items if item]
-
-
-def _parse_frontmatter(text):
-    """Return (mode, agent_types) from a YAML frontmatter block.
+def _isolation(text):
+    """(mode, agent_types) from an activation file's frontmatter.
 
     `isolate` carries both forms on one key, mirroring how `protected` is
     written next to it:
 
         isolate: writers        -> (WRITERS, DEFAULT_WRITERS)
-        isolate: [builder, x]   -> (WRITERS, ["builder", "x"])
-        isolate:                -> (WRITERS, ["builder", "x"])
+        isolate: [builder, x]   -> (WRITERS, ("builder", "x"))
+        isolate:                -> (WRITERS, ("builder", "x"))
           - builder
           - x
 
-    Anything it cannot make sense of — no fences, no closing fence, an unknown
-    scalar, an empty list — returns (OFF, ()), so a malformed activation file
-    leaves dispatches untouched instead of half-arming.
+    Anything else — an unknown scalar, an empty list, a mapping where a list
+    belongs — returns (OFF, ()), so a malformed activation file leaves
+    dispatches untouched instead of half-arming. A list names its own set, so an
+    empty one is an empty intent rather than a request for the built-ins.
     """
-    lines = text.splitlines()
-
-    start = None
-    for index, line in enumerate(lines):
-        stripped = line.lstrip("\ufeff").strip()
-        if not stripped:
-            continue
-        if stripped == "---":
-            start = index + 1
-        break  # the first non-blank line must be the opening fence
-    if start is None:
-        return OFF, ()
-
-    end = None
-    for index in range(start, len(lines)):
-        if lines[index].strip() in ("---", "..."):
-            end = index
-            break
-    if end is None:
-        return OFF, ()
-
-    armed_defaults = False  # `isolate: writers`
-    list_form = False       # `isolate: [..]` or a block sequence
-    explicit = []
-    in_isolate = False
-    for line in lines[start:end]:
-        if not line.strip() or line.strip().startswith("#"):
-            continue
-        indented = line[:1].isspace()
-        item = line.strip()
-
-        if in_isolate and item.startswith("- "):
-            value = _unquote(item[2:])
-            if value:
-                explicit.append(value)
-            continue
-        if in_isolate and item == "-":
-            continue
-        if indented:
-            continue  # nested mapping under some other key: not ours
-
-        colon = item.find(":")
-        if colon == -1:
-            continue
-        key = item[:colon].strip().lower()
-        raw_value = item[colon + 1:].strip()
-        in_isolate = False
-
-        if key != "isolate":
-            continue
-        if raw_value.startswith("[") and raw_value.endswith("]"):
-            explicit.extend(_split_inline_list(raw_value))
-            list_form, armed_defaults = True, False
-        elif not raw_value:
-            in_isolate = True
-            list_form, armed_defaults = True, False
-        else:
-            candidate = _unquote(raw_value).lower()
-            list_form = False
-            armed_defaults = candidate == WRITERS
-
-    # The list form names its own set, so an empty one is an empty intent rather
-    # than a request for the built-ins: arming the defaults there would isolate
-    # more than the file asked for.
-    if list_form:
-        return (WRITERS, tuple(explicit)) if explicit else (OFF, ())
-    if armed_defaults:
+    value = atelier_local.parse_key(text, "isolate")
+    if isinstance(value, list):
+        return (WRITERS, tuple(value)) if value else (OFF, ())
+    if isinstance(value, str) and value.lower() == WRITERS:
         return WRITERS, DEFAULT_WRITERS
     return OFF, ()
 
@@ -439,7 +334,7 @@ def _load_activation(project_dir):
     except Exception:
         return OFF, ()
     try:
-        return _parse_frontmatter(text)
+        return _isolation(text)
     except Exception:
         return OFF, ()
 
