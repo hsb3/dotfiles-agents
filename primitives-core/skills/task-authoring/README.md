@@ -16,8 +16,10 @@ an agent.
 ## Install
 
 ```
+claude plugin install mise-en-place@dotfiles-agents
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships with the solo-skills bundle; the doctrine itself is tracker-agnostic and needs no
-configuration.
+Ships with the solo-skills bundle and inside `mise-en-place`, whose planning desk delegates
+the item-body form to it rather than restating it. The doctrine itself is tracker-agnostic
+and needs no configuration.
