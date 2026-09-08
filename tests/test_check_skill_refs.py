@@ -8,6 +8,8 @@ Each red-path test asserts on the specific problem string, not merely on non-emp
 so a test cannot pass because some unrelated rule happened to fire.
 """
 
+import contextlib
+import io
 import os
 import shutil
 import sys
@@ -92,6 +94,34 @@ class SkillRefsGate(unittest.TestCase):
         self.assertIn("plugins/narrow", probs[0])
         self.assertNotIn("plugins/wide", probs[0])
 
+    def test_backticked_sibling_path_is_a_citation(self):
+        # `skills/<id>/...` is how a bundled script's own doc names a sibling's asset, and
+        # it is a hard dependency: the file is only there if the bundle ships the sibling.
+        # The English-word objection to bare names does not apply once `skills/` prefixes
+        # the id.
+        self.skill("alpha", "Pass a root holding `skills/beta/references/checklist.md`.")
+        self.skill("beta", "Beta.")
+        self.plugin("narrow", "alpha")
+        probs = self.problems()
+        self.assertEqual(len(probs), 1, probs)
+        self.assertIn("`beta`", probs[0])
+        self.assertIn("plugins/narrow", probs[0])
+
+    def test_path_form_matches_the_bare_directory_too(self):
+        self.skill("alpha", "a root that contains `skills/beta/`.")
+        self.skill("beta", "Beta.")
+        self.plugin("narrow", "alpha")
+        self.assertEqual(len(self.problems()), 1)
+
+    def test_path_form_does_not_match_a_longer_id(self):
+        self.skill("alpha", "See `skills/beta-extended/`.")
+        self.skill("beta", "Beta.")
+        self.skill("beta-extended", "Beta extended.")
+        self.plugin("narrow", "alpha", "beta")
+        probs = self.problems()
+        self.assertEqual(len(probs), 1, probs)
+        self.assertIn("`beta-extended`", probs[0])
+
     def test_references_and_examples_are_scanned(self):
         self.skill("alpha", "Body.", reference="See the `beta` skill.", example="Also `beta`.")
         self.skill("beta", "Beta.")
@@ -111,14 +141,23 @@ class SkillRefsGate(unittest.TestCase):
         self.assertEqual(self.problems(), [])
 
     def test_citer_in_no_assembly_has_no_consumer(self):
+        # `gamma`'s bundle ships neither skill, so a gate that stopped requiring the
+        # bundle to actually SHIP the citing skill would report it — which is what makes
+        # this test able to fail.
         self.skill("alpha", "Go and use the `beta` skill.")
         self.skill("beta", "Beta.")
+        self.skill("gamma", "Gamma.")
         self.plugin("narrow", "beta")
+        self.plugin("other", "gamma")
         self.assertEqual(self.problems(), [])
 
     def test_self_citation_is_not_a_reference(self):
-        self.skill("alpha", "This is the `alpha` skill.")
+        # Asserted on the extractor, not only on problems(): a self-citation can never be
+        # a violation anyway, so only the citation list — the audit surface --report
+        # prints — can tell whether the guard is still there.
+        self.skill("alpha", "This is the `alpha` skill, see `skills/alpha/`.")
         self.plugin("narrow", "alpha")
+        self.assertEqual(R.citations(self.fix), [])
         self.assertEqual(self.problems(), [])
 
     def test_readme_is_not_scanned(self):
@@ -181,6 +220,36 @@ class SkillRefsGate(unittest.TestCase):
         self.assertEqual(len(probs), 1, probs)
         self.assertIn("no such skill", probs[0])
 
+    def test_anchor_with_no_substance_is_rejected(self):
+        # The gate's whole safety property is the anchor. A one-letter anchor matches any
+        # prose, so an exemption carrying one certifies text it never read.
+        self.skill("alpha", "Use `beta`.")
+        self.skill("beta", "Beta.")
+        self.plugin("narrow", "alpha")
+        R.EXEMPTIONS = {("alpha", "beta"): ("reason", "e")}
+        probs = self.problems()
+        self.assertTrue(any("substance" in p for p in probs), probs)
+        self.assertNotEqual(R.main(["--repo", self.fix]), 0)
+
+    def test_anchor_that_is_just_the_cited_id_is_rejected(self):
+        # The citation itself contains the cited id, so such an anchor is self-satisfying.
+        self.skill("alpha", "Use `beta-with-a-long-name`.")
+        self.skill("beta-with-a-long-name", "Beta.")
+        self.plugin("narrow", "alpha")
+        R.EXEMPTIONS = {
+            ("alpha", "beta-with-a-long-name"): ("reason", "beta-with-a-long-name"),
+        }
+        probs = self.problems()
+        self.assertTrue(any("substance" in p for p in probs), probs)
+
+    def test_anchor_at_the_floor_is_accepted(self):
+        anchor = "x" * R.ANCHOR_MIN_CHARS
+        self.skill("alpha", "Use `beta`. %s" % anchor)
+        self.skill("beta", "Beta.")
+        self.plugin("narrow", "alpha")
+        R.EXEMPTIONS = {("alpha", "beta"): ("reason", anchor)}
+        self.assertEqual(self.problems(), [])
+
     # --- entry point -----------------------------------------------------
 
     def test_main_exit_codes(self):
@@ -192,14 +261,35 @@ class SkillRefsGate(unittest.TestCase):
         self.assertEqual(R.main(["--repo", self.fix]), 0)
 
     def test_report_mode_lists_every_citation(self):
-        self.skill("alpha", "Use the `beta` skill.")
+        self.skill("alpha", "Use the `beta` skill; this is `alpha`.")
         self.skill("beta", "Beta.")
         self.plugin("wide", "alpha", "beta")
-        self.assertEqual(R.main(["--repo", self.fix, "--report"]), 0)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(R.main(["--repo", self.fix, "--report"]), 0)
+        text = out.getvalue()
+        rows = [ln for ln in text.splitlines() if ln.startswith("alpha")]
+        self.assertEqual(len(rows), 1, text)
+        self.assertIn("beta", rows[0])
+        self.assertIn("shipped", rows[0])
+        self.assertIn("1 citation(s)", text)
+
+    def test_report_mode_flags_an_unresolved_citation(self):
+        self.skill("alpha", "Use the `beta` skill.")
+        self.skill("beta", "Beta.")
+        self.plugin("narrow", "alpha")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(R.main(["--repo", self.fix, "--report"]), 1)
+        self.assertIn("MISSING", out.getvalue())
 
 
 class LiveTree(unittest.TestCase):
     """The shipped tree is green, and every exemption still earns its place."""
+
+    # This test is what enforces the gate in CI (make ci -> make test). A truncated diff
+    # would hide the contributor's own violations behind "Diff is N characters long".
+    maxDiff = None
 
     def test_repo_is_clean(self):
         repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

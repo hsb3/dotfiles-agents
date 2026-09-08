@@ -17,13 +17,23 @@ this repo's own style pushes authors toward, which is what this gate reads.
 ## The rule
 
 A **citation** is a roster skill id in backticks — `` `dataviz` ``, optionally namespaced
-`` `diagrams:dataviz` `` — inside another skill's `SKILL.md`, `references/**/*.md`, or
-`examples/**/*.md` (the surface `check_solo_skills.py` calls prose). It is a violation when
-some plugin assembly ships the citing skill and not the cited one.
+`` `diagrams:dataviz` ``, or in the path form `` `skills/dataviz/references/x.md` `` —
+inside another skill's `SKILL.md`, `references/**/*.md`, or `examples/**/*.md` (the surface
+`check_solo_skills.py` calls prose). It is a violation when some plugin assembly ships the
+citing skill and not the cited one.
 
 Backticks are load-bearing and are the whole rule for "is this a reference". A bare
 unquoted name cannot be: roster ids include `handoff`, `waves`, `comms` and `diagrams`,
 which are ordinary English, and the false-positive rate of an unquoted rule is total.
+
+The **path form is the sharpest case, not an afterthought**: `skills/<id>/...` is how a
+bundled script's own documentation names a sibling's asset, so the file is only there if
+the bundle ships the sibling — a hard runtime dependency rather than a pointer. Both live
+subjects are exactly that (`repo-compliance-audit`'s `audit.py` aborts on a mise-en-place
+root), and the gate's first draft missed them by reading only the bare id, while catching
+the mirror direction of the same relationship because that one happened to be written
+without a path. The English-word objection above does not apply once `skills/` prefixes the
+id, so nothing is traded for the widening.
 
 **Dependency vs mention: there is no honest static rule, so this gate takes the
 conservative reading.** "Go and use `x`" is a dependency and "see also `x`" is not, but the
@@ -52,6 +62,16 @@ adding or dropping a symlink changes this gate's verdict the moment it lands.
     those are not shipped per-bundle the same way and had no subjects when this landed.
   * **A skill in no assembly is never a subject** — with no bundle there is no consumer
     whose install could be wrong.
+  * **The path form is matched only at the `skills/` prefix**, not through a deeper one
+    (`` `${CLAUDE_PLUGIN_ROOT}/skills/<id>/...` ``, `` `.claude/skills/<id>/...` ``).
+    Measured across the tree, every such site is either a self-reference or an
+    illustrative placeholder that is not a roster id, so widening buys no subject today
+    and would start reading example paths as citations.
+  * **The gate holds nothing red on the tree it landed in** — every cross-bundle pair is
+    exempted or amnestied, so a green run proves no regression, not an empty problem.
+    `docs/gotchas.md` asks a deliberate forward-guard to say so; this is that sentence. It
+    is not a guard without subjects, though: run against `faa3209` it is red in eight
+    places, and the two path-form pairs it now amnesties were live defects when found.
 
 ## Exemptions
 
@@ -80,14 +100,25 @@ rewritten or deleted anchor kills the exemption — is unaffected.
 
 Exemptions are themselves checked: an entry naming a skill that does not exist, or one
 whose pair produces no cross-bundle citation at all, is reported as stale, so this table
-cannot quietly outlive the line that justified it.
+cannot quietly outlive the line that justified it. So is the anchor's SUBSTANCE, because
+the safety property above rests entirely on it and nothing else constrains what an author
+types: an anchor must be at least `ANCHOR_MIN_CHARS` (20) characters and must not be part
+of either skill id. Twenty is a floor, not a target — below it an anchor stops pinning a
+sentence and starts matching any prose (`"e"` matches everything), and every live anchor
+clears it with room to spare, the shortest being 24. An id-derived anchor is rejected
+because every citation of the pair contains the id, so such an anchor can never be absent
+and the self-invalidation never fires. A defective anchor is reported AND deactivates the
+entry — an exemption nobody can trust must not suppress anything meanwhile.
 
-Three entries are an AMNESTY, not a clearance — real cross-bundle dependencies that predate
+Five entries are an AMNESTY, not a clearance — real cross-bundle dependencies that predate
 the gate, tracked on kata `kw60` ("three shipped skills cite a sibling their bundle does not
-ship"). Resolving them means changing a distribution surface (adding a symlink cascades
-plugin version bumps), which is an owner decision, not a gate's. This mirrors
-`check_readme_currency.py`'s landing-commit anchor: forward-only, with the backlog named out
-loud. When `kw60` closes, those three entries are deleted outright.
+ship"; the two path-form pairs were appended to it). Two of the five break at runtime, not
+merely on the page: `repo-compliance-audit`'s `audit.py` refuses to run against a
+`mise-en-place` root because `project-memory`'s checklist is not there. Resolving them means
+changing a distribution surface (adding a symlink cascades plugin version bumps), which is
+an owner decision, not a gate's. This mirrors `check_readme_currency.py`'s landing-commit
+anchor: forward-only, with the backlog named out loud. When `kw60` closes, those five
+entries are deleted outright.
 
 Run standalone to see every citation the extractor pulls, with its verdict — the tool for
 auditing the rule rather than trusting it:
@@ -113,8 +144,13 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROSE_NAMES = ("SKILL.md",)
 PROSE_DIRS = ("references", "examples")
 
-# (citing skill, cited skill) -> (reason, anchor). The anchor must still appear in the
-# citing skill's scanned prose or the entry does not apply; see the module docstring.
+# Floor for an anchor's length. Below this it stops pinning a sentence and starts matching
+# any prose; every live anchor clears it with room to spare (shortest: 24).
+ANCHOR_MIN_CHARS = 20
+
+# (citing skill, cited skill) -> (reason, anchor). The anchor must have substance and must
+# still appear in the citing skill's scanned prose, or the entry does not apply; see the
+# module docstring.
 EXEMPTIONS = {
     ("diagrams", "dataviz"): (
         "scope boundary, not a dependency — the line hands data charts AWAY to dataviz "
@@ -148,7 +184,7 @@ EXEMPTIONS = {
     # --- amnesty: pre-existing and UNRESOLVED, tracked on kata kw60 -----------------
     # Real cross-bundle dependencies. They are recorded here so the gate can be
     # forward-only; fixing them changes a distribution surface (owner decision). Delete
-    # these three entries when kw60 closes — the gate will then be red until the
+    # these five entries when kw60 closes — the gate will then be red until the
     # memberships or the bodies change, which is the point.
     ("planning-desk", "task-authoring"): (
         "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency: the desk "
@@ -162,6 +198,22 @@ EXEMPTIONS = {
         "prioritization is delegated to board-triage, which the mise-en-place bundle does "
         "not ship. Not a clearance; remove this entry when kw60 closes",
         "prioritization is the `board-triage` skill's job",
+    ),
+    ("repo-compliance-audit", "project-memory"): (
+        "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency, and the "
+        "only one of these that breaks at RUNTIME rather than dead-ending a reader: "
+        "`audit.py --plugin-root plugins/mise-en-place` exits with `checklist file "
+        "missing: .../skills/project-memory/references/checklist.md`, because "
+        "mise-en-place ships this skill and not project-memory. Not a clearance; remove "
+        "this entry when kw60 closes",
+        "pass `--plugin-root <dir>` pointing at a root that contains",
+    ),
+    ("mise-en-place-scaffold", "project-memory"): (
+        "AMNESTY (kata kw60), pre-existing and unresolved — the same mise-en-place gap "
+        "seen from the scaffold: it directs the consumer at a plugin root holding "
+        "project-memory's checklist, which that bundle does not ship. Not a clearance; "
+        "remove this entry when kw60 closes",
+        "(checklist + assets) and",
     ),
     ("project-memory", "repo-compliance-audit"): (
         "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency: the skill "
@@ -245,9 +297,10 @@ def _prose_files(sdir):
 
 
 def _pattern(sid):
-    """`sid` in backticks, with an optional `<plugin>:` prefix the way a namespaced
-    reference is written. The backticks anchor both ends, so `x-sid` never matches."""
-    return re.compile(r"`(?:[\w-]+:)?" + re.escape(sid) + r"`")
+    """`sid` in backticks: the bare id, a namespaced `<plugin>:<id>`, or the `skills/<id>`
+    path form with anything after it. The backticks and the trailing `/` anchor both ends,
+    so `x-sid`, `skills/sid-extended` and `skills/` alone never match."""
+    return re.compile(r"`(?:[\w-]+:)?(?:skills/)?" + re.escape(sid) + r"(?:/[^`]*)?`")
 
 
 def citations(repo, ids=None):
@@ -268,9 +321,13 @@ def citations(repo, ids=None):
     return sorted(out, key=lambda c: c.sort_key)
 
 
-def _anchored(repo, citing, anchor):
-    sdir = os.path.join(repo, "primitives-core", "skills", citing)
-    return any(anchor in _read(p) for p in _prose_files(sdir))
+def _exempts(repo, key):
+    """Whether this pair's exemption holds: an anchor with substance, still in the prose."""
+    entry = EXEMPTIONS.get(key)
+    if entry is None or anchor_defect(key, entry[1]):
+        return False
+    sdir = os.path.join(repo, "primitives-core", "skills", key[0])
+    return any(entry[1] in _read(p) for p in _prose_files(sdir))
 
 
 def unresolved(repo):
@@ -288,18 +345,45 @@ def unresolved(repo):
     return out
 
 
+def anchor_defect(key, anchor):
+    """Why this anchor cannot carry the exemption's weight, or None. The gate's whole
+    safety property is the anchor, and nothing else constrains what an author puts there."""
+    text = anchor.strip()
+    if len(text) < ANCHOR_MIN_CHARS:
+        return (
+            "is under %d characters, so it matches too much prose to pin any particular "
+            "sentence" % ANCHOR_MIN_CHARS
+        )
+    low = text.lower()
+    if any(low in sid.lower() for sid in key):
+        return (
+            "is part of a skill id, which every citation of that pair contains, so it "
+            "can never be absent"
+        )
+    return None
+
+
 def stale_exemptions(repo, candidates, ids):
-    """Entries that suppress nothing — a permanent hole nobody remembers opening."""
+    """Entries that suppress nothing, or that rest on an anchor with no substance — either
+    way a permanent hole nobody remembers opening."""
     out = []
     for key in sorted(EXEMPTIONS):
         citing, cited = key
+        anchor = EXEMPTIONS[key][1]
         missing_ids = [s for s in (citing, cited) if s not in ids]
         if missing_ids:
             out.append(
                 "EXEMPTIONS[%r, %r]: no such skill (%s) — remove it"
                 % (citing, cited, ", ".join(missing_ids))
             )
-        elif key not in candidates:
+            continue
+        defect = anchor_defect(key, anchor)
+        if defect:
+            out.append(
+                "EXEMPTIONS[%r, %r]: anchor %r has no substance — it %s; anchor the entry "
+                "to the sentence that justifies it" % (citing, cited, anchor, defect)
+            )
+        if key not in candidates:
             out.append(
                 "EXEMPTIONS[%r, %r]: stale — every bundle shipping `%s` now ships `%s` (or "
                 "the citation is gone), so the entry suppresses nothing; remove it"
@@ -315,14 +399,16 @@ def problems(repo=REPO):
     for key in sorted(candidates):
         citing, cited = key
         entry = EXEMPTIONS.get(key)
-        if entry and _anchored(repo, citing, entry[1]):
+        if _exempts(repo, key):
             continue
         note = ""
         if entry:
+            why = anchor_defect(key, entry[1]) or (
+                "is absent from this skill's prose, so the reason it records does not "
+                "describe this text"
+            )
             note = (
-                " — its EXEMPTIONS entry is INACTIVE: the anchor %r is absent from this "
-                "skill's prose, so the reason it records does not describe this text"
-                % entry[1]
+                " — its EXEMPTIONS entry is INACTIVE: the anchor %r %s" % (entry[1], why)
             )
         for cit, missing in candidates[key]:
             out.append(
@@ -343,10 +429,7 @@ def problems(repo=REPO):
 def report(repo):
     """Every citation and its verdict. Non-zero exit when any bundle cannot follow one."""
     candidates = unresolved(repo)
-    exempt_keys = {
-        k for k in candidates
-        if k in EXEMPTIONS and _anchored(repo, k[0], EXEMPTIONS[k][1])
-    }
+    exempt_keys = {k for k in candidates if _exempts(repo, k)}
     print("%-22s %-24s %-10s %s" % ("citing", "cited", "verdict", "site"))
     bad = 0
     for cit in citations(repo):
