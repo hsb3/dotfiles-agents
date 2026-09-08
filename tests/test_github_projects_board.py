@@ -511,7 +511,8 @@ class Apply(unittest.TestCase):
         cs = self.changeset(("1", "status", "Shipped"))
         code, out, err = run_main(self.argv(cs, "--apply"), gh)
         self.assertEqual(1, code, out + err)
-        self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", out)
+        self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", err)
+        self.assertNotIn("FAIL", out, "a refusal belongs on stderr, not in the row log")
         self.assertEqual([], gh.mutations())
 
     def test_a_dry_run_fails_the_same_row_the_write_would(self):
@@ -519,11 +520,12 @@ class Apply(unittest.TestCase):
         gh = board_gh([page(item(1))])
         code, out, err = run_main(self.argv(self.changeset(("1", "status", "Shipped"))), gh)
         self.assertEqual(1, code, out + err)
-        self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", out)
+        self.assertIn("FAIL  #1 status=Shipped: no option 'Shipped'", err)
         self.assertNotIn("DRY", out)
         self.assertEqual([], gh.mutations(), "a dry run still writes nothing")
 
     def test_a_failed_write_does_not_abort_the_remaining_rows(self):
+        """Also pins FAIL's stderr placement: the resolvable sibling row still lands on stdout."""
         gh = board_gh(
             [page(item(1))],
             mutations=[{"errors": [{"message": "rate limited"}]}, MUTATION_OK],
@@ -531,8 +533,9 @@ class Apply(unittest.TestCase):
         cs = self.changeset(("1", "status", "Done"), ("1", "notes", "hello"))
         code, out, err = run_main(self.argv(cs, "--apply"), gh)
         self.assertEqual(1, code, out + err)
-        self.assertIn("FAIL  #1 status=Done: graphql: no data", out)
-        self.assertIn("SET   #1 notes=hello", out)
+        self.assertIn("FAIL  #1 status=Done: graphql: no data", err)
+        self.assertNotIn("FAIL", out, "a refusal belongs on stderr, not in the row log")
+        self.assertIn("SET   #1 notes=hello", out, "the resolvable row still applies")
         self.assertEqual(2, len(gh.mutations()), "the second row is still attempted")
 
     def test_apply_honours_the_org_owner_type(self):
@@ -627,7 +630,8 @@ class Apply(unittest.TestCase):
         cs = self.changeset(("1", "blocking", "2"))
         code, out, err = run_main(self.argv(cs, "--repo", "acme/widgets", "--apply"), gh)
         self.assertEqual(1, code, out + err)
-        self.assertIn("FAIL  #1 blocking=2", out)
+        self.assertIn("FAIL  #1 blocking=2", err)
+        self.assertNotIn("FAIL", out, "a refusal belongs on stderr, not in the row log")
 
     def test_github_token_is_stripped_from_the_gh_environment(self):
         """A repo-scoped GITHUB_TOKEN shadows the project-scoped keyring login."""
