@@ -1,11 +1,11 @@
-# Chain width — how wide a chain may be, and when a manager is retired
+# Chain width and lifetime — how wide a chain may be, how long one manager carries it
 
 `SKILL.md` gives the manager "one chain; disposable" and forbids showing it sibling waves. Neither
-bounds how **wide** one chain may be, and nothing there retires a manager between slices. That gap
-is not theoretical: the repo owner wrote an eleven-task manager brief after reading the whole
-skill, and every clause of it was defensible `[field]`. **Principles without calibration anchors
-do not constrain.** The effort calibration in `SKILL.md` binds because it carries anchors; this
-file is the management layer's.
+bounds how **wide** one chain may be or how long one manager context can pay for it, and nothing
+there retires a manager between slices. That gap is not theoretical: the repo owner wrote an
+eleven-task manager brief after reading the whole skill, and every clause of it was defensible
+`[field]`. **Principles without calibration anchors do not constrain.** The effort calibration in
+`SKILL.md` binds because it carries anchors; this file is the management layer's.
 
 ## The bound
 
@@ -110,13 +110,68 @@ into A's files. **The tell: run each slice's acceptance command against the tree
 dispatch time.** One that cannot run is a hidden dependency wearing parallelism, and the two
 slices are one chain or two waves — never one wave of two.
 
+## The lifetime bound — a brief that fits at once but not in one manager
+
+The bound above sizes what a manager holds at once. **Lifetime is what its context can pay for**,
+and a brief can pass every width check and still outlive the agent it was written for.
+
+**The anchor `[field]`.** Reported from a consuming project, not reproduced under measurement: one
+correctly scoped brief — port a framework across roughly ninety source files, nine slices, no
+decision-gated items, one worktree — spent an entire manager context (~160k tokens) on its first
+three slices. The slicing was not wrong. The brief was simply three times longer than one agent.
+What saved it was improvised: rather than compact and continue blind, the manager externalized a
+plan file, marked the three finished slices, and reported up with the remainder written down; a
+second manager took that file and finished the other six with no rework. It worked because that
+manager invented the pattern under pressure — nothing in the brief asked for it, and the next
+manager in that position may simply compact.
+
+### The estimate `[untested]`
+
+Cost per slice is **dispatch + verify**: the brief written down, the worker's report read, and the
+manager's own first-pass check of it. Take the worst slice rather than the average — the estimate
+exists to refuse an oversized brief, so it is biased toward refusing.
+
+    slices × (brief + report + first-pass check)  vs.  one manager context window
+
+Applied to the anchor: three slices for ~160k is ~55k a slice, so nine project to ~500k against a
+context with roughly 200k to spend. The brief is 2–3 managers of work, and the line was in fact
+crossed on slice three. **Past 60–70% of the window, one manager cannot be trusted to finish.**
+Neither the ratio nor the arithmetic is measured: the fraction is calibrated so that a brief
+landing on the line still has room for the escalation, the follow-up, and the report it owes at
+the end, and every term in the estimate is a guess until a run instruments one.
+
+### Split, or contract a successor
+
+Two answers, both decided **before the dispatch**, never after — once the manager is full, the
+only agent that could re-slice the work is the one out of room.
+
+- **Pre-split into sequential manager briefs.** Cut at the seam check 3 already names: the first
+  point where a slice's output stops changing the next slice's brief, chosen far enough forward
+  that each half lands under the line. Each brief is its own contract and its manager is retired
+  on its report. Prefer this whenever the seams are visible — two clean contracts beat one
+  contract with a contingency.
+- **Mandate a successor contract in the brief `[field]`.** When the work does not seam — one
+  mechanical transform whose slices differ only in which files they touch, as in the anchor — the
+  brief names a plan file, requires it kept current **from slice 1** rather than written once the
+  manager notices it is full, and makes "report up with the plan file" a stop condition that
+  outranks compacting. The successor is briefed on the plan file, not on its predecessor's report.
+
+Compaction is not a third answer. A manager's context is disposable by design, so it has no one
+to hand a summary to but itself, and mid-chain it would keep the same agent alive holding a lossy
+copy of the state it is judged on — silently lossy, which is the part that costs. The strategy
+layer hands off at a watermark; the management layer's equivalent is a successor, contracted at
+brief time (`SKILL.md`, "Context hygiene").
+
 ## Applying it
 
-At dispatch, three checks in order; any failure re-slices before a worktree opens. The first two
-are "The bound" applied to the brief text; the third is reasoning, not observation `[untested]`.
+At dispatch, four checks in order; any failure re-slices before a worktree opens. The first two
+are "The bound" applied to the brief text; the last two are reasoning, not observation
+`[untested]`.
 
 1. **Strip the decision-gated items out.** They become questions for the user, not tasks.
 2. **Run the smell test on the brief text.**
 3. **Count what is left.** Past two to three tasks, cut at the first point where a task's output
    stops changing the next task's brief `[untested]` — that boundary is where one chain ends and
    the next begins, and the next one gets a fresh manager.
+4. **Price what is left against one manager context**, per the lifetime bound above. Over the
+   line, the brief either pre-splits at the check-3 seam or carries a successor contract.

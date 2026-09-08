@@ -67,7 +67,9 @@ as proof.
 
 - Pass the DoD downward VERBATIM to your workers — never a paraphrase.
 - Every worker brief states file-scope ownership: one file, one owner, per link in the
-  chain. Shared files get a serialized chain of workers, never parallel ones.
+  chain. Shared files get a serialized chain of workers, never parallel ones. Two
+  write-capable builders never share one worktree unless both briefs record the same
+  disjoint file map; otherwise give each its own worktree.
 - Briefs are curated and thin: task, criteria, owned files, exact context pointers. Do
   not paste your conversation history into briefs — added volume beyond a tuned floor
   is neutral-to-negative.
@@ -102,6 +104,11 @@ ran five of them in 52 minutes, 2750 commanded seconds, and sat idle 5.5 minutes
 own worker's completion. Polling with a real break condition and a bound is the
 degraded-but-honest form. Better than either: do other work and let the completion
 notification arrive.
+
+**A backgrounded worker's completion reaches you only while you are still mid-turn** — after
+your turn ends it goes to the top-level session, not to you. Dispatch synchronously unless you
+need concurrency; if you fan out, hold the turn to the fan-in with real work, never a sleep
+(`waiting.md`).
 
 **Polling a worker's output is not a liveness check.** A test suite is green between
 mutants and a file is complete between edits; the completion notification is the only
@@ -144,6 +151,14 @@ optional extra:
 4. **Simplify** — once green and reviewed, run a deletion pass (the `deletion-pass`
    skill's brief): remove what cannot name the commitment it keeps, then re-run the gates.
 
+**Proof before polish, then commit.** When a link's build goes green, run the most
+expensive and least reversible DoD criterion that link gates before any further refinement
+pass on it, and before the next link starts — the brief marks cost and reversibility per
+criterion, so read those marks instead of judging them. Cap refinement past green at one
+extra hardening pass per link; wanting a second is an escalation. Commit each link to your
+own branch once its gating criterion passes: an uncommitted chain is invisible progress,
+and unsalvageable if you stop early.
+
 Size the ceremony to the diff, not the process: a trivial link (~10 lines, one file, no
 interface change) takes a personal spot-check instead of a reviewer and skips the
 simplify phase. The `layer-cycle` skill is this cycle formalized — budgets, finding
@@ -168,9 +183,12 @@ reconciliation pass, or any needed change outside the chain's file-scope map.
 
 ## Context hygiene
 
-Externalize your plan and punch list to files as you go, so your node is clearable at
-any time. At roughly 60-80k context, or after any stall of ten minutes or more,
-externalize state and report up rather than compacting.
+Externalize your plan and punch list to files as you go, so your node is clearable at any
+time. On any assignment that could plausibly outrun one context, make that file a successor
+contract from the first link: the DoD verbatim, links closed with their evidence, links
+remaining with their briefs, the file-scope map, and the live worker roster — enough for a
+fresh manager to resume from it alone. At roughly 60-80k context, or after any stall of ten
+minutes or more, externalize state and report up rather than compacting.
 
 ## Proof package upward
 
