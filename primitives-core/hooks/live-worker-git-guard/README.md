@@ -83,25 +83,57 @@ section below. Each leaves it deciding exactly as it did before it could compare
 - `GIT_DIR`, `GIT_WORK_TREE` or `GIT_COMMON_DIR` assigned in the command line — the same
   relocation spelled as environment, which git honours identically;
 - a `cd`, `pushd` or `popd` in command position before the `git` word, which makes the payload's
-  `cwd` stale.
+  `cwd` stale — bare, or under an exec wrapper (`command cd …`, `builtin cd …`, `eval cd …`);
+- a wrapper option that moves the tree the git call runs in (`env -C DIR`, `sudo -D DIR`,
+  `env -S`), per the section above.
 
 The same rule a corrupt sidecar gets: a record that exists and cannot be read keeps its agent
 live. `init` and `clone` are not mutating verbs, so making a repo in a fresh directory never
 reaches the comparison.
 
+## Exec wrappers
+
+**A leading wrapper that execs the real command is stepped over**, and the command-position scan
+resumes after it, for both the `git` word and the `cd`. Not for the adversarial case — an agent
+that wants through has the override, which is cheaper and leaves a row — but for the honest one:
+`time git push`, `timeout 60 git push` and `nice git commit` are things a session writes for real
+reasons, and until this each lost its deny silently.
+
+`env`, `command`, `builtin`, `eval`, `nice`, `time`, `xargs`, `timeout`, `sudo`, `nohup`,
+`stdbuf`, `setsid`, chained (`nice time git commit`), and each in the `g`-prefixed coreutils
+spelling Homebrew installs (`gtimeout`). Each wrapper's own options are skipped **with their
+values**, so a value is never misread as the command word (`nice -n 10`, `xargs -I {}`,
+`env -u NAME`, `sudo -u NAME`, GNU `time -o FILE`), and `timeout`'s bare positional duration is
+skipped too.
+
+Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
+same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
+fail-closed, never skipped past: `env -C DIR`, `env --chdir=DIR`, `sudo -D DIR` and `env -S`
+(which packs a shell string this tokenizer cannot read) make the target unknowable, which reads as
+"shares the tree" and denies. A relocating option counts only on the wrapper chain that reaches
+the `git` word: `env -C DIR true && git commit` aims `true`, not the git call.
+
 ## What it cannot see
 
 Stated as a rule rather than a list, because a list of ways to hide a word invites the belief that
 it is complete. **The `git` word and the `cd` are read only in command position** of the single
-command string the hook is handed, so whatever displaces them is invisible: a wrapper that execs
-the real command (`env`, `command`, `nice`, `time` and their equivalents), `bash -c "..."`, a
-`$( )` substitution, a token glued to a separator (`ls&&git commit`), and heredoc body text. A
-`GIT_*` variable **exported by an earlier Bash call** is the same ceiling in another place — it is
-not among this command's tokens at all.
+command string the hook is handed, so whatever still displaces them is invisible:
 
-None of these is the sanctioned bypass. The override is, and it leaves a row. Seeing through them
-means interpreting the command line rather than tokenizing it, which is a larger change with its
-own over-denial surface.
+- an exec wrapper that is **not in the list above** — `flock`, `watch`, `parallel`, `script`,
+  `arch`, `caffeinate`, and every site-local wrapper script;
+- anything that re-parses a **string**, which is past a tokenizer by construction: `bash -c "..."`,
+  a `$( )` substitution, a quoted `eval "cd x && git commit"`, `env -S 'git commit'`, and heredoc
+  body text;
+- a token **glued to a separator** (`ls&&git commit`) or to a wrapper option (`xargs -I{}`);
+- a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
+  it is not among this command's tokens at all.
+
+Deliberately out of scope rather than missed: `ssh host git commit` and `docker run … git commit`
+run in a different tree entirely, so silence is the correct answer.
+
+None of these is the sanctioned bypass. The override is, and it leaves a row. Seeing through the
+remaining ones means interpreting the command line rather than tokenizing it, which is a larger
+change with its own over-denial surface.
 
 ## Override
 
@@ -177,9 +209,10 @@ No activation file: the guard fires wherever the plugin is installed.
 - **An unreadable ledger is not an empty one.** `settled_ids` raises rather than returning an
   empty set, because rendering "cannot tell" as "nothing has settled" would deny on every agent
   the session ever started.
-- **`git` only counts in command position** — first token, after a shell separator, or after an
-  env assignment. `man git commit` and `which git` are not git calls. Quoted text is tokenized
-  with `shlex`, so a git command mentioned inside a string is one token and cannot fire.
+- **`git` only counts in command position** — first token, after a shell separator, after an
+  env assignment, or after a leading exec wrapper and its options. `man git commit`,
+  `which git` and `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a
+  git command mentioned inside a string is one token and cannot fire.
 - **The override emits no `permissionDecision`.** `"allow"` would short-circuit every other
   permission check in the session; this hook's opinion is only about live workers.
 - **A stale sidecar blocks until the ledger settles it.** There is no age threshold: an agent that
