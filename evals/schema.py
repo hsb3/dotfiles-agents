@@ -201,6 +201,9 @@ def collection_specs(ids):
                 num("total_bytes"),
                 num("word_count"),
                 text("notes"),
+                # Set by ingest.py when the tree stops defining the slug; the row and all its
+                # dependents are retained, and consumers filter on it. Cleared by re-ingest.
+                boolean("retired"),
                 *stamps(),
             ],
             "indexes": ["CREATE UNIQUE INDEX idx_extenders_slug ON extenders (slug)"],

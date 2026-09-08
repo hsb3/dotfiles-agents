@@ -148,7 +148,7 @@ def fetch_reference(pb: PB) -> tuple[str, list[dict], list[dict]]:
         raise SystemExit(f"framework not found in DB: {FRAMEWORK_SLUG!r}")
     fw_id = fws[FRAMEWORK_SLUG]
     elements = [e for e in pb.list_all("framework_elements") if e["framework"] == fw_id]
-    extenders = pb.list_all("extenders")
+    extenders = [e for e in pb.list_all("extenders") if not e.get("retired")]
     return fw_id, elements, extenders
 
 

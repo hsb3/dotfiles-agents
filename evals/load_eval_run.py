@@ -55,7 +55,7 @@ def load_manifest(pb, path):
     with open(path, encoding="utf-8") as fh:
         m = json.load(fh)
     fw_ids = {f["slug"]: f["id"] for f in pb.list_all("frameworks")}
-    ext_ids = {e["slug"]: e["id"] for e in pb.list_all("extenders")}
+    ext_ids = {e["slug"]: e["id"] for e in pb.list_all("extenders") if not e.get("retired")}
 
     r = m["run"]
     run, created = pb.upsert("eval_runs", f"slug='{esc(r['slug'])}'", {

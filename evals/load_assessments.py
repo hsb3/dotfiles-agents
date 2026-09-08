@@ -45,7 +45,8 @@ def fetch_reference(pb):
     els = {}
     for e in pb.list_all("framework_elements"):
         els.setdefault(e["framework"], {})[e["slug"]] = e["id"]
-    exts = {e["slug"]: e["id"] for e in pb.list_all("extenders", "kind='skill'")}
+    exts = {e["slug"]: e["id"] for e in pb.list_all("extenders", "kind='skill'")
+            if not e.get("retired")}
     return fws, els, exts
 
 

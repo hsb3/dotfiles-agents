@@ -25,8 +25,9 @@ What it loads:
                            no file ingest) so curation queries cover the full curated surface.
 
 A full run ends by pruning: an `extenders` row whose slug neither the roster nor
-externals.yaml still defines is deleted, so the projection cannot outlive its source. The
-prune is destructive beyond what this script can rebuild — see prune_extenders.
+externals.yaml still defines is flagged `retired=True`. The row and every dependent are
+retained — consumers filter retired units out — and a returning slug is un-retired by the
+next upsert. See prune_extenders.
 """
 
 import argparse
@@ -630,6 +631,7 @@ def ingest_extenders(pb):
             "file_count": len(files),
             "total_bytes": sum(f["size_bytes"] for f in files),
             "word_count": len(body.split()),
+            "retired": False,
         })
         ext_ids[e["id"]] = rec["id"]
         ext_meta[e["id"]] = {
@@ -722,6 +724,7 @@ def ingest_externals(pb, src_ids):
             "file_count": 0,
             "total_bytes": 0,
             "word_count": 0,
+            "retired": False,
         })
         print(f"external {'created' if created else 'updated'}: {e['id']} ({e.get('kind', '')})")
         n += 1
@@ -735,71 +738,27 @@ def live_slugs():
     return roster | {e["id"] for e in parse_externals(EXTERNALS)}
 
 
-# collection -> (operator, fields holding the reference). The multi-relation lists need `~`:
-# PocketBase 0.40 matches nothing for `?=` or `=` against them (measured), which would report a
-# blast radius of zero. `~` is exact here because every record id is 15 chars, so no id can be
-# a substring of another.
-PRUNE_DEPENDENTS = {
-    "assessments": ("=", ("extender",)),
-    "relationships": ("=", ("extender_a", "extender_b")),
-    "eval_responses": ("~", ("extenders",)),
-    "distributions": ("~", ("members",)),
-}
-
-
-def prune_dependents(pb, rec_id):
-    """Every row that an `extenders` delete disturbs, keyed by collection."""
-    eid = esc(rec_id)
-    return {
-        coll: pb.list_all(coll, " || ".join(f"{f} {op} '{eid}'" for f in fields))
-        for coll, (op, fields) in PRUNE_DEPENDENTS.items()
-    }
-
-
 def prune_extenders(pb, slugs, dry_run=False):
-    """Delete `extenders` rows whose slug is no longer in `slugs`, reporting what goes with
-    each one. `files` and `assessments` cascade; `relationships` are deleted first because
-    extender_a/extender_b are required with cascadeDelete off, so PocketBase refuses the
-    delete while an edge remains; PocketBase silently strips the id from the non-required
-    `eval_responses.extenders` and `distributions.members` lists.
+    """Flag every `extenders` row whose slug is no longer in `slugs` with `retired=True`.
 
-    Only `files` and assessor `mechanical-v1` rows come back on the next run. Judged and
-    coverage assessments, relationships, and the eval_responses references are an evaluation
-    pass's verbatim record and nothing here regenerates them, so the accounting printed on
-    every run — dry or not — is the operator's only warning.
+    Nothing is deleted and no dependent row is read or written, so this pass keeps
+    PROCEDURES.md's "never touches non-mechanical assessors or `job_coverage`/`relationships`"
+    invariant: a unit's judged and coverage assessments, its relationship edges and the
+    `eval_responses` naming it are all non-regenerable, and only `files` plus assessor
+    `mechanical-v1` would ever come back. Consumers drop retired units in Python
+    (report.py, load_coverage.py, load_eval_run.py, load_assessments.py), and a slug that
+    reappears in the tree is un-retired by the next upsert, which writes `retired=False`.
     """
+    verb = "to retire" if dry_run else "retired"
     n = 0
-    hit = {coll: {} for coll in PRUNE_DEPENDENTS}
-    refs = {coll: 0 for coll in PRUNE_DEPENDENTS}
     for rec in pb.list_all("extenders"):
-        if rec["slug"] in slugs:
+        if rec["slug"] in slugs or rec.get("retired"):
             continue
-        dependents = prune_dependents(pb, rec["id"])
-        for coll, rows in dependents.items():
-            hit[coll].update({r["id"]: r for r in rows})
-            refs[coll] += len(rows)
         if not dry_run:
-            for edge in dependents["relationships"]:
-                pb.delete("relationships", edge["id"])
-            pb.delete("extenders", rec["id"])
-        counts = ", ".join(f"{c} {len(dependents[c])}" for c in PRUNE_DEPENDENTS)
-        print(f"extender {'stale' if dry_run else 'pruned'}: {rec['kind']}/{rec['slug']} "
-              f"({counts})")
+            pb.update("extenders", rec["id"], {"retired": True})
+        print(f"extender {verb}: {rec['kind']}/{rec['slug']}")
         n += 1
-    verb = "to prune" if dry_run else "pruned"
-    assessors = {}
-    for row in hit["assessments"].values():
-        key = row.get("assessor") or "(none)"
-        assessors[key] = assessors.get(key, 0) + 1
-    breakdown = ", ".join(f"{k} {v}" for k, v in sorted(assessors.items())) or "none"
     print(f"extenders {verb}: {n}")
-    print(f"assessments {verb} by cascade: {len(hit['assessments'])} ({breakdown})")
-    print(f"relationships {verb}: {len(hit['relationships'])}")
-    # A row can name several pruned extenders, so distinct rows and references differ.
-    print(f"eval_responses losing a reference: {len(hit['eval_responses'])} rows "
-          f"/ {refs['eval_responses']} references")
-    print(f"distributions losing a member: {len(hit['distributions'])} rows "
-          f"/ {refs['distributions']} references")
 
 
 def ingest_dimensions(pb, ext_meta, fw_ids):
