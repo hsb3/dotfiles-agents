@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Scaffold a conformant primitives-core/<type>/<id>/ body plus its roster row.
 
+For a skill, also wires the derived `solo-skills` membership end to end (symlink, the
+plugin's own README member row, the root README's catalog count) from the one
+`--description` the author already supplies — nothing here is prose a scaffold invents.
+
 Stdlib-only, deterministic. Fails loudly on a duplicate id rather than overwriting.
 Usage:
-    python3 scaffold.py skill <id> [--description TEXT]
+    python3 scaffold.py skill <id> --description TEXT
     python3 scaffold.py agent <id> [--description TEXT]
 """
 
@@ -16,7 +20,10 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(_HERE, "..", "..", "..", ".."))
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
-SOLO_SKILLS_LINK_DIR = os.path.join(REPO, "plugins", "solo-skills", "skills")
+SOLO_SKILLS_DIR = os.path.join(REPO, "plugins", "solo-skills")
+SOLO_SKILLS_LINK_DIR = os.path.join(SOLO_SKILLS_DIR, "skills")
+SOLO_SKILLS_README = os.path.join(SOLO_SKILLS_DIR, "README.md")
+ROOT_README = os.path.join(REPO, "README.md")
 ID_RX = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 
 DEFAULT_DESCRIPTION = "TODO — describe what this does and when to use it."
@@ -102,7 +109,54 @@ def _append_roster(entry_text):
         fh.write(text + entry_text)
 
 
+def _solo_skills_count():
+    """Live count of plugins/solo-skills/skills/ entries, matching check_catalog.py's rule."""
+    return sum(
+        1
+        for e in os.listdir(SOLO_SKILLS_LINK_DIR)
+        if not e.startswith((".", "_")) and os.path.isdir(os.path.join(SOLO_SKILLS_LINK_DIR, e))
+    )
+
+
+def _append_solo_skills_readme_row(id_, description):
+    """Add a member row to plugins/solo-skills/README.md's `**Uncategorized**` table
+    (creating that section, once) — never guesses a real category (that is editorial)."""
+    with open(SOLO_SKILLS_README, encoding="utf-8") as fh:
+        text = fh.read()
+    marker = "\n## Install\n"
+    if marker not in text:
+        _fail(f"{SOLO_SKILLS_README}: no '## Install' heading — can't place the member row")
+    row = f"| `{id_}` | {description} |\n"
+    insert = row if "\n**Uncategorized**\n" in text else (
+        "\n**Uncategorized**\n\n| Skill | What it does |\n|---|---|\n" + row
+    )
+    idx = text.index(marker)
+    with open(SOLO_SKILLS_README, "w", encoding="utf-8") as fh:
+        fh.write(text[:idx] + insert + text[idx:])
+
+
+ROOT_README_COUNT_RX = re.compile(
+    r"(\[`solo-skills`\]\(plugins/solo-skills/README\.md\)[^\n]*?)(\d+)( skills \|)"
+)
+
+
+def _fix_root_readme_count(n):
+    """Rewrite the solo-skills catalog row's `<n> skills` cell to the live count."""
+    with open(ROOT_README, encoding="utf-8") as fh:
+        text = fh.read()
+    new_text, count = ROOT_README_COUNT_RX.subn(rf"\g<1>{n}\g<3>", text, count=1)
+    if count != 1:
+        _fail(f"{ROOT_README}: expected exactly one solo-skills catalog row, found {count}")
+    with open(ROOT_README, "w", encoding="utf-8") as fh:
+        fh.write(new_text)
+
+
 def scaffold_skill(id_, description):
+    if not description or description == DEFAULT_DESCRIPTION:
+        _fail("--description is required for `skill` (used verbatim in SKILL.md and in "
+              "the solo-skills README member row — a stub has nothing honest to put there)")
+    if "\n" in description or "|" in description:
+        _fail("--description must be one line with no `|` (it lands in a markdown table row)")
     _check_id(id_)
     d = os.path.join(REPO, "primitives-core", "skills", id_)
     if os.path.exists(d):
@@ -122,14 +176,17 @@ def scaffold_skill(id_, description):
         _fail(f"{link} already exists")
     os.symlink(os.path.join("..", "..", "..", "primitives-core", "skills", id_), link)
 
+    _append_solo_skills_readme_row(id_, description)
+    _fix_root_readme_count(_solo_skills_count())
+
     print(f"scaffolded primitives-core/skills/{id_}/ (SKILL.md, README.md) + roster row")
     print(f"linked plugins/solo-skills/skills/{id_} -> primitives-core/skills/{id_}")
+    print("added a member row to plugins/solo-skills/README.md's Uncategorized table")
+    print("fixed the solo-skills catalog count in README.md")
     print(
-        "`make ci` stays RED until you write two human-facing claims a stub cannot:\n"
-        "  1. README.md — bump the solo-skills row's Contents cell (check_catalog.py)\n"
-        "  2. plugins/solo-skills/README.md — name the new member (check_readmes.py)\n"
-        "Then, at ship time, bump plugins/solo-skills' version "
-        "(check_version_bump.py, CI-only)."
+        "`make ci` is green. Two things remain for a human: move the Uncategorized row "
+        "into its real category when you write the skill's real body, and bump "
+        "plugins/solo-skills' version at ship time (check_version_bump.py, CI-only)."
     )
 
 
