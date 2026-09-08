@@ -8,7 +8,13 @@ command targets**, the call is denied and the deny text names the agents to wait
 
 Read-only git never fires — `status`, `diff`, `log`, `show`, `branch`, `rev-list`, `rev-parse`,
 `ls-files`, `fetch` are how a session orients — and the read-only forms of the verbs above
-(`stash list`, `stash show`, `apply --check`) are reads too.
+(`stash list`, `stash show`, `apply --check`, and `--help`/`-h` on any of them) are reads too.
+
+**That verb list is narrower than the hazard it describes.** `git add`, `rm`, `mv`, `update-ref`,
+`tag`, `bisect start`, `submodule update` and `sparse-checkout set` all write the index or the
+tree and none of them is in the set, so none of them fires. Widening it is a separate decision —
+each candidate needs its own read-form ruling, the way `stash list` and `apply --check` got one —
+and is tracked on this project's board rather than fixed here.
 
 ## Why
 
@@ -99,12 +105,18 @@ that wants through has the override, which is cheaper and leaves a row — but f
 `time git push`, `timeout 60 git push` and `nice git commit` are things a session writes for real
 reasons, and until this each lost its deny silently.
 
-`env`, `command`, `builtin`, `eval`, `nice`, `time`, `xargs`, `timeout`, `sudo`, `nohup`,
-`stdbuf`, `setsid`, chained (`nice time git commit`), and each in the `g`-prefixed coreutils
-spelling Homebrew installs (`gtimeout`). Each wrapper's own options are skipped **with their
-values**, so a value is never misread as the command word (`nice -n 10`, `xargs -I {}`,
-`env -u NAME`, `sudo -u NAME`, GNU `time -o FILE`), and `timeout`'s bare positional duration is
-skipped too.
+`env`, `command`, `builtin`, `eval`, `exec`, `nice`, `time`, `xargs`, `timeout`, `sudo`,
+`nohup`, `stdbuf`, `setsid`, chained (`nice time git commit`), and each in the `g`-prefixed
+coreutils spelling Homebrew installs (`gtimeout`).
+
+Each wrapper carries **the list of its own options that take a separate value**, taken from that
+tool's man page, so a value is not misread as the command word: `nice -n 10`, `xargs -I % -J % -R
+2 -S 300`, `env -u NAME -P PATH -a ARGV0`, `sudo -u NAME -T 30`, GNU `time -o FILE`. `timeout`'s
+bare positional duration is skipped too. **The guarantee is only as good as those lists** — an
+option that is not on one is skipped as a valueless flag, and the accuracy of each list is
+whatever the man page said. Options whose argument is OPTIONAL are deliberately absent
+(`xargs -i`/`-l`/`-e`/`--replace`/`--eof`, `git --exec-path`): such an argument must be glued, so
+consuming the next token would eat the command word.
 
 **Shell grammar displaces the command word the same way, and is read the same way.** After `do`,
 `then`, `else`, `elif`, `if`, `while`, `until` or `!`, the next word is a command, so
@@ -116,11 +128,18 @@ the word after them is a loop variable, not a command. The **verb** may carry a 
 (`while git pull; do`), which is stripped — that shape, and the plainer `git commit; ls`, were
 missed before.
 
-One accepted over-denial comes with this: a bare keyword sitting as an ARGUMENT immediately before
-a git call — `echo do git commit` — denies, because telling that `do` is `echo`'s argument needs a
-parser. A false deny costs one override; a miss costs a live worker's uncommitted files. A quoted
-keyword is inert (`git commit -m "then git push"` denies on the real `commit`, never on the
-string).
+One accepted over-denial comes with this: a bare keyword sitting as an ARGUMENT immediately
+before a git call — `echo do git commit` — denies, because telling that `do` is `echo`'s argument
+needs a parser. A false deny costs one override; a miss costs a live worker's uncommitted files.
+**Quoting the keyword alone does not make it inert** — `shlex` strips the quotes and `echo "then"
+git commit` denies exactly as the bare form does. Only a keyword inside a MULTI-WORD quoted string
+is inert, because that string is one token (`git commit -m "then git push"` denies on the real
+`commit`, never on the string).
+
+Two places a keyword is deliberately NOT read: after a `#` and after a `<<`. A trailing comment
+(`make ci  # then git commit`) and a heredoc body (a script being written that contains a loop
+around a git call) are text, not command lines, and both were silent before the keyword rule
+existed. Separators still open command position inside them, exactly as they always did.
 
 Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
 same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
@@ -142,7 +161,11 @@ command string the hook is handed, so whatever still displaces them is invisible
   body text;
 - a **command word** glued to a separator (`ls&&git commit`, `(git commit)`) — a glued wrapper
   option is fine (`nice -n10`, `env -uNAME`, `xargs -I%`), and a separator glued to the *verb*
-  (`git pull;`) is stripped; it is only the command word the separator still hides;
+  (`git pull;`) is stripped; it is only the command word the separator still hides. **Asymmetry,
+  deliberate:** the cwd check DOES strip a leading `(` before testing for `cd`, because
+  `(cd elsewhere && git commit)` is how a subshell cd is normally written and resolving it to the
+  wrong tree returns an affirmative "no block"; the verb scan does not, so `(git commit)` stays a
+  missed deny in the SAME tree;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 
@@ -228,9 +251,11 @@ No activation file: the guard fires wherever the plugin is installed.
   empty set, because rendering "cannot tell" as "nothing has settled" would deny on every agent
   the session ever started.
 - **`git` only counts in command position** — first token, after a shell separator, after an
-  env assignment, or after a leading exec wrapper and its options. `man git commit`,
-  `which git` and `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a
-  git command mentioned inside a string is one token and cannot fire.
+  env assignment, after a leading exec wrapper and its options, or after a shell keyword
+  (`; do`, `; then`) outside a comment or heredoc body. `man git commit`, `which git` and
+  `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a multi-word
+  string mentioning a git command is one token and cannot fire — a single quoted WORD is not
+  protected, since `shlex` strips its quotes.
 - **The override emits no `permissionDecision`.** `"allow"` would short-circuit every other
   permission check in the session; this hook's opinion is only about live workers.
 - **A stale sidecar blocks until the ledger settles it.** There is no age threshold: an agent that

@@ -347,7 +347,14 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
     def test_read_only_forms_of_mutating_verbs_are_silent(self):
         self._sidecar("d4444444444444444")
         for command in ("git stash list", "git stash show -p stash@{0}",
-                        "git apply --check fix.diff", "git apply --stat fix.diff"):
+                        "git apply --check fix.diff", "git apply --stat fix.diff",
+                        # The read form carried a glued separator: the verb
+                        # strip fixed the VERB, not the args compared here.
+                        "git stash list; ls",
+                        "for f in a b; do git stash list; done",
+                        # `--help` is orientation, whatever the verb.
+                        "git commit --help", "git rebase --help",
+                        "git stash --help", "git push -h"):
             result = self._run(self._payload(command))
             self.assertEqual(result.returncode, 0, command)
             self.assertEqual(result.stdout, "", command)
@@ -539,6 +546,8 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "setsid git push origin dev",
             "eval git commit -m x",
             "builtin git commit -m x",
+            "exec git push origin dev",
+            "exec -a mygit git commit -m x",
             "nice time git commit -m x",
         ):
             with self.subTest(command=command):
@@ -594,6 +603,12 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "env --split-string='-C {0}' git commit -m x",
             "sudo -D {0} git commit -m x",
             "sudo --chdir={0} git commit -m x",
+            # `man sudo` here: `[-D directory] ... [-R directory]` — both
+            # relocate, so both are unknowable rather than resolvable.
+            "sudo -R {0} git commit -m x",
+            "sudo --chroot={0} git commit -m x",
+            # The glued short spelling the docstring names.
+            "env -C{0} git commit -m x",
         ):
             with self.subTest(command=command):
                 self._assert_denied(self._run_in(
@@ -620,6 +635,26 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "echo x | xargs -l git commit -m",
             "timeout --kill-after 5 60 git push origin dev",
             "sudo -u someone git commit -m x",
+            # BSD spellings, verified against this machine's man pages:
+            # xargs `-J replstr` `-R replacements` `-S replsize`,
+            # sudo `-T timeout`, env `-P altpath`, GNU env `-a, --argv0=ARG`.
+            "echo x | xargs -J % git commit -m %",
+            "echo x | xargs -I % -R 2 git commit -m %",
+            "echo x | xargs -I % -S 300 git commit -m %",
+            "echo x | xargs -I % git commit -m %",
+            "sudo -T 30 git commit -m x",
+            "sudo --command-timeout 30 git commit -m x",
+            "env -P /usr/bin git commit -m x",
+            "env -a foo git commit -m x",
+            "env --argv0=foo git commit -m x",
+            # Optional-argument long spellings: the value must be glued, so
+            # reading the next token as it swallows the command word.
+            "echo x | xargs --replace git commit -m",
+            "echo x | xargs --eof git commit -m",
+            "echo x | xargs --replace=% git commit -m %",
+            # git's own `--exec-path[=<path>]` is optional-argument too.
+            "git --exec-path commit -m x",
+            "git --exec-path=/usr/libexec commit -m x",
             # Glued spellings, which the README claims are NOT a ceiling.
             "nice -n10 git commit -m x",
             "env -uGIT_DIR git commit -m x",
@@ -695,6 +730,7 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "until git push origin dev; do sleep 1; done",
             "if false; then echo no; else git commit -m x; fi",
             "if false; then echo no; elif true; then git commit -m x; fi",
+            "if a; then b; elif git commit -m x; then c; fi",
             "! git commit -m x",
             "for f in *; do nice git commit -m x; done",
         ):
@@ -710,6 +746,8 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "for d in a b; do cd {0} && git commit -m x; done",
             "if true; then cd {0} && git commit -m x; fi",
             "while true; do command cd {0} && git commit -m x; done",
+            # The way a subshell cd is actually written: glued to the `(`.
+            "(cd {0} && git commit -m x)",
         ):
             with self.subTest(command=command):
                 self._assert_denied(self._run_in(
@@ -743,6 +781,40 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertIn("`git commit`", reason)
         self.assertNotIn("`git push`", reason)
 
+    def test_a_trailing_comment_does_not_open_command_position(self):
+        # `#` never opened command position; a keyword one token later must not
+        # either, or every trailing comment mentioning a git command denies.
+        self._sidecar("n1111111111111111")
+        for command in (
+            "make ci  # then git commit",
+            "python3 -m unittest tests.foo  # if git commit fails, retry",
+            "ls -la  # do git push after this",
+            "sleep 1  # while git pull runs",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_separator_inside_a_comment_still_opens_command_position(self):
+        # Going inert suspends the KEYWORD rule only. A separator behaves as it
+        # always did, so this over-denial is unchanged rather than introduced —
+        # pinned because both prose surfaces claim exactly that.
+        self._sidecar("n3333333333333333")
+        self._assert_denied(self._run(self._payload(
+            "ls  # note; git commit -m x")))
+
+    def test_a_heredoc_body_with_a_keyword_stays_invisible(self):
+        # Both prose surfaces promise heredoc bodies are not read. A keyword in
+        # the body must not reopen command position, or writing a shell script
+        # about git blocks the session writing it.
+        self._sidecar("n2222222222222222")
+        for command in (
+            "cat > release.sh <<'EOF'\nfor f in *; do git commit -m x; done\nEOF",
+            "cat >> notes.md <<'EOF'\nthen git push origin dev\nEOF",
+            "cat > release.sh <<'EOF'\ngit commit -m x\nEOF",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
     def test_the_tokenizer_ceilings_stay_ceilings(self):
         # Not a wish list: each needs a parser rather than a token scan, and
         # the README names them as things the guard cannot see. A change here
@@ -753,6 +825,9 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "sh -c 'git commit -m x'",
             "echo $(git commit -m x)",
             "ls&&git commit -m x",
+            # Deliberate asymmetry with the cwd check, which DOES strip a
+            # leading `(`: a glued COMMAND WORD stays a stated ceiling.
+            "(git commit -m x)",
             "env -S 'git commit -m x'",
             "cat <<EOF\ngit commit -m x\nEOF",
         ):

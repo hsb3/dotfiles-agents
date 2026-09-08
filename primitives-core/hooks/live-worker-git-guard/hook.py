@@ -80,7 +80,9 @@ them. A leading exec wrapper: the named ones in EXEC_WRAPPERS are stepped over,
 with their own options and values, so `time git push` and `timeout 60 git push`
 are read as the calls they are. And a SHELL_KEYWORDS word, after which command
 position resumes, so the call inside `for f in *; do git commit; done` is read
-too. An unlisted wrapper still displaces them, and so do
+too — but NOT after a `#` comment or a `<<` heredoc, where the words are text
+and the keyword rule is suspended (separators keep opening command position
+there, as they always did). An unlisted wrapper still displaces them, and so do
 `bash -c "..."`, a `$( )` substitution, a command word glued to a separator
 (`ls&&git commit`), and heredoc body text. Anything that re-parses a STRING is
 past the ceiling by construction, including `env -S` and a quoted `eval`. A
@@ -131,10 +133,11 @@ LOG_PATH_ENV = "LIVE_WORKER_GIT_GUARD_LOG_PATH"
 OVERRIDE_VAR = "ATELIER_GIT_GUARD_OVERRIDE"
 OVERRIDE_TRUTHY = ("1", "true", "yes", "on")
 
-# Verbs that write the index, the working tree, or a ref. `fetch` is absent on
-# purpose: it moves no tracked file. `branch` is absent because the shape a
-# session actually runs (`git branch`, `git branch --show-current`) is a read,
-# and `branch -D` deletes a ref without touching the tree the workers hold.
+# The verbs this guard fires on — NOT every verb that writes. `add`, `rm`, `mv`,
+# `update-ref`, `tag`, `bisect` and `submodule` also write and are absent; see
+# the README, widening the set is a per-verb read-form decision tracked on the
+# board. `fetch` moves no tracked file, and `branch` as a session runs it is a
+# read.
 MUTATING_VERBS = frozenset((
     "commit", "push", "merge", "pull", "rebase", "checkout", "switch", "stash",
     "reset", "cherry-pick", "revert", "clean", "restore", "am", "apply",
@@ -144,7 +147,7 @@ MUTATING_VERBS = frozenset((
 # this set `git -C /repo commit` reads `/repo` as the subcommand and the call
 # goes unguarded.
 GLOBAL_FLAGS_WITH_VALUE = frozenset((
-    "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
+    "-C", "-c", "--git-dir", "--work-tree", "--namespace",
     "--config-env", "--attr-source", "--super-prefix",
 ))
 
@@ -163,23 +166,27 @@ CWD_MOVING_BUILTINS = frozenset(("cd", "pushd", "popd"))
 # separate value token — without which the value reads as the command word.
 EXEC_WRAPPERS = {
     "env": frozenset((
-        "-u", "--unset", "-C", "--chdir", "-S", "--split-string")),
+        "-u", "--unset", "-C", "--chdir", "-S", "--split-string",
+        "-P", "-a", "--argv0")),
     "command": frozenset(),
+    "exec": frozenset(("-a",)),
     "builtin": frozenset(),
     "eval": frozenset(),
     "nice": frozenset(("-n", "--adjustment")),
     "time": frozenset(("-o", "--output", "-f", "--format")),
-    # `-i`/`-l`/`-e` are absent on purpose: their argument is OPTIONAL, so it
-    # must be glued, and reading the next token as it swallows the command.
+    # `-i`/`-l`/`-e` and their long spellings `--replace`/`--eof` are absent
+    # on purpose: an OPTIONAL argument must be glued, so skipping two eats the
+    # command word.
     "xargs": frozenset((
-        "-n", "--max-args", "-P", "--max-procs", "-I", "--replace",
+        "-n", "--max-args", "-P", "--max-procs", "-I", "-J", "-R", "-S",
         "-L", "--max-lines", "-s", "--max-chars", "-a", "--arg-file",
-        "-d", "--delimiter", "-E", "--eof")),
+        "-d", "--delimiter", "-E")),
     "timeout": frozenset(("-s", "--signal", "-k", "--kill-after")),
     "sudo": frozenset((
         "-u", "--user", "-g", "--group", "-C", "--close-from", "-D",
         "--chdir", "-h", "--host", "-p", "--prompt", "-r", "--role",
-        "-t", "--type", "-U", "--other-user", "-R", "--chroot")),
+        "-t", "--type", "-U", "--other-user", "-R", "--chroot",
+        "-T", "--command-timeout")),
     "nohup": frozenset(),
     "stdbuf": frozenset(("-i", "--input", "-o", "--output", "-e", "--error")),
     "setsid": frozenset(),
@@ -189,7 +196,7 @@ EXEC_WRAPPERS = {
 # cannot read. Per wrapper: `sudo -C` is a file descriptor, `env -C` is a chdir.
 TREE_AIMING_WRAPPER_FLAGS = {
     "env": frozenset(("-C", "--chdir", "-S", "--split-string")),
-    "sudo": frozenset(("-D", "--chdir")),
+    "sudo": frozenset(("-D", "--chdir", "-R", "--chroot")),
 }
 
 # `command -v git` prints where git is; it does not run it. Same exclusion the
@@ -212,6 +219,11 @@ GIT_TIMEOUT = 3
 # A token ENDING in one of these is a shell separator, so the next token starts
 # a fresh command: `a && git commit`, `a; git commit`, `a | git commit`.
 SEPARATOR_TAILS = ("&", "|", ";", "(", ")", "{", "}")
+SEPARATORS = "".join(SEPARATOR_TAILS)
+
+# `git commit --help` opens a man page and touches nothing. Orientation has to
+# stay cheap, or the guard is the thing that gets turned off.
+HELP_FLAGS = frozenset(("--help", "-h"))
 
 # Keywords a command word follows — the same displacement a wrapper causes.
 # `for`/`in` are out (the next word is a loop variable); `done`/`fi` need no row.
@@ -271,12 +283,25 @@ def _is_assignment(token):
     return name.replace("_", "").isalnum() and not name[0].isdigit()
 
 
-def _opens_command(token):
+def _opens_command(token, inert):
     """True when the NEXT token is in command position: this one ends a
     command (a separator), prefixes one (an assignment), or is a keyword a
-    command follows (`; do git commit`)."""
-    return (token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
-            or token in SHELL_KEYWORDS)
+    command follows (`; do git commit`).
+
+    `inert` once the scan has passed a `#` or a `<<`, where the words are a
+    comment or heredoc body rather than a command line. Only the keyword rule
+    is suspended there: separators behave as they always did, so
+    `make ci  # then git commit` is silent again and a heredoc body stays the
+    ceiling both prose surfaces promise.
+    """
+    if token.endswith(SEPARATOR_TAILS) or _is_assignment(token):
+        return True
+    return not inert and token in SHELL_KEYWORDS
+
+
+def _is_inert(token):
+    """A `#` comment or a `<<` heredoc redirect: what follows is text."""
+    return token.startswith("#") or token.startswith("<<")
 
 
 def _relocates(wrapper, token):
@@ -353,6 +378,7 @@ def _first_mutating_verb(tokens):
     is the subcommand.
     """
     command_position = True
+    inert = False
     for index, token in enumerate(tokens):
         if command_position:
             git_at, _relocated = _unwrap(tokens, index)
@@ -361,7 +387,8 @@ def _first_mutating_verb(tokens):
                 if verb in MUTATING_VERBS and not _is_read_form(
                         verb, tokens, verb_at + 1):
                     return verb, git_at, index
-        command_position = _opens_command(token)
+        inert = inert or _is_inert(token)
+        command_position = _opens_command(token, inert)
     return None, None, None
 
 
@@ -373,7 +400,7 @@ def _subcommand(tokens, start):
     while i < len(tokens):
         token = tokens[i]
         if not token.startswith("-"):
-            return token.rstrip("".join(SEPARATOR_TAILS)), i
+            return token.rstrip(SEPARATORS), i
         if token in GLOBAL_FLAGS_WITH_VALUE:
             i += 2  # the flag and its separate value
             continue
@@ -384,14 +411,16 @@ def _subcommand(tokens, start):
 def _is_read_form(verb, tokens, start):
     """True when this call of a mutating verb is one of its read-only forms
     (READ_FORMS), judged on the arguments up to the next shell separator."""
+    args = []
+    for token in tokens[start:]:
+        args.append(token.rstrip(SEPARATORS))
+        if token.endswith(SEPARATOR_TAILS):
+            break
+    if any(a in HELP_FLAGS for a in args):
+        return True
     forms = READ_FORMS.get(verb)
     if not forms:
         return False
-    args = []
-    for token in tokens[start:]:
-        args.append(token)
-        if token.endswith(SEPARATOR_TAILS):
-            break
     if verb == "stash":
         first = next((a for a in args if not a.startswith("-")), None)
         return first in forms
@@ -473,17 +502,19 @@ def _target_directory(tokens, git_at, cwd):
     if not isinstance(cwd, str) or not cwd:
         return None
     command_position = True
+    inert = False
     for index, token in enumerate(tokens[:git_at]):
         if command_position:
             word_at, relocated = _unwrap(tokens, index)
             if relocated and word_at == git_at:
                 return None
             if word_at is not None and os.path.basename(
-                    tokens[word_at]) in CWD_MOVING_BUILTINS:
+                    tokens[word_at]).lstrip("({") in CWD_MOVING_BUILTINS:
                 return None
         if _is_assignment(token) and token.partition("=")[0] in TREE_AIMING_VARS:
             return None
-        command_position = _opens_command(token)
+        inert = inert or _is_inert(token)
+        command_position = _opens_command(token, inert)
     directory = cwd
     index = git_at + 1
     while index < len(tokens):
