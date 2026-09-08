@@ -142,8 +142,11 @@ topically, and `mise-en-place` needs it mechanically — that plugin's `audit.py
 root and abort without it, so the skill has to travel with them. Either way it is not a
 `solo-skills` member; take it from whichever of the two you already have.
 
-**External tools one of these needs.** `opencode-sandbox` needs the `opencode-sandbox` CLI
-and Docker, and says so at the point of use. The other members need nothing installed.
+**External tools some of these need.** `opencode-sandbox` needs the `opencode-sandbox` CLI
+and Docker; `iterm2` needs iTerm2 itself installed locally, since its default-terminal and
+shell-integration paths configure the real app; `owner-signoff` needs PyYAML on the system
+`python3` to read a YAML spec, and nothing outside the standard library for a JSON one. Each
+says so at the point of use.
 
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
