@@ -403,6 +403,7 @@ class PublishedRefResolution(unittest.TestCase):
         return [
             (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
             (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
+            (["show-ref", "--verify"], (0, b"", "")),
             (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
             self._remote(),
         ] + list(extra)
@@ -412,6 +413,7 @@ class PublishedRefResolution(unittest.TestCase):
         return [
             (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
             (["fetch"], (0, b"", "")),
+            (["show-ref", "--verify"], (0, b"", "")),
             (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
             self._remote(),
         ] + list(extra)
@@ -548,7 +550,7 @@ class PublishedRefResolution(unittest.TestCase):
         """No way to tell whether the record describes this remote is no proof either."""
         self.record_sync()
         tree = self.tree(
-            self._offline()[:3] + [(["remote", "get-url"], (128, b"", "fatal: No such remote"))]
+            self._offline()[:4] + [(["remote", "get-url"], (128, b"", "fatal: No such remote"))]
         )
         reason = tree.prepare()
         self.assertIsNotNone(reason)
@@ -591,7 +593,7 @@ class PublishedRefResolution(unittest.TestCase):
     def test_a_sync_whose_remote_cannot_be_named_records_nothing(self):
         """A record that cannot say where it came from certifies nothing, so skip it."""
         tree = self.tree(
-            self._online()[:3] + [(["remote", "get-url"], (128, b"", "fatal: No such remote"))]
+            self._online()[:4] + [(["remote", "get-url"], (128, b"", "fatal: No such remote"))]
         )
         self.assertIsNone(tree.prepare())
         self.assertFalse(os.path.exists(self.stamp))
@@ -607,7 +609,7 @@ class PublishedRefResolution(unittest.TestCase):
             [
                 (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
                 (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (1, b"", "")),
+                (["show-ref", "--verify"], (1, b"", "")),
             ]
         )
         reason = tree.prepare()
@@ -621,7 +623,7 @@ class PublishedRefResolution(unittest.TestCase):
             [
                 (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
                 (["fetch"], (128, b"", "fatal: could not read\n\nPlease make sure\nthe repo exists.")),
-                (["rev-parse", "--verify"], (1, b"", "")),
+                (["show-ref", "--verify"], (1, b"", "")),
             ]
         )
         reason = tree.prepare()
@@ -633,7 +635,7 @@ class PublishedRefResolution(unittest.TestCase):
             [
                 (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
                 (["fetch"], (128, b"", "x " * 5000)),
-                (["rev-parse", "--verify"], (1, b"", "")),
+                (["show-ref", "--verify"], (1, b"", "")),
             ]
         )
         self.assertLess(len(tree.prepare()), V.MAX_GIT_ERROR_CHARS + 120)
@@ -998,6 +1000,29 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         self.assertEqual(rc, 1, text)
         self.assertIn("NOT evidence of a missing version bump", text)
         self.assertNotIn("plugins/alpha", text)
+
+    def test_a_local_branch_named_the_full_refname_is_not_the_published_tree(self):
+        """A full refname is not self-verifying.
+
+        `rev-parse --verify` applies all six resolution rules, so with the tracking ref
+        absent a local branch literally named `refs/remotes/origin/main` resolves as
+        `refs/heads/refs/remotes/origin/main` and becomes the tree this gate compares
+        against. `show-ref --verify` matches the literal ref path and nothing else.
+        """
+        poisoned = self.git(
+            self.work, "rev-parse", V.PUBLISHED_FULL_REF
+        ).decode("ascii").strip()
+        self.git(self.work, "branch", V.PUBLISHED_FULL_REF, poisoned)
+        self.git(self.work, "remote", "remove", "origin")
+        self.git(self.work, "update-ref", "-d", V.PUBLISHED_FULL_REF)
+
+        tree = self.tree()
+        reason = tree.prepare()
+        self.assertIsNotNone(reason)
+        self.assertIn("could not be resolved", reason)
+        # ...and the shadow was never read as the published sha, which `index()` and
+        # `plugin_json()` would otherwise still reach for.
+        self.assertIsNone(tree._sha)
 
 
 if __name__ == "__main__":
