@@ -76,7 +76,7 @@ STATE_DIR_DEFAULT = "/tmp/context-watermark"
 LOG_STREAM = "context-watermark"
 LOG_PATH_ENV = "CONTEXT_WATERMARK_LOG_PATH"
 ACTIVATION_KEY = "watermark"
-GIT_TIMEOUT = 10
+GIT_TIMEOUT = 5  # under the hook's own 10s wiring timeout
 
 
 def _env_int(name, default):
@@ -411,7 +411,9 @@ def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
         "fired": fired,
         "model": model,
         "window": (info or {}).get("window"),
-        "window_fallback": bool(model) and not (info or {}).get("window"),
+        # "did this check measure a window?" — a missing model id and an
+        # unmapped one are the same answer, and an error row measured nothing.
+        "window_fallback": bool(info) and not info.get("window"),
         "complexity": (info or {}).get("complexity"),
         "soft": soft,
         "hard": hard,

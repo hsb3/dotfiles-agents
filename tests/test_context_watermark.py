@@ -299,6 +299,23 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual((row["soft"], row["hard"]), (120_000, 160_000))
         self.assertEqual(row["tier"], "soft")
 
+    def test_a_transcript_with_no_model_at_all_is_still_a_fallback(self):
+        """`window_fallback` answers "did this check measure a window?", so a
+        usage block with no model beside it is the same answer as an unmapped
+        model id — not a quieter one."""
+        session = "session-{0}".format(next(_SEQ))
+        transcript = os.path.join(self.tmp, "transcripts", session + ".jsonl")
+        record = _assistant(130_000)
+        record["message"].pop("model")
+        _write_jsonl(transcript, [record])
+        self.run_hook({
+            "hook_event_name": "UserPromptSubmit", "session_id": session,
+            "transcript_path": transcript, "cwd": self.project, "prompt": "go"})
+        row = self.rows()[-1]
+        self.assertIsNone(row["model"])
+        self.assertTrue(row["window_fallback"])
+        self.assertEqual((row["soft"], row["hard"]), (120_000, 160_000))
+
     def test_a_known_window_row_is_not_marked_as_a_fallback(self):
         self.run_hook(self.session_payload(10_000))
         self.assertFalse(self.rows()[-1]["window_fallback"])
