@@ -33,6 +33,11 @@ two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read.
 machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
 norms.
 
+Triage is one move in a longer loop, and its tools are split across plugins. The Kata adapter
+writes that loop out end to end — wiring check, per-card definition audit, health check, the
+pass, health again — under "The maintenance rhythm", including why a per-card audit and a
+whole-board health check are not redundant.
+
 **Every check reads open items only, the label ones included.** An adapter builds
 `fields.labels.options` from the board's whole history, so a label surviving on closed cards is
 not a live vocabulary and no edit to open work could ever clear it — judging a live board by its
