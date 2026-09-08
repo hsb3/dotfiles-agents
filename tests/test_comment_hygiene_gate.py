@@ -9,6 +9,7 @@ inherited, so a stray CLAUDE_PROJECT_DIR cannot redirect it.
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -167,6 +168,160 @@ class CommentHygieneGateTests(unittest.TestCase):
     def test_version_like_tokens_are_not_board_refs(self):
         self._stage("const enc = 'x'  // UTF-8 only, SHA-256 digest, see CVE-2024-1234\n")
         self.assertEqual(self._run("git commit -m x"), "")
+
+
+DIRTY_JS = "const x = 1  // rollback plan lives in ABC-77, per the review call\n"
+
+
+REPORTED_FILE = re.compile(r"^  - (\S+) \(\d+\)$", re.M)
+
+
+class PrDiffFixture(unittest.TestCase):
+    """Hermetic git plus the hook's PR-path invocation. No tests of its own."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        home = os.path.join(self.tmp.name, "home")
+        os.makedirs(home)
+        gitconfig = os.path.join(home, "gitconfig")
+        open(gitconfig, "w").close()
+        self.env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": home,
+            "GIT_CONFIG_GLOBAL": gitconfig,
+            "GIT_CONFIG_SYSTEM": gitconfig,
+            "GIT_AUTHOR_NAME": "fixture",
+            "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+            "GIT_COMMITTER_NAME": "fixture",
+            "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+
+    def _git(self, repo, *args):
+        subprocess.run(
+            ("git",) + args, cwd=repo, check=True, env=self.env,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def _out(self, repo, *args):
+        p = subprocess.run(
+            ("git",) + args, cwd=repo, check=True, env=self.env,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        )
+        return p.stdout.decode().strip()
+
+    def _commit(self, repo, name, body, message):
+        with open(os.path.join(repo, name), "w") as fh:
+            fh.write(body)
+        self._git(repo, "add", "-A")
+        self._git(repo, "commit", "-qm", message)
+        return self._out(repo, "rev-parse", "HEAD")
+
+    def _reviewed(self):
+        """Paths the hook reported on, sorted; [] when it reported nothing."""
+        payload = {
+            "session_id": "s", "cwd": self.repo, "tool_name": "Bash",
+            "tool_input": {"command": "gh pr create --fill"},
+        }
+        p = subprocess.run(
+            [sys.executable, HOOK_PATH], input=json.dumps(payload).encode(),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env,
+        )
+        self.assertEqual(p.returncode, 0, p.stderr.decode())
+        out = p.stdout.decode().strip()
+        if not out:
+            return []
+        return sorted(REPORTED_FILE.findall(
+            json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        ))
+
+
+class MergeBaseRefResolutionTests(PrDiffFixture):
+    """A shadowing local ref moves the diff BASE, so the hook reviews the wrong range.
+
+    `git rev-parse` resolves `refs/tags/<name>` and `refs/heads/<name>` before
+    `refs/remotes/<name>`, so a local branch or tag literally named `origin/main`
+    outranks the tracking ref. Every poison here sits MID-branch: a shadowed base then
+    still yields a non-empty diff, so the failure is a silently narrowed review range
+    rather than a silent hook, and no later candidate can rescue it by accident.
+    """
+
+    WHOLE_BRANCH = ["dirty.js", "more.js"]
+
+    def setUp(self):
+        super().setUp()
+        origin = os.path.join(self.tmp.name, "origin")
+        os.makedirs(origin)
+        self._git(origin, "init", "-q", "-b", "main", ".")
+        self._commit(origin, "app.js", "const a = 1\n", "base")
+
+        self.repo = os.path.join(self.tmp.name, "work")
+        subprocess.run(
+            ["git", "clone", "-q", origin, self.repo], check=True, env=self.env, timeout=60
+        )
+        # Neither commit is pushed, so refs/remotes/origin/main is the true base.
+        self.mid = self._commit(self.repo, "dirty.js", DIRTY_JS, "work")
+        self._commit(self.repo, "more.js", DIRTY_JS, "more")
+
+    def test_clone_head_points_at_the_tracking_ref(self):
+        """Guards the fixture: without it the poisoned cases prove nothing."""
+        self.assertEqual(
+            self._out(self.repo, "symbolic-ref", "refs/remotes/origin/HEAD"),
+            "refs/remotes/origin/main",
+        )
+        self.assertEqual(self._reviewed(), self.WHOLE_BRANCH)
+
+    def test_local_branch_named_origin_main_does_not_shadow_the_base(self):
+        self._git(self.repo, "branch", "origin/main", self.mid)
+        self.assertEqual(self._reviewed(), self.WHOLE_BRANCH)
+
+    def test_tag_named_origin_main_does_not_shadow_the_base(self):
+        self._git(self.repo, "tag", "origin/main", self.mid)
+        self.assertEqual(self._reviewed(), self.WHOLE_BRANCH)
+
+    def test_symbolic_ref_pointing_at_a_local_branch_is_not_trusted(self):
+        """`refs/remotes/origin/HEAD` is writable, and full-refname is not remote-tracking.
+
+        Repointed at a local branch it hands the hook a base that resolves fine and is
+        simply wrong, so the target is checked for being remote-tracking as well.
+        """
+        self._git(self.repo, "branch", "poison", self.mid)
+        self._git(self.repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/heads/poison")
+        self.assertEqual(self._reviewed(), self.WHOLE_BRANCH)
+
+
+class NoRemoteRefResolutionTests(PrDiffFixture):
+    """No `origin` remote at all — the fallback candidates must still resolve exactly.
+
+    A full refname is not self-verifying: `git rev-parse refs/remotes/origin/main` falls
+    through to rule 4 and yields `refs/heads/refs/remotes/origin/main` when no tracking
+    ref of that name exists. The poison sits MID-branch, so a shadowed base still produces
+    a non-empty diff — a silently narrowed review range, not a silent hook.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.repo = os.path.join(self.tmp.name, "solo")
+        os.makedirs(self.repo)
+        self._git(self.repo, "init", "-q", "-b", "main", ".")
+        self._commit(self.repo, "app.js", "const a = 1\n", "base")
+        self._git(self.repo, "checkout", "-qb", "feature")
+        self.mid = self._commit(self.repo, "one.js", DIRTY_JS, "one")
+        self._commit(self.repo, "two.js", DIRTY_JS, "two")
+
+    def test_fixture_reviews_the_whole_branch(self):
+        self.assertEqual(self._out(self.repo, "remote"), "")
+        self.assertEqual(self._reviewed(), ["one.js", "two.js"])
+
+    def test_local_branch_spelled_as_a_full_refname_is_not_used_as_the_base(self):
+        self._git(self.repo, "branch", "refs/remotes/origin/main", self.mid)
+        self.assertEqual(self._reviewed(), ["one.js", "two.js"])
+
+    def test_tag_named_main_does_not_shadow_the_local_fallback(self):
+        """Why the fallback is spelled `refs/heads/main` rather than bare `main`."""
+        self._git(self.repo, "tag", "main", self.mid)
+        self.assertEqual(self._reviewed(), ["one.js", "two.js"])
 
 
 if __name__ == "__main__":

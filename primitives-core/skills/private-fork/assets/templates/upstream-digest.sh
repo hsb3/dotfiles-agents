@@ -23,9 +23,11 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # ── CONFIG — edit per fork ────────────────────────────────────────────────────
-LOG_FILE="docs/upstream-review-log.md"
-UPSTREAM_REF="upstream/{{BRANCH}}"           # e.g. upstream/main
-MIRROR_BRANCH="upstream-{{BRANCH}}"          # local read-only mirror (full tier)
+LOG_FILE="docs/upstream-review-log.md"   # its Last-reviewed-upstream-commit: must be a SHA; a ref name there re-opens the shadow at the other end of the range
+# Full refname, not `upstream/{{BRANCH}}`: `refs/heads/<name>` resolves before
+# `refs/remotes/<name>`, so a local ref of that name would shadow the tracking ref.
+UPSTREAM_REF="refs/remotes/upstream/{{BRANCH}}"   # e.g. refs/remotes/upstream/main
+MIRROR_BRANCH="upstream-{{BRANCH}}"          # local read-only mirror (full tier), a real local branch
 UPSTREAM_REPO="{{UPSTREAM_ORG}}/{{NAME}}"    # for PR links
 MAX_DETAIL="${MAX_DETAIL:-300}"
 # SKIP: commit subjects that are almost never applicable to this fork.

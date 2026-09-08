@@ -68,20 +68,29 @@ could compare trees at all.
 Anything that aims the command away from the payload's cwd by a rule this does
 not reimplement is an unresolved comparison rather than a guess, and so counts
 the workers: the `--git-dir`/`--work-tree` flags, the same relocation spelled
-`GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR`, and a `cd`/`pushd`/`popd` before
-the git word.
+`GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR`, a `cd`/`pushd`/`popd` before the
+git word (wrapped or bare), and a wrapper option that moves the tree the git
+call itself runs in (`env -C DIR`, `sudo -D DIR`, `env -S`).
 
 Tokenizer ceiling, stated as a rule rather than a list, because a list of ways
 to hide a word invites the belief that it is complete: the `git` word and the
 `cd` are read only in COMMAND POSITION of the single command string the hook is
-handed, so whatever displaces them is not seen. A wrapper that execs the real
-command (`env`, `command`, `nice`, `time` and their equivalents) does; so do
-`bash -c "..."`, a `$( )` substitution, a token glued to a separator
-(`ls&&git commit`), and heredoc body text. A `GIT_*` variable exported by an
-EARLIER Bash call is the same ceiling in another place — it is not among this
-command's tokens at all. None of these is the sanctioned bypass; the override
-is, and it leaves a row. Seeing through them means interpreting the command
-line rather than tokenizing it, with its own over-denial surface.
+handed, so whatever displaces them is not seen. Two things no longer displace
+them. A leading exec wrapper: the named ones in EXEC_WRAPPERS are stepped over,
+with their own options and values, so `time git push` and `timeout 60 git push`
+are read as the calls they are. And a SHELL_KEYWORDS word, after which command
+position resumes, so the call inside `for f in *; do git commit; done` is read
+too — but NOT after a `#` comment or a `<<` heredoc, where the words are text
+and the keyword rule is suspended (separators keep opening command position
+there, as they always did). An unlisted wrapper still displaces them, and so do
+`bash -c "..."`, a `$( )` substitution, a command word glued to a separator
+(`ls&&git commit`), and heredoc body text. Anything that re-parses a STRING is
+past the ceiling by construction, including `env -S` and a quoted `eval`. A
+`GIT_*` variable exported by an EARLIER Bash call is the same ceiling in
+another place — it is not among this command's tokens at all. None of these is
+the sanctioned bypass; the override is, and it leaves a row. Seeing through
+them means interpreting the command line rather than tokenizing it, with its
+own over-denial surface.
 
 The pending set is `_lib/pending.py`, shared with `subagent-telemetry` so the
 two cannot disagree about who is live. Agents holding their own checkout
@@ -124,10 +133,11 @@ LOG_PATH_ENV = "LIVE_WORKER_GIT_GUARD_LOG_PATH"
 OVERRIDE_VAR = "ATELIER_GIT_GUARD_OVERRIDE"
 OVERRIDE_TRUTHY = ("1", "true", "yes", "on")
 
-# Verbs that write the index, the working tree, or a ref. `fetch` is absent on
-# purpose: it moves no tracked file. `branch` is absent because the shape a
-# session actually runs (`git branch`, `git branch --show-current`) is a read,
-# and `branch -D` deletes a ref without touching the tree the workers hold.
+# The verbs this guard fires on — NOT every verb that writes. `add`, `rm`, `mv`,
+# `update-ref`, `tag`, `bisect` and `submodule` also write and are absent; see
+# the README, widening the set is a per-verb read-form decision tracked on the
+# board. `fetch` moves no tracked file, and `branch` as a session runs it is a
+# read.
 MUTATING_VERBS = frozenset((
     "commit", "push", "merge", "pull", "rebase", "checkout", "switch", "stash",
     "reset", "cherry-pick", "revert", "clean", "restore", "am", "apply",
@@ -137,7 +147,7 @@ MUTATING_VERBS = frozenset((
 # this set `git -C /repo commit` reads `/repo` as the subcommand and the call
 # goes unguarded.
 GLOBAL_FLAGS_WITH_VALUE = frozenset((
-    "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
+    "-C", "-c", "--git-dir", "--work-tree", "--namespace",
     "--config-env", "--attr-source", "--super-prefix",
 ))
 
@@ -152,6 +162,56 @@ TREE_AIMING_VARS = frozenset(("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"))
 # call later in the same command line.
 CWD_MOVING_BUILTINS = frozenset(("cd", "pushd", "popd"))
 
+# Wrappers that exec another command, mapped to their OWN options that take a
+# separate value token — without which the value reads as the command word.
+EXEC_WRAPPERS = {
+    "env": frozenset((
+        "-u", "--unset", "-C", "--chdir", "-S", "--split-string",
+        "-P", "-a", "--argv0")),
+    "command": frozenset(),
+    "exec": frozenset(("-a",)),
+    "builtin": frozenset(),
+    "eval": frozenset(),
+    "nice": frozenset(("-n", "--adjustment")),
+    "time": frozenset(("-o", "--output", "-f", "--format")),
+    # `-i`/`-l`/`-e` and their long spellings `--replace`/`--eof` are absent
+    # on purpose: an OPTIONAL argument must be glued, so skipping two eats the
+    # command word.
+    "xargs": frozenset((
+        "-n", "--max-args", "-P", "--max-procs", "-I", "-J", "-R", "-S",
+        "-L", "--max-lines", "-s", "--max-chars", "-a", "--arg-file",
+        "-d", "--delimiter", "-E")),
+    "timeout": frozenset(("-s", "--signal", "-k", "--kill-after")),
+    "sudo": frozenset((
+        "-u", "--user", "-g", "--group", "-C", "--close-from", "-D",
+        "--chdir", "-h", "--host", "-p", "--prompt", "-r", "--role",
+        "-t", "--type", "-U", "--other-user", "-R", "--chroot",
+        "-T", "--command-timeout")),
+    "nohup": frozenset(),
+    "stdbuf": frozenset(("-i", "--input", "-o", "--output", "-e", "--error")),
+    "setsid": frozenset(),
+}
+
+# Wrapper options that relocate the tree, or pack a shell string this tokenizer
+# cannot read. Per wrapper: `sudo -C` is a file descriptor, `env -C` is a chdir.
+TREE_AIMING_WRAPPER_FLAGS = {
+    "env": frozenset(("-C", "--chdir", "-S", "--split-string")),
+    "sudo": frozenset(("-D", "--chdir", "-R", "--chroot")),
+}
+
+# `command -v git` prints where git is; it does not run it. Same exclusion the
+# docstring already makes for `which git`.
+LOOKUP_FLAGS = {"command": frozenset(("-v", "-V"))}
+
+# Wrappers taking a BARE positional before the command: `timeout 60 git push`.
+# A "first non-flag token is the command" rule would read `60` as the command.
+BARE_ARG_WRAPPERS = frozenset(("timeout",))
+
+# Homebrew's coreutils/findutils ship these `g`-prefixed and both spellings sit
+# on PATH, so `gtimeout` is read as the `timeout` row rather than as a command.
+G_PREFIXED_WRAPPERS = frozenset((
+    "env", "nice", "time", "timeout", "stdbuf", "nohup", "setsid", "xargs"))
+
 # Per `git rev-parse` call. At most two run, and only once a mutating verb is
 # already in hand, so the worst case sits well inside the hook's 10s budget.
 GIT_TIMEOUT = 3
@@ -159,6 +219,16 @@ GIT_TIMEOUT = 3
 # A token ENDING in one of these is a shell separator, so the next token starts
 # a fresh command: `a && git commit`, `a; git commit`, `a | git commit`.
 SEPARATOR_TAILS = ("&", "|", ";", "(", ")", "{", "}")
+SEPARATORS = "".join(SEPARATOR_TAILS)
+
+# `git commit --help` opens a man page and touches nothing. Orientation has to
+# stay cheap, or the guard is the thing that gets turned off.
+HELP_FLAGS = frozenset(("--help", "-h"))
+
+# Keywords a command word follows — the same displacement a wrapper causes.
+# `for`/`in` are out (the next word is a loop variable); `done`/`fi` need no row.
+SHELL_KEYWORDS = frozenset(("do", "then", "else", "elif", "if", "while",
+                            "until", "!"))
 
 # Read-only forms of verbs that otherwise write: `git stash list` is how a
 # session orients, `git apply --check` touches nothing. Keyed by verb; a call
@@ -213,38 +283,124 @@ def _is_assignment(token):
     return name.replace("_", "").isalnum() and not name[0].isdigit()
 
 
+def _opens_command(token, inert):
+    """True when the NEXT token is in command position: this one ends a
+    command (a separator), prefixes one (an assignment), or is a keyword a
+    command follows (`; do git commit`).
+
+    `inert` once the scan has passed a `#` or a `<<`, where the words are a
+    comment or heredoc body rather than a command line. Only the keyword rule
+    is suspended there: separators behave as they always did, so
+    `make ci  # then git commit` is silent again and a heredoc body stays the
+    ceiling both prose surfaces promise.
+    """
+    if token.endswith(SEPARATOR_TAILS) or _is_assignment(token):
+        return True
+    return not inert and token in SHELL_KEYWORDS
+
+
+def _is_inert(token):
+    """A `#` comment or a `<<` heredoc redirect: what follows is text."""
+    return token.startswith("#") or token.startswith("<<")
+
+
+def _relocates(wrapper, token):
+    """True when this wrapper option aims its command at another tree, in any
+    spelling (`env -C DIR`, `env --chdir=DIR`, `env -C/dir`, `sudo -D DIR`)."""
+    for flag in TREE_AIMING_WRAPPER_FLAGS.get(wrapper, ()):
+        if token == flag or token.startswith(flag + "="):
+            return True
+        if len(flag) == 2 and len(token) > 2 and token.startswith(flag):
+            return True
+    return False
+
+
+def _unwrap(tokens, start):
+    """(index of the real command word at `start`, aimed-elsewhere?), stepping
+    over leading exec wrappers.
+
+    A wrapper that execs its argument used to hide the whole call from the
+    command-position scan: `time git push` and `timeout 60 git push` are things
+    a session writes for real reasons, and each lost its deny silently. The
+    index is None when the line runs out, hits a separator, or the wrapper only
+    LOOKS the command up (`command -v git`). The flag is True when a wrapper
+    option relocates the tree or packs a shell string this tokenizer cannot
+    read, which the caller treats as unresolvable rather than skipping past.
+    """
+    index = start
+    relocated = False
+    wrapper = None
+    positional_pending = False
+    while index < len(tokens):
+        token = tokens[index]
+        if token.endswith(SEPARATOR_TAILS):
+            return None, relocated
+        if wrapper is None:
+            word = os.path.basename(token)
+            if word[:1] == "g" and word[1:] in G_PREFIXED_WRAPPERS:
+                word = word[1:]
+            if word not in EXEC_WRAPPERS:
+                return index, relocated
+            wrapper = word
+            positional_pending = word in BARE_ARG_WRAPPERS
+            index += 1
+            continue
+        if token in LOOKUP_FLAGS.get(wrapper, ()):
+            return None, relocated
+        if _relocates(wrapper, token):
+            relocated = True
+        if token.startswith("-") and token != "-":
+            index += 2 if token in EXEC_WRAPPERS[wrapper] else 1
+            continue
+        if _is_assignment(token):
+            index += 1
+            continue
+        if positional_pending:
+            positional_pending = False
+            index += 1
+            continue
+        wrapper = None  # a bare token after a wrapper's options: the command
+    return None, relocated
+
+
 def _first_mutating_verb(tokens):
-    """(verb, index of the `git` token) for the first mutating git call, else
-    (None, None).
+    """(verb, index of the `git` token, index of the command word that leads to
+    it) for the first mutating git call, else (None, None, None).
 
     A `git` token only counts in COMMAND position — first, after a shell
     separator, or after an env assignment — so `man git commit` and
-    `which git` are not git calls. `/usr/bin/git` counts: it is the same
-    program, and matching the bare word only would make the guard one absolute
-    path away from off. After it, git's own global options are skipped
-    (including the value of a `-C`-style flag) and the first bare token is the
-    subcommand.
+    `which git` are not git calls. An exec wrapper in command position is
+    stepped over, so the two indices differ for `nice git commit`; the second
+    is where the override prefix has to be read from. `/usr/bin/git` counts: it
+    is the same program, and matching the bare word only would make the guard
+    one absolute path away from off. After it, git's own global options are
+    skipped (including the value of a `-C`-style flag) and the first bare token
+    is the subcommand.
     """
     command_position = True
+    inert = False
     for index, token in enumerate(tokens):
-        if command_position and os.path.basename(token) == "git":
-            verb, verb_at = _subcommand(tokens, index + 1)
-            if verb in MUTATING_VERBS and not _is_read_form(verb, tokens, verb_at + 1):
-                return verb, index
-        command_position = (
-            token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
-        )
-    return None, None
+        if command_position:
+            git_at, _relocated = _unwrap(tokens, index)
+            if git_at is not None and os.path.basename(tokens[git_at]) == "git":
+                verb, verb_at = _subcommand(tokens, git_at + 1)
+                if verb in MUTATING_VERBS and not _is_read_form(
+                        verb, tokens, verb_at + 1):
+                    return verb, git_at, index
+        inert = inert or _is_inert(token)
+        command_position = _opens_command(token, inert)
+    return None, None, None
 
 
 def _subcommand(tokens, start):
     """(subcommand, its index) at or after `start`, skipping global options;
-    (None, None) when the command ends first."""
+    (None, None) when the command ends first. A trailing separator is stripped:
+    `while git pull; do` tokenizes the verb as `pull;`, which matched nothing."""
     i = start
     while i < len(tokens):
         token = tokens[i]
         if not token.startswith("-"):
-            return token, i
+            return token.rstrip(SEPARATORS), i
         if token in GLOBAL_FLAGS_WITH_VALUE:
             i += 2  # the flag and its separate value
             continue
@@ -255,30 +411,41 @@ def _subcommand(tokens, start):
 def _is_read_form(verb, tokens, start):
     """True when this call of a mutating verb is one of its read-only forms
     (READ_FORMS), judged on the arguments up to the next shell separator."""
+    args = []
+    for token in tokens[start:]:
+        args.append(token.rstrip(SEPARATORS))
+        if token.endswith(SEPARATOR_TAILS):
+            break
+    if any(a in HELP_FLAGS for a in args):
+        return True
     forms = READ_FORMS.get(verb)
     if not forms:
         return False
-    args = []
-    for token in tokens[start:]:
-        args.append(token)
-        if token.endswith(SEPARATOR_TAILS):
-            break
     if verb == "stash":
         first = next((a for a in args if not a.startswith("-")), None)
         return first in forms
     return any(a in forms for a in args)
 
 
-def _override_before(tokens, limit):
+def _is_override(token):
+    name, _sep, value = token.partition("=")
+    return name == OVERRIDE_VAR and value.strip().lower() in OVERRIDE_TRUTHY
+
+
+def _override_before(tokens, cmd_start, git_at):
     """True when an `ATELIER_GIT_GUARD_OVERRIDE=1` assignment precedes the git
-    word AS ITS ENV PREFIX — the contiguous run of assignments right before
-    it. Position matters: the same string as an argument (a commit message,
-    say) is not an override, and neither is a prefix on an earlier command in
-    the same line (`OVERRIDE=1 echo hi && git commit`)."""
-    i = limit - 1
+    call AS ITS ENV PREFIX — the contiguous run of assignments right before the
+    command word, or one carried inside the wrapper itself (`env VAR=1 git`).
+    The prefix sits before any wrapper, so reading backwards from the `git`
+    word rather than from the command word would lose the sanctioned escape
+    hatch to a false deny. Position matters: the same string as an argument (a
+    commit message, say) is not an override, and neither is a prefix on an
+    earlier command in the same line (`OVERRIDE=1 echo hi && git commit`)."""
+    if any(_is_override(token) for token in tokens[cmd_start:git_at]):
+        return True
+    i = cmd_start - 1
     while i >= 0 and _is_assignment(tokens[i]):
-        name, _sep, value = tokens[i].partition("=")
-        if name == OVERRIDE_VAR and value.strip().lower() in OVERRIDE_TRUTHY:
+        if _is_override(tokens[i]):
             return True
         i -= 1
     return False
@@ -321,9 +488,13 @@ def _target_directory(tokens, git_at, cwd):
     something in the line aims it somewhere this hook does not compute.
 
     Anything BEFORE the git word that invalidates the payload's cwd — a cwd
-    -moving builtin in command position, a tree-aiming environment assignment
+    -moving builtin in command position (under any exec wrapper: `command cd`
+    moves the cwd exactly as `cd` does), a wrapper option that relocates the
+    git call's own tree (`env -C DIR`), a tree-aiming environment assignment
     anywhere in the line, since a bare one carries to the rest of it — is
-    unresolvable rather than wrong. After it, `-C` is cumulative and each value
+    unresolvable rather than wrong. A relocating option counts only on the
+    wrapper chain that leads to the git word: `env -C DIR true && git commit`
+    aims `true`, not the git call. After it, `-C` is cumulative and each value
     is taken relative to the one before it, which is exactly `os.path.join`;
     git accepts only the separate-value spelling, so there is no `-C/repo`
     form to handle.
@@ -331,14 +502,19 @@ def _target_directory(tokens, git_at, cwd):
     if not isinstance(cwd, str) or not cwd:
         return None
     command_position = True
-    for token in tokens[:git_at]:
-        if command_position and os.path.basename(token) in CWD_MOVING_BUILTINS:
-            return None
+    inert = False
+    for index, token in enumerate(tokens[:git_at]):
+        if command_position:
+            word_at, relocated = _unwrap(tokens, index)
+            if relocated and word_at == git_at:
+                return None
+            if word_at is not None and os.path.basename(
+                    tokens[word_at]).lstrip("({") in CWD_MOVING_BUILTINS:
+                return None
         if _is_assignment(token) and token.partition("=")[0] in TREE_AIMING_VARS:
             return None
-        command_position = (
-            token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
-        )
+        inert = inert or _is_inert(token)
+        command_position = _opens_command(token, inert)
     directory = cwd
     index = git_at + 1
     while index < len(tokens):
@@ -472,11 +648,11 @@ def main():
             sys.exit(0)
 
         tokens = _tokens(command)
-        verb, git_at = _first_mutating_verb(tokens)
+        verb, git_at, cmd_start = _first_mutating_verb(tokens)
         if verb is None:
             sys.exit(0)
 
-        overridden = _override_before(tokens, git_at)
+        overridden = _override_before(tokens, cmd_start, git_at)
         workers = _live_workers(
             payload.get("transcript_path"),
             pending.agent_key(payload.get("agent_id")),

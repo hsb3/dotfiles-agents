@@ -347,7 +347,14 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
     def test_read_only_forms_of_mutating_verbs_are_silent(self):
         self._sidecar("d4444444444444444")
         for command in ("git stash list", "git stash show -p stash@{0}",
-                        "git apply --check fix.diff", "git apply --stat fix.diff"):
+                        "git apply --check fix.diff", "git apply --stat fix.diff",
+                        # The read form carried a glued separator: the verb
+                        # strip fixed the VERB, not the args compared here.
+                        "git stash list; ls",
+                        "for f in a b; do git stash list; done",
+                        # `--help` is orientation, whatever the verb.
+                        "git commit --help", "git rebase --help",
+                        "git stash --help", "git push -h"):
             result = self._run(self._payload(command))
             self.assertEqual(result.returncode, 0, command)
             self.assertEqual(result.stdout, "", command)
@@ -513,6 +520,317 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         # — creating a repo in a fresh directory stays free.
         self._sidecar("h2222222222222222")
         for command in ("git init .", "git clone https://example.invalid/r.git"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    # -- exec wrappers around the command word ------------------------------
+
+    def test_an_exec_wrapper_does_not_hide_a_mutating_call(self):
+        # Measured 2026-09-08: every row but the control was silent, because
+        # the `git` word was read only in command position of the raw string.
+        # Nobody writes `env git commit` by accident, but `time git push` and
+        # `timeout 60 git push` are things a real session writes for real
+        # reasons, and each lost its deny with no trace.
+        self._sidecar("k1111111111111111")
+        for command in (
+            "git commit -m x",
+            "env git commit -m x",
+            "command git commit -m x",
+            "nice git commit -m x",
+            "time git commit -m x",
+            "echo x | xargs git commit -m",
+            "timeout 60 git push origin dev",
+            "sudo git commit -m x",
+            "nohup git push origin dev",
+            "stdbuf -oL git push origin dev",
+            "setsid git push origin dev",
+            "eval git commit -m x",
+            "builtin git commit -m x",
+            "exec git push origin dev",
+            "exec -a mygit git commit -m x",
+            "nice time git commit -m x",
+        ):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("live-worker-git-guard", reason)
+
+    def test_the_coreutils_g_spelling_of_a_wrapper_is_the_same_wrapper(self):
+        # Homebrew's coreutils ship these `g`-prefixed and both spellings sit
+        # on PATH on a Mac, so `gtimeout 60 git push` is the same real shape.
+        self._sidecar("k9999999999999999")
+        for command in (
+            "gtimeout 60 git push origin dev",
+            "gnice -n 10 git commit -m x",
+            "genv -u GIT_DIR git commit -m x",
+            "echo x | gxargs -n 1 git commit -m",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run(self._payload(command)))
+        # Not a blanket `g`-prefix rule: only the wrappers that have such a
+        # spelling, so an ordinary command starting with `g` is untouched.
+        # (stdout only — the denies above have already written ledger rows.)
+        self.assertEqual(
+            self._run(self._payload("gh pr merge && ls")).stdout.strip(), "")
+
+    def test_an_exec_wrapped_cd_still_stales_the_payload_cwd(self):
+        # The other half of the same defect: with the call issued from an
+        # unrelated repo, only the `cd` check can produce a deny, and a wrapper
+        # around the `cd` hid it.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("k2222222222222222")
+        for command in (
+            "cd {0} && git commit -m x",
+            "builtin cd {0} && git commit -m x",
+            "command cd {0} && git commit -m x",
+            "eval cd {0} && git commit -m x",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(
+                    command.format(session), other, session))
+
+    def test_a_wrapper_flag_that_moves_the_tree_fails_closed(self):
+        # `env -C` / `sudo -D` relocate the tree by a rule this hook does not
+        # reimplement, so the target is unknowable — the same answer
+        # `--work-tree` gets, and never a silent skip past the flag.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("k3333333333333333")
+        for command in (
+            "env -C {0} git commit -m x",
+            "env --chdir={0} git commit -m x",
+            "env -S '-C {0}' git commit -m x",
+            "env --split-string='-C {0}' git commit -m x",
+            "sudo -D {0} git commit -m x",
+            "sudo --chdir={0} git commit -m x",
+            # `man sudo` here: `[-D directory] ... [-R directory]` — both
+            # relocate, so both are unknowable rather than resolvable.
+            "sudo -R {0} git commit -m x",
+            "sudo --chroot={0} git commit -m x",
+            # The glued short spelling the docstring names.
+            "env -C{0} git commit -m x",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(
+                    command.format(other), other, session))
+
+    def test_a_wrapper_flag_value_is_not_read_as_the_command(self):
+        # Each of these has a value token between the wrapper and `git`; a
+        # naive "first non-flag token is the command" rule reads the value as
+        # the command and loses the deny. `timeout`'s duration is a BARE
+        # positional, not a flag value.
+        self._sidecar("k4444444444444444")
+        for command in (
+            "env -u GIT_DIR git commit -m x",
+            "env --unset=GIT_DIR git commit -m x",
+            "env FOO=bar git commit -m x",
+            "nice -n 10 git commit -m x",
+            "nice -5 git commit -m x",
+            "time -o /tmp/t.log git commit -m x",
+            "echo x | xargs -n 1 -P 2 git commit -m",
+            "echo x | xargs -I {} git commit -m {}",
+            # `-i`/`-e`/`-l` take an OPTIONAL argument, which must be glued —
+            # reading the next token as their value swallows the `git` word.
+            "echo x | xargs -i git commit -m",
+            "echo x | xargs -l git commit -m",
+            "timeout --kill-after 5 60 git push origin dev",
+            "sudo -u someone git commit -m x",
+            # BSD spellings, verified against this machine's man pages:
+            # xargs `-J replstr` `-R replacements` `-S replsize`,
+            # sudo `-T timeout`, env `-P altpath`, GNU env `-a, --argv0=ARG`.
+            "echo x | xargs -J % git commit -m %",
+            "echo x | xargs -I % -R 2 git commit -m %",
+            "echo x | xargs -I % -S 300 git commit -m %",
+            "echo x | xargs -I % git commit -m %",
+            "sudo -T 30 git commit -m x",
+            "sudo --command-timeout 30 git commit -m x",
+            "env -P /usr/bin git commit -m x",
+            "env -a foo git commit -m x",
+            "env --argv0=foo git commit -m x",
+            # Optional-argument long spellings: the value must be glued, so
+            # reading the next token as it swallows the command word.
+            "echo x | xargs --replace git commit -m",
+            "echo x | xargs --eof git commit -m",
+            "echo x | xargs --replace=% git commit -m %",
+            # git's own `--exec-path[=<path>]` is optional-argument too.
+            "git --exec-path commit -m x",
+            "git --exec-path=/usr/libexec commit -m x",
+            # Glued spellings, which the README claims are NOT a ceiling.
+            "nice -n10 git commit -m x",
+            "env -uGIT_DIR git commit -m x",
+            "echo x | xargs -I% git commit -m %",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run(self._payload(command)))
+
+    def test_the_override_survives_a_wrapper(self):
+        # Unwrapping moves the `git` word, and the override run is read
+        # BACKWARDS from it: read from the wrong end, the sanctioned escape
+        # hatch turns into a deny.
+        self._sidecar("k5555555555555555", agent_type="atelier:scout")
+        for command in (
+            "ATELIER_GIT_GUARD_OVERRIDE=1 nice git commit -m x",
+            "ATELIER_GIT_GUARD_OVERRIDE=1 timeout 60 git push",
+            "env ATELIER_GIT_GUARD_OVERRIDE=1 git commit -m x",
+        ):
+            with self.subTest(command=command):
+                result = self._run(self._payload(command))
+                payload = json.loads(result.stdout)
+                self.assertNotIn("hookSpecificOutput", payload, command)
+                self.assertIn("k5555555555555555", payload["systemMessage"])
+
+    def test_a_wrapper_does_not_widen_the_guard_onto_reads(self):
+        # The over-denial surface of the unwrap: a wrapped read is still a
+        # read, a lookup is not a call, and a wrapper NAME appearing as an
+        # argument is just a word.
+        self._sidecar("k6666666666666666")
+        for command in (
+            "nice git status --short",
+            "time git log --oneline -5",
+            "env -u GIT_DIR git diff",
+            "timeout 5 git fetch origin",
+            "command -v git",
+            "command -V git",
+            "which git",
+            "echo time git commit",
+            "ls env nice time",
+            "timeout 60 echo git commit",
+            "nice git stash list",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_wrapper_flag_on_an_earlier_command_does_not_fail_closed(self):
+        # `env -C` binds the command IT wraps. Applied to something that is
+        # not the git call, it says nothing about where the git call points.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("k7777777777777777")
+        self._assert_silent(self._run_in(
+            "env -C {0} true && git commit -m x".format(session),
+            other, session))
+
+    # -- shell keywords in front of the command word ------------------------
+
+    def test_a_shell_keyword_does_not_hide_a_mutating_call(self):
+        # The same displacement the exec wrappers caused, spelled as grammar:
+        # after `do` or `then` the next word IS a command, and a session
+        # writes loops and conditionals for real reasons.
+        self._sidecar("m1111111111111111")
+        for command in (
+            "for f in *; do git commit -m x; done",
+            "while read f; do git push origin dev; done",
+            "if true; then git commit -m x; fi",
+            "if git commit -m x; then echo ok; fi",
+            "while git pull; do sleep 1; done",
+            # Pre-existing miss the keyword rows surfaced: the VERB carried the
+            # glued separator, so `pull;` never matched the verb set.
+            "git commit; echo done",
+            "git stash; ls",
+            "until git push origin dev; do sleep 1; done",
+            "if false; then echo no; else git commit -m x; fi",
+            "if false; then echo no; elif true; then git commit -m x; fi",
+            "if a; then b; elif git commit -m x; then c; fi",
+            "! git commit -m x",
+            "for f in *; do nice git commit -m x; done",
+        ):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("live-worker-git-guard", reason)
+
+    def test_a_keyword_before_a_cd_still_stales_the_payload_cwd(self):
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("m2222222222222222")
+        for command in (
+            "for d in a b; do cd {0} && git commit -m x; done",
+            "if true; then cd {0} && git commit -m x; fi",
+            "while true; do command cd {0} && git commit -m x; done",
+            # The way a subshell cd is actually written: glued to the `(`.
+            "(cd {0} && git commit -m x)",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(
+                    command.format(session), other, session))
+
+    def test_the_keyword_rule_does_not_widen_onto_reads(self):
+        self._sidecar("m3333333333333333")
+        for command in (
+            "for f in *; do git status --short; done",
+            "if true; then git log --oneline -5; fi",
+            "while read f; do git show HEAD; done",
+            "grep -r then .",
+            'echo "do git commit"',
+            "for f in *; do nice git status; done",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_bare_keyword_as_an_argument_over_denies_deliberately(self):
+        # Accepted over-denial, pinned rather than hidden: `do` is `echo`'s
+        # argument here, but the rule cannot tell that without a parser, and
+        # a false deny costs one override while a miss costs a worker's files.
+        self._sidecar("m4444444444444444")
+        reason = self._assert_denied(
+            self._run(self._payload("echo do git commit")))
+        self.assertIn("commit", reason)
+        # A quoted keyword is one token, so it stays inert: this denies on the
+        # real `commit` in command position, never on the string's `push`.
+        reason = self._assert_denied(self._run(self._payload(
+            'git commit -m "then git push"')))
+        self.assertIn("`git commit`", reason)
+        self.assertNotIn("`git push`", reason)
+
+    def test_a_trailing_comment_does_not_open_command_position(self):
+        # `#` never opened command position; a keyword one token later must not
+        # either, or every trailing comment mentioning a git command denies.
+        self._sidecar("n1111111111111111")
+        for command in (
+            "make ci  # then git commit",
+            "python3 -m unittest tests.foo  # if git commit fails, retry",
+            "ls -la  # do git push after this",
+            "sleep 1  # while git pull runs",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_separator_inside_a_comment_still_opens_command_position(self):
+        # Going inert suspends the KEYWORD rule only. A separator behaves as it
+        # always did, so this over-denial is unchanged rather than introduced —
+        # pinned because both prose surfaces claim exactly that.
+        self._sidecar("n3333333333333333")
+        self._assert_denied(self._run(self._payload(
+            "ls  # note; git commit -m x")))
+
+    def test_a_heredoc_body_with_a_keyword_stays_invisible(self):
+        # Both prose surfaces promise heredoc bodies are not read. A keyword in
+        # the body must not reopen command position, or writing a shell script
+        # about git blocks the session writing it.
+        self._sidecar("n2222222222222222")
+        for command in (
+            "cat > release.sh <<'EOF'\nfor f in *; do git commit -m x; done\nEOF",
+            "cat >> notes.md <<'EOF'\nthen git push origin dev\nEOF",
+            "cat > release.sh <<'EOF'\ngit commit -m x\nEOF",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_the_tokenizer_ceilings_stay_ceilings(self):
+        # Not a wish list: each needs a parser rather than a token scan, and
+        # the README names them as things the guard cannot see. A change here
+        # is a deliberate widening, not an accident.
+        self._sidecar("k8888888888888888")
+        for command in (
+            'bash -c "git commit -m x"',
+            "sh -c 'git commit -m x'",
+            "echo $(git commit -m x)",
+            "ls&&git commit -m x",
+            # Deliberate asymmetry with the cwd check, which DOES strip a
+            # leading `(`: a glued COMMAND WORD stays a stated ceiling.
+            "(git commit -m x)",
+            "env -S 'git commit -m x'",
+            "cat <<EOF\ngit commit -m x\nEOF",
+        ):
             with self.subTest(command=command):
                 self._assert_silent(self._run(self._payload(command)))
 

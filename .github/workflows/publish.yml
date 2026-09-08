@@ -100,7 +100,7 @@ jobs:
             git checkout --orphan publish-tree
           else
             git fetch origin main
-            git checkout -B publish-tree origin/main
+            git checkout -B publish-tree refs/remotes/origin/main
           fi
           git rm -rfq . 2>/dev/null || true
           git clean -fdq

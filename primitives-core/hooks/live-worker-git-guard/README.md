@@ -8,7 +8,13 @@ command targets**, the call is denied and the deny text names the agents to wait
 
 Read-only git never fires — `status`, `diff`, `log`, `show`, `branch`, `rev-list`, `rev-parse`,
 `ls-files`, `fetch` are how a session orients — and the read-only forms of the verbs above
-(`stash list`, `stash show`, `apply --check`) are reads too.
+(`stash list`, `stash show`, `apply --check`, and `--help`/`-h` on any of them) are reads too.
+
+**That verb list is narrower than the hazard it describes.** `git add`, `rm`, `mv`, `update-ref`,
+`tag`, `bisect start`, `submodule update` and `sparse-checkout set` all write the index or the
+tree and none of them is in the set, so none of them fires. Widening it is a separate decision —
+each candidate needs its own read-form ruling, the way `stash list` and `apply --check` got one —
+and is tracked on this project's board rather than fixed here.
 
 ## Why
 
@@ -83,25 +89,92 @@ section below. Each leaves it deciding exactly as it did before it could compare
 - `GIT_DIR`, `GIT_WORK_TREE` or `GIT_COMMON_DIR` assigned in the command line — the same
   relocation spelled as environment, which git honours identically;
 - a `cd`, `pushd` or `popd` in command position before the `git` word, which makes the payload's
-  `cwd` stale.
+  `cwd` stale — bare, or under an exec wrapper (`command cd …`, `builtin cd …`, `eval cd …`);
+- a wrapper option that moves the tree the git call runs in (`env -C DIR`, `sudo -D DIR`,
+  `env -S`), per the section above.
 
 The same rule a corrupt sidecar gets: a record that exists and cannot be read keeps its agent
 live. `init` and `clone` are not mutating verbs, so making a repo in a fresh directory never
 reaches the comparison.
 
+## Exec wrappers and shell keywords
+
+**A leading wrapper that execs the real command is stepped over**, and the command-position scan
+resumes after it, for both the `git` word and the `cd`. Not for the adversarial case — an agent
+that wants through has the override, which is cheaper and leaves a row — but for the honest one:
+`time git push`, `timeout 60 git push` and `nice git commit` are things a session writes for real
+reasons, and until this each lost its deny silently.
+
+`env`, `command`, `builtin`, `eval`, `exec`, `nice`, `time`, `xargs`, `timeout`, `sudo`,
+`nohup`, `stdbuf`, `setsid`, chained (`nice time git commit`), and each in the `g`-prefixed
+coreutils spelling Homebrew installs (`gtimeout`).
+
+Each wrapper carries **the list of its own options that take a separate value**, taken from that
+tool's man page, so a value is not misread as the command word: `nice -n 10`, `xargs -I % -J % -R
+2 -S 300`, `env -u NAME -P PATH -a ARGV0`, `sudo -u NAME -T 30`, GNU `time -o FILE`. `timeout`'s
+bare positional duration is skipped too. **The guarantee is only as good as those lists** — an
+option that is not on one is skipped as a valueless flag, and the accuracy of each list is
+whatever the man page said. Options whose argument is OPTIONAL are deliberately absent
+(`xargs -i`/`-l`/`-e`/`--replace`/`--eof`, `git --exec-path`): such an argument must be glued, so
+consuming the next token would eat the command word.
+
+**Shell grammar displaces the command word the same way, and is read the same way.** After `do`,
+`then`, `else`, `elif`, `if`, `while`, `until` or `!`, the next word is a command, so
+`for f in *; do git commit -m x; done`, `if true; then git commit; fi` and
+`while git pull; do sleep 1; done` all deny — as does a keyword and a wrapper together
+(`for f in *; do nice git commit; done`), and the cwd check sees a wrapped or keyword-preceded
+`cd` (`for d in a b; do cd "$d" && git commit; done`). `for` and `in` are deliberately absent:
+the word after them is a loop variable, not a command. The **verb** may carry a glued separator
+(`while git pull; do`), which is stripped — that shape, and the plainer `git commit; ls`, were
+missed before.
+
+One accepted over-denial comes with this: a bare keyword sitting as an ARGUMENT immediately
+before a git call — `echo do git commit` — denies, because telling that `do` is `echo`'s argument
+needs a parser. A false deny costs one override; a miss costs a live worker's uncommitted files.
+**Quoting the keyword alone does not make it inert** — `shlex` strips the quotes and `echo "then"
+git commit` denies exactly as the bare form does. Only a keyword inside a MULTI-WORD quoted string
+is inert, because that string is one token (`git commit -m "then git push"` denies on the real
+`commit`, never on the string).
+
+Two places a keyword is deliberately NOT read: after a `#` and after a `<<`. A trailing comment
+(`make ci  # then git commit`) and a heredoc body (a script being written that contains a loop
+around a git call) are text, not command lines, and both were silent before the keyword rule
+existed. Separators still open command position inside them, exactly as they always did.
+
+Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
+same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
+fail-closed, never skipped past: `env -C DIR`, `env --chdir=DIR`, `sudo -D DIR` and `env -S`
+(which packs a shell string this tokenizer cannot read) make the target unknowable, which reads as
+"shares the tree" and denies. A relocating option counts only on the wrapper chain that reaches
+the `git` word: `env -C DIR true && git commit` aims `true`, not the git call.
+
 ## What it cannot see
 
 Stated as a rule rather than a list, because a list of ways to hide a word invites the belief that
 it is complete. **The `git` word and the `cd` are read only in command position** of the single
-command string the hook is handed, so whatever displaces them is invisible: a wrapper that execs
-the real command (`env`, `command`, `nice`, `time` and their equivalents), `bash -c "..."`, a
-`$( )` substitution, a token glued to a separator (`ls&&git commit`), and heredoc body text. A
-`GIT_*` variable **exported by an earlier Bash call** is the same ceiling in another place — it is
-not among this command's tokens at all.
+command string the hook is handed, so whatever still displaces them is invisible:
 
-None of these is the sanctioned bypass. The override is, and it leaves a row. Seeing through them
-means interpreting the command line rather than tokenizing it, which is a larger change with its
-own over-denial surface.
+- an exec wrapper that is **not in the list above** — `flock`, `watch`, `parallel`, `script`,
+  `arch`, `caffeinate`, and every site-local wrapper script;
+- anything that re-parses a **string**, which is past a tokenizer by construction: `bash -c "..."`,
+  a `$( )` substitution, a quoted `eval "cd x && git commit"`, `env -S 'git commit'`, and heredoc
+  body text;
+- a **command word** glued to a separator (`ls&&git commit`, `(git commit)`) — a glued wrapper
+  option is fine (`nice -n10`, `env -uNAME`, `xargs -I%`), and a separator glued to the *verb*
+  (`git pull;`) is stripped; it is only the command word the separator still hides. **Asymmetry,
+  deliberate:** the cwd check DOES strip a leading `(` before testing for `cd`, because
+  `(cd elsewhere && git commit)` is how a subshell cd is normally written and resolving it to the
+  wrong tree returns an affirmative "no block"; the verb scan does not, so `(git commit)` stays a
+  missed deny in the SAME tree;
+- a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
+  it is not among this command's tokens at all.
+
+Deliberately out of scope rather than missed: `ssh host git commit` and `docker run … git commit`
+run in a different tree entirely, so silence is the correct answer.
+
+None of these is the sanctioned bypass. The override is, and it leaves a row. Seeing through the
+remaining ones means interpreting the command line rather than tokenizing it, which is a larger
+change with its own over-denial surface.
 
 ## Override
 
@@ -177,9 +250,12 @@ No activation file: the guard fires wherever the plugin is installed.
 - **An unreadable ledger is not an empty one.** `settled_ids` raises rather than returning an
   empty set, because rendering "cannot tell" as "nothing has settled" would deny on every agent
   the session ever started.
-- **`git` only counts in command position** — first token, after a shell separator, or after an
-  env assignment. `man git commit` and `which git` are not git calls. Quoted text is tokenized
-  with `shlex`, so a git command mentioned inside a string is one token and cannot fire.
+- **`git` only counts in command position** — first token, after a shell separator, after an
+  env assignment, after a leading exec wrapper and its options, or after a shell keyword
+  (`; do`, `; then`) outside a comment or heredoc body. `man git commit`, `which git` and
+  `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a multi-word
+  string mentioning a git command is one token and cannot fire — a single quoted WORD is not
+  protected, since `shlex` strips its quotes.
 - **The override emits no `permissionDecision`.** `"allow"` would short-circuit every other
   permission check in the session; this hook's opinion is only about live workers.
 - **A stale sidecar blocks until the ledger settles it.** There is no age threshold: an agent that

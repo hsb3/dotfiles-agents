@@ -141,11 +141,19 @@ def _merge_base_diff(cwd):
     """Branch diff against the merge-base with the default branch."""
     head = _git(cwd, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
     candidates = []
-    if head:
-        candidates.append(head.strip().split("refs/remotes/")[-1])
-    candidates += ["origin/main", "origin/master", "main", "master"]
+    # That ref is writable and can be repointed at a local branch, so full-refname-ness
+    # is checked as remote-tracking-ness, not merely as a slash-shaped name.
+    if head and head.strip().startswith("refs/remotes/"):
+        candidates.append(head.strip())
+    # `refs/tags/<name>` and `refs/heads/<name>` resolve BEFORE `refs/remotes/<name>`, so a
+    # local ref named `origin/main` would otherwise become the base and diff a shorter range.
+    candidates += ["refs/remotes/origin/main", "refs/remotes/origin/master"]
+    # Last resort for a repo with no remote: these two are genuine LOCAL branches.
+    candidates += ["refs/heads/main", "refs/heads/master"]
     for base in candidates:
-        if not base:
+        # Existence by EXACT path. A full refname is not self-verifying: rev-parse would
+        # still fall through to `refs/heads/refs/remotes/origin/main` when the real one is absent.
+        if _git(cwd, "show-ref", "--verify", "--quiet", base) is None:
             continue
         out = _git(cwd, "diff", "--unified=0", "--no-color", base + "...HEAD")
         if out:
