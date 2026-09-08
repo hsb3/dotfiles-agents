@@ -14,7 +14,10 @@ harness does go quiet: for an Edit or Write from nested worktree B aimed at a
 path under dispatcher worktree A, a repo-owned hook emits either NOTHING (allow)
 or a visible `permissionDecision: deny` carrying a reason. Never a silent
 suppression, and never an `updatedInput` rewrite. If a silent no-op is ever seen
-again, these tests are the evidence that it did not come from here.
+again, these tests are the evidence that it did not come from here. The harness
+half of that finding rests on the live probe recorded in `docs/gotchas.md` and
+is NOT re-runnable from this suite — nothing here drives Claude Code's own
+isolation guard.
 
 The layout matches the measured one: a linked worktree A, and B created from
 inside A at `A/.claude/worktrees/agent-<id>`. `CLAUDE_PROJECT_DIR` is passed
@@ -171,18 +174,35 @@ class NestedWorktreeEditTests(unittest.TestCase):
         self.assertIn("docs/target.md", hso["permissionDecisionReason"])
 
     def test_no_repo_hook_can_silently_swallow_a_cross_worktree_write(self):
+        """The card's headline invariant, swept over both hooks and both anchors.
+
+        Silence is the allow branch, so asserting only "allow or visible deny"
+        would pass on a deny path that had been silenced outright. Each case
+        therefore also pins WHICH of the two outcomes is correct: custody acts
+        only where the anchor puts the target in its jurisdiction, and the
+        isolation hook — an `Agent`-tool hook — never acts on an edit at all.
+        """
         for hook_path in (ISOLATION_HOOK, CUSTODY_HOOK):
+            hook_name = os.path.basename(os.path.dirname(hook_path))
             for tool_name in ("Edit", "Write"):
-                for target_root in (self.tree_a, self.main_dir):
-                    label = "{0} {1} -> {2}".format(
-                        os.path.basename(os.path.dirname(hook_path)), tool_name, target_root,
-                    )
-                    with self.subTest(hook=hook_path, tool=tool_name, target=target_root):
-                        result = self._run(hook_path, self._edit_payload(
-                            os.path.join(target_root, TARGET), tool_name=tool_name,
-                        ))
-                        self._assert_allow_or_visible_deny(result, label)
-                        self.assertEqual(result.stderr.strip(), "", label)
+                for target_name, target_root in (("A", self.tree_a), ("main", self.main_dir)):
+                    for anchor_name, anchor in (("unanchored", ""), ("anchored-at-A", self.tree_a)):
+                        must_deny = (
+                            hook_path == CUSTODY_HOOK
+                            and anchor == self.tree_a
+                            and target_root == self.tree_a
+                        )
+                        label = "{0} {1} -> {2} ({3})".format(
+                            hook_name, tool_name, target_name, anchor_name,
+                        )
+                        with self.subTest(hook=hook_name, tool=tool_name,
+                                          target=target_name, anchor=anchor_name):
+                            result = self._run(hook_path, self._edit_payload(
+                                os.path.join(target_root, TARGET), tool_name=tool_name,
+                            ), project_dir=anchor)
+                            hso = self._assert_allow_or_visible_deny(result, label)
+                            self.assertEqual(hso is not None, must_deny, label)
+                            self.assertEqual(result.stderr.strip(), "", label)
 
 
 if __name__ == "__main__":
