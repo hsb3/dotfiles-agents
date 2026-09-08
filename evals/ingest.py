@@ -1,6 +1,7 @@
 """Populate the extender-db from this repo (idempotent, upsert-by-slug).
 
     python3 evals/ingest.py
+    python3 evals/ingest.py --prune-dry-run   # report stale extenders, write nothing
 
 What it loads:
   1. extenders + files   - every roster skill/agent/hook: parsed frontmatter (hooks carry
@@ -22,6 +23,9 @@ What it loads:
                            their publisher via extenders.source.
   7. externals.yaml rows - third-party extenders recorded by reference (origin `external`,
                            no file ingest) so curation queries cover the full curated surface.
+
+A full run ends by pruning: an `extenders` row whose slug neither the roster nor
+externals.yaml still defines is deleted, so the projection cannot outlive its source.
 """
 
 import ast
@@ -43,6 +47,10 @@ ROSTER = os.path.join(REPO, "primitives-core.yaml")
 MARKETPLACE = os.path.join(REPO, ".claude-plugin", "marketplace.json")
 PLUGINS_DIR = os.path.join(REPO, "plugins")
 EXTERNALS = os.path.join(REPO, "externals.yaml")
+
+# Roster types that become `extenders` rows. Shared by ingest_extenders and live_slugs so the
+# writer and the prune predicate cannot disagree about what the tree defines.
+ROSTER_EXTENDER_TYPES = ("skill", "agent", "hook")
 
 LANG_BY_EXT = {
     ".py": "python", ".sh": "shell", ".js": "javascript", ".ts": "typescript",
@@ -579,7 +587,7 @@ def ingest_frameworks(pb):
 
 
 def ingest_extenders(pb):
-    entries = [e for e in parse_roster(ROSTER) if e.get("type") in ("skill", "agent", "hook")]
+    entries = [e for e in parse_roster(ROSTER) if e.get("type") in ROSTER_EXTENDER_TYPES]
     ext_ids = {}      # roster id -> record id
     ext_meta = {}     # roster id -> dict used by later passes
     for e in entries:
@@ -717,6 +725,34 @@ def ingest_externals(pb, src_ids):
     print(f"externals: {n}")
 
 
+def live_slugs():
+    """Every slug the tree currently defines: the union of what both `extenders` writers
+    produce. A roster-only predicate would treat every externals.yaml row as stale."""
+    roster = {e["id"] for e in parse_roster(ROSTER) if e.get("type") in ROSTER_EXTENDER_TYPES}
+    return roster | {e["id"] for e in parse_externals(EXTERNALS)}
+
+
+def prune_extenders(pb, slugs, dry_run=False):
+    """Delete `extenders` rows whose slug is no longer in `slugs` (mirrors the stale-file
+    delete in ingest_extenders — the projection is rebuilt from source, so there is no
+    history to keep). Dependent `relationships` rows go first: extender_a/extender_b are
+    required with cascadeDelete off, so PocketBase refuses the delete while an edge remains.
+    files and assessments cascade on their own."""
+    n = 0
+    for rec in pb.list_all("extenders"):
+        if rec["slug"] in slugs:
+            continue
+        if not dry_run:
+            eid = esc(rec["id"])
+            for edge in pb.list_all("relationships", f"extender_a='{eid}' || extender_b='{eid}'"):
+                pb.delete("relationships", edge["id"])
+            pb.delete("extenders", rec["id"])
+        print(f"extender {'stale' if dry_run else 'pruned'}: {rec['kind']}/{rec['slug']}")
+        n += 1
+    print(f"extenders {'to prune' if dry_run else 'pruned'}: {n}")
+    return n
+
+
 def ingest_dimensions(pb, ext_meta, fw_ids):
     counts = {}
     for m in ext_meta.values():
@@ -817,8 +853,11 @@ def ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids):
     print(f"mechanical assessments: {n}")
 
 
-def main():
+def main(prune_dry_run=False):
     pb = PB()
+    if prune_dry_run:
+        prune_extenders(pb, live_slugs(), dry_run=True)
+        return
     fw_ids, el_ids = ingest_frameworks(pb)
     ext_ids, ext_meta = ingest_extenders(pb)
     ingest_distributions(pb, ext_ids, ext_meta)
@@ -826,8 +865,9 @@ def main():
     ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids)
     src_ids = ingest_sources(pb)
     ingest_externals(pb, src_ids)
+    prune_extenders(pb, live_slugs())
     print("done.")
 
 
 if __name__ == "__main__":
-    main()
+    main(prune_dry_run="--prune-dry-run" in sys.argv)
