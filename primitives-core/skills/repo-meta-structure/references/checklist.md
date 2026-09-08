@@ -50,7 +50,7 @@ else. Adding or changing a check *row* means editing this file, not the audit; a
 | CLAUDE-04 | `.claude/` | `path-exists: .claude/rules/` | Directory exists |
 | CLAUDE-05 | `.claude/` | `path-exists: .claude/skills/` | Directory exists |
 | CLAUDE-06 | `.claude/` | `path-exists: .claude/settings.json` | File exists (tracked project policy; must carry anything a headless run depends on) |
-| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per the skills-over-commands decision (ADR: `dotfiles-agents/backlog/decisions/0001-skills-over-commands.md`) *(migration debt)* |
+| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per the skills-over-commands decision (ADR: `dotfiles-agents/docs/decisions/0001-skills-over-commands.md`) *(migration debt)* |
 
 ## `.github/` template set
 
@@ -163,6 +163,6 @@ missing field).
 - **`HOOK-xx` (hook packaging)** — hooks as script + config directories, never inline in
   `.claude/settings.json`: the interim `HOOK-01` check (`no-inline-hooks`) is sourced by the
   audit directly from the hooks-as-script-plus-config decision (ADR:
-  `dotfiles-agents/backlog/decisions/0002-hooks-as-script-plus-config.md`); the full family
+  `dotfiles-agents/docs/decisions/0002-hooks-as-script-plus-config.md`); the full family
   arrives with the deferred hook-composition standard.
 - **Naming-grammar conformance** — arrives with the naming-taxonomy standard.
