@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """gen_claude_skills.py — build a Claude Code skill laydown from primitives-core at INSTALL TIME (ADR 0017).
 
-The marketplace bundle (`solo-skills`) is all-or-nothing: one install, every skill. A consumer
+The marketplace bundles are all-or-nothing: one install, every skill the bundle carries. A consumer
 who wants three skills and no marketplace needs the other distribution shape Claude Code
 already supports — plain directories under `.claude/skills/` (project) or `~/.claude/skills/`
 (user). This generator builds that laydown into a consumer-chosen directory, NEVER tracked;
