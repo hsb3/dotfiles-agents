@@ -48,6 +48,21 @@ Rules 1 and 3 narrow the signal at the point where prose is genuinely conversati
 code does not mention siblings conversationally. A match that is provably not a dependency
 is retired through a named, audited exemption, never by loosening the rule.
 
+Two known blind spots, recorded so nobody re-derives them:
+
+  * **Rule 2 scans only `CODE_SUFFIXES`**, so a bundled `examples/` asset with any other
+    extension is never scanned — a sample `Makefile`, `Dockerfile`, `.toml`, `.yaml`,
+    `.sql`, or an extensionless script naming a sibling skill passes this gate unseen.
+    Widening the scan is a separate decision (`.md` and `.json` are excluded on purpose,
+    for the reason stated at `CODE_SUFFIXES`, and a wider net changes eligibility for
+    live skills), so this is a statement of the boundary, not a TODO.
+  * **A bare backticked skill name in prose is invisible to rule 1 BY DESIGN** — only
+    `skills/<id>` paths and `[[wikilinks]]` count, because a prose mention is not a
+    dependency and this gate's question is whether a skill can stand alone. The
+    consequence for a DIFFERENT question — whether a bundle ships everything its own
+    bodies point at — is owned by `scripts/check_skill_refs.py`, which reads exactly that
+    backticked form. Neither gate is the other's fallback.
+
 The gate is bidirectional:
 
   - an ineligible skill inside `solo-skills` is red (membership must not drift in), and
