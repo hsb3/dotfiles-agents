@@ -295,7 +295,9 @@ class HookGuard(unittest.TestCase):
         self.addCleanup(self.box.destroy)
         # Unique to this tempdir: no sibling worktree's crew and no parallel run
         # of this test can land in the count.
-        self.pattern = "snapshot_lanes.py " + self.box.root
+        # Anchored like the hook's own: an unanchored count here would itself
+        # pick up the sibling daemon the prefix-collision test starts.
+        self.pattern = "snapshot_lanes\\.py " + re.escape(self.box.root) + "($|[/ ])"
         self.addCleanup(
             lambda: self.assertEqual(
                 self.repo_daemons(), [], "a test left a daemon running against this checkout",
@@ -312,6 +314,20 @@ class HookGuard(unittest.TestCase):
     def daemons(self):
         return self._pgrep(self.pattern)
 
+    def kill_pattern(self, pattern):
+        for pid in self._pgrep(pattern):
+            try:
+                os.kill(int(pid), 15)
+            except (ProcessLookupError, ValueError, PermissionError):
+                pass
+
+    def wait_for_pattern(self, pattern, count, seconds=15):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            if len(self._pgrep(pattern)) == count:
+                return
+            time.sleep(0.2)
+
     def repo_daemons(self):
         return self._pgrep("snapshot_lanes.py " + REPO_ROOT)
 
@@ -326,10 +342,10 @@ class HookGuard(unittest.TestCase):
                 return
             time.sleep(0.2)
 
-    def run_hook(self):
+    def run_hook(self, cwd=None):
         payload = {
             "session_id": "test-session",
-            "cwd": self.box.root,
+            "cwd": cwd or self.box.root,
             "hook_event_name": "SessionStart",
             "source": "startup",
         }
@@ -363,6 +379,33 @@ class HookGuard(unittest.TestCase):
         self.assertEqual(counts, [0, 1, 1])
         # Cleanup is part of the contract, not an afterthought.
         self.assertEqual(self.daemons(), [])
+
+    def test_a_prefix_colliding_sibling_repo_still_gets_its_own_daemon(self):
+        """`pgrep -f` matches a substring, so an unanchored pattern let a live
+        daemon for `<root>-second` answer for `<root>`: the hook launched
+        nothing and logged that a daemon was already running, while the repo
+        had no protection at all."""
+        sibling = self.box.root + "-second"
+        os.makedirs(sibling)
+        git(sibling, "init", "-q", "-b", "main", ".")
+        write(os.path.join(sibling, "seed.txt"), "seed\n")
+        git(sibling, "add", "-A")
+        git(sibling, "commit", "-q", "-m", "seed")
+        sibling_pattern = "snapshot_lanes\\.py " + re.escape(sibling) + "($|[/ ])"
+        self.addCleanup(self.kill_pattern, sibling_pattern)
+        try:
+            self.assertEqual(self.run_hook(cwd=sibling).returncode, 0)
+            self.wait_for_pattern(sibling_pattern, 1)
+            self.assertEqual(len(self._pgrep(sibling_pattern)), 1, "sibling daemon did not start")
+
+            self.assertEqual(self.run_hook().returncode, 0)
+            self.wait_for(1)
+            self.assertEqual(
+                len(self.daemons()), 1,
+                "the sibling's daemon was mistaken for this root's",
+            )
+        finally:
+            self.kill_all()
 
     def test_hook_never_blocks_when_the_root_is_not_a_repo(self):
         """Every path exits 0 and launches nothing: a failed resolution must

@@ -51,8 +51,10 @@ LOG_STREAM = "lane-snapshot"
 LOG_PATH_ENV = "LANE_SNAPSHOT_LOG_PATH"
 DAEMON_NAME = "snapshot_lanes.py"
 DAEMON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), DAEMON_NAME)
-GIT_TIMEOUT = 10
-PGREP_TIMEOUT = 10
+# Both run sequentially inside a hook whose declared budget is 10s
+# (config.json/hooks.json), so their sum has to fit under it.
+GIT_TIMEOUT = 4
+PGREP_TIMEOUT = 4
 
 
 def _repo_root(cwd):
@@ -82,12 +84,20 @@ def _repo_root(cwd):
 
 
 def _pattern(root):
-    """The pgrep pattern: the daemon's filename plus the root it was launched
-    with. Both halves matter — the filename alone would match another repo's
-    daemon (or another agent worktree's test run) and report a false "already
-    running", leaving that repo unprotected."""
-    literal = "{0} {1}".format(DAEMON_NAME, root)
-    return re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", literal)
+    """The pgrep pattern: the daemon's filename, the root, and a boundary.
+
+    All three matter. The filename alone would match another repo's daemon and
+    report a false "already running", leaving that repo unprotected — and so
+    would an unterminated root, because `pgrep -f` matches a SUBSTRING: without
+    the boundary a live daemon for `/x/repo-second` makes `/x/repo` read as
+    protected while nothing is watching it. Two ordinarily named siblings are
+    enough; `agent-a1` and `agent-a15` is this repo's own worktree scheme.
+    """
+    literal = "{0} {1}".format(DAEMON_NAME, root.rstrip("/"))
+    escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", literal)
+    # The root is the daemon's last argument, so end-of-string is the usual
+    # case; `/` and a space keep a trailing slash or a future extra arg a match.
+    return escaped + r"($|[/ ])"
 
 
 def _already_running(root):

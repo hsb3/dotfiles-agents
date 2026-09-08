@@ -57,7 +57,10 @@ No per-project activation file. The hook is armed by being present in an install
 | `LANE_SNAPSHOT_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/lane-snapshot.jsonl` | Ledger |
 
 The worktree glob is an override rather than a constant because a repo that parks its worktrees
-somewhere else must not have to fork the hook to say so.
+somewhere else must not have to fork the hook to say so. That reach is deliberately not fenced —
+worktrees legitimately live outside the repo — so the glob is joined onto the root and nothing
+more: `../sibling-*` or an absolute pattern will snapshot directories outside the root, and their
+refs still land in the root's `refs/lane-snapshots/` namespace. Set it to a path you meant.
 
 ### Root resolution, in precedence order
 
