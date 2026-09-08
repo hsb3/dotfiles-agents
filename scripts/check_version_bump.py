@@ -31,19 +31,42 @@ NAME, so adding one would strand every open PR on a check that never reports (ow
 ruling, TASK-032).
 
 Network contract — uniform across every CI-only gate here (decision-016 point 4): a gate
-that cannot measure is red, never green, so no usable `origin/main` at all exits 1 saying
-outright that it is not evidence of a missing bump. `origin/main` is fetched best-effort,
-then resolved; a fetch failure with a locally cached ref falls back to that ref and warns,
-because something real was still compared — but only while that ref is no more than
-`MAX_CACHED_REF_AGE_DAYS` (7) days old. MORE than that and the fallback is red on the same
-rule: a ref last refreshed weeks ago is not a reading of what is published today, so an
-indefinitely stale cache could otherwise mask a real unbumped change forever without the
-gate going red. The age is the cached commit's own committer date, and an age that cannot
-be read is red too — freshness unproven is freshness unmeasured, which is also how a ref
-dated in the FUTURE is treated, since that is a clock disagreeing rather than a fresh ref.
-A full local clone is never shallow-marked as a
-side effect (`--depth=1` is used only where the repo is already shallow, as in a CI
-checkout).
+that cannot measure is red, never green, so no usable published ref at all exits 1 saying
+outright that it is not evidence of a missing bump. The ref is fetched best-effort into
+`refs/remotes/origin/main` and resolved by that FULL refname, never by the short
+`origin/main`: the short form is AMBIGUOUS, and git resolves `refs/<name>`,
+`refs/tags/<name>` and `refs/heads/<name>` BEFORE `refs/remotes/<name>`, so a local branch
+or tag literally named `origin/main` would otherwise become the published tree this gate
+compares against — silently, since `--quiet` suppresses git's ambiguity warning and the
+fetch still updates the tracking ref nobody read. The short form survives only in message
+text, where it is what a reader recognises.
+
+FRESHNESS IS CONTACT WITH THE REMOTE — not the age of the commit the ref points at. A
+fetch that exits 0 rewrote the tracking ref from `origin` moments ago, so it is current by
+definition however old that commit is: a quiet `main` publishes nothing for weeks and its
+cache is no less accurate for it. When the fetch FAILS, the comparison falls back to the
+cached ref and warns, because something real was still compared — but only while THIS
+CLONE's last successful sync is no more than `MAX_SYNC_AGE_DAYS` (7) days old, so an
+indefinitely stale cache cannot mask a real unbumped change forever without the gate going
+red. That moment is recorded here, in a one-line stamp under the git common directory,
+because git records nothing equivalent (measured on git 2.55.0: a fetch that finds nothing
+new writes NO reflog entry for the tracking ref; `.git/FETCH_HEAD` is truncated and
+re-dated by a FAILED fetch exactly as by a successful one, so its mtime dates the last
+ATTEMPT, not the last sync; and `git clone` leaves neither for `refs/remotes/origin/main`).
+No stamp, an unreadable one, or one dated in the FUTURE — a clock disagreeing rather than a
+fresh sync — is red on the same rule: freshness unproven is freshness unmeasured. A clone
+that has never synced under this gate therefore cannot use the fallback until it runs once
+with a reachable remote, which is one command and the honest verdict meanwhile.
+
+The gate assumes `origin` resolves to the canonical publish remote and does NOT check it.
+A contributor whose `origin` is a fork or any stale mirror gets a successful fetch of the
+wrong tree and a green that measured the wrong thing. Verifying the URL would hardcode a
+consuming repo's convention, which AGENTS.md forbids without an override, so the assumption
+is stated rather than enforced; a check would have to arrive through
+`docs/override-convention.md`, not a hardcoded URL.
+
+A full local clone is never shallow-marked as a side effect (`--depth=1` is used only where
+the repo is already shallow, as in a CI checkout).
 
 Deliberately NOT covered: parity between `plugin.json` and the root
 `.claude-plugin/marketplace.json` entry, which `scripts/check_catalog.py` already enforces
@@ -83,15 +106,21 @@ PLUGINS_DIR = os.path.join(REPO, "plugins")
 
 PUBLISHED_REMOTE = "origin"
 PUBLISHED_BRANCH = "main"
+# The short form is for MESSAGES — it is what a reader recognises. Every git command uses
+# the full one, which no local branch or tag can shadow.
 PUBLISHED_REF = f"{PUBLISHED_REMOTE}/{PUBLISHED_BRANCH}"
+PUBLISHED_FULL_REF = f"refs/remotes/{PUBLISHED_REMOTE}/{PUBLISHED_BRANCH}"
 PUBLISHED_PREFIX = "plugins"
 MANIFEST_REL = os.path.join(".claude-plugin", "plugin.json")
 GIT_TIMEOUT_SECONDS = 120
-# How long a cached `origin/main` may stand in for a refreshed one after a failed fetch.
-# Longer than any plausible offline stretch, short enough that a cache cannot silently
-# outlive the published tree it claims to represent.
-MAX_CACHED_REF_AGE_DAYS = 7
+# How long this clone's last successful sync of the published ref may stand in for a
+# refreshed one after a failed fetch. Longer than any plausible offline stretch, short
+# enough that a cache cannot silently outlive the published tree it claims to represent.
+MAX_SYNC_AGE_DAYS = 7
 SECONDS_PER_DAY = 86400
+# Where that sync is recorded: one line, unix seconds, under the git COMMON dir, so linked
+# worktrees share the record exactly as they share the remote-tracking ref it describes.
+SYNC_STAMP_NAME = "version-bump-published-sync"
 
 # Mirrors the .gitignore rules that can surface inside a dereferenced plugins/ walk:
 # `cp -RL` copies them onto the publish tree, `git add -A` then drops them, so they are
@@ -228,15 +257,20 @@ class GitPublishedTree:
     `prepare()` is the network step and the only one that can decline: it returns None when
     the ref is usable (leaving an advisory `note`), or a human-readable reason string when
     the published tree cannot be reached at all.
+
+    Every git command names `PUBLISHED_FULL_REF`; `self.ref` is the short form and belongs
+    in messages only. `stamp_path` is injectable so the sync record can be driven without
+    a real git dir.
     """
 
-    def __init__(self, ref=PUBLISHED_REF, repo=None, run=None):
+    def __init__(self, ref=PUBLISHED_REF, repo=None, run=None, stamp_path=None):
         self.ref = ref
         self.repo = repo or REPO
         self.note = ""
         self._run = run or (lambda args: run_git(args, repo=self.repo))
         self._sha = None
         self._fetch_error = ""
+        self._stamp_path = stamp_path
 
     def _git(self, args):
         return self._run(list(args))
@@ -244,15 +278,18 @@ class GitPublishedTree:
     def prepare(self):
         try:
             self._fetch()
-            rc, out, _ = self._git(["rev-parse", "--verify", "--quiet", f"{self.ref}^{{commit}}"])
+            rc, out, _ = self._git(
+                ["rev-parse", "--verify", "--quiet", f"{PUBLISHED_FULL_REF}^{{commit}}"]
+            )
             if rc != 0 or not out.strip():
                 detail = f" ({self._fetch_error})" if self._fetch_error else ""
                 return f"{self.ref} could not be resolved{detail}"
             self._sha = out.decode("ascii", "replace").strip()
-            # A refreshed ref is current by definition, so its age is only worth reading —
-            # and only capable of declining — on the fallback path.
+            # A ref just rewritten from the remote is current by definition, so the sync
+            # record is only worth reading — and only capable of declining — on the
+            # fallback path, where no contact was made.
             if self._fetch_error:
-                return self._stale_cache_reason()
+                return self._unsynced_reason()
         except FileNotFoundError:
             return "git is not available on PATH, so the published tree cannot be read"
         except subprocess.TimeoutExpired:
@@ -262,41 +299,78 @@ class GitPublishedTree:
             )
         return None
 
-    def _stale_cache_reason(self):
-        """Reason string when the cached ref is too old to stand in for a refreshed one.
+    @property
+    def stamp_path(self):
+        """Where this clone's sync record lives, resolved once through git."""
+        if self._stamp_path is None:
+            rc, out, _ = self._git(["rev-parse", "--git-common-dir"])
+            gitdir = out.decode("utf-8", "replace").strip() if rc == 0 else ""
+            if gitdir and not os.path.isabs(gitdir):
+                # git resolves it against the directory it ran in, which is `self.repo`.
+                gitdir = os.path.join(self.repo, gitdir)
+            self._stamp_path = os.path.join(gitdir, SYNC_STAMP_NAME) if gitdir else ""
+        return self._stamp_path
+
+    def _record_sync(self):
+        """Note that the published ref was just rewritten from the remote."""
+        if not self.stamp_path:
+            return
+        try:
+            with open(self.stamp_path, "w") as fh:
+                fh.write("%d\n" % int(time.time()))
+        except OSError:
+            pass  # a read-only git dir only costs the NEXT offline run its fallback
+
+    def _read_sync(self):
+        """(unix seconds, problem) for the recorded sync — one of the two is None."""
+        if not self.stamp_path:
+            return None, "this clone's git directory could not be located"
+        try:
+            with open(self.stamp_path) as fh:
+                raw = fh.read().strip()
+        except OSError:
+            return None, (
+                "this clone has no record of ever syncing it (run this gate once with the "
+                "remote reachable)"
+            )
+        try:
+            return int(raw), None
+        except ValueError:
+            return None, f"its sync record is unreadable ({_one_line(raw, 40)!r})"
+
+    def _unsynced_reason(self):
+        """Reason string when no recent-enough sync backs the cached ref.
 
         Also finishes the fallback warning with the measured age, so a reader of the green
         path can judge what the comparison was worth.
         """
-        rc, out, err = self._git(["log", "-1", "--format=%ct", self._sha])
-        try:
-            committed = int(out.decode("ascii", "replace").strip()) if rc == 0 else None
-        except ValueError:
-            committed = None
-        age_days = None if committed is None else (time.time() - committed) / SECONDS_PER_DAY
-        # A NEGATIVE age is a clock disagreeing with the publisher's, not a fresh ref: a
-        # local clock behind theirs (or a garbage %ct) would otherwise report a genuinely
-        # old cache as comfortably within the limit. Unmeasured either way, so red either
-        # way — but described as unread rather than as past the limit, which it is not.
-        if age_days is None or age_days < 0:
-            if age_days is None:
-                detail = _one_line(err) if err else "no parseable commit date"
-            else:
-                detail = f"its commit date is {-age_days:.2f} days in the future"
+        synced_at, problem = self._read_sync()
+        if problem:
             return (
-                f"{self.ref} could not be refreshed ({self._fetch_error}) and the cached "
-                f"ref's age could not be read ({detail}), so its freshness is unproven"
+                f"{self.ref} could not be refreshed ({self._fetch_error}) and {problem}, so "
+                "the cached ref's freshness is unproven"
             )
-        if age_days > MAX_CACHED_REF_AGE_DAYS:
+        age_days = (time.time() - synced_at) / SECONDS_PER_DAY
+        # A NEGATIVE age is a clock disagreeing with the one that wrote the stamp, not a
+        # fresh sync: a clock moved backwards would otherwise report a long-abandoned
+        # record as comfortably within the limit. Unmeasured either way, so red either way
+        # — but described as unproven rather than as past the limit, which it is not.
+        if age_days < 0:
             return (
-                f"{self.ref} could not be refreshed ({self._fetch_error}) and the cached ref "
-                f"is {age_days:.2f} days old, past the {MAX_CACHED_REF_AGE_DAYS}-day limit — "
-                "too stale to stand in for what is published now"
+                f"{self.ref} could not be refreshed ({self._fetch_error}) and its sync "
+                f"record is dated {-age_days:.2f} days in the FUTURE (a clock disagreeing, "
+                "not a fresh sync), so the cached ref's freshness is unproven"
             )
-        # Two decimals in both verdicts: one would print "7.0 days old" on either side of
+        if age_days > MAX_SYNC_AGE_DAYS:
+            return (
+                f"{self.ref} could not be refreshed ({self._fetch_error}) and this clone "
+                f"last synced it {age_days:.2f} days ago, past the {MAX_SYNC_AGE_DAYS}-day "
+                "limit — too stale to stand in for what is published now"
+            )
+        # Two decimals in both verdicts: one would print "7.0 days ago" on either side of
         # the cutoff, leaving a CI log unable to say which way it went.
         self.note += (
-            f" ({age_days:.2f} days old, within the {MAX_CACHED_REF_AGE_DAYS}-day limit)"
+            f" (last synced {age_days:.2f} days ago, within the {MAX_SYNC_AGE_DAYS}-day limit)"
         )
         return None
 
@@ -322,16 +396,22 @@ class GitPublishedTree:
                 f"{self.ref} could not be refreshed ({self._fetch_error}); comparing against "
                 "the locally cached ref"
             )
+            return
+        self._record_sync()
 
     def index(self):
-        rc, out, err = self._git(["ls-tree", "-r", "-z", self._sha or self.ref, "--", PUBLISHED_PREFIX])
+        rc, out, err = self._git(
+            ["ls-tree", "-r", "-z", self._sha or PUBLISHED_FULL_REF, "--", PUBLISHED_PREFIX]
+        )
         if rc != 0:
             raise RuntimeError(f"git ls-tree {self.ref} failed: {err}")
         return parse_ls_tree(out)
 
     def plugin_json(self, pid):
         rel = f"{PUBLISHED_PREFIX}/{pid}/.claude-plugin/plugin.json"
-        rc, out, _ = self._git(["cat-file", "blob", f"{self._sha or self.ref}:{rel}"])
+        rc, out, _ = self._git(
+            ["cat-file", "blob", f"{self._sha or PUBLISHED_FULL_REF}:{rel}"]
+        )
         return out if rc == 0 else None
 
 

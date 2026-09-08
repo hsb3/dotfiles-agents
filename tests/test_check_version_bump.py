@@ -8,12 +8,14 @@ tests need no git binary and no network.
 
 Two narrower groups sit alongside those:
   * `PublishedRefResolution` drives GitPublishedTree with a FAKE command runner, pinning
-    what the gate does when `origin/main` cannot be fetched (the network contract: a
-    RECENT cached ref still measures and warns, one older than MAX_CACHED_REF_AGE_DAYS is
-    red, and no usable ref at all is red).
+    what the gate does when `origin/main` cannot be fetched (the network contract: a cache
+    synced within MAX_SYNC_AGE_DAYS still measures and warns, one last synced past that is
+    red, and no sync record — or no usable ref — at all is red).
   * `GitPublishedTreeIntegration` runs the real git plumbing against a throwaway clone of a
     throwaway origin (file transport, no network). It SKIPS when git is absent, so the rest
-    of the suite still passes on a bare machine.
+    of the suite still passes on a bare machine. It is also where the two ambiguity cases
+    live: a local branch or tag literally named `origin/main` must not become the tree the
+    gate compares against.
 """
 
 import json
@@ -335,7 +337,21 @@ class LsTreeParsing(unittest.TestCase):
 
 
 class PublishedRefResolution(unittest.TestCase):
-    """GitPublishedTree.prepare() against a fake command runner."""
+    """GitPublishedTree.prepare() against a fake command runner.
+
+    The sync stamp is a real file in a tempdir — injected rather than resolved through
+    git, so the fake runner only ever sees the calls a test is pinning.
+    """
+
+    def setUp(self):
+        self.gitdir = tempfile.mkdtemp(prefix="check-version-bump-stamp-")
+        self.addCleanup(shutil.rmtree, self.gitdir, True)
+        self.stamp = os.path.join(self.gitdir, V.SYNC_STAMP_NAME)
+
+    def record_sync(self, days_ago=0, raw=None):
+        """Write the sync stamp a previous successful run would have left."""
+        with open(self.stamp, "w") as fh:
+            fh.write(raw if raw is not None else "%d\n" % int(time.time() - days_ago * 86400))
 
     def tree(self, responses, calls=None):
         def run(args):
@@ -346,7 +362,7 @@ class PublishedRefResolution(unittest.TestCase):
                     return result
             raise AssertionError(f"unexpected git call: {args}")
 
-        return V.GitPublishedTree(run=run)
+        return V.GitPublishedTree(run=run, stamp_path=self.stamp)
 
     def test_fetch_then_resolve_is_available(self):
         calls = []
@@ -391,107 +407,84 @@ class PublishedRefResolution(unittest.TestCase):
         fetch = next(c for c in calls if c[0] == "fetch")
         self.assertNotIn("--depth=1", fetch)
 
-    def _committed_days_ago(self, days):
-        """A `git log -1 --format=%ct` stdout for a commit `days` days in the past."""
-        return str(int(time.time() - days * 86400)).encode("ascii") + b"\n"
+    def _offline(self, extra=()):
+        """Responses for a failed fetch over a resolvable cached ref."""
+        return [
+            (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
+            (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
+            (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
+        ] + list(extra)
 
-    def test_failed_fetch_falls_back_to_a_recent_cached_ref(self):
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: unable to access ... Could not resolve host")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (0, self._committed_days_ago(2), "")),
-            ]
-        )
+    def test_failed_fetch_falls_back_to_a_recently_synced_cached_ref(self):
+        self.record_sync(days_ago=2)
+        tree = self.tree(self._offline())
         self.assertIsNone(tree.prepare())
         self.assertIn("could not be refreshed", tree.note)
         self.assertIn("Could not resolve host", tree.note)
 
-    def test_the_recent_cached_ref_warning_states_the_measured_age(self):
+    def test_the_fallback_warning_states_the_measured_sync_age(self):
         """The warning has to say HOW stale, or a reader cannot judge what it is worth."""
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (0, self._committed_days_ago(3), "")),
-            ]
-        )
+        self.record_sync(days_ago=3)
+        tree = self.tree(self._offline())
         self.assertIsNone(tree.prepare())
         # two decimals, so a reader can tell 6.99 days from 7.04 — one decimal prints
-        # "7.0 days old" for both, on opposite sides of the verdict
-        self.assertIn("3.00 days old", tree.note)
-        self.assertIn(str(V.MAX_CACHED_REF_AGE_DAYS), tree.note)
+        # "7.0 days ago" for both, on opposite sides of the verdict
+        self.assertIn("3.00 days ago", tree.note)
+        self.assertIn(str(V.MAX_SYNC_AGE_DAYS), tree.note)
 
-    def test_failed_fetch_with_a_stale_cached_ref_is_unavailable(self):
-        """A ref too old to stand in for a refreshed one has not measured `main`."""
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (0, self._committed_days_ago(30), "")),
-            ]
-        )
-        reason = tree.prepare()
+    def test_the_tip_commit_date_is_not_the_metric(self):
+        """A quiet `main` publishes nothing for weeks; that says nothing about the cache.
+
+        The gate must never ask for the cached commit's date — the fake runner rejects
+        any call a test does not name, so a `git log` here would raise.
+        """
+        self.record_sync(days_ago=1)
+        calls = []
+        tree = self.tree(self._offline(), calls)
+        self.assertIsNone(tree.prepare())
+        self.assertEqual([c for c in calls if c[0] == "log"], [])
+
+    def test_failed_fetch_with_a_long_unsynced_cache_is_unavailable(self):
+        """A cache last synced past the limit has not measured `main`."""
+        self.record_sync(days_ago=30)
+        reason = self.tree(self._offline()).prepare()
         self.assertIsNotNone(reason)
-        self.assertIn("30.00 days old", reason)
-        self.assertIn(str(V.MAX_CACHED_REF_AGE_DAYS), reason)
+        self.assertIn("30.00 days ago", reason)
+        self.assertIn(str(V.MAX_SYNC_AGE_DAYS), reason)
         self.assertIn("Could not resolve host", reason)
 
     def test_the_limit_itself_measures_and_a_second_past_it_is_red(self):
         """The cutoff is exact and one-sided: MORE than the limit is red, the limit is not.
 
-        The clock is pinned, because with a real one an integer `%ct` exactly the limit
+        The clock is pinned, because with a real one a stamp written exactly the limit
         away lands microseconds over and the boundary is untestable.
         """
         now = 1_800_000_000.0
-        limit = V.MAX_CACHED_REF_AGE_DAYS * V.SECONDS_PER_DAY
+        limit = V.MAX_SYNC_AGE_DAYS * V.SECONDS_PER_DAY
         for seconds_old, expect_red in ((limit, False), (limit + 1, True)):
-            tree = self.tree(
-                [
-                    (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                    (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                    (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                    (["log", "-1"], (0, str(int(now - seconds_old)).encode("ascii"), "")),
-                ]
-            )
+            self.record_sync(raw=str(int(now - seconds_old)))
+            tree = self.tree(self._offline())
             with mock.patch.object(V.time, "time", lambda: now):
                 reason = tree.prepare()
             self.assertEqual(reason is not None, expect_red, f"{seconds_old}s: {reason}")
 
-    def test_a_future_dated_cached_ref_is_unavailable(self):
-        """A ref dated ahead of now is a clock disagreeing, not a fresh ref.
+    def test_a_future_dated_sync_record_is_unavailable(self):
+        """A record dated ahead of now is a clock disagreeing, not a fresh sync.
 
-        A local clock behind the publisher's turns a genuinely old cache negative-aged, so
-        reading that as "within the limit" is the staleness loophole reopened.
+        A clock moved backwards turns a long-abandoned record negative-aged, so reading
+        that as "within the limit" is the staleness loophole reopened.
         """
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (0, self._committed_days_ago(-3650), "")),
-            ]
-        )
-        reason = tree.prepare()
+        self.record_sync(days_ago=-3650)
+        reason = self.tree(self._offline()).prepare()
         self.assertIsNotNone(reason)
-        self.assertIn("age could not be read", reason)
+        self.assertIn("in the FUTURE", reason)
 
-    def test_an_absurdly_large_commit_date_is_unavailable(self):
-        """Same branch by construction: a garbage `%ct` is a huge negative age."""
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (0, b"9" * 18 + b"\n", "")),
-            ]
-        )
-        reason = tree.prepare()
+    def test_an_absurdly_large_sync_record_is_unavailable(self):
+        """Same branch by construction: a garbage stamp is a huge negative age."""
+        self.record_sync(raw="9" * 18)
+        reason = self.tree(self._offline()).prepare()
         self.assertIsNotNone(reason)
-        self.assertIn("age could not be read", reason)
+        self.assertIn("in the FUTURE", reason)
 
     def test_a_later_successful_fetch_clears_the_stale_warning(self):
         """`note` is per-prepare() state: a warning must not outlive the failure it named."""
@@ -500,47 +493,45 @@ class PublishedRefResolution(unittest.TestCase):
         def run(args):
             if args[0] == "fetch":
                 return fetches.pop(0)
-            if args[0] == "log":
-                return (0, str(int(time.time())).encode("ascii"), "")
             if args[:2] == ["rev-parse", "--is-shallow-repository"]:
                 return (0, b"false\n", "")
             return (0, b"c" * 40 + b"\n", "")
 
-        tree = V.GitPublishedTree(run=run)
+        self.record_sync()
+        tree = V.GitPublishedTree(run=run, stamp_path=self.stamp)
         self.assertIsNone(tree.prepare())
         self.assertIn("could not be refreshed", tree.note)
         self.assertIsNone(tree.prepare())
         self.assertEqual(tree.note, "")
 
-    def test_an_unreadable_cached_ref_date_is_unavailable(self):
-        """Age unmeasured is freshness unproven, which is red (decision-016 point 4)."""
+    def test_no_sync_record_at_all_is_unavailable(self):
+        """Freshness unproven is freshness unmeasured, which is red (decision-016 point 4).
+
+        This is the clone that has never fetched under this gate: measured on git 2.55.0,
+        neither a reflog entry nor a FETCH_HEAD survives a clone to date its cache.
+        """
+        reason = self.tree(self._offline()).prepare()
+        self.assertIsNotNone(reason)
+        self.assertIn("no record of ever syncing it", reason)
+
+    def test_an_unparseable_sync_record_is_unavailable(self):
+        self.record_sync(raw="not-a-timestamp\n")
+        reason = self.tree(self._offline()).prepare()
+        self.assertIsNotNone(reason)
+        self.assertIn("sync record is unreadable", reason)
+
+    def test_an_unlocatable_git_dir_is_unavailable(self):
+        """No stamp path resolvable means no freshness proof, so the fallback declines."""
         tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (128, b"", "fatal: bad object")),
-            ]
+            self._offline([(["rev-parse", "--git-common-dir"], (128, b"", "fatal: not a repo"))])
         )
+        tree._stamp_path = None  # force resolution through the fake runner
         reason = tree.prepare()
         self.assertIsNotNone(reason)
-        self.assertIn("age could not be read", reason)
+        self.assertIn("git directory could not be located", reason)
 
-    def test_an_unparseable_cached_ref_date_is_unavailable(self):
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-                (["log", "-1"], (0, b"not-a-timestamp\n", "")),
-            ]
-        )
-        reason = tree.prepare()
-        self.assertIsNotNone(reason)
-        self.assertIn("age could not be read", reason)
-
-    def test_a_successful_fetch_never_asks_for_the_cached_ref_age(self):
-        """A refreshed ref is fresh by definition — measuring it would be dead weight."""
+    def test_a_successful_fetch_records_the_sync_and_never_reads_one(self):
+        """A refreshed ref is fresh by definition — reading the record would be dead weight."""
         calls = []
         tree = self.tree(
             [
@@ -551,7 +542,26 @@ class PublishedRefResolution(unittest.TestCase):
             calls,
         )
         self.assertIsNone(tree.prepare())
-        self.assertEqual([c for c in calls if c[0] == "log"], [])
+        self.assertEqual(tree.note, "")
+        with open(self.stamp) as fh:
+            self.assertAlmostEqual(int(fh.read().strip()), int(time.time()), delta=60)
+
+    def test_a_failed_fetch_records_nothing(self):
+        """Only contact with the remote may write the record it is evidence of."""
+        self.tree(self._offline()).prepare()
+        self.assertFalse(os.path.exists(self.stamp))
+
+    def test_an_unwritable_git_dir_does_not_crash_the_gate(self):
+        """A read-only git dir costs the NEXT offline run its fallback, nothing more."""
+        tree = self.tree(
+            [
+                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
+                (["fetch"], (0, b"", "")),
+                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
+            ]
+        )
+        tree._stamp_path = os.path.join(self.gitdir, "no-such-dir", V.SYNC_STAMP_NAME)
+        self.assertIsNone(tree.prepare())
 
     def test_failed_fetch_with_no_cached_ref_is_unavailable(self):
         tree = self.tree(
@@ -725,14 +735,24 @@ class GitPublishedTreeIntegration(unittest.TestCase):
     def _break_origin(self):
         self.git(self.work, "remote", "set-url", "origin", os.path.join(self.root, "gone"))
 
+    def _sync_stamp(self):
+        return V.GitPublishedTree(repo=self.work).stamp_path
+
+    def _record_sync(self, days_ago=0):
+        """Stand in for a successful gate run `days_ago` back."""
+        with open(self._sync_stamp(), "w") as fh:
+            fh.write("%d\n" % int(time.time() - days_ago * 86400))
+
     def test_unreachable_origin_falls_back_to_the_cached_ref(self):
-        """Real fetch failure, cached ref present: still compares, and says the ref is stale."""
+        """Real fetch failure, recent sync on record: still compares, and says so."""
+        self.assertIsNone(self.tree().prepare())  # an online run records the sync
         self._break_origin()
         with open(self.body, "wb") as fh:
             fh.write(b"edited body\n")
         tree = self.tree()
         self.assertIsNone(tree.prepare())
         self.assertIn("could not be refreshed", tree.note)
+        self.assertIn("last synced", tree.note)
         problems = V.compare(
             V.local_index(self.plugins), tree.index(), self.local_json, tree.plugin_json
         )
@@ -754,10 +774,15 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         out = self.git(self.work, "log", "-1", "--format=%ct", "origin/main")
         return int(out.decode("ascii").strip())
 
-    def test_unreachable_origin_with_a_stale_cached_ref_is_red(self):
-        """Cached ref older than the limit: red, and it does not blame the version."""
-        committed = self._republish(b"republished body\n", 30)
-        self.assertLess(committed, time.time() - 29 * 86400)
+    def test_unreachable_origin_with_a_long_unsynced_cache_is_red(self):
+        """Last successful sync past the limit: red, and it does not blame the version.
+
+        An offline stretch this long is exactly the case the fallback must not survive:
+        `main` may have been published to any number of times unseen.
+        """
+        self._republish(b"republished body\n", 0)
+        self.assertIsNone(self.tree().prepare())  # synced once...
+        self._record_sync(days_ago=30)  # ...and then 30 days of no contact
         self._break_origin()
         # local still ships the OLD body, so a real divergence exists that must not be
         # reported as a missing bump
@@ -766,35 +791,108 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         text = "\n".join(lines)
         self.assertEqual(rc, 1, text)
         self.assertIn("NOT evidence of a missing version bump", text)
-        self.assertIn("30.00 days old", text)
+        self.assertIn("synced it 30.00 days ago", text)
         self.assertNotIn("plugins/alpha", text)
 
-    def test_unreachable_origin_with_a_future_dated_cached_ref_is_red(self):
+    def test_unreachable_origin_with_a_future_dated_sync_record_is_red(self):
         """A skewed clock must not launder a stale cache into a green comparison."""
-        self._republish(b"republished body\n", -3650)
+        self._record_sync(days_ago=-3650)
         self._break_origin()
         lines = []
         rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
         text = "\n".join(lines)
         self.assertEqual(rc, 1, text)
         self.assertIn("NOT evidence of a missing version bump", text)
-        self.assertIn("age could not be read", text)
+        self.assertIn("in the FUTURE", text)
         self.assertNotIn("plugins/alpha", text)
 
-    def test_unreachable_origin_with_a_recent_cached_ref_still_measures(self):
-        """Cached ref younger than the limit: exit 0, with the warning kept."""
-        committed = self._republish(b"republished body\n", 2)
-        self.assertGreater(committed, time.time() - 3 * 86400)
+    def test_unreachable_origin_in_a_clone_that_never_synced_is_red(self):
+        """`git clone` leaves no record of when it populated the tracking ref.
+
+        Measured on git 2.55.0: a clone writes neither a reflog entry for
+        `refs/remotes/origin/main` nor a FETCH_HEAD, and a FAILED fetch truncates and
+        re-dates FETCH_HEAD anyway — so a clone that has never run this gate online has
+        nothing that dates its cache, and unproven freshness is red. One online run fixes
+        it, which is what the message says.
+        """
+        self.assertFalse(os.path.exists(self._sync_stamp()))
         self._break_origin()
         with open(self.body, "wb") as fh:
             fh.write(b"republished body\n")
         lines = []
         rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
         text = "\n".join(lines)
+        self.assertEqual(rc, 1, text)
+        self.assertIn("no record of ever syncing it", text)
+        self.assertNotIn("plugins/alpha", text)
+
+    def test_a_successful_fetch_records_the_sync(self):
+        """The stamp is the gate's own, because git keeps no equivalent."""
+        self.assertFalse(os.path.exists(self._sync_stamp()))
+        self.assertIsNone(self.tree().prepare())
+        with open(self._sync_stamp()) as fh:
+            recorded = int(fh.read().strip())
+        self.assertAlmostEqual(recorded, int(time.time()), delta=60)
+
+    def test_the_sync_stamp_lives_in_the_git_common_dir(self):
+        """Linked worktrees share the tracking ref, so they must share its sync record."""
+        self.assertEqual(
+            self._sync_stamp(),
+            os.path.join(self.work, ".git", V.SYNC_STAMP_NAME),
+        )
+
+    def _shadowed_divergence(self, kind):
+        """Run the gate with a local `kind` named `origin/main` pinned pre-publish.
+
+        `origin` publishes a body the working tree does not ship, under an unmoved
+        version — a genuine violation, visible only through the remote-tracking ref.
+        """
+        shadowed = self.git(
+            self.work, "rev-parse", "refs/remotes/origin/main"
+        ).decode("ascii").strip()
+        self._republish(b"republished body\n", 0)
+        self.git(self.work, kind, "origin/main", shadowed)
+        lines = []
+        rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
+        return rc, "\n".join(lines)
+
+    def test_a_local_branch_shadowing_origin_main_is_not_what_gets_compared(self):
+        """`origin/main` is AMBIGUOUS: git resolves `refs/heads/<name>` BEFORE
+        `refs/remotes/<name>`, and `--quiet` swallows the ambiguity warning.
+
+        A local branch named `origin/main` (a mistyped `git fetch origin main:origin/main`,
+        or `git switch -c origin/main`) therefore becomes the published tree this gate
+        compares against, while the fetch it just ran correctly updated the tracking ref
+        nobody read. Pinned pre-publish it makes a real divergence vanish.
+        """
+        rc, text = self._shadowed_divergence("branch")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("plugins/alpha", text)
+
+    def test_a_tag_shadowing_origin_main_is_not_what_gets_compared(self):
+        """Same shadowing, one rung higher: `refs/tags/<name>` outranks `refs/heads/`."""
+        rc, text = self._shadowed_divergence("tag")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("plugins/alpha", text)
+
+    def test_a_recently_synced_cache_under_a_quiet_main_is_not_red(self):
+        """Freshness is contact with the remote, not the tip commit's date (card 3b2e).
+
+        `main` published 30 days ago and has been quiet since; this clone synced it
+        seconds ago and then lost the network. The cache is a perfectly accurate reading
+        of what is published, and a gate that calls it stale is a false red.
+        """
+        self._republish(b"republished body\n", 30)
+        with open(self.body, "wb") as fh:
+            fh.write(b"republished body\n")  # local matches published exactly
+        self.assertIsNone(self.tree().prepare())  # an online run: records the sync
+        self._break_origin()  # ...and now the machine is offline
+        lines = []
+        rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
+        text = "\n".join(lines)
         self.assertEqual(rc, 0, text)
-        self.assertIn("⚠", text)
         self.assertIn("could not be refreshed", text)
-        self.assertIn("2.00 days old", text)
+        self.assertIn("last synced", text)
 
     def test_unreachable_origin_with_no_cached_ref_is_red(self):
         """Real fetch failure, no cached ref: red, and it does not blame the version."""
