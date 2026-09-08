@@ -1,6 +1,6 @@
 ---
 name: excalidraw
-description: Create sketch-style, hand-drawn-look architecture diagrams as Excalidraw files. Use when the user asks for an excalidraw diagram, a whiteboard-style or sketchy diagram, or wants a .excalidraw file created or edited. Works with or without the Excalidraw MCP tools - when the MCP tools are unavailable, author the .excalidraw JSON scene directly. Covers the scene JSON schema, element and arrow-binding essentials, and export to SVG/PNG.
+description: Create sketch-style, hand-drawn-look architecture diagrams as Excalidraw files. Use when the user asks for an excalidraw diagram, a whiteboard-style or sketchy diagram, or wants a .excalidraw file created or edited. Works with or without the Excalidraw MCP tools - when the MCP tools are unavailable, author the .excalidraw JSON scene directly. Covers the scene JSON schema, element and arrow-binding essentials, an offline headless render-and-lint loop that screenshots a scene and names its defects, and export to SVG/PNG.
 ---
 
 # Excalidraw Diagrams
@@ -79,15 +79,70 @@ and on each bound shape: `"boundElements": [{ "id": "arrow-1", "type": "arrow" }
 - Palette that keeps the sketch feel: pastel fills (`#a5d8ff` blue, `#b2f2bb` green, `#ffec99` yellow, `#ffc9c9` red) with `#1e1e1e` strokes — readable on light and dark canvases.
 - Group related shapes via a shared id in `groupIds`, or use a `frame` element as a titled container.
 
-## Export to SVG/PNG
+## Render it and check it — the headless loop
 
-No official headless CLI. Options, in order of preference:
+Upstream ships no headless CLI, so this skill carries its own renderer. `scripts/render_check.py` draws the scene to SVG, screenshots it through headless Chromium (Playwright), and lints the scene as data. **Run it before handing any scene to the user** — you author blind otherwise.
 
-1. **Excalidraw MCP tools** (when available) — export directly.
-2. **App export** — user opens the file at excalidraw.com and exports PNG/SVG (2x for decks).
-3. **Scripted** — the `@excalidraw/utils` npm package exposes `exportToSvg(scene)` for a Node one-off when automation matters.
+```
+python3 scripts/render_check.py path/to/scene.excalidraw --out "$(mktemp -d)"
+```
 
-Exported pairs follow the SVG+PNG output-pipeline conventions in the `diagrams` skill (numbered files in the artifact's `diagrams/` folder). The `.excalidraw` JSON is the source of truth — commit it next to the exports.
+Writes `<stem>.svg` and `<stem>.png` to the out dir, prints both paths, and exits 1 when the lint finds defects (it still renders — you read the finding and look at the picture together). Default scene is the bundled `examples/request-path.excalidraw`.
+
+- Playwright must be resolvable by node. The script uses `$EXCALIDRAW_NODE_PATH`, else `npm root -g`; `--node-path DIR` overrides both. A global install is enough — nothing is installed into the project.
+- `--no-screenshot` writes SVG only (no node needed); `--lint-only` skips rendering; `--defect <kind>` injects a known defect into a copy to exercise the loop; `--self-test` runs the built-in checks.
+- **Fidelity:** first-party renderer, geometry and layout exact, hand-drawn wobble and hachure texture not reproduced. It answers "is this laid out right", not "is this pretty". Offline, deterministic, no network at any point.
+
+What the lint catches:
+
+| Code | Meaning |
+|---|---|
+| `overlap` | two shapes' boxes intersect — one is drawn over the other |
+| `dangling-arrow` | a binding names an element id that is not in the scene |
+| `orphan-label` | a `containerId` with no `boundElements` back-reference (or no container at all) |
+| `frame-escape` | an element sits outside the frame it claims |
+| `text-overflow` | a label needs more width than its container offers |
+
+**Export for delivery** is a separate step: Excalidraw MCP tools when available, otherwise the user opens the file at excalidraw.com and exports PNG/SVG (2x for decks); the `@excalidraw/utils` npm package exposes `exportToSvg(scene)` for a Node one-off with the real renderer. Exported pairs follow the SVG+PNG output-pipeline conventions in the `diagrams` skill (numbered files in the artifact's `diagrams/` folder). The `.excalidraw` JSON is the source of truth — commit it next to the exports.
+
+## Methodology
+
+**Evidence artifacts.** A scene you hand over comes with three things: the `.excalidraw` source (committed), the PNG you actually looked at, and the lint output. "It should render fine" is not evidence. Renders are derived — write them to a scratch dir and keep them out of the repo unless the user asks for a committed export.
+
+**Depth assessment** — pick the level *before* placing anything, and say which you picked:
+
+| Depth | Elements | Shows | Use for |
+|---|---|---|---|
+| Sketch | < 15 | one idea, no internals | a proposal, a whiteboard photo replacement |
+| Working | 15–40 | components, their links, one frame per zone | design review, onboarding |
+| Detailed | 40+ | protocols, data shapes, failure paths | a spec appendix — split it before it grows past this |
+
+Depth creep is the usual defect: a sketch that grew internals reads as a blueprint and invites blueprint-level argument about a thing you have not designed yet.
+
+**Visual pattern library** — reach for a known shape instead of inventing a layout:
+
+| Pattern | Layout | Reads as |
+|---|---|---|
+| Pipeline | left-to-right row, bound arrows between | a request or data path |
+| Layers | stacked frames, one per tier, arrows crossing down | an architecture stack |
+| Hub | one centre shape, radial arrows out | a broker, a bus, one service everything calls |
+| Swimlane | one frame per actor, time flowing right | a sequence with owners |
+| Cluster | grouped shapes in a frame with a title | a bounded context or deployment unit |
+
+Encode meaning in the palette, not just prettiness: one fill per role (blue = client, green = service, yellow = store, red = external), and keep it the same across every diagram in the set.
+
+**Section by section for large diagrams.** Past ~25 elements, never author the whole scene and render once. Draw one section (a frame and its contents), run the loop, fix, then add the next section and re-run. Coordinates are computed by hand here — an early off-by-100 propagates into every later element, and one render at the end makes you unpick all of them at once. Keep a section's origin as a variable in your head (`frame x + 40`), not an absolute number you re-derive per shape.
+
+**Quality checklist** — before handing over:
+
+- [ ] `render_check.py` exits 0 on the final scene
+- [ ] you looked at the PNG, not just the exit code
+- [ ] every arrow is bound at both ends, with back-references
+- [ ] every label sits inside its container and fits
+- [ ] the depth level matches what was asked for
+- [ ] palette roles are consistent, and readable on a light background
+- [ ] seeds vary per element (the wobble is not identical everywhere)
+- [ ] the `.excalidraw` source is what you commit; renders are not
 
 ## Pitfalls
 
