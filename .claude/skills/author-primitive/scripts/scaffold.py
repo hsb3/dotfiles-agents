@@ -125,9 +125,11 @@ def scaffold_skill(id_, description):
     print(f"scaffolded primitives-core/skills/{id_}/ (SKILL.md, README.md) + roster row")
     print(f"linked plugins/solo-skills/skills/{id_} -> primitives-core/skills/{id_}")
     print(
-        "shipping this for real also needs a plugins/solo-skills version bump "
-        "(scripts/check_version_bump.py, CI-only, not in make ci) — a semantic call for a "
-        "human to make at ship time, not this script"
+        "`make ci` stays RED until you write two human-facing claims a stub cannot:\n"
+        "  1. README.md — bump the solo-skills row's Contents cell (check_catalog.py)\n"
+        "  2. plugins/solo-skills/README.md — name the new member (check_readmes.py)\n"
+        "Then, at ship time, bump plugins/solo-skills' version "
+        "(check_version_bump.py, CI-only)."
     )
 
 

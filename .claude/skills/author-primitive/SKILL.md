@@ -23,12 +23,11 @@ python3 .claude/skills/author-primitive/scripts/scaffold.py agent <id> [--descri
 
 This creates:
 
-- **skill**: `primitives-core/skills/<id>/SKILL.md` + `README.md`, a `type: skill` roster
-  row, and a `plugins/solo-skills/skills/<id>` symlink — a fresh skill is dependency-free
-  by construction, so `solo-skills` is its derived home
-  (`scripts/check_solo_skills.py`: membership is derived, not curatorial).
-- **agent**: `primitives-core/agents/<id>.md`, plus a `type: agent` roster row. No
-  symlink — there is no assembly that derives agent membership.
+- **skill**: `primitives-core/skills/<id>/{SKILL,README}.md`, a `type: skill` roster row,
+  and a `plugins/solo-skills/skills/<id>` symlink — a fresh skill is dependency-free by
+  construction, so `solo-skills` is its derived home (`scripts/check_solo_skills.py`).
+- **agent**: `primitives-core/agents/<id>.md` + a `type: agent` roster row. No symlink —
+  no assembly derives agent membership.
 
 Both roster rows default `origin: authored`, `disposition: untriaged`,
 `targets: [claude-code]`. Fails loudly (no overwrite) if the id already exists on disk, in
@@ -36,14 +35,23 @@ the roster, or (skill) in `plugins/solo-skills/skills/`.
 
 ## After scaffolding
 
-Write the real `SKILL.md`/agent body and README content, then run `make ci`. If the skill
-should NOT ship solo, it must earn that by carrying a real dependency (a sibling skill
+Write the real `SKILL.md`/agent body and README content. For a scaffolded **skill**,
+`make ci` stays red until you close two gates by hand — deliberate repo design: these are
+human-facing claims a fresh stub has nothing true to say for yet, so a scaffold must not
+fabricate them.
+
+1. Root `README.md` — bump the `solo-skills` row's `Contents` cell (`<n> skills`). Gate:
+   `check_catalog.py` (in `make ci`).
+2. `plugins/solo-skills/README.md` — name the new member. Gate: `check_readmes.py` (in
+   `make ci`).
+3. `plugins/solo-skills/.claude-plugin/plugin.json` + `marketplace.json` — bump
+   `version`. Gate: `check_version_bump.py` (CI-only, a ship-time human call).
+
+If the skill should NOT ship solo, earn that with a real dependency (a sibling skill
 path, an agent dispatch, a hook) or a `SYSTEM_EXEMPTIONS` entry in
-`scripts/check_solo_skills.py` — remove the symlink to match. Shipping in any OTHER plugin
-is a separate, hand-authored step (ADR 0017: membership is symlink assemblies, not a
-roster field) — add `skills/<id>` (or `agents/<id>.md`) to that `plugins/<id>/` assembly
-and add its `## Install` line. Shipping the `solo-skills` bump for real also needs a
-version bump there (`scripts/check_version_bump.py`, CI-only) — a human call at ship time.
+`scripts/check_solo_skills.py`, and remove the symlink. Shipping in any OTHER plugin is
+its own hand-authored step (ADR 0017) — add `skills/<id>` (or `agents/<id>.md`) there
+plus its `## Install` line.
 
 ## Removing a scaffolded primitive
 
