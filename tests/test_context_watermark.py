@@ -381,10 +381,18 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(row["agent_id"], "a40d0f7528e04f941")
         self.assertEqual(row["window"], 200_000)
 
-    def test_the_worker_nudge_names_the_action_to_take(self):
+    def test_the_worker_nudge_names_its_sender_the_action_and_its_own_limits(self):
+        """A live worker refused this nudge (2026-09-08) because it read as a
+        claim about the model's context limit, which it could see was false,
+        and carried no sender. All three properties are load-bearing."""
         proc = self.run_hook(self.subagent_payload(70_000))
         text = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("wrap up and report now", text.lower())
+        lower = text.lower()
+        self.assertIn("atelier", lower)  # provenance: not an injected instruction
+        self.assertIn("context-watermark", lower)
+        self.assertIn("wrap up and report now", lower)  # the concrete action
+        self.assertIn("not the model", lower)  # a large remaining budget is not a refutation
+        self.assertIn("genuinely small", lower)  # a correct refusal has somewhere to go
         self.assertNotIn("/clear", text)
         self.assertNotIn("/compact", text)
 

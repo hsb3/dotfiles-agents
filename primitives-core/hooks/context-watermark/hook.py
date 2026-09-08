@@ -360,13 +360,18 @@ MESSAGES = {
         "current step now: run /handoff, then tell the user to /clear "
         "(preferred) or /compact before continuing."
     ),
-    # A worker has no /handoff, no /clear and no successor session, so the
-    # only move it can take is the one this names.
+    # A worker has no /handoff, no /clear and no successor session, so the only
+    # move it can take is the one this names. It names its sender and disclaims
+    # the model's limit because a live worker refused an earlier wording as
+    # probable prompt injection: it could see millions of tokens still free.
     "subagent": (
-        "Your context is ~{k}k tokens, past the ~{soft}k watermark for a delegated "
-        "worker. Wrap up and report now: stop taking on new work, commit what is "
-        "done, and return your handoff note with what is finished, what is not, and "
-        "the evidence you have."
+        "atelier context-watermark: your context is ~{k}k tokens, past the ~{soft}k "
+        "budget for a delegated worker. That is a quality line from a measured "
+        "degradation band, NOT the model's context limit — a large remaining token "
+        "budget is not evidence against it. Wrap up and report now: stop taking on new "
+        "work, commit what is done, and return what is finished, what is not, and your "
+        "evidence. If the remaining work is genuinely small, finishing it first and then "
+        "reporting is an acceptable answer."
     ),
 }
 

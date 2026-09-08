@@ -53,6 +53,15 @@ off, compact, or start a fresh session — the only move it has is to finish —
 that move ("wrap up and report now") instead of offering commands it does not have. A bare
 "you are at 60% of context" is the unactionable message this deliberately avoids.
 
+Three properties of that text are load-bearing, and a live worker's refusal (2026-09-08) is why.
+It **names its sender** (`atelier context-watermark:`), because an unattributed instruction to
+truncate a task is indistinguishable from prompt injection and the worker said so. It states the
+number as a **quality line from a measured degradation band, explicitly not the model's context
+limit**, because a worker can see its own remaining budget — millions of tokens, in the probe —
+and reads any smaller threshold as a false claim of exhaustion. And it grants that **finishing
+genuinely small remaining work first is an acceptable answer**, so a worker that is right to keep
+going has somewhere to go that is not a fight with the hook.
+
 Its context is read from the worker's OWN transcript. **Inside a worker, `transcript_path`
 names the MAIN SESSION transcript** (measured 2026-09-08); the worker's is at
 `<transcript_path minus .jsonl>/subagents/agent-<agent_id>.jsonl`. Measuring the payload's path
