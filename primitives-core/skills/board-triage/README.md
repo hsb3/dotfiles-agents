@@ -19,6 +19,20 @@ stderr — a `SKIP` for a row the adapter refused, a `FAIL` for one the board re
 stdout is only ever the row log, and piping it into a diff or a counter never has to
 filter them out.
 
+## Deciding whether a pass is due
+
+`scripts/board_health.py <snapshot.json>` (or on stdin) is the other half: six decay checks
+that answer whether the board has rotted enough to be worth a pass, and afterwards whether the
+pass took. It reads the same §2 snapshot every adapter already emits, so it is backend-agnostic
+for free and talks to no board itself.
+
+It measures whether a field **discriminates**, not just whether it is filled — a priority band
+holding most of the backlog, items with no band or no label at all, a grouping convention living
+in title prefixes that no filter can reach, declared labels nobody uses, and two spellings of one
+concept splitting it across two filters. Exit 0 is clean, 1 is any finding, 2 is a snapshot it
+could not read. `--json` for machine output; `--skew-threshold` and `--prefix-threshold` tune it
+for a board with different norms.
+
 ## When it triggers
 
 Use it to "run board triage", "triage the backlog", "prioritize the issues", "rank the
