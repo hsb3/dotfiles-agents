@@ -105,6 +105,11 @@ own worker's completion. Polling with a real break condition and a bound is the
 degraded-but-honest form. Better than either: do other work and let the completion
 notification arrive.
 
+**A backgrounded worker's completion reaches you only while you are still mid-turn** — after
+your turn ends it goes to the top-level session, not to you. Dispatch synchronously unless you
+need concurrency; if you fan out, hold the turn to the fan-in with real work, never a sleep
+(`waiting.md`).
+
 **Polling a worker's output is not a liveness check.** A test suite is green between
 mutants and a file is complete between edits; the completion notification is the only
 signal the work is finished.

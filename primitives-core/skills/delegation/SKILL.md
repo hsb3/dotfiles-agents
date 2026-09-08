@@ -458,7 +458,7 @@ feeds).
 
 An agent that blocks on something that cannot happen is the most expensive failure this kit has
 recorded, and none of the layer rules above prevent it. Three rules do, and
-**`references/waiting.md`** carries them in full with the four reported deadlocks walked to
+**`references/waiting.md`** carries them in full, with every reported deadlock walked to
 termination:
 
 - **No wait without a producer.** Every wait — including one an agent adopts for itself, which is

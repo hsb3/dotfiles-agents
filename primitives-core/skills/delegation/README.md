@@ -27,8 +27,11 @@ later turn, while a manager absorbs the same traffic into a context that gets th
 A separate failure the layer model alone does not prevent: an agent blocking on something
 that cannot arrive. Only `manager` carries `SendMessage`, so a message to a live execution
 agent can never be answered; a self-adopted stop condition that names no producer can never
-be met; and a slow worker is indistinguishable from a dead one without a check.
-`references/waiting.md` holds the rules and the liveness check.
+be met; and a slow worker is indistinguishable from a dead one without a check. It also runs
+the other way: a backgrounded worker's completion reaches the agent that dispatched it only
+while that agent is still mid-turn, so a report that lands above instead gets relayed back
+down verbatim rather than absorbed there. `references/waiting.md` holds the rules, the
+completion routing, and the liveness check.
 
 ## When it triggers
 
