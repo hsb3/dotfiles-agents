@@ -50,7 +50,10 @@ origin/main` (remove the worktree after).
 Keep changes surgical and match existing style. Get the owner's approval before major
 information-architecture changes (moving/renaming top-level structures, reshaping the roster).
 
-GitHub issues are inbound intake (bugs and requests, mirrored onto the board); planned work lives on the kata board (see "Task tracking").
+GitHub issues are inbound intake (bugs and requests); planned work lives on the kata board (see
+"Task tracking"). `kata sync github` is enabled and mints an issue when a card is created, but
+it does **not** close the issue when the card closes — an open GitHub issue means open work only
+because `make board-reconcile` keeps it true. See "Curation rhythm" step 4.
 
 ### Branch hygiene
 
@@ -85,15 +88,43 @@ refused until `/handoff` runs, which is the intended answer. Needs atelier ≥ 0
 Never create a `backlog.md`, a `TODO` file, or any other in-repo task list — file it on the
 board.
 
-**Curation rhythm** (7hws, 2026-09-07). At session start, in order: `kata_doctor.py` (wiring —
-binary, daemon, binding, `KATA_AUTHOR`, shim, duplicate server; every warn is wiring debt to
-fix), `audit_issues.py --project dotfiles-agents` (definition and dependency hygiene over open
-issues), then the board-triage kata adapter for whatever the audit leaves unranked. Both scripts
-ship in the kata plugin (`~/.claude/plugins/cache/kata-oversight/kata/<version>/skills/kata-audit/scripts/`).
+**Curation rhythm** (7hws, 2026-09-07; step 4 added 2026-09-08). At session start, in order:
+
+1. `kata_doctor.py` — wiring (binary, daemon, binding, `KATA_AUTHOR`, shim, duplicate server;
+   every warn is wiring debt to fix).
+2. `audit_issues.py --project dotfiles-agents` — definition and dependency hygiene over open
+   issues.
+3. The board-triage kata adapter for whatever the audit leaves unranked.
+4. `make board-reconcile` — GitHub issues against the board (see below).
+
+Steps 1–2 ship in the kata plugin
+(`~/.claude/plugins/cache/kata-oversight/kata/<version>/skills/kata-audit/scripts/`).
 Findings to fix: `title-long`, `no-acceptance`, `prose-dep` (add the edge, or reword if it is
 not a real prerequisite), `no-priority` (the frozen kaneo children under `my1a` may stay blank).
 Ignore `unlinked-ref` until kata-oversight `z6gb` filters its noise (closed cards named in prose,
 epics naming their own children).
+
+**Step 4 — the GitHub reconcile** (owner ruling 2026-09-08). `scripts/reconcile_github.py`
+classifies every open GitHub issue against the board and is dry-run by default; `APPLY=1 make
+board-reconcile` executes.
+
+| class | meaning | action |
+|---|---|---|
+| `tracked` | its card is open | nothing |
+| `stale-mirror` | its card is **closed** | close the issue with a pointer to the card — the script does this |
+| `untracked` | no card at all | inbound intake: file it on the board by hand, then rerun |
+
+It never creates cards: intake needs judgment, and the card may already exist unlinked (#488 was
+already on the board as `wvkc`, byte-identical, missing only the `github_issue` metadata — stamp
+the link rather than filing a duplicate). Not a `make ci` gate; it reads the live hosted board,
+which CI cannot reach.
+
+Why it has to exist: the sync mints an issue on card creation but propagates no close, so the
+drift grows by one every time a card closes. Before the first run (2026-09-08) 13 of 27 open
+issues were finished work. It also defuses a live hazard —
+`kata sync github enable` resets the sync cursor and re-applies GitHub state onto the board,
+**reopening every closed card whose mirror is still open**
+(`.claude/memory/kata-sync-enable-resets-cursor.md`).
 
 **`audit_issues.py` is the definition bar for this board; planning-desk's `conformance.py` is
 advisory** (owner ruling 2026-09-08, `bxer`). They disagree because they check different things:
