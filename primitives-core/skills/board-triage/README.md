@@ -42,6 +42,21 @@ machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board 
 norms. Every check that can fail judges open items only, so a board's retired label history can
 never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
 
+## Putting a board back on the vocabulary
+
+`scripts/relabel_board.py` migrates one project's labels onto the core set: it reads the
+rename table in `scripts/label-map.yaml` beside it, computes the minimum label delta per open
+card, and prints the plan. **It is a dry run unless `APPLY=1` is set in the environment** — not
+a flag, so it cannot be half-typed into a live run, and every mutating call goes through the
+one place that checks it. Three things it refuses to do rather than guess: it skips a GitHub
+mirror (the sync owns a mirror's labels and re-applies them), it plans nothing at all for a
+card that would end up with two `type:` or two `area:` labels, and it reports a label absent
+from the map instead of inventing a home for it. The map is the only file that changes when a
+mapping decision changes, and a label deliberately left out of it is a decision, not an
+oversight. Title-prefix promotion is a separate mode, `--strip-prefixes`, off by default and
+inert unless the caller supplies that project's area list with `--areas` — with no list it
+promotes nothing and reports every prefixed title, which is the fail-safe.
+
 The Kata adapter also states how kata's import-only GitHub sync constrains the loop: a mirror is an
 epic to decompose, and anything rewritten in place must be a native card.
 

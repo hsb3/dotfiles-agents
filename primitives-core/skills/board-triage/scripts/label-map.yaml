@@ -1,0 +1,135 @@
+# Legacy label -> core vocabulary. Read by relabel_board.py.
+#
+# THE CORE VOCABULARY (ratified 2026-09-08). A board carries, per open item:
+#   type, exactly one:  type:feat  type:fix  type:chore
+#   containers/behaviour: epic  decision  handoff  meta  needs-review  up-next
+#   area, exactly one:  area:<x>   (project-defined — the only per-project family)
+# A project may add labels on top of the core, never instead of it.
+#
+# THREE DISPOSITIONS, and absence is the third:
+#   <target>  rename: drop the old name, attach the target
+#   drop      the vocabulary retires it and nothing replaces it
+#   keep      already core — recognised, no operation
+#   (absent)  UNMAPPED: relabel_board.py reports it for a human and touches nothing.
+#             This is a legitimate outcome, not an oversight. A label whose right home is
+#             a genuine owner judgment stays out: a wrong mapping is worse than a gap.
+# `keep` and `drop` are reserved values and cannot be label names.
+#
+# CONVENTION FOR CORE NAMES: they are present, mapped to `keep`. Absence already means
+# "unmapped, report it", so leaving `epic` out would make every board report its own core
+# vocabulary as a finding.
+#
+# FORMAT: flat one-level YAML, deliberately parseable without a YAML library (the tests
+# and the scripts here are stdlib-only, zero install). One `key: value` per line, `#`
+# comments (whole-line only — there is no inline comment), blank lines ignored. A key
+# containing a colon is quoted. The parser splits on the LAST `": "` and strips quotes
+# from the key, so `bug: type:fix` and
+# `"kaneo-status:*": drop` both read correctly. A line that is neither blank, comment, nor
+# `key: value` is an error, not a skipped line. A duplicate key is an error too: the second
+# one would silently win and no one would see it.
+#
+# GLOBS: a key ending in `*` matches by prefix. An exact key always wins over a glob, which
+# is what lets a malformed twin be corrected inside a family the glob otherwise keeps.
+#
+# IDENTITY-NEUTRAL: this file ships to other repos, so it is label-to-label only — no board,
+# project, repo or person names. A project's `area:*` list is that project's own config and
+# is passed to the script as an argument, never recorded here.
+
+# --- already core -----------------------------------------------------------
+"type:feat": keep
+"type:fix": keep
+"type:chore": keep
+epic: keep
+decision: keep
+handoff: keep
+meta: keep
+needs-review: keep
+up-next: keep
+# Areas are project-defined, so the whole family is core by construction. Exact keys below
+# still win over this, which is how the malformed twins get corrected.
+"area:*": keep
+
+# --- migration residue from a prior tracker ---------------------------------
+# Its column names came across as labels. The column is not a concept this vocabulary has.
+"kaneo-status:*": drop
+
+# --- a label that duplicates a first-class field ----------------------------
+# Priority is a field on this backend, and effort is a rubric INPUT the backend does not
+# store at all (see references/adapters/kata.md's field map). A label restating either is a
+# second source of truth that drifts from the field the moment one of them is edited.
+"priority:*": drop
+"effort:*": drop
+
+# --- malformed twins: a stray hyphen after the namespace colon --------------
+"type:-chore": type:chore
+"type:-enhancement": type:feat
+"type:-tech-debt": type:chore
+"area:-backend": area:backend
+"area:-database": area:database
+"area:-forecast": area:forecast
+"area:-infra": area:infra
+"priority:-medium": drop
+"priority:-low": drop
+
+# --- retired type words -----------------------------------------------------
+bug: type:fix
+feature: type:feat
+enhancement: type:feat
+chore: type:chore
+task: type:chore
+cleanup: type:chore
+housekeeping: type:chore
+maintenance: type:chore
+refactor: type:chore
+# OPEN OWNER CALL: these three land on type:chore because the closed type vocabulary has no
+# documentation term, so the fact "this is documentation work" is LOST by the rename. If the
+# answer is that documentation is a domain rather than a kind of work, the right target is
+# `area:docs` and it is additive (the card still needs a type). Decide before a bulk apply —
+# the map is the only place the answer has to change.
+doc: type:chore
+docs: type:chore
+documentation: type:chore
+
+# --- decision, said three ways ----------------------------------------------
+decide: decision
+decision-needed: decision
+needs-decision: decision
+
+# --- workstream is an area under another name -------------------------------
+"workstream:backend": area:backend
+"workstream:data": area:data
+"workstream:frontend": area:frontend
+"workstream:infra": area:infra
+"workstream:meta": area:meta
+"workstream:pipeline": area:pipeline
+"workstream:tooling": area:tooling
+
+# --- bare words that are plainly a domain, not a kind of work ---------------
+# Conservative on purpose: a word that could read as a type, a state or an area is left
+# unmapped instead. `tooling` and `toolchain` are kept apart rather than merged — in a repo
+# where the language runtime and the in-house scripts are different concerns, merging them
+# is the owner's call to make, not this file's.
+frontend: area:frontend
+backend: area:backend
+infra: area:infra
+ops: area:ops
+ci: area:ci
+security: area:security
+testing: area:testing
+architecture: area:architecture
+tooling: area:tooling
+toolchain: area:toolchain
+
+# --- workflow states this backend already models ----------------------------
+# Dropped because the state is COMPUTED and the label can only disagree with it:
+#   blocked  — blockedness comes from the blocked_by graph (`ready`/`next` read the graph).
+#   parked   — parking is a future scheduled_on or someday=true; both gate ready/next.
+#   backlog  — every open item is in the backlog; the label divides nothing.
+#   triage   — "needs triage" is an unset priority, which board_health.py already reports.
+# Other states (`draft`, `spike`, `unverified`, `blocked-external`, `owner-gated`, ...) are
+# deliberately UNMAPPED: this backend models none of them, so dropping one would delete a
+# fact rather than de-duplicate it, and none is a type or an area.
+blocked: drop
+parked: drop
+backlog: drop
+triage: drop
