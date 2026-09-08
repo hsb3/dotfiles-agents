@@ -25,9 +25,11 @@ What it loads:
                            no file ingest) so curation queries cover the full curated surface.
 
 A full run ends by pruning: an `extenders` row whose slug neither the roster nor
-externals.yaml still defines is deleted, so the projection cannot outlive its source.
+externals.yaml still defines is deleted, so the projection cannot outlive its source. The
+prune is destructive beyond what this script can rebuild — see prune_extenders.
 """
 
+import argparse
 import ast
 import hashlib
 import json
@@ -488,7 +490,8 @@ def scan_files(abs_source, entry_file):
                 ap = os.path.join(root, n)
                 paths.append((ap, os.path.relpath(ap, abs_source)))
     for ap, rel in sorted(paths, key=lambda t: t[1]):
-        raw = open(ap, "rb").read()
+        with open(ap, "rb") as fh:
+            raw = fh.read()
         try:
             content = raw.decode("utf-8")
             is_binary = False
@@ -732,25 +735,71 @@ def live_slugs():
     return roster | {e["id"] for e in parse_externals(EXTERNALS)}
 
 
+# collection -> (operator, fields holding the reference). The multi-relation lists need `~`:
+# PocketBase 0.40 matches nothing for `?=` or `=` against them (measured), which would report a
+# blast radius of zero. `~` is exact here because every record id is 15 chars, so no id can be
+# a substring of another.
+PRUNE_DEPENDENTS = {
+    "assessments": ("=", ("extender",)),
+    "relationships": ("=", ("extender_a", "extender_b")),
+    "eval_responses": ("~", ("extenders",)),
+    "distributions": ("~", ("members",)),
+}
+
+
+def prune_dependents(pb, rec_id):
+    """Every row that an `extenders` delete disturbs, keyed by collection."""
+    eid = esc(rec_id)
+    return {
+        coll: pb.list_all(coll, " || ".join(f"{f} {op} '{eid}'" for f in fields))
+        for coll, (op, fields) in PRUNE_DEPENDENTS.items()
+    }
+
+
 def prune_extenders(pb, slugs, dry_run=False):
-    """Delete `extenders` rows whose slug is no longer in `slugs` (mirrors the stale-file
-    delete in ingest_extenders — the projection is rebuilt from source, so there is no
-    history to keep). Dependent `relationships` rows go first: extender_a/extender_b are
-    required with cascadeDelete off, so PocketBase refuses the delete while an edge remains.
-    files and assessments cascade on their own."""
+    """Delete `extenders` rows whose slug is no longer in `slugs`, reporting what goes with
+    each one. `files` and `assessments` cascade; `relationships` are deleted first because
+    extender_a/extender_b are required with cascadeDelete off, so PocketBase refuses the
+    delete while an edge remains; PocketBase silently strips the id from the non-required
+    `eval_responses.extenders` and `distributions.members` lists.
+
+    Only `files` and assessor `mechanical-v1` rows come back on the next run. Judged and
+    coverage assessments, relationships, and the eval_responses references are an evaluation
+    pass's verbatim record and nothing here regenerates them, so the accounting printed on
+    every run — dry or not — is the operator's only warning.
+    """
     n = 0
+    hit = {coll: {} for coll in PRUNE_DEPENDENTS}
+    refs = {coll: 0 for coll in PRUNE_DEPENDENTS}
     for rec in pb.list_all("extenders"):
         if rec["slug"] in slugs:
             continue
+        dependents = prune_dependents(pb, rec["id"])
+        for coll, rows in dependents.items():
+            hit[coll].update({r["id"]: r for r in rows})
+            refs[coll] += len(rows)
         if not dry_run:
-            eid = esc(rec["id"])
-            for edge in pb.list_all("relationships", f"extender_a='{eid}' || extender_b='{eid}'"):
+            for edge in dependents["relationships"]:
                 pb.delete("relationships", edge["id"])
             pb.delete("extenders", rec["id"])
-        print(f"extender {'stale' if dry_run else 'pruned'}: {rec['kind']}/{rec['slug']}")
+        counts = ", ".join(f"{c} {len(dependents[c])}" for c in PRUNE_DEPENDENTS)
+        print(f"extender {'stale' if dry_run else 'pruned'}: {rec['kind']}/{rec['slug']} "
+              f"({counts})")
         n += 1
-    print(f"extenders {'to prune' if dry_run else 'pruned'}: {n}")
-    return n
+    verb = "to prune" if dry_run else "pruned"
+    assessors = {}
+    for row in hit["assessments"].values():
+        key = row.get("assessor") or "(none)"
+        assessors[key] = assessors.get(key, 0) + 1
+    breakdown = ", ".join(f"{k} {v}" for k, v in sorted(assessors.items())) or "none"
+    print(f"extenders {verb}: {n}")
+    print(f"assessments {verb} by cascade: {len(hit['assessments'])} ({breakdown})")
+    print(f"relationships {verb}: {len(hit['relationships'])}")
+    # A row can name several pruned extenders, so distinct rows and references differ.
+    print(f"eval_responses losing a reference: {len(hit['eval_responses'])} rows "
+          f"/ {refs['eval_responses']} references")
+    print(f"distributions losing a member: {len(hit['distributions'])} rows "
+          f"/ {refs['distributions']} references")
 
 
 def ingest_dimensions(pb, ext_meta, fw_ids):
@@ -853,11 +902,8 @@ def ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids):
     print(f"mechanical assessments: {n}")
 
 
-def main(prune_dry_run=False):
+def main():
     pb = PB()
-    if prune_dry_run:
-        prune_extenders(pb, live_slugs(), dry_run=True)
-        return
     fw_ids, el_ids = ingest_frameworks(pb)
     ext_ids, ext_meta = ingest_extenders(pb)
     ingest_distributions(pb, ext_ids, ext_meta)
@@ -870,4 +916,14 @@ def main(prune_dry_run=False):
 
 
 if __name__ == "__main__":
-    main(prune_dry_run="--prune-dry-run" in sys.argv)
+    ap = argparse.ArgumentParser(description="Populate the extender-db from this repo.")
+    ap.add_argument(
+        "--prune-dry-run", action="store_true",
+        help="report the stale extenders and everything a prune would take with them, "
+             "then exit; make no writes. Not spelled --dry-run: only the prune is "
+             "previewed, and an unrecognised flag must fail rather than run destructively.",
+    )
+    if ap.parse_args().prune_dry_run:
+        prune_extenders(PB(), live_slugs(), dry_run=True)
+    else:
+        main()
