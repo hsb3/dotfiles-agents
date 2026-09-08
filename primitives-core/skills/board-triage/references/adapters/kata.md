@@ -97,14 +97,25 @@ distribution, so run both.
 Step 1 is a gate, not a suggestion — a FAIL there means every later step is reading or
 writing the wrong board.
 
-**If the project also mirrors to GitHub issues** (`kata sync github`), add a reconcile step:
-the sync mints an issue when a card is created but does not close it when the card closes,
-so open issues silently accumulate finished work. Filed upstream against kata; until it
-lands, a consuming repo needs its own reconcile — classify each open issue as tracked (its
-card is open), stale (its card is closed, so close the issue with a pointer), or untracked
-(no card, so it is inbound intake). Left un-run this is worse than untidy: `kata sync github
-enable` resets the sync cursor and re-applies GitHub state onto the board, **reopening every
-closed card whose mirror is still open**.
+**If the project imports GitHub issues** (`kata sync github`), know that the sync is
+**import-only by design** — a card never becomes an issue, and a kata close never closes one.
+Kata's intended loop closes the issue through the code: the fixing PR says `Fixes #N` and
+GitHub closes on merge.
+
+**That loop breaks in any repo whose PRs do not merge to the default branch.** GitHub
+auto-closes only from the default branch, so where work lands on a `dev` branch and the
+default branch is written by a publish job, `Closes #N` is inert and the issue stays open
+forever. Such a repo needs a reconcile pass: classify each open issue as tracked (its card is
+open), stale (its card is closed — close the issue with a pointer to the card), or untracked
+(no card, so it is inbound intake awaiting decomposition). Left un-run this is worse than
+untidy: `kata sync github enable` resets the sync cursor and re-applies GitHub state onto the
+board, **reopening every closed card whose mirror is still open**.
+
+Two mirror rules the sync enforces whether or not you reconcile: the sync **owns** a mirror's
+title, body, labels and comments and re-applies GitHub's version whenever that issue next
+changes, so put acceptance criteria in native children (`--parent <mirror>`) and never in the
+mirror's body; and anything rewritten in place — a rolling handoff, a living plan — must be a
+native card, never a mirror.
 
 ## Notes verified against a live instance
 

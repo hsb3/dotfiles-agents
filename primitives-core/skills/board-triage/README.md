@@ -34,6 +34,9 @@ machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board 
 norms. Every check that can fail judges open items only, so a board's retired label history can
 never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
 
+The Kata adapter also states how kata's import-only GitHub sync constrains the loop: a mirror is an
+epic to decompose, and anything rewritten in place must be a native card.
+
 Triage is one move in a longer loop, and its tools are split across plugins. The Kata adapter
 writes that loop out end to end — wiring check, per-card definition audit, health check, the
 pass, health again — under "The maintenance rhythm", including why a per-card audit and a

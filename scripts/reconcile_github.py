@@ -2,9 +2,12 @@
 """GitHub issues <-> kata board reconciler. Classes, rationale and hazards: AGENTS.md
 "Curation rhythm" step 4.
 
-`kata sync github` mints an issue on card creation but propagates no close, so an open
-issue only means open work if this runs. Dry-run by default; `--apply` closes stale
-mirrors. Reads the live hosted board, so it is not a `make ci` gate.
+`kata sync github` is import-only by design — it never creates an issue from a card and never
+closes one. And `Closes #N` is inert here: GitHub auto-closes only from the default branch,
+while PRs merge to `dev` and `main` is written solely by the publish workflow, which names no
+issue. So a mirror is closed by hand when its work lands (standing ruling 2026-08-24) and this
+is the sweep for the ones that got missed. Dry-run by default; `--apply` closes stale mirrors.
+Reads the live hosted board, so it is not a `make ci` gate.
 
     python3 scripts/reconcile_github.py [--apply]     # or: [APPLY=1] make board-reconcile
 """

@@ -50,10 +50,32 @@ origin/main` (remove the worktree after).
 Keep changes surgical and match existing style. Get the owner's approval before major
 information-architecture changes (moving/renaming top-level structures, reshaping the roster).
 
-GitHub issues are inbound intake (bugs and requests); planned work lives on the kata board (see
-"Task tracking"). `kata sync github` is enabled and mints an issue when a card is created, but
-it does **not** close the issue when the card closes — an open GitHub issue means open work only
-because `make board-reconcile` keeps it true. See "Curation rhythm" step 5.
+### GitHub issues and kata cards
+
+**GitHub issues are the external intake and the public record. kata cards drive the work.**
+`kata sync github` is enabled and is **import-only** — one way, GitHub into kata (verified
+2026-09-08: three cards created here with sync on produced no issues; the `sync github once`
+payload has one direction key, `import`). Four consequences, and none of them is a bug:
+
+1. **Never create a GitHub issue from a kata card.** kata forbids it outright; pushing every
+   card outward doubles the bookkeeping for no reader. A card that did not come from GitHub
+   simply has no mirror, and 40+ of ours do not.
+2. **An imported mirror is the epic; native children are the work.** Decompose the mirror with
+   `--parent <mirror>`, one child per focused PR, and work the children. A one-PR mirror is
+   worked directly.
+3. **Never rewrite a mirror's body, title, labels or comments** — the sync OWNS them and
+   re-applies GitHub's version whenever that issue next changes. Acceptance criteria go in the
+   children. This is why the session handoff is a native card and not a mirror.
+4. **A kata close never closes the GitHub issue, and `Closes #N` is inert here** — GitHub
+   auto-closes only from the default branch, and `main` is written solely by the publish
+   workflow, which names no issue. So the mirror is closed **by hand** when its work lands
+   (standing ruling 2026-08-24), and `make board-reconcile` is the sweep that catches the ones
+   that got missed. See "Curation rhythm" step 5.
+
+Historical note, because it misled a session on 2026-09-08: **Kaneo's sync was bidirectional** —
+a board task minted an issue within seconds — and doctrine written for it survived the
+2026-09-02 migration to kata. Anything asserting that the board mints or two-way-mirrors GitHub
+issues is Kaneo-era residue, not current behavior.
 
 ### Branch hygiene
 
@@ -73,8 +95,12 @@ open task was carried over; a migrated issue carries the old number in `kaneo_ta
 metadata (`kata list --meta kaneo_task_number=<N>`), and the `kaneo-status:up-next` label marks
 what sat in the owner's queue at cutover.
 
-**The session handoff is a board issue too**: `8xyk` (title "Session Handoff", label
-`handoff`; GitHub #329 mirrors it). Read it at session start; at session end rewrite its
+**The session handoff is a board issue too**: `4w08` (title "Session Handoff", label
+`handoff`). It is a **native** card with no GitHub mirror, deliberately — it replaced mirror
+card `8xyk` on 2026-09-08 because the sync owns a mirror's body and reverted the handoff
+whenever GitHub #329 changed (demonstrated live: closing that issue wiped the card's body and
+priority, and closed the card). `8xyk` and #329 are both closed; do not resurrect either.
+Read it at session start; at session end rewrite its
 **body** in place under the `handoff` skill's content rules. **No handoff file is tracked in this
 tree, and there is no handoff branch — never create either.**
 

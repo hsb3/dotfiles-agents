@@ -58,8 +58,10 @@ it (kata doesn't parse close keywords out of PR bodies):
 kata close <ref> --done --message "<what shipped and how it was verified>" --pr <pr-url>
 ```
 
-`kata sync github` (enable/once/status) mirrors kata issues to/from GitHub *issues* if that sync
-is on — it does not link PRs or auto-close on merge; treat it as orthogonal to landing a wave.
+`kata sync github` (enable/once/status) imports GitHub *issues* into kata if that sync is on.
+It is one-way — a kata card never becomes a GitHub issue — and it does not link PRs or
+auto-close on merge; treat it as orthogonal to landing a wave. An imported mirror is an epic to
+decompose into native children, not a card to rewrite: the sync owns a mirror's body.
 
 **No GitHub remote** (a project whose only backlog is a kata board): land on a local integration
 branch gated by the repo's own DoD (tests/build run bare on the merge commit, same as Phase 5's
