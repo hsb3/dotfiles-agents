@@ -18,8 +18,7 @@ otherwise hand you its stale threads.
 
 ```
 claude plugin install code-desk@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-`code-desk` also carries the `/pr-findings` command that drives it; the `solo-skills`
-bundle ships the skill alone.
+Ships in the `code-desk` bundle only — its topical plugin owns it (decision-020).
+`code-desk` also carries the `/pr-findings` command that drives it.

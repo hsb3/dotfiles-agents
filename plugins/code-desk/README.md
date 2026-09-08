@@ -58,9 +58,11 @@ And one command:
 |---|---|
 | `/pr-findings [<n>]` | Loads `pull-request` and drives it over one PR — the current branch's open PR when no number is given. |
 
-Per-skill plugins have been retired: the members that stand alone outside this desk —
-`comms`, `pptx-themes`, `project-memory`, `readme-value-and-proof` — ship individually in the
-`solo-skills` bundle instead, from the same source, so the bytes are identical either way.
+Per-skill plugins have been retired. The members that stand alone and have no topical
+plugin of their own — `pptx-themes`, `project-memory`, `readme-value-and-proof` — also ship
+individually in the `solo-skills` bundle, from the same source, so the bytes are identical
+either way. `comms` and `pull-request` do not: this desk is their topical plugin, so it is
+the only bundle that carries them (decision-020).
 
 ## A worked example
 

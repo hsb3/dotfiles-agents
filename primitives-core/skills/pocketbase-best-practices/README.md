@@ -40,5 +40,6 @@ reported to the upstream project.
 
 ```
 claude plugin install pocketbase@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
+
+Ships in the `pocketbase` bundle only — its topical plugin owns it (decision-020).

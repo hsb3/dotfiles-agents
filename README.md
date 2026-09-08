@@ -52,7 +52,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | I want to… | Install |
 |---|---|
-| Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, set up a repo, or ship a recurring briefing — anything that works on its own | [`solo-skills`](plugins/solo-skills/README.md) |
+| Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, or set up a repo — anything that works on its own and has no plugin of its own | [`solo-skills`](plugins/solo-skills/README.md) |
 | Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
 | Decide what a repo's quality gate must enforce, then run review triage, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
 | Run a planning desk over a tracker (kata first), or lay out/audit/scaffold a repo's in-repo _meta/ structure | [`mise-en-place`](plugins/mise-en-place/README.md) |
@@ -65,7 +65,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 35 skills |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone and has no topical plugin: harness config, session discipline, research, diagrams, repo setup, Obsidian dev. | 31 skills |
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 12 hooks · 1 command |

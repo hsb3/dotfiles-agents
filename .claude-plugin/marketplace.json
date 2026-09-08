@@ -106,13 +106,13 @@
       "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes), a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment, and three subject-matter agents that carry the backend laws into a delegated brief: a builder, an adversarial reviewer, and a security auditor, each proving its claims from its own clean-room server. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "pocketbase",
       "source": "./plugins/pocketbase",
-      "version": "0.2.1"
+      "version": "0.2.2"
     },
     {
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Every skill that stands on its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, comms, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
       "version": "0.14.0"
