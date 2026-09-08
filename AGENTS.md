@@ -50,7 +50,7 @@ origin/main` (remove the worktree after).
 Keep changes surgical and match existing style. Get the owner's approval before major
 information-architecture changes (moving/renaming top-level structures, reshaping the roster).
 
-GitHub issues are bug intake only; planned work lives on the kata board (see "Task tracking").
+GitHub issues are inbound intake (bugs and requests, mirrored onto the board); planned work lives on the kata board (see "Task tracking").
 
 ### Branch hygiene
 
