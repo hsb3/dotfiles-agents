@@ -47,7 +47,6 @@ this plugin on its own, and one that sheds a dependency joins it.
 | Skill | What it does |
 |---|---|
 | `handoff` | Maintain the session handoff so a cold session can pick the work up — a file this skill writes, or an external tracker it signals via a freshness stamp — the externalization pass that makes a session safe to clear. |
-| `dev-focus` | Mid-session focus check that flags drift from the original task, plus a scope triage that sorts a task list into MUST, DEFER, and CUT. |
 | `layer-cycle` | Drive a module through create, evaluate, and refine cycles until it converges or the budget runs out, turning findings into scoped fix briefs. |
 | `rubric-panel` | Score artifacts against an anchored rubric with a persona-diverse judge panel, classifying each finding as defect, noise, spec-hole, or undeclared commitment. |
 | `deletion-pass` | Reduce a module to irreducible against its contract — remove every line that cannot name the commitment it keeps, without changing observable behavior. |

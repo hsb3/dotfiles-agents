@@ -5,12 +5,13 @@ description: >-
   through a multi-round draft -> review -> fix -> reconcile loop over a tracker read through a
   pluggable adapter, plus analysis scripts for conformance, coverage, and reconciliation. Use
   whenever the user wants to plan a feature or epic before building, run a planning or
-  backlog-grooming session, organize work under _meta/plans/, audit plan/tracker drift, or set the
-  desk up in a repo - even phrased as "plan this out", "groom the backlog", or "get this repo's
-  planning organized". It enforces deliverables/criteria/parallelism (never timelines) and grounds
-  every claim in cited source. Not for writing the body of a tracked work item (task-authoring),
-  not for creating a repo's meta-structure or filling audit gaps (mise-en-place-scaffold), and not
-  the layout standard itself (repo-meta-structure).
+  backlog-grooming session, organize work under _meta/plans/, audit plan/tracker drift, triage a
+  candidate list into MUST/DEFER/CUT, or set the desk up in a repo - even phrased as "plan this
+  out", "groom the backlog", "scope this", "what should we cut", "run the scope hammer", or "get
+  this repo's planning organized". It enforces deliverables/criteria/parallelism (never
+  timelines) and grounds every claim in cited source. Not for writing the body of a tracked work
+  item (task-authoring), not for creating a repo's meta-structure or filling audit gaps
+  (mise-en-place-scaffold), and not the layout standard itself (repo-meta-structure).
 ---
 
 # Planning desk
@@ -35,6 +36,7 @@ _meta/plans/
 | produce a deep, source-grounded build plan      | **plan**   | `references/plan.md`    |
 | run a multi-round planning session over a batch | **loop**   | `references/loop.md`    |
 | groom the backlog, audit drift, gate a wave     | **govern** | `references/toolkit.md` |
+| cut a candidate list down to what ships now     | **hammer** | Scope hammer, below     |
 
 **For the body of a tracked work item - title, acceptance criteria, thresholds, scope - use the
 `task-authoring` skill**; its rules are not restated here. Desk absent? Set up first, then
@@ -63,6 +65,22 @@ milestone/gate vocabulary a board speaks.
    docs a plan must cite, which tracker it is bound to. `TODO(owner):` what you could not resolve.
 4. Confirm it runs (`reconcile.py` reconciles an empty desk clean, `conformance.py` audits live
    item bodies), then report what you scaffolded and every `TODO(owner):` gap.
+
+## Scope hammer - MUST / DEFER / CUT
+
+Triage a candidate list before it hardens into deliverables. **Default bias is DEFER or CUT** -
+make the case for MUST, never assume it. Produce this table, one row per candidate:
+
+| Item | Bucket | Why |
+| ---- | ------ | --- |
+| <candidate> | MUST / DEFER / CUT | blocks the core goal / valuable but can wait / a simpler approach covers it |
+
+Then answer, in one line each under the table, every challenge that fired: everything landed in
+MUST, an item carries no acceptance criteria, total effort runs past one focused session, an item
+depends on infrastructure that is not built.
+
+**Done when** every candidate sits in exactly one bucket with a one-line reason, and every
+challenge that fired has an answer rather than silence.
 
 ## The non-negotiables (every mode)
 

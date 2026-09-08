@@ -1,9 +1,10 @@
 # code-desk
 
 Set the quality contract a repo is held to, build the one gate command that enforces it, and
-run next-release work through it — plus the executive-desk overhead around that work: a
-mid-session focus check, weekly board triage, recurring status comms, the themed decks those
-comms ship as, an honest value-and-proof README, and the memory taxonomy the repo keeps.
+run next-release work through it — plus the executive-desk overhead around that work: the
+review findings a green check hides, weekly board triage, recurring status comms, the themed
+decks those comms ship as, an honest value-and-proof README, and the memory taxonomy the repo
+keeps.
 
 The in-repo `_meta/` planning system that used to live here — the layout standard, the
 compliance audit, the scaffold, and the planning desk — now ships as the separate
@@ -23,8 +24,6 @@ flowchart TD
     Repo[A software repo] --> Start[starting-conditions interviews and writes the contract]
     Start --> Rig[rig-builder builds one gate command and proves it green and red]
     Rig --> Build[Next release work]
-    Build --> Focus[dev-focus flags drift and triages scope]
-    Focus --> Build
     Build --> PR[pull-request triages the review findings a green check hides]
     PR --> Build
     Build --> Board[board-triage ranks the external board weekly]
@@ -42,7 +41,6 @@ flowchart TD
 | Skill | What it does |
 |---|---|
 | `starting-conditions` | Interview-first. Decides what is being built, in what language, and which rules a machine enforces, then writes a `RULES.md` contract, one gate command that proves it, and the baseline of what that gate says about the tree today. Measures; never remediates. |
-| `dev-focus` | A mid-session focus check that flags drift from the original task, and a scope triage that sorts a task list into MUST/DEFER/CUT. |
 | `board-triage` | The weekly routine that ranks the un-ranked items on a task board so its prioritization and roadmap views stay useful instead of drifting into noise. The Impact×Effort judgment is backend-agnostic; a thin adapter does the board's I/O (GitHub Projects v2, Kaneo, and Kata ship). |
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
 | `pptx-themes` | Builds the decks `comms` ships as, with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill. |
@@ -61,9 +59,8 @@ And one command:
 | `/pr-findings [<n>]` | Loads `pull-request` and drives it over one PR — the current branch's open PR when no number is given. |
 
 Per-skill plugins have been retired: the members that stand alone outside this desk —
-`comms`, `dev-focus`, `pptx-themes`, `project-memory`, `readme-value-and-proof` — ship
-individually in the `solo-skills` bundle instead, from the same source, so the bytes are
-identical either way.
+`comms`, `pptx-themes`, `project-memory`, `readme-value-and-proof` — ship individually in the
+`solo-skills` bundle instead, from the same source, so the bytes are identical either way.
 
 ## A worked example
 
@@ -73,9 +70,9 @@ You: "set this repo's starting conditions"
   rig-builder then builds that gate, breaks one rule on purpose to watch it fail, reverts
   the sabotage, and reports the baseline the gate gives on the tree as it stands.
 
-Mid-session: "am I still on task?"
-→ dev-focus compares what you're doing now against the task you started, names the drift,
-  and sorts what's left into MUST / DEFER / CUT.
+After the checks go green: "what did the review actually find?"
+→ pull-request collects the inline comments, reviews, and gate statuses, and splits what
+  sits on a line this PR changed from pre-existing rot named as deferred.
 
 Later: "write me a real README for this"
 → readme-value-and-proof captures live screenshots of the app actually running and

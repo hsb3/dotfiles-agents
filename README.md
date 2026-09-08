@@ -54,7 +54,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 |---|---|
 | Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, set up a repo, or ship a recurring briefing — anything that works on its own | [`solo-skills`](plugins/solo-skills/README.md) |
 | Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
-| Decide what a repo's quality gate must enforce, then run focus checks, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
+| Decide what a repo's quality gate must enforce, then run review triage, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
 | Run a planning desk over a tracker (kata first), or lay out/audit/scaffold a repo's in-repo _meta/ structure | [`mise-en-place`](plugins/mise-en-place/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
@@ -65,8 +65,8 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 36 skills |
-| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: focus checks, board triage, and status comms. | 8 skills · 1 agent · 1 command |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 35 skills |
+| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 12 hooks · 1 command |
 | [`kaneo`](plugins/kaneo/README.md) | bundle | Track a repo's work on a live Kaneo board instead of in-repo task files, with board authority narrowing down the delegation chain. | 2 skills · 1 agent · 3 hooks · 1 MCP server |

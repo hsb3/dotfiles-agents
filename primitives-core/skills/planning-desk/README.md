@@ -9,9 +9,16 @@ and parallelism — never timelines.
 ## When it triggers
 
 Use it to plan a feature or epic before building, run a planning or backlog-grooming session,
-organize work under `_meta/plans/`, audit plan/tracker drift, or set the desk up in a new repo —
-even phrased loosely as "plan this out", "groom the backlog", or "get this repo's planning
+organize work under `_meta/plans/`, audit plan/tracker drift, cut a candidate list down with the
+MUST/DEFER/CUT scope hammer, or set the desk up in a new repo — even phrased loosely as "plan
+this out", "groom the backlog", "scope this", "what should we cut", or "get this repo's planning
 organized".
+
+The scope hammer is the one move that needs no desk and no tracker: it triages a candidate list
+into MUST, DEFER, or CUT — biased toward deferring or cutting, so MUST has to be argued for. It
+lands as a table with a one-line reason per row, plus an answer to every challenge that fired:
+everything in MUST, an item with no acceptance criteria, effort past one session, a dependency
+on unbuilt infrastructure.
 
 It also carries two standing standards the desk cites (`references/entry-forms-and-milestones.md`):
 the queue-entry forms a unit of work takes to enter a backlog or an incubator, and the ordered
