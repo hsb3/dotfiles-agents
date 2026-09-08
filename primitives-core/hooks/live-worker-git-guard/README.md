@@ -91,7 +91,7 @@ The same rule a corrupt sidecar gets: a record that exists and cannot be read ke
 live. `init` and `clone` are not mutating verbs, so making a repo in a fresh directory never
 reaches the comparison.
 
-## Exec wrappers
+## Exec wrappers and shell keywords
 
 **A leading wrapper that execs the real command is stepped over**, and the command-position scan
 resumes after it, for both the `git` word and the `cd`. Not for the adversarial case — an agent
@@ -105,6 +105,22 @@ spelling Homebrew installs (`gtimeout`). Each wrapper's own options are skipped 
 values**, so a value is never misread as the command word (`nice -n 10`, `xargs -I {}`,
 `env -u NAME`, `sudo -u NAME`, GNU `time -o FILE`), and `timeout`'s bare positional duration is
 skipped too.
+
+**Shell grammar displaces the command word the same way, and is read the same way.** After `do`,
+`then`, `else`, `elif`, `if`, `while`, `until` or `!`, the next word is a command, so
+`for f in *; do git commit -m x; done`, `if true; then git commit; fi` and
+`while git pull; do sleep 1; done` all deny — as does a keyword and a wrapper together
+(`for f in *; do nice git commit; done`), and the cwd check sees a wrapped or keyword-preceded
+`cd` (`for d in a b; do cd "$d" && git commit; done`). `for` and `in` are deliberately absent:
+the word after them is a loop variable, not a command. The **verb** may carry a glued separator
+(`while git pull; do`), which is stripped — that shape, and the plainer `git commit; ls`, were
+missed before.
+
+One accepted over-denial comes with this: a bare keyword sitting as an ARGUMENT immediately before
+a git call — `echo do git commit` — denies, because telling that `do` is `echo`'s argument needs a
+parser. A false deny costs one override; a miss costs a live worker's uncommitted files. A quoted
+keyword is inert (`git commit -m "then git push"` denies on the real `commit`, never on the
+string).
 
 Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
 same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
@@ -124,8 +140,9 @@ command string the hook is handed, so whatever still displaces them is invisible
 - anything that re-parses a **string**, which is past a tokenizer by construction: `bash -c "..."`,
   a `$( )` substitution, a quoted `eval "cd x && git commit"`, `env -S 'git commit'`, and heredoc
   body text;
-- a token **glued to a separator** (`ls&&git commit`) — a glued wrapper option is fine
-  (`nice -n10`, `env -uNAME`, `xargs -I%`), it is only the separator that hides the word;
+- a **command word** glued to a separator (`ls&&git commit`, `(git commit)`) — a glued wrapper
+  option is fine (`nice -n10`, `env -uNAME`, `xargs -I%`), and a separator glued to the *verb*
+  (`git pull;`) is stripped; it is only the command word the separator still hides;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

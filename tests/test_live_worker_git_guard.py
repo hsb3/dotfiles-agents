@@ -675,6 +675,74 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "env -C {0} true && git commit -m x".format(session),
             other, session))
 
+    # -- shell keywords in front of the command word ------------------------
+
+    def test_a_shell_keyword_does_not_hide_a_mutating_call(self):
+        # The same displacement the exec wrappers caused, spelled as grammar:
+        # after `do` or `then` the next word IS a command, and a session
+        # writes loops and conditionals for real reasons.
+        self._sidecar("m1111111111111111")
+        for command in (
+            "for f in *; do git commit -m x; done",
+            "while read f; do git push origin dev; done",
+            "if true; then git commit -m x; fi",
+            "if git commit -m x; then echo ok; fi",
+            "while git pull; do sleep 1; done",
+            # Pre-existing miss the keyword rows surfaced: the VERB carried the
+            # glued separator, so `pull;` never matched the verb set.
+            "git commit; echo done",
+            "git stash; ls",
+            "until git push origin dev; do sleep 1; done",
+            "if false; then echo no; else git commit -m x; fi",
+            "if false; then echo no; elif true; then git commit -m x; fi",
+            "! git commit -m x",
+            "for f in *; do nice git commit -m x; done",
+        ):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("live-worker-git-guard", reason)
+
+    def test_a_keyword_before_a_cd_still_stales_the_payload_cwd(self):
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("m2222222222222222")
+        for command in (
+            "for d in a b; do cd {0} && git commit -m x; done",
+            "if true; then cd {0} && git commit -m x; fi",
+            "while true; do command cd {0} && git commit -m x; done",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(
+                    command.format(session), other, session))
+
+    def test_the_keyword_rule_does_not_widen_onto_reads(self):
+        self._sidecar("m3333333333333333")
+        for command in (
+            "for f in *; do git status --short; done",
+            "if true; then git log --oneline -5; fi",
+            "while read f; do git show HEAD; done",
+            "grep -r then .",
+            'echo "do git commit"',
+            "for f in *; do nice git status; done",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_bare_keyword_as_an_argument_over_denies_deliberately(self):
+        # Accepted over-denial, pinned rather than hidden: `do` is `echo`'s
+        # argument here, but the rule cannot tell that without a parser, and
+        # a false deny costs one override while a miss costs a worker's files.
+        self._sidecar("m4444444444444444")
+        reason = self._assert_denied(
+            self._run(self._payload("echo do git commit")))
+        self.assertIn("commit", reason)
+        # A quoted keyword is one token, so it stays inert: this denies on the
+        # real `commit` in command position, never on the string's `push`.
+        reason = self._assert_denied(self._run(self._payload(
+            'git commit -m "then git push"')))
+        self.assertIn("`git commit`", reason)
+        self.assertNotIn("`git push`", reason)
+
     def test_the_tokenizer_ceilings_stay_ceilings(self):
         # Not a wish list: each needs a parser rather than a token scan, and
         # the README names them as things the guard cannot see. A change here

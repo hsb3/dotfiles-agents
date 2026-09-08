@@ -75,11 +75,13 @@ call itself runs in (`env -C DIR`, `sudo -D DIR`, `env -S`).
 Tokenizer ceiling, stated as a rule rather than a list, because a list of ways
 to hide a word invites the belief that it is complete: the `git` word and the
 `cd` are read only in COMMAND POSITION of the single command string the hook is
-handed, so whatever displaces them is not seen. A leading exec wrapper no
-longer displaces them — the named ones in EXEC_WRAPPERS are stepped over, with
-their own options and values, so `time git push` and `timeout 60 git push` are
-read as the calls they are — but an unlisted wrapper still does, and so do
-`bash -c "..."`, a `$( )` substitution, a token glued to a separator
+handed, so whatever displaces them is not seen. Two things no longer displace
+them. A leading exec wrapper: the named ones in EXEC_WRAPPERS are stepped over,
+with their own options and values, so `time git push` and `timeout 60 git push`
+are read as the calls they are. And a SHELL_KEYWORDS word, after which command
+position resumes, so the call inside `for f in *; do git commit; done` is read
+too. An unlisted wrapper still displaces them, and so do
+`bash -c "..."`, a `$( )` substitution, a command word glued to a separator
 (`ls&&git commit`), and heredoc body text. Anything that re-parses a STRING is
 past the ceiling by construction, including `env -S` and a quoted `eval`. A
 `GIT_*` variable exported by an EARLIER Bash call is the same ceiling in
@@ -211,6 +213,11 @@ GIT_TIMEOUT = 3
 # a fresh command: `a && git commit`, `a; git commit`, `a | git commit`.
 SEPARATOR_TAILS = ("&", "|", ";", "(", ")", "{", "}")
 
+# Keywords a command word follows — the same displacement a wrapper causes.
+# `for`/`in` are out (the next word is a loop variable); `done`/`fi` need no row.
+SHELL_KEYWORDS = frozenset(("do", "then", "else", "elif", "if", "while",
+                            "until", "!"))
+
 # Read-only forms of verbs that otherwise write: `git stash list` is how a
 # session orients, `git apply --check` touches nothing. Keyed by verb; a call
 # whose first non-option argument (stash) or any option (apply) is listed here
@@ -262,6 +269,14 @@ def _is_assignment(token):
     if not sep or not name:
         return False
     return name.replace("_", "").isalnum() and not name[0].isdigit()
+
+
+def _opens_command(token):
+    """True when the NEXT token is in command position: this one ends a
+    command (a separator), prefixes one (an assignment), or is a keyword a
+    command follows (`; do git commit`)."""
+    return (token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
+            or token in SHELL_KEYWORDS)
 
 
 def _relocates(wrapper, token):
@@ -346,20 +361,19 @@ def _first_mutating_verb(tokens):
                 if verb in MUTATING_VERBS and not _is_read_form(
                         verb, tokens, verb_at + 1):
                     return verb, git_at, index
-        command_position = (
-            token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
-        )
+        command_position = _opens_command(token)
     return None, None, None
 
 
 def _subcommand(tokens, start):
     """(subcommand, its index) at or after `start`, skipping global options;
-    (None, None) when the command ends first."""
+    (None, None) when the command ends first. A trailing separator is stripped:
+    `while git pull; do` tokenizes the verb as `pull;`, which matched nothing."""
     i = start
     while i < len(tokens):
         token = tokens[i]
         if not token.startswith("-"):
-            return token, i
+            return token.rstrip("".join(SEPARATOR_TAILS)), i
         if token in GLOBAL_FLAGS_WITH_VALUE:
             i += 2  # the flag and its separate value
             continue
@@ -469,9 +483,7 @@ def _target_directory(tokens, git_at, cwd):
                 return None
         if _is_assignment(token) and token.partition("=")[0] in TREE_AIMING_VARS:
             return None
-        command_position = (
-            token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
-        )
+        command_position = _opens_command(token)
     directory = cwd
     index = git_at + 1
     while index < len(tokens):
