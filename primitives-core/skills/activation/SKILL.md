@@ -56,17 +56,27 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 |---|---|---|---|
 | `enforce` | `worker-context`, `config-custody` | `advisory` \| `strict` (anything else is off) | yes |
 | `protected` | `config-custody` | fnmatch globs, block or inline list | yes |
-| `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
 | `isolate` | `worktree-isolation` | `writers` \| an explicit agent-type list (empty list = off) | yes |
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` | a project-relative path to a file that **already exists** (file mode), or a mapping naming an external tracker plus a freshness stamp (external mode) - see below | yes |
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
+
+<!-- harness:claude-code -->
+One more key is read only on this harness, and a GFM table cannot carry a harness marker, so it
+sits here instead of in the table above:
+
+| key | read by | accepted values | enforced per hook call? |
+|---|---|---|---|
+| `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
+<!-- /harness -->
 
 **`effort` is not machine-enforced.** No hook reads it. It only takes effect if the agent
 actually opens the activation file and reads the frontmatter itself — the `delegation` skill
 documents this. Setting it is a request an agent might honor, not a control a hook applies. Do
 not describe it as equivalent to the hook-enforced keys.
 
+<!-- harness:claude-code -->
 **`protected-branches` is a different key from `protected`, and has no default.** One names branch names, the other names file paths, and neither hook reads the other's key - a file glob must never be taken for a branch name. Absent, empty, or unparseable leaves the protected-branch half of its hook inert; nothing is protected until the project names it, because a built-in `main`/`master` guard is wrong in every project whose default branch is a publish-only surface. The same hook's shared-tree stash ban needs no key and is live wherever the plugin is installed, which is why `check` reports an absent key as not configured rather than as the hook being off.
+<!-- /harness -->
 
 **`handoff` has two modes, and each has a failure shape only one side of which is safe.** File
 mode (a bare scalar, or `{mode: file, path: ...}`) behaves as before: a path that resolves

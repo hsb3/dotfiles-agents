@@ -38,6 +38,7 @@ handoff: docs/HANDOFF.md   # optional: override the project's handoff location �
 
 ## Which copy of the file a hook reads
 
+<!-- harness:claude-code -->
 **Enforcement follows the main checkout into a linked worktree.** A worktree is a clean checkout
 of a ref, and the activation file is conventionally ignored, so a worker running inside one used
 to find no file at all and run with custody and the covenant silently off — in exactly the
@@ -57,6 +58,7 @@ there is no handoff nor refused a compaction over a stamp that only ever existed
 up. An explicit environment override of the activation file's location still wins outright and is
 never re-resolved. With no `git` available, or a project directory that is not a worktree,
 nothing about any of this changes.
+<!-- /harness -->
 
 `isolate` is read by `worktree-isolation`, which fires before a dispatch, and is independent of
 `enforce` — a project can isolate writers without arming custody, or the reverse. It rewrites the
@@ -91,6 +93,7 @@ forcing isolation is a hard error rather than a no-op).
 The harness's own `Explore`, `Plan`, and `fork` agents are on the never-isolated list too.
 <!-- /harness -->
 
+<!-- harness:claude-code -->
 `protected-branches` is read by `worker-git-scope-guard` and is a **separate key from
 `protected:`**, which means protected file *paths* and is read by `config-custody`. Overloading
 one key for two different kinds of thing would make both harder to read; they are independent and
@@ -120,6 +123,7 @@ and never fire.
 of it: that one stops an *orchestrator* from clobbering the uncommitted state of children it
 started, keyed off its own pending set, and it exempts an agent holding its own worktree. Two peer
 builders are nobody's children, so their pending sets are empty and it never fires for them.
+<!-- /harness -->
 
 `handoff` names where the project's handoff lives, read by `session-handoff-surfacer`,
 `handoff-freshness-guard`, and the `handoff` skill — all three otherwise search
@@ -175,9 +179,12 @@ in force before quoting a number.
   subagents, never to the main session. The strategist owns config and git; no mode changes that.
   The `manager` is a subagent, so custody binds the management layer too, which is the intended
   reading: only the layer that wrote the definition of done may edit what checks it.
-- **Path custody does no command matching; the git guards do, and say so.** Path custody is
-  fnmatch against a list the project wrote — Step 3's ownership map made machine-readable, with no
-  command string anywhere in it. Git was left advisory for a long time on the grounds that
+- **Path custody does no command matching.** It is fnmatch against a list the project wrote —
+  Step 3's ownership map made machine-readable, with no command string anywhere in it. Whether
+  anything below it parses a command at all is a harness question, answered next.
+
+<!-- harness:claude-code -->
+- **The git guards do parse commands, and say so.** Git was left advisory for a long time on the grounds that
   blocking a push or a merge means matching Bash command strings, which is brittle. Two losses
   measured in the field overrode that: sibling workers in one shared tree destroying each other's
   uncommitted work with `git stash`, and a worker whose HEAD sat on a publish-only branch
@@ -188,6 +195,8 @@ in force before quoting a number.
   leaves a refusal in the transcript. A project that wants a broader hard block can still add deny
   rules to its own harness config — noting that permission rules are not role-scoped and bind the
   main session too.
+<!-- /harness -->
+
 - **Fail-open.** A missing, malformed, or unrecognized activation file means `off`. A hook error
   can never produce a deny.
 - **Escape hatches.** Drop to `advisory` (or remove the key) to stop blocking everywhere; lift a

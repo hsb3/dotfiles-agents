@@ -40,9 +40,13 @@ eleven-task manager brief after reading the whole skill, and every clause of it 
 
 ## The anchor — eleven tasks that read as one chain `[field]`
 
-Observed in a consuming project, not reproduced under measurement here. One `manager` on opus,
-one worktree, over an hour and roughly 200k tokens, most of it spent reasoning about cross-task
-serialization the strategy layer should have settled before dispatch.
+Observed in a consuming project, not reproduced under measurement here. One `manager` at the heavy
+tier, one worktree, over an hour and roughly 200k tokens, most of it spent reasoning about
+cross-task serialization the strategy layer should have settled before dispatch.
+
+<!-- harness:claude-code -->
+The run was on opus.
+<!-- /harness -->
 
 **The brief as written.** Eleven tasks (141 152 154 159 160 161 162 166 167 168 178) to one
 manager in one worktree; they overlap on `nav-model.ts` and the settings screens, so workers on

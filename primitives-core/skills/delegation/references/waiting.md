@@ -236,9 +236,11 @@ Concretely: remove a worker's worktree only after its last message, and once rem
 `SendMessage` that agent again.
 <!-- /harness -->
 
+<!-- harness:claude-code -->
 **A removed workspace is not always a deliberate act.** An unchanged worker workspace is
 auto-removed by the harness when that worker finishes, with nobody choosing it — the orphan
 state can arrive from ordinary completion, not only from an operator tearing one down early.
+<!-- /harness -->
 
 **A resumed orphan is not merely disoriented — it is aimed at the dispatcher's own workspace.**
 

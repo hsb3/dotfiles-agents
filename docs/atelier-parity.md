@@ -10,7 +10,10 @@ the pointer, so that the next author editing atelier here knows the other copy e
 ## The transform, in four lines
 
 - **Frontmatter is harness-owned** and not compared — each repo's own gates own its shape.
-  That includes `description`, so a description change has to be carried across by hand.
+  That includes `description`, so a description change has to be carried across by hand. Both
+  harnesses' descriptions carry model-tier advice, each in its own vocabulary — this side names
+  the per-dispatch override, the other names the workload band its fixed `tier:` is set for — so
+  the exclusion is a real hole, not an empty one.
 - **opencode namespaces every artifact `atelier-<name>`**; here the name is bare, or
   plugin-qualified as `atelier:<name>`. The normalizer deletes `atelier-` or `atelier:`
   wherever it immediately precedes a roster name.
@@ -25,8 +28,8 @@ the pointer, so that the next author editing atelier here knows the other copy e
 ## The check does not run in this repo's CI
 
 Parity is enforced by `bun gate/parity.ts` in `dotfiles-agents-oc`, which reads this
-checkout from `$ATELIER_CC_REPO` (default `~/Developer/dotfiles-agents`) and fails loudly
-when the sibling is missing.
+checkout from `$ATELIER_CC_REPO` — falling back to the first of `~/Developer/_hsb3/dotfiles-agents`
+and `~/Developer/dotfiles-agents` that exists — and fails loudly when the sibling is missing.
 
 It cannot run here. GitHub CI has no sibling checkout, and this repo tracks nothing generated
 (ADR 0017), so there is no Claude-Code-side copy for CI to compare against. **A doctrine
@@ -47,6 +50,7 @@ the drift discovered a year later as a merge conflict of ideas.
 | `skills/delegation/references/model-tiers.md`, `tier-cutoff-log.md` | opencode only | opencode has no per-dispatch model override: tiers are fixed in agent frontmatter, so a reference table and a measured cutoff log are the only knobs. This harness overrides the model per call and needs neither. |
 | `primitives-core/**/README.md` | Claude Code only | The per-primitive provenance convention, read by the roster guard. opencode has no equivalent and should not grow one. |
 | `skills/activation/scripts/`, `skills/activation/examples/` | Claude Code only | The auditor imports this harness's Python hook modules; opencode's hooks are TypeScript and its copy is an independent parser. The example is a template for `.claude/` versus `.opencode/`. |
+| the `protected-branches:` activation key | Claude Code only | Read by one hook that exists only here, `worker-git-scope-guard`. opencode's activation parser reads `enforce`, `protected`, `isolate`, `worktreeBaseRef` and `handoff` and nothing else (`plugins/atelier/activation.ts` in `dotfiles-agents-oc`), and that bundle ships no guard on a worker's git at all, so the key would be read by nobody there. Do not confuse it with `protected:`, config-custody's file globs, which **is** shared. Being one-sided, its doctrine prose lives in a `harness:claude-code` block, never in neutral text. |
 
 Atelier's primitives are rostered `targets: [claude-code]` for the same reason:
 `scripts/gen_opencode.py` no longer emits them, because a generated second copy would compete
