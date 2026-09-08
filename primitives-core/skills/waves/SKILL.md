@@ -68,6 +68,18 @@ which system is which at Phase 0, and never assume closing a PR closed a backlog
   open backlog: a bare "run the waves" plans only that ranked set into crews. Never infer, from
   a general request, that the whole backlog should go into crews in one run — widen only on
   explicit say-so.
+- **Check for a live coordination signal on this branch before planning anything.** Read what
+  the session start surfaced about other recent sessions here, and record the trunk tip
+  (`git rev-parse HEAD`) that the plan is being built on. A concurrent session moving the trunk
+  underneath a running campaign is a real failure mode, not a hypothetical. If another session
+  is live on the branch, settle the landing order with it — or with the owner — before launching
+  a single crew; two campaigns merging into one trunk unaware of each other is how a landing
+  gets clobbered.
+  <!-- harness:claude-code -->
+  The `branch-activity-surfacer` hook does the detecting: it warns at session start when another
+  session recorded a start on this repo and branch, or when the tip moved since the last one, and
+  names the commits and the merged PR that moved it.
+  <!-- /harness -->
 
 ## Phase 1 — Triage refresh
 

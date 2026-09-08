@@ -34,6 +34,14 @@ left on a hardening list is re-routed rather than filed on sight. Each landing r
 wave closed against what it filed, so the run's totals show whether a wave shrank the backlog or
 grew it.
 
+## Concurrent campaigns
+
+Phase 0 checks for a live coordination signal before anything is planned: another session
+moving the trunk under a running campaign is a known failure mode, so the tip the plan is
+built on gets recorded, and a branch someone else is already on gets a landing order agreed
+before a crew launches. On Claude Code the detecting is done by the `branch-activity-surfacer`
+hook in the same bundle.
+
 ## Install
 
 ```
