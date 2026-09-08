@@ -295,9 +295,10 @@ class HookGuard(unittest.TestCase):
         self.addCleanup(self.box.destroy)
         # Unique to this tempdir: no sibling worktree's crew and no parallel run
         # of this test can land in the count.
-        # Anchored like the hook's own: an unanchored count here would itself
-        # pick up the sibling daemon the prefix-collision test starts.
-        self.pattern = "snapshot_lanes\\.py " + re.escape(self.box.root) + "($|[/ ])"
+        # Spelled exactly like the hook's own pattern, boundary included: this
+        # count IS the assertion in the two collision tests, so a looser one
+        # here would swallow the very daemon they are checking is separate.
+        self.pattern = "snapshot_lanes\\.py " + re.escape(self.box.root) + "($| )"
         self.addCleanup(
             lambda: self.assertEqual(
                 self.repo_daemons(), [], "a test left a daemon running against this checkout",
@@ -403,6 +404,29 @@ class HookGuard(unittest.TestCase):
             self.assertEqual(
                 len(self.daemons()), 1,
                 "the sibling's daemon was mistaken for this root's",
+            )
+        finally:
+            self.kill_all()
+
+    def test_a_lane_worktrees_daemon_does_not_answer_for_the_repo_above_it(self):
+        """The boundary class must not contain `/`. A worker session opening in
+        `.claude/worktrees/agent-*` resolves its toplevel to the LANE, so its
+        daemon is rooted there and snapshots nothing; if that daemon can answer
+        for the repo above it, every lane goes unprotected while the ledger
+        says otherwise. This is the pgrep-substring defect one boundary over."""
+        lane = self.box.lanes["agent-one"]
+        lane_pattern = "snapshot_lanes\\.py " + re.escape(lane) + "($| )"
+        self.addCleanup(self.kill_pattern, lane_pattern)
+        try:
+            self.assertEqual(self.run_hook(cwd=lane).returncode, 0)
+            self.wait_for_pattern(lane_pattern, 1)
+            self.assertEqual(len(self._pgrep(lane_pattern)), 1, "lane daemon did not start")
+
+            self.assertEqual(self.run_hook().returncode, 0)
+            self.wait_for(1)
+            self.assertEqual(
+                len(self.daemons()), 1,
+                "the lane's daemon was mistaken for the repo root's",
             )
         finally:
             self.kill_all()

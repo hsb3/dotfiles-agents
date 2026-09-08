@@ -88,16 +88,18 @@ def _pattern(root):
 
     All three matter. The filename alone would match another repo's daemon and
     report a false "already running", leaving that repo unprotected — and so
-    would an unterminated root, because `pgrep -f` matches a SUBSTRING: without
-    the boundary a live daemon for `/x/repo-second` makes `/x/repo` read as
-    protected while nothing is watching it. Two ordinarily named siblings are
-    enough; `agent-a1` and `agent-a15` is this repo's own worktree scheme.
+    would an unterminated root, because `pgrep -f` matches a SUBSTRING. Both
+    shapes that bite are ordinary here: a sibling whose path merely extends
+    this one (`agent-a1` and `agent-a15` is this repo's own worktree scheme),
+    and a lane worktree UNDER this root, whose daemon would otherwise answer
+    for the whole repo while snapshotting nothing.
     """
-    literal = "{0} {1}".format(DAEMON_NAME, root.rstrip("/"))
+    literal = "{0} {1}".format(DAEMON_NAME, root.rstrip("/") or "/")
     escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", literal)
-    # The root is the daemon's last argument, so end-of-string is the usual
-    # case; `/` and a space keep a trailing slash or a future extra arg a match.
-    return escaped + r"($|[/ ])"
+    # `/` is NOT in the class: it would match `<root>/anything`, so a daemon
+    # rooted at a lane worktree would answer for the repo above it — the same
+    # defect one boundary over, and the likeliest one here.
+    return escaped + r"($| )"
 
 
 def _already_running(root):

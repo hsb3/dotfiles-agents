@@ -59,8 +59,10 @@ No per-project activation file. The hook is armed by being present in an install
 The worktree glob is an override rather than a constant because a repo that parks its worktrees
 somewhere else must not have to fork the hook to say so. That reach is deliberately not fenced —
 worktrees legitimately live outside the repo — so the glob is joined onto the root and nothing
-more: `../sibling-*` or an absolute pattern will snapshot directories outside the root, and their
-refs still land in the root's `refs/lane-snapshots/` namespace. Set it to a path you meant.
+more: `../sibling-*` or an absolute pattern will snapshot directories outside the root. A linked
+worktree reached that way shares the root's object store, so its ref lands in the root's
+`refs/lane-snapshots/` namespace; an unrelated repo does not, and its `update-ref` fails with an
+error row while the scan still counts it as a lane. Set it to a path you meant.
 
 ### Root resolution, in precedence order
 
