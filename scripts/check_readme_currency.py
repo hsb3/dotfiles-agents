@@ -36,16 +36,6 @@ The README side DOES follow a link (a standalone plugin points at its member ski
 README): history for the link entry or for its in-repo target counts, since the file a
 reader opens is the target, and editing the entry alone could never clear the unit.
 
-The gate is anchored at the commit that added decision-015: a unit whose last body change
-predates the ruling is not evaluated, since 31 of 56 units were stale the day the rule
-landed and a retroactive gate would just be a mass-touch. The anchor is the OLDEST add
-matching the pathspec, not the newest — a later `decision-015*` file (an addendum, or a
-retitle, since this repo puts the title in the filename) would otherwise move the amnesty
-forward and turn a red unit green. It is read out of history, so renaming or deleting the
-doc does not lift the amnesty; that takes deleting these lines, which is the intended move
-once the backlog is backfilled. A repo with no such commit (any fixture) evaluates all of
-history.
-
 Needs real history: a shallow clone is a hard failure, not a skip, because every unit
 would trivially pass in one (`actions/checkout` is depth-1 unless told otherwise).
 
@@ -60,7 +50,6 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIT_ROOTS = (("skill", "primitives-core/skills"), ("plugin", "plugins"))
-ANCHOR_PATHSPEC = "docs/decisions/decision-015*"
 
 
 def _git(*args):
@@ -103,14 +92,8 @@ def _readme_pathspecs(rel):
     return [link] if target == link or target.startswith("..") else [link, target]
 
 
-def _anchor():
-    """The OLDEST commit adding a decision-015 doc — '' when the repo has none."""
-    adds = _git("log", "--diff-filter=A", "--format=%H", "--", ANCHOR_PATHSPEC).splitlines()
-    return adds[-1] if adds else ""
-
-
 def audit():
-    """(problems, evaluated, skipped) — skipped = untracked body, or anchored out."""
+    """(problems, evaluated, skipped) — skipped = a unit with no tracked body."""
     if not _git("rev-parse", "--git-dir"):
         return [f"{REPO} is not a git repository — currency is derived from history"], 0, 0
     if _git("rev-parse", "--is-shallow-repository") == "true":
@@ -118,14 +101,10 @@ def audit():
             "shallow clone: every unit would pass vacuously — fetch full history "
             "(`git fetch --unshallow`, or `fetch-depth: 0` on the CI checkout)"
         ], 0, 0
-    anchor = _anchor()
     out, evaluated, skipped = [], 0, 0
     for kind, name, rel in _units():
         body = _git("log", "-1", "--format=%H", "--", rel, f":(exclude){rel}/README.md")
         if not body:  # no tracked body — check_readmes.py owns what a unit must contain
-            skipped += 1
-            continue
-        if anchor and _is_ancestor(body, anchor):  # predates decision-015
             skipped += 1
             continue
         evaluated += 1
@@ -156,7 +135,7 @@ def main(argv):
         return 1
     print(
         f"✓ README-currency gate clean — {evaluated} unit(s) evaluated, {skipped} not "
-        f"(last change predates decision-015, or no tracked body)"
+        "(no tracked body)"
     )
     return 0
 

@@ -27,7 +27,7 @@ flowchart LR
 | Skill | What it does |
 |---|---|
 | `diagrams` | The hub — structural-diagram tool selection, cloud-architecture diagrams with provider icons via Python's `diagrams` library (Azure first), raw Graphviz dot for dependency graphs and trees, and the output pipelines the other skills feed. |
-| `mermaid` | Mermaid for GitHub-rendered markdown — flowcharts, sequence diagrams, ERDs, and state diagrams, with the house rule that node labels carry no parentheses or special characters, light/dark theming, and mermaid-cli rendering to SVG/PNG. |
+| `mermaid` | Mermaid for GitHub-rendered markdown — flowcharts, sequence diagrams, ERDs, state diagrams, and class diagrams, with the house rule that node labels carry no parentheses or special characters, light/dark theming, and mermaid-cli rendering to SVG/PNG. |
 | `drawio` | Read, convert, and headlessly export draw.io / diagrams.net files — compressed and uncompressed mxGraph XML, a stdlib Python decompression recipe, legacy-to-Mermaid conversion, and desktop-app CLI export to PNG/SVG. |
 | `excalidraw` | Sketch-style architecture diagrams as `.excalidraw` files — uses the Excalidraw MCP tools when a session exposes them, otherwise authors the scene JSON directly (schema, arrow binding, labels), with SVG/PNG export guidance. Ships a bundled offline render loop: `scripts/render_check.py` draws the scene, screenshots it through headless Chromium, and lints it for overlaps, dangling bindings, orphan labels, frame escapes and text overflow — plus a design methodology (depth assessment, pattern library, large-diagram workflow, handover checklist). |
 

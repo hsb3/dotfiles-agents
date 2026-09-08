@@ -39,4 +39,5 @@ claude plugin install obsidian-toolkit@dotfiles-agents
 Guidance skills, not a scaffolder: they teach the API surfaces, patterns, and gotchas with
 worked examples, and assume a standard Obsidian plugin dev setup (TypeScript, esbuild).
 `obsidian-cli` needs the Obsidian app's official CLI available on the machine
-(`cli:obsidian`); the other three need only an editor and a vault to test in.
+(`cli:obsidian`); `obsidian-mcp-server` additionally needs `@modelcontextprotocol/sdk` and
+`zod` from npm; the other two need only an editor and a vault to test in.

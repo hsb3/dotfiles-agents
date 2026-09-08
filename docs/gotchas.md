@@ -47,11 +47,11 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   so every unit's body and README look like the same change and the gate would pass
   vacuously; it refuses a shallow clone instead. Only that job — `entry-gate-floor` stays
   depth-1 and its test for this gate skips there, so a test asserting the live tree is
-  current must never assume history exists. The gate is also anchored at decision-015's
-  landing commit: 31 of 56 units were stale the day the rule landed, and the anchor keeps it
-  forward-only until those are backfilled. Lifting the amnesty means deleting those lines in
-  `scripts/check_readme_currency.py` — the anchor is read out of history, so renaming or
-  deleting the decision doc does nothing.
+  current must never assume history exists. The decision-015 amnesty that once anchored the
+  gate to the ruling's landing commit is gone (backfilled 2026-09-08): every unit with a
+  tracked body is evaluated over all of history, so any body change lands red unless that
+  unit's README moves with it. `skipped` in the clean line now means only a unit whose body
+  is not committed yet.
 - **`ci.yml` fires on `pull_request` ONLY.** A direct push to `dev` gets ZERO CI, and the owner's
   waiver means `remote: Bypassed rule violations` is expected on the handful of paths it covers.
   Run `make ci` locally first — nothing else will. Code still goes through a PR.

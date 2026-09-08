@@ -132,21 +132,7 @@ class ReadmeCurrencyGate(unittest.TestCase):
         self._skill("beta")  # never committed
         self.assertEqual(C.problems(), [])
 
-    # --- anchor, shallow, non-repo ---------------------------------------
-    def test_changes_predating_the_anchor_are_not_evaluated(self):
-        self._skill("alpha")
-        self._commit("add alpha")
-        self._write("primitives-core/skills/alpha/SKILL.md", "v2\n")
-        self._commit("rewrite alpha")
-        self.assertEqual(len(C.problems()), 1)
-        self._write("docs/decisions/decision-015 - README currency.md", "the ruling\n")
-        self._commit("land decision-015")
-        self.assertEqual(C.problems(), [])
-        # …and a change made after the anchor is evaluated again.
-        self._write("primitives-core/skills/alpha/SKILL.md", "v3\n")
-        self._commit("rewrite alpha again")
-        self.assertEqual(len(C.problems()), 1)
-
+    # --- shallow, non-repo -----------------------------------------------
     def test_shallow_clone_is_a_hard_failure_not_a_vacuous_pass(self):
         self._skill("alpha")
         self._commit("add alpha")
@@ -171,20 +157,6 @@ class ReadmeCurrencyGate(unittest.TestCase):
             self.assertIn("not a git repository", found[0])
         finally:
             shutil.rmtree(C.REPO, ignore_errors=True)
-
-    def test_a_later_matching_doc_does_not_move_the_anchor(self):
-        self._skill("alpha")
-        self._commit("add alpha")
-        self._write("docs/decisions/decision-015 - README currency.md", "the ruling\n")
-        self._commit("land decision-015")
-        self._write("primitives-core/skills/alpha/SKILL.md", "v2\n")
-        self._commit("rewrite alpha")
-        self.assertEqual(len(C.problems()), 1)
-        # An addendum (or a retitle — this repo puts the title in the filename) adds a
-        # second matching path; the amnesty must stay pinned to the original ruling.
-        self._write("docs/decisions/decision-015a - addendum.md", "more\n")
-        self._commit("add an addendum")
-        self.assertEqual(len(C.problems()), 1)
 
     def test_symlinked_readme_is_acknowledged_through_its_target(self):
         self._skill("alpha")

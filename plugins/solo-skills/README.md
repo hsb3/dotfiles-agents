@@ -21,7 +21,7 @@ flowchart TD
     Q -->|no| Sys{Prescribes an opt-in system, in-repo or external}
     Sys -->|yes| MEP[Ships only in that system's own plugin]
     Sys -->|no| Top{Has a topical plugin of its own}
-    Top -->|yes| Own[Ships in that topical plugin]
+    Top -->|yes| Own[Owned by that topical plugin and free to leave this one]
     Top -->|no| Solo[Ships in solo-skills]
     Q -->|dispatches agents, reads the covenant hooks| At[Ships in atelier]
     Q -->|assumes the desk's other pieces| CD[Ships in code-desk]
@@ -73,7 +73,7 @@ joins it.
 | `mermaid` | Mermaid for GitHub-rendered markdown — flowcharts, sequence, ER, state, and class diagrams, with the house rule that node labels carry no parentheses or special characters. |
 | `drawio` | Read, convert, and headlessly export draw.io files — compressed and uncompressed mxGraph XML, legacy-to-Mermaid conversion, and CLI export to PNG/SVG. |
 | `excalidraw` | Sketch-style diagrams as `.excalidraw` files, using the Excalidraw MCP tools when a session exposes them and authoring the scene JSON directly when it does not. |
-| `dataviz` | Chart design rules to consult *before* writing chart code, in any library: mark selection, the anti-patterns to refuse, and a colorblind-safe palette with a runnable validator. |
+| `dataviz` | Chart design rules to consult *before* writing chart code, in any library: mark selection, the anti-patterns to refuse, and a colorblind-safe palette, closing with the validation checklist to run before delivering. |
 | `pptx-themes` | PowerPoint decks with a curated theme layer — semantic tokens, approved palettes, monospaced typography, and a visual QA pass, over a vendored base that is never hand-edited. |
 
 **Building software**
@@ -134,11 +134,13 @@ on a repo that has not chosen them. The system can be in-repo (the `_meta/` plan
 and its layout standard, in `mise-en-place`) or external (the `bun` toolchain, the
 `kenn-forge` daemon, each in a plugin of that name).
 
-**Skills with a topical plugin are not here either.** The topical plugin owns a skill;
-this bundle is the home for the ones with nowhere topical to live (decision-020,
-2026-09-08). PocketBase work lives in `pocketbase`; the pull-request and comms skills live
-in `code-desk`. Enable the topical plugin to get those. This is a break if you were
-getting them from here — nothing was duplicated, they simply stopped being members.
+**A skill with a topical plugin does not have to be here.** The topical plugin owns a
+skill; this bundle is the home for the ones with nowhere topical to live (decision-020,
+2026-09-08). That ruling is executed per skill rather than swept, so the dual-homed members
+under *Overlaps* below stay members. Where it has been executed the skill is gone from here:
+PocketBase work lives in `pocketbase`; the pull-request and comms skills live in `code-desk`.
+Enable the topical plugin to get those. This is a break if you were getting them from here —
+nothing was duplicated, they simply stopped being members.
 
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
@@ -148,7 +150,8 @@ Carbon MCP server. Each says so at the point of use.
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
-skills also ship inside a topical plugin (`handoff` in `atelier`, the diagram skills in
+skills also ship inside a topical plugin (`handoff`, `layer-cycle`, `rubric-panel`,
+`deletion-pass`, and `comment-hygiene` in `atelier`, the diagram skills in
 `diagrams`, the Obsidian skills in `obsidian-toolkit`, `carbon-builder` in `carbon`, several
 in `code-desk`, and `project-memory` plus `task-authoring` in `mise-en-place`, which reads
 both as standards its audit and its desk depend on). Enable more than one home and the skill

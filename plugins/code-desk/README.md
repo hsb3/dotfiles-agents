@@ -121,7 +121,9 @@ chain resolved to.
 
 `pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a full
 authoring replacement for it — and it names where to report an error in that base, since the
-vendored copy is never hand-edited.
+vendored copy is never hand-edited. Its render/QA script also needs `pdftoppm` (poppler) plus
+LibreOffice or PowerPoint for PDF conversion; it probes for whichever is present and says
+what is missing.
 
 ## Install
 

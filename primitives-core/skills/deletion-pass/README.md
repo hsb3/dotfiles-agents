@@ -17,5 +17,5 @@ claude plugin install atelier@dotfiles-agents
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `atelier` and `solo-skills` bundles — layer-cycle invokes it as the refine step
-after rubric-panel evaluates.
+Ships in the `atelier` and `solo-skills` bundles — layer-cycle invokes it, alongside
+comment-hygiene, as the refine step once evaluation surfaces findings.

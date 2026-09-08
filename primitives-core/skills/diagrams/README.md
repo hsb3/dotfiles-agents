@@ -4,6 +4,8 @@ Create technical architecture diagrams with Python's `diagrams` library (provide
 Azure, GCP, AWS, Kubernetes, on-prem) or raw Graphviz dot for icon-free graphs. It is also the
 **hub** of the diagrams bundle: it owns tool selection across the sibling renderers and the
 shared SVG+PNG output pipeline that feeds GitHub markdown, slide decks, and standalone docs.
+`scripts/diagram_helper.py validate` checks that Graphviz and the `diagrams` library are both
+installed before the first render; its `boilerplate` subcommand scaffolds a starter script.
 
 ## When it triggers
 

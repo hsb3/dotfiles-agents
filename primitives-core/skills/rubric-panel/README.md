@@ -6,9 +6,10 @@ undeclared-commitment.
 
 ## When it triggers
 
-Use it when asked to evaluate, score, judge, or compare solutions or modules, or when
-invoked by layer-cycle as its evaluate step. Judges run read-only against a supplied rubric
-and contract; each finding must cite concrete code.
+Use it when asked to evaluate, score, judge, or compare competing implementations of the same
+spec, or when invoked by layer-cycle as its evaluate step. For choosing between technologies,
+frameworks, or vendors, use `tech-eval-research` instead. Judges run read-only against a
+supplied rubric and contract; each finding must cite concrete code.
 
 ## Install
 
