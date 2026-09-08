@@ -132,7 +132,8 @@ For each wave, as crews report back — the session, personally:
    in the declared order.
 3. **Close the wave's items** per the binding's landing operation, each with a pointer to what
    landed it. Where the tracker cannot close from the forge, closing is a separate step you owe
-   at the end of the wave, not the end of the run.
+   at the end of the wave, not the end of the run. Record the wave's closed count against what it
+   filed as you land it — the attribution is not recoverable later.
 4. A finding you can fix faster than you can brief, fix yourself; anything larger goes back to
    the wave's crew as an amendment to the crew that is still live — never a re-brief.
 
@@ -150,7 +151,11 @@ Send that amendment with `SendMessage` to the running manager.
 
 ## Phase 6 — Externalize (the run isn't done without this)
 
-- File items for every deferred thing and new finding from the run.
+- **Dispose of every deferred thing and new finding by the fold order, filing last**: a sibling
+  site of what a wave already fixed is fixed inside that wave; a finding that belongs to an open
+  item becomes a comment on it; one with no home rides the wave's hardening list; only what none
+  of those hold is filed, with the reason. Tracked is still the bar for "will not be forgotten" —
+  a new item is the last rung of it, not the first.
 - **Update the triage view**: mark the delivery plan **EXECUTED** with the actual landing table,
   refresh the ranking and date — then **move the plan below the open sections** into the
   delivery-history block and collapse it. Position is the reader's only done/outstanding cue; an
@@ -169,8 +174,9 @@ Send that amendment with `SendMessage` to the running manager.
 There is no `/handoff` command: in Claude Code a command silently shadows a same-named skill in
 the same plugin, so atelier ships the skill only (`primitives-core/commands/README.md`).
 <!-- /harness -->
-- Close with session totals: waves landed, items closed, items filed, what remains and *why*
-  (owner-gated / parked / next wave).
+- Close with session totals: waves landed, closed against filed per wave plus the run total, what
+  remains and *why* (owner-gated / parked / next wave). **Filed over closed is the signal** — a
+  wave above 1.0 grew the backlog it was run to shrink, so name what drove it.
 
 ## `/waves init` — create the triage view
 

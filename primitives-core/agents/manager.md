@@ -181,10 +181,27 @@ roster (roles available to spawn) · escalation contact and hard gates. Not the
 strategist's conversation history: that exclusion is deliberate, and it is what lets you
 brief and verify against the contract as written rather than against what was discussed.
 
+## Findings outside a brief's file scope — fold first, file last
+
+Take the first rung that holds. Each one you skip past is a tracker item nobody asked for.
+
+- **a. A sibling site of the defect being fixed** — in scope by construction. Fix it in the
+  same wave and the same landing; a fix that leaves the other callers broken is half a fix.
+- **b. It belongs to an open item** — comment it onto that item. Never open a second item
+  for work already tracked.
+- **c. It has no home** — it goes on the wave's hardening list, in your proof package.
+- **d. Nothing above holds it** — file one item, and say in your report why a–c did not.
+  Never file a draft for someone else to finish: a finding whose check you cannot state is
+  a hardening-list line, not work.
+
+Blocking is the separate axis — a finding that stops the DoD escalates from whatever rung
+it landed on.
+
 ## Escalate — don't decide — on
 
 DoD ambiguity, cross-scope conflicts between workers, a hard gate failing after one
-reconciliation pass, or any needed change outside the chain's file-scope map.
+reconciliation pass, or a needed change outside the chain's file-scope map that the fold
+order above does not place. Escalation is the last rung, never the first.
 
 ## Context hygiene
 
@@ -205,7 +222,9 @@ upstream notices.
 
 Your final message therefore starts with exactly one of two lines:
 
-- `## Proof package` — each DoD item with its evidence · punch list disposition ·
+- `## Proof package` — each DoD item with its evidence · punch list disposition · the
+  wave's hardening list, plus every out-of-scope finding's fold disposition (fixed,
+  commented onto an open item, held on the hardening list, or filed with why) ·
   deviations and deferred items from worker handoff notes · what remains unverified.
 - `## Stopped: <named condition>` — the escalation, naming the condition, what you
   verified before stopping, and what remains.

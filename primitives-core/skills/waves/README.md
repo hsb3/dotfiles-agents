@@ -24,6 +24,14 @@ decompose, never a card to rewrite.
 Tracker and code forge are separate everywhere except GitHub, so closing an item and landing
 its code are two steps unless the tracker is GitHub itself.
 
+## Findings the run turns up
+
+A finding outside a wave's scope folds before it is filed: a sibling site of what the wave
+already fixed is fixed in the same wave, a finding that belongs to an open item becomes a
+comment on it, one with no home rides the wave's hardening list, and only what none of those
+hold is filed. Each landing records what the wave closed against what it filed, so the run's
+totals show whether a wave shrank the backlog or grew it.
+
 ## Install
 
 ```
