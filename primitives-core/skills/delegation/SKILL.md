@@ -557,10 +557,9 @@ Operating defaults from measured findings `[cost]`. The `context-watermark` (Use
 - **Trigger the `handoff` skill at a self-chosen boundary in the 60–80k band.** The economics
   optimum is ~40–60k; the buffer buys boundary quality. `context-watermark` does the nudging.
   **Scale its thresholds to the model's own context window rather than fixing them as a flat
-  count** — but as a CAP and never a lift: the measured degradation band is an absolute token
-  count, so a small window pulls the line down while a large one leaves it where the measurement
-  put it. How far each harness has taken that is its own business; each states its concrete
-  figures below and in `references/activation.md`.
+  count** — a fixed number means different things on a 200k-window model and a 1M-window one. How
+  far each harness has taken that is its own business; each states its concrete figures below and
+  in `references/activation.md`.
 - **Prefer handoff + a fresh session over `/compact`** — a fresh session reading the handoff
   restarts at ~10–20k; a compaction summary is similar in size, less curated, and carries a
   re-read tax.
@@ -572,9 +571,11 @@ Operating defaults from measured findings `[cost]`. The `context-watermark` (Use
   DoD so an under-powered crew fails loudly and fast; see `references/tier-cutoff.md`.
 
 <!-- harness:claude-code -->
-Concretely here: `context-watermark` sets soft at `min(120k, 60% of the lead model's window)`
-and hard at `min(160k, 80%)`, each scaled by a repo-size factor (tracked files: under 5k → 1.00,
-5k–20k → 0.85, over 20k → 0.75). At a 200k window that is 120k/160k; at 1M it is still 120k/160k,
+Concretely here the window **caps** the threshold and never lifts it, because the `[cost]`
+degradation band is an absolute token count: `context-watermark` sets soft at
+`min(120k, 60% of the lead model's window)` and hard at `min(160k, 80%)`, each scaled by a
+repo-size factor that only ever points down (tracked files: under 5k → 1.00, 5k–20k → 0.85,
+over 20k → 0.75). At a 200k window that is 120k/160k; at 1M it is still 120k/160k,
 because percent-of-window thresholds are inert against the ~967k auto-compact default; at 64k it
 is 38.4k/51.2k. An unknown model falls back to the absolute pair and says so in its ledger row.
 Override with `CONTEXT_WATERMARK_SOFT`/`_HARD`, or a `watermark:` key (`soft`/`hard`/`complexity`)

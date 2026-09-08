@@ -74,7 +74,9 @@ The doctrine is prose until a project arms it. `references/activation.md` is the
 says which keys exist, which hook reads each, and what each one does when it is absent or
 malformed — `enforce` and `protected` (config custody over file paths), `isolate` (writing
 workers get their own checkout), `protected-branches` (a worker may not commit or push onto a
-named branch, and may not `git stash` in a tree it shares with a peer), `handoff`, and `effort`.
+named branch, and may not `git stash` in a tree it shares with a peer), `handoff`, `watermark`
+(per-project context thresholds for the `/handoff` nudge, each sub-key falling back to the value
+the hook computes from the model's own window), and `effort`.
 It also records which copy of the activation file a hook reads when the worker is running inside
 a linked worktree — including that the same fallback covers what the file *names*, so a
 `handoff:` path and its freshness stamp resolve through the main checkout too, and that the

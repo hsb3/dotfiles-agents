@@ -58,7 +58,7 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `protected` | `config-custody` | fnmatch globs, block or inline list | yes |
 | `isolate` | `worktree-isolation` | `writers` \| an explicit agent-type list (empty list = off) | yes |
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` | a project-relative path to a file that **already exists** (file mode), or a mapping naming an external tracker plus a freshness stamp (external mode) - see below | yes |
-| `watermark` | `context-watermark` | a mapping of `soft` / `hard` (token counts) and `complexity` (a multiplier); every sub-key optional | yes |
+| `watermark` | `context-watermark` | a mapping of per-project threshold overrides; every sub-key optional, and this harness's sub-keys are named in its block below | yes |
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 <!-- harness:claude-code -->
@@ -100,11 +100,18 @@ exists to fix, and the stamp is only a freshness gauge, never the thing being su
 because it is live - just probably not as intended.
 
 **`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
-not a positive number leaves that tier computed from the lead model's context window rather than
-turning anything off — so `check` calls a key with nothing readable under it inert, and a key
-naming only `hard` armed. It is also the one key an environment variable outranks:
-`CONTEXT_WATERMARK_SOFT` and `CONTEXT_WATERMARK_HARD` win over the file, which wins over the
-computed default.
+unusable leaves that one value computed from the lead model's context window rather than turning
+anything off — so `check` calls a key with nothing readable under it inert, and a key naming only
+one threshold armed. It is also the one key the environment outranks: a threshold set in the
+session's environment wins over the file, which wins over the computed default.
+
+<!-- harness:claude-code -->
+Here the sub-keys are `soft` and `hard` (absolute token counts) and `complexity` (a multiplier on
+both, replacing the tracked-file factor the hook computes), and the environment variables that
+outrank them are `CONTEXT_WATERMARK_SOFT` and `CONTEXT_WATERMARK_HARD`. The bundle's wiring sets
+neither, on purpose: a shell-expanded default would leave the variable always set and the top tier
+would win forever.
+<!-- /harness -->
 
 ## Effect and location
 
