@@ -21,9 +21,9 @@ Read-only git is never touched — `status`, `diff`, `log`, `show`, `branch`,
 guard that made orientation expensive would be turned off.
 
 Scoped to ONE working tree. The pending set is keyed on the session's
-transcript, which says nothing about where a command points: a manager
-dispatched from this session but working in a checkout of a DIFFERENT repo had
-a push denied by workers it could not reach. So the tree the command targets
+transcript, which says nothing about where a command points, and a session can
+hold workers in its own tree while a call runs in a checkout of a different
+repo entirely — those workers are unreachable from there. So the tree targeted
 (`git rev-parse --show-toplevel` from its cwd, moved by any `-C`) is compared
 against the tree the session's non-isolated workers occupy (the same
 resolution from CLAUDE_PROJECT_DIR, which Claude Code sets on the hook process
@@ -68,8 +68,14 @@ could compare trees at all.
 Tokenizer ceilings, stated: a git call hidden inside `bash -c "..."`, a `$( )`
 substitution, or glued to a separator with no whitespace (`ls&&git commit`) is
 not seen. An honest session does not write those; a bypass is the override.
-`--git-dir` and `--work-tree` relocate the working tree by a rule this does not
-reimplement, so their presence is an unresolved comparison, not a guess.
+
+Anything that aims the command away from the payload's cwd by a rule this does
+not reimplement is an unresolved comparison rather than a guess, and so counts
+the workers: the `--git-dir`/`--work-tree` flags, the same relocation spelled
+`GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR`, and a `cd`/`pushd`/`popd` before
+the git word. One ceiling remains, because it leaves no evidence in the line
+at all: a `GIT_*` variable exported by an EARLIER Bash call is not among this
+command's tokens, so the comparison runs against a cwd git will not use.
 
 The pending set is `_lib/pending.py`, shared with `subagent-telemetry` so the
 two cannot disagree about who is live. Agents holding their own checkout
@@ -132,6 +138,13 @@ GLOBAL_FLAGS_WITH_VALUE = frozenset((
 # ...and the two of those that move the working tree itself, in either
 # spelling. They make the targeted tree unknowable rather than wrong.
 TREE_AIMING_FLAGS = ("--git-dir", "--work-tree")
+
+# The same relocation spelled as environment, which git honours identically.
+TREE_AIMING_VARS = frozenset(("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"))
+
+# Builtins that move the cwd, which makes the payload's cwd stale for any git
+# call later in the same command line.
+CWD_MOVING_BUILTINS = frozenset(("cd", "pushd", "popd"))
 
 # Per `git rev-parse` call. At most two run, and only once a mutating verb is
 # already in hand, so the worst case sits well inside the hook's 10s budget.
@@ -277,7 +290,7 @@ def _repo_root(directory):
     routes — a payload cwd and an env var — and on macOS the same tree reached
     through a symlink (`/var` for `/private/var`) is spelled two ways.
     """
-    if not directory:
+    if not isinstance(directory, str) or not directory:
         return None
     try:
         proc = subprocess.run(
@@ -298,15 +311,28 @@ def _repo_root(directory):
 
 
 def _target_directory(tokens, git_at, cwd):
-    """The directory this git call resolves paths against, or None when a
-    global flag aims it somewhere this hook does not compute.
+    """The directory this git call resolves paths against, or None when
+    something in the line aims it somewhere this hook does not compute.
 
-    `-C` is cumulative and each value is taken relative to the one before it,
-    which is exactly `os.path.join`. git accepts only the separate-value
-    spelling, so there is no `-C/repo` form to handle.
+    Anything BEFORE the git word that invalidates the payload's cwd — a cwd
+    -moving builtin in command position, a tree-aiming environment assignment
+    anywhere in the line, since a bare one carries to the rest of it — is
+    unresolvable rather than wrong. After it, `-C` is cumulative and each value
+    is taken relative to the one before it, which is exactly `os.path.join`;
+    git accepts only the separate-value spelling, so there is no `-C/repo`
+    form to handle.
     """
-    if not cwd:
+    if not isinstance(cwd, str) or not cwd:
         return None
+    command_position = True
+    for token in tokens[:git_at]:
+        if command_position and os.path.basename(token) in CWD_MOVING_BUILTINS:
+            return None
+        if _is_assignment(token) and token.partition("=")[0] in TREE_AIMING_VARS:
+            return None
+        command_position = (
+            token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
+        )
     directory = cwd
     index = git_at + 1
     while index < len(tokens):
