@@ -101,7 +101,9 @@ the same place — while the rule drawn across them is not, because nothing has 
 brief against an unsplit one. The two datasets cannot even be joined: the delegation ledger
 records no owned-file list, so brief scope and worker context share no key. Adding that field is
 what would upgrade the tag, and until it exists the rule stays `[untested]` however often it is
-applied.
+applied. The figures themselves are recorded in `references/provenance.md` with their n and the
+date they were read, never in the doctrine prose: both corpora are still growing, one of them is
+appended to live, and independent derivations of the same figure have already disagreed.
 
 ## Shared with the opencode port
 

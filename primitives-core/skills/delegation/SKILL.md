@@ -299,12 +299,14 @@ manager sequences links within a release and never re-plans across releases.
 ### Measure the owned-file list before dispatching
 
 The first three axes are judged; the fourth is counted, once per brief. **A brief scoped above
-10 files or 100 KB of owned files should be split** `[untested]`. Either term trips it alone:
-across this kit's merged history the file-count distribution is bimodal, with only 8.6% of
-changes landing between 11 and 20 files, and the measured `builder` context median is 92k tokens
-with 42.6% of dispatches past the 100k stop line — but nothing yet measures whether splitting at
-that boundary improves anything. The byte term is what catches the single-topic doctrine change:
-9 files and 141 KB sits under the file bound and well over the byte one.
+10 files or 100 KB of owned files should be split** `[untested]`. Either term trips it alone. The
+line is calibrated, not derived: across this kit's merged history the file-count distribution is
+bimodal with a trough between roughly ten and twenty files, and a worker's own context runs out
+around the same place — but nothing yet measures whether splitting at that boundary improves
+anything, and both corpora are still growing, so the figures live in `references/provenance.md`
+with their n and the date they were read rather than in this sentence. The byte term is what
+catches the single-topic doctrine change: rewriting one skill and its reference set sits under
+the file bound and well over the byte one.
 
 **An entry that cannot be measured makes the figure a floor rather than a total — treat the
 brief as over the threshold until that entry is resolved.** Four ways an entry goes unmeasurable,
@@ -404,9 +406,12 @@ All four are cheap to write and expensive to retrofit `[lab]`.
    deliberately **inside the files the worker will change**, watch that gate fail, restore, then
    dispatch against it — a break anywhere else in the tree proves the gate is alive, not that it
    is watching. Passing and covering are different facts that look identical from outside: a gate
-   with zero real subjects reports the same green as a gate with fifty. So the concrete check is
-   a count, not a run — make the gate name or tally the subjects it matched, and confirm the
-   worker's files are among them. If it cannot say, it has not shown coverage `[untested]`.
+   with zero real subjects reports the same green as a gate with fifty, so that break is the
+   check, and it is the half that always runs. Where the gate can already name or tally the
+   subjects it matched, read that too and confirm the worker's files are among them. Where it
+   cannot — a stock test runner, linter, typechecker or build target usually cannot — the break
+   stands alone: teaching a gate to report its subjects is an edit to config the dispatcher does
+   not own, and a precondition that demanded it would be unsatisfiable exactly where it matters.
 3. **A premise re-derived against the tree at dispatch time, not at authoring time.** A brief's
    factual claims — what a file asserts about itself, how many sites a rule touches, what a
    tracker item recorded — were true when written and are checked when dispatched, never the

@@ -171,6 +171,11 @@ class Cli(unittest.TestCase):
             json.loads(out),
         )
 
+    def test_json_keys_are_sorted_in_the_emitted_bytes(self):
+        _, out, _ = run(["--json", self.a, self.b])
+        keys = [line.split('"')[1] for line in out.splitlines() if line.startswith('  "')]
+        self.assertEqual(["binary", "bytes", "files", "lines", "unresolved"], keys)
+
     def test_paths_on_stdin_when_argv_is_empty(self):
         code, out, _ = run(["--json"], stdin="%s\n\n%s\n" % (self.a, self.b))
         self.assertEqual(0, code)
@@ -183,6 +188,18 @@ class Cli(unittest.TestCase):
         self.assertIn("unresolved 1", out)
         self.assertIn("missing  %s" % missing, out)
         self.assertIn("files 1", out)
+
+    def test_rendered_unresolved_entries_follow_input_order(self):
+        missing = os.path.join(self.dir, "z-nope.md")
+        pattern = os.path.join(self.dir, "a-*.md")
+        code, out, _ = run([missing, pattern, self.a])
+        self.assertEqual(1, code)
+        self.assertIn("unresolved 2", out)
+        first, second = out.splitlines()[-2:]
+        self.assertTrue(first.startswith("  missing"), first)
+        self.assertIn(missing, first)
+        self.assertTrue(second.startswith("  glob"), second)
+        self.assertIn(pattern, second)
 
     def test_no_paths_at_all_is_a_usage_error(self):
         code, out, err = run([])

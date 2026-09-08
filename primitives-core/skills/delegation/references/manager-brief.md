@@ -100,8 +100,10 @@ on. Start the final message with exactly one of these two lines:
 `## Proof package`, then:
 1. Per-DoD-criterion: evidence (command + actual output, file:line, diff summary)
 2. What was deliberately deferred, and why
-3. The wave's hardening list — out-of-scope findings with no home (rung c) — plus any item you
-   filed and why a–c did not hold
+3. Every out-of-scope finding and the rung that placed it: fixed in this landing (a), commented
+   onto an open item (b), held on the wave's hardening list (c), or filed as a new item with why
+   a–c did not hold (d). A finding you placed but did not list reads downstream as unplaced, and
+   gets filed a second time
 4. Worker log: which links were delegated, and what your check found
 If you bounded any coverage (sampled, skipped cases, top-N), say so explicitly — a silent cap
 reads as full coverage.
