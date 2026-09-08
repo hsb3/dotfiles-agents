@@ -472,6 +472,69 @@ class ConfigCustodyTests(unittest.TestCase):
             project_dir=main_dir,
         ))
 
+    def test_the_committed_copy_governs_when_the_worktree_is_the_project_dir(self):
+        """`CLAUDE_PROJECT_DIR` does not always name the main checkout: it can
+        name the worktree, and with it unset the payload `cwd` does. The
+        committed copy has to govern in all three shapes."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-p", "wt-p")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - Makefile\n---\n")
+        self._write_activation(mode="off", project_dir=worktree)
+        edit = self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree)
+
+        with self.subTest("the project dir is the worktree"):
+            self._assert_denied(self._run_hook(edit, project_dir=worktree))
+        with self.subTest("no project dir, so the payload cwd is the worktree"):
+            self._assert_denied(self._run_hook(edit))
+        with self.subTest("jurisdiction is still that tree's root, not a basename"):
+            self._assert_silent(self._run_hook(
+                self._payload(file_path=os.path.join(worktree, "docs", "Makefile"),
+                              cwd=worktree),
+                project_dir=worktree,
+            ))
+
+    def test_an_oversized_committed_copy_falls_back(self):
+        """A blob past the size ceiling is 'no committed copy', not 'off'."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-big", "wt-big")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - docs/*\n---\n"
+                        + "x" * (256 * 1024))
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "docs", "guide.md"),
+                          cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_a_committed_copy_deleted_from_disk_does_not_govern(self):
+        """The `isfile` probe is the gate on the whole committed read: a tree
+        whose copy is gone from disk falls back rather than resurrecting it."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-g", "wt-g")
+        self._commit_in(worktree, "---\nenforce: off\n---\n")
+        os.remove(os.path.join(worktree, ".claude", "atelier.local.md"))
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_an_empty_committed_copy_disarms_that_worktree(self):
+        """Empty or unparseable means "off" for that tree — the same tolerant
+        rule the on-disk reader follows, and it is reached only by committing."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-e", "wt-e")
+        self._commit_in(worktree, "")
+
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
     def test_an_untracked_worktree_copy_does_not_govern(self):
         """AC#1 promises the *tracked* copy. A file that exists only on disk is
         not on the branch, so the main checkout's policy still applies."""
