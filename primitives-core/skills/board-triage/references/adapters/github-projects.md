@@ -75,7 +75,17 @@ issue-native and not settable through the project API — they are absent from t
 and from each item's `fields` grid, and apply names the refusing dataType. Each item still
 carries its `labels`, `milestone`, and `parent` as plain read-only context.
 
-## Provisioning the fields
+## Provisioning
+
+### Project
+
+Once, before anything else: create the project and note the printed number as `PN`.
+
+```bash
+gh project create --owner "@me" --title "Engineering"
+```
+
+### Fields
 
 Once per board, only for what it does not already carry. Keep single-select labels **comma-free**
 — the `gh` CLI splits `--single-select-options` on commas.
@@ -132,6 +142,61 @@ gh api graphql -f query='{ user(login:"<OWNER>"){ projectV2(number:<PN>){ id } }
 gh api graphql -f query='{ node(id:"<PROJECT_NODE_ID>"){ ... on ProjectV2 { fields(first:50){ nodes{
   ... on ProjectV2FieldCommon{ id name } ... on ProjectV2SingleSelectField{ id name options{ id name } } } } } } }'
 ```
+
+## Seeding items
+
+`export`/`apply` operate on items already in the project — they don't add new ones. Add existing
+issues once the project and fields exist:
+
+```bash
+gh project item-add $PN --owner "$OWNER" --url https://github.com/acme/widgets/issues/42
+gh project item-list $PN --owner "$OWNER" --format json --limit 400   # inspect what's already added
+```
+
+## Sub-issues
+
+Decomposing an epic is REST, not a project field — same shape as the `blocked_by` call above,
+keyed on the child's **numeric** issue id:
+
+```bash
+gh api -X POST repos/acme/widgets/issues/<parent>/sub_issues -F sub_issue_id=<child numeric id>
+```
+
+No Gantt arrows in native Projects: sub-issues plus `blocked_by` in the issue sidebar, and a
+Dependencies view (below), are the substitute.
+
+## Views (UI-only) + workflows (UI-only)
+
+No mutation creates or edits either — build these once by hand, in **+ New view** and project
+⋯ → **Workflows**. A starter set:
+
+| View | Layout | Filter | Group / Sort |
+|---|---|---|---|
+| Now / critical path | Board | `priority:P0` | by Status |
+| Roadmap | Roadmap | `-status:Done` | dates Start→Target, group by Milestone |
+| Dependencies | Table | `is:open` | show sub-issues; surface Blocked |
+| Prioritization | Table | `no:Priority` then `-status:Done` | sort Impact↓, Effort↑ |
+| By Epic | Board | `is:open` | column = Parent issue |
+| Working board | Board | `iteration:@current` | by Status |
+
+Workflow toggles (project ⋯ → Workflows, no code): item added → `Backlog`; item reopened → `In
+Progress`; item closed → `Done`; PR merged → `Done`; auto-add `is:issue is:open`; auto-archive
+`status:Done` closed > 2 wks. Cross-repo or label-driven automation instead uses a GitHub Action
+with `actions/add-to-project`.
+
+## Status update banner
+
+A project-level status update (the project's overview page, not a per-item field):
+
+```bash
+gh api graphql -f query='mutation($p:ID!,$b:String!){ createProjectV2StatusUpdate(input:{
+  projectId:$p, body:$b, status:ON_TRACK }){ statusUpdate{ id } } }' \
+  -f p="<PROJECT_NODE_ID>" -f b="<markdown>"
+```
+
+`status` ∈ `INACTIVE ON_TRACK AT_RISK OFF_TRACK COMPLETE`. This is a board write — confirm
+before sending. Pass the body as the `$b` variable rather than inlining it: a status update is
+markdown, and inlining it into the query string breaks on the first quote.
 
 ## Notes verified against a live board
 

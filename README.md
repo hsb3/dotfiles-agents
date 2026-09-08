@@ -52,9 +52,9 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | I want to… | Install |
 |---|---|
-| Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, set up a repo, or ship a recurring briefing — anything that works on its own | [`solo-skills`](plugins/solo-skills/README.md) |
+| Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, or set up a repo — anything that works on its own and has no plugin of its own | [`solo-skills`](plugins/solo-skills/README.md) |
 | Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
-| Decide what a repo's quality gate must enforce, then run focus checks, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
+| Decide what a repo's quality gate must enforce, then run review triage, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
 | Run a planning desk over a tracker (kata first), or lay out/audit/scaffold a repo's in-repo _meta/ structure | [`mise-en-place`](plugins/mise-en-place/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
@@ -65,8 +65,8 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands on its own, in one install: harness config, session discipline, research, diagrams, repo setup, comms, Obsidian dev. | 36 skills |
-| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: focus checks, board triage, and status comms. | 8 skills · 1 agent · 1 command |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone and has no topical plugin: harness config, session discipline, research, diagrams, repo setup, Obsidian dev. | 31 skills |
+| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 12 hooks · 1 command |
 | [`kaneo`](plugins/kaneo/README.md) | bundle | Track a repo's work on a live Kaneo board instead of in-repo task files, with board authority narrowing down the delegation chain. | 2 skills · 1 agent · 3 hooks · 1 MCP server |
@@ -85,10 +85,11 @@ code desk's audit reads the same standard its scaffold writes from, and `atelier
 are useless without the agents beside them. Anything shipping agents or hooks is a bundle
 too, even when it carries no skill at all.
 
-`solo-skills` is the other half of that idea. It carries every skill that needs nothing
-beside it — no agent, no hook, no sibling skill — so its membership is derived rather than
-curated: `scripts/check_solo_skills.py` re-reads the skill bodies, their bundled scripts and
-their bundled examples, and works out which ones qualify.
+`solo-skills` is the other half of that idea. It is the home for skills that need nothing
+beside them — no agent, no hook, no sibling skill — and that no topical plugin already owns,
+so its membership is derived rather than curated: `scripts/check_solo_skills.py` re-reads the
+skill bodies, their bundled scripts and their bundled examples, works out which ones qualify,
+and reads the other assemblies to see which already have a home of their own.
 
 **Per-skill *plugins* are no longer offered — per-skill installs are.** Each of those skills
 used to ship as its own one-skill plugin. A plugin is the unit of installation in Claude Code,
@@ -99,9 +100,10 @@ actually want, `scripts/install_claude_skills.sh --only <id>[,<id>]` copies thos
 folders straight into `~/.claude/skills/` or a project's `.claude/skills/`, with no
 marketplace in the loop.
 
-Some skills are dual-homed, shipping in `solo-skills` and in a bundle. Each is one source
-symlinked into both assemblies, not a copy, so both ship identical bytes and installing both
-loads the skill once.
+Some skills are still dual-homed, shipping in `solo-skills` and in a bundle. Each is one
+source symlinked into both assemblies, not a copy, so both ship identical bytes — but a
+session with both plugins enabled lists that skill twice, which is why a skill a topical
+plugin owns now ships only from that plugin (decision-020).
 
 ## How this repo is built
 

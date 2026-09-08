@@ -1,12 +1,13 @@
 # solo-skills
 
-Every skill in this collection that stands on its own, in one install. A skill belongs
-here when it needs no agent, no hook, and no sibling skill to do its job — so whichever
-one you reach for works the moment it activates, with nothing else to set up.
+The home for skills that stand on their own and have no topical plugin, in one install. A
+skill belongs here when it needs no agent, no hook, and no sibling skill to do its job — so
+whichever one you reach for works the moment it activates, with nothing else to set up.
 
 Membership is derived rather than curated. A membership gate in the source repo re-reads every
 skill body and every bundled script on each run and works out which ones qualify, so this
-plugin cannot quietly fall behind the collection or admit a skill that grew a dependency.
+plugin cannot admit a skill that grew a dependency or quietly drop one that nothing else
+ships.
 
 ## How it fits together
 
@@ -18,8 +19,10 @@ on every run:
 flowchart TD
     Skill[A skill in this collection] --> Q{Needs an agent, a hook, or a sibling skill}
     Q -->|no| Sys{Prescribes an opt-in system, in-repo or external}
-    Sys -->|no| Solo[Ships in solo-skills]
     Sys -->|yes| MEP[Ships only in that system's own plugin]
+    Sys -->|no| Top{Has a topical plugin of its own}
+    Top -->|yes| Own[Ships in that topical plugin]
+    Top -->|no| Solo[Ships in solo-skills]
     Q -->|dispatches agents, reads the covenant hooks| At[Ships in atelier]
     Q -->|assumes the desk's other pieces| CD[Ships in code-desk]
     Solo --> Gate[The membership gate re-derives this on every run]
@@ -27,7 +30,8 @@ flowchart TD
 ```
 
 Because the answer is derived rather than recorded, a skill that grows a dependency leaves
-this plugin on its own, and one that sheds a dependency joins it.
+this plugin on its own, and one that sheds every dependency and has nowhere topical to live
+joins it.
 
 ## What you get
 
@@ -47,7 +51,6 @@ this plugin on its own, and one that sheds a dependency joins it.
 | Skill | What it does |
 |---|---|
 | `handoff` | Maintain the session handoff so a cold session can pick the work up — a file this skill writes, or an external tracker it signals via a freshness stamp — the externalization pass that makes a session safe to clear. |
-| `dev-focus` | Mid-session focus check that flags drift from the original task, plus a scope triage that sorts a task list into MUST, DEFER, and CUT. |
 | `layer-cycle` | Drive a module through create, evaluate, and refine cycles until it converges or the budget runs out, turning findings into scoped fix briefs. |
 | `rubric-panel` | Score artifacts against an anchored rubric with a persona-diverse judge panel, classifying each finding as defect, noise, spec-hole, or undeclared commitment. |
 | `deletion-pass` | Reduce a module to irreducible against its contract — remove every line that cannot name the commitment it keeps, without changing observable behavior. |
@@ -78,8 +81,6 @@ this plugin on its own, and one that sheds a dependency joins it.
 |---|---|
 | `api-craft` | HTTP/REST API servers by layer — route, schema, service, repository, model — with the rejection cascade that maps every failure to a status code and outside-in build order. |
 | `tui-craft` | Full-screen terminal apps — layering, state ownership, repaint and streaming discipline, key routing, and the fixes for flicker, resize corruption, and a terminal left broken after exit. |
-| `pocketbase` | Operate a PocketBase backend over the REST API or in Go package mode — collection and record CRUD, auth, backups, migrations, hooks, and custom routes; design calls route to `pocketbase-best-practices`. |
-| `pocketbase-best-practices` | Design and review rules for a PocketBase backend — schema, API rules, auth flows, query performance, realtime, file handling, and deployment. |
 | `carbon-builder` | IBM Carbon Design System for React and Web Components — components, IBM Products UI, Carbon Charts, design tokens, IBM Plex, and Carbon compliance audits, grounded in the hosted Carbon MCP server. |
 
 **Repos and projects**
@@ -89,13 +90,11 @@ this plugin on its own, and one that sheds a dependency joins it.
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
 | `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. |
 | `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
-| `pull-request` | Work a PR's review findings after the checks go green — collect the inline, review, and summary comments the status check never shows, then split them into what this PR must answer and the pre-existing rot it names as deferred. |
 
-**Planning and comms**
+**Planning**
 
 | Skill | What it does |
 |---|---|
-| `comms` | Recurring communication deliverables — morning briefing, end-of-day wrap-up, weekly plan, board readout — shipped as a deck to a consistent standard. Its bundled example reads the palette it ships beside it, so the sample renders on this bundle alone. |
 | `task-authoring` | Write tracked work items a cold agent can execute — titles, acceptance criteria, thresholds, approval gates, and scope ownership, on any tracker. |
 
 **Obsidian plugin development**
@@ -134,6 +133,12 @@ on a repo that has not chosen them. The system can be in-repo (the `_meta/` plan
 and its layout standard, in `mise-en-place`) or external (the `bun` toolchain, the
 `kenn-forge` daemon, each in a plugin of that name).
 
+**Skills with a topical plugin are not here either.** The topical plugin owns a skill;
+this bundle is the home for the ones with nowhere topical to live (decision-020,
+2026-09-08). PocketBase work lives in `pocketbase`; the pull-request and comms skills live
+in `code-desk`. Enable the topical plugin to get those. This is a break if you were
+getting them from here — nothing was duplicated, they simply stopped being members.
+
 **External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
 draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
 `opencode-sandbox` needs the `opencode-sandbox` CLI and Docker; `carbon-builder` needs the hosted
@@ -143,6 +148,7 @@ Carbon MCP server. Each says so at the point of use.
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
 skills also ship inside another plugin (`handoff` in `atelier`, the diagram skills in
-`diagrams`, the Obsidian skills in `obsidian-toolkit`, the PocketBase skills in `pocketbase`,
-`carbon-builder` in `carbon`, `task-authoring` in `kaneo`, and several in `code-desk`);
-installing both homes loads each skill once.
+`diagrams`, the Obsidian skills in `obsidian-toolkit`, `carbon-builder` in `carbon`,
+`task-authoring` in `kaneo`, and several in `code-desk`). Enable both homes and the skill
+is listed twice in a session — one source, two memberships, no way for either plugin to
+suppress the other — so pick the one home you want it from.

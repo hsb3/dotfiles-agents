@@ -94,3 +94,7 @@ Full detail, including why `base/` must never be hand-edited, is in each skill's
 ```
 claude plugin install pocketbase@dotfiles-agents
 ```
+
+This is the only bundle that ships the two PocketBase skills. They used to also ship in
+`solo-skills`; as of decision-020 the topical plugin owns a skill, so enable this plugin to
+get them.

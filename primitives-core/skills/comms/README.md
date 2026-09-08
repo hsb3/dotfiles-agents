@@ -74,7 +74,6 @@ if you want the full set — neither arrives by way of this plugin.
 
 ```
 claude plugin install code-desk@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `code-desk` and `solo-skills` bundles.
+Ships in the `code-desk` bundle only — its topical plugin owns it (decision-020).

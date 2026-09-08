@@ -60,7 +60,7 @@ class SoloSkillsGate(unittest.TestCase):
             k: getattr(S, k)
             for k in (
                 "REPO", "SKILLS_DIR", "AGENTS_DIR", "HOOKS_DIR", "SOLO_SKILLS_DIR",
-                "AGENT_EXEMPTIONS", "SYSTEM_EXEMPTIONS",
+                "PLUGINS_DIR", "AGENT_EXEMPTIONS", "SYSTEM_EXEMPTIONS",
             )
         }
         S.REPO = self.fix
@@ -68,6 +68,7 @@ class SoloSkillsGate(unittest.TestCase):
         S.AGENTS_DIR = os.path.join(self.fix, "primitives-core", "agents")
         S.HOOKS_DIR = os.path.join(self.fix, "primitives-core", "hooks")
         S.SOLO_SKILLS_DIR = os.path.join(self.fix, "plugins", "solo-skills", "skills")
+        S.PLUGINS_DIR = os.path.join(self.fix, "plugins")
         S.AGENT_EXEMPTIONS = {}
         S.SYSTEM_EXEMPTIONS = {}
         os.makedirs(S.SKILLS_DIR)
@@ -114,6 +115,12 @@ class SoloSkillsGate(unittest.TestCase):
         os.symlink(
             os.path.join(S.SKILLS_DIR, sid), os.path.join(S.SOLO_SKILLS_DIR, sid)
         )
+
+    def topical(self, sid, plugin):
+        """Link a skill into some OTHER plugin's assembly — its topical home."""
+        d = os.path.join(S.PLUGINS_DIR, plugin, "skills")
+        os.makedirs(d, exist_ok=True)
+        os.symlink(os.path.join(S.SKILLS_DIR, sid), os.path.join(d, sid))
 
     def assertProblem(self, needle):
         probs = S.problems()
@@ -259,7 +266,35 @@ class SoloSkillsGate(unittest.TestCase):
 
     def test_eligible_skill_absent_from_solo_skills_is_red(self):
         self.skill("beta", "Beta stands alone.")  # eligible, deliberately not a member
+        # No other plugin's assembly ships it, so solo-skills is its only possible home.
+        self.assertEqual(S._topical_homes(), set())
         self.assertProblem("standalone-capable but absent from solo-skills")
+
+    def test_eligible_skill_with_a_topical_home_may_be_absent(self):
+        # decision-020: the topical plugin owns a skill; solo-skills is the home for
+        # skills with NO topical plugin. `beta` ships from `gamma-plugin`, so its
+        # absence from solo-skills is the rule, not drift.
+        self.skill("beta", "Beta stands alone.")
+        self.topical("beta", "gamma-plugin")
+        self.assertNoProblem("standalone-capable but absent from solo-skills")
+        self.assertEqual(S.problems(), [])
+
+    def test_eligible_skill_with_no_topical_home_is_still_red(self):
+        # The relaxation is narrow: another plugin shipping a DIFFERENT skill grants
+        # `beta` nothing.
+        self.skill("beta", "Beta stands alone.")
+        self.skill("delta", "Delta stands alone.")
+        self.member("delta")
+        self.topical("delta", "gamma-plugin")
+        self.assertProblem("standalone-capable but absent from solo-skills")
+
+    def test_dual_homed_member_stays_legal(self):
+        # PERMISSIVE only: a skill with a topical home that ALSO stays in solo-skills is
+        # still clean — ~20 skills are dual-homed and this ruling is executed per-skill.
+        self.skill("beta", "Beta stands alone.")
+        self.member("beta")
+        self.topical("beta", "gamma-plugin")
+        self.assertEqual(S.problems(), [])
 
     def test_member_with_no_such_skill_is_red(self):
         os.symlink(

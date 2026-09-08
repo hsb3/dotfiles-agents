@@ -41,15 +41,21 @@ Rules 1 and 3 narrow the signal at the point where prose is genuinely conversati
 code does not mention siblings conversationally. A match that is provably not a dependency
 is retired through a named, audited exemption, never by loosening the rule.
 
-The gate is bidirectional, because the plugin's own description promises *every*
-standalone-capable skill:
+The gate is bidirectional:
 
   - an ineligible skill inside `solo-skills` is red (membership must not drift in), and
-  - an eligible skill outside it is red (membership must not silently fall behind).
+  - a standalone-capable skill with NO topical plugin, outside `solo-skills`, is red
+    (membership must not silently fall behind).
 
-The second direction is what keeps the catalog's claim honest as skills are added. A new
-skill that genuinely should not ship solo must earn that by carrying a real dependency,
-not by being quietly left out.
+The second direction narrowed on 2026-09-08 (decision-020): the topical plugin owns a
+skill, and `solo-skills` is the home for skills with no topical plugin. "Has a topical
+plugin" is DERIVED from the symlink assemblies — any `plugins/<id>/skills/<skill>` where
+`<id>` is not `solo-skills` — never from a hand-maintained list, so a skill acquires or
+loses its topical home the moment the assembly changes. The narrowing is PERMISSIVE: a
+skill with a topical home MAY still be a solo-skills member, because ~20 skills are
+deliberately dual-homed and decision-020 is executed per-skill, not swept. What survives
+is the case the direction exists for — a skill nothing else ships being quietly left out
+of the everything-bundle.
 
 One narrow escape exists: `SYSTEM_EXEMPTIONS`, for a skill that is standalone-CAPABLE
 (no sibling, agent, or hook need) but prescribes a system the consumer must opt into
@@ -76,6 +82,7 @@ SKILLS_DIR = os.path.join(REPO, "primitives-core", "skills")
 AGENTS_DIR = os.path.join(REPO, "primitives-core", "agents")
 HOOKS_DIR = os.path.join(REPO, "primitives-core", "hooks")
 SOLO_SKILLS_DIR = os.path.join(REPO, "plugins", "solo-skills", "skills")
+PLUGINS_DIR = os.path.join(REPO, "plugins")
 
 PROSE_NAMES = ("SKILL.md",)
 PROSE_DIRS = ("references",)
@@ -286,6 +293,20 @@ def stale_exemptions(skill_ids, agent_ids):
     return out
 
 
+def _topical_homes():
+    """Skill ids shipped by some plugin OTHER than solo-skills (decision-020)."""
+    out = set()
+    if not os.path.isdir(PLUGINS_DIR):
+        return out
+    for plugin in sorted(os.listdir(PLUGINS_DIR)):
+        if plugin == "solo-skills" or plugin.startswith("."):
+            continue
+        d = os.path.join(PLUGINS_DIR, plugin, "skills")
+        if os.path.isdir(d):
+            out.update(x for x in os.listdir(d) if not x.startswith("."))
+    return out
+
+
 def _members():
     if not os.path.isdir(SOLO_SKILLS_DIR):
         return None
@@ -299,6 +320,7 @@ def problems():
     agent_ids = _agent_ids()
     hook_ids = _hook_ids()
     members = _members()
+    topical = _topical_homes()
     if members is None:
         return ["plugins/solo-skills/skills/: missing — the solo-skills assembly has no skills directory"]
 
@@ -323,11 +345,12 @@ def problems():
                     "the exemption"
                 )
             continue
-        if sid not in members:
+        if sid not in members and sid not in topical:
             out.append(
                 f"primitives-core/skills/{sid}: standalone-capable but absent from "
-                "solo-skills — the plugin claims every such skill; add the symlink or "
-                "give the skill a real dependency"
+                "solo-skills — the plugin claims every such skill with no topical "
+                "plugin; add the symlink, give it a topical plugin, or give the skill "
+                "a real dependency"
             )
 
     for sid in members:
@@ -372,7 +395,7 @@ def main():
         f"✓ solo-skills membership clean — {len(members)} skills, each verified "
         "standalone-capable (no sibling path, no sibling id in bundled code, no agent "
         "dispatch, no hook resolved from bundled code); every standalone-capable skill "
-        "is a member or system-exempted "
+        "is a member, has a topical plugin, or is system-exempted "
         f"({len(SYSTEM_EXEMPTIONS)} exempted)"
     )
     return 0

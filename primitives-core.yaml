@@ -416,12 +416,6 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, opencode]
-  - id: dev-focus
-    type: skill
-    source: primitives-core/skills/dev-focus
-    origin: authored
-    disposition: qualified
-    targets: [claude-code]
   - id: delegation-watermark
     type: hook
     source: primitives-core/hooks/delegation-watermark

@@ -39,7 +39,7 @@ No adapter for your board? Write one against §2 — it is two commands and a fi
 
 ## 2. The adapter contract
 
-Every adapter supplies the same three artifacts, so §3–§5 never change.
+Every adapter supplies the same three artifacts, so §3–§6 never change.
 
 **Snapshot** — one JSON document the analyst can read whole:
 
@@ -94,7 +94,22 @@ The rubric emits a priority band `P0`–`P3` from Impact × Effort. Whether the 
 **Override:** a **dated critical path** (demo, stage gate, external commitment) forces **P0**
 regardless of effort.
 
-## 4. Procedure
+## 4. What earns a field
+
+Before an adapter's field map grows, or a new backend gets provisioned with one, apply this
+test: **a field earns its place only if it is a judgment state that cannot be derived from a
+system of record, and something will actually filter or sort on it.** Anything derivable — from
+the filesystem, CI, an issue body, or another field — stays derived (reported, or synced with a
+generator plus a drift guard), never hand-maintained: a hand-kept field silently drifts the
+moment someone forgets it, which is the exact failure triage exists to prevent.
+
+Rule of thumb: Status = workflow state · Priority/Impact/Effort = the triage decision · time
+fields (iteration/start/target) = schedule. Everything else is either derivable (script it),
+gate-enforced (fold it into the Definition of Ready instead of a checkbox), or a label if all you
+need is to filter the backlog — not a required field. This doctrine is backend-agnostic; a
+backend's own field names and option shapes still live in that backend's adapter.
+
+## 5. Procedure
 
 1. **Snapshot.** Run the adapter's export command; read the JSON it writes.
 2. **Find the work.** List items whose priority is null (untriaged), plus anything whose ranking
@@ -109,7 +124,7 @@ regardless of effort.
 5. **Preview, then apply.** Run the adapter's writer dry first, read the diff, then apply.
 6. **Promote.** Ready top-band items move to the board's ready lane, same changeset mechanism.
 
-## 5. Discipline
+## 6. Discipline
 
 - Every triaged item leaves with a priority band and a grouping value — that is the pass's
   definition of done.
