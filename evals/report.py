@@ -89,8 +89,11 @@ def load(src):
     """Fetch every collection report.py needs, once, whole. Everything downstream is a
     plain function over this dict — no further data-source calls."""
     frameworks = src.list_all("frameworks")
-    extenders = src.list_all("extenders")
+    extenders = [e for e in src.list_all("extenders") if not e.get("retired")]
     sources = src.list_all("sources")
+    # Retiring keeps a dropped unit's assessments and edges, but every join below indexes
+    # ext_by_id unguarded, so rows pointing at a filtered-out unit must go too.
+    live = {e["id"] for e in extenders}
     return {
         "frameworks": frameworks,
         "fw_by_id": {f["id"]: f for f in frameworks},
@@ -101,8 +104,9 @@ def load(src):
         "sources": sources,
         "src_by_id": {s["id"]: s for s in sources},
         "job_coverage": src.list_all("job_coverage"),
-        "relationships": src.list_all("relationships"),
-        "assessments": src.list_all("assessments"),
+        "relationships": [r for r in src.list_all("relationships")
+                          if r["extender_a"] in live and r["extender_b"] in live],
+        "assessments": [a for a in src.list_all("assessments") if a["extender"] in live],
         "eval_runs": src.list_all("eval_runs"),
     }
 

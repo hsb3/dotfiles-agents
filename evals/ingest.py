@@ -1,6 +1,7 @@
 """Populate the extender-db from this repo (idempotent, upsert-by-slug).
 
     python3 evals/ingest.py
+    python3 evals/ingest.py --retire-dry-run  # list what a run would retire, write nothing
 
 What it loads:
   1. extenders + files   - every roster skill/agent/hook: parsed frontmatter (hooks carry
@@ -22,8 +23,14 @@ What it loads:
                            their publisher via extenders.source.
   7. externals.yaml rows - third-party extenders recorded by reference (origin `external`,
                            no file ingest) so curation queries cover the full curated surface.
+
+A full run ends by retiring: an `extenders` row whose slug neither the roster nor
+externals.yaml still defines is flagged `retired=True`. The row and every dependent are
+retained — consumers filter retired units out — and a returning slug is un-retired by the
+next upsert. See retire_extenders.
 """
 
+import argparse
 import ast
 import hashlib
 import json
@@ -43,6 +50,10 @@ ROSTER = os.path.join(REPO, "primitives-core.yaml")
 MARKETPLACE = os.path.join(REPO, ".claude-plugin", "marketplace.json")
 PLUGINS_DIR = os.path.join(REPO, "plugins")
 EXTERNALS = os.path.join(REPO, "externals.yaml")
+
+# Roster types that become `extenders` rows. Shared by ingest_extenders and live_slugs so the
+# writer and the retire predicate cannot disagree about what the tree defines.
+ROSTER_EXTENDER_TYPES = ("skill", "agent", "hook")
 
 LANG_BY_EXT = {
     ".py": "python", ".sh": "shell", ".js": "javascript", ".ts": "typescript",
@@ -480,7 +491,8 @@ def scan_files(abs_source, entry_file):
                 ap = os.path.join(root, n)
                 paths.append((ap, os.path.relpath(ap, abs_source)))
     for ap, rel in sorted(paths, key=lambda t: t[1]):
-        raw = open(ap, "rb").read()
+        with open(ap, "rb") as fh:
+            raw = fh.read()
         try:
             content = raw.decode("utf-8")
             is_binary = False
@@ -579,7 +591,7 @@ def ingest_frameworks(pb):
 
 
 def ingest_extenders(pb):
-    entries = [e for e in parse_roster(ROSTER) if e.get("type") in ("skill", "agent", "hook")]
+    entries = [e for e in parse_roster(ROSTER) if e.get("type") in ROSTER_EXTENDER_TYPES]
     ext_ids = {}      # roster id -> record id
     ext_meta = {}     # roster id -> dict used by later passes
     for e in entries:
@@ -619,6 +631,7 @@ def ingest_extenders(pb):
             "file_count": len(files),
             "total_bytes": sum(f["size_bytes"] for f in files),
             "word_count": len(body.split()),
+            "retired": False,
         })
         ext_ids[e["id"]] = rec["id"]
         ext_meta[e["id"]] = {
@@ -711,10 +724,36 @@ def ingest_externals(pb, src_ids):
             "file_count": 0,
             "total_bytes": 0,
             "word_count": 0,
+            "retired": False,
         })
         print(f"external {'created' if created else 'updated'}: {e['id']} ({e.get('kind', '')})")
         n += 1
     print(f"externals: {n}")
+
+
+def live_slugs():
+    """Every slug the tree currently defines: the union of what both `extenders` writers
+    produce. A roster-only predicate would treat every externals.yaml row as stale."""
+    roster = {e["id"] for e in parse_roster(ROSTER) if e.get("type") in ROSTER_EXTENDER_TYPES}
+    return roster | {e["id"] for e in parse_externals(EXTERNALS)}
+
+
+def retire_extenders(pb, slugs, dry_run=False):
+    """Flag every `extenders` row whose slug is no longer in `slugs` with `retired=True`.
+
+    Deliberately reads and writes no other collection: a delete would cascade away judged
+    and coverage assessments that nothing regenerates. See PROCEDURES.md's `ingest.py` row.
+    """
+    verb = "to retire" if dry_run else "retired"
+    n = 0
+    for rec in pb.list_all("extenders"):
+        if rec["slug"] in slugs or rec.get("retired"):
+            continue
+        if not dry_run:
+            pb.update("extenders", rec["id"], {"retired": True})
+        print(f"extender {verb}: {rec['kind']}/{rec['slug']}")
+        n += 1
+    print(f"extenders {verb}: {n}")
 
 
 def ingest_dimensions(pb, ext_meta, fw_ids):
@@ -826,8 +865,19 @@ def main():
     ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids)
     src_ids = ingest_sources(pb)
     ingest_externals(pb, src_ids)
+    retire_extenders(pb, live_slugs())
     print("done.")
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(description="Populate the extender-db from this repo.")
+    ap.add_argument(
+        "--retire-dry-run", action="store_true",
+        help="list the extenders a full run would flag retired, then exit; make no writes. "
+             "Not spelled --dry-run: only the retire pass is previewed, and an unrecognised "
+             "flag must fail rather than silently run the whole ingest.",
+    )
+    if ap.parse_args().retire_dry_run:
+        retire_extenders(PB(), live_slugs(), dry_run=True)
+    else:
+        main()

@@ -148,7 +148,7 @@ def fetch_reference(pb: PB) -> tuple[str, list[dict], list[dict]]:
         raise SystemExit(f"framework not found in DB: {FRAMEWORK_SLUG!r}")
     fw_id = fws[FRAMEWORK_SLUG]
     elements = [e for e in pb.list_all("framework_elements") if e["framework"] == fw_id]
-    extenders = pb.list_all("extenders")
+    extenders = [e for e in pb.list_all("extenders") if not e.get("retired")]
     return fw_id, elements, extenders
 
 
@@ -171,13 +171,18 @@ def validate_against_db(
     errs: list[str] = []
     el_lookup = build_lookup(elements)
     ext_lookup = build_lookup(extenders)
+    # `extenders` excludes retired units, so an unresolvable name is either absent or
+    # retired; the operator needs to know which.
+    retired = {a for e in pb.list_all("extenders") if e.get("retired")
+               for a in (e.get("slug"), e.get("name")) if a}
     ext_slug_by_id = {e["id"]: e["slug"] for e in extenders}
     resolved: dict[str, int] = {}
     for i, m in enumerate(data["mappings"]):
         ext_name = m.get("extender")
         ext_id = ext_lookup.get(ext_name)
         if ext_id is None:
-            errs.append(f"mappings[{i}]: unknown extender {ext_name!r} (not in DB)")
+            why = "retired" if ext_name in retired else "not in DB"
+            errs.append(f"mappings[{i}]: unknown extender {ext_name!r} ({why})")
             continue
         if ext_id in resolved:
             errs.append(
@@ -201,7 +206,8 @@ def validate_against_db(
         for s in scope:
             eid = ext_lookup.get(s)
             if eid is None:
-                errs.append(f"--extenders: unknown extender {s!r} (not in DB)")
+                why = "retired" if s in retired else "not in DB"
+                errs.append(f"--extenders: unknown extender {s!r} ({why})")
             else:
                 target_ids.add(eid)
         label = "--extenders scope"

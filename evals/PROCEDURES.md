@@ -15,7 +15,7 @@ no shell, which makes the no-DB-access discipline structural, not just briefed).
 |---|---|---|---|---|
 | 0 | `serve.sh` | env / `.claude/operations/extender-db.env` | — | First. Server + admin UI on :8090. Other scripts need it up. |
 | 1 | `schema.py` | its own collection specs | all collections (merge-by-name, ids preserved) | After any schema change; safe anytime. **Always before any loader.** |
-| 2 | `ingest.py` | repo (`primitives-core/`, rosters, `externals.yaml`) | inventory collections + framework seeds + `mechanical-v1` assessments | After any catalog change. Never touches non-mechanical assessors or `job_coverage`/`relationships`. |
+| 2 | `ingest.py` | repo (`primitives-core/`, rosters, `externals.yaml`) | inventory collections + framework seeds + `mechanical-v1` assessments + the `extenders.retired` flag | After any catalog change. Never touches non-mechanical assessors or `job_coverage`/`relationships`; a slug the tree no longer defines is retired, not deleted — see "Retiring a dropped extender" below. |
 | 3 | `load_eval_run.py` | a manifest JSON (run metadata + prompt/response files) | `eval_runs`, `eval_responses` | **Before** loading any judged/coverage assessments — their loader input needs the run id it creates. |
 | 4a | `load_assessments.py` | judged-verdict JSON | `assessments` (per-row upsert) | W1-style judged/review passes (`judged-v1`, `review-v1`). |
 | 4b | `load_coverage.py` | mapping JSON (see its docstring) | `assessments`, assessor `coverage-v1` — full cross product, or ONLY the named extenders' rows with `--extenders slug1,slug2` (EDB-26 delta mode) | Coverage passes. `--dry-run` first, always. Bulk-diff upsert; re-run must report 0 create. **Delta passes MUST use `--extenders`** so carried extenders' rows and `eval_run` stamps are never touched. |
@@ -25,6 +25,30 @@ no shell, which makes the no-DB-access discipline structural, not just briefed).
 
 Cold rebuild from a fresh clone: 0 → 1 → 2, then re-load eval provenance if wanted
 (the DB is a projection; `data.db` is tracked, so normally you just serve what git has).
+
+### Retiring a dropped extender
+
+When the tree stops defining a slug, `ingest.py` ends its run by setting `extenders.retired`
+on that row. It is never deleted: `assessments.extender` and `files.extender` cascade, so a
+delete would take the unit's judged, review and coverage verdicts with it — rows no script
+regenerates, since `ingest.py` only ever writes assessor `mechanical-v1`. Retiring is what
+keeps step 2's "never touches non-mechanical assessors" invariant true.
+
+Consequences:
+
+- The row, its `files`, its `assessments`, its `relationships` and the `eval_responses`
+  naming it all stay exactly as they were.
+- The four consumers — `report.py`, `load_coverage.py`, `load_eval_run.py`,
+  `load_assessments.py` — drop retired units in plain Python at their reference fetch.
+  `report.py` additionally drops assessments and relationships pointing at one, because its
+  joins index `ext_by_id` unguarded.
+- A slug that comes back is un-retired automatically: both `extenders` upserts write
+  `retired=False`.
+- Preview with `ingest.py --retire-dry-run`, which lists what would be flagged and writes
+  nothing. It is deliberately not spelled `--dry-run` (only the retire pass is previewed,
+  not the whole ingest) and an unrecognised flag is a hard error.
+- Hand-run queries over `extenders` need `retired` in the predicate — a retired unit keeps
+  the previous pass's rows and will otherwise satisfy a gate on data no consumer reads.
 
 ## Procedure: an evaluated pass (the W1/M1 pattern)
 
@@ -96,7 +120,7 @@ Run all of these yourself; agent self-reports don't count (PLAN "Definition of d
 
 | Gate | How |
 |---|---|
-| 0 unmapped extenders | query: every extender has ≥1 present/partial row (or explicit jobless) for the pass's assessor |
+| 0 unmapped extenders | query: every **non-retired** extender has ≥1 present/partial row (or explicit jobless) for the pass's assessor — a retired unit keeps the last pass's rows and would pass on data no consumer reads |
 | every job has a `job_coverage` row | count vs framework elements |
 | loader idempotent | `load_coverage.py --dry-run` reports 0 create (post-adjudication it will report N update = exactly the adjudicated rows — expected; do NOT run it for real, it would revert them) |
 | ingest discipline | checksum the pass's assessments + `relationships` + `job_coverage` → run `ingest.py` → checksums identical |
