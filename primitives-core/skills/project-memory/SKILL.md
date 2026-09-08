@@ -158,8 +158,9 @@ path and lists fuzzy candidates.
 - **No memory system implementation** — storage, loading, and settings precedence are the
   memory-standard technical design; the bundled scripts wire and migrate structure, they do
   not implement the runtime.
-- **No auditing** — pass/gap verdicts come from the sibling `repo-compliance-audit` skill,
-  which reads `references/checklist.md` from this skill's directory.
+- **No auditing** — this skill supplies the `MEM-xx` rows in `references/checklist.md` and
+  stops there. Turning those rows into pass/gap verdicts is a compliance audit's job, and
+  whichever bundle you have it from reads the checklist out of this skill's directory.
 - **No content judgment** — the `MEM-xx` rows are structure-only; what a memory *says* is the
   owner's curation judgment, never a compliance surface.
 - **No layout ownership** — that `.claude/memory/` appears in the repo layout at all is the

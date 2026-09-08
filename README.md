@@ -69,7 +69,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 13 hooks · 1 command |
-| [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout standard, read-only audit, fill-only scaffold, and desk config skills. | 4 skills |
+| [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout and memory standards, read-only audit, fill-only scaffold, item-body form. | 6 skills |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
 | [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents |
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill · 1 MCP server |
@@ -99,10 +99,11 @@ actually want, `scripts/install_claude_skills.sh --only <id>[,<id>]` copies thos
 folders straight into `~/.claude/skills/` or a project's `.claude/skills/`, with no
 marketplace in the loop.
 
-Some skills are still dual-homed, shipping in `solo-skills` and in a bundle. Each is one
-source symlinked into both assemblies, not a copy, so both ship identical bytes — but a
-session with both plugins enabled lists that skill twice, which is why a skill a topical
-plugin owns now ships only from that plugin (decision-020).
+Some skills are still dual-homed, shipping in `solo-skills` and in at least one bundle. Each
+is one source symlinked into every assembly that carries it, not a copy, so they all ship
+identical bytes — but a session with more than one of those plugins enabled lists that skill
+more than once, which is why a skill a topical plugin owns now ships only from that plugin
+(decision-020).
 
 ## How this repo is built
 

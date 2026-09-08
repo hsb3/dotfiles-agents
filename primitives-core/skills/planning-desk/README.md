@@ -43,8 +43,8 @@ loop, the governance scripts — is kept and now runs over a tracker adapter, Ka
   issue-authoring machinery. `deps-suggest.py` proposed GitHub-native dependency edges, which a
   tracker has first-class. `evidence-audit.py` backstopped closing without evidence, which a
   tracker requires. `sequence.py` computed readiness and "what's next", which the tracker computes
-  itself and which the `board-triage` skill prioritizes. `_repo.py` derived a GitHub repo and had
-  no callers left. The generic issue templates the desk used to seed went with them.
+  itself and whose ordering is a triage call made outside this desk. `_repo.py` derived a GitHub
+  repo and had no callers left. The generic issue templates the desk used to seed went with them.
 
 ## What it needs
 

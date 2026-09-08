@@ -41,7 +41,8 @@ The contract for the snapshot and the changeset — the extension point for a se
 - **"Is the desk honest?"** → `reconcile.py`. Run it at the start of any session that works off the
   README table (trust it before relying on it) and at the end (catch rows you left stale).
 - **"What should I work on next?"** → not here. Readiness is computed by the tracker itself
-  (dependency edges, schedules, gates), and prioritization is the `board-triage` skill's job.
+  (dependency edges, schedules, gates), and ordering what is ready is a triage call this desk
+  does not make.
 
 ## Conventions the scripts depend on
 
