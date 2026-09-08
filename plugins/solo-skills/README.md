@@ -89,7 +89,7 @@ joins it.
 | Skill | What it does |
 |---|---|
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
-| `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. Its templates and copy-paste commands name the upstream tracking ref in full (`refs/remotes/upstream/<branch>`), so a local ref of that name in the fork cannot shadow it. |
+| `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. Every command it hands you names the upstream tracking ref in full, so a local ref of that name in your fork cannot shadow it. |
 | `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
 
 **Planning**
