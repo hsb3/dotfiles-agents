@@ -1,0 +1,6 @@
+{
+  "event": "SessionStart",
+  "matcher": "startup|resume|clear",
+  "timeout": 30,
+  "statusMessage": "Checking board health"
+}

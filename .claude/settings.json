@@ -50,6 +50,12 @@
           {
             "command": "kata attention-hook start --source kata-agent-hook-start",
             "type": "command"
+          },
+          {
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/board-health/hook.py",
+            "statusMessage": "Checking board health",
+            "timeout": 30,
+            "type": "command"
           }
         ],
         "matcher": "startup|resume|clear"
