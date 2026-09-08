@@ -317,6 +317,53 @@ class SyntheticRemovalRepo(unittest.TestCase):
         self.assertTrue(sha)
         self.assertIn("drop beta", message)
 
+    def test_a_file_deleted_inside_a_surviving_unit_does_not_declare_it(self):
+        """The dual-homed shape the reviewer measured on real history.
+
+        `alpha` stops shipping in this bundle (its symlink goes) while the body stays,
+        because another bundle still carries it. A LATER commit deletes one file inside that
+        surviving body under a message that names alpha and says "removed" — legitimately,
+        about the file. The pathspec union matches both, so taking the newest deletion lets
+        that unrelated message declare the earlier, undeclared removal.
+        """
+        os.remove(os.path.join(self.work, "plugins", "demo", "skills", "alpha"))
+        git(self.work, "add", "-A")
+        git(self.work, "commit", "-qm", "chore(demo): tidy the assembly")
+
+        write(os.path.join(self.work, "primitives-core", "skills", "alpha", "extra.md"), "# extra\n")
+        git(self.work, "add", "-A")
+        git(self.work, "commit", "-qm", "chore(demo): add a reference page to alpha")
+        os.remove(os.path.join(self.work, "primitives-core", "skills", "alpha", "extra.md"))
+        git(self.work, "add", "-A")
+        git(self.work, "commit", "-qm",
+            "refactor(demo): fold alpha's reference page into SKILL.md\n\nThe extra page is removed.")
+
+        code, lines = run_gate(self.work)
+        blob = "\n".join(lines)
+        self.assertEqual(code, 1, blob)
+        self.assertIn("demo/skills/alpha", blob)
+        _, message = R.find_removal("demo/skills/alpha", repo=self.work)
+        self.assertIn("tidy the assembly", message)
+        self.assertNotIn("reference page", message)
+
+    def test_a_rename_reads_as_an_undeclared_removal_of_the_old_id(self):
+        os.rename(
+            os.path.join(self.work, "primitives-core", "skills", "beta"),
+            os.path.join(self.work, "primitives-core", "skills", "gamma"),
+        )
+        os.remove(os.path.join(self.work, "plugins", "demo", "skills", "beta"))
+        os.symlink(
+            os.path.join("..", "..", "..", "primitives-core", "skills", "gamma"),
+            os.path.join(self.work, "plugins", "demo", "skills", "gamma"),
+        )
+        git(self.work, "add", "-A")
+        git(self.work, "commit", "-qm", "chore(demo): rename beta to gamma")
+        code, lines = run_gate(self.work)
+        blob = "\n".join(lines)
+        self.assertEqual(code, 1, blob)
+        self.assertIn("demo/skills/beta", blob)
+        self.assertNotIn("demo/skills/gamma", blob)
+
 
 @unittest.skipUnless(have_git(), "git is not on PATH")
 class RealHistoryDeclarations(unittest.TestCase):

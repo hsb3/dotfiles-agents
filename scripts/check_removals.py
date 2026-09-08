@@ -17,10 +17,11 @@ What this proves:
      file, nothing anyone maintains by hand. A file that listed what had been removed would
      be one more thing to forget to update, and forgetting is the failure being caught.
   2. A unit on `origin/main` and absent locally is a REMOVAL, and every removal must be
-     declared by the commit that removed it — found with
-     `git log -1 --diff-filter=D -- plugins/<id>/<kind>/<name> primitives-core/<kind>/<name>`
-     over HEAD's history, which on `dev` is the squashed merge commit, the form a removal
-     actually lands in here.
+     declared by the commit that removed it. `git log --diff-filter=D -- <both homes>`
+     produces the CANDIDATES; each is then confirmed by tree (the path resolves in the
+     parent commit and not in the commit itself), newest first, because that pathspec also
+     matches a file deleted INSIDE a unit that still ships. Over HEAD's history, which on
+     `dev` is the squashed merge commit — the form a removal actually lands in here.
   3. `--notes` renders the same set as a markdown section for the release page, so a removal
      reaches a CONSUMER (decision-013's release mechanism) and not only this gate's exit
      code. It prints nothing when nothing was removed and always exits 0: release notes must
@@ -35,8 +36,11 @@ removals in this repo's history — `2c590d6` ("fold comm-kit into comms", body:
 skill are removed") and `84f9dd7` ("collapse github-project-board into a GitHub Projects
 adapter script", body: "…its solo-skills symlink are deleted") — carry no trailer and cannot
 retroactively grow one without rewriting landed history. A trailer-only rule would therefore
-be red on `dev` from the day it merged. What this gate is actually worth: an UNDECLARED
-removal, the one nobody wrote a sentence about, cannot pass silently.
+be red on `dev` from the day it merged. (`84f9dd7` passed on its BODY alone until `collapse`
+joined `REMOVAL_VERBS` — that is how brittle a narrow verb list is, and why the list is
+wide.) What this gate is actually worth: an UNDECLARED removal, the one nobody wrote a
+sentence about, cannot pass silently. The false-PASS side is closed by the TREE check in
+`find_removal()`, never by tightening the string rule.
 
 Where it runs: a step in the `drift guards` CI job, NOT in `make ci`. Reaching `origin/main`
 needs NETWORK and `make ci` is offline-and-zero-install by design; a job of its own was
@@ -79,11 +83,21 @@ PUBLISHED_REF = bump.PUBLISHED_REF
 # bundle furniture (README.md, hooks.json, .claude-plugin/) and cannot be removed as a unit.
 KINDS = ("skills", "agents", "hooks", "commands")
 
+# Wide on purpose: a well-written declaration says "drop", "sunset" or "supersede" as
+# readily as "remove", and rejecting one is a false RED against a contributor who did
+# exactly the right thing. Widening costs nothing on the other side — the false-PASS risk
+# is bounded by the tree check in find_removal(), not by this list.
 REMOVAL_VERBS = (
     "remove", "removed", "removes", "removal",
     "delete", "deleted", "deletes",
     "retire", "retires", "retired",
     "fold", "folded", "folds",
+    "drop", "drops", "dropped",
+    "sunset", "sunsets", "sunsetting",
+    "supersede", "supersedes", "superseded",
+    "deprecate", "deprecates", "deprecated",
+    "collapse", "collapses", "collapsed",
+    "absorb", "absorbs", "absorbed",
 )
 VERB_RE = re.compile(r"\b(" + "|".join(REMOVAL_VERBS) + r")\b", re.IGNORECASE)
 
@@ -156,23 +170,48 @@ def pathspecs(unit):
     ]
 
 
+def removes_outright(sha, specs, run):
+    """True when `sha` deleted one of `specs` ITSELF, not a file inside it.
+
+    A tree check, not a stronger string rule: the path resolves in the parent's tree and no
+    longer resolves in this commit's. `git cat-file -e` answers for a tree object as readily
+    as a blob, so a skill directory and an `agents/<name>.md` blob take the same path here.
+    """
+    for spec in specs:
+        if run(["cat-file", "-e", f"{sha}:{spec}"])[0] == 0:
+            continue  # still present in this commit, so it did not remove it
+        if run(["cat-file", "-e", f"{sha}^:{spec}"])[0] == 0:
+            return True  # absent here, present in the parent — a root commit fails this and is skipped
+    return False
+
+
 def find_removal(unit, repo=None, run=None):
-    """(sha, full message) of the most recent commit deleting `unit`, or ("", "").
+    """(sha, full message) of the newest commit that deleted `unit` OUTRIGHT, or ("", "").
+
+    The pathspec query is only the CANDIDATE list: it matches any file deleted under either
+    home, so a commit that dropped one reference page inside a still-shipping skill answers
+    it too. Taking the newest candidate blindly lets that commit's message declare a
+    different, earlier, undeclared removal — measured against this repo's real history, that
+    pre-authorized two live units. So each candidate is confirmed by tree, newest first, and
+    the first one that actually deleted the unit wins.
 
     HEAD's history, so on `dev` this resolves to the SQUASHED merge commit — the shape a
     removal actually lands in here, and the message a reviewer actually wrote.
     """
     run = run or (lambda args: bump.run_git(args, repo=repo or REPO))
+    specs = pathspecs(unit)
     try:
-        rc, out, _ = run(
-            ["log", "-1", "--diff-filter=D", "--format=%H%x00%B", "--"] + pathspecs(unit)
-        )
+        rc, out, _ = run(["log", "--diff-filter=D", "--format=%H%x00%B%x00%x00", "--"] + specs)
     except OSError:
         return "", ""
-    if rc != 0 or not out.strip():
+    if rc != 0:
         return "", ""
-    sha, _, message = out.decode("utf-8", "replace").partition("\0")
-    return sha.strip(), message.strip()
+    for record in out.decode("utf-8", "replace").split("\0\0"):
+        sha, _, message = record.partition("\0")
+        sha = sha.strip()
+        if sha and removes_outright(sha, specs, run):
+            return sha, message.strip()
+    return "", ""
 
 
 def is_declared(message, unit):
