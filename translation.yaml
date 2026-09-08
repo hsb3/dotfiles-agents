@@ -21,9 +21,13 @@
 #   unsupported      — a build FAILURE for that target, not a drop (nothing may ship carrying it)
 # A field or tool with no row at all is a build failure too: silence is never a treatment.
 #
-# `model_aliases` rows pin a bare CC alias to the provider-prefixed ref opencode requires, or
-# declare it `opencode: unsupported` when the alias names a CC-only concept rather than a model.
-# A bare alias with neither is a build failure (decision-009 AC #7 — never a silent omission).
+# `model_aliases` rows declare every bare CC `model:` alias an agent may carry. A row is either
+# `resolves: tier` — the alias is this harness's RENDERING of a dispatch tier, and the concrete
+# provider-prefixed ref comes from primitives-core/hooks/_lib/model_catalog.json — or
+# `opencode: unsupported` when the alias names a CC-only concept rather than a model. A bare
+# alias with neither is a build failure (decision-009 AC #7 — never a silent omission).
+# A row must NOT carry a `ref:`: that would be a second tier-to-id map, and the whole point of
+# the catalog is that switching provider is one edit. scripts/check_model_tiers.py fails on one.
 #
 # `exclusions` are ROSTER-LEVEL opt-outs with reasons — primitives whose targets stay
 # [claude-code] even though their type is mechanically translatable. The generated laydown
@@ -55,11 +59,11 @@ matrix:
 
 model_aliases:
   - alias: haiku
-    ref: anthropic/claude-haiku-4-5
+    resolves: tier
   - alias: sonnet
-    ref: anthropic/claude-sonnet-5
+    resolves: tier
   - alias: opus
-    ref: anthropic/claude-opus-4-8
+    resolves: tier
   - alias: inherit
     opencode: unsupported
     reason: "CC-only: `inherit` tells CC to run the agent on the dispatching session's model. opencode agents have no inheriting mode, so there is nothing to pin it to — the alias is declared here so it is a named unsupported, not an unrecognized one"
@@ -107,10 +111,13 @@ field_treatments:
   - field: description
     treatment: map
     opencode: description
+  - field: tier
+    treatment: drop-with-notice
+    reason: "the provider-independent dispatch tier (light/mid/heavy). It does not travel as a key because this lane already emits the tier's RESOLVED provider-prefixed ref in `model:`, and a second copy of the same fact is a second place a provider switch has to be made"
   - field: model
     treatment: map
     opencode: model
-    reason: "resolved through model_aliases; an alias with neither a ref nor an unsupported declaration fails the build"
+    reason: "a bare alias is resolved tier -> model_catalog.json -> `<provider>/<id>`; an alias with no model_aliases row, or a row that pins its own `ref:`, fails the build"
   - field: tools
     treatment: map
     opencode: permission

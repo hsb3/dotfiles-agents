@@ -1,6 +1,7 @@
 ---
 name: builder
 description: Scoped implementation inside an owned file list against explicit acceptance criteria. Defaults to sonnet for well-specified bounded edits; dispatch with model:opus when the slice has coupled logic or being wrong is expensive to unwind.
+tier: mid
 model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
 color: green

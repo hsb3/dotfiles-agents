@@ -1,6 +1,7 @@
 ---
 name: pb-builder
 description: Backend builder for a PocketBase project — migrations, JSVM or Go hooks, custom routes, API rules, and their tests. Carries the laws that are expensive to get wrong (never edit an applied migration, secrets via boot hooks not migrations, pooled-JSVM inlining, rule-status semantics, clean-room probes) so a brief does not have to restate them. Scoped implementation against explicit acceptance criteria inside an owned file list.
+tier: mid
 model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---

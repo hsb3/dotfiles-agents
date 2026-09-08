@@ -1,6 +1,7 @@
 ---
 name: scout
 description: Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Runs no commands unless the brief names read-only ones. Defaults to haiku; dispatch with model:sonnet when the question needs real cross-file synthesis.
+tier: light
 model: haiku
 effort: low
 tools: Read, Grep, Glob, Bash

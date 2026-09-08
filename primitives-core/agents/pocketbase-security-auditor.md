@@ -1,6 +1,7 @@
 ---
 name: pocketbase-security-auditor
 description: Audits a PocketBase backend's collection rules, custom routes, hooks, realtime authorization, relation scoping, and role boundaries, with clean-room evidence. Report-only. Use before shipping a backend or after any change to access control.
+tier: heavy
 model: opus
 tools: Read, Grep, Glob, Bash
 ---
