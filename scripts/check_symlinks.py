@@ -21,16 +21,11 @@ incomplete plugin. This lint makes that failure mode loud:
      takes the assembly off the standalone path (decision-010). Bundle READMEs are
      hand-authored regular files and this check does not touch them.
 
-     NOTE — check 4 currently has NO SUBJECTS, deliberately. Every one-skill plugin was
-     retired into the `solo-skills` aggregate (TASK-043), and no remaining assembly
-     satisfies is_standalone(). The rule is kept as a FORWARD GUARD: if a standalone is
-     ever added again, its README must still symlink to the skill's own README rather
-     than fork from it. It is retained rather than retired because the convention it
-     encodes outlives the current lineup, and re-deriving it later costs more than the
-     ~45 lines it occupies. Note that this cannot be discovered from a red gate — the
-     rule is exercised entirely by synthetic fixtures in tests/test_check_symlinks.py,
-     which build their own plugin dirs in tempdirs, so it stays green with zero real
-     subjects either way.
+     NOTE — this rule is a FORWARD GUARD, kept regardless of how many assemblies are
+     currently standalone: main()'s success line reports that count at runtime (never
+     hardcode it here — a hardcoded count is exactly the kind of claim that drifts from
+     the gate). It stays exercised by synthetic fixtures in tests/test_check_symlinks.py
+     even when the real lineup has zero standalone subjects.
 
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = violations (prints every one).
 Usage: python3 scripts/check_symlinks.py   (run from anywhere)
@@ -162,9 +157,15 @@ def main():
         if os.path.islink(os.path.join(dirpath, name))
     )
     n_plugins = sum(1 for d in os.listdir(PLUGINS_DIR) if os.path.isdir(os.path.join(PLUGINS_DIR, d)))
+    n_standalone = sum(
+        1
+        for d in os.listdir(PLUGINS_DIR)
+        if os.path.isdir(os.path.join(PLUGINS_DIR, d)) and is_standalone(os.path.join(PLUGINS_DIR, d))
+    )
     print(
-        f"✓ symlink assemblies clean — {n_plugins} plugin(s), {n_links} symlink(s) all "
-        "resolve in-repo; marketplace.json entries and assemblies match 1:1"
+        f"✓ symlink assemblies clean — {n_plugins} plugin(s) ({n_standalone} standalone), "
+        f"{n_links} symlink(s) all resolve in-repo; marketplace.json entries and assemblies "
+        "match 1:1"
     )
     return 0
 
