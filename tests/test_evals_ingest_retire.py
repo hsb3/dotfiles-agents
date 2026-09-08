@@ -31,7 +31,7 @@ import report  # noqa: E402
 
 
 class FakePB:
-    """Stands in for PB with only what the prune calls: list_all, update, delete."""
+    """Stands in for PB with only what the retire pass calls: list_all, update, delete."""
 
     def __init__(self, extenders, relationships=()):
         self.rows = {
@@ -113,7 +113,7 @@ def quiet(fn, *args, **kwargs):
 class RetireTest(unittest.TestCase):
     def test_stale_row_is_flagged_retired_and_not_deleted(self):
         pb = FakePB([row("id-live", "handoff"), row("id-stale", "github-project-board")])
-        out = quiet(I.prune_extenders, pb, {"handoff"})
+        out = quiet(I.retire_extenders, pb, {"handoff"})
         self.assertEqual(pb.deleted, [])
         self.assertEqual(pb.updated, [("extenders", "id-stale", {"retired": True})])
         self.assertIn("github-project-board", out)
@@ -126,7 +126,7 @@ class RetireTest(unittest.TestCase):
             [row("id-stale", "github-project-board"), row("id-live", "handoff")],
             relationships=[{"id": "edge-a", "extender_a": "id-stale", "extender_b": "id-live"}],
         )
-        quiet(I.prune_extenders, pb, {"handoff"})
+        quiet(I.retire_extenders, pb, {"handoff"})
         self.assertEqual(pb.deleted, [])
         self.assertEqual([r["id"] for r in pb.rows["relationships"]], ["edge-a"])
         self.assertEqual([c for c, _i, _b in pb.updated], ["extenders"])
@@ -136,12 +136,12 @@ class RetireTest(unittest.TestCase):
             row("id-ext", "pptx", kind="plugin", origin="external"),
             row("id-stale", "github-project-board"),
         ])
-        quiet(I.prune_extenders, pb, {"pptx"})
+        quiet(I.retire_extenders, pb, {"pptx"})
         self.assertEqual([u[1] for u in pb.updated], ["id-stale"])
 
     def test_dry_run_writes_nothing_and_still_reports_the_stale_slug(self):
         pb = FakePB([row("id-live", "handoff"), row("id-stale", "github-project-board")])
-        out = quiet(I.prune_extenders, pb, {"handoff"}, dry_run=True)
+        out = quiet(I.retire_extenders, pb, {"handoff"}, dry_run=True)
         self.assertEqual(pb.updated, [])
         self.assertEqual(pb.deleted, [])
         self.assertIn("github-project-board", out)
@@ -149,7 +149,7 @@ class RetireTest(unittest.TestCase):
 
     def test_an_already_retired_row_is_not_rewritten(self):
         pb = FakePB([row("id-stale", "github-project-board", retired=True)])
-        out = quiet(I.prune_extenders, pb, set())
+        out = quiet(I.retire_extenders, pb, set())
         self.assertEqual(pb.updated, [])
         self.assertIn("extenders retired: 0", out)
 
@@ -180,7 +180,7 @@ class LiveSlugsTest(unittest.TestCase):
 
 
 class MainWiringTest(unittest.TestCase):
-    """AC#1: the prune runs in the same run that upserts the rest, after both writers."""
+    """AC#1: the retire pass runs in the same run that upserts the rest, after both writers."""
 
     def _run_main(self):
         calls = []
@@ -201,7 +201,7 @@ class MainWiringTest(unittest.TestCase):
             "ingest_sources": record("ingest_sources", {}),
             "ingest_externals": record("ingest_externals"),
             "live_slugs": record("live_slugs", set()),
-            "prune_extenders": record("prune_extenders"),
+            "retire_extenders": record("retire_extenders"),
         }
         with contextlib.ExitStack() as stack:
             for name, fn in stubs.items():
@@ -209,14 +209,14 @@ class MainWiringTest(unittest.TestCase):
             quiet(I.main)
         return calls
 
-    def test_main_prunes(self):
-        self.assertIn("prune_extenders", self._run_main())
+    def test_main_retires(self):
+        self.assertIn("retire_extenders", self._run_main())
 
-    def test_main_prunes_after_both_extenders_writers(self):
+    def test_main_retires_after_both_extenders_writers(self):
         calls = self._run_main()
-        pruned = calls.index("prune_extenders")
-        self.assertGreater(pruned, calls.index("ingest_extenders"))
-        self.assertGreater(pruned, calls.index("ingest_externals"))
+        retired = calls.index("retire_extenders")
+        self.assertGreater(retired, calls.index("ingest_extenders"))
+        self.assertGreater(retired, calls.index("ingest_externals"))
 
 
 LIVE = row("id-live", "handoff")
@@ -287,18 +287,55 @@ class ConsumerFilterTest(unittest.TestCase):
         _fws, _els, exts = load_assessments.fetch_reference(pb)
         self.assertEqual(sorted(exts), ["handoff"])
 
-    def test_load_eval_run_cannot_link_a_response_to_a_retired_unit(self):
-        pb = ReferencePB(frameworks=[], extenders=[LIVE, RETIRED])
-        manifest = {
+    def test_load_coverage_says_retired_not_not_in_db(self):
+        """The row is in the DB; `(not in DB)` would send the operator looking for a
+        deleted unit."""
+        pb = ReferencePB(
+            frameworks=[{"id": "fw-1", "slug": load_coverage.FRAMEWORK_SLUG}],
+            framework_elements=[{"id": "el-1", "framework": "fw-1", "slug": "plan-work"}],
+            extenders=[LIVE, RETIRED],
+        )
+        _fw_id, elements, extenders = load_coverage.fetch_reference(pb)
+        data = {"mappings": [{"extender": "github-project-board", "jobs": []},
+                             {"extender": "never-existed", "jobs": []}]}
+        errs = load_coverage.validate_against_db(pb, data, elements, extenders)
+        self.assertIn("mappings[0]: unknown extender 'github-project-board' (retired)", errs)
+        self.assertIn("mappings[1]: unknown extender 'never-existed' (not in DB)", errs)
+
+    def _eval_run_manifest(self, slug):
+        return {
             "run": {"slug": "r1", "kind": "coverage"},
-            "responses": [{"role": "scout", "extenders": ["github-project-board"]}],
+            "responses": [{"role": "scout", "extenders": [slug]}],
         }
+
+    def _load_manifest(self, pb, manifest):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "manifest.json")
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(manifest, fh)
-            with self.assertRaises(KeyError):
-                quiet(load_eval_run.load_manifest, pb, path)
+            return quiet(load_eval_run.load_manifest, pb, path)
+
+    def test_load_eval_run_refuses_a_response_naming_a_retired_unit(self):
+        pb = ReferencePB(frameworks=[], extenders=[LIVE, RETIRED])
+        with self.assertRaises(SystemExit) as caught:
+            self._load_manifest(pb, self._eval_run_manifest("github-project-board"))
+        self.assertIn("github-project-board", str(caught.exception))
+        self.assertIn("retired", str(caught.exception))
+
+    def test_load_eval_run_says_no_such_extender_when_the_slug_is_absent(self):
+        pb = ReferencePB(frameworks=[], extenders=[LIVE])
+        with self.assertRaises(SystemExit) as caught:
+            self._load_manifest(pb, self._eval_run_manifest("never-existed"))
+        self.assertIn("no such extender", str(caught.exception))
+
+    def test_load_eval_run_writes_nothing_when_a_response_cannot_resolve(self):
+        """The run upsert precedes the response loop, so failing late orphans an eval_runs
+        row with no responses that a re-run then silently reuses."""
+        pb = ReferencePB(frameworks=[], extenders=[LIVE, RETIRED])
+        with self.assertRaises(SystemExit):
+            self._load_manifest(pb, self._eval_run_manifest("github-project-board"))
+        self.assertEqual(pb.collections.get("eval_runs", []), [])
+        self.assertEqual(pb.collections.get("eval_responses", []), [])
 
 
 class ReferenceSource:

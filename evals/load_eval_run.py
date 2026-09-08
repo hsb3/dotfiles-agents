@@ -55,7 +55,18 @@ def load_manifest(pb, path):
     with open(path, encoding="utf-8") as fh:
         m = json.load(fh)
     fw_ids = {f["slug"]: f["id"] for f in pb.list_all("frameworks")}
-    ext_ids = {e["slug"]: e["id"] for e in pb.list_all("extenders") if not e.get("retired")}
+    all_ext = {e["slug"]: e for e in pb.list_all("extenders")}
+    ext_ids = {s: e["id"] for s, e in all_ext.items() if not e.get("retired")}
+
+    # Resolve every response's extenders before the first write: failing inside the loop
+    # below would leave an eval_runs row with no responses, which a re-run then reuses.
+    unresolved = sorted({
+        f"{s} ({'retired' if s in all_ext else 'no such extender'})"
+        for resp in m.get("responses", [])
+        for s in resp.get("extenders", []) if s not in ext_ids
+    })
+    if unresolved:
+        raise SystemExit(f"{path}: cannot link response extenders: {', '.join(unresolved)}")
 
     r = m["run"]
     run, created = pb.upsert("eval_runs", f"slug='{esc(r['slug'])}'", {

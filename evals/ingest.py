@@ -1,7 +1,7 @@
 """Populate the extender-db from this repo (idempotent, upsert-by-slug).
 
     python3 evals/ingest.py
-    python3 evals/ingest.py --prune-dry-run   # report stale extenders, write nothing
+    python3 evals/ingest.py --retire-dry-run  # list what a run would retire, write nothing
 
 What it loads:
   1. extenders + files   - every roster skill/agent/hook: parsed frontmatter (hooks carry
@@ -24,10 +24,10 @@ What it loads:
   7. externals.yaml rows - third-party extenders recorded by reference (origin `external`,
                            no file ingest) so curation queries cover the full curated surface.
 
-A full run ends by pruning: an `extenders` row whose slug neither the roster nor
+A full run ends by retiring: an `extenders` row whose slug neither the roster nor
 externals.yaml still defines is flagged `retired=True`. The row and every dependent are
 retained — consumers filter retired units out — and a returning slug is un-retired by the
-next upsert. See prune_extenders.
+next upsert. See retire_extenders.
 """
 
 import argparse
@@ -52,7 +52,7 @@ PLUGINS_DIR = os.path.join(REPO, "plugins")
 EXTERNALS = os.path.join(REPO, "externals.yaml")
 
 # Roster types that become `extenders` rows. Shared by ingest_extenders and live_slugs so the
-# writer and the prune predicate cannot disagree about what the tree defines.
+# writer and the retire predicate cannot disagree about what the tree defines.
 ROSTER_EXTENDER_TYPES = ("skill", "agent", "hook")
 
 LANG_BY_EXT = {
@@ -738,16 +738,11 @@ def live_slugs():
     return roster | {e["id"] for e in parse_externals(EXTERNALS)}
 
 
-def prune_extenders(pb, slugs, dry_run=False):
+def retire_extenders(pb, slugs, dry_run=False):
     """Flag every `extenders` row whose slug is no longer in `slugs` with `retired=True`.
 
-    Nothing is deleted and no dependent row is read or written, so this pass keeps
-    PROCEDURES.md's "never touches non-mechanical assessors or `job_coverage`/`relationships`"
-    invariant: a unit's judged and coverage assessments, its relationship edges and the
-    `eval_responses` naming it are all non-regenerable, and only `files` plus assessor
-    `mechanical-v1` would ever come back. Consumers drop retired units in Python
-    (report.py, load_coverage.py, load_eval_run.py, load_assessments.py), and a slug that
-    reappears in the tree is un-retired by the next upsert, which writes `retired=False`.
+    Deliberately reads and writes no other collection: a delete would cascade away judged
+    and coverage assessments that nothing regenerates. See PROCEDURES.md's `ingest.py` row.
     """
     verb = "to retire" if dry_run else "retired"
     n = 0
@@ -870,19 +865,19 @@ def main():
     ingest_assessments(pb, ext_ids, ext_meta, fw_ids, el_ids)
     src_ids = ingest_sources(pb)
     ingest_externals(pb, src_ids)
-    prune_extenders(pb, live_slugs())
+    retire_extenders(pb, live_slugs())
     print("done.")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Populate the extender-db from this repo.")
     ap.add_argument(
-        "--prune-dry-run", action="store_true",
-        help="report the stale extenders and everything a prune would take with them, "
-             "then exit; make no writes. Not spelled --dry-run: only the prune is "
-             "previewed, and an unrecognised flag must fail rather than run destructively.",
+        "--retire-dry-run", action="store_true",
+        help="list the extenders a full run would flag retired, then exit; make no writes. "
+             "Not spelled --dry-run: only the retire pass is previewed, and an unrecognised "
+             "flag must fail rather than silently run the whole ingest.",
     )
-    if ap.parse_args().prune_dry_run:
-        prune_extenders(PB(), live_slugs(), dry_run=True)
+    if ap.parse_args().retire_dry_run:
+        retire_extenders(PB(), live_slugs(), dry_run=True)
     else:
         main()

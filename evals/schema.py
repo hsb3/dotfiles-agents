@@ -183,7 +183,7 @@ def collection_specs(ids):
                 text("name"),
                 select("kind", EXTENDER_KINDS, required=True),
                 text("description"),
-                select("origin", ["authored", "sourced", "external"]),
+                select("origin", ["authored", "sourced", "external", "vendored"]),
                 text("upstream"),
                 text("upstream_ref"),
                 text("repo_path"),
@@ -201,8 +201,8 @@ def collection_specs(ids):
                 num("total_bytes"),
                 num("word_count"),
                 text("notes"),
-                # Set by ingest.py when the tree stops defining the slug; the row and all its
-                # dependents are retained, and consumers filter on it. Cleared by re-ingest.
+                # Set by ingest.py when the tree stops defining the slug (row and dependents
+                # retained, consumers filter on it); cleared by re-ingest.
                 boolean("retired"),
                 *stamps(),
             ],
