@@ -34,12 +34,14 @@ Network contract — uniform across every CI-only gate here (decision-016 point 
 that cannot measure is red, never green, so no usable `origin/main` at all exits 1 saying
 outright that it is not evidence of a missing bump. `origin/main` is fetched best-effort,
 then resolved; a fetch failure with a locally cached ref falls back to that ref and warns,
-because something real was still compared — but only while that ref is younger than
-`MAX_CACHED_REF_AGE_DAYS` (7). Past that the fallback is red on the same rule: a ref last
-refreshed weeks ago is not a reading of what is published today, so an indefinitely stale
-cache could otherwise mask a real unbumped change forever without the gate going red. The
-age is the cached commit's own committer date, and an age that cannot be read is red too —
-freshness unproven is freshness unmeasured. A full local clone is never shallow-marked as a
+because something real was still compared — but only while that ref is no more than
+`MAX_CACHED_REF_AGE_DAYS` (7) days old. MORE than that and the fallback is red on the same
+rule: a ref last refreshed weeks ago is not a reading of what is published today, so an
+indefinitely stale cache could otherwise mask a real unbumped change forever without the
+gate going red. The age is the cached commit's own committer date, and an age that cannot
+be read is red too — freshness unproven is freshness unmeasured, which is also how a ref
+dated in the FUTURE is treated, since that is a clock disagreeing rather than a fresh ref.
+A full local clone is never shallow-marked as a
 side effect (`--depth=1` is used only where the repo is already shallow, as in a CI
 checkout).
 
@@ -271,27 +273,37 @@ class GitPublishedTree:
             committed = int(out.decode("ascii", "replace").strip()) if rc == 0 else None
         except ValueError:
             committed = None
-        if committed is None:
-            detail = _one_line(err) if err else "no parseable commit date"
+        age_days = None if committed is None else (time.time() - committed) / SECONDS_PER_DAY
+        # A NEGATIVE age is a clock disagreeing with the publisher's, not a fresh ref: a
+        # local clock behind theirs (or a garbage %ct) would otherwise report a genuinely
+        # old cache as comfortably within the limit. Unmeasured either way, so red either
+        # way — but described as unread rather than as past the limit, which it is not.
+        if age_days is None or age_days < 0:
+            if age_days is None:
+                detail = _one_line(err) if err else "no parseable commit date"
+            else:
+                detail = f"its commit date is {-age_days:.2f} days in the future"
             return (
                 f"{self.ref} could not be refreshed ({self._fetch_error}) and the cached "
                 f"ref's age could not be read ({detail}), so its freshness is unproven"
             )
-        age_days = (time.time() - committed) / SECONDS_PER_DAY
         if age_days > MAX_CACHED_REF_AGE_DAYS:
             return (
                 f"{self.ref} could not be refreshed ({self._fetch_error}) and the cached ref "
-                f"is {age_days:.1f} days old, past the {MAX_CACHED_REF_AGE_DAYS}-day limit — "
+                f"is {age_days:.2f} days old, past the {MAX_CACHED_REF_AGE_DAYS}-day limit — "
                 "too stale to stand in for what is published now"
             )
+        # Two decimals in both verdicts: one would print "7.0 days old" on either side of
+        # the cutoff, leaving a CI log unable to say which way it went.
         self.note += (
-            f" ({age_days:.1f} days old, within the {MAX_CACHED_REF_AGE_DAYS}-day limit)"
+            f" ({age_days:.2f} days old, within the {MAX_CACHED_REF_AGE_DAYS}-day limit)"
         )
         return None
 
     def _fetch(self):
         """Best-effort refresh of the published ref; records why it failed, never raises."""
         self._fetch_error = ""
+        self.note = ""  # per-attempt state: a warning must not outlive the failure it named
         args = ["fetch", "--quiet", "--no-tags"]
         rc, out, _ = self._git(["rev-parse", "--is-shallow-repository"])
         # Only deepen-free fetch a repo that is ALREADY shallow (a CI checkout). Passing

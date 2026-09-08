@@ -79,8 +79,9 @@ Every vendored body must carry, at minimum:
   evidence of drift, but a gate that cannot measure is red rather than green
   (decision-016 point 4). The version-bump gate's parallel case is red for the same reason:
   when its fetch fails, [`scripts/check_version_bump.py`](../scripts/check_version_bump.py)
-  falls back to a cached `origin/main` only while that ref is under 7 days old, since an
-  older one is a reading of the past rather than of what is published now.
+  falls back to a cached `origin/main` only while that ref is no more than 7 days old (and
+  is not dated in the future, which is a clock disagreeing rather than a fresh ref), since
+  an older one is a reading of the past rather than of what is published now.
 
 A vendored entry whose upstream later disappears is not deleted — it is reclassified
 `disposition: orphaned` and reviewed under task-11 (vendored-skill quality).
