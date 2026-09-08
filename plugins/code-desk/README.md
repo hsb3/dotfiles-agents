@@ -110,7 +110,10 @@ means one thing on all three backends.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already
 carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it does not —
-it never creates the wider meta-structure to get there.
+it never creates the wider meta-structure to get there. That is the default, not the only
+answer: a `briefings_dir` key in `.claude/comms.local.md` redirects the output for a project
+that follows neither convention, and `deliver.py briefings-dir <project>` prints what the
+chain resolved to.
 
 `pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a full
 authoring replacement for it — and it names where to report an error in that base, since the
