@@ -327,6 +327,27 @@ def _worktree_root(abs_path, project_dir):
     return None
 
 
+def _policy_dir(abs_path, raw_path, payload_cwd, project_dir):
+    """The tree whose activation file governs this edit.
+
+    A linked worktree holding its own `.claude/atelier.local.md` is governed by
+    that copy: a worker on its own branch answers to the policy committed there,
+    which is also the policy a reviewer sees on that branch. The tree the edited
+    file lives in decides — a relative tool path names no tree of its own, so
+    the payload cwd's tree stands in for it. Anything else resolves to
+    `project_dir`, and so does a worktree with no copy of its own, which is what
+    keeps `_resolve_activation_path`'s main-checkout fallback reachable.
+    """
+    root = _worktree_root(abs_path, project_dir)
+    if (root is None and not os.path.isabs(raw_path)
+            and isinstance(payload_cwd, str) and os.path.isabs(payload_cwd)):
+        # `_worktree_root` walks up from a file, so hand it one inside the cwd.
+        root = _worktree_root(os.path.join(payload_cwd, "_"), project_dir)
+    if root and os.path.isfile(os.path.join(root, ACTIVATION_RELPATH)):
+        return root
+    return project_dir
+
+
 def _normalize(raw_path, project_dir):
     """Return (abs_path, relpath) or (None, None) when out of jurisdiction.
 
@@ -343,8 +364,8 @@ def _normalize(raw_path, project_dir):
     worktree, so relativizing everything against it turns every path an
     isolated worker touches into `.claude/worktrees/agent-<id>/...` — a shape
     no project-relative pattern matches, which silently exempts exactly the
-    workers custody is aimed at. Policy comes from the main checkout;
-    jurisdiction is the worktree.
+    workers custody is aimed at. Jurisdiction is the worktree; which copy of the
+    activation file supplies the patterns is `_policy_dir`'s separate question.
     """
     try:
         abs_path = raw_path if os.path.isabs(raw_path) else os.path.join(project_dir, raw_path)
@@ -400,10 +421,6 @@ def main():
         if not project_dir:
             sys.exit(0)
 
-        mode, patterns = _load_activation(project_dir)
-        if mode not in ACTIVE_MODES or not patterns:
-            sys.exit(0)
-
         tool_input = payload.get("tool_input")
         if not isinstance(tool_input, dict):
             sys.exit(0)
@@ -414,6 +431,14 @@ def main():
         abs_path, relpath = _normalize(raw_path, project_dir)
         if relpath is None:
             sys.exit(0)  # outside the project: out of jurisdiction
+
+        # The path is resolved first because the policy that governs the edit is
+        # the one belonging to the tree the edited file lives in.
+        mode, patterns = _load_activation(
+            _policy_dir(abs_path, raw_path, payload.get("cwd"), project_dir)
+        )
+        if mode not in ACTIVE_MODES or not patterns:
+            sys.exit(0)
 
         pattern = _first_match(relpath, abs_path, patterns)
         if not pattern:
