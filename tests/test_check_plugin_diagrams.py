@@ -226,6 +226,11 @@ class DiagramGuard(unittest.TestCase):
         body = "flowchart LR\n  A --writes--> B\n  B -.calls.-> C\n  C -->|ok| D\n"
         self.assertEqual(sorted(D._edge_labels(body)), ["calls", "ok", "writes"])
 
+    def test_unlabelled_dotted_edge_contributes_no_edge_label(self):
+        # `-.->` matches EDGE_INLINE_LABEL_RE with an empty middle group; an unlabelled
+        # arrow is not a label and must not show up as one.
+        self.assertEqual(D._edge_labels("flowchart LR\n  Mem -.-> Repo\n"), [])
+
     # --- shape of the report ------------------------------------------------------
 
     def test_every_problem_is_reported_not_just_the_first(self):

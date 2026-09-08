@@ -127,9 +127,15 @@ def _scan_shape_labels(body):
 
 
 def _edge_labels(body):
-    """Return every edge label: `|label|` pipe form and inline `--text-->`/`-.text.->` form."""
+    """Return every edge label: `|label|` pipe form and inline `--text-->`/`-.text.->` form.
+
+    The inline regex's middle group also matches a bare unlabelled arrow (`-.->`) with an
+    empty capture; that is not a label, so empty (after stripping) matches are dropped.
+    """
     labels = re.findall(r"\|([^|\n]*)\|", body)
-    labels += [m.group(2) for m in EDGE_INLINE_LABEL_RE.finditer(body)]
+    labels += [
+        m.group(2) for m in EDGE_INLINE_LABEL_RE.finditer(body) if m.group(2).strip()
+    ]
     return labels
 
 
