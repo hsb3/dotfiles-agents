@@ -36,13 +36,18 @@ confirm the pass took. It checks whether a field discriminates, not merely wheth
 which is the failure a field-population audit reports as green, and the reason §6's definition of
 done needs a check at all.
 
-Every check reads **open items only**, and that includes the label ones. `fields.labels.options`
-is the board's label *history* — an adapter derives it from closed items too — so a check judged
-against it can never go green no matter what anyone edits, and a check that cannot go green is
-noise. The fossil check therefore needs a declared vocabulary (`--vocabulary FILE`, one label per
-line) and is **skipped, visibly, in the report** without one; a skip never changes the exit code.
-A declaration is a closed set someone chose — this repo's `scripts/check_labels.py` `VOCABULARY`
-constant is the pattern.
+Every check that can FAIL judges **open items only**. `fields.labels.options` is the board's label
+*history* — an adapter derives it from closed items too — so a check judged against it can never
+go green no matter what anyone edits, and a check that cannot go green is noise. The collision
+check therefore compares only labels in use on open items, and the fossil check needs a declared
+vocabulary (`--vocabulary FILE`, one label per line), without which it is **skipped, visibly, in
+the report**; a skip never changes the exit code. A declaration is a closed set someone chose —
+this repo's `scripts/check_labels.py` `VOCABULARY` constant is the pattern.
+
+`grouping-latent` is the deliberate exception: it reads the declared vocabulary *and* the labels
+in use, because its question is whether a title prefix is **reachable** as a filter, and a
+declared-but-unused label still answers yes. Fossil pressure cannot make it fire spuriously — an
+extra declared name can only ever make a prefix look more reachable, never less.
 
 ## 1. Pick the adapter
 

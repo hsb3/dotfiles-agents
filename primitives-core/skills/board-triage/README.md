@@ -31,7 +31,8 @@ holding most of the backlog, items with no band or no label at all, a grouping c
 in title prefixes that no filter can reach, and two spellings of one concept splitting it across
 two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read. `--json` for
 machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
-norms.
+norms. Every check that can fail judges open items only, so a board's retired label history can
+never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
 
 Triage is one move in a longer loop, and its tools are split across plugins. The Kata adapter
 writes that loop out end to end — wiring check, per-card definition audit, health check, the
