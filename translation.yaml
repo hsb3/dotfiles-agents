@@ -8,13 +8,31 @@
 #   render      — re-emit as opencode config (mcp entries -> config fragment; none rostered yet)
 #   unsupported — does not travel; listed in the generated exclusions manifest
 #
+# `tool_capabilities` maps every CC tool name an agent frontmatter `tools:` list can carry to
+# one of five NEUTRAL capabilities (read · search · edit · execute · delegate, decision-009) and
+# then to the target's own model. A row is keyed by `tool:` (exact name) or `prefix:` (a declared
+# blanket over a whole tool namespace). The `opencode:` column is that target's permission bucket
+# (read/write/bash) or `unsupported` when the capability has no counterpart there.
+#
+# `field_treatments` declares what happens to every frontmatter key that appears in any
+# `primitives-core/agents/*.md`. Treatments:
+#   map              — carried to the target's key named in the `opencode:` column
+#   drop-with-notice — not emitted; the generator PRINTS a notice naming agent, field and reason
+#   unsupported      — a build FAILURE for that target, not a drop (nothing may ship carrying it)
+# A field or tool with no row at all is a build failure too: silence is never a treatment.
+#
+# `model_aliases` rows pin a bare CC alias to the provider-prefixed ref opencode requires, or
+# declare it `opencode: unsupported` when the alias names a CC-only concept rather than a model.
+# A bare alias with neither is a build failure (decision-009 AC #7 — never a silent omission).
+#
 # `exclusions` are ROSTER-LEVEL opt-outs with reasons — primitives whose targets stay
-# [claude-code] even though their type is mechanically translatable. The generated
-# The generated laydown README surfaces every exclusion (matrix + roster): no silent caps.
-# `model_aliases` pin the bare model aliases our agent frontmatter uses to the
-# provider-prefixed refs opencode requires.
+# [claude-code] even though their type is mechanically translatable. The generated laydown
+# README surfaces every exclusion (matrix + roster): no silent caps.
+#
+# `version` moves whenever tool_capabilities / field_treatments change shape; the completeness
+# gate in scripts/check_roster.py is what actually catches drift (decision-009).
 
-version: 1
+version: 2
 
 matrix:
   - type: skill
@@ -42,6 +60,70 @@ model_aliases:
     ref: anthropic/claude-sonnet-5
   - alias: opus
     ref: anthropic/claude-opus-4-8
+  - alias: inherit
+    opencode: unsupported
+    reason: "CC-only: `inherit` tells CC to run the agent on the dispatching session's model. opencode agents have no inheriting mode, so there is nothing to pin it to — the alias is declared here so it is a named unsupported, not an unrecognized one"
+
+tool_capabilities:
+  - tool: Read
+    capability: read
+    opencode: read
+  - tool: Grep
+    capability: search
+    opencode: read
+  - tool: Glob
+    capability: search
+    opencode: read
+  - tool: Edit
+    capability: edit
+    opencode: write
+  - tool: Write
+    capability: edit
+    opencode: write
+  - tool: NotebookEdit
+    capability: edit
+    opencode: write
+  - tool: Bash
+    capability: execute
+    opencode: bash
+  - tool: Agent
+    capability: delegate
+    opencode: unsupported
+    reason: "opencode has no spawn primitive — an agent granted Agent cannot dispatch sub-agents there, and the grant has no permission bucket to land in"
+  - tool: SendMessage
+    capability: delegate
+    opencode: unsupported
+    reason: "the continuation half of the same delegate capability: no spawn primitive means no live sub-agent to message"
+  - prefix: mcp__
+    capability: execute
+    opencode: unsupported
+    reason: "a declared blanket over the whole MCP tool namespace: CC grants MCP tools per agent by name, opencode configures MCP servers globally in opencode.jsonc and its read/write/bash permission map has no per-agent MCP allowlist to invert into"
+
+field_treatments:
+  - field: name
+    treatment: map
+    opencode: filename
+    reason: "opencode derives an agent's identity from agents/<id>.md; the key itself is not emitted"
+  - field: description
+    treatment: map
+    opencode: description
+  - field: model
+    treatment: map
+    opencode: model
+    reason: "resolved through model_aliases; an alias with neither a ref nor an unsupported declaration fails the build"
+  - field: tools
+    treatment: map
+    opencode: permission
+    reason: "the CC allowlist inverts into opencode's read/write/bash permission map via tool_capabilities"
+  - field: maxTurns
+    treatment: map
+    opencode: steps
+  - field: color
+    treatment: drop-with-notice
+    reason: "opencode expects hex/theme-token colors and rejects CC's named values at config load (verified live on opencode 1.18.11)"
+  - field: effort
+    treatment: drop-with-notice
+    reason: "CC-only reasoning-budget knob; opencode has no per-agent equivalent, so the agent runs at its model's default effort"
 
 exclusions:
   - id: update-config
@@ -54,3 +136,5 @@ exclusions:
     reason: "orchestrates rubric-panel and worker briefs via Claude Code dispatch (and optionally /code-review) — needs an opencode adaptation pass"
   - id: waves
     reason: "composes the foreman skill and Claude Code SendMessage mechanics — follows the foreman adaptation"
+  - id: manager
+    reason: "body prose is built on Claude Code dispatch mechanics (the Agent tool, SendMessage continuation, per-dispatch model overrides); an agent whose whole job is spawning sub-agents has nothing coherent to say on a harness with no spawn primitive, so it is not shipped there rather than having its prose laundered (decision-009)"
