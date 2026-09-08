@@ -19,7 +19,9 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   Sub-briefs, first-pass checking, and a proof package back. A chain is sized twice before
   it is dispatched — how wide it may be, and whether one manager context can pay for it to
   the end. A brief too long for one manager is pre-split, or told to hand its remainder to
-  a successor; it is never compacted mid-chain.
+  a successor; it is never compacted mid-chain. Inside the chain, the expensive and least
+  reversible proof runs before any further polish on a green link, and each link is
+  committed as it lands.
 - **Execution — `scout`, `builder`, `reviewer`**, each working from a brief and nothing else.
 
 ## Waiting
