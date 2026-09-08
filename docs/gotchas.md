@@ -106,8 +106,8 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   worktrees one repo rather than several.
   **Pruning:** the ledger is append-only and disposable. Reads are capped to the last
   `BRANCH_ACTIVITY_MAX_BYTES` of the file and the peer warning ages out after
-  `BRANCH_ACTIVITY_PEER_TTL_SECONDS`, so nothing has to be swept and deleting the file costs
-  exactly one missed warning.
+  `BRANCH_ACTIVITY_PEER_TTL_SECONDS`, so nothing has to be swept and deleting the file costs one
+  missed warning per repo and branch that had a move pending, never more.
   **The ceiling:** the ledger is per-machine, so "a session is live *right now* on the other Mac"
   is not detected. The tip-move half still is — it is derived from git rather than from the
   ledger, so a merge made anywhere surfaces as soon as this checkout has the commit.
