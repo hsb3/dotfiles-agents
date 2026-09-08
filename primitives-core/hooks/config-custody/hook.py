@@ -65,6 +65,10 @@ LOG_PATH_ENV = "ATELIER_CUSTODY_LOG_PATH"
 # file and reading it into a hook that runs on every edit is not worth it.
 ACTIVATION_MAX_BYTES = 256 * 1024
 
+# Both git reads can run on one call, so the pair has to fit inside the hook
+# timeout `config.json` declares (10s) with room for interpreter startup.
+GIT_TIMEOUT = 3
+
 OFF = "off"
 ADVISORY = "advisory"
 STRICT = "strict"
@@ -116,7 +120,7 @@ def _main_checkout(path):
     try:
         proc = subprocess.run(
             ["git", "-C", path, "rev-parse", "--git-common-dir"],
-            capture_output=True, timeout=5,
+            capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
         return path
@@ -316,15 +320,18 @@ def _worktree_root(abs_path, project_dir):
     finds the tree that file actually lives in, innermost first, which is the
     right answer when worktrees are nested.
 
-    The walk stops at `project_dir` rather than at the filesystem root, so a
-    worktree outside the project can never become a jurisdiction: custody
-    governs this project's trees, nothing above them.
+    The walk stops AT `project_dir`, inclusive, so a worktree outside the
+    project can never become a jurisdiction while the common case of the project
+    dir being the worktree itself is still found. Whatever the `.git` file points
+    at is trusted: this is a guardrail, not a sandbox.
     """
     prefix = project_dir + os.sep
     current = os.path.dirname(abs_path)
-    while current.startswith(prefix):
+    while current == project_dir or current.startswith(prefix):
         if os.path.isfile(os.path.join(current, ".git")):
             return current
+        if current == project_dir:
+            break
         current = os.path.dirname(current)
     return None
 
@@ -340,7 +347,7 @@ def _committed_activation(worktree_root):
     try:
         proc = subprocess.run(
             ["git", "-C", worktree_root, "show", "HEAD:" + ACTIVATION_GIT_PATH],
-            capture_output=True, timeout=5,
+            capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
         return None
