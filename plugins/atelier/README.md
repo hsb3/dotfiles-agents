@@ -48,7 +48,7 @@ its commitment, the other cuts comments that cannot.
 |---|---|---|
 | `delegation` | skill | Size a substantial task and route it across the three delegation layers — strategy (the session itself), management, execution: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration keyed to the model in the session's strategist seat: standard by default, deep when a top-tier model leads. Sizes a chain twice — how wide it may be, and whether one manager context can pay for it to the end — and orders a manager's own loop so the expensive, least-reversible proof runs before any optional refinement pass. |
 | `handoff` | skill | Maintain the project's session-handoff file so a brand-new session can pick up work cold — the externalization pass that makes a session clearable. |
-| `waves` | skill | Drive a project's backlog to closed with near-zero owner input: refresh the triage view (the living, ranked plan), group buildable items into branch-sized waves, launch isolated crews via `delegation`, verify and land each wave in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. Tracker-agnostic — bindings ship for GitHub issues, kata, and Kaneo; the kata binding states that its GitHub sync is import-only. |
+| `waves` | skill | Drive a project's backlog to closed with near-zero owner input: refresh the triage view (the living, ranked plan), group buildable items into branch-sized waves, launch isolated crews via `delegation`, verify and land each wave in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. Tracker-agnostic — bindings ship for GitHub issues and kata; the kata binding states that its GitHub sync is import-only. |
 | `rubric-panel` | skill | Score one or more code artifacts against an anchored rubric with a persona-diverse judge panel (whole-field calibration, contested-spread flagging); outputs dimension scores plus findings classified as defect / noise / spec-hole / undeclared-commitment. |
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. Its defect branch now cites `test-quality` (ships in `solo-skills`) for what "red observed" has to mean, so a fix cannot be encoded as a test that could never fail. |
@@ -293,8 +293,8 @@ skill to dispatch; they don't run unless something explicitly delegates to them.
 because the thing it guards is unrecoverable. It reads the `Bash` command about to run, so
 a worker that writes a shell script and executes that, or that drives git through any other
 tool, is not caught; its parser splits on raw text, so a separator inside a quoted argument
-can still hide an invocation. That is the same ceiling `kaneo-bash-tripwire` states, and
-the same reasoning: catching the path agents actually take and leaving a refusal in the
+can still hide an invocation. That is the same ceiling any string-based Bash tripwire
+has, and the same reasoning: catching the path agents actually take and leaving a refusal in the
 transcript is worth far more than the partial coverage costs. **Server-side branch
 protection is the layer above it** — a local hook cannot stop a novel path to the remote,
 a protected-branch rule on the forge can, so where a branch genuinely matters, configure

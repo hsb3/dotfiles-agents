@@ -9,16 +9,15 @@ wrote them.
 
 ## When it triggers
 
-Creating or rewriting any tracker item — a Kata issue, a Kaneo task, a GitHub issue, an
+Creating or rewriting any tracker item — a Kata issue, a GitHub issue, an
 OpenSpec change — or reviewing an existing task for executability before handing it to
 an agent.
 
 ## Install
 
 ```
-claude plugin install kaneo@dotfiles-agents
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships with the kaneo bundle; the doctrine itself is tracker-agnostic and needs no
+Ships with the solo-skills bundle; the doctrine itself is tracker-agnostic and needs no
 configuration.

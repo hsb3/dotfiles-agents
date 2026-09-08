@@ -1,6 +1,6 @@
 """board-triage's Kata adapter: the transformations, not the network.
 
-Sibling of test_board_triage.py's Kaneo half, and covered on the same principle —
+Sibling of test_github_projects_board.py, and covered on the same principle —
 everything between `kata list --json` and the argv of a mutation is this adapter's own
 judgment and can be wrong on its own, so it is tested; the `kata` calls themselves are
 only checked at the boundary (the argv built and the exit-code contract), because a

@@ -134,8 +134,8 @@ directory an unresolved compare mismatches and, again, silently allows the stash
 
 A worker that writes a shell script and runs that, or drives git through a tool other than
 `Bash`, is not caught. Command parsing splits on raw text, so a separator inside a quoted
-argument can still fragment a command and hide an invocation. The same ceiling
-`kaneo-bash-tripwire` states applies here for the same reason: catching the path agents
+argument can still fragment a command and hide an invocation. That is the ceiling any
+string-based Bash tripwire has, and it is worth accepting for the same reason: catching the path agents
 actually take, and leaving a refusal in the transcript, is worth much more than the
 partial coverage costs — but it is not a sandbox and must not be sold as one.
 

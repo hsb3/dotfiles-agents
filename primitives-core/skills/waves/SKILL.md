@@ -5,7 +5,7 @@ description: >
   crews — the full loop: refresh the triage view, group buildable items into branch-sized waves,
   launch worktree-isolated teams via the delegation skill, verify and land each wave in order,
   reconcile, and externalize. Tracker-agnostic: the backlog can live on GitHub issues, a kata
-  board, a Kaneo board, or any tracker that can list open items and hold a written plan — see
+  board or any tracker that can list open items and hold a written plan — see
   the tracker bindings under references/. Use when the user says "work through the waves",
   "launch isolated teams to resolve/close the issues", "run the backlog", "triage and execute",
   points at the triage view, or asks to plan development branches around open items. Use
@@ -48,7 +48,6 @@ tracker-agnostic.
 
 - `references/tracker-github.md` — issues, a pinned issue body, PRs
 - `references/tracker-kata.md` — the kata CLI
-- `references/tracker-kaneo.md` — a Kaneo board
 
 For a tracker with no binding file, name the three operations explicitly in your first message
 and confirm them with the owner before triaging. A campaign run against a seam nobody wrote

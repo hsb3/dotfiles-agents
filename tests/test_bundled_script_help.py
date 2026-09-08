@@ -13,7 +13,7 @@ one is not a user-facing contract. Vendored `base/` trees are outside the patter
 purpose: they are third-party and not ours to fix.
 
 Each script runs from a scratch cwd (so nothing resolves a real repo) with HOME and
-XDG_DATA_HOME redirected and every KANEO_/GH_/GITHUB_ variable removed, so a pass means
+XDG_DATA_HOME redirected and every GH_/GITHUB_ variable removed, so a pass means
 the help text came out of the script itself and not out of the host's credentials.
 """
 
@@ -48,7 +48,7 @@ def scrubbed_env(home: str, data_home: str) -> dict:
     env = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith(("KANEO_", "GH_", "GITHUB_"))
+        if not key.startswith(("GH_", "GITHUB_"))
     }
     env["HOME"] = home
     env["XDG_DATA_HOME"] = data_home

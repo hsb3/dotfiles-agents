@@ -1,1 +1,0 @@
-../../../primitives-core/agents/kaneo-manager.md
