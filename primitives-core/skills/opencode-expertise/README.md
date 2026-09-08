@@ -11,6 +11,13 @@ opencode distribution target for a Claude Code skill collection, or answering ho
 opencode extension surface works. Reference content, not an installer — it does not itself
 translate or port anything.
 
+## References
+
+- `extension-surfaces.md` — the seven surfaces, numbered, each verified against the live docs.
+- `configuration.md` — the config file, its precedence, and which keys are re-verified.
+- `cc-to-opencode-mapping.md` — the Claude Code → opencode translation table.
+- `distribution.md` — laying a bundle down as an opencode install.
+
 ## Install
 
 ```

@@ -41,7 +41,7 @@ joins it.
 |---|---|
 | `claude-code-config` | Configure Claude Code itself — permissions, hooks, env vars, MCP servers, and settings routed to the right file by precedence, closing with a check that the change actually took effect. |
 | `claude-code-expertise` | The map of Claude Code's extension surfaces: which surface fits a need, what each one's frontmatter and config contract is, and how to debug one that is not firing. |
-| `opencode-expertise` | opencode's extension surfaces end to end, the TypeScript constraint, and how each Claude Code equivalent translates onto them. |
+| `opencode-expertise` | opencode's extension surfaces end to end, the TypeScript constraint, and how each Claude Code equivalent translates onto them. Reference content — it answers and maps, it does not port. |
 | `project-memory` | Where agent memory lives and how it moves — the global/project split, the loading modes, and two scripts to wire a repo for tracked memory or recover it after a move. |
 | `iterm2` | iTerm2 past its silent failures: the preferences model, dynamic profiles, shell integration, and default-terminal bindings that report success while dropping the change. |
 | `opencode-sandbox` | Spin up a disposable, isolated opencode instance and hand it to the session as an MCP server — its workspace is a volume, so it cannot see the host filesystem. |
