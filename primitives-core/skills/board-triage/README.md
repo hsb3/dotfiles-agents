@@ -14,7 +14,10 @@ Every adapter writes only on `--apply`. The default run is a preview you read fi
 refuses the same rows the write would, so an unresolvable changeset is caught before it
 touches the board. A refused row is a failure on every adapter alike: it prints as a `SKIP` on
 stderr and the run exits non-zero, while the rows that did resolve are still applied. So
-`apply || abort` behaves the same whichever board is underneath, and stdout stays the row log.
+`apply || abort` behaves the same whichever board is underneath. Both diagnostics go to
+stderr — a `SKIP` for a row the adapter refused, a `FAIL` for one the board rejected — so
+stdout is only ever the row log, and piping it into a diff or a counter never has to
+filter them out.
 
 ## When it triggers
 
