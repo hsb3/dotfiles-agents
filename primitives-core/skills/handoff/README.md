@@ -18,8 +18,7 @@ there and touches a freshness stamp, no HANDOFF.md involved.
 
 ```
 claude plugin install atelier@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `atelier` and `solo-skills` bundles — it closes the session that the delegation
+Ships in the `atelier` bundle — it closes the session that the delegation
 skill runs and the waves skill drives across a backlog.

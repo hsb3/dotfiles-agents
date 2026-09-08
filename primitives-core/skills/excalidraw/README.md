@@ -30,7 +30,6 @@ for the siblings instead — the selection guide lives in the `diagrams` skill.
 
 ```
 claude plugin install diagrams@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `diagrams` and `solo-skills` bundles.
+Ships in the `diagrams` bundle.

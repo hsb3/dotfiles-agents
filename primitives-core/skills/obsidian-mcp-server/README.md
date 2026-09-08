@@ -17,8 +17,7 @@ Obsidian plugin.
 
 ```
 claude plugin install obsidian-toolkit@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `obsidian-toolkit` and `solo-skills` bundles. Pair with `obsidian-chat-ui` to
-surface the agent's tool calls in the sidebar.
+Ships in the `obsidian-toolkit` bundle. Pair with `obsidian-chat-ui` to surface the agent's
+tool calls in the sidebar.

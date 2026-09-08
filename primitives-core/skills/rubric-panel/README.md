@@ -15,9 +15,8 @@ run read-only against a supplied rubric and contract; each finding must cite con
 
 ```
 claude plugin install atelier@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `atelier` and `solo-skills` bundles — layer-cycle's evaluate step reaches for it
-on module-scale or contested work, its reserved case rather than the every-cycle default, ahead
-of the deletion-pass refine step.
+Ships in the `atelier` bundle — layer-cycle's evaluate step reaches for it on module-scale or
+contested work, its reserved case rather than the every-cycle default, ahead of the
+deletion-pass refine step.
