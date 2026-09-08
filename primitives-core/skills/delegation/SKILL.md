@@ -259,12 +259,14 @@ At `deep`, also **override builders to opus** more liberally — the per-dispatc
 the cheapest way to buy judgment on a link the strategist cannot afford to take itself.
 <!-- /harness -->
 
-## Step 1 — Size the job on three axes
+## Step 1 — Size the job on four axes
 
 - **Complexity** — `trivial` → `bounded` (well-specified) → `coupled` (step N needs step N-1) →
   `architectural` (many unknowns).
 - **Parallelizability** — disjoint file ownership, or a dependent chain?
 - **Work-list** — do the slices already exist, or must they be discovered?
+- **Change scope** — how much material one brief's owned-file list actually is, in files and
+  bytes.
 
 The third axis is the one sessions skip, and skipping it is the documented way a strategist ends up
 doing the work itself. Work that arrives pre-sliced ("build this in three languages", "fix these
@@ -293,6 +295,39 @@ integration risk first — whether the pipeline connects at all is settled in th
 and an interrupted job ends at its last green release instead of a pile of finished components
 that have never met. The spine choice is floor work (it IS the decomposition, floor item 1); a
 manager sequences links within a release and never re-plans across releases.
+
+### Measure the owned-file list before dispatching
+
+The first three axes are judged; the fourth is counted, once per brief. **A brief scoped above
+10 files or 100 KB of owned files should be split** `[untested]`. Either term trips it alone. The
+line is calibrated, not derived: across this kit's merged history the file-count distribution is
+bimodal with a trough between roughly ten and twenty files, and a worker's own context runs out
+around the same place — but nothing yet measures whether splitting at that boundary improves
+anything, and both corpora are still growing, so the figures live in `references/provenance.md`
+with their n and the date they were read rather than in this sentence. The byte term is what
+catches the single-topic doctrine change: rewriting one skill and its reference set sits under
+the file bound and well over the byte one.
+
+**An entry that cannot be measured makes the figure a floor rather than a total — treat the
+brief as over the threshold until that entry is resolved.** Four ways an entry goes unmeasurable,
+each with one answer: a **glob** is expanded deliberately and re-measured, never expanded at
+measurement time (that measures whatever directory the measuring process sits in, not the tree
+the brief was written against); a **directory** means the brief is not scoped, so list the files
+or accept the figure as a floor; a **missing** path is a typo or a file the worker is meant to
+create, which costs nothing to read today and is excluded deliberately rather than left reading
+as measured; an **unreadable** path is permissions, resolved before dispatch. A measurement that
+cannot complete is red, never green.
+
+<!-- harness:claude-code -->
+`scripts/scope.py` in this skill does the counting:
+`python3 primitives-core/skills/delegation/scripts/scope.py <owned-file> ...` from a checkout of
+this kit, or, from an installed plugin,
+`python3 ~/.claude/plugins/cache/dotfiles-agents/atelier/<version>/skills/delegation/scripts/scope.py <paths...>`.
+With argv omitted it reads one path per line on stdin; `--json` is the machine form. It prints
+`files`, `bytes`, `lines`, `binary`, `unresolved <n>`, then one `reason  path` line per
+unresolved entry. Exit 0 is fully measured, 1 is a floor, and 2 is no paths given at all — an
+empty owned-file list is a defect in the brief, not a zero figure.
+<!-- /harness -->
 
 ## Step 2 — Pick the architecture
 
@@ -354,9 +389,9 @@ pass their checks individually, then fail one after another as each predecessor 
 Full conditions, the cap's reasoning, and what does not parallelise:
 **`references/concurrent-chains.md`**.
 
-## Step 3 — Satisfy three preconditions before the first dispatch
+## Step 3 — Satisfy four preconditions before the first dispatch
 
-All three are cheap to write and expensive to retrofit `[lab]`.
+All four are cheap to write and expensive to retrofit `[lab]`.
 
 1. **A definition of done, as machine-checkable criteria** — each one written as **a command plus
    its expected output**: a command that passes, a grep that returns zero, an artifact that
@@ -365,10 +400,30 @@ All three are cheap to write and expensive to retrofit `[lab]`.
    prose a worker can self-certify. **Include the error paths and the empty case**: unspecified
    edge cases are exactly where independent implementations diverge, and every divergence the
    lab's cross-implementation diffing surfaced traced to a case the contract never named.
-2. **A gate that exists and has been proved red.** The DoD's command must actually fail when the
-   work is wrong. A gate that cannot fail is decoration. Break something deliberately once, watch
-   it fail, restore, then dispatch against it.
-3. **An ownership map separating owned source from read-only config.** The gate belongs to the
+2. **A gate that exists, has been proved red, and has this diff in its subject set.** The DoD's
+   command must actually fail when *this* work is wrong. A gate that cannot fail is decoration; a
+   gate that can only fail somewhere else is decoration for this brief. Break something
+   deliberately **inside the files the worker will change**, watch that gate fail, restore, then
+   dispatch against it — a break anywhere else in the tree proves the gate is alive, not that it
+   is watching. Passing and covering are different facts that look identical from outside: a gate
+   with zero real subjects reports the same green as a gate with fifty, so that break is the
+   check, and it is the half that always runs. Where the gate can already name or tally the
+   subjects it matched, read that too and confirm the worker's files are among them. Where it
+   cannot — a stock test runner, linter, typechecker or build target usually cannot — the break
+   stands alone: teaching a gate to report its subjects is an edit to config the dispatcher does
+   not own, and a precondition that demanded it would be unsatisfiable exactly where it matters.
+3. **A premise re-derived against the tree at dispatch time, not at authoring time.** A brief's
+   factual claims — what a file asserts about itself, how many sites a rule touches, what a
+   tracker item recorded — were true when written and are checked when dispatched, never the
+   other way round. So re-derive every premise the brief rests on against the tree you are
+   dispatching against. When it has moved, either re-brief, or state the drift in the brief and
+   dispatch with the worker informed; never dispatch a premise nobody re-checked `[field]`. A
+   lint's own docstring in this kit declared its rule had zero real subjects, deliberately; an
+   item filed against it recorded that one assembly had since acquired the rule as a subject; the
+   count re-derived at dispatch was three. Both the claim and its correction were stale and the
+   gate had been green throughout, because nothing about a passing gate distinguishes zero
+   subjects from N. No red gate could have surfaced it.
+4. **An ownership map separating owned source from read-only config.** The gate belongs to the
    strategist. A worker that can edit the coverage threshold, the lint config, or the test that
    defines its own acceptance criteria can satisfy any brief. Workers are told: an unsatisfiable
    gate is an escalation, never a config edit. Where the project has activation on, make the map
@@ -431,6 +486,18 @@ produced a ~90-line wall of mostly single-use constants, costing that solution i
 score, unanimously, on its round's panel `[lab]`. The other two rules are test-first by default
 with the observed failure as evidence (the largest single quality lever the lab measured), and the
 negative list of what a worker must never be told (cycle budgets, scores, sibling work).
+
+**A finding outside a brief's file scope folds before it is filed.** Take the first rung that
+holds; each one skipped past is a tracker item nobody asked for. **a.** A sibling site of the
+defect being fixed is in scope by construction — fix it in the same wave and the same landing.
+**b.** A finding that belongs to an open item is commented onto that item; never open a second
+item for work already tracked. **c.** A finding with no home goes on the wave's hardening list,
+in the manager's proof package. **d.** Only a finding nothing above holds is filed as one new
+item, and the report says why a–c did not. Never file a draft for someone else to finish: a
+finding whose check you cannot state is a hardening-list line, not work. Blocking is the separate
+axis — a finding that stops the DoD escalates from whatever rung it landed on. The `manager` and
+`reviewer` contracts and `references/manager-brief.md` state the same order; they are one rule in
+four places, not four rules.
 
 **A manager brief carries one more check `[field]`:** if the brief has to tell the manager which of
 its own tasks may run at the same time, the brief **is a wave and not a chain** — split it before

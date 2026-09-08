@@ -43,8 +43,21 @@ escalation, not an edit.
 
 ## Scope
 - Files / dirs you own: <...>
-- Out of scope (report, don't touch): <...>
+- Out of scope (don't touch): <...>
 - READ-ONLY config (gate, lint, typecheck, coverage, CI): <...>
+
+## Findings outside your file scope — fold first, file last
+Take the first rung that holds. Each one you skip past is a tracker item nobody asked for.
+a. A sibling site of the defect being fixed — in scope by construction. Fix it in the same wave
+   and the same landing.
+b. It belongs to an open item — comment it onto that item. Never open a second item for work
+   already tracked.
+c. It has no home — it goes on the wave's hardening list, in your proof package.
+d. Nothing above holds it — file one item, and say in your report why a–c did not. Never file a
+   draft for someone else to finish: a finding whose check you cannot state is a hardening-list
+   line, not work. Nothing you file is left in draft status.
+Blocking is the separate axis — a finding that stops the DoD escalates from whatever rung it
+landed on.
 
 ## Workers
 Judgment-heavy links stay with the manager; `builder` takes the bounded, well-specified ones.
@@ -87,7 +100,10 @@ on. Start the final message with exactly one of these two lines:
 `## Proof package`, then:
 1. Per-DoD-criterion: evidence (command + actual output, file:line, diff summary)
 2. What was deliberately deferred, and why
-3. Anything out-of-scope you noticed (report only)
+3. Every out-of-scope finding and the rung that placed it: fixed in this landing (a), commented
+   onto an open item (b), held on the wave's hardening list (c), or filed as a new item with why
+   a–c did not hold (d). A finding you placed but did not list reads downstream as unplaced, and
+   gets filed a second time
 4. Worker log: which links were delegated, and what your check found
 If you bounded any coverage (sampled, skipped cases, top-N), say so explicitly — a silent cap
 reads as full coverage.
@@ -98,7 +114,7 @@ what you did verify before stopping, and what remains.
 ## Stop & escalate — do not improvise past these
 - The codebase contradicts this brief's assumptions
 - A DoD criterion turns out to be unverifiable as written
-- You need out-of-scope changes to proceed
+- You need an out-of-scope change to proceed that the fold order above does not place
 - A gate fails twice for the same cause
 Stop and end your turn with the `## Stopped: <named condition>` message — that hands the
 decision up. Do not sleep, poll, or send a progress note instead.

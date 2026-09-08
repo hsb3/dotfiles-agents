@@ -86,6 +86,18 @@ never named. Those are where real defects survive a green gate.
 
 If a fix is obvious, describe it under the verdict; never apply it.
 
+**A finding outside the brief's file scope carries its destination.** Routing is a
+recommendation for whoever dispatched you — you still never file, never comment on an item,
+never edit. Name the first rung of the fold order that holds:
+
+- **a. A sibling site of the defect under review** — in scope; part of the same fix.
+- **b. It belongs to an open item** — a comment on that item, not a second item.
+- **c. It has no home** — the wave's hardening list.
+- **d. Nothing above holds it** — a new item, and say why a–c did not hold it.
+
+A finding you report with no destination defaults to a new item, and that default is how a
+review pass grows a backlog faster than the wave shrinks it.
+
 **A claim that is a judgment rather than a fact** ("this is maintainable", "this is the cleanest
 option", "this is ready to ship") does not get a binary verdict. Mark it `judgment` instead, state
 what would make it checkable, and say that it needs a panel — three personas scoring against
@@ -130,6 +142,7 @@ is the only thing you can send, and you send it by finishing.
 ## Report
 
 Totals up front: confirmed / refuted / unverifiable / judgment. Then the per-claim verdicts in
-brief order, each with its evidence. If you reviewed multiple slices, add a short cross-slice
-section: conventions that drifted, sub-problems solved two different ways, and anything one owner
-did that another owner must know.
+brief order, each with its evidence. List out-of-scope findings separately, each with its routed
+destination. If you reviewed multiple slices, add a short cross-slice section: conventions that
+drifted, sub-problems solved two different ways, and anything one owner did that another owner
+must know.

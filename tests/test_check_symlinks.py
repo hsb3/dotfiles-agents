@@ -5,8 +5,11 @@ guard's orphan rule) and the module's REPO/PLUGINS_DIR/MARKETPLACE constants are
 at them for the duration of each test.
 """
 
+import contextlib
+import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -237,6 +240,75 @@ class ReadmeConvention(unittest.TestCase):
         self.assertFalse(S.is_standalone(with_cmd))
         without_cmd = self._make_plugin("xi", ["xi"])
         self.assertTrue(S.is_standalone(without_cmd))
+
+
+class StandaloneCountReporting(unittest.TestCase):
+    """main()'s success line must report the is_standalone() count at runtime, so the
+    docstring can never again drift from the gate the way the retired "check 4 has no
+    subjects" note did once a standalone assembly was added."""
+
+    def setUp(self):
+        self.fix = tempfile.mkdtemp(prefix="check-symlinks-count-")
+        self.saved = {k: getattr(S, k) for k in ("REPO", "PLUGINS_DIR", "MARKETPLACE")}
+        S.REPO = self.fix
+        S.PLUGINS_DIR = os.path.join(self.fix, "plugins")
+        S.MARKETPLACE = os.path.join(self.fix, ".claude-plugin", "marketplace.json")
+        os.makedirs(os.path.join(self.fix, "primitives-core", "skills"))
+        os.makedirs(os.path.join(self.fix, ".claude-plugin"))
+
+    def tearDown(self):
+        for k, v in self.saved.items():
+            setattr(S, k, v)
+        shutil.rmtree(self.fix, ignore_errors=True)
+
+    def _make_plugin(self, plugin_id, skill_ids, bundle_readme=False):
+        """Standalone (1 skill) gets a compliant README symlink; a bundle (>1 skill)
+        gets a hand-authored regular-file README."""
+        pdir = os.path.join(S.PLUGINS_DIR, plugin_id)
+        skills_dir = os.path.join(pdir, "skills")
+        os.makedirs(os.path.join(pdir, ".claude-plugin"))
+        os.makedirs(skills_dir)
+        with open(os.path.join(pdir, ".claude-plugin", "plugin.json"), "w") as fh:
+            json.dump({"name": plugin_id}, fh)
+        for sid in skill_ids:
+            src = os.path.join(self.fix, "primitives-core", "skills", sid)
+            os.makedirs(src)
+            with open(os.path.join(src, "SKILL.md"), "w") as fh:
+                fh.write(f"---\nname: {sid}\ndescription: x\n---\n")
+            os.symlink(os.path.relpath(src, skills_dir), os.path.join(skills_dir, sid))
+        readme_path = os.path.join(pdir, "README.md")
+        if bundle_readme:
+            with open(readme_path, "w") as fh:
+                fh.write(f"# {plugin_id}\n")
+        else:
+            skill_readme = os.path.join(self.fix, "primitives-core", "skills", skill_ids[0], "README.md")
+            with open(skill_readme, "w") as fh:
+                fh.write(f"# {skill_ids[0]}\n")
+            os.symlink(os.path.relpath(skill_readme, pdir), readme_path)
+        return pdir
+
+    def test_reported_count_matches_is_standalone(self):
+        self._make_plugin("solo-one", ["solo-one"])
+        self._make_plugin("solo-two", ["solo-two"])
+        self._make_plugin("bundle-one", ["bundle-a", "bundle-b"], bundle_readme=True)
+        plugins = sorted(os.listdir(S.PLUGINS_DIR))
+        with open(S.MARKETPLACE, "w") as fh:
+            json.dump(
+                {"plugins": [{"name": p, "source": f"./plugins/{p}"} for p in plugins]},
+                fh,
+            )
+        # independently derived — never hard-code a plugin name or a count here
+        expected = sum(1 for p in plugins if S.is_standalone(os.path.join(S.PLUGINS_DIR, p)))
+        self.assertGreater(expected, 0)
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = S.main()
+        self.assertEqual(code, 0, buf.getvalue())
+
+        match = re.search(r"(\d+) standalone", buf.getvalue())
+        self.assertIsNotNone(match, buf.getvalue())
+        self.assertEqual(int(match.group(1)), expected)
 
 
 if __name__ == "__main__":
