@@ -20,6 +20,15 @@ Read-only git is never touched — `status`, `diff`, `log`, `show`, `branch`,
 `rev-list`, `rev-parse`, `ls-files`, `fetch` are how a session orients, and a
 guard that made orientation expensive would be turned off.
 
+The verb set is ruled on one verb at a time in the README's table, and the
+line it draws is this hazard rather than "writes something": what can remove,
+overwrite or swap a tracked file in THIS tree, move the branch the tree sits
+on, or capture and publish its half-finished state. What writes only the index
+(`add`), only the object database, only a ref that has an everyday read
+spelling (`branch`, `tag`, `symbolic-ref`), only another working tree, or only
+files named on the command line (`merge-file`, `mergetool` — the destructive
+-write case below) is deliberately out, with its reason recorded beside it.
+
 Scoped to ONE working tree. The pending set is keyed on the session's
 transcript, which says nothing about where a command points, and a session can
 hold workers in its own tree while a call runs in a checkout of a different
@@ -133,14 +142,17 @@ LOG_PATH_ENV = "LIVE_WORKER_GIT_GUARD_LOG_PATH"
 OVERRIDE_VAR = "ATELIER_GIT_GUARD_OVERRIDE"
 OVERRIDE_TRUTHY = ("1", "true", "yes", "on")
 
-# The verbs this guard fires on — NOT every verb that writes. `add`, `rm`, `mv`,
-# `update-ref`, `tag`, `bisect` and `submodule` also write and are absent; see
-# the README, widening the set is a per-verb read-form decision tracked on the
-# board. `fetch` moves no tracked file, and `branch` as a session runs it is a
-# read.
+# Verbs that can take a tracked file off THIS working tree, move the branch it
+# sits on, or publish its half-finished state. What writes only the index
+# (`add`), only the object database, only a ref that has an everyday read
+# spelling (`branch`, `tag`), or only files named on the command line is
+# deliberately out — the README's ruling table gives the reason for every verb,
+# in the set or out of it.
 MUTATING_VERBS = frozenset((
     "commit", "push", "merge", "pull", "rebase", "checkout", "switch", "stash",
     "reset", "cherry-pick", "revert", "clean", "restore", "am", "apply",
+    "rm", "mv", "bisect", "submodule", "sparse-checkout", "update-ref",
+    "read-tree", "checkout-index",
 ))
 
 # git's own global options, the ones that take a SEPARATE value token. Without
@@ -232,12 +244,24 @@ SHELL_KEYWORDS = frozenset(("do", "then", "else", "elif", "if", "while",
 
 # Read-only forms of verbs that otherwise write: `git stash list` is how a
 # session orients, `git apply --check` touches nothing. Keyed by verb; a call
-# whose first non-option argument (stash) or any option (apply) is listed here
-# is a read and never fires.
+# whose first non-option argument (a SUBCOMMAND_VERBS one) or any option (every
+# other) is listed here is a read and never fires. `""` is the bare call.
 READ_FORMS = {
     "stash": frozenset(("list", "show")),
     "apply": frozenset(("--check", "--stat", "--numstat", "--summary")),
+    "bisect": frozenset(("", "log", "view", "visualize", "terms", "help")),
+    "submodule": frozenset(("", "status", "summary")),
+    "sparse-checkout": frozenset(("", "list", "check-rules")),
+    "rm": frozenset(("--dry-run", "-n")),
+    "mv": frozenset(("--dry-run", "-n")),
+    "read-tree": frozenset(("--dry-run", "-n")),
 }
+
+# Verbs whose read forms are subcommands rather than options, so the FIRST bare
+# argument decides. Bare is a read for all but `stash`, where bare means push:
+# `git submodule` is `status`, and the other two print usage.
+SUBCOMMAND_VERBS = frozenset((
+    "stash", "bisect", "submodule", "sparse-checkout"))
 
 MAX_NAMED_AGENTS = 4
 
@@ -421,8 +445,8 @@ def _is_read_form(verb, tokens, start):
     forms = READ_FORMS.get(verb)
     if not forms:
         return False
-    if verb == "stash":
-        first = next((a for a in args if not a.startswith("-")), None)
+    if verb in SUBCOMMAND_VERBS:
+        first = next((a for a in args if not a.startswith("-")), "")
         return first in forms
     return any(a in forms for a in args)
 
