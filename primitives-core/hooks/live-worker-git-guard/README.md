@@ -3,8 +3,8 @@
 Refuses a **mutating git command while this session still has delegations running**.
 `PreToolUse` on `Bash`: if the command contains `git commit`, `push`, `merge`, `pull`, `rebase`,
 `checkout`, `switch`, `stash`, `reset`, `cherry-pick`, `revert`, `clean`, `restore`, `am` or
-`apply`, and any subagent this session started has not settled, the call is denied and the deny
-text names the agents to wait for.
+`apply`, and a subagent this session started has not settled **and shares the working tree that
+command targets**, the call is denied and the deny text names the agents to wait for.
 
 Read-only git never fires — `status`, `diff`, `log`, `show`, `branch`, `rev-list`, `rev-parse`,
 `ls-files`, `fetch` are how a session orients — and the read-only forms of the verbs above
@@ -48,6 +48,37 @@ session holding them, and the deny text fits it unchanged. A delegating agent is
 its own pending set, and an agent holding its own worktree is exempt entirely — it is not looking
 at this tree.
 
+## Which tree the command targets
+
+Being live is only half the question; the other half is whether the command can reach them. The
+pending set is keyed on the session's transcript, so on its own it says nothing about where a
+command points — a manager dispatched from a session in repo A but working in a checkout of
+repo B had a `git push` denied by workers it could not touch.
+
+So the guard resolves both trees and compares them:
+
+| side | how |
+|---|---|
+| the tree the command targets | `git rev-parse --show-toplevel` from the payload `cwd`, moved by any `-C` (cumulative, as git applies them) |
+| the tree the workers occupy | the same resolution from `CLAUDE_PROJECT_DIR`, which Claude Code sets on the hook process to the session's **main checkout** |
+
+Same tree, decide as before. Different trees, no block — a worker with no `worktreePath` sits in
+the session's own tree, and that is the only sound proxy for where the workers are, because a
+sidecar carries no per-worker `cwd`.
+
+`--show-toplevel` and not `--git-common-dir`, deliberately: the hazard is a shared **working
+tree**, not a shared repository. A sibling linked worktree of the same repo has its own working
+tree and its own index, so a `commit` there stages only its own files and a `push` moves only
+refs — neither takes a worker's uncommitted file off disk in the main checkout. Repo identity
+would block a whole class of calls that cannot cause the loss.
+
+**Ambiguity fails closed**, the one place this hook is not fail-open: no `git` binary, a `cwd`
+outside any repository, an unset or non-repo `CLAUDE_PROJECT_DIR`, or a `--git-dir` / `--work-tree`
+flag (which relocate the working tree by a rule the hook does not reimplement) all leave the guard
+deciding exactly as it did before it could compare trees at all. The same rule a corrupt sidecar
+gets: a record that exists and cannot be read keeps its agent live. `init` and `clone` are not
+mutating verbs, so making a repo in a fresh directory never reaches the comparison.
+
 ## Override
 
 ```bash
@@ -56,7 +87,14 @@ ATELIER_GIT_GUARD_OVERRIDE=1 git commit -m "unrelated work"
 
 The assignment must come **before** the `git` word; the same string as an argument is not an
 override. The command goes through, and a `systemMessage` states that the override was used and
-which agents are still live. Both the deny and the override are logged.
+which agents are still live.
+
+**Every use of the override is logged, including one that suppressed nothing.** A prefix on a
+command the guard was not going to block (no live workers, or a different tree) prints no
+`systemMessage` — there is nobody to name — but still writes its row, so reaching for the escape
+hatch is visible afterwards rather than silent. An empty `pending` in the row is what separates
+the two cases. A prefix on a command with no mutating verb writes nothing at all: the stream is a
+record of contested commands, not of every Bash call.
 
 Do **not** `git stash` by hand to get around a deny. That reopens the exact window the guard
 closes, and the work lands in a stash entry the agent will never look for. The deny text says so.
@@ -98,17 +136,20 @@ No activation file: the guard fires wherever the plugin is installed.
 
 | Env var | Default | Meaning |
 |---|---|---|
-| `ATELIER_GIT_GUARD_OVERRIDE` | unset | `=1` as a command prefix allows one mutating call |
+| `ATELIER_GIT_GUARD_OVERRIDE` | unset | `=1` as a command prefix allows one mutating call, and is logged whether or not it suppressed a block |
+| `CLAUDE_PROJECT_DIR` | set by Claude Code | The session's main checkout, resolved to the working tree the workers occupy. Unset or outside a repo, the tree comparison fails closed |
 | `SUBAGENT_TELEMETRY_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/delegation.jsonl` | The delegation ledger it reads to learn who settled |
 | `SUBAGENT_TELEMETRY_TAIL_BYTES` | `262144` | Bounds how much of the delegation ledger's tail is read to compute the settled set |
 | `LIVE_WORKER_GIT_GUARD_LOG_PATH` | `…/agent-logs/claude-code/atelier/live-worker-git-guard.jsonl` | Its own ledger |
 
 ## Design notes
 
-- **Fail-open, always.** No `transcript_path`, no `subagents/` directory, an unreadable ledger, a
-  malformed payload — every one exits 0 with no output. A guard that cannot read its own records
-  has no grounds to block, and the session is left exactly as unguarded as it was before this hook
-  existed.
+- **Fail-open on an absent record.** No `transcript_path`, no `subagents/` directory, an
+  unreadable ledger, a malformed payload — every one exits 0 with no output. A guard that cannot
+  read its own records has no grounds to block, and the session is left exactly as unguarded as it
+  was before this hook existed. **Fail-closed on an unreadable one**, in the two places a record
+  exists and will not yield: a sidecar that does not parse, and a tree comparison that does not
+  resolve.
 - **An unreadable ledger is not an empty one.** `settled_ids` raises rather than returning an
   empty set, because rendering "cannot tell" as "nothing has settled" would deny on every agent
   the session ever started.
@@ -127,9 +168,12 @@ No activation file: the guard fires wherever the plugin is installed.
 
 ## Ledger
 
-One row per **decision that reached the session** — a deny or an override, never one per Bash
-call. Ledgers live outside the project, in the partitioned root shared with every other hook in
-this plugin; the append path is `hooks/_lib/agentlog.py`.
+One row per **decision that reached the session** — a deny or an override — plus one for an
+override used where nothing was going to block, so no use of the escape hatch is silent. Never
+one per Bash call. `pending` lists the live delegations sharing the tree the command targets, so
+an empty list is an override that suppressed nothing. Ledgers live outside the project, in the
+partitioned root shared with every other hook in this plugin; the append path is
+`hooks/_lib/agentlog.py`.
 
 ```json
 {"v":1,"plugin":"atelier","harness":"claude-code","stream":"live-worker-git-guard",
