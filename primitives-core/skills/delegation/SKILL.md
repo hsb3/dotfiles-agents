@@ -461,13 +461,20 @@ the premium tier for every model-bearing call and never exercised the cheaper ti
 `references/tier-cutoff.md` is the protocol for measuring the cutoff and the record of how far it
 has been measured.
 
+The tier vocabulary is **`light` / `mid` / `heavy`** — semantic bands, deliberately not model
+names, so the same words survive a provider change. Role defaults: scout=light; builder and
+`code-reviewer`=mid; reviewer and manager=heavy. Which concrete model a band buys is a harness
+question, never an agent's.
+
 <!-- harness:claude-code -->
-**Tier is a dispatch-time decision, not an agent choice.** The defaults are scout=haiku (`effort:
-low`), builder=sonnet, reviewer=opus, manager=opus, and the strategist is the session itself (Opus
-at `standard`, Fable at `deep`). Override at dispatch: `model: sonnet` on a scout for cross-file
-synthesis, `model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not
-downtiered — verification is where the premium pays. Pass `model:` on the Agent call only when the
-slice demonstrably needs the judgment.
+**Tier is a dispatch-time decision, not an agent choice.** Here a band renders to one of Claude
+Code's frontmatter keywords — light=`haiku` (with `effort: low`), mid=`sonnet`, heavy=`opus` — and
+that rendering lives in `hooks/_lib/model_catalog.json`, not in any agent file. The strategist is
+the session itself (Opus at `standard`, Fable at `deep`). Override at dispatch by naming the
+keyword the band you want renders to: `model: sonnet` on a scout for cross-file synthesis,
+`model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not downtiered —
+verification is where the premium pays. Pass `model:` on the Agent call only when the slice
+demonstrably needs the judgment.
 <!-- /harness -->
 
 Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent

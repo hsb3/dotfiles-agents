@@ -59,24 +59,40 @@ def tiers(catalog):
     return list(catalog["tiers"])
 
 
+def _tier_row(catalog, tier):
+    """A tier's row, or {} — a row of the wrong SHAPE is as unmapped as a missing one."""
+    row = catalog["tiers"].get(tier)
+    return row if isinstance(row, dict) else {}
+
+
 def model_for(catalog, tier, provider=None):
     """(tier, provider) -> concrete model id, or None when that pairing is unmapped."""
-    row = catalog["tiers"].get(tier)
-    if not row:
+    models = _tier_row(catalog, tier).get("models")
+    if not isinstance(models, dict):
         return None
-    return row.get("models", {}).get(provider or active_provider(catalog))
+    return models.get(provider or active_provider(catalog))
 
 
 def claude_code_keyword(catalog, tier):
     """tier -> the keyword Claude Code agent frontmatter accepts, or None."""
-    row = catalog["tiers"].get(tier)
-    return row.get("claude_code_keyword") if row else None
+    return _tier_row(catalog, tier).get("claude_code_keyword")
 
 
 def window_for(catalog, model_id, provider=None):
-    """A concrete model id -> its context window in tokens, or None if unknown."""
-    if not model_id:
+    """A concrete model id -> its context window in tokens, or None if unknown.
+
+    A non-string id is as unknown as an unrecognized one: a transcript field that arrives
+    as a number is exactly the malformed input this fail-open contract exists for, and a
+    TypeError here would take down the caller instead.
+
+    The bracketed suffix is DISCARDED, not interpreted, so `claude-opus-5[1m]` resolves to
+    the base model's window. Where a long-context variant has a larger window that under-
+    reports — which is the conservative direction for a watermark: a smaller window puts
+    the threshold lower, so the reminder fires early rather than never.
+    """
+    if not isinstance(model_id, str) or not model_id:
         return None
     bare = _VARIANT_SUFFIX.sub("", model_id).strip()
-    row = catalog["providers"].get(provider or active_provider(catalog), {}).get(bare)
+    models = catalog["providers"].get(provider or active_provider(catalog))
+    row = models.get(bare) if isinstance(models, dict) else None
     return row.get("context") if isinstance(row, dict) else None

@@ -47,9 +47,11 @@ same map (`keyword -> tier -> the active provider's id`). Switching provider is 
 `active_provider`; the nine agent files do not move.
 
 `../hooks/_lib/model_tiers.py` is the runtime side of the same map — `model_for`,
-`claude_code_keyword`, and `window_for`, which answers a model id's context window in tokens
-(stripping the bracketed variant suffix the harness writes into transcripts, as in
-`claude-opus-5[1m]`).
+`claude_code_keyword`, and `window_for`, which answers a model id's context window in tokens.
+The bracketed variant suffix the harness writes into transcripts (`claude-opus-5[1m]`) is
+**discarded, not interpreted**, so a long-context variant resolves to its base model's
+window. That under-reports, deliberately: a smaller window puts a watermark threshold lower,
+so the reminder fires early rather than never.
 
 **Fallback, both halves.** A tier with no model for the active provider is `None` from
 `model_for` — a hook fails open on it and keeps the session alive — and a RED failure in the
@@ -62,13 +64,32 @@ vendored in-tree because `make ci` is offline by design and an in-tree catalog i
 an invented id detectable with no network:
 
 ```sh
-python3 scripts/check_model_tiers.py            # offline gate (make ci)
-make models-drift                               # network: projection vs upstream, not in ci
-python3 scripts/check_model_tiers.py --refresh  # network: rewrite the projection
+python3 scripts/check_model_tiers.py            # offline gate; the one wired into make ci
+python3 scripts/check_model_tiers.py --drift    # needs network; NOT in make ci
+python3 scripts/check_model_tiers.py --refresh  # needs network; rewrites the projection
 ```
 
 `--refresh` rewrites only `providers`; re-pinning a tier to a newly released model stays a
 deliberate hand edit.
+
+**The two modes catch different things, and neither alone is enough.** The offline gate
+checks a pinned id against the projection, so it is circular by construction: pinning an id
+that does not exist *and* adding it to `providers` passes offline, green. That is inherent
+to an offline check and is accepted, so it is stated rather than implied.
+
+| Failure | offline gate | `--drift` |
+|---|---|---|
+| pinned id absent from the projection | caught | caught |
+| non-positive or non-integer window on any projected entry | caught | — |
+| tier with no model for the active provider | caught | — |
+| agent `model:` no longer renders its declared tier | caught | — |
+| agent naming a model id, or a second map in `translation.yaml` | caught | — |
+| **fabricated** projection entry (an id upstream never had) | **missed** | caught |
+| **stale** entry (a window upstream has since changed) | **missed** | caught |
+| model retired upstream, or one upstream added | **missed** | caught |
+
+A hand-edited `providers` block is therefore invisible to `make ci`. Run `--drift` before
+trusting a projection you did not produce with `--refresh`.
 
 **Never swap `builder` for `rig-builder`:** `builder` implements until the acceptance
 criteria pass; `rig-builder` measures the baseline and must not fix it, because a baseline

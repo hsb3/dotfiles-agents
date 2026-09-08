@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
@@ -91,6 +92,22 @@ class TestResolver(unittest.TestCase):
     def test_window_for_unknown_id_is_none_never_an_exception(self):
         self.assertIsNone(MT.window_for(self.catalog, "claude-imaginary-9"))
         self.assertIsNone(MT.window_for(self.catalog, ""))
+
+    def test_window_for_a_non_string_is_none_not_a_typeerror(self):
+        """A transcript field that is a number is exactly the malformed input the
+        fail-open contract exists for — `if not model_id` never guarded it."""
+        for junk in (12345, {"a": 1}, ["claude-opus-5"], 3.5, True):
+            self.assertIsNone(MT.window_for(self.catalog, junk), junk)
+
+    def test_claude_code_keyword_survives_a_malformed_tier_row(self):
+        bad = copy.deepcopy(self.catalog)
+        bad["tiers"]["heavy"] = "opus"
+        self.assertIsNone(MT.claude_code_keyword(bad, "heavy"))
+
+    def test_model_for_survives_a_malformed_tier_row(self):
+        bad = copy.deepcopy(self.catalog)
+        bad["tiers"]["heavy"] = ["claude-opus-5"]
+        self.assertIsNone(MT.model_for(bad, "heavy"))
 
     def test_catalog_path_sits_beside_the_module(self):
         self.assertTrue(os.path.isfile(MT.CATALOG_PATH))
@@ -231,12 +248,75 @@ class TestGateFixtures(unittest.TestCase):
         )
         self.assertTrue(any("haiku" in p and "model_aliases" in p for p in found), found)
 
+    def test_a_corrupt_window_on_an_unpinned_projection_entry_fails(self):
+        """The gate used to validate windows only for PINNED ids, so a corrupted entry the
+        map does not name reached the watermark hook with the gate still green."""
+        bad = copy.deepcopy(self.catalog)
+        bad["providers"]["anthropic"]["claude-opus-4-6"]["context"] = -1
+        found = GATE.problems(catalog_path=self._catalog_path(bad), agents_dir=self._agents_dir())
+        self.assertTrue(any("claude-opus-4-6" in p for p in found), found)
+
+    def test_a_non_integer_window_on_an_unpinned_entry_fails(self):
+        bad = copy.deepcopy(self.catalog)
+        bad["providers"]["anthropic"]["claude-opus-4-6"] = {"context": "1m"}
+        found = GATE.problems(catalog_path=self._catalog_path(bad), agents_dir=self._agents_dir())
+        self.assertTrue(any("claude-opus-4-6" in p for p in found), found)
+
+    def test_a_single_version_segment_id_is_diagnosed_as_a_model_id(self):
+        """`claude-opus-5` has no second dotted segment; it is still a model id, and the
+        failure has to say so rather than blaming the tier rendering."""
+        agents = self._agents_dir({"reviewer.md": ("model: opus", "model: claude-opus-5")})
+        found = GATE.problems(catalog_path=self._catalog_path(), agents_dir=agents)
+        self.assertTrue(
+            any("names a model id directly" in p and "reviewer" in p for p in found), found)
+
     def test_a_broken_catalog_is_a_gate_failure_not_a_traceback(self):
         path = os.path.join(self.dir, "model_catalog.json")
         with open(path, "w", encoding="utf-8") as fh:
             fh.write("{ not json")
         found = GATE.problems(catalog_path=path, agents_dir=self._agents_dir())
         self.assertTrue(found)
+
+
+class TestNetworkModesTakeTheUpstreamTheyAreGiven(unittest.TestCase):
+    """`upstream or _fetch()` silently re-fetched on a falsy body, so an empty-but-valid
+    upstream response could never surface as red — it went and got a good one instead."""
+
+    def _no_network(self):
+        return unittest.mock.patch.object(
+            GATE, "_fetch", side_effect=AssertionError("re-fetched an upstream it was handed"))
+
+    def test_drift_does_not_refetch_an_empty_upstream(self):
+        with self._no_network():
+            found = GATE.drift(upstream={})
+        self.assertTrue(any("not_found" in f for f in found), found)
+
+    def test_drift_is_clean_against_the_upstream_it_is_handed(self):
+        catalog = _shipped()
+        upstream = {
+            "anthropic": {"models": {
+                mid: {"limit": {"context": row["context"]}}
+                for mid, row in catalog["providers"]["anthropic"].items()}}}
+        with self._no_network():
+            self.assertEqual(GATE.drift(upstream=upstream), [])
+
+    def test_drift_reports_a_changed_window(self):
+        catalog = _shipped()
+        upstream = {
+            "anthropic": {"models": {
+                mid: {"limit": {"context": 42}}
+                for mid in catalog["providers"]["anthropic"]}}}
+        with self._no_network():
+            found = GATE.drift(upstream=upstream)
+        self.assertTrue(any("drift:" in f and "42" in f for f in found), found)
+
+    def test_refresh_does_not_refetch_an_empty_upstream(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        path = _write(_shipped(), d)
+        with self._no_network():
+            GATE.refresh(catalog_path=path, upstream={})
+        self.assertEqual(MT.load(path)["providers"]["anthropic"], {})
 
 
 class TestProviderSwitchIsOneEdit(unittest.TestCase):

@@ -19,9 +19,12 @@ Default mode is offline, and is a `make ci` gate:
      that fails open must not be the only thing that notices
   3. every agent declares a `tier:` from the vocabulary
   4. every agent's `model:` equals its tier's Claude Code keyword
-  5. no agent `model:` is a full model id (a `/` ref or a digit-dotted id)
+  5. no agent `model:` is a full model id (anything carrying a `/` or a digit — every
+     harness keyword is a bare digit-free word)
   6. translation.yaml declares no second tier-to-id map (no `model_aliases` row with a
      `ref:` — the opencode generator resolves through the shared catalog instead)
+  7. every projected entry — not just the pinned ones — carries a positive integer window,
+     since `window_for` answers for any id a transcript names
 
 The catalog is a PINNED, MINIMAL PROJECTION of `https://models.dev/api.json`: every model
 the provider lists, with its context window and nothing else. It is vendored in-tree
@@ -33,10 +36,30 @@ same split `scripts/check_vendored_drift.py` already uses:
               `tiers` and `active_provider` are never touched). This is the refresh path:
               run it when a provider ships a model, then re-pin the tier ids by hand.
   --drift     fetch and compare without writing; exits non-zero on a differing window, an
-              id upstream no longer lists, or an upstream that could not be reached at all
-              — a gate that cannot measure is red, never green.
+              id upstream no longer lists, an id upstream has that the projection does
+              not, or an upstream that could not be reached at all — a gate that cannot
+              measure is red, never green.
 
-Neither network mode is in `make ci`; `make models-drift` runs the comparison.
+Neither network mode is in `make ci`. Run the comparison by hand:
+
+    python3 scripts/check_model_tiers.py --drift     # needs network
+
+WHAT EACH MODE CAN AND CANNOT CATCH. The offline mode checks a pinned id against the
+PROJECTION, so it is circular by construction: pinning `claude-omniscient-42` AND adding
+it to `providers` passes offline, green. That is inherent to an offline check and it is
+accepted, not overlooked — but it means the two modes divide the error classes and
+neither alone is sufficient:
+
+  offline catches   an id absent from the projection; a non-positive or non-integer
+                    window on any projected entry; a tier with no model for the active
+                    provider; an agent whose `model:` no longer renders its declared tier;
+                    an agent naming a model id; a second tier-to-id map in translation.yaml
+  --drift catches   a FABRICATED projection entry (an id upstream never had); a STALE one
+                    (a window upstream has since changed); a model retired upstream; and a
+                    model upstream added that the projection is missing
+
+So a hand-edited `providers` block is invisible to `make ci` and visible only to
+`--drift`. Run `--drift` before trusting a projection you did not produce with `--refresh`.
 
 Stdlib-only, deterministic. Exit 0 = clean; exit 1 = problems (prints every one).
 Usage: python3 scripts/check_model_tiers.py [--refresh | --drift]
@@ -62,9 +85,11 @@ TRANSLATION = os.path.join(REPO, "translation.yaml")
 UPSTREAM = "https://models.dev/api.json"
 FETCH_TIMEOUT = 60
 
-#: A `model:` value that names a model rather than a harness keyword: a provider-prefixed
-#: ref, or a versioned id like `claude-opus-4-1` / `gpt-5.6`.
-FULL_MODEL_ID = re.compile(r"/|[A-Za-z]-?\d+[.-]\d")
+#: A `model:` value that names a model rather than a harness keyword. Every harness keyword
+#: is a bare digit-free word (`sonnet` / `opus` / `haiku` / `inherit`) and every model id
+#: carries a version number, so "a slash or a digit" is the whole rule — and it catches a
+#: single-segment id like `claude-opus-5`, which a digit-DOTTED pattern misses.
+FULL_MODEL_ID = re.compile(r"[/\d]")
 
 
 def agent_fields(path):
@@ -95,17 +120,25 @@ def problems(catalog_path=None, agents_dir=None, translation_path=None):
     provider = MT.active_provider(catalog)
     projected = catalog["providers"]
 
+    # EVERY projection entry, not just the pinned ones: `window_for` answers for any id a
+    # transcript names, so a corrupted window on an unpinned model reaches a hook the same way.
+    for prov, models in sorted(projected.items()):
+        if not isinstance(models, dict):
+            found.append(f"projected catalog for `{prov}` is not an object")
+            continue
+        for model_id, row in sorted(models.items()):
+            context = row.get("context") if isinstance(row, dict) else None
+            if not isinstance(context, int) or isinstance(context, bool) or context <= 0:
+                found.append(
+                    f"projected entry `{prov}/{model_id}` carries context window "
+                    f"{context!r} — re-run --refresh")
+
     for tier in MT.tiers(catalog):
         for prov, model_id in sorted(catalog["tiers"][tier].get("models", {}).items()):
-            row = projected.get(prov, {}).get(model_id)
-            if not isinstance(row, dict):
+            if not isinstance(projected.get(prov, {}).get(model_id), dict):
                 found.append(
                     f"tier `{tier}` pins `{prov}/{model_id}`, which the projected catalog "
                     f"for `{prov}` does not list — an invented or retired id")
-            elif not isinstance(row.get("context"), int) or row["context"] <= 0:
-                found.append(
-                    f"tier `{tier}` pins `{prov}/{model_id}`, whose projected context "
-                    f"window is {row.get('context')!r} — refresh the projection")
         if MT.model_for(catalog, tier) is None:
             found.append(
                 f"tier `{tier}` has no model for the active provider `{provider}` — the "
@@ -190,7 +223,10 @@ def _write(catalog, path):
 def refresh(catalog_path=None, upstream=None):
     path = catalog_path or MT.CATALOG_PATH
     catalog = MT.load(path)
-    catalog["providers"] = project(upstream or _fetch(), _providers(catalog))
+    # `is None`, not `or`: an empty-but-valid upstream body must reach the projection as
+    # the emptiness it is, never be quietly replaced by a second fetch that went better.
+    catalog["providers"] = project(_fetch() if upstream is None else upstream,
+                                   _providers(catalog))
     _write(catalog, path)
     counts = ", ".join(f"{p}: {len(m)}" for p, m in sorted(catalog["providers"].items()))
     print(f"✓ model catalog projection refreshed — {path} ({counts})")
@@ -200,7 +236,7 @@ def refresh(catalog_path=None, upstream=None):
 def drift(catalog_path=None, upstream=None):
     """Compare the projection against upstream. Returns a list of problems."""
     catalog = MT.load(catalog_path)
-    fresh = project(upstream or _fetch(), _providers(catalog))
+    fresh = project(_fetch() if upstream is None else upstream, _providers(catalog))
     found = []
     for prov, models in sorted(catalog["providers"].items()):
         for mid, row in sorted(models.items()):
