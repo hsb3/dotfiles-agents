@@ -83,6 +83,9 @@ FILL_RE = re.compile(r"^\s*(?:style|classDef)\b.*\bfill\s*:", re.MULTILINE)
 
 #: Every flowchart edge form: `-->`, `--->`, `-.->`, `==>`, and the plain `---` connector.
 ARROW_RE = re.compile(r"[-=.]{2,}>|-{3}")
+#: The inline-label edge forms — `-.text.->`, `--text-->`, `==text==>`. The middle excludes
+#: `>` so a match can never span two arrows and mask the node between them.
+EDGE_INLINE_LABEL_RE = re.compile(r"(--|-\.|==)([^\n>]*?)(\.-+>|-+>|=+>)")
 LEADING_IDENT_RE = re.compile(r"\s*([A-Za-z_][A-Za-z0-9_-]*)")
 TRAILING_IDENT_RE = re.compile(r"([A-Za-z_][A-Za-z0-9_-]*)\s*$")
 
@@ -123,17 +126,30 @@ def _edge_labels(body):
     return [seg for seg in re.findall(r"\|([^|\n]*)\|", body)]
 
 
-def _node_ids(body):
-    """Distinct node ids in a fence, for the ceiling check.
+def _mask_labels(body):
+    """Blank every label — node shape, `|pipe|`, and inline edge — leaving ids and arrows.
 
-    Labels are blanked first so their prose never reads as an identifier; what remains is
-    ids, arrows, and grammar, and RESERVED removes the grammar.
+    Arrow characters survive so a caller can still split on ARROW_RE. The inline forms
+    (`-.text.->`, `--text-->`, `==text==>`) are as valid as the pipe form, and a label left
+    unmasked reads as node ids; the mask never crosses a `>`, so a chained `A --> B --> C`
+    cannot swallow B.
     """
     masked = list(body)
     for label, off in _scan_shape_labels(body):
         for p in range(off, off + len(label)):
             masked[p] = " "
     masked = re.sub(r"\|[^|\n]*\|", " ", "".join(masked))
+    return EDGE_INLINE_LABEL_RE.sub(
+        lambda m: m.group(1) + " " * len(m.group(2)) + m.group(3), masked)
+
+
+def _node_ids(body):
+    """Distinct node ids in a fence, for the ceiling check.
+
+    Labels are blanked first so their prose never reads as an identifier; what remains is
+    ids, arrows, and grammar, and RESERVED removes the grammar.
+    """
+    masked = _mask_labels(body)
     ids = set()
     for line in masked.splitlines():
         stripped = line.strip()
@@ -152,11 +168,7 @@ def _reserved_used_as_node_ids(body):
     Labels are blanked first so prose containing the word `end` or `class` is not mistaken
     for a node id.
     """
-    masked = list(body)
-    for label, off in _scan_shape_labels(body):
-        for p in range(off, off + len(label)):
-            masked[p] = " "
-    masked = re.sub(r"\|[^|\n]*\|", " ", "".join(masked))
+    masked = _mask_labels(body)
     hits = set()
     for line in masked.splitlines():
         parts = ARROW_RE.split(line)

@@ -66,6 +66,17 @@ jobs:
       # when that ref is unreachable, so a network blip does not block every PR.
       - name: version-bump gate (published bytes vs origin/main)
         run: python3 scripts/check_version_bump.py
+      # Removal gate (card 7sv8): a unit published on origin/main and absent from this tree
+      # must be declared by the commit that removed it. Nothing else watches deletions — a
+      # removal moves no version, breaks no symlink and orphans no roster entry, so the
+      # version-bump gate above says outright that it does not cover one. Rides this job for
+      # the same two reasons as the gates around it (needs network to reach origin/main; dev's
+      # branch protection pins required checks by job NAME). UNLIKE the two gates above it does
+      # NOT skip-and-pass on an unreadable published tree: that is red (decision-016 point 4),
+      # and the failure says outright that it is not evidence of a removal. Needs this job's
+      # fetch-depth: 0 — the declaration is read from the commit that deleted the unit.
+      - name: removal gate (published units absent here must be declared)
+        run: python3 scripts/check_removals.py
       # Vendored-drift gate: every `origin: vendored` base/ against its pinned upstream ref
       # (docs/vendoring-rule.md). Rides this job for the same two reasons as the gate above
       # — it needs network to reach the upstream, and dev's branch protection pins required

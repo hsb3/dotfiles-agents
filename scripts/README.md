@@ -26,12 +26,15 @@ guards` CI job.
 
 They do not agree on what an unreachable remote means. `check_version_bump.py` and
 `check_vendored_drift.py` skip with a notice and exit 0, so a blip does not block every PR.
-`check_labels.py` is red instead (decision-016): a gate that cannot measure is red, never
-green. Both behaviours are deliberate; check the script before assuming either.
+`check_labels.py` and `check_removals.py` are red instead (decision-016 point 4): a gate that
+cannot measure is red, never green, because a step that exits 0 having measured nothing reads
+in the CI summary exactly like one that measured and found the tree clean. Both behaviours
+are deliberate; check the script before assuming either.
 
 | Script | Make target | Proves |
 |---|---|---|
 | `check_version_bump.py` | none — CI step only | changed published bytes ship under a moved version (compares against `origin/main`) |
+| `check_removals.py` | none — CI step only | a unit published on `origin/main` and absent here was declared by the commit that removed it (both sets derived from the two trees, never an inventory). `--notes` renders the removals as the release-page section. Red, not skipped, when the published tree cannot be read |
 | `check_vendored_drift.py` | `vendored-drift` | every `origin: vendored` `base/` still matches its pinned upstream ref |
 | `check_manifests.py` | `manifests` | `claude plugin validate --strict` over the marketplace and every assembly (needs the `claude` binary) |
 | `check_labels.py` | `labels` | the repo's live GitHub label set is exactly the closed vocabulary (decision-016); names the `gh label delete`/`create` fix for each difference. Red — not skipped — whenever it cannot read the live set |

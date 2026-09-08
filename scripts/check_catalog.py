@@ -20,9 +20,11 @@ table rather than as a passing one. Six checks:
   2. Catalog cell content — per row, `Kind` is exactly `bundle` or `standalone` AND
      agrees with the assembly on disk (a plugin whose `plugins/<id>/` holds more than one
      skill, or any agent, hook, or command, is a bundle; a one-skill assembly is
-     standalone); the blurb is a non-empty single sentence of at most 140 characters; the
-     `Contents` cell is a `<n> skills · <n> agents · <n> hooks · <n> commands` list whose
-     counts equal what `plugins/<id>/{skills,agents,hooks,commands}/` actually holds (a
+     standalone — an MCP server does not enter this, since kind counts the units a user
+     invokes); the blurb is a non-empty single sentence of at most 140 characters; the
+     `Contents` cell is a `<n> skills · <n> agents · <n> hooks · <n> commands ·
+     <n> MCP servers` list whose counts equal what `plugins/<id>/` actually holds — the
+     four member directories, plus the servers `plugins/<id>/.mcp.json` declares (a
      unit with a zero count is omitted from the cell, not written as `0`).
   3. Published-surface links — every inline Markdown link, reference-style link
      definition (`[label]: dest`), and HTML `href=`/`src=` attribute in README.md is an
@@ -87,9 +89,11 @@ PUBLISHED_BLURB = (
 )
 
 KINDS = ("bundle", "standalone")
-CONTENTS_UNITS = ("skill", "agent", "hook", "command")
-CONTENTS_TOKEN = re.compile(r"^(\d+)\s+(skill|agent|hook|command)s?$")
+CONTENTS_UNITS = ("skill", "agent", "hook", "command", "MCP server")
+CONTENTS_TOKEN = re.compile(r"^(\d+)\s+(skill|agent|hook|command|MCP server)s?$")
 CONTENTS_SEP = "·"
+CONTENTS_SHAPE = f" {CONTENTS_SEP} ".join(f"<n> {u}s" for u in CONTENTS_UNITS)
+MCP_SPEC = ".mcp.json"
 MAX_BLURB_CHARS = 140
 MIN_DESCRIPTION_CHARS = 40
 SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
@@ -233,8 +237,26 @@ def _count_children(path, want_dirs, suffix=None):
     return n
 
 
+def _count_mcp_servers(base):
+    """Count the servers plugins/<pid>/.mcp.json declares — the file is not a member dir.
+
+    A spec that will not parse counts zero: JSON validity is `check_manifests.py`'s job,
+    and reading a broken file as "one server" would make this guard's message blame the
+    catalog for a defect that is not there.
+    """
+    path = os.path.join(base, MCP_SPEC)
+    if not os.path.isfile(path):
+        return 0
+    try:
+        with open(path, encoding="utf-8") as fh:
+            servers = json.load(fh).get("mcpServers")
+    except (ValueError, OSError, AttributeError):
+        return 0
+    return len(servers) if isinstance(servers, dict) else 0
+
+
 def _assembly_counts(pid):
-    """Return (skills, agents, hooks, commands) for plugins/<pid>/, or None if absent.
+    """Return (skills, agents, hooks, commands, mcp servers) for plugins/<pid>/, or None.
 
     Order matches CONTENTS_UNITS; commands are flat `.md` files like agents.
     """
@@ -246,12 +268,17 @@ def _assembly_counts(pid):
         _count_children(os.path.join(base, "agents"), want_dirs=False, suffix=".md"),
         _count_children(os.path.join(base, "hooks"), want_dirs=True),
         _count_children(os.path.join(base, "commands"), want_dirs=False, suffix=".md"),
+        _count_mcp_servers(base),
     )
 
 
 def _expected_kind(counts):
-    """A multi-skill assembly, or one carrying agents, hooks, or commands, is a bundle."""
-    skills, agents, hooks, commands = counts
+    """A multi-skill assembly, or one carrying agents, hooks, or commands, is a bundle.
+
+    An MCP server is deliberately not part of this: kind counts the units a user invokes,
+    and a server spec rides along with the skill that drives it.
+    """
+    skills, agents, hooks, commands = counts[:4]
     return "bundle" if (skills > 1 or agents or hooks or commands) else "standalone"
 
 
@@ -297,7 +324,7 @@ def _row_cell_problems(pid, cells):
     elif counts is not None:
         expected = _expected_kind(counts)
         if kind != expected:
-            skills, agents, hooks, commands = counts
+            skills, agents, hooks, commands = counts[:4]
             problems.append(
                 f"README.md catalog row for `{pid}`: Kind cell {kind!r} disagrees with the "
                 f"assembly — plugins/{pid}/ holds {skills} skill(s), {agents} agent(s), "
@@ -332,8 +359,7 @@ def _row_cell_problems(pid, cells):
         if stated is None:
             problems.append(
                 f"README.md catalog row for `{pid}`: Contents cell {contents!r} is not a "
-                f"`<n> skills {CONTENTS_SEP} <n> agents {CONTENTS_SEP} <n> hooks "
-                f"{CONTENTS_SEP} <n> commands` list"
+                f"`{CONTENTS_SHAPE}` list"
             )
         else:
             actual = {u: n for u, n in zip(CONTENTS_UNITS, counts) if n}

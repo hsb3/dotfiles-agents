@@ -162,6 +162,24 @@ class DiagramGuard(unittest.TestCase):
         self.assertEqual(D.problems(), [])
         self.assertEqual(D._node_ids(body), {"A", "B"})
 
+    def test_inline_dotted_edge_label_does_not_count_as_a_node(self):
+        # `-.text.->` is as valid as `-.->|text|`; both must mask the label the same way
+        body = "flowchart TD\n  A -.calls.-> B\n  B -->|ok| C\n"
+        self.assertEqual(D._node_ids(body), {"A", "B", "C"})
+
+    def test_inline_labels_on_plain_and_thick_edges_do_not_count_as_nodes(self):
+        self.assertEqual(D._node_ids("flowchart TD\n  A --calls--> B\n"), {"A", "B"})
+        self.assertEqual(D._node_ids("flowchart TD\n  A == calls ==> B\n"), {"A", "B"})
+
+    def test_unlabelled_edges_and_chains_keep_every_node(self):
+        self.assertEqual(D._node_ids("flowchart TD\n  A --> B --> C\n"), {"A", "B", "C"})
+        self.assertEqual(D._node_ids("flowchart TD\n  A --- B --- C\n"), {"A", "B", "C"})
+        self.assertEqual(D._node_ids("flowchart TD\n  A -.-> B ==> C\n"), {"A", "B", "C"})
+
+    def test_reserved_word_in_an_inline_dotted_label_is_allowed(self):
+        self._write("# alpha\n\n```mermaid\nflowchart LR\n    load -.end.-> fin[Fin]\n```\n")
+        self.assertEqual(D.problems(), [])
+
     # --- check 5: ghost primitives ------------------------------------------------
 
     def test_naming_a_primitive_the_plugin_does_not_ship_is_flagged(self):

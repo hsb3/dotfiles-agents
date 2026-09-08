@@ -43,7 +43,7 @@ python3 "$S/kaneo_board.py" apply --changeset changeset.tsv --apply    # write
 
 Dry-run by default. Cells already at the target value are dropped, so re-runs are free. Writes go
 through `PATCH /task/bulk`, grouped into one call per (operation, value). Unresolvable rows print
-as `SKIP` on stderr; the resolvable rows still apply.
+as `SKIP` on stderr and set a non-zero exit; the resolvable rows still apply.
 
 **Every written cell is verified.** After the writes, apply waits `--settle-seconds` (default
 2.0, `0` skips the wait) and re-pulls the board, then re-plans the same changeset rows against it.

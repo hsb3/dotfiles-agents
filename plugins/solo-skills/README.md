@@ -95,7 +95,7 @@ this plugin on its own, and one that sheds a dependency joins it.
 
 | Skill | What it does |
 |---|---|
-| `comms` | Recurring communication deliverables — morning briefing, end-of-day wrap-up, weekly plan, board readout — shipped as a deck to a consistent standard. |
+| `comms` | Recurring communication deliverables — morning briefing, end-of-day wrap-up, weekly plan, board readout — shipped as a deck to a consistent standard. Its bundled example reads the palette it ships beside it, so the sample renders on this bundle alone. |
 | `task-authoring` | Write tracked work items a cold agent can execute — titles, acceptance criteria, thresholds, approval gates, and scope ownership, on any tracker. |
 
 **Obsidian plugin development**

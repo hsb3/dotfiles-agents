@@ -12,7 +12,9 @@ file: two commands and a field map, no edit to the rubric.
 
 Every adapter writes only on `--apply`. The default run is a preview you read first, and it
 refuses the same rows the write would, so an unresolvable changeset is caught before it
-touches the board.
+touches the board. A refused row is a failure on every adapter alike: it prints as a `SKIP` on
+stderr and the run exits non-zero, while the rows that did resolve are still applied. So
+`apply || abort` behaves the same whichever board is underneath, and stdout stays the row log.
 
 ## When it triggers
 

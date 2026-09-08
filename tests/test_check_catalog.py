@@ -101,7 +101,8 @@ class CatalogGuard(unittest.TestCase):
         with open(C.MARKETPLACE, "w", encoding="utf-8") as fh:
             json.dump({"metadata": {"description": metadata_description}, "plugins": entries}, fh)
 
-    def _write_plugin(self, pid, description, version="0.0.1", skills=1, agents=0, hooks=0, commands=0):
+    def _write_plugin(self, pid, description, version="0.0.1", skills=1, agents=0, hooks=0,
+                      commands=0, mcp_servers=0, mcp_body=None):
         """Write plugins/<pid>/ — manifest, README, and (additively) its assembly members."""
         pdir = os.path.join(self.fix, "plugins", pid, ".claude-plugin")
         os.makedirs(pdir, exist_ok=True)
@@ -136,6 +137,12 @@ class CatalogGuard(unittest.TestCase):
             os.makedirs(os.path.join(base, "commands"), exist_ok=True)
             with open(os.path.join(base, "commands", f"{pid}-command-{i}.md"), "w", encoding="utf-8") as fh:
                 fh.write("---\ndescription: x\n---\ndo the thing\n")
+        if mcp_servers or mcp_body is not None:
+            body = mcp_body if mcp_body is not None else json.dumps(
+                {"mcpServers": {f"{pid}-server-{i}": {"type": "http", "url": "${U}/mcp"}
+                                for i in range(mcp_servers)}})
+            with open(os.path.join(base, ".mcp.json"), "w", encoding="utf-8") as fh:
+                fh.write(body)
 
     def _write_readme(self, text):
         with open(C.README_PATH, "w", encoding="utf-8") as fh:
@@ -298,7 +305,7 @@ class CatalogGuard(unittest.TestCase):
         self._write_plugin("omega", "Omega is a fixture plugin used only for command counting.",
                             skills=1, commands=1)
         counts = C._assembly_counts("omega")
-        self.assertEqual(counts, (1, 0, 0, 1))
+        self.assertEqual(counts, (1, 0, 0, 1, 0))
         self.assertEqual(C._expected_kind(counts), "bundle")
 
         singular = C._contents_label({"skill": 1, "command": 1})
@@ -308,6 +315,51 @@ class CatalogGuard(unittest.TestCase):
         plural = C._contents_label({"command": 2})
         self.assertEqual(plural, "2 commands")
         self.assertEqual(C._parse_contents(plural), {"command": 2})
+
+    def test_mcp_server_counts_and_contents_cell(self):
+        """An MCP server is a `.mcp.json` at the plugin ROOT, not a subdirectory of members,
+        so it needs its own counter — but it is still derived from the assembly on disk."""
+        self._write_plugin("gamma", "Gamma is a fixture plugin used only for server counting.",
+                           skills=1, mcp_servers=1)
+        counts = C._assembly_counts("gamma")
+        self.assertEqual(counts, (1, 0, 0, 0, 1))
+
+        singular = C._contents_label({"skill": 1, "MCP server": 1})
+        self.assertEqual(singular, "1 skill · 1 MCP server")
+        self.assertEqual(C._parse_contents(singular), {"skill": 1, "MCP server": 1})
+
+        plural = C._contents_label({"MCP server": 2})
+        self.assertEqual(plural, "2 MCP servers")
+        self.assertEqual(C._parse_contents(plural), {"MCP server": 2})
+
+    def test_mcp_server_count_is_the_specs_server_entries_not_the_file(self):
+        """One `.mcp.json` may declare several servers; the count is what it declares."""
+        self._write_plugin("gamma", "Gamma is a fixture plugin used only for server counting.",
+                           skills=1, mcp_servers=3)
+        self.assertEqual(C._assembly_counts("gamma")[4], 3)
+
+    def test_an_mcp_spec_that_declares_nothing_counts_zero(self):
+        self._write_plugin("gamma", "Gamma is a fixture plugin used only for server counting.",
+                           skills=1, mcp_body="{ not json at all")
+        self.assertEqual(C._assembly_counts("gamma")[4], 0)
+
+    def test_undeclared_mcp_server_is_red(self):
+        self._write_plugin("alpha", ALPHA_DESC, skills=2, agents=1, hooks=1, mcp_servers=1)
+        problems = C.catalog_problems()
+        self.assertTrue(
+            any("`alpha`" in p and "1 MCP server" in p for p in problems), problems
+        )
+
+    def test_declared_mcp_server_is_clean(self):
+        self._write_plugin("alpha", ALPHA_DESC, skills=2, agents=1, hooks=1, mcp_servers=1)
+        self._row_with(ALPHA_ROW, contents="2 skills · 1 agent · 1 hook · 1 MCP server")
+        self.assertEqual(C.catalog_problems(), [])
+
+    def test_an_mcp_server_alone_does_not_make_a_bundle(self):
+        """Kind counts the units a user invokes; a server spec rides along with the skill
+        that drives it, so a one-skill plugin registering a server stays standalone."""
+        self._write_plugin("beta", BETA_DESC, skills=1, mcp_servers=1)
+        self.assertEqual(C._expected_kind(C._assembly_counts("beta")), "standalone")
 
     # -- check 3: published-surface links ------------------------------------
 

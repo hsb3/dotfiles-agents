@@ -7,9 +7,11 @@ and make the ask of the board** - the open questions are commercial, not technic
 exactly what the board is for. Toolchain pptx-themes (NOT `deliver.py`); theme `actuarial-signal`;
 `.pptx` + `.pdf` with a confidential footer; audio optional. Folder slug `-advisor-overview`.
 
-> Invoke the `pptx-themes` skill for palette, tokens, typography, and visual QA. `sample.deck.js`
-> is the gold reference for layout (cards, ledger columns, 2x2 matrix, status chips); note its
-> `require` of the pptx-themes `theme-tokens.js` - keep that pattern.
+> Invoke the `pptx-themes` skill for palette, typography, and visual QA. `sample.deck.js`
+> is the gold reference for layout (cards, ledger columns, 2x2 matrix, status chips); it
+> reads its tokens from this skill's own `themes/actuarial-signal.json`, so it runs on a bare
+> install - keep that pattern. When you do author against pptx-themes, take its token set
+> there; do not hardcode a path into another skill's install directory.
 
 ## The one rule
 

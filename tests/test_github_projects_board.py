@@ -444,7 +444,7 @@ class Apply(unittest.TestCase):
         code, out, err = run_main(self.argv(cs, "--apply"), gh)
         self.assertEqual(0, code, out + err)
         self.assertEqual(1, len(gh.mutations()), out)
-        self.assertNotIn("SKIP", out, "the header is a header, not a row keyed 'issue'")
+        self.assertNotIn("SKIP", out + err, "the header is a header, not a row keyed 'issue'")
 
     def test_rerun_against_the_written_board_writes_nothing(self):
         gh = board_gh([page(item(1, status="Done"))])
@@ -473,13 +473,37 @@ class Apply(unittest.TestCase):
             ("1", "blocked_by", "2"),  # needs --repo
         )
         code, out, err = run_main(self.argv(cs, "--apply"), gh)
-        self.assertEqual(0, code, out + err)
-        self.assertIn("SKIP  #9 status=Done: not on board", out)
-        self.assertIn("SKIP  #1 nope=x: no field matches 'nope'", out)
-        self.assertIn("(LABELS) not settable", out)
-        self.assertIn("SKIP  row key='abc': not an integer", out)
-        self.assertIn("SKIP  #1 blocked_by=2: --repo required", out)
-        self.assertEqual(5, out.count("SKIP  "), out)
+        self.assertEqual(1, code, out + err)
+        self.assertIn("SKIP  #9 status=Done: not on board", err)
+        self.assertIn("SKIP  #1 nope=x: no field matches 'nope'", err)
+        self.assertIn("(LABELS) not settable", err)
+        self.assertIn("SKIP  row key='abc': not an integer", err)
+        self.assertIn("SKIP  #1 blocked_by=2: --repo required", err)
+        self.assertEqual(5, err.count("SKIP  "), err)
+        self.assertEqual([], gh.mutations())
+
+    def test_a_skip_is_a_failure_on_stderr_and_the_rest_still_applies(self):
+        """The contract's SKIP ruling: non-zero, on stderr, resolvable rows still written.
+
+        An operator scripting `apply || abort` has to get the same answer from every
+        adapter, and has to be able to tee stdout without the refusals vanishing into it.
+        """
+        gh = board_gh([page(item(1))])
+        cs = self.changeset(("9", "status", "Done"), ("1", "status", "Done"))
+        code, out, err = run_main(self.argv(cs, "--apply"), gh)
+        self.assertEqual(1, code, out + err)
+        self.assertIn("SKIP  #9 status=Done: not on board", err)
+        self.assertNotIn("SKIP", out, "a refusal belongs on stderr, not in the row log")
+        self.assertIn("SET   #1 status=Done", out, "the resolvable row still applies")
+        self.assertEqual(1, len(gh.mutations()), out)
+
+    def test_a_dry_run_with_a_skip_also_exits_non_zero(self):
+        gh = board_gh([page(item(1))])
+        cs = self.changeset(("9", "status", "Done"), ("1", "status", "Done"))
+        code, out, err = run_main(self.argv(cs), gh)
+        self.assertEqual(1, code, out + err)
+        self.assertIn("SKIP  #9 status=Done: not on board", err)
+        self.assertIn("DRY   would set #1 status=Done", out)
         self.assertEqual([], gh.mutations())
 
     def test_unknown_single_select_option_fails_the_run(self):

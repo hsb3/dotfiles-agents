@@ -303,7 +303,7 @@ def cmd_export(args):
 def _dependency_row(args, issue, field, value, tag):
     """blocked_by / blocking: not project cells at all — they live on the REST issue graph."""
     if not args.repo:
-        print(f"SKIP  {tag}: --repo required for {field}")
+        print(f"SKIP  {tag}: --repo required for {field}", file=sys.stderr)
         return "skipped"
     rc, out, _ = _gh("api", f"repos/{args.repo}/issues/{value}", "--jq", ".id", check=False)
     if rc != 0:
@@ -337,7 +337,7 @@ def cmd_apply(args):
         try:
             issue = int(key.lstrip("#"))
         except ValueError:
-            print(f"SKIP  row key={key!r}: not an integer")
+            print(f"SKIP  row key={key!r}: not an integer", file=sys.stderr)
             tally["skipped"] += 1
             continue
         tag = f"#{issue} {field}={value or '(clear)'}"
@@ -346,17 +346,18 @@ def cmd_apply(args):
             tally[_dependency_row(args, issue, field, value, tag)] += 1
             continue
         if issue not in items:
-            print(f"SKIP  {tag}: not on board")
+            print(f"SKIP  {tag}: not on board", file=sys.stderr)
             tally["skipped"] += 1
             continue
         name = resolve_field(field, fields)
         if not name:
-            print(f"SKIP  {tag}: no field matches '{field}'")
+            print(f"SKIP  {tag}: no field matches '{field}'", file=sys.stderr)
             tally["skipped"] += 1
             continue
         fdef = fields[name]
         if fdef["dataType"] not in SETTABLE:
-            print(f"SKIP  {tag}: field '{name}' ({fdef['dataType']}) not settable via project API")
+            print(f"SKIP  {tag}: field '{name}' ({fdef['dataType']}) not settable via project API",
+                  file=sys.stderr)
             tally["skipped"] += 1
             continue
 
@@ -397,7 +398,9 @@ def cmd_apply(args):
     )
     if not args.apply and tally["changed"]:
         print("re-run with --apply to write.", file=sys.stderr)
-    return 1 if tally["failed"] else 0
+    # A SKIP is a failure: the changeset asked for a cell that did not get written, and an
+    # operator scripting `apply || abort` has to see that. The resolvable rows still applied.
+    return 1 if tally["failed"] or tally["skipped"] else 0
 
 
 def _board_args(parser):

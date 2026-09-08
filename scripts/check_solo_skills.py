@@ -17,10 +17,29 @@ scripts, and it reads them differently because the two carry dependencies differ
      `SKILL.md` or `references/`. A path is a dependency; a prose mention of another
      skill by name is not, so only path- and wikilink-shaped references count here.
   2. **Sibling id in bundled code** — any other skill's id appearing anywhere under
-     `scripts/`. Code does not mention skills conversationally, so an id in a script is
-     a dependency even when it never forms a literal path.
+     `scripts/` or `examples/`. Code does not mention skills conversationally, so an id
+     in a script is a dependency even when it never forms a literal path. `examples/`
+     counts because a bundled sample is code a consumer runs: `comms`' advisor-board
+     sample required `~/.claude/skills/pptx-themes/...` for its palette, so the sample
+     was broken on any install without that sibling while the skill shipped solo.
   3. **Named-agent dispatch** — a roster agent id in backticks. A skill that dispatches
      this repo's agents cannot run without them.
+  4. **Hook coupling in bundled code** — a `primitives-core/hooks/` directory name
+     appearing in the skill's code. `activation/scripts/activation.py` resolves
+     `os.path.join(root, n, "hook.py")` over its `HOOK_NAMES`, so the literal
+     `hooks/<name>` never forms and only the id is visible — the same shape rule 2
+     exists for. Prose naming a hook is documentation and does not count.
+
+**A string match is EVIDENCE of coupling, not the definition of it.** The definition is a
+real runtime dependency: the skill does not function without the other primitive. No
+static scan can decide that, so every rule above reads a textual signal and the gate takes
+the conservative reading — a match excludes the skill from `solo-skills`. That trades false
+exclusions for false inclusions deliberately: a wrongly-excluded skill is one bundle short
+and visible in `--report`, while a wrongly-included one ships broken to every consumer.
+Rules 1 and 3 narrow the signal at the point where prose is genuinely conversational
+(path- and wikilink-shaped only; backticked agent ids only); rules 2 and 4 do not, because
+code does not mention siblings conversationally. A match that is provably not a dependency
+is retired through a named, audited exemption, never by loosening the rule.
 
 The gate is bidirectional, because the plugin's own description promises *every*
 standalone-capable skill:
@@ -55,14 +74,16 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILLS_DIR = os.path.join(REPO, "primitives-core", "skills")
 AGENTS_DIR = os.path.join(REPO, "primitives-core", "agents")
+HOOKS_DIR = os.path.join(REPO, "primitives-core", "hooks")
 SOLO_SKILLS_DIR = os.path.join(REPO, "plugins", "solo-skills", "skills")
 
 PROSE_NAMES = ("SKILL.md",)
 PROSE_DIRS = ("references",)
-CODE_DIRS = ("scripts",)
+CODE_DIRS = ("scripts", "examples")
 
-# Text extensions worth scanning inside scripts/ — a dependency lives in source, not in
-# a compiled artifact or a binary asset.
+# Text extensions worth scanning inside the code dirs — a dependency lives in source,
+# not in a compiled artifact or a binary asset. Sample DATA (`.json`, `.md`) is excluded
+# by the same reasoning: it imports nothing.
 CODE_SUFFIXES = (".py", ".sh", ".bash", ".zsh", ".js", ".ts", ".rb", ".pl")
 
 # Documented false positives for the agent rule, keyed (skill_id, agent_id).
@@ -125,6 +146,15 @@ def _agent_ids():
     )
 
 
+def _hook_ids():
+    if not os.path.isdir(HOOKS_DIR):
+        return []
+    return sorted(
+        d for d in os.listdir(HOOKS_DIR)
+        if os.path.isdir(os.path.join(HOOKS_DIR, d)) and not d.startswith((".", "_"))
+    )
+
+
 def _read(path):
     try:
         with open(path, encoding="utf-8") as fh:
@@ -164,7 +194,7 @@ def _rel(path):
     return os.path.relpath(path, REPO)
 
 
-def dependencies(skill_id, skill_ids, agent_ids):
+def dependencies(skill_id, skill_ids, agent_ids, hook_ids=()):
     """Return a list of human-readable dependency findings for one skill."""
     sdir = os.path.join(SKILLS_DIR, skill_id)
     siblings = [s for s in skill_ids if s != skill_id]
@@ -187,7 +217,7 @@ def dependencies(skill_id, skill_ids, agent_ids):
                     )
                     break
 
-    # 2. Sibling id anywhere in bundled code.
+    # 2 and 4, over one pass of the bundled code: a sibling skill's id, and a hook id.
     for path in _code_files(sdir):
         text = _read(path)
         for sib in siblings:
@@ -197,6 +227,13 @@ def dependencies(skill_id, skill_ids, agent_ids):
                 found.append(
                     f"bundled script names sibling skill `{sib}` "
                     f"at {_rel(path)}:{line}"
+                )
+        for hook in hook_ids:
+            m = re.search(rf"(?<![\w-]){re.escape(hook)}(?![\w-])", text)
+            if m:
+                line = text.count("\n", 0, m.start()) + 1
+                found.append(
+                    f"bundled script resolves hook `{hook}` at {_rel(path)}:{line}"
                 )
 
     # 3. Named-agent dispatch in prose. An optional `<plugin>:` prefix is allowed so the
@@ -260,6 +297,7 @@ def _members():
 def problems():
     skill_ids = _skill_ids()
     agent_ids = _agent_ids()
+    hook_ids = _hook_ids()
     members = _members()
     if members is None:
         return ["plugins/solo-skills/skills/: missing — the solo-skills assembly has no skills directory"]
@@ -267,7 +305,7 @@ def problems():
     out = list(stale_exemptions(skill_ids, agent_ids))
     eligible = []
     for sid in skill_ids:
-        deps = dependencies(sid, skill_ids, agent_ids)
+        deps = dependencies(sid, skill_ids, agent_ids, hook_ids)
         if not deps:
             eligible.append(sid)
         elif sid in members:
@@ -304,9 +342,10 @@ def problems():
 def report():
     skill_ids = _skill_ids()
     agent_ids = _agent_ids()
+    hook_ids = _hook_ids()
     eligible, blocked = [], []
     for sid in skill_ids:
-        deps = dependencies(sid, skill_ids, agent_ids)
+        deps = dependencies(sid, skill_ids, agent_ids, hook_ids)
         (eligible if not deps else blocked).append((sid, deps))
     print(f"standalone-capable ({len(eligible)}):")
     for sid, _ in eligible:
@@ -332,7 +371,8 @@ def main():
     print(
         f"✓ solo-skills membership clean — {len(members)} skills, each verified "
         "standalone-capable (no sibling path, no sibling id in bundled code, no agent "
-        "dispatch); every standalone-capable skill is a member or system-exempted "
+        "dispatch, no hook resolved from bundled code); every standalone-capable skill "
+        "is a member or system-exempted "
         f"({len(SYSTEM_EXEMPTIONS)} exempted)"
     )
     return 0

@@ -74,6 +74,16 @@ jobs:
           # would otherwise surface every ignored-on-dev leftover as untracked noise.
           cp .gitignore "$ASM/.gitignore"
           echo "ASM=$ASM" >> "$GITHUB_ENV"
+      # A removal is the one publish-surface change with nothing to read it off: no version
+      # moves, no manifest entry appears, and the tree simply gets smaller. Rendered here so
+      # it reaches the release page (decision-013) rather than only the gate's exit code.
+      #
+      # ORDER IS LOAD-BEARING: this runs BEFORE the commit step, because that step's push
+      # advances origin/main to the tree being published — after it the removed unit is absent
+      # from BOTH sides and the diff is empty. The section is captured now and pasted into the
+      # notes below. `--notes` always exits 0; notes must never be why a publish fails.
+      - name: Render the removal notes (published units this tree no longer ships)
+        run: python3 scripts/check_removals.py --notes > "$RUNNER_TEMP/removals.md"
       - name: Commit to main — parented, append-only
         run: |
           set -euo pipefail
@@ -163,6 +173,10 @@ jobs:
             echo
             echo "Install: \`claude plugin install <name>@dotfiles-agents\`"
             echo
+            if [ -s "$RUNNER_TEMP/removals.md" ]; then
+              cat "$RUNNER_TEMP/removals.md"
+              echo
+            fi
             gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
               -f tag_name="$REL_TAG" -f target_commitish="$DEV_FULL_SHA" \
               --jq .body

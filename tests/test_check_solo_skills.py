@@ -17,6 +17,41 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import check_solo_skills as S  # noqa: E402
 
+# The hook-resolution core of primitives-core/skills/activation/scripts/activation.py,
+# copied here with its two sibling-skill mentions (`delegation`, `handoff`) stripped so
+# the only coupling left is the hook directory. It carries no literal `hooks/<name>`
+# either: the path is assembled with os.path.join, exactly as the real file does.
+ACTIVATION_HOOK_RESOLUTION = '''\
+import os
+
+HOOK_NAMES = (
+    "worker-context",
+    "config-custody",
+    "worktree-isolation",
+    "session-handoff-surfacer",
+    "handoff-freshness-guard",
+    "worker-git-scope-guard",
+)
+
+
+def _hook_roots():
+    seen = []
+    for base in (os.path.dirname(os.path.abspath(__file__)),
+                 os.path.dirname(os.path.realpath(__file__))):
+        root = os.path.normpath(os.path.join(base, "..", "..", "..", "hooks"))
+        if root not in seen:
+            seen.append(root)
+    return seen
+
+
+def load_hooks():
+    for root in _hook_roots():
+        paths = {n: os.path.join(root, n, "hook.py") for n in HOOK_NAMES}
+        if all(os.path.isfile(p) for p in paths.values()):
+            return paths
+    return None
+'''
+
 
 class SoloSkillsGate(unittest.TestCase):
     def setUp(self):
@@ -24,18 +59,20 @@ class SoloSkillsGate(unittest.TestCase):
         self.saved = {
             k: getattr(S, k)
             for k in (
-                "REPO", "SKILLS_DIR", "AGENTS_DIR", "SOLO_SKILLS_DIR",
+                "REPO", "SKILLS_DIR", "AGENTS_DIR", "HOOKS_DIR", "SOLO_SKILLS_DIR",
                 "AGENT_EXEMPTIONS", "SYSTEM_EXEMPTIONS",
             )
         }
         S.REPO = self.fix
         S.SKILLS_DIR = os.path.join(self.fix, "primitives-core", "skills")
         S.AGENTS_DIR = os.path.join(self.fix, "primitives-core", "agents")
+        S.HOOKS_DIR = os.path.join(self.fix, "primitives-core", "hooks")
         S.SOLO_SKILLS_DIR = os.path.join(self.fix, "plugins", "solo-skills", "skills")
         S.AGENT_EXEMPTIONS = {}
         S.SYSTEM_EXEMPTIONS = {}
         os.makedirs(S.SKILLS_DIR)
         os.makedirs(S.AGENTS_DIR)
+        os.makedirs(S.HOOKS_DIR)
         os.makedirs(S.SOLO_SKILLS_DIR)
         with open(os.path.join(S.AGENTS_DIR, "manager.md"), "w") as fh:
             fh.write("---\nname: manager\n---\n")
@@ -49,7 +86,7 @@ class SoloSkillsGate(unittest.TestCase):
 
     # --- fixture helpers -------------------------------------------------
 
-    def skill(self, sid, body="Body.", ref=None, script=None):
+    def skill(self, sid, body="Body.", ref=None, script=None, example=None):
         d = os.path.join(S.SKILLS_DIR, sid)
         os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, "SKILL.md"), "w") as fh:
@@ -62,6 +99,16 @@ class SoloSkillsGate(unittest.TestCase):
             os.makedirs(os.path.join(d, "scripts"), exist_ok=True)
             with open(os.path.join(d, "scripts", "run.py"), "w") as fh:
                 fh.write(script + "\n")
+        if example is not None:
+            os.makedirs(os.path.join(d, "examples", "demo"), exist_ok=True)
+            with open(os.path.join(d, "examples", "demo", "sample.js"), "w") as fh:
+                fh.write(example + "\n")
+
+    def hook(self, name):
+        d = os.path.join(S.HOOKS_DIR, name)
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "hook.py"), "w") as fh:
+            fh.write("# hook\n")
 
     def member(self, sid):
         os.symlink(
@@ -73,6 +120,13 @@ class SoloSkillsGate(unittest.TestCase):
         self.assertTrue(
             any(needle in p for p in probs),
             f"expected a problem containing {needle!r}, got {probs}",
+        )
+
+    def assertNoProblem(self, needle):
+        probs = S.problems()
+        self.assertFalse(
+            any(needle in p for p in probs),
+            f"expected no problem containing {needle!r}, got {probs}",
         )
 
     # --- green path ------------------------------------------------------
@@ -118,6 +172,27 @@ class SoloSkillsGate(unittest.TestCase):
         self.member("beta")
         self.assertProblem("bundled script names sibling skill `alpha`")
 
+    def test_sibling_id_in_bundled_example_code_is_red(self):
+        # examples/ ships runnable code the same way scripts/ does — a cross-skill
+        # require in a bundled sample is a dependency a consumer hits on first run.
+        self.skill(
+            "beta", "Beta.",
+            example='const { T } = require("~/.claude/skills/alpha/assets/t.js");',
+        )
+        self.member("beta")
+        self.assertProblem("bundled script names sibling skill `alpha`")
+
+    def test_non_code_example_asset_is_not_scanned(self):
+        # Only source extensions are read: sample DATA carrying a sibling id is not
+        # shipped code and cannot import anything.
+        self.skill("beta", "Beta.")
+        d = os.path.join(S.SKILLS_DIR, "beta", "examples", "demo")
+        os.makedirs(d)
+        with open(os.path.join(d, "sample.slides.json"), "w") as fh:
+            fh.write('{"note": "alpha"}\n')
+        self.member("beta")
+        self.assertEqual(S.problems(), [])
+
     # --- rule 3: named-agent dispatch ------------------------------------
 
     def test_agent_dispatch_is_red(self):
@@ -129,6 +204,56 @@ class SoloSkillsGate(unittest.TestCase):
         self.skill("beta", "Dispatch `atelier:manager` for the coupled chain.")
         self.member("beta")
         self.assertProblem("dispatches agent `manager`")
+
+    # --- rule 4: hook coupling in bundled code ---------------------------
+
+    def test_hook_id_in_code_is_red_with_no_sibling_mention_anywhere(self):
+        # Prose and code name no sibling skill at all; the only coupling is the hook.
+        self.hook("worker-context")
+        self.skill(
+            "beta", "Beta stands alone.",
+            script='P = os.path.join(ROOT, "worker-context", "hook.py")',
+        )
+        self.member("beta")
+        self.assertProblem("bundled script resolves hook `worker-context`")
+        self.assertNoProblem("names sibling skill")
+
+    def test_literal_hook_path_in_code_is_red(self):
+        self.hook("config-custody")
+        self.skill("beta", "Beta.", script='P = "hooks/config-custody/hook.py"')
+        self.member("beta")
+        self.assertProblem("bundled script resolves hook `config-custody`")
+
+    def test_hook_id_in_prose_alone_is_not_a_dependency(self):
+        # Naming a hook in prose is documentation; only shipped code couples.
+        self.hook("worker-context")
+        self.skill("beta", "The `worker-context` hook explains the covenant.")
+        self.member("beta")
+        self.assertEqual(S.problems(), [])
+
+    def test_activation_stays_excluded_on_the_hook_rule_alone(self):
+        # AC: with `delegation` and `handoff` stripped from activation.py's code, the
+        # gate must still exclude it. Proven on a copy, never by editing the real file.
+        for name in (
+            "worker-context", "config-custody", "worktree-isolation",
+            "session-handoff-surfacer", "handoff-freshness-guard",
+            "worker-git-scope-guard",
+        ):
+            self.hook(name)
+        self.skill("delegation", "Delegation stands alone.")
+        self.member("delegation")
+        self.skill("handoff", "Handoff stands alone.")
+        self.member("handoff")
+        self.skill("activation", "Audit what the enforcement hooks resolve.",
+                   script=ACTIVATION_HOOK_RESOLUTION)
+        self.member("activation")
+        self.assertNotIn(
+            "delegation", ACTIVATION_HOOK_RESOLUTION,
+            "the fixture must not carry the sibling mention it is stripping",
+        )
+        self.assertProblem("bundled script resolves hook `worker-context`")
+        # Rule 2 alone would now find nothing — that is the hole this rule closes.
+        self.assertNoProblem("names sibling skill")
 
     # --- both directions of membership drift -----------------------------
 
