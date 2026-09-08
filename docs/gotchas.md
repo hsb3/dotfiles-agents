@@ -100,6 +100,22 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   conclusion came from inferring via a YAML library instead.
 - **Run `git worktree list` at session start.** A stale worktree hides finished work while
   `git status` stays clean.
+- **A worktree-isolated agent's cross-tree write is refused LOUDLY, but a relative path is
+  not refused at all.** Probed on Claude Code 2.1.263 (2026-09-07) from a nested worktree,
+  `CLAUDE_PROJECT_DIR` empty. An Edit or Write at an absolute path under the dispatcher's
+  worktree — or under the main checkout — dies with `This agent is isolated in the worktree
+  <path>. Edit the worktree copy of this file instead of the shared-checkout path.`, and
+  nothing is written on either side. Read across the boundary is allowed. **The trap is the
+  relative `file_path`**: it resolves against the agent's OWN worktree, so it succeeds while
+  the dispatcher sees nothing at the path it expected — which is what two builders reported
+  as an edit that "returned success and applied nothing". Neither repo-owned hook can produce
+  that (`tests/test_nested_worktree_edits.py` pins both as allow-or-visible-deny). Two more
+  edges of the same guard: a `git` command it cannot statically prove stays in-tree is refused
+  whole (`too complex to verify`), and it reads the command TEXT, so a heredoc merely
+  *containing* such a command is refused too — write that file with the Write tool. And an
+  agent resumed after its worktree was removed has `pwd` and `git rev-parse --show-toplevel`
+  silently re-resolve to the DISPATCHER's tree, with the guard then naming that tree as the
+  one it is isolated in.
 
 ## Editing this repo
 

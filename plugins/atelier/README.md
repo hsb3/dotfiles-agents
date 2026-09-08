@@ -203,6 +203,11 @@ a new worktree branches from `origin/<default-branch>` unless the project sets t
 The key is nested under `worktree`; a flat top-level spelling of it is a `/config` widget id, not
 a settings key, and is silently ignored.
 
+A dispatcher that is itself in a linked worktree gets its writers **nested** under it, one branch
+each, and the hook's notice hands it the integrate step at dispatch time. That step is
+`git cherry HEAD <branch>` to name the commits not yet picked, then a cherry-pick of exactly those
+— safe to re-run every round, unlike the range form, which exits 128 once a round has nothing new.
+
 **No restart needed.** The skill and the hooks re-read this file per call, so an edit to
 `enforce:`, `protected:`, `protected-branches:`, or `isolate:` applies to the very next
 tool call.

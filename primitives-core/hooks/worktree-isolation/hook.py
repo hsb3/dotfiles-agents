@@ -136,11 +136,18 @@ NOTICE_TEMPLATE = (
 # costs is integration ergonomics, so the dispatcher is handed the integrate
 # step here — at dispatch — instead of meeting a pile of stray branches at the
 # end of the wave.
+#
+# Two separate commands, read then run, rather than one shell pipeline: the
+# reader's shell is zsh, which does not word-split an unquoted expansion, so a
+# `picks=$(...)` one-liner passes every SHA as ONE bad revision. See the README
+# for why the range form `HEAD..<branch>` cannot be repeated either.
 NESTED_CLAUSE = (
     " You are standing in a linked worktree yourself, so this one is NESTED under it "
     "on its own branch — intended, not a misconfiguration. To integrate when it "
-    "reports: `git worktree list` for its path and branch, "
-    "`git cherry-pick HEAD..<branch>` to take its commits, then "
+    "reports: `git worktree list` for its path and branch, then `git cherry HEAD "
+    "<branch>` and READ it — `+` lines are commits you have not picked yet, `-` "
+    "lines are already in — then `git cherry-pick <the + SHAs>` if there are any. "
+    "Repeat that pair each round; it never re-applies. Finally "
     "`git worktree remove <path> && git branch -D <branch>` to clean up."
 )
 

@@ -23,7 +23,7 @@ import unittest
 # Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
 # under `-t .`, so prime the path the same way the hooks prime `_lib`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from worktree_fixture import make_worktree, require_git  # noqa: E402
+from worktree_fixture import _git, make_worktree, require_git  # noqa: E402
 
 HOOK_PATH = os.path.join(
     os.path.dirname(__file__), "..", "primitives-core", "hooks",
@@ -393,7 +393,10 @@ class WorktreeIsolationTests(unittest.TestCase):
 
         message = body["systemMessage"]
         self.assertIn("NESTED", message)
-        self.assertIn("git cherry-pick HEAD..", message)
+        # The exact pair the integration test below drives, so the advertised
+        # step and the tested one cannot drift apart.
+        self.assertIn("git cherry HEAD <branch>", message)
+        self.assertIn("git cherry-pick", message)
         self.assertIn("git worktree remove", message)
         self.assertIn("git branch -D", message)
 
@@ -447,6 +450,96 @@ class WorktreeIsolationTests(unittest.TestCase):
             with self.subTest(label):
                 self._run_hook(json.dumps(self._payload(cwd=cwd)))
                 self.assertEqual(self._rows()[-1]["nested"], expected)
+
+    # -- the integrate step, run for real ------------------------------
+
+    def _integration_fixture(self, branch="worktree-agent-x"):
+        """A dispatcher checkout with a worker branch beside it.
+
+        Returns three callables: commit a file as the worker, run the notice's
+        integrate step as the dispatcher, and read the dispatcher's commit
+        subjects newest-first.
+        """
+        require_git()
+        base = os.path.join(self.tmp.name, "integrate")
+        os.makedirs(base, exist_ok=True)
+        main_dir, worktree_dir = make_worktree(base, branch=branch)
+        # Config lives in the shared git dir, so this covers the worktree too.
+        for key, value in (("user.name", "fixture"),
+                           ("user.email", "fixture@example.invalid"),
+                           ("commit.gpgsign", "false")):
+            _git(main_dir, "config", key, value)
+
+        def worker_commit(name):
+            with open(os.path.join(worktree_dir, name), "w", encoding="utf-8") as fh:
+                fh.write(name)
+            _git(worktree_dir, "add", "--", name)
+            _git(worktree_dir, "commit", "-q", "-m", "worker " + name)
+
+        def run(*args):
+            return subprocess.run(
+                ["git"] + list(args),
+                cwd=main_dir, capture_output=True, text=True, timeout=60,
+            )
+
+        def integrate(target=branch):
+            """The two steps the notice hands the dispatcher, as argv.
+
+            No shell: the notice is deliberately two commands a human reads
+            between, so a shell string is not the thing under test — and
+            running one would test `sh` word-splitting the dispatcher's zsh
+            does not do. A failed listing is returned as-is rather than read
+            as "nothing to pick", which is the whole reason the `+` lines are
+            read before anything is applied.
+            """
+            listing = run("cherry", "HEAD", target)
+            if listing.returncode != 0:
+                return listing
+            picks = [line.split()[1] for line in listing.stdout.splitlines()
+                     if line.startswith("+ ")]
+            return run("cherry-pick", *picks) if picks else listing
+
+        def subjects():
+            return _git(main_dir, "log", "--format=%s").splitlines()
+
+        return worker_commit, integrate, subjects
+
+    def test_integrate_step_is_safe_to_repeat(self):
+        """The defect, measured by hand: the old `git cherry-pick HEAD..<branch>`
+        step exits 128 with `error: empty commit set passed` the moment a round
+        has nothing new — the range still spans round one's originals (picking
+        them changed their SHAs), and cherry-pick's own patch-id filter then
+        empties it. What is asserted here is the replacement: reading `git
+        cherry` and picking only the `+` SHAs applies each commit exactly once,
+        however many rounds a worker reports over."""
+        worker_commit, integrate, subjects = self._integration_fixture()
+
+        worker_commit("a.txt")
+        worker_commit("b.txt")
+        first = integrate()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        after_first = subjects()
+        self.assertEqual(after_first[:2], ["worker b.txt", "worker a.txt"])
+
+        # A round with nothing new: applies nothing, exits 0, no empty-set fatal.
+        second = integrate()
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertEqual(subjects(), after_first)
+
+        # The next round takes exactly what the worker added since, once.
+        worker_commit("c.txt")
+        third = integrate()
+        self.assertEqual(third.returncode, 0, third.stderr)
+        self.assertEqual(subjects(), ["worker c.txt"] + after_first)
+
+    def test_a_branch_that_cannot_be_listed_is_not_a_quiet_no_op(self):
+        """A stale or mistyped branch name must fail, not report success with
+        nothing integrated — the trap in guarding on an empty pick set."""
+        worker_commit, integrate, subjects = self._integration_fixture()
+        worker_commit("a.txt")
+        result = integrate(target="worktree-agent-typo")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(subjects(), ["fixture"])
 
 
 if __name__ == "__main__":

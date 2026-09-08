@@ -92,13 +92,45 @@ at dispatch time rather than at the end of the wave:
 ```
 … You are standing in a linked worktree yourself, so this one is NESTED under it on its own
 branch — intended, not a misconfiguration. To integrate when it reports: `git worktree list`
-for its path and branch, `git cherry-pick HEAD..<branch>` to take its commits, then
+for its path and branch, then `git cherry HEAD <branch>` and READ it — `+` lines are commits
+you have not picked yet, `-` lines are already in — then `git cherry-pick <the + SHAs>` if
+there are any. Repeat that pair each round; it never re-applies. Finally
 `git worktree remove <path> && git branch -D <branch>` to clean up.
 ```
 
-`HEAD..<branch>` is correct under either `worktree.baseRef` setting — with `head` the worker's
-branch starts at the dispatcher's HEAD, with `fresh` it starts at the default branch, and the range
-is "what this branch has that mine does not" in both cases.
+**Why not the obvious `git cherry-pick HEAD..<branch>`, which the notice used to carry.** A worker
+reports more than once, and integration is per-round. Picking a commit rewrites it, so the original
+on the worker's branch stays unreachable from the dispatcher's HEAD and the range still spans it on
+a later round; cherry-pick's own patch-id filter then drops every one of them and the command dies
+with `error: empty commit set passed`, exit 128. That fatal was reproduced by hand against a real
+repo before this step was rewritten.
+
+`git cherry <upstream> <branch>` answers the same question without it. It prints one line per commit,
+`-` for one whose patch-id is already upstream and `+` for one that is not, so `git cherry HEAD
+<branch>` names exactly the set still to take — correct after an earlier round changed the SHAs, and
+correct under either `worktree.baseRef` setting (with `head` the worker's branch starts at the
+dispatcher's HEAD, with `fresh` at the default branch; the range is "what this branch has that mine
+does not" either way).
+
+**Two commands the dispatcher reads between, deliberately, not one shell one-liner.** A pipeline
+like `picks=$(git cherry …); git cherry-pick $picks` is wrong twice over. The notice is pasted into
+a **zsh** shell, and zsh does not word-split an unquoted expansion — every SHA arrives as a single
+argument and `git cherry-pick` dies with `fatal: bad revision`. And guarding on an empty `$picks`
+cannot tell "nothing to pick" from "`git cherry` failed", so a stale branch name would exit 0 with
+nothing integrated, which is exactly the silent no-op this step exists to prevent. Passing the SHAs
+as literal arguments has no splitting surface in any shell, needs no empty-set special case, and a
+failed listing is seen because you read it before picking. `xargs` is not a fix either: BSD `xargs`
+skips the utility on empty input, GNU `xargs` runs it once with no arguments.
+
+`tests/test_worktree_isolation.py` drives this procedure as argv over several rounds against a real
+linked worktree: two commits taken, a round with nothing new that applies nothing and exits 0, a
+round that takes exactly the one new commit, and a mistyped branch name that fails rather than
+reporting success.
+
+**The ceiling.** Patch-ids match content, not identity. A commit whose content changed while you
+resolved a conflict on an earlier round no longer matches its original, so `git cherry` still lists
+it `+` and picking it applies it again. Reading the `+` lines before you pick is what catches that,
+which is the other reason these stay two commands.
 
 To sweep for strays after a wave, from the dispatcher's own worktree:
 

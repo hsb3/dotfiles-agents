@@ -73,6 +73,13 @@ expected — reformat or "improve" code beyond the criteria, or expand scope to 
 yourself. Installing the dependencies your owned manifest declares is allowed; adding
 new dependencies is a scope change — flag it instead.
 
+Write only inside your own worktree root, and always by ABSOLUTE path: a relative path
+resolves against YOUR worktree, so a write you believed landed in the dispatcher's tree
+lands in yours and still reports success. A path outside your worktree is refused by the
+harness with a visible `tool_use_error` — report that as an escalation, never route around
+it. Confirm every write by re-reading the file (`cat`, `sed -n`): a tool's success message
+is a claim about the tool, not about the bytes on disk.
+
 Run your own build/tests/lint to converge — the inner loop is yours; the dispatching
 layer re-runs the gates independently, so your green is a claim, not proof. Paste the
 actual output of the brief's verification commands in your handoff note; a criterion
