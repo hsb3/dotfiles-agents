@@ -387,7 +387,7 @@ decision with an agent that has no standing to make it.
 
 The same refusal to substitute one rank for another governs the provenance tags: `[field]`
 outranks `[untested]` and never outranks `[lab]` or `[cost]`. Only new evidence moves a tag —
-never how long it has sat in this file, and never how persuasive one session found it.
+never how long it has stood, and never how persuasive one session found it.
 
 `builder` takes bounded, well-specified implementation links. Coupled, costly-to-unwind, or
 judgment-heavy links remain with the `strategist` or the `manager`, which can use `reviewer` for
@@ -457,8 +457,8 @@ feeds).
 ## Waiting and liveness
 
 An agent that blocks on something that cannot happen is the most expensive failure this kit has
-recorded, and none of the layer rules above prevent it. Three rules do, and
-**`references/waiting.md`** carries them in full, with every reported deadlock walked to
+recorded, and none of the layer rules above prevent it. Four rules do, and
+**`references/waiting.md`** carries them in full, with every reported failure walked to
 termination:
 
 - **No wait without a producer.** Every wait — including one an agent adopts for itself, which is
@@ -468,7 +468,11 @@ termination:
   agent that receives one has no tool to answer with, so its reply is its final report. Send
   amendments, never questions.
 - **A live worker's owned files are not the dispatcher's**, manager included, and a green poll is
-  not a completion signal. Wait for the completion notification, then edit.
+  not a completion signal. Queue the edit for after that worker finishes, or fold it into the
+  worker as an amendment.
+- **A completion reaches its dispatcher only while that dispatcher is still mid-turn** `[field]`.
+  So dispatch synchronously unless you actually need concurrency, and never block on the
+  notification; a report that lands one layer up is relayed down verbatim, never absorbed.
 
 ## Context hygiene
 
@@ -500,9 +504,9 @@ slash command — a command would shadow the skill of the same name.
 <!-- /harness -->
 
 These watermarks are the strategy layer's budget. A manager spends a context that gets thrown away
-at the end of its chain, so it does not hand off. If a chain outgrows one manager context, that is
-a slicing defect to escalate, not a compaction to ride out — and one the brief should have priced
-before dispatch (Step 2, "Width is not lifetime").
+at the end of its chain, so it hands off to a successor rather than to itself. If a chain outgrows
+one manager context, that is a slicing defect to escalate, not a compaction to ride out — and one
+the brief should have priced before dispatch (Step 2, "Width is not lifetime").
 
 ## Additional resources
 
@@ -520,8 +524,8 @@ before dispatch (Step 2, "Width is not lifetime").
 - **`references/tier-cutoff.md`** — the protocol for measuring where cheap model tiers stop being
   enough.
 - **`references/dispatch-knobs.md`** — worktree isolation, turn caps, continuing an agent, the git policy.
-- **`references/waiting.md`** — the no-wait-without-a-producer rule, one-way messages down, the
-  liveness check, and file ownership while a worker is live.
+- **`references/waiting.md`** — the no-wait-without-a-producer rule, one-way messages down, where
+  a completion is routed, the liveness check, and file ownership while a worker is live.
 - **`references/activation.md`** — per-project enforcement: `atelier.local.md`, the `enforce`
   modes, the `protected:` map, and the worker covenant.
 - **`references/provenance.md`** — which rule came from which measurement, and which are untested.

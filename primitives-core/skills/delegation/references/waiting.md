@@ -61,15 +61,18 @@ your report is the only thing you can send, and it is sent by finishing.
 ## Where a worker's completion actually goes
 
 **A worker's completion reaches the agent that dispatched it only if that agent is still mid-turn
-when the worker finishes** `[field]`. Every completion is enqueued to the top-level session first
-and then re-routed down to the real dispatcher — and that re-route lands only while the
-dispatcher is still running and interruptible. An agent whose turn has already ended is never
-re-invoked by its child's completion. Delivery is therefore a race against the dispatcher's own
-turn ending, and a manager that dispatches in the background and then stops talking loses it by
-construction. This was established by a controlled headless probe rather than by unreproduced
-observation, so the `[field]` tag understates the evidence behind it.
+when the worker finishes** `[field]`. An agent whose turn has already ended is never re-invoked by
+its child's completion. Delivery is therefore a race against the dispatcher's own turn ending, and
+a manager that dispatches in the background and then stops talking loses it by construction. This
+was established by a controlled headless probe rather than by unreproduced observation, so the
+`[field]` tag understates the evidence behind it — but the probe ran on one harness, so the
+mechanism it measured is recorded as that harness's rather than as doctrine.
 
-Three outcomes, one dispatch shape, differing only in what the manager was doing at that moment:
+<!-- harness:claude-code -->
+**The mechanism, measured here.** Every completion is enqueued to the top-level session first and
+then re-routed down to the real dispatcher, and that re-route lands only while the dispatcher is
+still running and interruptible. Three outcomes were measured from one dispatch shape, differing
+only in what the manager was doing at that moment:
 
 - **Manager still mid-turn** — the completion arrives inside the manager's own transcript
   carrying the worker's full result, and the manager continues past it. The only delivery
@@ -80,13 +83,14 @@ Three outcomes, one dispatch shape, differing only in what the manager was doing
 - **Manager stopped seconds after its worker finished** — the completion reached no one: enqueued
   above, then dropped. Why is not established `[untested]`, so treat a backgrounded completion as
   a signal that may simply never exist rather than one that is merely late.
+<!-- /harness -->
 
 **So never let a completion notification be the thing you are blocked on.**
 
 - **Dispatch synchronously unless you actually need concurrency** `[field]`. A synchronous
   dispatch hands the worker's result back as an ordinary tool result — no queue, no notification,
-  no race — and it is the only route measured to deliver every time. It is the default; a
-  background dispatch is the deviation and needs a reason.
+  no race — and it is the only route measured on this harness to deliver every time. It is the
+  default; a background dispatch is the deviation and needs a reason.
 - **Fan out inside one turn, and stay in that turn until the fan-in** `[untested]`. Concurrency is
   still worth having; what breaks it is ending the turn while workers run. Hold the turn open with
   your own real work — reviewing the last link, drafting the next brief — never with a sleep,
@@ -99,9 +103,8 @@ Three outcomes, one dispatch shape, differing only in what the manager was doing
 **The standing relay.** A report for a wave it is not running lands in the top-level session
 often enough to need a protocol: that session neither acts on it nor quietly absorbs it. It
 relays the report down, in full and verbatim, to the manager that dispatched the worker, on the
-manager's own channel — which reaches a finished agent as well as a live one, so the relay
-restarts a manager that had already stopped. This is the field workaround already in use, and it
-stays the recovery path for a race that has already been lost `[field]`.
+manager's own channel. This is the field workaround already in use, and it stays the recovery
+path for a race that has already been lost `[field]`.
 
 **A manager's word that "the result came back" is not evidence** `[field]`. In the probe the
 manager reported the expected result while already holding that same text in its own briefing, so
@@ -111,9 +114,10 @@ receiving transcript's record of it, never by the receiver's summary — the evi
 
 <!-- harness:claude-code -->
 The knob is the Agent call's background flag; leaving it off is the synchronous default above.
-The relay channel is `SendMessage` addressed to the manager's agent id. A delivered completion
-appears in the recipient's transcript as an attachment carrying the child's whole result, which
-is the record to read when checking whether delivery happened.
+The relay channel is `SendMessage` addressed to the manager's agent id, which reaches a finished
+agent as well as a live one, so the relay restarts a manager that had already stopped. A delivered
+completion appears in the recipient's transcript as an attachment carrying the child's whole
+result, which is the record to read when checking whether delivery happened.
 
 **Transcript location is not routing evidence.** Every agent at every depth writes its transcript
 under the top-level session's directory; parentage lives only in the sibling
@@ -241,14 +245,14 @@ Each ends in termination under the rules above.
 4. **A manager overwrites its own live builder's file.** The ownership rule denies the edit
    before it happens; the fix goes on the punch list or into the worker as an amendment, and
    lands after the completion notification. No lost write, and nothing waits. **Terminates.**
-5. **A manager spawns a background worker and then ends its turn.** The re-route needs a live
+5. **A manager spawns a background worker and then ends its turn.** Delivery needs a live
    dispatcher, so the completion goes to the top-level session and the manager is never
    re-invoked. The routing rule refuses that shape at the dispatch: go synchronous, or keep the
    turn open until the fan-in. Made anyway, the top session relays the report down verbatim and
    the manager resumes holding the worker's result; if nothing was ever delivered, the fallback
    is reading the worker's own record, not waiting. **Terminates.**
-6. **A manager resumes a finished worker and the reply never appears.** Same race, same rule: the
-   reply lands only while the resuming manager is still mid-turn, so send the message and stay in
-   the turn with real work instead of ending it on the send. Where the reply is already missing,
+6. **A manager resumes a finished worker and the reply never appears.** Presumed the same race —
+   that arm was not run `[untested]` — so send the message and stay in the turn with real work
+   instead of ending it on the send. Where the reply is already missing,
    the manager reads the worker's record rather than waiting on it, and the relay covers anything
    that surfaced above instead. **Terminates.**

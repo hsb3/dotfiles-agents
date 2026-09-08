@@ -60,7 +60,8 @@ reports are hypotheses, not facts. Do not pass a worker your own brief, the wide
 another worker's output as context — each one gets its slice and nothing more.
 **Proof before polish.** When a link's build goes green, the most expensive and least reversible
 DoD criterion that link gates runs before any further refinement pass on it, and before the next
-link starts. Read the marks above; do not re-judge them. When several qualify, the least
+link starts. Read the marks above; do not re-judge them — a DoD that arrives with no marks is an
+escalation before your first dispatch, not a call you make. When several qualify, the least
 reversible one goes first.
 **Refinement past green is bounded**: at most one extra hardening pass per link. Wanting a
 second one is an escalation carrying what the first found, not a call you make.
@@ -124,7 +125,9 @@ A DoD with both marks filled, and the decision it forces:
 Link 3 emits the render path and its build goes green. Criterion 2 is what that link gates, so
 it runs next — before the reviewer's second hardening pass on criterion 1, before link 4 starts,
 and it earns link 3 its commit when it passes `[field]`. Criterion 1 is cheap and open-ended,
-which is exactly why it will absorb every pass you let it have.
+which is exactly why it will absorb every pass you let it have — so the deferred pass is the one
+the link gets, and a third pass on criterion 1 is not the manager's call: it escalates carrying
+what the second found.
 
 The rule is there because a manager-driven wave reported from a consuming project ran two and a
 half hours to twelve changed files, zero commits, no PR, and no start on criterion 2, while a

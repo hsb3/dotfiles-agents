@@ -30,10 +30,9 @@ ref a new worktree branches from is `{"worktree": {"baseRef": "head"}}` in `sett
 nested under `worktree`, and absent that a worktree branches from `origin/<default-branch>`.
 The flat spelling `"worktreeBaseRef"` is only the config menu's widget id, never a settings
 key, and a file using it fails silently: no error, no warning, isolated writers still branching from
-the default branch while the operator reads the setting as applied. That state held here for an
-extended stretch. Where the default branch is a publish-only surface it reaches you as workers
-reporting that paths their briefs name do not exist — check the nesting first, since nothing else
-in the run will tell you.
+the default branch while the operator reads the setting as applied. Where the default branch is a
+publish-only surface it reaches you as workers reporting that paths their briefs name do not
+exist — check the nesting first, since nothing else in the run will tell you.
 <!-- /harness -->
 
 ## Deliberate turn caps
@@ -118,6 +117,7 @@ carries the liveness check for telling a dead callee from a slow one.
   directory under a brief that demanded no scratch files. Read the frontmatter of any definition
   you did not write.
 
-The tools behind the first bullet: `manager` carries `Agent` and `SendMessage`, and `scout`,
-`builder`, and `reviewer` do not. `scout` additionally lacks `Edit`, `Write`, and `NotebookEdit`.
+The tools behind the spawn-authority bullet: `manager` carries `Agent` and `SendMessage`, and
+`scout`, `builder`, and `reviewer` do not. `scout` additionally lacks `Edit`, `Write`, and
+`NotebookEdit`.
 <!-- /harness -->
