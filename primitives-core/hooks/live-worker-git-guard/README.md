@@ -105,9 +105,9 @@ workers are live. Each is a stated cost, not an oversight:
 - **File-level writes** — `merge-file`, `mergetool`, `rerere`, and any `>` redirect. This is the
   destructive-write case named in "What it does not cover": catching it needs an ownership
   registry mapping briefs to paths, and worktree isolation solves it instead.
-- **Foreign-SCM front ends** — `git svn rebase`, `git p4 sync`, `git quiltimport`, `git citool`.
-  Each is a denied verb wearing another tool's name, and none is installed or reachable in this
-  project's loop. A session that starts using one adds its row here first.
+- **Foreign-SCM front ends and GUIs** — `git svn rebase`, `git p4 sync`, `git quiltimport`,
+  `git citool`. Each is a denied verb wearing another tool's name, and none is installed, or in
+  the GUIs' case reachable without a display. A session that starts using one adds its row first.
 - **The tokenizer ceiling**, which is a different axis entirely and has its own section:
   ["What it cannot see"](#what-it-cannot-see). A verb in the set still goes unread when the `git`
   word itself is displaced.

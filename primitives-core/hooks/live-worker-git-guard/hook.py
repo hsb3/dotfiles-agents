@@ -26,8 +26,8 @@ overwrite or swap a tracked file in THIS tree, move the branch the tree sits
 on, or capture and publish its half-finished state. What writes only the index
 (`add`), only the object database, only a ref that has an everyday read
 spelling (`branch`, `tag`, `symbolic-ref`), only another working tree, or only
-files named on the command line (`merge-file`, `mergetool` — the destructive
--write case below) is deliberately out, with its reason recorded beside it.
+the files named on the command line (`merge-file`, `mergetool`, which are the
+destructive-write case below) is out, with its reason recorded beside it.
 
 Scoped to ONE working tree. The pending set is keyed on the session's
 transcript, which says nothing about where a command points, and a session can
