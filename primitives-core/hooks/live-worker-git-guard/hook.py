@@ -65,17 +65,23 @@ tree comparison that does not resolve — no git binary, a cwd outside any
 repository, an unset CLAUDE_PROJECT_DIR — decides as the guard did before it
 could compare trees at all.
 
-Tokenizer ceilings, stated: a git call hidden inside `bash -c "..."`, a `$( )`
-substitution, or glued to a separator with no whitespace (`ls&&git commit`) is
-not seen. An honest session does not write those; a bypass is the override.
-
 Anything that aims the command away from the payload's cwd by a rule this does
 not reimplement is an unresolved comparison rather than a guess, and so counts
 the workers: the `--git-dir`/`--work-tree` flags, the same relocation spelled
 `GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR`, and a `cd`/`pushd`/`popd` before
-the git word. One ceiling remains, because it leaves no evidence in the line
-at all: a `GIT_*` variable exported by an EARLIER Bash call is not among this
-command's tokens, so the comparison runs against a cwd git will not use.
+the git word.
+
+Tokenizer ceiling, stated as a rule rather than a list, because a list of ways
+to hide a word invites the belief that it is complete: the `git` word and the
+`cd` are read only in COMMAND POSITION of the single command string the hook is
+handed, so whatever displaces them is not seen. A wrapper that execs the real
+command (`env`, `command`, `nice`, `time` and their equivalents) does; so do
+`bash -c "..."`, a `$( )` substitution, a token glued to a separator
+(`ls&&git commit`), and heredoc body text. A `GIT_*` variable exported by an
+EARLIER Bash call is the same ceiling in another place — it is not among this
+command's tokens at all. None of these is the sanctioned bypass; the override
+is, and it leaves a row. Seeing through them means interpreting the command
+line rather than tokenizing it, with its own over-denial surface.
 
 The pending set is `_lib/pending.py`, shared with `subagent-telemetry` so the
 two cannot disagree about who is live. Agents holding their own checkout

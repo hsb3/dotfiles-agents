@@ -72,8 +72,9 @@ tree and its own index, so a `commit` there stages only its own files and a `pus
 refs — neither takes a worker's uncommitted file off disk in the main checkout. Repo identity
 would block a whole class of calls that cannot cause the loss.
 
-**Ambiguity fails closed**, the one place this hook is not fail-open. Every one of these leaves
-the guard deciding exactly as it did before it could compare trees at all:
+**Ambiguity fails closed**, the one place this hook is not fail-open. These are the cases where
+the guard *sees* a mutating call but cannot place it — what it does not see at all is a separate
+section below. Each leaves it deciding exactly as it did before it could compare trees:
 
 - no `git` binary, or a `cwd` that is missing, not a string, or outside any repository;
 - an unset or non-repo `CLAUDE_PROJECT_DIR`;
@@ -88,10 +89,19 @@ The same rule a corrupt sidecar gets: a record that exists and cannot be read ke
 live. `init` and `clone` are not mutating verbs, so making a repo in a fresh directory never
 reaches the comparison.
 
-**The residual ceiling**, stated because it leaves no evidence in the command: a `GIT_*` variable
-**exported by an earlier Bash call** is not among this command's tokens, so the comparison runs
-against a cwd git will not use. Only the override is a deliberate bypass; this one is a blind
-spot, and closing it would need session state the hook does not have.
+## What it cannot see
+
+Stated as a rule rather than a list, because a list of ways to hide a word invites the belief that
+it is complete. **The `git` word and the `cd` are read only in command position** of the single
+command string the hook is handed, so whatever displaces them is invisible: a wrapper that execs
+the real command (`env`, `command`, `nice`, `time` and their equivalents), `bash -c "..."`, a
+`$( )` substitution, a token glued to a separator (`ls&&git commit`), and heredoc body text. A
+`GIT_*` variable **exported by an earlier Bash call** is the same ceiling in another place — it is
+not among this command's tokens at all.
+
+None of these is the sanctioned bypass. The override is, and it leaves a row. Seeing through them
+means interpreting the command line rather than tokenizing it, which is a larger change with its
+own over-denial surface.
 
 ## Override
 
