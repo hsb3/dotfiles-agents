@@ -1,7 +1,7 @@
 {
   "event": "SessionStart",
   "matcher": "*",
-  "timeout": 12,
+  "timeout": 20,
   "statusMessage": "Checking for other sessions on this branch...",
   "env": {
     "BRANCH_ACTIVITY_PEER_TTL_SECONDS": "3600",

@@ -2,20 +2,24 @@
 """
 branch-activity-surfacer — SessionStart hook.
 
-Warns a starting session that another session has been working the same branch,
-and names what changed rather than that someone was here.
+Warns a starting session that this branch has moved, or that another session's
+process is still alive on it, and names what changed rather than that someone
+was here.
 
-Two signals, both derived locally:
-  - moved: the branch tip differs from the tip the last recorded session start
-    saw. Read from git, so a move made on another machine or by a merge on
-    GitHub also counts, once this checkout has the commits.
-  - peer: another session_id recorded a start on this repo+branch inside the
-    TTL, so it may still be live.
+Two signals, deliberately keyed differently:
+  - moved: the tip differs from the tip the last recorded start saw — from ANY
+    session, including this one's own earlier row. The question is "has the
+    branch moved since anyone last looked", so filtering by session would miss
+    the case where the peer restarts and records the new tip first.
+  - peer: another session's owning process is still alive and started inside
+    the TTL. Identity is the owning `claude` process, NOT session_id: `/clear`
+    mints a new session_id in the same process, so a session_id key reports the
+    operator to themselves.
 
-The record is a local ledger keyed by repo + branch + tip + session id, written
-through the shared append path. Nothing is pushed and nothing is fetched: a
-marker branch would need network and push rights at every session start, and
-would only work for sessions that remembered to write to it.
+The record is a local ledger written through the shared append path. Nothing is
+pushed and nothing is fetched: a marker branch would need network and push
+rights at every session start, and would only report the sessions that
+remembered to write to it.
 
 Contract (SessionStart):
   - stdin JSON fields consumed: session_id, cwd, source, hook_event_name,
@@ -34,6 +38,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 from datetime import datetime, timezone
 
@@ -48,14 +53,27 @@ import agentlog  # noqa: E402  (path must be primed before this import)
 LOG_STREAM = "branch-activity"
 LOG_PATH_ENV = "BRANCH_ACTIVITY_LOG_PATH"
 
-SURFACE_SOURCES = {"startup", "clear", "resume"}
+# `fork` is a real production source; leaving it out made a forked session
+# invisible to the next one.
+SURFACE_SOURCES = {"startup", "clear", "resume", "fork"}
 
 PEER_TTL_SECONDS_DEFAULT = 3600
 MAX_BYTES_DEFAULT = 1048576
 LOG_COMMITS_DEFAULT = 5
+PEERS_NAMED = 3
 
-GIT_TIMEOUT = 5
+# The whole budget must stay under the hook's own timeout (20s), or a merely
+# slow git gets the process killed before it writes its row.
+GIT_TIMEOUT = 3
 GH_TIMEOUT = 4
+PS_TIMEOUT = 1
+PS_DEADLINE = 1.5
+PS_MAX_HOPS = 8
+
+#: A git call that could not run at all (no binary, timeout), as distinct from
+#: one that ran and answered "no" — the ledger's skip reasons must not conflate
+#: a broken environment with a detached HEAD.
+UNAVAILABLE = object()
 
 
 def _env_int(name, default):
@@ -69,32 +87,106 @@ def _env_int(name, default):
 
 
 # ---------------------------------------------------------------------------
+# Session identity: the owning `claude` process
+# ---------------------------------------------------------------------------
+
+def _ps_parent(pid):
+    """(ppid, comm) for `pid`, or None when ps cannot answer."""
+    try:
+        proc = subprocess.run(
+            ["ps", "-o", "ppid=,comm=", "-p", str(pid)],
+            capture_output=True, timeout=PS_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    line = proc.stdout.decode("utf-8", "replace").strip()
+    if not line:
+        return None
+    parts = line.split(None, 1)
+    if len(parts) != 2:
+        return None
+    try:
+        return int(parts[0]), parts[1].strip()
+    except ValueError:
+        return None
+
+
+def _owner_pid():
+    """The pid of the `claude` process this hook is running under, or a
+    fallback, or None.
+
+    This is the session's real identity: `/clear` mints a new session_id
+    without a new process, so session_id over-reports peers and under-reports
+    the same operator.
+    """
+    override = os.environ.get("BRANCH_ACTIVITY_OWNER_PID")
+    if override:
+        try:
+            return int(override)
+        except ValueError:
+            pass
+    try:
+        deadline = time.monotonic() + PS_DEADLINE
+        pid = os.getpid()
+        for _ in range(PS_MAX_HOPS):
+            if time.monotonic() > deadline:
+                break
+            answer = _ps_parent(pid)
+            if answer is None:
+                break
+            ppid, comm = answer
+            if os.path.basename(comm.split()[0] if comm.split() else comm) == "claude":
+                return pid
+            if ppid <= 1:
+                break
+            pid = ppid
+        return os.getppid()
+    except Exception:
+        return None
+
+
+def _pid_alive(pid):
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except Exception:
+        return True  # PermissionError and friends mean it exists
+    return True
+
+
+# ---------------------------------------------------------------------------
 # git facts
 # ---------------------------------------------------------------------------
 
 def _git(cwd, args, timeout=GIT_TIMEOUT):
-    """stdout of a git call, or None on any failure — including no git binary."""
+    """stdout of a git call, None when it ran and failed, UNAVAILABLE when it
+    could not run at all."""
     try:
         proc = subprocess.run(
             ["git", "-C", cwd] + args, capture_output=True, timeout=timeout,
         )
     except (OSError, subprocess.SubprocessError):
-        return None
+        return UNAVAILABLE
     if proc.returncode != 0:
         return None
     return proc.stdout.decode("utf-8", "replace").strip()
 
 
 def _repo_key(cwd):
-    """Absolute, symlink-resolved shared git dir, or None outside a repository.
+    """Absolute, symlink-resolved shared git dir.
 
     `--git-common-dir` rather than the toplevel: a linked worktree and its main
     checkout share one git dir, so they share one key and a session in either
     sees the other's rows.
     """
     common = _git(cwd, ["rev-parse", "--git-common-dir"])
-    if not common:
-        return None
+    if common is UNAVAILABLE or not common:
+        return common or None
     if not os.path.isabs(common):
         common = os.path.join(cwd, common)
     return os.path.realpath(common)
@@ -105,17 +197,23 @@ def _repo_key(cwd):
 # ---------------------------------------------------------------------------
 
 def _parse_ts(value):
-    """agentlog's ISO-8601 Zulu stamp as an aware datetime, or None."""
+    """agentlog's ISO-8601 Zulu stamp as an aware datetime, or None.
+
+    A zone-less stamp returns None rather than a naive datetime: subtracting one
+    raises, and fail-open would then swallow this session's own row — one bad
+    line would disable the hook for that branch permanently.
+    """
     if not isinstance(value, str):
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+    return None if parsed.tzinfo is None else parsed
 
 
 def _read_rows(path, max_bytes, repo, branch):
-    """Session rows for this repo+branch from the ledger's tail, oldest first.
+    """Session rows for this repo+branch from the ledger's tail, in file order.
 
     Only the tail is read: the ledger grows without bound and a session start
     must not slow down with it. The first line after a seek is a partial line
@@ -144,7 +242,10 @@ def _read_rows(path, max_bytes, repo, branch):
             continue
         if row.get("repo") != repo or row.get("branch") != branch:
             continue
-        if not isinstance(row.get("head"), str) or not isinstance(row.get("ts"), str):
+        head = row.get("head")
+        if not isinstance(head, str) or len(head) < 7:
+            continue
+        if not isinstance(row.get("ts"), str):
             continue
         if not isinstance(row.get("session_id"), str):
             continue
@@ -152,12 +253,46 @@ def _read_rows(path, max_bytes, repo, branch):
     return rows
 
 
-def _latest_other_session(rows, session_id):
-    """The most recent row from a session that is not this one, or None."""
-    others = [row for row in rows if row["session_id"] != session_id]
-    if not others:
-        return None
-    return max(others, key=lambda row: row["ts"])
+def _latest(rows):
+    """The most recent row by `ts`, which agentlog stamps as ISO-8601 Zulu and
+    which therefore sorts lexically in the order it sorts chronologically."""
+    return max(rows, key=lambda row: row["ts"]) if rows else None
+
+
+def _live_peers(rows, session_id, owner_pid, ttl, now):
+    """[(row, age_seconds)] for other sessions that may still be running, newest
+    first.
+
+    Identity is `owner_pid` when both sides carry one, else `session_id` — rows
+    written before the lineage key existed still behave as they did. Liveness is
+    only checkable for a row that carries a pid.
+    """
+    newest = {}
+    for row in rows:
+        pid = row.get("owner_pid")
+        keyed_by_pid = isinstance(pid, int) and owner_pid is not None
+        key = ("pid", pid) if keyed_by_pid else ("sid", row["session_id"])
+        if key not in newest or row["ts"] > newest[key]["ts"]:
+            newest[key] = row
+
+    peers = []
+    for (kind, value), row in newest.items():
+        if kind == "pid":
+            if value == owner_pid:
+                continue  # this very process: a /clear or resume, not a peer
+            if not _pid_alive(value):
+                continue
+        elif value == session_id:
+            continue
+        stamp = _parse_ts(row["ts"])
+        if stamp is None:
+            continue
+        age = (now - stamp).total_seconds()
+        if abs(age) >= ttl:
+            continue
+        peers.append((row, age))
+    peers.sort(key=lambda item: item[0]["ts"], reverse=True)
+    return peers
 
 
 # ---------------------------------------------------------------------------
@@ -170,9 +305,21 @@ def _commits_between(cwd, old, new, limit):
     out = _git(cwd, [
         "log", "--format=%h %an %s", "-n", str(limit), "{0}..{1}".format(old, new),
     ])
-    if out is None:
+    if out is None or out is UNAVAILABLE:
         return None
     return [line for line in out.splitlines() if line.strip()]
+
+
+def _dropped_count(cwd, old, new):
+    """How many commits are on `old` but not on `new` — a rewind or a force
+    rebase, the move that most deserves a loud message."""
+    out = _git(cwd, ["rev-list", "--count", "{0}..{1}".format(new, old)])
+    if out is None or out is UNAVAILABLE:
+        return None
+    try:
+        return int(out)
+    except ValueError:
+        return None
 
 
 def _merged_pr(cwd, head):
@@ -211,41 +358,56 @@ def _merged_pr(cwd, head):
 # Message
 # ---------------------------------------------------------------------------
 
-def _format(branch, head, prior, moved, peer, commits, pr, age_seconds):
-    """(additionalContext, systemMessage) for the signals that fired."""
+def _format(branch, head, moved_from, peers, commits, dropped, pr):
+    """(additionalContext, systemMessage). The two clauses are independent and
+    may describe different prior rows.
+
+    The move is stated without attributing agency: the ledger records that a
+    start saw a different tip, not who moved it, and the prior row may well be
+    this same operator's. The `%an` in each commit line carries the author.
+    """
     lines = []
     summary = []
 
-    if moved:
+    if moved_from is not None:
         lines.append(
-            "Another session left branch {0} at a different commit than it is on now. "
-            "Tip: {1} -> {2}.".format(branch, prior["head"][:8], head)
+            "Branch {0} moved since the last recorded start here: {1} -> {2}.".format(
+                branch, moved_from[:8], head[:8],
+            )
         )
         if commits:
             lines.append("Commits added since:")
             lines.extend("  - " + line for line in commits)
         elif commits is None:
             lines.append(
-                "  (that earlier commit is not in this checkout, so the range "
-                "cannot be listed — fetch before assuming a clean base.)"
+                "  (that earlier commit is not in this checkout, so the range cannot "
+                "be listed — fetch before assuming a clean base.)"
+            )
+        elif dropped:
+            lines.append(
+                "  ({0} commit(s) recorded then are no longer on this branch — "
+                "history was rewritten or reset.)".format(dropped)
             )
         if pr:
             lines.append("Merged PR carrying this tip: {0}.".format(pr))
-        summary.append(
-            "this branch changed since the last session here ({0} -> {1})".format(
-                prior["head"][:8], head[:8],
-            )
-        )
+        summary.append("branch {0} moved ({1} -> {2})".format(
+            branch, moved_from[:8], head[:8],
+        ))
 
-    if peer:
-        minutes = max(0, int(age_seconds // 60))
+    if peers:
         lines.append(
-            "Session {0} started {1} minute(s) ago in {2} and may still be live on "
-            "branch {3} — coordinate before committing.".format(
-                prior["session_id"], minutes, prior.get("cwd") or "an unknown cwd", branch,
-            )
+            "{0} session(s) on this branch look live:".format(len(peers))
+            if len(peers) > 1 else "Another session on this branch looks live:"
         )
-        summary.append("a session started {0}m ago is on it".format(minutes))
+        for row, age in peers[:PEERS_NAMED]:
+            lines.append("  - {0}, started {1} minute(s) ago in {2}".format(
+                row["session_id"], max(0, int(age // 60)),
+                row.get("cwd") or "an unknown cwd",
+            ))
+        if len(peers) > PEERS_NAMED:
+            lines.append("  - (+{0} more)".format(len(peers) - PEERS_NAMED))
+        lines.append("Coordinate before committing.")
+        summary.append("{0} other session(s) look live on it".format(len(peers)))
 
     return "\n".join(lines), "atelier: " + "; ".join(summary) + "."
 
@@ -279,44 +441,51 @@ def main():
         skip("subagent session")
 
     repo = _repo_key(cwd)
+    if repo is UNAVAILABLE:
+        skip("git could not be run")
     if repo is None:
         skip("not a git repository")
-    branch = _git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])
-    if not branch or branch == "HEAD":
+
+    branch = _git(cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"])
+    if branch is UNAVAILABLE:
+        skip("git could not be run")
+    if not branch:
         skip("detached HEAD")
+
     head = _git(cwd, ["rev-parse", "HEAD"])
+    if head is UNAVAILABLE:
+        skip("git could not be run")
     if not head:
         skip("no commits")
 
-    ledger = agentlog.stream_path(LOG_STREAM, LOG_PATH_ENV)
+    owner_pid = _owner_pid()
     rows = _read_rows(
-        ledger, _env_int("BRANCH_ACTIVITY_MAX_BYTES", MAX_BYTES_DEFAULT), repo, branch,
+        agentlog.stream_path(LOG_STREAM, LOG_PATH_ENV),
+        _env_int("BRANCH_ACTIVITY_MAX_BYTES", MAX_BYTES_DEFAULT), repo, branch,
     )
-    prior = _latest_other_session(rows, session_id)
 
-    signals = []
-    age_seconds = None
-    if prior is not None:
-        if prior["head"] != head:
-            signals.append("moved")
-        prior_ts = _parse_ts(prior["ts"])
-        if prior_ts is not None:
-            age_seconds = (datetime.now(timezone.utc) - prior_ts).total_seconds()
-            ttl = _env_int("BRANCH_ACTIVITY_PEER_TTL_SECONDS", PEER_TTL_SECONDS_DEFAULT)
-            if abs(age_seconds) < ttl:
-                signals.append("peer")
+    latest = _latest(rows)
+    moved_from = latest["head"] if latest is not None and latest["head"] != head else None
+    peers = _live_peers(
+        rows, session_id, owner_pid,
+        _env_int("BRANCH_ACTIVITY_PEER_TTL_SECONDS", PEER_TTL_SECONDS_DEFAULT),
+        datetime.now(timezone.utc),
+    )
+
+    signals = (["moved"] if moved_from else []) + (["peer"] if peers else [])
 
     if signals:
-        moved = "moved" in signals
-        commits = pr = None
-        if moved:
+        commits = dropped = pr = None
+        if moved_from:
             commits = _commits_between(
-                cwd, prior["head"], head,
+                cwd, moved_from, head,
                 _env_int("BRANCH_ACTIVITY_LOG_COMMITS", LOG_COMMITS_DEFAULT),
             )
+            if commits == []:
+                dropped = _dropped_count(cwd, moved_from, head)
             pr = _merged_pr(cwd, head)
         context, system = _format(
-            branch, head, prior, moved, "peer" in signals, commits, pr, age_seconds or 0,
+            branch, head, moved_from, peers, commits, dropped, pr,
         )
         print(json.dumps({
             "hookSpecificOutput": {
@@ -328,11 +497,11 @@ def main():
             "systemMessage": system,
         }))
 
-    # Last, so this session's own row can never be the prior row it read.
+    # Last, so this session's own row can never be read as a prior start.
     log({
         "event": "session", "repo": repo, "branch": branch, "head": head,
-        "session_id": session_id, "source": source, "cwd": cwd,
-        "surfaced": bool(signals), "signals": signals,
+        "session_id": session_id, "owner_pid": owner_pid, "source": source,
+        "cwd": cwd, "surfaced": bool(signals), "signals": signals,
     })
     sys.exit(0)
 
