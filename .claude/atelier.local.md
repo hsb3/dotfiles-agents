@@ -41,7 +41,7 @@ protected-branches:
 handoff:
   mode: external
   stamp: .claude/handoff.stamp
-  location: kata issue 8xyk "Session Handoff" (project dotfiles-agents, GitHub #329 mirrors it)
+  location: kata issue 4w08 "Session Handoff" (project dotfiles-agents; NATIVE card, deliberately not a GitHub mirror)
 
 # Prose-only: no hook reads this. The delegation skill honours it when an agent
 # reads this file, and `activation.py check` validates the spelling.
