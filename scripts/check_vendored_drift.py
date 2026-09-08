@@ -26,6 +26,9 @@ What this proves, per `origin: vendored` roster entry:
        not_found  — the upstream is reachable but the ref is gone (history rewritten, or the
                     repo/path removed). Failure: the rule says such an entry is reclassified
                     `disposition: orphaned` by a human, so the gate holds until one does.
+       unreachable — the upstream could not be reached. Failure, but NOT evidence of drift:
+                    nothing was compared, and a gate that cannot measure is red rather than
+                    green (decision-016 point 4).
 
 Which subtree to compare comes from `externals.yaml`, indexed by (upstream, ref) rather
 than by id — the roster id and the externals id are NOT the same string in general (the
@@ -141,8 +144,8 @@ def _fetch_at_ref(upstream, ref, dest):
     if rc != 0:
         return "no_net"
     _git(["remote", "add", "origin", upstream], cwd=dest)
-    # Is the host reachable at all? Distinguishes a network blip (skip) from a
-    # rewritten/removed ref (fail) — the whole point of the network contract.
+    # Is the host reachable at all? Both branches fail; this only decides WHICH
+    # failure is named, an unreachable host or a rewritten/removed ref.
     rc, _ = _git(["ls-remote", "--exit-code", "origin", "HEAD"], cwd=dest)
     if rc != 0:
         return "no_net"
