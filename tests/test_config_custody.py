@@ -119,6 +119,7 @@ class ConfigCustodyTests(unittest.TestCase):
 
     def _assert_denied(self, result):
         self.assertEqual(result.returncode, 0)
+        self.assertNotEqual(result.stdout.strip(), "", "hook stayed silent, expected a deny")
         hso = json.loads(result.stdout)["hookSpecificOutput"]
         self.assertEqual(hso["permissionDecision"], "deny")
         return hso
@@ -457,21 +458,44 @@ class ConfigCustodyTests(unittest.TestCase):
             project_dir=main_dir,
         ))
 
-    def test_a_relative_edit_is_governed_by_the_cwds_worktree(self):
-        """A relative tool path names no tree of its own, so the caller's tree
-        decides. Anchoring is unchanged: it still resolves against the project
-        dir, so `docs/*` does not start matching `deep/docs/guide.md`."""
+    def test_an_uncommitted_edit_to_the_worktrees_copy_has_no_effect(self):
+        """The committed version governs. Editing the activation file in your
+        own worktree is a permitted `Edit` on most boards, and it must not be a
+        way to stand custody down for the rest of the session."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-d", "wt-d")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - Makefile\n---\n")
+        self._write_activation(mode="off", project_dir=worktree)
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_an_untracked_worktree_copy_does_not_govern(self):
+        """AC#1 promises the *tracked* copy. A file that exists only on disk is
+        not on the branch, so the main checkout's policy still applies."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-u", "wt-u")
+        self._write_activation(mode="off", project_dir=worktree)
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_a_relative_edit_is_judged_by_one_tree_for_both_questions(self):
+        """A relative tool path anchors on the project dir, so the project
+        dir's policy is what judges it: policy and jurisdiction resolve to the
+        same tree by construction, whatever the payload cwd says."""
         main_dir = self._repo(patterns=("Makefile",))
         worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-r", "wt-r")
         self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - docs/*\n---\n")
 
-        self._assert_silent(self._run_hook(
-            self._payload(file_path="Makefile", cwd=worktree), project_dir=main_dir))
         self._assert_denied(self._run_hook(
-            self._payload(file_path="docs/guide.md", cwd=worktree), project_dir=main_dir))
+            self._payload(file_path="Makefile", cwd=worktree), project_dir=main_dir))
         self._assert_silent(self._run_hook(
-            self._payload(file_path="deep/docs/guide.md", cwd=worktree),
-            project_dir=main_dir))
+            self._payload(file_path="docs/guide.md", cwd=worktree), project_dir=main_dir))
 
     def test_a_foreign_trees_activation_file_never_arms_the_hook(self):
         """Out of jurisdiction is decided before policy is read, so an edit
