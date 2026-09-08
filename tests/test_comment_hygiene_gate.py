@@ -169,5 +169,96 @@ class CommentHygieneGateTests(unittest.TestCase):
         self.assertEqual(self._run("git commit -m x"), "")
 
 
+DIRTY_JS = "const x = 1  // rollback plan lives in ABC-77, per the review call\n"
+
+
+class MergeBaseRefResolutionTests(unittest.TestCase):
+    """The PR path picks a diff BASE by name, so a shadowing local ref moves the range.
+
+    `git rev-parse` resolves `refs/tags/<name>` and `refs/heads/<name>` before
+    `refs/remotes/<name>`, so a local branch or tag literally named `origin/main`
+    outranks the tracking ref. Fixture: `refs/remotes/origin/main` is the real base and
+    the shadowing ref sits on HEAD, so a shadowed resolution yields an empty diff and the
+    hook reviews nothing.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        home = os.path.join(self.tmp.name, "home")
+        os.makedirs(home)
+        gitconfig = os.path.join(home, "gitconfig")
+        open(gitconfig, "w").close()
+        self.env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": home,
+            "GIT_CONFIG_GLOBAL": gitconfig,
+            "GIT_CONFIG_SYSTEM": gitconfig,
+            "GIT_AUTHOR_NAME": "fixture",
+            "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+            "GIT_COMMITTER_NAME": "fixture",
+            "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+
+        origin = os.path.join(self.tmp.name, "origin")
+        os.makedirs(origin)
+        self._git(origin, "init", "-q", "-b", "main", ".")
+        with open(os.path.join(origin, "app.js"), "w") as fh:
+            fh.write("const a = 1\n")
+        self._git(origin, "add", "-A")
+        self._git(origin, "commit", "-qm", "base")
+
+        self.repo = os.path.join(self.tmp.name, "work")
+        subprocess.run(
+            ["git", "clone", "-q", origin, self.repo], check=True, env=self.env, timeout=60
+        )
+        # The branch commit stays local, so refs/remotes/origin/main is the true base.
+        with open(os.path.join(self.repo, "dirty.js"), "w") as fh:
+            fh.write(DIRTY_JS)
+        self._git(self.repo, "add", "-A")
+        self._git(self.repo, "commit", "-qm", "work")
+
+    def _git(self, repo, *args):
+        subprocess.run(
+            ("git",) + args, cwd=repo, check=True, env=self.env,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def _run(self):
+        payload = {
+            "session_id": "s", "cwd": self.repo, "tool_name": "Bash",
+            "tool_input": {"command": "gh pr create --fill"},
+        }
+        p = subprocess.run(
+            [sys.executable, HOOK_PATH], input=json.dumps(payload).encode(),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env,
+        )
+        self.assertEqual(p.returncode, 0, p.stderr.decode())
+        return p.stdout.decode().strip()
+
+    def _assert_reviews_the_branch(self):
+        out = self._run()
+        self.assertNotEqual(out, "", "the hook reviewed an empty diff — wrong base")
+        self.assertIn("dirty.js", json.loads(out)["hookSpecificOutput"]["additionalContext"])
+
+    def test_clone_head_points_at_the_tracking_ref(self):
+        """Guards the fixture: without it the poisoned cases prove nothing."""
+        p = subprocess.run(
+            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"], cwd=self.repo,
+            stdout=subprocess.PIPE, env=self.env,
+        )
+        self.assertEqual(p.stdout.decode().strip(), "refs/remotes/origin/main")
+        self._assert_reviews_the_branch()
+
+    def test_local_branch_named_origin_main_does_not_shadow_the_base(self):
+        self._git(self.repo, "branch", "origin/main", "HEAD")
+        self._assert_reviews_the_branch()
+
+    def test_tag_named_origin_main_does_not_shadow_the_base(self):
+        self._git(self.repo, "tag", "origin/main", "HEAD")
+        self._assert_reviews_the_branch()
+
+
 if __name__ == "__main__":
     unittest.main()

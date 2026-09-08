@@ -142,8 +142,12 @@ def _merge_base_diff(cwd):
     head = _git(cwd, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
     candidates = []
     if head:
-        candidates.append(head.strip().split("refs/remotes/")[-1])
-    candidates += ["origin/main", "origin/master", "main", "master"]
+        candidates.append(head.strip())  # already a full refname; shortening it re-introduces the shadow
+    # `refs/tags/<name>` and `refs/heads/<name>` resolve BEFORE `refs/remotes/<name>`, so a
+    # local ref named `origin/main` would otherwise become the base and diff the wrong range.
+    candidates += ["refs/remotes/origin/main", "refs/remotes/origin/master"]
+    # Last resort for a clone with no remote: these two are genuine LOCAL branches.
+    candidates += ["refs/heads/main", "refs/heads/master"]
     for base in candidates:
         if not base:
             continue
