@@ -343,15 +343,21 @@ class PublishedRefResolution(unittest.TestCase):
     git, so the fake runner only ever sees the calls a test is pinning.
     """
 
+    CANONICAL = "git@github.com:hsb3/dotfiles-agents.git"
+
     def setUp(self):
         self.gitdir = tempfile.mkdtemp(prefix="check-version-bump-stamp-")
         self.addCleanup(shutil.rmtree, self.gitdir, True)
         self.stamp = os.path.join(self.gitdir, V.SYNC_STAMP_NAME)
 
-    def record_sync(self, days_ago=0, raw=None):
+    def record_sync(self, days_ago=0, raw=None, url=CANONICAL):
         """Write the sync stamp a previous successful run would have left."""
         with open(self.stamp, "w") as fh:
-            fh.write(raw if raw is not None else "%d\n" % int(time.time() - days_ago * 86400))
+            fh.write(
+                raw
+                if raw is not None
+                else "%d\t%s\n" % (int(time.time() - days_ago * 86400), url)
+            )
 
     def tree(self, responses, calls=None):
         def run(args):
@@ -366,14 +372,7 @@ class PublishedRefResolution(unittest.TestCase):
 
     def test_fetch_then_resolve_is_available(self):
         calls = []
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (0, b"", "")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-            ],
-            calls,
-        )
+        tree = self.tree(self._online(), calls)
         self.assertIsNone(tree.prepare())
         self.assertEqual(tree.note, "")
         self.assertTrue(any(c[0] == "fetch" for c in calls))
@@ -381,11 +380,7 @@ class PublishedRefResolution(unittest.TestCase):
     def test_shallow_repo_fetches_shallow(self):
         calls = []
         tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"true\n", "")),
-                (["fetch"], (0, b"", "")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-            ],
+            [(["rev-parse", "--is-shallow-repository"], (0, b"true\n", ""))] + self._online()[1:],
             calls,
         )
         self.assertIsNone(tree.prepare())
@@ -395,17 +390,13 @@ class PublishedRefResolution(unittest.TestCase):
     def test_full_repo_fetch_stays_full(self):
         """Never shallow-mark a complete local clone as a side effect of a gate."""
         calls = []
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (0, b"", "")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-            ],
-            calls,
-        )
+        tree = self.tree(self._online(), calls)
         tree.prepare()
         fetch = next(c for c in calls if c[0] == "fetch")
         self.assertNotIn("--depth=1", fetch)
+
+    def _remote(self, url=CANONICAL):
+        return (["remote", "get-url"], (0, url.encode("utf-8") + b"\n", ""))
 
     def _offline(self, extra=()):
         """Responses for a failed fetch over a resolvable cached ref."""
@@ -413,6 +404,16 @@ class PublishedRefResolution(unittest.TestCase):
             (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
             (["fetch"], (128, b"", "fatal: Could not resolve host: github.com")),
             (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
+            self._remote(),
+        ] + list(extra)
+
+    def _online(self, extra=()):
+        """Responses for a fetch that reached the remote."""
+        return [
+            (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
+            (["fetch"], (0, b"", "")),
+            (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
+            self._remote(),
         ] + list(extra)
 
     def test_failed_fetch_falls_back_to_a_recently_synced_cached_ref(self):
@@ -462,7 +463,7 @@ class PublishedRefResolution(unittest.TestCase):
         now = 1_800_000_000.0
         limit = V.MAX_SYNC_AGE_DAYS * V.SECONDS_PER_DAY
         for seconds_old, expect_red in ((limit, False), (limit + 1, True)):
-            self.record_sync(raw=str(int(now - seconds_old)))
+            self.record_sync(raw="%d\t%s" % (int(now - seconds_old), self.CANONICAL))
             tree = self.tree(self._offline())
             with mock.patch.object(V.time, "time", lambda: now):
                 reason = tree.prepare()
@@ -481,7 +482,7 @@ class PublishedRefResolution(unittest.TestCase):
 
     def test_an_absurdly_large_sync_record_is_unavailable(self):
         """Same branch by construction: a garbage stamp is a huge negative age."""
-        self.record_sync(raw="9" * 18)
+        self.record_sync(raw="9" * 18 + "\t" + self.CANONICAL)
         reason = self.tree(self._offline()).prepare()
         self.assertIsNotNone(reason)
         self.assertIn("in the FUTURE", reason)
@@ -493,6 +494,8 @@ class PublishedRefResolution(unittest.TestCase):
         def run(args):
             if args[0] == "fetch":
                 return fetches.pop(0)
+            if args[0] == "remote":
+                return (0, self.CANONICAL.encode("utf-8") + b"\n", "")
             if args[:2] == ["rev-parse", "--is-shallow-repository"]:
                 return (0, b"false\n", "")
             return (0, b"c" * 40 + b"\n", "")
@@ -515,10 +518,50 @@ class PublishedRefResolution(unittest.TestCase):
         self.assertIn("no record of ever syncing it", reason)
 
     def test_an_unparseable_sync_record_is_unavailable(self):
-        self.record_sync(raw="not-a-timestamp\n")
+        self.record_sync(raw="not-a-timestamp\t" + self.CANONICAL + "\n")
         reason = self.tree(self._offline()).prepare()
         self.assertIsNotNone(reason)
         self.assertIn("sync record is unreadable", reason)
+
+    def test_a_bare_timestamp_sync_record_is_unavailable(self):
+        """The format this gate wrote before the stamp named its remote.
+
+        Not grandfathered: a record that cannot say which remote earned it is exactly the
+        certificate `test_a_sync_from_another_remote_is_no_record` refuses, so honouring
+        it would keep that hazard alive for a full limit's worth of days per clone.
+        """
+        self.record_sync(raw="%d\n" % int(time.time()))
+        reason = self.tree(self._offline()).prepare()
+        self.assertIsNotNone(reason)
+        self.assertIn("sync record is unreadable", reason)
+
+    def test_a_sync_from_another_remote_is_no_record(self):
+        """The fetch that wrote the stamp wrote the cached ref too, so a stamp earned
+        from a fork certifies a tree the current `origin` never published."""
+        self.record_sync(url="https://example.invalid/someone/fork.git")
+        reason = self.tree(self._offline()).prepare()
+        self.assertIsNotNone(reason)
+        self.assertIn("earned from https://example.invalid/someone/fork.git", reason)
+        self.assertIn(self.CANONICAL, reason)
+
+    def test_an_unreadable_remote_url_is_unavailable(self):
+        """No way to tell whether the record describes this remote is no proof either."""
+        self.record_sync()
+        tree = self.tree(
+            self._offline()[:3] + [(["remote", "get-url"], (128, b"", "fatal: No such remote"))]
+        )
+        reason = tree.prepare()
+        self.assertIsNotNone(reason)
+        self.assertIn("could not be read", reason)
+
+    def test_a_directory_at_the_stamp_path_is_not_reported_as_a_missing_record(self):
+        """`IsADirectoryError` is an OSError; reporting it as "never synced" hands the
+        reader a remedy that cannot work."""
+        os.mkdir(self.stamp)
+        reason = self.tree(self._offline()).prepare()
+        self.assertIsNotNone(reason)
+        self.assertNotIn("no record of ever syncing it", reason)
+        self.assertIn("could not be read", reason)
 
     def test_an_unlocatable_git_dir_is_unavailable(self):
         """No stamp path resolvable means no freshness proof, so the fallback declines."""
@@ -532,34 +575,30 @@ class PublishedRefResolution(unittest.TestCase):
 
     def test_a_successful_fetch_records_the_sync_and_never_reads_one(self):
         """A refreshed ref is fresh by definition — reading the record would be dead weight."""
-        calls = []
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (0, b"", "")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-            ],
-            calls,
-        )
+        tree = self.tree(self._online())
         self.assertIsNone(tree.prepare())
         self.assertEqual(tree.note, "")
         with open(self.stamp) as fh:
-            self.assertAlmostEqual(int(fh.read().strip()), int(time.time()), delta=60)
+            stamped_at, _, stamped_url = fh.read().strip().partition("\t")
+        self.assertAlmostEqual(int(stamped_at), int(time.time()), delta=60)
+        self.assertEqual(stamped_url, self.CANONICAL)
 
     def test_a_failed_fetch_records_nothing(self):
         """Only contact with the remote may write the record it is evidence of."""
         self.tree(self._offline()).prepare()
         self.assertFalse(os.path.exists(self.stamp))
 
+    def test_a_sync_whose_remote_cannot_be_named_records_nothing(self):
+        """A record that cannot say where it came from certifies nothing, so skip it."""
+        tree = self.tree(
+            self._online()[:3] + [(["remote", "get-url"], (128, b"", "fatal: No such remote"))]
+        )
+        self.assertIsNone(tree.prepare())
+        self.assertFalse(os.path.exists(self.stamp))
+
     def test_an_unwritable_git_dir_does_not_crash_the_gate(self):
         """A read-only git dir costs the NEXT offline run its fallback, nothing more."""
-        tree = self.tree(
-            [
-                (["rev-parse", "--is-shallow-repository"], (0, b"false\n", "")),
-                (["fetch"], (0, b"", "")),
-                (["rev-parse", "--verify"], (0, b"c" * 40 + b"\n", "")),
-            ]
-        )
+        tree = self.tree(self._online())
         tree._stamp_path = os.path.join(self.gitdir, "no-such-dir", V.SYNC_STAMP_NAME)
         self.assertIsNone(tree.prepare())
 
@@ -733,15 +772,21 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         self.assertIn("plugins/alpha", "\n".join(lines))
 
     def _break_origin(self):
-        self.git(self.work, "remote", "set-url", "origin", os.path.join(self.root, "gone"))
+        """Go offline: the URL `origin` names is unchanged, the remote is unreachable.
+
+        Repointing `origin` elsewhere would be a different remote, not a lost network —
+        and the gate now tells those apart.
+        """
+        shutil.move(self.origin, self.origin + ".offline")
 
     def _sync_stamp(self):
         return V.GitPublishedTree(repo=self.work).stamp_path
 
     def _record_sync(self, days_ago=0):
-        """Stand in for a successful gate run `days_ago` back."""
+        """Stand in for a successful gate run `days_ago` back, against this `origin`."""
+        url = self.git(self.work, "remote", "get-url", "origin").decode("utf-8").strip()
         with open(self._sync_stamp(), "w") as fh:
-            fh.write("%d\n" % int(time.time() - days_ago * 86400))
+            fh.write("%d\t%s\n" % (int(time.time() - days_ago * 86400), url))
 
     def test_unreachable_origin_falls_back_to_the_cached_ref(self):
         """Real fetch failure, recent sync on record: still compares, and says so."""
@@ -826,13 +871,59 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         self.assertIn("no record of ever syncing it", text)
         self.assertNotIn("plugins/alpha", text)
 
+    def _fork_of_origin(self):
+        """A second remote carrying the tree the working copy already ships."""
+        fork = os.path.join(self.root, "fork")
+        shutil.copytree(self.origin, fork)
+        return fork
+
+    def test_a_sync_earned_from_another_remote_does_not_certify_the_cache(self):
+        """The stamp must say WHAT it certifies, not merely that contact happened.
+
+        A fetch from a fork succeeds, so it mints a freshness record — and the cached ref
+        it left behind is the fork's tree, which the canonical remote never wrote. Seven
+        days of offline greens against that ref is the same "green when it cannot measure"
+        the fallback exists to prevent.
+        """
+        fork = self._fork_of_origin()
+        self._republish(b"republished body\n", 0)  # canonical moves; local still ships the old body
+
+        self.git(self.work, "remote", "set-url", "origin", "file://" + fork)
+        lines = []
+        self.assertEqual(  # the disclosed wrong-remote hazard: online, this reads green
+            V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append), 0,
+            "\n".join(lines),
+        )
+
+        self.git(self.work, "remote", "set-url", "origin", "file://" + self.origin)
+        self._break_origin()
+        lines = []
+        rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
+        text = "\n".join(lines)
+        self.assertEqual(rc, 1, text)
+        self.assertIn("earned from", text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+
+    def test_a_sync_record_in_the_older_bare_timestamp_format_is_not_honoured(self):
+        """A record that cannot name the remote it came from is exactly the certificate
+        the fork case says must not be honoured, so the upgrade does not grandfather it."""
+        with open(self._sync_stamp(), "w") as fh:
+            fh.write("%d\n" % int(time.time()))
+        self._break_origin()
+        lines = []
+        rc = V.main(plugins_dir=self.plugins, tree=self.tree(), out=lines.append)
+        text = "\n".join(lines)
+        self.assertEqual(rc, 1, text)
+        self.assertIn("unreadable", text)
+
     def test_a_successful_fetch_records_the_sync(self):
         """The stamp is the gate's own, because git keeps no equivalent."""
         self.assertFalse(os.path.exists(self._sync_stamp()))
         self.assertIsNone(self.tree().prepare())
         with open(self._sync_stamp()) as fh:
-            recorded = int(fh.read().strip())
-        self.assertAlmostEqual(recorded, int(time.time()), delta=60)
+            stamped_at, _, stamped_url = fh.read().strip().partition("\t")
+        self.assertAlmostEqual(int(stamped_at), int(time.time()), delta=60)
+        self.assertEqual(stamped_url, self.origin)  # what the clone set `origin` to
 
     def test_the_sync_stamp_lives_in_the_git_common_dir(self):
         """Linked worktrees share the tracking ref, so they must share its sync record."""

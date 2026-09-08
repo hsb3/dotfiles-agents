@@ -87,7 +87,10 @@ Every vendored body must carry, at minimum:
   weeks without its cache becoming any less accurate. Git records no such contact — a fetch
   that finds nothing new writes no reflog entry, and a failed fetch re-dates `FETCH_HEAD`
   exactly as a successful one does — so the gate stamps the moment itself under the git
-  common dir, and a clone that has never synced under it cannot use the fallback at all.
+  common dir, and a clone that has never synced under it cannot use the fallback at all. The
+  stamp names the remote URL it was earned from and is void when `origin` names a different
+  one now: the fetch that wrote it also wrote the cached ref, so a sync earned from a fork
+  would otherwise certify a tree the canonical remote never published.
 
 A vendored entry whose upstream later disappears is not deleted — it is reclassified
 `disposition: orphaned` and reviewed under task-11 (vendored-skill quality).

@@ -58,12 +58,26 @@ fresh sync — is red on the same rule: freshness unproven is freshness unmeasur
 that has never synced under this gate therefore cannot use the fallback until it runs once
 with a reachable remote, which is one command and the honest verdict meanwhile.
 
+The stamp names the URL it was earned from, and a sync earned from a DIFFERENT remote is
+no record at all: that fetch wrote the cached ref too, so a fork's tree would otherwise
+carry a seven-day freshness certificate the canonical remote never issued. The stamp does
+NOT name the sha it synced to. That would additionally catch a tracking ref moved by
+something other than this gate — a hand `git update-ref`, or a fetch with an explicit
+refspec — but a plain `git pull` moves that ref legitimately between gate runs, so a
+sha-bound stamp would go red on ordinary use; and anyone able to write the tracking ref by
+hand can write the stamp beside it, so it buys no guarantee against a local actor. A stamp
+in the older bare-timestamp format cannot name a remote, so it reads as unreadable rather
+than being grandfathered: honouring it would keep exactly the hazard above alive for seven
+days on every clone that ran the previous version.
+
 The gate assumes `origin` resolves to the canonical publish remote and does NOT check it.
 A contributor whose `origin` is a fork or any stale mirror gets a successful fetch of the
-wrong tree and a green that measured the wrong thing. Verifying the URL would hardcode a
-consuming repo's convention, which AGENTS.md forbids without an override, so the assumption
-is stated rather than enforced; a check would have to arrive through
-`docs/override-convention.md`, not a hardcoded URL.
+wrong tree and a green that measured the wrong thing — online and, since the stamp is
+earned in that same configuration, offline too. Verifying the URL against a known-good
+value would hardcode a consuming repo's convention, which AGENTS.md forbids without an
+override, so the assumption is stated rather than enforced; a check would have to arrive
+through `docs/override-convention.md`, not a hardcoded URL. Comparing the stamp's remote
+against the CURRENT one hardcodes nothing — it only requires the two to agree.
 
 A full local clone is never shallow-marked as a side effect (`--depth=1` is used only where
 the repo is already shallow, as in a CI checkout).
@@ -311,32 +325,56 @@ class GitPublishedTree:
             self._stamp_path = os.path.join(gitdir, SYNC_STAMP_NAME) if gitdir else ""
         return self._stamp_path
 
+    def _remote_url(self):
+        """What `origin` resolves to right now, rewrites applied; "" if unreadable."""
+        rc, out, _ = self._git(["remote", "get-url", PUBLISHED_REMOTE])
+        return out.decode("utf-8", "replace").strip() if rc == 0 else ""
+
     def _record_sync(self):
-        """Note that the published ref was just rewritten from the remote."""
-        if not self.stamp_path:
-            return
+        """Record that the published ref was just rewritten, and from WHERE."""
+        url = self._remote_url()
+        if not self.stamp_path or not url:
+            return  # a record that cannot name its remote certifies nothing
         try:
             with open(self.stamp_path, "w") as fh:
-                fh.write("%d\n" % int(time.time()))
+                fh.write("%d\t%s\n" % (int(time.time()), url))
         except OSError:
             pass  # a read-only git dir only costs the NEXT offline run its fallback
 
     def _read_sync(self):
-        """(unix seconds, problem) for the recorded sync — one of the two is None."""
+        """(unix seconds, problem) for a sync earned from the remote `origin` names NOW.
+
+        A record from any other remote is no record: the fetch that wrote it also wrote
+        the cached ref, so both describe a tree the current `origin` never published.
+        """
         if not self.stamp_path:
             return None, "this clone's git directory could not be located"
         try:
             with open(self.stamp_path) as fh:
                 raw = fh.read().strip()
-        except OSError:
+        except FileNotFoundError:
             return None, (
                 "this clone has no record of ever syncing it (run this gate once with the "
                 "remote reachable)"
             )
+        except OSError as exc:
+            return None, f"its sync record could not be read ({exc.strerror})"
+        stamped_at, _, stamped_url = raw.partition("\t")
         try:
-            return int(raw), None
+            seconds = int(stamped_at) if stamped_url else None
         except ValueError:
+            seconds = None
+        if seconds is None:
             return None, f"its sync record is unreadable ({_one_line(raw, 40)!r})"
+        url = self._remote_url()
+        if not url:
+            return None, f"the URL `{PUBLISHED_REMOTE}` resolves to could not be read"
+        if url != stamped_url:
+            return None, (
+                f"the only sync on record was earned from {stamped_url}, not from the "
+                f"{url} that `{PUBLISHED_REMOTE}` names now"
+            )
+        return seconds, None
 
     def _unsynced_reason(self):
         """Reason string when no recent-enough sync backs the cached ref.
