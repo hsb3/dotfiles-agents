@@ -35,6 +35,7 @@ import agentlog  # noqa: E402  (path must be primed before this import)
 #: Hand-written on purpose: this is the expectation the sources are checked
 #: against, so deriving it from those same sources would assert nothing.
 EXPECTED_STREAMS = {
+    "branch-activity-surfacer": ("branch-activity", "BRANCH_ACTIVITY_LOG_PATH"),
     "config-custody": ("config-custody", "ATELIER_CUSTODY_LOG_PATH"),
     "context-watermark": ("context-watermark", "CONTEXT_WATERMARK_LOG_PATH"),
     "delegation-watermark": ("delegation-watermark", "DELEGATION_WATERMARK_LOG_PATH"),
