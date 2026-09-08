@@ -272,13 +272,20 @@ def _assembly_counts(pid):
     )
 
 
+def _kind_counts(counts):
+    """(skills, agents, hooks, commands) read by unit name, not by position in the tuple —
+    a bare `counts[:4]` silently mislabels the columns if CONTENTS_UNITS is ever reordered."""
+    by_unit = dict(zip(CONTENTS_UNITS, counts))
+    return tuple(by_unit[u] for u in ("skill", "agent", "hook", "command"))
+
+
 def _expected_kind(counts):
     """A multi-skill assembly, or one carrying agents, hooks, or commands, is a bundle.
 
     An MCP server is deliberately not part of this: kind counts the units a user invokes,
     and a server spec rides along with the skill that drives it.
     """
-    skills, agents, hooks, commands = counts[:4]
+    skills, agents, hooks, commands = _kind_counts(counts)
     return "bundle" if (skills > 1 or agents or hooks or commands) else "standalone"
 
 
@@ -324,7 +331,7 @@ def _row_cell_problems(pid, cells):
     elif counts is not None:
         expected = _expected_kind(counts)
         if kind != expected:
-            skills, agents, hooks, commands = counts[:4]
+            skills, agents, hooks, commands = _kind_counts(counts)
             problems.append(
                 f"README.md catalog row for `{pid}`: Kind cell {kind!r} disagrees with the "
                 f"assembly — plugins/{pid}/ holds {skills} skill(s), {agents} agent(s), "
