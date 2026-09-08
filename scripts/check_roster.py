@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Roster <-> disk drift guard (issue #5).
+"""Roster <-> disk drift guard (issue #5) + the translation-matrix completeness gate.
 
 Verifies that primitives-core.yaml (the roster, slimmed to a provenance manifest per
 ADR 0017) and primitives-core/ on disk agree:
@@ -14,6 +14,11 @@ ADR 0017) and primitives-core/ on disk agree:
   - provenance: every `origin: sourced` or `origin: vendored` entry carries non-null
     `upstream` and `ref`
 
+It also owns translation.yaml's parser and the matrix-completeness gate (decision-009): every
+frontmatter key, tool and model alias used by an agent must be declared in translation.yaml,
+so nothing reaches gen_opencode.py as a silent drop. The parser lives here rather than in the
+generator because the gate must run without importing it (gen_opencode imports from this file).
+
 Stdlib-only (a tailored line parser for the roster's controlled format — no pyyaml), so it runs
 in CI with zero install. Exit 0 = clean; exit 1 = drift (prints every problem).
 
@@ -27,6 +32,8 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 PC = os.path.join(REPO, "primitives-core")
+TRANSLATION = os.path.join(REPO, "translation.yaml")
+AGENTS = os.path.join(PC, "agents")
 
 TYPES = {"skill", "agent", "command", "mcp", "hook"}
 # The runtime enum (ADR 0017): claude-code installs the symlink assemblies natively;
@@ -35,6 +42,12 @@ TARGETS = {"claude-code", "opencode"}
 ORIGINS = {"authored", "sourced", "vendored"}
 DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged", "orphaned"}
 CAPABILITIES = {"hooks", "local-mcp", "hosted-mcp"}
+# translation.yaml's two closed vocabularies (decision-009): the neutral capability words
+# tool_capabilities rows map onto, and the treatments a frontmatter field may carry.
+TOOL_CAPABILITIES = {"read", "search", "edit", "execute", "delegate"}
+FIELD_TREATMENTS = {"map", "drop-with-notice", "unsupported"}
+TRANSLATION_SECTIONS = ("matrix", "model_aliases", "tool_capabilities", "field_treatments",
+                        "exclusions")
 # Dependency declarations (issue #79): cli:<kebab> = a binary/app the primitive invokes;
 # env:<kebab> = machine state it assumes (e.g. env:dotfiles). Deploy tooling reads these.
 REQUIRES_DEP = re.compile(r"^(cli|env):[a-z0-9][a-z0-9_-]*$")
@@ -85,6 +98,130 @@ def parse_roster(path):
     if cur is not None:
         entries.append(cur)
     return entries
+
+
+def parse_translation(path):
+    """Tailored line parser for translation.yaml's controlled format (its entry lists)."""
+    section, entry = None, None
+    out = {name: [] for name in TRANSLATION_SECTIONS}
+    header = re.compile(r"^(%s):\s*$" % "|".join(TRANSLATION_SECTIONS))
+    with open(path, encoding="utf-8") as fh:
+        for raw in fh:
+            line = raw.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            m = header.match(line)
+            if m:
+                section = m.group(1)
+                entry = None
+                continue
+            m = re.match(r"^  - ([a-z_]+):\s*(.*)$", line)
+            if m and section:
+                entry = {m.group(1): m.group(2).strip().strip('"')}
+                out[section].append(entry)
+                continue
+            m = re.match(r"^    ([a-z_]+):\s*(.*)$", line)
+            if m and entry is not None:
+                entry[m.group(1)] = m.group(2).strip().strip('"')
+    return out
+
+
+def split_frontmatter(text):
+    """Split a `---`-delimited frontmatter block into (dict, body); raises on a file without.
+
+    A YAML block sequence (`tools:` then `  - Read` lines) folds into the same comma-joined
+    string an inline `tools: Read, Bash` produces, so callers see one shape. Read as an empty
+    scalar instead, it would hand the permission inversion a WRONG answer, not a missing one.
+    """
+    m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
+    if not m:
+        raise ValueError("agent file has no frontmatter block")
+    fm, seq_key = {}, None
+    for line in m.group(1).splitlines():
+        km = re.match(r"^([A-Za-z0-9_-]+):\s*(.*)$", line)
+        if km:
+            key, value = km.group(1), km.group(2).strip()
+            fm[key] = value
+            seq_key = None if value else key
+            continue
+        im = re.match(r"^\s+- (.*)$", line)
+        if im and seq_key:
+            item = im.group(1).strip()
+            fm[seq_key] = f"{fm[seq_key]}, {item}" if fm[seq_key] else item
+    return fm, m.group(2)
+
+
+def tool_row(translation, name):
+    """The tool_capabilities row covering `name`: exact `tool:` first, then a `prefix:` blanket."""
+    for row in translation["tool_capabilities"]:
+        if row.get("tool") == name:
+            return row
+    for row in translation["tool_capabilities"]:
+        prefix = row.get("prefix")
+        if prefix and name.startswith(prefix):
+            return row
+    return None
+
+
+def check_matrix_completeness(agents_dir=None, translation_path=None):
+    """Every agent frontmatter key, tool and model alias must be named by translation.yaml.
+
+    decision-009 chose a completeness check over a version stamp as the drift catcher: a key
+    or tool the matrix does not name would otherwise reach gen_opencode.py as a silent drop.
+    """
+    agents_dir = agents_dir or AGENTS
+    translation_path = translation_path or TRANSLATION
+    problems = []
+    if not os.path.isfile(translation_path):
+        return [f"translation matrix not on disk: {translation_path}"]
+    tr = parse_translation(translation_path)
+
+    for row in tr["tool_capabilities"]:
+        name = row.get("tool") or row.get("prefix") or "<unnamed>"
+        if row.get("capability") not in TOOL_CAPABILITIES:
+            problems.append(
+                f"translation.yaml: tool_capabilities row {name!r} has capability "
+                f"{row.get('capability')!r} (must be one of {sorted(TOOL_CAPABILITIES)})")
+    for row in tr["field_treatments"]:
+        if row.get("treatment") == "map" and not row.get("opencode"):
+            problems.append(
+                f"translation.yaml: field_treatments row {row.get('field')!r} is "
+                "`treatment: map` with no `opencode:` target key")
+        if row.get("treatment") not in FIELD_TREATMENTS:
+            problems.append(
+                f"translation.yaml: field_treatments row {row.get('field')!r} has treatment "
+                f"{row.get('treatment')!r} (must be one of {sorted(FIELD_TREATMENTS)})")
+
+    treatments = {r["field"] for r in tr["field_treatments"] if "field" in r}
+    aliases = {r["alias"] for r in tr["model_aliases"] if "alias" in r}
+    if not os.path.isdir(agents_dir):
+        return problems
+    for fn in sorted(os.listdir(agents_dir)):
+        if not fn.endswith(".md") or fn.lower() == "readme.md":
+            continue
+        with open(os.path.join(agents_dir, fn), encoding="utf-8") as fh:
+            text = fh.read()
+        try:
+            fm, _ = split_frontmatter(text)
+        except ValueError as exc:
+            problems.append(f"[agents/{fn}] {exc}")
+            continue
+        for key in fm:
+            if key not in treatments:
+                problems.append(
+                    f"[agents/{fn}] frontmatter key `{key}` has no translation.yaml "
+                    "field_treatments row")
+        for tool in (t.strip() for t in fm.get("tools", "").split(",")):
+            if tool and tool_row(tr, tool) is None:
+                problems.append(
+                    f"[agents/{fn}] tool `{tool}` has no translation.yaml tool_capabilities "
+                    "row (exact `tool:` or a declared `prefix:`)")
+        model = fm.get("model", "").strip()
+        if model and "/" not in model and model not in aliases:
+            problems.append(
+                f"[agents/{fn}] model `{model}` is neither provider-prefixed nor a "
+                "translation.yaml model_aliases row")
+    return problems
 
 
 def disk_primitives():
@@ -211,6 +348,8 @@ def main():
             continue  # exists but maybe normalized differently; existence already checked above
         problems.append(f"in roster but NOT on disk: ({t}) {src}")
 
+    problems.extend(check_matrix_completeness())
+
     n = len(entries)
     counts = {}
     for e in entries:
@@ -218,11 +357,11 @@ def main():
     summary = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
 
     if problems:
-        print(f"✗ roster<->disk drift: {len(problems)} problem(s)")
+        print(f"✗ roster<->disk / translation-matrix drift: {len(problems)} problem(s)")
         for p in problems:
             print(f"  - {p}")
         return 1
-    print(f"✓ roster<->disk clean — {n} primitives ({summary})")
+    print(f"✓ roster<->disk clean, translation matrix complete — {n} primitives ({summary})")
     return 0
 
 

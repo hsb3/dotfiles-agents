@@ -11,12 +11,14 @@ tempdir and executes the generated installer; `--out` is the direct entry point:
   skills/<id>/            native — copied verbatim from primitives-core/skills/<id>/
                           (validated: opencode name regex ^[a-z0-9]+(-[a-z0-9]+)*$, <=64;
                           description <= 1024 — a violation FAILS the build, never skips)
-  agents/<id>.md          transform — frontmatter remapped per the cc-to-opencode mapping:
-                          `name` dropped (filename carries it), `mode: subagent` added,
-                          bare model aliases pinned to provider-prefixed refs
-                          (translation.yaml model_aliases), the CC `tools:` allowlist
-                          inverted into opencode's permission map (read/write/bash),
-                          CC-only keys (effort, color) dropped, maxTurns -> steps; body verbatim
+  agents/<id>.md          transform — frontmatter remapped from translation.yaml's declared
+                          matrix, never hardcoded sets (decision-009): `field_treatments`
+                          says what each key does (map / drop-with-notice / unsupported),
+                          `tool_capabilities` inverts the CC `tools:` allowlist into
+                          opencode's read/write/bash permission map, `model_aliases` pins
+                          bare aliases to provider-prefixed refs. An undeclared field, tool
+                          or alias FAILS the build; anything the matrix says does not travel
+                          prints a notice. Body verbatim
   opencode.jsonc          the mergeable config fragment (schema ref plus the `mcp` block
                           every roster mcp entry targeting opencode renders into; both
                           rostered entries are claude-code-only, so today it is the ref
@@ -52,7 +54,12 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
-from check_roster import parse_roster  # noqa: E402
+from check_roster import (  # noqa: E402
+    parse_roster,
+    parse_translation,
+    split_frontmatter,
+    tool_row,
+)
 
 ROSTER = os.path.join(REPO, "primitives-core.yaml")
 TRANSLATION = os.path.join(REPO, "translation.yaml")
@@ -62,38 +69,9 @@ SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 MAX_SKILL_NAME = 64
 MAX_DESCRIPTION = 1024
 
-# CC tool names -> opencode permission buckets (allow when granted, deny otherwise).
-WRITE_TOOLS = {"Edit", "Write", "NotebookEdit"}
-BASH_TOOLS = {"Bash"}
-
 #: opencode expands `{env:VAR}`, never CC's `${VAR}` (opencode-expertise,
 #: references/extension-surfaces.md) — an unconverted ref ships as a literal string.
 ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-
-
-def parse_translation(path):
-    """Tailored line parser for translation.yaml's controlled format (three entry lists)."""
-    section, entry = None, None
-    out = {"matrix": [], "model_aliases": [], "exclusions": []}
-    with open(path, encoding="utf-8") as fh:
-        for raw in fh:
-            line = raw.rstrip("\n")
-            if not line.strip() or line.lstrip().startswith("#"):
-                continue
-            m = re.match(r"^(matrix|model_aliases|exclusions):\s*$", line)
-            if m:
-                section = m.group(1)
-                entry = None
-                continue
-            m = re.match(r"^  - ([a-z_]+):\s*(.*)$", line)
-            if m and section:
-                entry = {m.group(1): m.group(2).strip().strip('"')}
-                out[section].append(entry)
-                continue
-            m = re.match(r"^    ([a-z_]+):\s*(.*)$", line)
-            if m and entry is not None:
-                entry[m.group(1)] = m.group(2).strip().strip('"')
-    return out
 
 
 def treatment_for(translation, ptype):
@@ -115,40 +93,123 @@ def _targets(entry):
     return [v] if v else []
 
 
-def split_frontmatter(text):
-    m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
-    if not m:
-        raise ValueError("agent file has no frontmatter block")
-    fm = {}
-    for line in m.group(1).splitlines():
-        km = re.match(r"^([A-Za-z_-]+):\s*(.*)$", line)
-        if km:
-            fm[km.group(1)] = km.group(2).strip()
-    return fm, m.group(2)
+def _model_row(translation, alias):
+    return next((r for r in translation["model_aliases"] if r.get("alias") == alias), None)
 
 
-def transform_agent(text, aliases):
-    """CC agent .md -> opencode agent .md per the mapping table."""
+def _resolve_model(translation, agent_id, model):
+    """A CC `model:` value -> the ref opencode needs. Returns (ref-or-None, problems, notices)."""
+    if "/" in model:
+        return model, [], []
+    row = _model_row(translation, model)
+    if row is None:
+        return None, [f"{agent_id}: model alias `{model}` has no translation.yaml "
+                      "model_aliases row — pin it or declare it unsupported"], []
+    if row.get("ref"):
+        return row["ref"], [], []
+    if row.get("opencode") == "unsupported":
+        return None, [], [f"{agent_id}: model `{model}` does not travel, so the agent runs on "
+                          f"opencode's default — {row.get('reason', 'no reason declared')}"]
+    return None, [f"{agent_id}: model_aliases row for `{model}` declares neither a `ref` "
+                  "nor `opencode: unsupported`"], []
+
+
+#: opencode keys whose position in the emitted block is pinned (byte-stability for the agents
+#: already laid down); every other declared `map` target appends after them, in field order.
+PINNED_KEYS = ("model", "steps")
+
+
+def transform_agent(text, translation, agent_id):
+    """CC agent .md -> opencode agent .md, driven entirely by translation.yaml's matrix.
+
+    Returns (text, problems, notices): anything the matrix does not name is a PROBLEM, and
+    anything it declares does not travel is a printed NOTICE — never a silent drop
+    (decision-009). Emission is driven FROM the `field_treatments` rows, so a declared `map`
+    row the emitter has no special case for still travels. Notice order follows the
+    frontmatter, so builds stay diff-identical.
+    """
     fm, body = split_frontmatter(text)
+    problems, notices = [], []
+    rows = {r["field"]: r for r in translation["field_treatments"] if "field" in r}
+    values, tools = {}, ""
+
+    for key, raw in fm.items():
+        row = rows.get(key)
+        if row is None:
+            problems.append(
+                f"{agent_id}: frontmatter key `{key}` has no translation.yaml "
+                "field_treatments row — declare a treatment for it")
+            continue
+        treatment, why = row.get("treatment"), row.get("reason", "no reason declared")
+        if treatment == "unsupported":
+            problems.append(
+                f"{agent_id}: frontmatter key `{key}` is `treatment: unsupported` for "
+                f"opencode — {why}")
+            continue
+        if treatment == "drop-with-notice":
+            notices.append(f"{agent_id}: dropped `{key}` — {why}")
+            continue
+        if treatment != "map":
+            problems.append(
+                f"{agent_id}: frontmatter key `{key}` has unknown treatment {treatment!r}")
+            continue
+        to = row.get("opencode", "")
+        if not to:
+            problems.append(
+                f"{agent_id}: field_treatments row `{key}` is `treatment: map` with no "
+                "`opencode:` target key — nothing says where it lands")
+            continue
+        if to == "filename":
+            continue  # identity travels as agents/<id>.md, never as a key
+        if not raw:
+            problems.append(
+                f"{agent_id}: frontmatter key `{key}` is empty, so opencode's `{to}` would "
+                "be written blank — give it a value or drop the key")
+            continue
+        if to == "permission":
+            tools = raw
+        elif key == "model":
+            ref, mp, mn = _resolve_model(translation, agent_id, raw)
+            problems.extend(mp)
+            notices.extend(mn)
+            if ref:
+                values[to] = ref
+        else:
+            values[to] = raw
+
     out = ["---"]
-    out.append(f"description: {fm.get('description', '')}")
+    if "description" in values:
+        out.append(f"description: {values.pop('description')}")
     out.append("mode: subagent")
-    model = fm.get("model", "")
-    if model:
-        ref = aliases.get(model, model if "/" in model else "")
-        if ref:
-            out.append(f"model: {ref}")
-    if fm.get("maxTurns"):
-        out.append(f"steps: {fm['maxTurns']}")
-    # CC `color:` is dropped: opencode expects hex/theme-token colors and rejects CC's
-    # named values at config load (verified live on opencode 1.18.11)
-    tools = {t.strip() for t in fm.get("tools", "").split(",") if t.strip()}
+    for key in PINNED_KEYS:
+        if key in values:
+            out.append(f"{key}: {values.pop(key)}")
+    out.extend(f"{k}: {v}" for k, v in values.items())
+
+    granted, seen = {"read": False, "write": False, "bash": False}, []
+    for tool in (t.strip() for t in tools.split(",")):
+        if tool and tool not in seen:
+            seen.append(tool)
+    for tool in seen:
+        row = tool_row(translation, tool)
+        if row is None:
+            problems.append(
+                f"{agent_id}: tool `{tool}` has no translation.yaml tool_capabilities row "
+                "(exact `tool:` or a declared `prefix:`) — declare its capability")
+        elif row.get("opencode") in granted:
+            granted[row["opencode"]] = True
+        elif row.get("opencode") == "unsupported":
+            notices.append(
+                f"{agent_id}: tool `{tool}` grants no opencode permission — "
+                f"{row.get('reason', 'no reason declared')}")
+        else:
+            problems.append(
+                f"{agent_id}: tool_capabilities row for `{tool}` has unknown opencode "
+                f"bucket {row.get('opencode')!r}")
     out.append("permission:")
-    out.append("  read: allow")
-    out.append(f"  write: {'allow' if tools & WRITE_TOOLS else 'deny'}")
-    out.append(f"  bash: {'allow' if tools & BASH_TOOLS else 'deny'}")
+    out.extend(f"  {b}: {'allow' if granted[b] else 'deny'}" for b in ("read", "write", "bash"))
     out.append("---")
-    return "\n".join(out) + "\n" + body
+    return "\n".join(out) + "\n" + body, problems, notices
 
 
 def skill_problems(sid, src):
@@ -269,8 +330,8 @@ def render_fragment(servers):
 
 
 def build(out_root, entries, translation):
-    problems = []
-    aliases = {r["alias"]: r["ref"] for r in translation["model_aliases"] if "alias" in r}
+    """Lay the tree down. Returns (problems, notices) — see transform_agent for the split."""
+    problems, notices = [], []
     excluded_ids = {r["id"]: r.get("reason", "") for r in translation["exclusions"] if "id" in r}
     members = opencode_members(entries)
 
@@ -306,16 +367,20 @@ def build(out_root, entries, translation):
         elif ptype == "agent":
             with open(src, encoding="utf-8") as fh:
                 text = fh.read()
+            rendered, agent_problems, agent_notices = transform_agent(text, translation, eid)
+            problems.extend(agent_problems)
+            notices.extend(agent_notices)
             os.makedirs(os.path.join(out_root, "agents"), exist_ok=True)
             with open(os.path.join(out_root, "agents", f"{eid}.md"), "w", encoding="utf-8") as fh:
-                fh.write(transform_agent(text, aliases))
+                fh.write(rendered)
             shipped["agent"].append(eid)
         elif ptype == "mcp":
             servers, mcp_problems = render_mcp(eid, src)
             problems.extend(mcp_problems)
             problems.extend(
-                f"{eid}: server name {name!r} collides with one an earlier mcp entry has "
-                "already rendered — opencode's `mcp` block is one flat namespace"
+                f"{eid}: server name {name!r} collides with a server an earlier mcp entry "
+                "already rendered, and opencode's `mcp` block is one flat namespace, so "
+                "this one would overwrite it"
                 for name in servers if name in mcp_servers
             )
             mcp_servers.update(servers)
@@ -378,7 +443,7 @@ def build(out_root, entries, translation):
     ]
     with open(os.path.join(out_root, "README.md"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
-    return problems
+    return problems, notices
 
 
 def _identical(a, b):
@@ -406,7 +471,11 @@ def main(argv):
     entries = parse_roster(ROSTER)
     translation = parse_translation(TRANSLATION)
     os.makedirs(out, exist_ok=True)
-    problems = build(out, entries, translation)
+    problems, notices = build(out, entries, translation)
+    if notices:
+        print(f"ℹ opencode laydown — {len(notices)} capability notice(s):")
+        for n in notices:
+            print(f"  - {n}")
     if problems:
         print(f"✗ opencode laydown — {len(problems)} problem(s):")
         for p in problems:
