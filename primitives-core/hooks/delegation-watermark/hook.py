@@ -75,26 +75,30 @@ DELEGABLE_TOOLS = {
 }
 DISPATCH_TOOLS = {"Task", "Agent"}
 
-# The never-delegated floor (the delegation skill's own list): work the doctrine
-# assigns to the session itself, so a streak of it is not retained labor. It is
-# detected from the transcript record — the tool name and that call's own input —
-# never from the model declaring which phase it thinks it is in.
+# The never-delegated floor: work the doctrine assigns to the session itself, so
+# it is not retained labor. Detected from the transcript record — the tool name
+# and that call's own input — never from the model declaring its phase.
 #
-# A floor SKILL is a phase boundary and resets the streak the way a dispatch
-# does. `input.skill` may be plugin-qualified (`atelier:handoff`) or bare, so the
-# match is on the segment after the last colon.
-FLOOR_SKILLS = {
-    "handoff", "board-triage", "publish-to-main", "owner-signoff",
-    "pull-request", "merge-review",
-}
-
-# A floor COMMAND neither counts nor resets: coordination and review shell, the
-# same status as TodoWrite. `kata` is a consuming-repo convention, hence the
-# override (docs/override-convention.md).
+# Floor work never RESETS the streak, it only fails to count. A reset would let
+# any periodic floor call hide unbounded labor between them (measured: 12 cycles
+# of 24 edits + one board touch = 288 uncounted calls, silent forever).
+#
+# `kata` is a consuming-repo convention, hence the override
+# (docs/override-convention.md).
 FLOOR_COMMANDS_DEFAULT = "kata,gh,make,git"
-GIT_FLOOR_SUBCOMMANDS = {
-    "status", "log", "diff", "show", "fetch", "branch", "worktree", "rev-list",
-    "rev-parse", "merge", "push", "rebase", "switch", "checkout",
+
+# Which subcommands of a floor head are actually coordination or review. The int
+# is which non-flag token to read: `gh` is noun-verb (`gh pr view`), so it is the
+# second, which is what keeps `gh workflow run` and `gh api graphql` labor. A
+# head with no entry here is floor for any subcommand — that is what makes the
+# override usable for a tracker other than kata.
+FLOOR_SUBCOMMANDS = {
+    "git": ({"status", "log", "diff", "show", "fetch", "branch", "worktree",
+             "rev-list", "rev-parse", "merge", "push"}, 1),
+    "gh": ({"view", "list", "checks", "diff", "status", "watch"}, 2),
+    "make": ({"", "ci", "test", "check", "help", "lint"}, 1),
+    "kata": ({"list", "show", "ready", "next", "board", "search", "comment",
+              "meta", "label", "schedule", "deadline"}, 1),
 }
 _SEGMENT_SPLIT = re.compile(r"[;&|\n]+")
 
@@ -110,7 +114,11 @@ def _env_int(name, default):
 
 
 def _env_set(name, default):
-    raw = os.environ.get(name) or default
+    """Comma-separated list knob. Unlike `_env_int`, an empty value is
+    meaningful: for a list it says "none", not "use the default"."""
+    raw = os.environ.get(name)
+    if raw is None:
+        raw = default
     return {item.strip() for item in raw.split(",") if item.strip()}
 
 
@@ -121,15 +129,6 @@ STATE_DIR = os.environ.get("DELEGATION_WATERMARK_STATE_DIR") or STATE_DIR_DEFAUL
 FLOOR_COMMANDS = _env_set(
     "DELEGATION_WATERMARK_FLOOR_COMMANDS", FLOOR_COMMANDS_DEFAULT
 )
-
-
-def _is_floor_skill(tool_input):
-    if not isinstance(tool_input, dict):
-        return False
-    skill = tool_input.get("skill")
-    if not isinstance(skill, str):
-        return False
-    return skill.rsplit(":", 1)[-1].strip() in FLOOR_SKILLS
 
 
 def _is_floor_command(command):
@@ -149,14 +148,20 @@ def _is_floor_command(command):
             continue
         if tokens[0] not in FLOOR_COMMANDS:
             return False
-        if tokens[0] == "git" and not _is_floor_git(tokens[1:]):
+        allowed = FLOOR_SUBCOMMANDS.get(tokens[0])
+        if allowed and _positional(tokens[1:], allowed[1]) not in allowed[0]:
             return False
     return True
 
 
-def _is_floor_git(tokens):
-    """Read git's subcommand past the global flags (`git -C <dir> status`)."""
+def _positional(tokens, index):
+    """The index-th non-flag token, "" when absent.
+
+    `-C`/`-c` take a value, so `git -C <dir> status` and `make -C <dir> ci` read
+    their subcommand rather than the directory.
+    """
     skip_next = False
+    seen = 0
     for token in tokens:
         if skip_next:
             skip_next = False
@@ -164,8 +169,10 @@ def _is_floor_git(tokens):
         if token.startswith("-"):
             skip_next = token in ("-C", "-c")
             continue
-        return token in GIT_FLOOR_SUBCOMMANDS
-    return False
+        seen += 1
+        if seen == index:
+            return token
+    return ""
 
 
 def _emit(obj):
@@ -235,17 +242,19 @@ def _scan(path):
                 if not isinstance(block, dict) or block.get("type") != "tool_use":
                     continue
                 name = block.get("name")
-                tool_input = block.get("input")
                 if name in DISPATCH_TOOLS:
                     dispatches += 1
                     streak = 0           # a dispatch resets the streak
-                elif name == "Skill":
-                    if _is_floor_skill(tool_input):
-                        streak = 0       # a floor phase resets it too
                 elif name in DELEGABLE_TOOLS:
-                    if name == "Bash" and _is_floor_command(
-                        (tool_input or {}).get("command")
-                    ):
+                    tool_input = block.get("input")
+                    # `input` is not guaranteed to be a dict; a raised
+                    # AttributeError here escapes to main() and abandons the
+                    # whole scan, losing every call in the transcript silently.
+                    command = (
+                        tool_input.get("command")
+                        if isinstance(tool_input, dict) else None
+                    )
+                    if name == "Bash" and _is_floor_command(command):
                         continue         # coordination shell: neither counts nor resets
                     delegable_total += 1
                     streak += 1
