@@ -24,6 +24,11 @@ capture run that surfaces a real bug is a feature of the process, not a detour.
 **Verify before committing.** Image paths must resolve and the README must read top-to-bottom
 for its target audience.
 
+**Capture against synthetic data, not a live account.** Screenshots come from seeded,
+realistic-looking content, never a live account's real user or client data — and every image
+gets read before committing for leaked tokens or identifiers (names, emails, org slugs, API
+keys) visible in a URL bar, DevTools, or a notification.
+
 ## Structure it produces
 
 Why this exists (the problem) · What you get today (the honest value prop, including what it

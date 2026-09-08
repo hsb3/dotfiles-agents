@@ -10,8 +10,10 @@ adversarially tries to refute every load-bearing claim before anything is assert
 
 Use it when the user asks to "research X", "do a deep dive", or wants a multi-source,
 verified answer to a substantive question. The skill enforces scope discipline first
-(underspecified questions get 2-3 clarifying questions with recommended defaults), and
-the final report carries per-claim citations, confidence labels
+(underspecified questions get 2-3 clarifying questions with recommended defaults) and
+defaults to the single refined question actually asked, never the widest reading of
+it — it widens only when the user explicitly asks for broader coverage. The final
+report carries per-claim citations, confidence labels
 (verified / contested / unverified / refuted), and a negative-findings section — what
 did NOT hold up stays on the record.
 

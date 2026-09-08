@@ -22,5 +22,6 @@ plus script file — never inline shell strings in settings).
 claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `solo-skills` bundle. Ships copy-pasteable JSON examples
-and a self-contained example hook template (stdlib-only).
+Ships in the `solo-skills` bundle alongside `claude-code-expertise`, which authors skills,
+subagents, and plugins and defers here for settings, permissions, and hook wiring. Ships
+copy-pasteable JSON examples and a self-contained example hook template (stdlib-only).

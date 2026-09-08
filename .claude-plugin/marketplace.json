@@ -16,7 +16,7 @@
       "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, hold protected config in custody, and refuse a worker git call that would sweep away a sibling's uncommitted work or land on a protected branch. Enforcement follows the main checkout into a linked worktree, so an isolated worker is no longer an unguarded one. Run /atelier:activate to arm it in a project and see what each hook resolved. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.30.1"
+      "version": "0.30.2"
     },
     {
       "author": {
@@ -43,7 +43,7 @@
       "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.11.7"
+      "version": "0.11.8"
     },
     {
       "author": {
@@ -52,7 +52,7 @@
       "description": "Structural diagrams for repo docs, decks, and briefings, with consistent SVG and PNG output: Mermaid for GitHub-rendered markdown, Python diagrams for cloud architecture with provider icons, draw.io reading and headless export, Excalidraw sketches, and raw Graphviz. Data charts belong to the dataviz skill, deck theming to pptx-themes. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "author": {
@@ -79,7 +79,7 @@
       "description": "Build Obsidian plugins against the real API — lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP — and automate vaults from the terminal with the official Obsidian CLI. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "obsidian-toolkit",
       "source": "./plugins/obsidian-toolkit",
-      "version": "0.1.5"
+      "version": "0.1.6"
     },
     {
       "author": {
@@ -106,7 +106,7 @@
       "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, session discipline, research, diagrams and data visualization, repo and project setup, sandboxed opencode instances, and Obsidian plugin development. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.14.3"
+      "version": "0.14.4"
     }
   ]
 }
