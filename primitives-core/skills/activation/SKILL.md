@@ -58,6 +58,7 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `protected` | `config-custody` | fnmatch globs, block or inline list | yes |
 | `isolate` | `worktree-isolation` | `writers` \| an explicit agent-type list (empty list = off) | yes |
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` | a project-relative path to a file that **already exists** (file mode), or a mapping naming an external tracker plus a freshness stamp (external mode) - see below | yes |
+| `watermark` | `context-watermark` | a mapping of `soft` / `hard` (token counts) and `complexity` (a multiplier); every sub-key optional | yes |
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 <!-- harness:claude-code -->
@@ -97,6 +98,13 @@ the board on a cold session regardless - silence at cold start is exactly what e
 exists to fix, and the stamp is only a freshness gauge, never the thing being surfaced.
 `check` reports either mode as armed with a warning when its file/stamp does not exist yet,
 because it is live - just probably not as intended.
+
+**`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
+not a positive number leaves that tier computed from the lead model's context window rather than
+turning anything off — so `check` calls a key with nothing readable under it inert, and a key
+naming only `hard` armed. It is also the one key an environment variable outranks:
+`CONTEXT_WATERMARK_SOFT` and `CONTEXT_WATERMARK_HARD` win over the file, which wins over the
+computed default.
 
 ## Effect and location
 

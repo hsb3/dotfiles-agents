@@ -46,6 +46,19 @@ isolate: writers           # off (default when absent) | writers | [builder, my-
 #   stamp: .claude/handoff.stamp
 #   location: Kaneo board task DFA-233
 
+# context-watermark: where the /handoff nudge fires. Every sub-key is optional and
+# independent — `soft` and `hard` are absolute token counts, `complexity` is a
+# multiplier on both. Anything absent, blank, or not a positive number leaves that
+# one computed from the lead model's context window, so this key is only worth
+# writing when a project knows better than the formula.
+#
+# Ships commented out on purpose: the computed default already scales to the model.
+# `CONTEXT_WATERMARK_SOFT` / `_HARD` in the environment outrank whatever is written here.
+# watermark:
+#   soft: 90000
+#   hard: 130000
+#   complexity: 0.9
+
 # Prose-only: no hook reads this. The delegation skill honours it when an agent
 # reads this file, and `activation.py check` validates the spelling.
 effort: standard           # standard | deep

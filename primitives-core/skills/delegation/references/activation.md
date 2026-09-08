@@ -173,11 +173,27 @@ number means different things on a 200k-window model and a 1M-window one. How fa
 taken that is its own business, and each states its concrete mechanism below.
 
 <!-- harness:claude-code -->
-The hook nudges on **absolute token counts**, overridable per environment with
-`CONTEXT_WATERMARK_SOFT` and `CONTEXT_WATERMARK_HARD`. There is no window-relative arithmetic and
-no `complexity:` key here: percent-of-window thresholds were inert against the ~967k auto-compact
-default, so the figures in `SKILL.md` are stated absolutely. Read the hook for the values actually
-in force before quoting a number.
+The hook computes `soft = min(120_000, 0.60 × window) × complexity` and
+`hard = min(160_000, 0.80 × window) × complexity`, taking `window` from the model id on the
+transcript's last assistant line (no hook payload carries a `model` field) and `complexity` from
+the repo's tracked-file count — under 5,000 files 1.00, 5,000–20,000 0.85, over 20,000 0.75, and
+1.00 in a tree that is not a checkout at all. The absolute terms are why a 1M-window model is
+still nudged at 120k: percent-of-window thresholds alone were inert against the ~967k
+auto-compact default. An unknown model, or one the catalog has no window for, falls back to the
+absolute 120k/160k pair — never to a fraction of an assumed window — and writes a ledger row
+marking the fallback, so a check that could not measure never looks like one that measured and
+found nothing.
+
+Precedence, applied per value: `CONTEXT_WATERMARK_SOFT` / `CONTEXT_WATERMARK_HARD` in the
+environment, then a `watermark:` key in the activation file (`soft`, `hard`, `complexity`, each
+independently optional and each fail-open to the tier below), then the computed default. The
+wiring deliberately supplies no shell-expanded env default: that would leave the variable always
+set, and the top tier would win forever.
+
+A delegated worker is watched on `PostToolUse` (only a worker's payload carries `agent_id`), at
+half the session's soft line and with no hard tier, because it cannot hand off, compact, or start
+a fresh session — the nudge therefore names the one move it has, wrap up and report. Read the hook
+for the values actually in force before quoting a number.
 <!-- /harness -->
 
 ## Design commitments

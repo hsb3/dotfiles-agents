@@ -27,7 +27,8 @@ import os
 import shutil
 import sys
 
-KEYS = ("enforce", "protected", "protected-branches", "isolate", "handoff", "effort")
+KEYS = ("enforce", "protected", "protected-branches", "isolate", "handoff",
+        "watermark", "effort")
 EFFORT_VALUES = ("standard", "deep")
 
 HOOK_NAMES = (
@@ -37,6 +38,7 @@ HOOK_NAMES = (
     "session-handoff-surfacer",
     "handoff-freshness-guard",
     "worker-git-scope-guard",
+    "context-watermark",
 )
 
 ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
@@ -219,6 +221,7 @@ def evaluate(project_dir, modules):
     surfacer, freshness = (
         modules["session-handoff-surfacer"], modules["handoff-freshness-guard"])
     scope_guard = modules["worker-git-scope-guard"]
+    watermark = modules["context-watermark"]
 
     # The hooks all resolve the activation path the same way (ATELIER_ACTIVATION_FILE
     # first, else <project-dir>/.claude/atelier.local.md), so ask one of them rather
@@ -404,6 +407,26 @@ def evaluate(project_dir, modules):
                 "handoff: that file does not exist yet. This is still live: the hooks "
                 "do NOT fall back to the standard search when an override is set, they "
                 "report no handoff at all. Create the file or drop the key.")
+
+    # -- watermark (context-watermark; every sub-key optional) --------------
+    # Absent sub-keys are not a defect: each one that is missing or unusable
+    # leaves that tier computed from the model's window, which is the shipped
+    # behaviour. Only a key written with nothing readable under it is inert.
+    thresholds = watermark._load_watermark_config(project_dir)
+    if "watermark" not in present:
+        result["rows"].append(_row("watermark", "not configured", "", ["context-watermark"]))
+    elif not thresholds:
+        result["rows"].append(_row(
+            "watermark", "inert",
+            "written, but no usable soft/hard/complexity value - the sub-keys are "
+            "missing, blank, or not positive numbers, so every tier stays computed",
+            ["context-watermark"]))
+    else:
+        result["rows"].append(_row(
+            "watermark", "armed",
+            ", ".join("{0}={1}".format(k, thresholds[k])
+                      for k in ("soft", "hard", "complexity") if k in thresholds),
+            ["context-watermark"]))
 
     # -- effort (no hook) ---------------------------------------------------
     effort = effort_value(region, worker._unquote)
