@@ -61,12 +61,12 @@ your report is the only thing you can send, and it is sent by finishing.
 ## Where a worker's completion actually goes
 
 **A worker's completion reaches the agent that dispatched it only if that agent is still mid-turn
-when the worker finishes** `[field]`. An agent whose turn has already ended is never re-invoked by
+when the worker finishes** `[measured]`. An agent whose turn has already ended is never re-invoked by
 its child's completion. Delivery is therefore a race against the dispatcher's own turn ending, and
 a manager that dispatches in the background and then stops talking loses it by construction. This
-was established by a controlled headless probe rather than by unreproduced observation, so the
-`[field]` tag understates the evidence behind it — but the probe ran on one harness, so the
-mechanism it measured is recorded as that harness's rather than as doctrine.
+was established by a controlled headless probe rather than by unreproduced observation — but the
+probe ran on one harness, so the mechanism it measured is recorded as that harness's rather than as
+doctrine.
 
 <!-- harness:claude-code -->
 **The mechanism, measured here.** Every completion is enqueued to the top-level session first and
@@ -87,7 +87,7 @@ only in what the manager was doing at that moment:
 
 **So never let a completion notification be the thing you are blocked on.**
 
-- **Dispatch synchronously unless you actually need concurrency** `[field]`. A synchronous
+- **Dispatch synchronously unless you actually need concurrency** `[measured]`. A synchronous
   dispatch hands the worker's result back as an ordinary tool result — no queue, no notification,
   no race — and it is the only route measured on this harness to deliver every time. It is the
   default; a background dispatch is the deviation and needs a reason.
@@ -106,7 +106,7 @@ relays the report down, in full and verbatim, to the manager that dispatched the
 manager's own channel. This is the field workaround already in use, and it stays the recovery
 path for a race that has already been lost `[field]`.
 
-**A manager's word that "the result came back" is not evidence** `[field]`. In the probe the
+**A manager's word that "the result came back" is not evidence** `[measured]`. In the probe the
 manager reported the expected result while already holding that same text in its own briefing, so
 its line would have read identically had nothing been delivered. Delivery is proven by the
 receiving transcript's record of it, never by the receiver's summary — the evidence ranking in

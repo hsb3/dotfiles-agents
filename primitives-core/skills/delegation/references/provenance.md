@@ -19,12 +19,11 @@ overturning something.
   rule outranks `[untested]` reasoning and never outranks a `[lab]` or `[cost]` result. Two ways to
   get it wrong, both fatal to this file's purpose: defending one as a measurement, or discarding
   one as a guess. Each row names the experiment that would settle it.
+- `[measured]` — reproduced under controlled measurement outside the inventory lab rig: a headless
+  harness probe run with arms and a held-constant variable. It outranks `[field]` (observed,
+  uncontrolled) but lacks the cross-round comparability a `[lab]` result carries, since it was
+  never scored through the lab's panel rounds.
 - `[untested]` — reasoning. Never measured. Change these first when evidence arrives.
-
-**No tag currently covers a controlled probe run outside the inventory lab.** The completion-routing
-rows below were established that way — reproduced under measurement, but not in the lab rig — and so
-carry the weaker of the two candidate tags, with the probe named in their observation column.
-Widening the vocabulary is an owner call, not a row-level one.
 
 ## `[lab]` rules and their measurements
 
@@ -73,8 +72,7 @@ merged with the `[field]` specialization claim below.
 | **No two write-capable builders in one shared worktree without a disjoint file map in both briefs** (`manager-brief.md`, "Workers"; `agents/manager.md`, "Delegating downward") | The same run: one manager put two write-capable builders in a single shared worktree, and a builder rather than the manager caught the custody break | Run paired waves of two builders over one tree, with and without the disjoint map recorded in both briefs; count lost writes and which layer catches each. One incident and one catch is not a rate |
 | **Review the artifact and the report that describes it, hunting for stale rather than wrong** (`verification.md`, "The evidence ranking") | Observed in practice: a reviewer confirmed every mechanical claim in a builder's report and still passed an artifact carrying a superseded decision that read as current truth. Each statement was true when written and had since been overtaken, so no per-claim check could fire | Seed known-stale claims — a decision reversed later in the wave, a path since renamed, a constraint since lifted — into review packages and count how many reviewers surface them with the rule and without |
 | **Look outside the transcript first** (`waiting.md`, "The liveness check") | Observed in practice: a stalled agent and a dead one are indistinguishable from inside a transcript, while the traces a working chain leaves elsewhere — commits, branches, opened PRs, processes it was told to run — answered the question that transcript reading did not. The ordering claim, external signals before any transcript reading, is the part that has never been raced | Time both routes over the same stalled and slow chains, external-first against transcript-first, recording time to a correct verdict and wrong verdicts per route |
-| **A worker's completion reaches its dispatcher only while that dispatcher is still mid-turn**, and the synchronous default that follows (`waiting.md`, "Where a worker's completion actually goes"; reports 5 and 6) | Established by a controlled probe run as part of this change rather than by unreproduced observation: three arms plus a discovery run, one dispatch shape, differing only in what the dispatcher was doing when its worker finished. Measured — a completion delivered in full to a dispatcher still mid-turn; a completion delivered to the top-level session instead once the dispatcher's turn had ended; a completion lost entirely where the dispatcher stopped seconds after its worker finished; and a synchronous dispatch returning the result as an ordinary tool result with no race. Tagged conservatively per the note above | Why the dropped completion was dropped is not established. Nor is the un-run arm: a dispatcher that sends a resume message and then ends its own turn, which is the originally reported shape. Every arm ran headless, so interactive sessions are untested. Cover those three before reading the loss as a bound rather than a hazard |
-| **The standing relay**, and **a manager's word that the result came back is not evidence** (`waiting.md`, same section) | The relay is the field workaround already in use for a race that has been lost — the top-level session hands the misrouted report down verbatim on the manager's own channel, which reaches a finished manager as well as a live one; it is practice, not an arm of the probe. The evidence clause is from the probe: the manager reported the expected result while already holding that text in its own briefing, so its line would have read identically had nothing been delivered | For the relay, count over real waves how often one restarts a stopped manager against how often it does not. For the evidence clause, re-run the same arm with the expected result withheld from the briefing, so a report of it can only come from delivery |
+| **The standing relay** (`waiting.md`, "Where a worker's completion actually goes") | The relay is the field workaround already in use for a race that has been lost — the top-level session hands the misrouted report down verbatim on the manager's own channel, which reaches a finished manager as well as a live one; it is practice, not an arm of the probe | Count over real waves how often the relay restarts a stopped manager against how often it does not |
 
 <!-- harness:claude-code -->
 | Rule | The observation | What would settle it |
@@ -84,6 +82,13 @@ merged with the `[field]` specialization claim below.
 | **A `memory:` key in an agent definition writes to the tree at dispatch time** (`dispatch-knobs.md`) | Observed here: the runtime creates that directory before the agent takes its first action, so a definition produces tree state as a side effect of being dispatched even when the agent then does nothing. No shipped definition here sets it; the trap is one adopted from elsewhere that does | Dispatch a definition carrying the key into a clean tree under a no-op brief and diff the tree, per harness release — it is runtime behavior and may change without notice |
 | **Transcript location is not routing evidence** (`waiting.md`, harness block) | The probe mechanics behind the routing rows above: custom agents defined inline, every arm run headless (`claude -p`), transcripts read off disk afterwards with `parentAgentId` and `spawnDepth` from the sibling `agent-<id>.meta.json` proving which file belonged to which agent. That is how the layout claim was read directly — every agent at every depth writes under the top-level session's directory, so a worker's file sitting there is the normal layout and not the misrouting it was once taken for | The layout was read, not inferred, so nothing about it is open; what remains open is the routing itself, listed against the rows above |
 <!-- /harness -->
+
+## `[measured]` rules
+
+| Rule | Measurement | What would settle it further |
+|---|---|---|
+| **A worker's completion reaches its dispatcher only while that dispatcher is still mid-turn**, and the synchronous default that follows (`waiting.md`, "Where a worker's completion actually goes"; reports 5 and 6) | Established by a controlled probe run as part of this change rather than by unreproduced observation: three arms plus a discovery run, one dispatch shape, differing only in what the dispatcher was doing when its worker finished. Measured — a completion delivered in full to a dispatcher still mid-turn; a completion delivered to the top-level session instead once the dispatcher's turn had ended; a completion lost entirely where the dispatcher stopped seconds after its worker finished; and a synchronous dispatch returning the result as an ordinary tool result with no race | Why the dropped completion was dropped is not established. Nor is the un-run arm: a dispatcher that sends a resume message and then ends its own turn, which is the originally reported shape. Every arm ran headless, so interactive sessions are untested. Cover those three before reading the loss as a bound rather than a hazard |
+| **A manager's word that the result came back is not evidence** (`waiting.md`, "Where a worker's completion actually goes") | From the probe: the manager reported the expected result while already holding that text in its own briefing, so its line would have read identically had nothing been delivered | Re-run the same arm with the expected result withheld from the briefing, so a report of it can only come from delivery |
 
 ## `[untested]` rules — change these first
 
@@ -141,7 +146,8 @@ lab. The three-layer model and its vocabulary come from the repo owner.
 When a rule changes, change its row. When a rule is added, add a row with an honest tag — an
 untagged rule reads as measured, which is the specific failure this file exists to prevent.
 
-Tags move in one direction only, and only on evidence: `[untested]` or `[field]` becomes `[lab]` or
-`[cost]` when an experiment named in its "what would settle it" column has actually been run, and
-the row then records what was run. A tag never drifts upward because a rule has been in the file a
-long time or because a session found it persuasive.
+Tags move in one direction only, and only on evidence: `[untested]` or `[field]` becomes
+`[measured]`, `[lab]`, or `[cost]` when an experiment named in its "what would settle it" column
+has actually been run outside the inventory lab rig, in the lab rig, or against real delegation
+cost respectively, and the row then records what was run. A tag never drifts upward because a
+rule has been in the file a long time or because a session found it persuasive.
