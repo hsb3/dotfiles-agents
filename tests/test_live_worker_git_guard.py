@@ -440,6 +440,50 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             with self.subTest(command=command):
                 self._assert_denied(self._run_in(command, other, session))
 
+    def test_a_cd_before_the_git_word_fails_closed(self):
+        # The payload cwd is then stale, so the target is unknowable — the
+        # same answer the two tree-aiming flags get.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("j1111111111111111")
+        for command in (
+            "cd {0} && git commit -m x".format(session),
+            "( cd {0} ; git commit -m x )".format(session),
+            "pushd {0} && git commit -m x".format(session),
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(command, other, session))
+
+    def test_a_git_tree_env_assignment_fails_closed(self):
+        # GIT_WORK_TREE and GIT_DIR are the same relocation `--work-tree` and
+        # `--git-dir` spell as flags, so they get the same answer.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("j2222222222222222")
+        for command in (
+            "GIT_WORK_TREE={0} git -C {1} commit -m x".format(session, other),
+            "GIT_DIR={0}/.git git commit -m x".format(session),
+            "GIT_COMMON_DIR={0}/.git git commit -m x".format(session),
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(command, other, session))
+
+    def test_a_cd_word_that_is_not_a_command_still_compares(self):
+        # `cd` only moves the cwd in command position; as an argument it is
+        # just a word, and over-denying on it would be noise.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("j3333333333333333")
+        self._assert_silent(
+            self._run_in("echo cd && git commit -m x", other, session))
+
+    def test_a_non_string_cwd_fails_closed(self):
+        session = self._repo("session-repo")
+        self._sidecar("j4444444444444444")
+        for bad in ({"a": 1}, 123, ["x"]):
+            with self.subTest(cwd=bad):
+                self._assert_denied(self._run_in("git commit -m x", bad, session))
+
     def test_a_cwd_outside_any_repo_fails_closed(self):
         session = self._repo("session-repo")
         self._sidecar("g7777777777777777")

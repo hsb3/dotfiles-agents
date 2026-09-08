@@ -52,8 +52,8 @@ at this tree.
 
 Being live is only half the question; the other half is whether the command can reach them. The
 pending set is keyed on the session's transcript, so on its own it says nothing about where a
-command points — a manager dispatched from a session in repo A but working in a checkout of
-repo B had a `git push` denied by workers it could not touch.
+command points: a session can hold workers in its own tree while a call runs in a checkout of a
+different repo, where those workers have nothing to lose.
 
 So the guard resolves both trees and compares them:
 
@@ -72,12 +72,26 @@ tree and its own index, so a `commit` there stages only its own files and a `pus
 refs — neither takes a worker's uncommitted file off disk in the main checkout. Repo identity
 would block a whole class of calls that cannot cause the loss.
 
-**Ambiguity fails closed**, the one place this hook is not fail-open: no `git` binary, a `cwd`
-outside any repository, an unset or non-repo `CLAUDE_PROJECT_DIR`, or a `--git-dir` / `--work-tree`
-flag (which relocate the working tree by a rule the hook does not reimplement) all leave the guard
-deciding exactly as it did before it could compare trees at all. The same rule a corrupt sidecar
-gets: a record that exists and cannot be read keeps its agent live. `init` and `clone` are not
-mutating verbs, so making a repo in a fresh directory never reaches the comparison.
+**Ambiguity fails closed**, the one place this hook is not fail-open. Every one of these leaves
+the guard deciding exactly as it did before it could compare trees at all:
+
+- no `git` binary, or a `cwd` that is missing, not a string, or outside any repository;
+- an unset or non-repo `CLAUDE_PROJECT_DIR`;
+- a `--git-dir` or `--work-tree` flag, which relocate the working tree by a rule the hook does not
+  reimplement;
+- `GIT_DIR`, `GIT_WORK_TREE` or `GIT_COMMON_DIR` assigned in the command line — the same
+  relocation spelled as environment, which git honours identically;
+- a `cd`, `pushd` or `popd` in command position before the `git` word, which makes the payload's
+  `cwd` stale.
+
+The same rule a corrupt sidecar gets: a record that exists and cannot be read keeps its agent
+live. `init` and `clone` are not mutating verbs, so making a repo in a fresh directory never
+reaches the comparison.
+
+**The residual ceiling**, stated because it leaves no evidence in the command: a `GIT_*` variable
+**exported by an earlier Bash call** is not among this command's tokens, so the comparison runs
+against a cwd git will not use. Only the override is a deliberate bypass; this one is a blind
+spot, and closing it would need session state the hook does not have.
 
 ## Override
 
