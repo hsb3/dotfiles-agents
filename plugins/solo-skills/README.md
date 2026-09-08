@@ -148,8 +148,9 @@ Carbon MCP server. Each says so at the point of use.
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
 changes configuration; `claude-code-expertise` explains the surfaces. Several of these
-skills also ship inside another plugin (`handoff` in `atelier`, the diagram skills in
-`diagrams`, the Obsidian skills in `obsidian-toolkit`, `carbon-builder` in `carbon`,
-and several in `code-desk`). Enable both homes and the skill
-is listed twice in a session — one source, two memberships, no way for either plugin to
-suppress the other — so pick the one home you want it from.
+skills also ship inside a topical plugin (`handoff` in `atelier`, the diagram skills in
+`diagrams`, the Obsidian skills in `obsidian-toolkit`, `carbon-builder` in `carbon`, several
+in `code-desk`, and `project-memory` plus `task-authoring` in `mise-en-place`, which reads
+both as standards its audit and its desk depend on). Enable more than one home and the skill
+is listed once per membership in a session — one source, several memberships, no way for any
+of them to suppress the others — so pick the one home you want it from.

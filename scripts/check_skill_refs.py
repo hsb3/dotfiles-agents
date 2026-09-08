@@ -68,10 +68,11 @@ adding or dropping a symlink changes this gate's verdict the moment it lands.
     illustrative placeholder that is not a roster id, so widening buys no subject today
     and would start reading example paths as citations.
   * **The gate holds nothing red on the tree it landed in** — every cross-bundle pair is
-    exempted or amnestied, so a green run proves no regression, not an empty problem.
+    exempted, so a green run proves no regression, not an empty problem.
     `docs/gotchas.md` asks a deliberate forward-guard to say so; this is that sentence. It
     is not a guard without subjects, though: run against `faa3209` it is red in eight
-    places, and the two path-form pairs it now amnesties were live defects when found.
+    places, and the two path-form pairs it amnestied at landing were live defects that
+    `kw60` then fixed.
 
 ## Exemptions
 
@@ -110,15 +111,15 @@ because every citation of the pair contains the id, so such an anchor can never 
 and the self-invalidation never fires. A defective anchor is reported AND deactivates the
 entry — an exemption nobody can trust must not suppress anything meanwhile.
 
-The entries marked AMNESTY are not a clearance — real cross-bundle dependencies that predate
-the gate, tracked on kata `kw60` ("shipped skills cite a sibling their bundle does not
-ship"; the two path-form pairs were appended to it). Two of them break at runtime, not
-merely on the page: `repo-compliance-audit`'s `audit.py` refuses to run against a
-`mise-en-place` root because `project-memory`'s checklist is not there. Resolving them means
-changing a distribution surface (adding a symlink cascades plugin version bumps), which is
-an owner decision, not a gate's. This mirrors `check_readme_currency.py`'s landing-commit
-anchor: forward-only, with the backlog named out loud. When `kw60` closes, every AMNESTY
-entry is deleted outright.
+The AMNESTY block this table shipped with is gone: kata `kw60` ("shipped skills cite a
+sibling their bundle does not ship") closed by resolving all five pairs rather than by
+clearing them. `mise-en-place` now ships `project-memory` and `task-authoring`, which is
+what the two path-form pairs were really asking for — both `repo-compliance-audit`'s
+`audit.py` and `mise-en-place-scaffold`'s `scaffold.py` hardcode
+`skills/project-memory/references/checklist.md` and refused to run against a
+`mise-en-place` root without it — and the two citations that owed the reader no substance
+were dropped from the prose. Every entry left is a permanent judgment, so a pair appearing
+here again is a new decision, not a deferred one.
 
 Run standalone to see every citation the extractor pulls, with its verdict — the tool for
 auditing the rule rather than trusting it:
@@ -180,47 +181,6 @@ EXEMPTIONS = {
         "only offers more; anchored to that inline sentence, which is exactly what was "
         "missing when this citation shipped broken",
         "red observed against the unfixed code, red again when",
-    ),
-    # --- amnesty: pre-existing and UNRESOLVED, tracked on kata kw60 -----------------
-    # Real cross-bundle dependencies. They are recorded here so the gate can be
-    # forward-only; fixing them changes a distribution surface (owner decision). Delete
-    # every entry in this block when kw60 closes — the gate will then be red until the
-    # memberships or the bodies change, which is the point.
-    ("planning-desk", "task-authoring"): (
-        "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency: the desk "
-        "says outright that item bodies are written with task-authoring and its rules are "
-        "not restated, so a mise-en-place consumer is sent to a skill that bundle does not "
-        "ship. Not a clearance; remove this entry when kw60 closes",
-        "its rules are not restated here",
-    ),
-    ("planning-desk", "board-triage"): (
-        "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency: "
-        "prioritization is delegated to board-triage, which the mise-en-place bundle does "
-        "not ship. Not a clearance; remove this entry when kw60 closes",
-        "prioritization is the `board-triage` skill's job",
-    ),
-    ("repo-compliance-audit", "project-memory"): (
-        "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency, and the "
-        "only one of these that breaks at RUNTIME rather than dead-ending a reader: "
-        "`audit.py --plugin-root plugins/mise-en-place` exits with `checklist file "
-        "missing: .../skills/project-memory/references/checklist.md`, because "
-        "mise-en-place ships this skill and not project-memory. Not a clearance; remove "
-        "this entry when kw60 closes",
-        "pass `--plugin-root <dir>` pointing at a root that contains",
-    ),
-    ("mise-en-place-scaffold", "project-memory"): (
-        "AMNESTY (kata kw60), pre-existing and unresolved — the same mise-en-place gap "
-        "seen from the scaffold: it directs the consumer at a plugin root holding "
-        "project-memory's checklist, which that bundle does not ship. Not a clearance; "
-        "remove this entry when kw60 closes",
-        "(checklist + assets) and",
-    ),
-    ("project-memory", "repo-compliance-audit"): (
-        "AMNESTY (kata kw60), pre-existing and unresolved — a real dependency: the skill "
-        "declines to audit and routes the verdict to repo-compliance-audit, which neither "
-        "code-desk nor solo-skills ships alongside it. Not a clearance; remove this entry "
-        "when kw60 closes",
-        "verdicts come from the sibling `repo-compliance-audit` skill",
     ),
 }
 
