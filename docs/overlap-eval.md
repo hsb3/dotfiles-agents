@@ -61,3 +61,16 @@ would restate an existing one.
 - **Ranked backlog**: consolidated in board-triage; adapters carry the tools.
 - **Diagrams**: hub + thin tool skills, deliberate — not pending consolidation.
 - **Obsidian toolkit**: one product, four access surfaces — not an overlap family.
+
+## Supersession note (2026-09-08)
+
+The 2026-08-23 disposition above names **github-project-board** as the shipped example of
+"mostly mechanics -> keep the tool skill." That skill has since been retired: its
+mechanics collapsed into a `board-triage` adapter
+(`primitives-core/skills/board-triage/references/adapters/github-projects.md`), which now
+also carries the provisioning material (project and field creation, sub-issues, views and
+workflows, the status-update mutation) recovered from the retired skill. The
+"mostly mechanics -> keep the tool skill" resolution pattern still holds; **kaneo** is now
+its shipped example, and `board-triage` itself demonstrates the "mostly doctrine -> adapter
+per tool" row instead. The 2026-08-23 record above is left as written; this note is the
+correction.
