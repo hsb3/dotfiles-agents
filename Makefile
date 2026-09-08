@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout agent-refs floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels
+.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels models-drift
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -23,6 +23,9 @@ hook-layout: ## Entry-gate floor: hooks use the ratified hooks/<name>/hook.py la
 
 agent-refs: ## Agent-reference gate: no shipped body names an agent that is neither a roster agent nor a harness built-in (--report lists every reference)
 	@python3 scripts/check_agent_refs.py
+
+model-tiers: ## Model-tier gate: every tier's pinned id is real in the vendored models.dev projection, and every agent's model: renders its declared tier
+	@python3 scripts/check_model_tiers.py
 
 floor: identity test provenance hook-layout ## The Tier-1 entry-gate machine floor (required on PRs into dev)
 
@@ -61,13 +64,16 @@ test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check 
 # guard the distribution surface; agent-refs keeps shipped bodies from routing through an
 # agent nobody ships; harness-coupling keeps harness/ extraction-clean
 # (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout agent-refs symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
+ci: check identity provenance hook-layout agent-refs model-tiers symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
 
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).
 .PHONY: harness-test harness-eval harness-report
 vendored-drift: ## Vendored base/ vs pinned upstream ref (needs network; NOT in ci)
 	@python3 scripts/check_vendored_drift.py
+
+models-drift: ## Vendored model catalog vs models.dev (needs network; NOT in ci). --refresh rewrites the projection
+	@python3 scripts/check_model_tiers.py --drift
 
 labels: ## GitHub label set vs the closed vocabulary, decision-016 (needs gh + network; NOT in ci)
 	@python3 scripts/check_labels.py

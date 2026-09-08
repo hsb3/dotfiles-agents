@@ -15,10 +15,12 @@ tempdir and executes the generated installer; `--out` is the direct entry point:
                           matrix, never hardcoded sets (decision-009): `field_treatments`
                           says what each key does (map / drop-with-notice / unsupported),
                           `tool_capabilities` inverts the CC `tools:` allowlist into
-                          opencode's read/write/bash permission map, `model_aliases` pins
-                          bare aliases to provider-prefixed refs. An undeclared field, tool
-                          or alias FAILS the build; anything the matrix says does not travel
-                          prints a notice. Body verbatim
+                          opencode's read/write/bash permission map, and a bare CC `model:`
+                          alias resolves through the SHARED tier map
+                          (primitives-core/hooks/_lib/model_catalog.json): keyword -> tier
+                          -> the active provider's id. An undeclared field, tool or alias
+                          FAILS the build; anything the matrix says does not travel prints
+                          a notice. Body verbatim
   opencode.jsonc          the mergeable config fragment (schema ref plus the `mcp` block
                           every roster mcp entry targeting opencode renders into; both
                           rostered entries are claude-code-only, so today it is the ref
@@ -53,6 +55,9 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
+sys.path.insert(0, os.path.join(REPO, "primitives-core", "hooks", "_lib"))
+
+import model_tiers  # noqa: E402
 
 from check_roster import (  # noqa: E402
     parse_roster,
@@ -97,21 +102,59 @@ def _model_row(translation, alias):
     return next((r for r in translation["model_aliases"] if r.get("alias") == alias), None)
 
 
-def _resolve_model(translation, agent_id, model):
-    """A CC `model:` value -> the ref opencode needs. Returns (ref-or-None, problems, notices)."""
+def _catalog():
+    """The shared tier map, loaded once. A broken catalog is a build failure, not a default."""
+    global _CATALOG
+    if _CATALOG is None:
+        _CATALOG = model_tiers.load()
+    return _CATALOG
+
+
+_CATALOG = None
+
+
+def _tier_for_keyword(catalog, keyword):
+    return next(
+        (t for t in model_tiers.tiers(catalog)
+         if model_tiers.claude_code_keyword(catalog, t) == keyword),
+        None,
+    )
+
+
+def _resolve_model(translation, agent_id, model, catalog=None):
+    """A CC `model:` value -> the ref opencode needs. Returns (ref-or-None, problems, notices).
+
+    A bare CC alias is this harness's rendering of a dispatch tier, so it resolves through
+    the SHARED map (model_catalog.json), not through a per-target pin: keyword -> tier ->
+    active provider's model id. That is what keeps a provider switch to one edit.
+    """
     if "/" in model:
         return model, [], []
     row = _model_row(translation, model)
     if row is None:
         return None, [f"{agent_id}: model alias `{model}` has no translation.yaml "
                       "model_aliases row — pin it or declare it unsupported"], []
-    if row.get("ref"):
-        return row["ref"], [], []
     if row.get("opencode") == "unsupported":
         return None, [], [f"{agent_id}: model `{model}` does not travel, so the agent runs on "
                           f"opencode's default — {row.get('reason', 'no reason declared')}"]
-    return None, [f"{agent_id}: model_aliases row for `{model}` declares neither a `ref` "
-                  "nor `opencode: unsupported`"], []
+    if row.get("ref"):
+        return None, [f"{agent_id}: model_aliases row for `{model}` pins `ref: {row['ref']}` "
+                      "— a second tier-to-id map; the alias resolves through "
+                      "primitives-core/hooks/_lib/model_catalog.json"], []
+    if row.get("resolves") != "tier":
+        return None, [f"{agent_id}: model_aliases row for `{model}` declares neither "
+                      "`resolves: tier` nor `opencode: unsupported`"], []
+    catalog = catalog or _catalog()
+    tier = _tier_for_keyword(catalog, model)
+    if tier is None:
+        return None, [f"{agent_id}: model alias `{model}` renders no tier in the shared map "
+                      "— no tier declares it as its `claude_code_keyword`"], []
+    concrete = model_tiers.model_for(catalog, tier)
+    if concrete is None:
+        provider = model_tiers.active_provider(catalog)
+        return None, [f"{agent_id}: tier `{tier}` has no model for the active provider "
+                      f"`{provider}` in the shared map"], []
+    return f"{model_tiers.active_provider(catalog)}/{concrete}", [], []
 
 
 #: opencode keys whose position in the emitted block is pinned (byte-stability for the agents
@@ -119,7 +162,7 @@ def _resolve_model(translation, agent_id, model):
 PINNED_KEYS = ("model", "steps")
 
 
-def transform_agent(text, translation, agent_id):
+def transform_agent(text, translation, agent_id, catalog=None):
     """CC agent .md -> opencode agent .md, driven entirely by translation.yaml's matrix.
 
     Returns (text, problems, notices): anything the matrix does not name is a PROBLEM, and
@@ -169,7 +212,7 @@ def transform_agent(text, translation, agent_id):
         if to == "permission":
             tools = raw
         elif key == "model":
-            ref, mp, mn = _resolve_model(translation, agent_id, raw)
+            ref, mp, mn = _resolve_model(translation, agent_id, raw, catalog)
             problems.extend(mp)
             notices.extend(mn)
             if ref:
@@ -329,7 +372,7 @@ def render_fragment(servers):
     return FRAGMENT_HEADER + json.dumps(config, indent=2, sort_keys=True) + "\n"
 
 
-def build(out_root, entries, translation):
+def build(out_root, entries, translation, catalog=None):
     """Lay the tree down. Returns (problems, notices) — see transform_agent for the split."""
     problems, notices = [], []
     excluded_ids = {r["id"]: r.get("reason", "") for r in translation["exclusions"] if "id" in r}
@@ -367,7 +410,8 @@ def build(out_root, entries, translation):
         elif ptype == "agent":
             with open(src, encoding="utf-8") as fh:
                 text = fh.read()
-            rendered, agent_problems, agent_notices = transform_agent(text, translation, eid)
+            rendered, agent_problems, agent_notices = transform_agent(
+                text, translation, eid, catalog)
             problems.extend(agent_problems)
             notices.extend(agent_notices)
             os.makedirs(os.path.join(out_root, "agents"), exist_ok=True)

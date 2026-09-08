@@ -1,6 +1,7 @@
 ---
 name: pb-reviewer
 description: Adversarial report-only verification for PocketBase backend claims — re-derives each claim from its cited source, re-runs its commands in its own clean room, and actively tries to refute. Use after any builder or lead report that will drive further changes. Never edits.
+tier: heavy
 model: opus
 tools: Read, Grep, Glob, Bash
 ---

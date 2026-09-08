@@ -11,6 +11,17 @@
           }
         ],
         "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
+            "statusMessage": "Checking worker context watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash"
       }
     ],
     "PreCompact": [
@@ -161,7 +172,7 @@
       {
         "hooks": [
           {
-            "command": "CONTEXT_WATERMARK_HARD=\"${CONTEXT_WATERMARK_HARD:-160000}\" CONTEXT_WATERMARK_SOFT=\"${CONTEXT_WATERMARK_SOFT:-120000}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
             "statusMessage": "Checking context watermark...",
             "timeout": 10,
             "type": "command"

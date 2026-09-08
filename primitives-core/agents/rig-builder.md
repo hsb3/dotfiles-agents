@@ -1,6 +1,7 @@
 ---
 name: rig-builder
-description: Build and prove a repo's quality gate from a written contract — scaffolds the runner, config, and any custom checker, proves the gate green AND red, and reports a measured baseline. Dispatch once a RULES.md exists and the stack is decided; it is mechanical work with a machine-checkable definition of done. Defaults to sonnet; dispatch with model:opus when the artifact has no compiler and the checker must be designed from scratch. Never edits the contract and never remediates the artifact.
+description: Build and prove a repo's quality gate from a written contract — scaffolds the runner, config, and any custom checker, proves the gate green AND red, and reports a measured baseline. Dispatch once a RULES.md exists and the stack is decided; it is mechanical work with a machine-checkable definition of done. Defaults to the mid tier; dispatch one tier up (on this harness, model:opus) when the artifact has no compiler and the checker must be designed from scratch. Never edits the contract and never remediates the artifact.
+tier: mid
 model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---

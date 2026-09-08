@@ -26,19 +26,31 @@ the project declared.
 
 ## Worked example 1 — hooks: `CONTEXT_WATERMARK_SOFT` / `_HARD`
 
-The wiring supplies the default and the environment wins:
+The environment wins, and here the wiring supplies **no** default:
 
 ```jsonc
-// plugins/atelier/hooks/hooks.json:153
-"command": "CONTEXT_WATERMARK_HARD=\"${CONTEXT_WATERMARK_HARD:-160000}\" CONTEXT_WATERMARK_SOFT=\"${CONTEXT_WATERMARK_SOFT:-120000}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\""
+// plugins/atelier/hooks/hooks.json
+"command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\""
 ```
 
 A user overrides one by setting it in `.claude/settings.json` under `env` — documented in
 `plugins/atelier/README.md` ("Session-wide settings — environment variables") and in
-`primitives-core/hooks/context-watermark/README.md`. The hook itself
-(`primitives-core/hooks/context-watermark/hook.py`) reads the variables through `_env_int`
-with the same numbers hardcoded as its own fallback, so it behaves identically when it is
-run outside the wiring.
+`primitives-core/hooks/context-watermark/README.md`.
+
+**A shell-expanded default is only right when the value it defaults to is a constant.** This
+hook computes its thresholds from the lead model's context window, so
+`CONTEXT_WATERMARK_SOFT="${CONTEXT_WATERMARK_SOFT:-120000}"` — the form this example carried
+until 2026-09-08 — made the variable *always set*, and since the env var is the top of the
+precedence chain the computed value could never apply. The wiring now passes nothing, the hook
+keeps the absolute pair internally as its unknown-model fallback, and it behaves identically
+run inside or outside the wiring.
+
+That leaves this hook with a chain rather than a pair, and it is the general shape for any hook
+whose default is computed: **env var → the `watermark:` key in `.claude/atelier.local.md` → the
+computed default**. The file tier is the row below in the table, reached for the ordinary reason
+— the threshold is a per-project fact worth committing — and it extends the existing activation
+file rather than adding a second config surface. Fail-open runs the whole chain: absent, blank,
+or unparseable at any tier falls through to the next and never errors.
 
 ## Worked example 2 — skills: the `handoff:` key
 

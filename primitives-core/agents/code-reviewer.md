@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: Senior-engineer code-quality review focused on simplification, minimalism, and elegance. Flags over-engineering, unnecessary abstraction, and needless complexity, then shows the cleaner form with before/after. Use after writing or modifying code for a quality and simplification pass, distinct from the correctness-focused reviewer agent.
+tier: mid
 model: sonnet
 tools: Read, Grep, Glob, Bash
 color: cyan

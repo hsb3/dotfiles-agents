@@ -461,13 +461,20 @@ the premium tier for every model-bearing call and never exercised the cheaper ti
 `references/tier-cutoff.md` is the protocol for measuring the cutoff and the record of how far it
 has been measured.
 
+The tier vocabulary is **`light` / `mid` / `heavy`** — semantic bands, deliberately not model
+names, so the same words survive a provider change. Role defaults: scout=light; builder and
+`code-reviewer`=mid; reviewer and manager=heavy. Which concrete model a band buys is a harness
+question, never an agent's.
+
 <!-- harness:claude-code -->
-**Tier is a dispatch-time decision, not an agent choice.** The defaults are scout=haiku (`effort:
-low`), builder=sonnet, reviewer=opus, manager=opus, and the strategist is the session itself (Opus
-at `standard`, Fable at `deep`). Override at dispatch: `model: sonnet` on a scout for cross-file
-synthesis, `model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not
-downtiered — verification is where the premium pays. Pass `model:` on the Agent call only when the
-slice demonstrably needs the judgment.
+**Tier is a dispatch-time decision, not an agent choice.** Here a band renders to one of Claude
+Code's frontmatter keywords — light=`haiku` (with `effort: low`), mid=`sonnet`, heavy=`opus` — and
+that rendering lives in `hooks/_lib/model_catalog.json`, not in any agent file. The strategist is
+the session itself (Opus at `standard`, Fable at `deep`). Override at dispatch by naming the
+keyword the band you want renders to: `model: sonnet` on a scout for cross-file synthesis,
+`model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not downtiered —
+verification is where the premium pays. Pass `model:` on the Agent call only when the slice
+demonstrably needs the judgment.
 <!-- /harness -->
 
 Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent
@@ -564,10 +571,19 @@ Operating defaults from measured findings `[cost]`. The `context-watermark` (Use
   DoD so an under-powered crew fails loudly and fast; see `references/tier-cutoff.md`.
 
 <!-- harness:claude-code -->
-Concretely here: `context-watermark` nudges on **absolute tokens** (120k soft, 160k hard),
-because percent-of-window thresholds are inert against the ~967k auto-compact default; the fresh
-session is `/clear`; downtiering is a `model:` value on the dispatch; and the handoff skill has no
-slash command — a command would shadow the skill of the same name.
+Concretely here the window **caps** the threshold and never lifts it, because the `[cost]`
+degradation band is an absolute token count: `context-watermark` sets soft at
+`min(120k, 60% of the lead model's window)` and hard at `min(160k, 80%)`, each scaled by a
+repo-size factor that only ever points down (tracked files: under 5k → 1.00, 5k–20k → 0.85,
+over 20k → 0.75). At a 200k window that is 120k/160k; at 1M it is still 120k/160k,
+because percent-of-window thresholds are inert against the ~967k auto-compact default; at 64k it
+is 38.4k/51.2k. An unknown model falls back to the absolute pair and says so in its ledger row.
+Override with `CONTEXT_WATERMARK_SOFT`/`_HARD`, or a `watermark:` key (`soft`/`hard`/`complexity`)
+in `.claude/atelier.local.md` — env beats file beats computed. A delegated worker is watched too,
+on `PostToolUse`, at half the session's soft line and with no hard tier: it cannot hand off or
+clear, so the nudge tells it to wrap up and report. The fresh session is `/clear`; downtiering is
+a `model:` value on the dispatch; and the handoff skill has no slash command — a command would
+shadow the skill of the same name.
 <!-- /harness -->
 
 These watermarks are the strategy layer's budget. A manager spends a context that gets thrown away

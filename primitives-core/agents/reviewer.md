@@ -1,6 +1,7 @@
 ---
 name: reviewer
 description: Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits, fixes, or writes into the repo under review. Use whenever a claim or diff will drive further changes; a producer self-report is a hypothesis, not proof.
+tier: heavy
 model: opus
 tools: Read, Grep, Glob, Bash
 color: yellow

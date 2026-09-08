@@ -17,9 +17,11 @@ import unittest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
+sys.path.insert(0, os.path.join(REPO, "primitives-core", "hooks", "_lib"))
 
 import check_roster as CR  # noqa: E402
 import gen_opencode as G  # noqa: E402
+import model_tiers as MT  # noqa: E402
 from check_roster import parse_roster  # noqa: E402
 
 #: The real matrix — these tests pin the shipped declarations, not a hand-made stand-in.
@@ -75,6 +77,28 @@ class TestTransformAgent(unittest.TestCase):
         out, problems, _ = self._t(CC_AGENT.replace("model: haiku", "model: openai/gpt-5"))
         self.assertEqual(problems, [])
         self.assertIn("model: openai/gpt-5", out)
+
+    def test_alias_resolves_through_the_shared_tier_map(self):
+        """A bare alias is not pinned in translation.yaml any more: it renders a tier, and
+        the concrete id comes from the one map a provider switch edits."""
+        catalog = MT.load()
+        for alias, tier in (("haiku", "light"), ("sonnet", "mid"), ("opus", "heavy")):
+            out, problems, _ = self._t(CC_AGENT.replace("model: haiku", f"model: {alias}"))
+            self.assertEqual(problems, [], alias)
+            self.assertIn(
+                f"model: {MT.active_provider(catalog)}/{MT.model_for(catalog, tier)}", out)
+
+    def test_a_model_aliases_ref_is_a_problem_not_a_second_map(self):
+        tr = copy.deepcopy(TR)
+        next(r for r in tr["model_aliases"] if r.get("alias") == "haiku")["ref"] = "x/y-1"
+        _, problems, _ = G.transform_agent(CC_AGENT, tr, "scout")
+        self.assertTrue(any("second tier-to-id map" in p for p in problems), problems)
+
+    def test_alias_whose_tier_is_unmapped_for_the_active_provider_is_a_problem(self):
+        catalog = copy.deepcopy(MT.load())
+        del catalog["tiers"]["light"]["models"][catalog["active_provider"]]
+        _, problems, _ = G.transform_agent(CC_AGENT, TR, "scout", catalog)
+        self.assertTrue(any("light" in p and "scout" in p for p in problems), problems)
 
     def test_unknown_model_alias_is_a_problem(self):
         """Replaces the old silent-drop pin: an unrecognized alias fails the build

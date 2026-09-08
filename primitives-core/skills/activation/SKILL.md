@@ -61,12 +61,13 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 <!-- harness:claude-code -->
-One more key is read only on this harness, and a GFM table cannot carry a harness marker, so it
-sits here instead of in the table above:
+Two more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
+they sit here instead of in the table above:
 
 | key | read by | accepted values | enforced per hook call? |
 |---|---|---|---|
 | `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
+| `watermark` | `context-watermark` | a mapping of `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on both); every sub-key optional | yes |
 <!-- /harness -->
 
 **`effort` is not machine-enforced.** No hook reads it. It only takes effect if the agent
@@ -97,6 +98,16 @@ the board on a cold session regardless - silence at cold start is exactly what e
 exists to fix, and the stamp is only a freshness gauge, never the thing being surfaced.
 `check` reports either mode as armed with a warning when its file/stamp does not exist yet,
 because it is live - just probably not as intended.
+
+<!-- harness:claude-code -->
+**`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
+unusable leaves that one value computed from the lead model's context window rather than turning
+anything off — so `check` calls a key with nothing readable under it inert, and a key naming only
+one threshold armed. It is also the one key the environment outranks: `CONTEXT_WATERMARK_SOFT`
+and `CONTEXT_WATERMARK_HARD` beat the file, which beats the computed default. `complexity`
+replaces the tracked-file factor the hook computes. The bundle's wiring sets neither variable, on
+purpose: a shell-expanded default would leave it always set and the top tier would win forever.
+<!-- /harness -->
 
 ## Effect and location
 

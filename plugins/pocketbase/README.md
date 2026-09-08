@@ -63,7 +63,9 @@ findings that extend the rules, with the evidence that established them.
 | `pocketbase-security-auditor` | The authorization surface — collection rules, custom routes, hooks, realtime subscriptions, relation scoping, role boundaries | read-only |
 
 Each boots its own throwaway server on a port it picks per run, so nothing it does touches an
-instance you are using.
+instance you are using. Each also declares a semantic dispatch **tier** (`pb-builder` is `mid`;
+the two review agents are `heavy`) rather than a model name; which model a tier buys is resolved
+from one shared map, so a provider change does not touch this bundle.
 
 ## Honest scope
 
