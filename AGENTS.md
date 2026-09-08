@@ -53,7 +53,7 @@ information-architecture changes (moving/renaming top-level structures, reshapin
 GitHub issues are inbound intake (bugs and requests); planned work lives on the kata board (see
 "Task tracking"). `kata sync github` is enabled and mints an issue when a card is created, but
 it does **not** close the issue when the card closes — an open GitHub issue means open work only
-because `make board-reconcile` keeps it true. See "Curation rhythm" step 4.
+because `make board-reconcile` keeps it true. See "Curation rhythm" step 5.
 
 ### Branch hygiene
 
@@ -88,14 +88,20 @@ refused until `/handoff` runs, which is the intended answer. Needs atelier ≥ 0
 Never create a `backlog.md`, a `TODO` file, or any other in-repo task list — file it on the
 board.
 
-**Curation rhythm** (7hws, 2026-09-07; step 4 added 2026-09-08). At session start, in order:
+**Curation rhythm** (7hws, 2026-09-07; health + reconcile steps added 2026-09-08). At session
+start, in order:
 
 1. `kata_doctor.py` — wiring (binary, daemon, binding, `KATA_AUTHOR`, shim, duplicate server;
    every warn is wiring debt to fix).
 2. `audit_issues.py --project dotfiles-agents` — definition and dependency hygiene over open
    issues.
-3. The board-triage kata adapter for whatever the audit leaves unranked.
-4. `make board-reconcile` — GitHub issues against the board (see below).
+3. `board_health.py` — does the board still *discriminate*? Ships in the board-triage skill
+   (code-desk plugin):
+   `python3 ~/.claude/plugins/cache/dotfiles-agents/code-desk/<version>/skills/board-triage/scripts/board_health.py <(python3 primitives-core/skills/board-triage/scripts/kata_board.py export --project dotfiles-agents)`
+   Exit 0 means no pass is due and you can skip step 4.
+4. The board-triage kata adapter, **only if step 3 exited non-zero**. Re-run step 3 after to
+   confirm the pass took.
+5. `make board-reconcile` — GitHub issues against the board (see below).
 
 Steps 1–2 ship in the kata plugin
 (`~/.claude/plugins/cache/kata-oversight/kata/<version>/skills/kata-audit/scripts/`).
@@ -104,7 +110,20 @@ not a real prerequisite), `no-priority` (the frozen kaneo children under `my1a` 
 Ignore `unlinked-ref` until kata-oversight `z6gb` filters its noise (closed cards named in prose,
 epics naming their own children).
 
-**Step 4 — the GitHub reconcile** (owner ruling 2026-09-08). `scripts/reconcile_github.py`
+**Steps 2 and 3 are not redundant.** `audit_issues.py` reads one card and asks whether its
+fields are *populated*; `board_health.py` reads the whole board and asks whether those fields
+still *discriminate*. On 2026-09-08 the audit reported `no-priority: 0` and `body-thin: 0` on a
+board where 34 of 55 open items sat in one priority band, 16 carried no label, and the area
+grouping lived only in title prefixes. A per-card check cannot see a distribution. Run both.
+
+**Board conventions** (owner ruling 2026-09-08). Every open card carries exactly one
+`area:*` label and exactly one type label from the closed vocabulary (`type:feat`, `type:fix`,
+`type:chore`, `decision`, `epic`) — the same vocabulary decision-016 closes on GitHub, so a
+card and its mirror read alike. Areas are the 10 in use; add one only when a genuine new domain
+appears, never for a single card. `meta`, `handoff`, `needs-review`, `up-next` are behavioural
+labels, not types. Board labels do NOT propagate to GitHub — `make labels` proves it.
+
+**Step 5 — the GitHub reconcile** (owner ruling 2026-09-08). `scripts/reconcile_github.py`
 classifies every open GitHub issue against the board and is dry-run by default; `APPLY=1 make
 board-reconcile` executes.
 

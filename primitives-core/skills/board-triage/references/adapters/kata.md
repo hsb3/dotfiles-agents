@@ -71,6 +71,41 @@ reason and evidence (`kata close --done|--wontfix|...`). A closed issue is genui
 not merely triaged, so it's excluded at export time (`--status open`) rather than pulled
 in and then dropped per SKILL.md §4 step 2 — for this backend that step is a no-op.
 
+## The maintenance rhythm
+
+Triage is one move in a longer loop, and the tools are split across two plugins — nothing
+else names them in order, which is why they get run piecemeal or not at all. Run at session
+start, or whenever `board_health.py` says a pass is due:
+
+| # | Tool | Ships in | Answers |
+|---|---|---|---|
+| 1 | `kata_doctor.py` | kata plugin | Is this checkout even wired to the board? Every warn is wiring debt. |
+| 2 | `audit_issues.py` | kata plugin | Is each card *defined* — a title that fits, acceptance text, real edges instead of prose? |
+| 3 | `board_health.py` | this skill | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
+| 4 | this skill, §5 | this skill | The pass itself, when step 3 says one is due. |
+| 5 | `board_health.py` | this skill | Did the pass take? Exit 0 or it did not. |
+
+Steps 2 and 3 look redundant and are not, and the difference is the whole reason step 3
+exists. `audit_issues.py` reads one card at a time and asks whether its fields are
+**populated**; `board_health.py` reads the whole board and asks whether those fields still
+**discriminate**. A board can pass every per-card check and still be unusable: measured on a live board
+2026-09-08, the audit reported `no-priority: 0` and `body-thin: 0` while 34 of 55 open items
+sat in one priority band, 16 carried no label at all, and the area grouping existed only
+inside title prefixes where no query could reach it. Per-card checks cannot see a
+distribution, so run both.
+
+Step 1 is a gate, not a suggestion — a FAIL there means every later step is reading or
+writing the wrong board.
+
+**If the project also mirrors to GitHub issues** (`kata sync github`), add a reconcile step:
+the sync mints an issue when a card is created but does not close it when the card closes,
+so open issues silently accumulate finished work. Filed upstream against kata; until it
+lands, a consuming repo needs its own reconcile — classify each open issue as tracked (its
+card is open), stale (its card is closed, so close the issue with a pointer), or untracked
+(no card, so it is inbound intake). Left un-run this is worse than untidy: `kata sync github
+enable` resets the sync cursor and re-applies GitHub state onto the board, **reopening every
+closed card whose mirror is still open**.
+
 ## Notes verified against a live instance
 
 - `kata list --json` and `kata show --json` omit unset scalar fields entirely (no
