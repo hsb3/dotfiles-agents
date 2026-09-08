@@ -620,6 +620,10 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "echo x | xargs -l git commit -m",
             "timeout --kill-after 5 60 git push origin dev",
             "sudo -u someone git commit -m x",
+            # Glued spellings, which the README claims are NOT a ceiling.
+            "nice -n10 git commit -m x",
+            "env -uGIT_DIR git commit -m x",
+            "echo x | xargs -I% git commit -m %",
         ):
             with self.subTest(command=command):
                 self._assert_denied(self._run(self._payload(command)))

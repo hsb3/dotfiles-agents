@@ -124,7 +124,8 @@ command string the hook is handed, so whatever still displaces them is invisible
 - anything that re-parses a **string**, which is past a tokenizer by construction: `bash -c "..."`,
   a `$( )` substitution, a quoted `eval "cd x && git commit"`, `env -S 'git commit'`, and heredoc
   body text;
-- a token **glued to a separator** (`ls&&git commit`) or to a wrapper option (`xargs -I{}`);
+- a token **glued to a separator** (`ls&&git commit`) — a glued wrapper option is fine
+  (`nice -n10`, `env -uNAME`, `xargs -I%`), it is only the separator that hides the word;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 
