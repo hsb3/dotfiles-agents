@@ -50,7 +50,9 @@ flowchart TD
 
 The bundle also ships an agent: `rig-builder`, which `starting-conditions` dispatches once
 the contract exists to scaffold the gate, prove it fails when a rule is broken, and report
-the baseline.
+the baseline. It declares a semantic dispatch **tier** (`mid`) rather than a model name; which
+model a tier buys is resolved from one shared map, so a provider change does not touch this
+bundle.
 
 And one command:
 
