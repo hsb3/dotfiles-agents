@@ -4,9 +4,9 @@ does not have.
 
 A skill body that names a sibling skill is making a promise about the consumer's install.
 That promise is only true inside a bundle that ships both. `layer-cycle` cites
-`test-quality`; `layer-cycle` ships from `atelier` and `solo-skills`, `test-quality` ships
-from `solo-skills` only, so every atelier consumer read a pointer into a skill they do not
-have. Nothing was red: `check_agent_refs.py` resolves agent names, `check_symlinks.py`
+`test-quality`; `layer-cycle` shipped from `atelier` and `solo-skills`, `test-quality`
+ships from `solo-skills` only, so every atelier consumer read a pointer into a skill they
+did not have. Nothing was red: `check_agent_refs.py` resolves agent names, `check_symlinks.py`
 proves links resolve rather than that a bundle is coherent, and the README/catalog gates
 say nothing about body content. `check_solo_skills.py` reads sibling skill names but
 matches only `skills/<id>` paths and `[[wikilinks]]` — a bare backticked name is invisible
@@ -153,6 +153,27 @@ ANCHOR_MIN_CHARS = 20
 # still appear in the citing skill's scanned prose, or the entry does not apply; see the
 # module docstring.
 EXEMPTIONS = {
+    ("dataviz", "diagrams"): (
+        "scope boundary, not a dependency — the line hands structural diagrams AWAY to "
+        "diagrams and says outright they are not this skill's job, so a consumer without "
+        "diagrams is told what this skill will not do, not sent somewhere they cannot go; "
+        "a live subject only since the 18 dual-homed memberships left solo-skills (kata "
+        "8tw0)",
+        "Do not use a chart library for structure",
+    ),
+    ("dataviz", "mermaid"): (
+        "scope boundary, not a dependency — the same structure hand-off as diagrams, "
+        "written as the boundary row that routes boxes-and-arrows elsewhere; a live "
+        "subject only since the 18 dual-homed memberships left solo-skills (kata 8tw0)",
+        "Not this skill's job — that's the boundary",
+    ),
+    ("dataviz", "pptx-themes"): (
+        "scope boundary, not a dependency — deck theming is declared owned elsewhere and "
+        "the rule the reader needs is stated inline, so a consumer without pptx-themes is "
+        "told what this skill will not do, not sent somewhere they cannot go; a live "
+        "subject only since the 18 dual-homed memberships left solo-skills (kata 8tw0)",
+        "don't bake a chart palette into a slide",
+    ),
     ("diagrams", "dataviz"): (
         "scope boundary, not a dependency — the line hands data charts AWAY to dataviz "
         "and says outright they are not this plugin's job, so a consumer without dataviz "
