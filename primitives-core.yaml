@@ -428,6 +428,12 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code]
+  - id: lane-snapshot
+    type: hook
+    source: primitives-core/hooks/lane-snapshot
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: comment-hygiene-gate
     type: hook
     source: primitives-core/hooks/comment-hygiene-gate
