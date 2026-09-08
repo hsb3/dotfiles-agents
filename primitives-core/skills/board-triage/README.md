@@ -28,10 +28,21 @@ for free and talks to no board itself.
 
 It measures whether a field **discriminates**, not just whether it is filled — a priority band
 holding most of the backlog, items with no band or no label at all, a grouping convention living
-in title prefixes that no filter can reach, declared labels nobody uses, and two spellings of one
-concept splitting it across two filters. Exit 0 is clean, 1 is any finding, 2 is a snapshot it
-could not read. `--json` for machine output; `--skew-threshold` and `--prefix-threshold` tune it
-for a board with different norms.
+in title prefixes that no filter can reach, and two spellings of one concept splitting it across
+two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read. `--json` for
+machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
+norms.
+
+**Every check reads open items only, the label ones included.** An adapter builds
+`fields.labels.options` from the board's whole history, so a label surviving on closed cards is
+not a live vocabulary and no edit to open work could ever clear it — judging a live board by its
+history is how a check ends up permanently red, which is the noise this script exists to remove.
+
+That makes the fossil check meaningless without a real declaration, so it takes one:
+`--vocabulary FILE`, one label per line, `#` comments ignored. Without it the check is **skipped
+and says so in the report** rather than quietly omitted, and a skip never affects the exit code.
+`scripts/check_labels.py`'s `VOCABULARY` constant in this repo is exactly the kind of declaration
+it consumes — a closed set someone chose, not a set the board accumulated.
 
 ## When it triggers
 

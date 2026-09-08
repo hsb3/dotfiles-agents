@@ -8,8 +8,12 @@ FILLED, not that it DISCRIMINATES. On 2026-09-08 one reported all-clear on a boa
 only in title prefixes no query could reach.
 
 Reads the §2 adapter snapshot — never a backend — so it works for kata, Kaneo and GitHub
-Projects alike with no adapter change. Open items only; a rank on closed work means nothing.
-Exit 0 clean, 1 on any finding, 2 when the snapshot cannot be read.
+Projects alike with no adapter change. Every check reads OPEN items only, and that includes
+the label ones: an adapter builds `fields.labels.options` from the board's whole history, so a
+label surviving on closed cards is not a live vocabulary and no edit to open work could clear
+it. Judging a live board by its history is how a check ends up permanently red.
+
+Exit 0 clean, 1 on any finding, 2 when an input cannot be read.
 """
 
 import argparse
@@ -29,7 +33,7 @@ SYNONYMS = {"feat": "feature", "fix": "bug", "chore": "maintenance", "doc": "doc
 
 
 class SnapshotError(Exception):
-    """The snapshot could not be read or is not the §2 shape."""
+    """An input could not be read, or the snapshot is not the §2 shape."""
 
 
 def load_snapshot(path: str | None) -> dict:
@@ -52,6 +56,22 @@ def load_snapshot(path: str | None) -> dict:
             " expected an object with an 'items' list (see board-triage SKILL.md §2)"
         )
     return snapshot
+
+
+def load_vocabulary(path: str) -> list[str]:
+    """One label per line, `#` comments and blanks ignored."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+    except OSError as exc:
+        raise SnapshotError(f"cannot read vocabulary {path!r}: {exc}") from exc
+    names = [ln.strip() for ln in lines if ln.strip() and not ln.lstrip().startswith("#")]
+    if not names:
+        raise SnapshotError(
+            f"vocabulary {path!r} declares no labels — an empty declaration would report"
+            " a clean vocabulary having checked nothing"
+        )
+    return names
 
 
 def open_items(snapshot: dict) -> list[dict]:
@@ -79,7 +99,7 @@ def normalize_label(label: str) -> str:
     return SYNONYMS.get(name, name)
 
 
-def vocabulary(snapshot: dict, items: list[dict]) -> tuple[list[str], list[str]]:
+def board_labels(snapshot: dict, items: list[dict]) -> tuple[list[str], list[str]]:
     """Labels the board declares, and labels open items actually carry."""
     declared = ((snapshot.get("fields") or {}).get("labels") or {}).get("options") or []
     in_use = {label for item in items for label in (item.get("labels") or [])}
@@ -160,8 +180,19 @@ def check_grouping_latent(items: list[dict], labels: list[str], threshold: float
     )
 
 
-def check_vocabulary_fossils(declared: list[str], in_use: list[str]) -> dict | None:
-    """A declared label no open item carries makes the picker offer a vocabulary that lies."""
+def check_vocabulary_fossils(declared: list[str] | None, in_use: list[str]) -> dict | None:
+    """A declared label no open item carries makes the picker offer a vocabulary that lies.
+
+    Needs a real declaration. `fields.labels.options` is not one — an adapter derives it from
+    the board's history, so it can never go green (see the module docstring).
+    """
+    if declared is None:
+        return _finding(
+            "vocabulary-fossils",
+            "skip",
+            "no --vocabulary given (a board's label history is not a declaration)",
+            [],
+        )
     used = {label.strip().lower() for label in in_use}
     fossils = sorted(d for d in declared if d.strip().lower() not in used)
     if not fossils:
@@ -175,10 +206,10 @@ def check_vocabulary_fossils(declared: list[str], in_use: list[str]) -> dict | N
     )
 
 
-def check_vocabulary_collision(labels: list[str]) -> dict | None:
+def check_vocabulary_collision(in_use: list[str]) -> dict | None:
     """Two spellings of one concept split it across two filters, so neither is complete."""
     by_concept: dict[str, set[str]] = collections.defaultdict(set)
-    for label in labels:
+    for label in in_use:
         by_concept[normalize_label(label)].add(label)
     groups = [sorted(names) for _, names in sorted(by_concept.items()) if len(names) > 1]
     if not groups:
@@ -193,30 +224,37 @@ def check_vocabulary_collision(labels: list[str]) -> dict | None:
     )
 
 
-def analyze(snapshot: dict, skew_threshold: float = 0.5, prefix_threshold: float = 0.4) -> list:
+def analyze(
+    snapshot: dict,
+    skew_threshold: float = 0.5,
+    prefix_threshold: float = 0.4,
+    vocabulary: list[str] | None = None,
+) -> list:
     items = open_items(snapshot)
     if not items:
         return []
-    declared, in_use = vocabulary(snapshot, items)
-    every = sorted(set(declared) | set(in_use))
+    declared, in_use = board_labels(snapshot, items)
     found = [
         check_priority_skew(items, skew_threshold),
         check_priority_missing(items),
         check_grouping_missing(items),
-        check_grouping_latent(items, every, prefix_threshold),
-        check_vocabulary_fossils(declared, in_use),
-        check_vocabulary_collision(every),
+        # Reachability is the question here, so a label declared but unused still answers it.
+        check_grouping_latent(items, sorted(set(declared) | set(in_use)), prefix_threshold),
+        check_vocabulary_fossils(vocabulary, in_use),
+        check_vocabulary_collision(in_use),
     ]
     return [f for f in found if f]
+
+
+def actionable(entries: list[dict]) -> list[dict]:
+    """Findings the reader can act on — a skipped check is reported but never counted."""
+    return [e for e in entries if e["severity"] != "skip"]
 
 
 def render(snapshot: dict, findings: list[dict], count: int) -> str:
     board = snapshot.get("board") or {}
     header = f"board health — {board.get('name', '?')} ({board.get('backend', '?')})"
     lines = [f"{header} · {count} open item(s)", ""]
-    if not findings:
-        lines.append("clean — no decay found by any of the 6 checks")
-        return "\n".join(lines)
     for found in findings:
         lines.append(f"{found['severity'].upper():4} {found['check']}: {found['finding']}")
         for key, label in (("distribution", "bands"), ("prefixes", "prefixes")):
@@ -226,22 +264,33 @@ def render(snapshot: dict, findings: list[dict], count: int) -> str:
         if "groups" in found:
             pairs = " · ".join(" = ".join(g) for g in found["groups"])
             lines.append(f"     collisions: {pairs}")
-        shown = found["affected"][:PRINT_CAP]
-        extra = len(found["affected"]) - len(shown)
-        lines.append("     " + " ".join(shown) + (f" +{extra} more" if extra else ""))
+        if found["affected"]:
+            shown = found["affected"][:PRINT_CAP]
+            extra = len(found["affected"]) - len(shown)
+            lines.append("     " + " ".join(shown) + (f" +{extra} more" if extra else ""))
         lines.append("")
-    verdict = "run a triage pass" if any(f["severity"] == "fail" for f in findings) else "hygiene"
-    lines.append(f"{len(findings)} finding(s) — {verdict}")
+    real = actionable(findings)
+    if not real:
+        lines.append("clean — no decay found by any of the checks that ran")
+        return "\n".join(lines)
+    verdict = "run a triage pass" if any(f["severity"] == "fail" for f in real) else "hygiene"
+    lines.append(f"{len(real)} finding(s) — {verdict}")
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Decay checks over a board-triage snapshot (SKILL.md §2). "
-        "Exit 0 clean, 1 on any finding, 2 on an unreadable snapshot.",
+        "Exit 0 clean, 1 on any finding, 2 on an unreadable input.",
     )
     parser.add_argument("snapshot", nargs="?", help="snapshot JSON path (default: stdin)")
     parser.add_argument("--json", action="store_true", help="emit findings as JSON")
+    parser.add_argument(
+        "--vocabulary",
+        metavar="FILE",
+        help="declared labels, one per line (`#` comments ignored); without it"
+        " vocabulary-fossils is skipped rather than judged against board history",
+    )
     parser.add_argument(
         "--skew-threshold",
         type=float,
@@ -258,18 +307,19 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         snapshot = load_snapshot(args.snapshot)
+        declared = load_vocabulary(args.vocabulary) if args.vocabulary else None
     except SnapshotError as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
-    findings = analyze(snapshot, args.skew_threshold, args.prefix_threshold)
+    findings = analyze(snapshot, args.skew_threshold, args.prefix_threshold, declared)
     count = len(open_items(snapshot))
     if args.json:
         print(json.dumps({"board": snapshot.get("board"), "open_items": count,
                           "findings": findings}, indent=2))
     else:
         print(render(snapshot, findings, count))
-    return 1 if findings else 0
+    return 1 if actionable(findings) else 0
 
 
 if __name__ == "__main__":

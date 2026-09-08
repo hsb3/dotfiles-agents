@@ -65,9 +65,13 @@ def findings_by_id(snap, **kwargs):
     return {f["check"]: f for f in bh.analyze(snap, **kwargs)}
 
 
+def actionable(snap, **kwargs):
+    return bh.actionable(bh.analyze(snap, **kwargs))
+
+
 class CleanBoard(unittest.TestCase):
     def test_no_check_fires(self):
-        self.assertEqual([], bh.analyze(clean()))
+        self.assertEqual([], actionable(clean()))
 
     def test_the_largest_band_at_exactly_half_is_not_skew(self):
         """>50%, not >=50% — a two-band board split down the middle still discriminates."""
@@ -81,7 +85,7 @@ class CleanBoard(unittest.TestCase):
             item(f"d{n}", f"area{n}: closed", priority=None, labels=[], state="done")
             for n in range(20)
         ]
-        self.assertEqual([], bh.analyze(snapshot(CLEAN_ITEMS + rotten)))
+        self.assertEqual([], actionable(snapshot(CLEAN_ITEMS + rotten)))
 
 
 class PrioritySkew(unittest.TestCase):
@@ -175,32 +179,47 @@ class GroupingLatent(unittest.TestCase):
 
 
 class VocabularyFossils(unittest.TestCase):
+    """Only a DECLARED vocabulary makes this check meaningful.
+
+    `fields.labels.options` is not one: the kata adapter builds it from `kata labels`, which
+    counts closed issues, so every label the board ever retired is 'declared' forever and the
+    check could never go green. A check that cannot go green is the noise this tool exists to
+    remove, so absent an explicit declaration it skips and says so.
+    """
+
     def test_declared_labels_on_no_open_item_are_reported(self):
-        snap = snapshot(CLEAN_ITEMS, label_options=["infra", "docs", "kaneo-status:to-do", "epic"])
-        found = findings_by_id(snap)["vocabulary-fossils"]
+        vocab = ["infra", "docs", "kaneo-status:to-do", "epic"]
+        found = findings_by_id(snapshot(CLEAN_ITEMS), vocabulary=vocab)["vocabulary-fossils"]
         self.assertEqual("warn", found["severity"])
         self.assertEqual(["epic", "kaneo-status:to-do"], found["affected"])
 
     def test_a_label_used_only_by_a_done_item_is_still_a_fossil(self):
-        snap = snapshot(
-            CLEAN_ITEMS + [item("d1", labels=["epic"], state="done")],
-            label_options=["infra", "docs", "epic"],
-        )
-        self.assertEqual(["epic"], findings_by_id(snap)["vocabulary-fossils"]["affected"])
+        snap = snapshot(CLEAN_ITEMS + [item("d1", labels=["epic"], state="done")])
+        found = findings_by_id(snap, vocabulary=["infra", "docs", "epic"])
+        self.assertEqual(["epic"], found["vocabulary-fossils"]["affected"])
 
-    def test_a_board_with_no_declared_vocabulary_reports_nothing(self):
-        snap = clean()
-        del snap["fields"]["labels"]
-        self.assertNotIn("vocabulary-fossils", findings_by_id(snap))
+    def test_without_a_declaration_the_check_skips_visibly(self):
+        found = findings_by_id(snapshot(CLEAN_ITEMS, label_options=["infra", "docs", "epic"]))
+        self.assertEqual("skip", found["vocabulary-fossils"]["severity"])
+        self.assertIn("--vocabulary", found["vocabulary-fossils"]["finding"])
+
+    def test_a_skip_is_not_a_finding(self):
+        """It must be visible in the report and inert in the exit code."""
+        self.assertEqual([], actionable(clean()))
+
+    def test_declared_options_are_never_the_declaration(self):
+        snap = snapshot(CLEAN_ITEMS, label_options=["infra", "docs", "epic"])
+        self.assertEqual([], actionable(snap), "'epic' is board history, not a declaration")
 
 
 class VocabularyCollision(unittest.TestCase):
     def test_synonyms_and_namespace_prefixes_collapse_to_one_concept(self):
-        snap = snapshot(
-            CLEAN_ITEMS,
-            label_options=["infra", "docs", "doc", "chore", "type:chore", "feature", "type:feat"],
-        )
-        found = findings_by_id(snap)["vocabulary-collision"]
+        items = [
+            item("c1", labels=["docs"]), item("c2", labels=["doc"]),
+            item("c3", labels=["chore"]), item("c4", labels=["type:chore"]),
+            item("c5", labels=["feature"]), item("c6", labels=["type:feat"]),
+        ]
+        found = findings_by_id(snapshot(items))["vocabulary-collision"]
         self.assertEqual("warn", found["severity"])
         self.assertEqual(
             [["doc", "docs"], ["feature", "type:feat"], ["chore", "type:chore"]],
@@ -216,9 +235,27 @@ class VocabularyCollision(unittest.TestCase):
             findings_by_id(snap)["vocabulary-collision"]["groups"],
         )
 
-    def test_distinct_concepts_do_not_collide(self):
-        snap = snapshot(CLEAN_ITEMS, label_options=["infra", "docs", "priority:high", "spike"])
+    def test_a_closed_only_label_does_not_collide(self):
+        """The live half of a collision is the only actionable half.
+
+        `type:fix` surviving on closed cards while open work uses `bug` splits nothing a
+        human can still filter — and no edit to open items could ever clear it.
+        """
+        snap = snapshot(
+            CLEAN_ITEMS + [item("c1", labels=["bug"]),
+                           item("d1", labels=["type:fix"], state="done")],
+            label_options=["infra", "docs", "bug", "type:fix"],
+        )
         self.assertNotIn("vocabulary-collision", findings_by_id(snap))
+
+    def test_a_declared_but_unused_label_does_not_collide(self):
+        snap = snapshot(CLEAN_ITEMS + [item("c1", labels=["bug"])],
+                        label_options=["infra", "docs", "bug", "type:fix"])
+        self.assertNotIn("vocabulary-collision", findings_by_id(snap))
+
+    def test_distinct_concepts_do_not_collide(self):
+        items = [item("c1", labels=["priority:high"]), item("c2", labels=["spike"])]
+        self.assertNotIn("vocabulary-collision", findings_by_id(snapshot(CLEAN_ITEMS + items)))
 
     def test_normalization_rules(self):
         self.assertEqual("bug", bh.normalize_label("type:fix"))
@@ -264,11 +301,17 @@ class LoadSnapshot(unittest.TestCase):
 
 
 class Cli(unittest.TestCase):
-    def run_main(self, snap_text, argv=()):
+    def run_main(self, snap_text, argv=(), vocabulary=None):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "snap.json")
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write(snap_text)
+            argv = list(argv)
+            if vocabulary is not None:
+                vocab_path = os.path.join(tmp, "vocabulary.txt")
+                with open(vocab_path, "w", encoding="utf-8") as handle:
+                    handle.write(vocabulary)
+                argv += ["--vocabulary", vocab_path]
             out, err = io.StringIO(), io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
                 code = bh.main([path, *argv])
@@ -278,6 +321,34 @@ class Cli(unittest.TestCase):
         code, out, err = self.run_main(json.dumps(clean()))
         self.assertEqual(0, code, out + err)
         self.assertIn("clean", out)
+
+    def test_the_skipped_check_is_printed_but_does_not_change_the_exit_code(self):
+        code, out, _ = self.run_main(json.dumps(snapshot(CLEAN_ITEMS, ["infra", "docs", "epic"])))
+        self.assertEqual(0, code, "a skip is not a finding")
+        self.assertIn("SKIP vocabulary-fossils", out)
+        self.assertIn("--vocabulary", out, "the reader must be told how to enable it")
+
+    def test_a_vocabulary_file_enables_the_fossil_check(self):
+        code, out, err = self.run_main(
+            json.dumps(clean()), vocabulary="# retired\ninfra\ndocs\n\nepic\n"
+        )
+        self.assertEqual(1, code, out + err)
+        self.assertIn("vocabulary-fossils", out)
+        self.assertIn("epic", out)
+        self.assertNotIn("SKIP", out)
+
+    def test_an_empty_vocabulary_is_an_error_not_an_empty_declaration(self):
+        """Declaring nothing is never intentional, and it renders 'clean' having checked nothing."""
+        code, _, err = self.run_main(json.dumps(clean()), vocabulary="# all commented out\n\n")
+        self.assertEqual(2, code)
+        self.assertIn("declares no labels", err)
+
+    def test_an_unreadable_vocabulary_exits_two(self):
+        code, _, err = self.run_main(
+            json.dumps(clean()), ["--vocabulary", "/no/such/vocabulary.txt"]
+        )
+        self.assertEqual(2, code)
+        self.assertIn("cannot read", err)
 
     def test_any_finding_exits_one(self):
         items = [item(f"p{n}", priority="P2") for n in range(7)] + [item("q1", priority="P0")]
@@ -297,7 +368,9 @@ class Cli(unittest.TestCase):
         self.assertEqual(1, code)
         payload = json.loads(out)
         self.assertEqual(8, payload["open_items"])
-        self.assertEqual(["priority-skew"], [f["check"] for f in payload["findings"]])
+        checks = {f["check"]: f["severity"] for f in payload["findings"]}
+        self.assertEqual({"priority-skew": "fail", "vocabulary-fossils": "skip"}, checks,
+                         "--json carries the skip too, or a consumer cannot see the gap")
 
     def test_the_printed_item_list_is_capped(self):
         items = [item(f"p{n:02d}", priority=None, labels=[]) for n in range(14)]
