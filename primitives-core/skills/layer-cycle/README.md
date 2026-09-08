@@ -10,7 +10,7 @@ Use it when asked to "run the cycle", take a module through review and refinemen
 iterate a module against a contract. The evaluate step scales to the diff: a spot-check for
 trivial diffs, a single adversarial reviewer for bounded ones, rubric-panel reserved for
 module-scale or contested work. The refine step companions deletion-pass, dispatched as a
-discrete worker brief.
+discrete worker brief; the defect branch cites test-quality for what "red observed" means.
 
 ## Install
 

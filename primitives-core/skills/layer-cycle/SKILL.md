@@ -43,7 +43,8 @@ is a whole module and needs budgets, triage, and stop conditions.
      every-cycle default.
 3. **Triage** findings by type:
    - `defect` → L2 fix brief: contract citation + the failing case,
-     encoded as a test first (red observed) before the fix.
+     encoded as a test first, red observed to the `test-quality` bar,
+     before the fix.
    - `noise` → fold into one deletion-pass invocation.
    - `spec-hole` / `undeclared-commitment` → amend the contract. This is
      an L1 act — only this level edits the spec. Then decide whether the
