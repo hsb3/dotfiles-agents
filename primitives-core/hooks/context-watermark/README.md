@@ -106,10 +106,20 @@ ${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/context-watermar
 Each row carries the identity envelope (`v`, `plugin`, `harness`, `stream`, `ts`, `project`)
 plus `scope` (`session` or `subagent`), `session_id`, `ctx_tokens`, `tier` (`none`, `soft`, or
 `hard`), `fired`, `model`, `window`, `window_fallback`, `complexity`, `soft`, `hard` (null for a
-worker), and `sources` naming which tier of the precedence chain supplied each value. A subagent
-row also carries `agent_id`. A row written from an error path carries `null` `ctx_tokens`,
-`tier: "none"`, `fired: false`, and an `error` (plus a truncated `traceback` from the fail-open
-handler).
+worker), and `sources` naming which tier of the precedence chain supplied each value.
+
+`sources` describes the **session's** resolution, and it carries no `hard` key on a worker row,
+where there is no hard tier to resolve. A worker's `soft` is that resolved session line multiplied
+by `subagent_soft_ratio`, and the row carries both terms (`session_soft`, `subagent_soft_ratio`)
+so `sources.soft: "env"` beside `soft: 60000` is readable rather than contradictory. A subagent
+row also carries `agent_id`.
+
+Two row shapes are narrower than that. A row from a handled error path (no transcript, no usage
+block, no worker transcript) carries `null` `ctx_tokens`, `tier: "none"`, `fired: false` and an
+`error`, with `window`/`complexity`/`soft`/`hard` null and no `sources`. A row from the outer
+fail-open handler is narrower still — `session_id`, `ctx_tokens`, `tier`, `fired`, `error` and a
+truncated `traceback`, and **none** of `scope`, `model`, `window`, `window_fallback`,
+`complexity`, `soft` or `hard` — because by then the payload itself may be what failed.
 
 ## Install
 

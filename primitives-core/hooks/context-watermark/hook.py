@@ -107,7 +107,7 @@ def compute_thresholds(window, complexity):
     """(soft, hard) for a context window in tokens, or the absolute pair when
     the window is unknown — never a fraction of an assumed one."""
     soft, hard = SOFT_ABS, HARD_ABS
-    if window:
+    if window and window > 0:
         soft = min(SOFT_ABS, SOFT_FRAC * window)
         hard = min(HARD_ABS, HARD_FRAC * window)
     return int(soft * complexity), int(hard * complexity)
@@ -311,11 +311,15 @@ def _state_path(session_id, agent_id=None):
 
 
 def _load_state(session_id, agent_id=None):
+    """The anti-nag state, or {} for anything unreadable — including valid JSON
+    that is not an object, which would otherwise raise on every later call and
+    never be rewritten."""
     try:
         with open(_state_path(session_id, agent_id)) as f:
-            return json.load(f)
+            state = json.load(f)
     except Exception:
         return {}
+    return state if isinstance(state, dict) else {}
 
 
 def _save_state(session_id, state, agent_id=None):
@@ -389,7 +393,7 @@ def _format_message(tier, ctx_tokens, soft, hard):
 # ---------------------------------------------------------------------------
 
 def _measure(transcript_path, project_dir, session_id, cwd):
-    """(ctx_tokens, model, window, soft, hard, info) for one transcript.
+    """(ctx_tokens, model, (soft, hard), error, info) for one transcript.
 
     Raises nothing the caller has to know about: a transcript it cannot read
     or that carries no usage block yields ctx_tokens None.
@@ -424,11 +428,15 @@ def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
         "hard": hard,
     }
     if info:
+        # No key for a value this scope has not got: a worker has no hard tier,
+        # and naming a precedence tier for it would describe a resolution that
+        # never reached the row.
         row["sources"] = {
             "soft": info.get("soft_source"),
-            "hard": info.get("hard_source"),
             "complexity": info.get("complexity_source"),
         }
+        if hard is not None:
+            row["sources"]["hard"] = info.get("hard_source")
     if error:
         row["error"] = error
     return row
@@ -533,8 +541,11 @@ def handle_subagent(payload, log):
                 "prompts_since_fire": check_state.get("prompts_since_fire", 0)},
                 agent_id)
 
+    # `soft` here is the resolved SESSION line halved, so the row carries both
+    # terms: `sources.soft` names where the session value came from, not this one.
     log(dict(_row("subagent", session_id, ctx_tokens, tier, fired, model, info, soft),
-             agent_id=agent_id))
+             agent_id=agent_id, session_soft=tiers[0],
+             subagent_soft_ratio=SUBAGENT_SOFT_RATIO))
 
 
 # ---------------------------------------------------------------------------

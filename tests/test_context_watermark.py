@@ -93,6 +93,12 @@ class ThresholdFormulaTests(_ScrubbedEnv):
     def test_unknown_window_falls_back_to_the_absolute_pair(self):
         self.assertEqual(hook.compute_thresholds(None, 1.0), (120_000, 160_000))
 
+    def test_a_non_positive_window_is_unknown_not_a_tiny_one(self):
+        """Unreachable through the catalog, but this hook never trusts input:
+        a window of 1 would otherwise make both tiers 0 and fire forever."""
+        self.assertEqual(hook.compute_thresholds(-200_000, 1.0), (120_000, 160_000))
+        self.assertEqual(hook.compute_thresholds(0, 1.0), (120_000, 160_000))
+
     def test_the_named_constants_are_the_ruling_of_2026_09_08(self):
         self.assertEqual(
             (hook.SOFT_ABS, hook.HARD_ABS, hook.SOFT_FRAC, hook.HARD_FRAC),
@@ -327,6 +333,45 @@ class HookRunTests(_ScrubbedEnv):
         self.assertIn("additionalContext", json.loads(proc.stdout))
         self.assertEqual(self.rows()[-1]["soft"], 25_000)
 
+    def test_a_state_file_holding_a_json_non_object_repairs_itself(self):
+        """A valid-JSON list where the state dict belongs used to kill this
+        (session, agent) pair forever: every later call raised on `.get` and
+        nothing ever rewrote the file."""
+        payload = self.session_payload(125_000)
+        os.makedirs(self.state_dir, exist_ok=True)
+        state = os.path.join(
+            self.state_dir, "".join(
+                c for c in payload["session_id"] if c.isalnum() or c in "-_") + ".json")
+        with open(state, "w") as fh:
+            fh.write("[1, 2, 3]")
+        proc = self.run_hook(payload)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("additionalContext", json.loads(proc.stdout))
+        self.assertNotIn("error", self.rows()[-1])
+
+    def test_the_ledger_names_the_tier_that_supplied_each_value(self):
+        proc = self.run_hook(self.session_payload(125_000),
+                             env={"CONTEXT_WATERMARK_SOFT": "100000"})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        row = self.rows()[-1]
+        self.assertEqual(row["sources"], {
+            "soft": "env", "hard": "computed", "complexity": "computed"})
+
+    def test_the_activation_file_beats_the_computed_default_end_to_end(self):
+        os.makedirs(os.path.join(self.project, ".claude"), exist_ok=True)
+        with open(os.path.join(self.project, ".claude", "atelier.local.md"), "w") as fh:
+            fh.write("---\nwatermark:\n  soft: 20000\n  hard: 30000\n---\n")
+        proc = self.run_hook(self.session_payload(25_000))
+        self.assertEqual(self.rows()[-1]["soft"], 20_000)
+        self.assertIn("additionalContext", json.loads(proc.stdout))
+
+        # ... and the environment still beats the file.
+        proc = self.run_hook(self.session_payload(25_000),
+                             env={"CONTEXT_WATERMARK_SOFT": "26000"})
+        row = self.rows()[-1]
+        self.assertEqual((row["soft"], row["tier"]), (26_000, "none"))
+        self.assertEqual(row["sources"]["hard"], "activation")
+
     def test_malformed_payload_exits_zero_and_says_nothing(self):
         proc = subprocess.run(
             [sys.executable, HOOK_PATH], input="{not json",
@@ -400,6 +445,20 @@ class HookRunTests(_ScrubbedEnv):
         proc = self.run_hook(self.subagent_payload(20_000))
         self.assertEqual(proc.stdout.strip(), "")
         self.assertEqual(self.rows()[-1]["tier"], "none")
+
+    def test_a_worker_row_claims_no_source_for_a_tier_it_has_not_got(self):
+        """`sources` names which precedence tier supplied each value, so it may
+        not name one for a `hard` this scope never had — and `soft` is the
+        resolved session value halved, which the row records rather than
+        implying env supplied 60000 when it supplied 120000."""
+        proc = self.run_hook(self.subagent_payload(70_000),
+                             env={"CONTEXT_WATERMARK_SOFT": "120000"})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        row = self.rows()[-1]
+        self.assertNotIn("hard", row["sources"])
+        self.assertEqual(row["sources"]["soft"], "env")
+        self.assertEqual((row["soft"], row["session_soft"]), (60_000, 120_000))
+        self.assertEqual(row["subagent_soft_ratio"], 0.5)
 
     def test_a_worker_never_gets_a_hard_tier(self):
         proc = self.run_hook(self.subagent_payload(190_000))

@@ -1,10 +1,12 @@
 {
-  "event": "UserPromptSubmit",
-  "matcher": "*",
+  "event": ["UserPromptSubmit", "PostToolUse"],
+  "matcher": {
+    "UserPromptSubmit": "*",
+    "PostToolUse": "Edit|Write|MultiEdit|NotebookEdit|Bash"
+  },
   "timeout": 10,
-  "statusMessage": "Checking context watermark...",
-  "env": {
-    "CONTEXT_WATERMARK_SOFT": "120000",
-    "CONTEXT_WATERMARK_HARD": "160000"
+  "statusMessage": {
+    "UserPromptSubmit": "Checking context watermark...",
+    "PostToolUse": "Checking worker context watermark..."
   }
 }
