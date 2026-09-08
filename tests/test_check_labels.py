@@ -121,8 +121,8 @@ class NetworkContract(unittest.TestCase):
 
     That is the point of these three tests and the reason they are worth their weight: a
     step that exits 0 having measured nothing is indistinguishable in a CI summary from
-    one that measured and found the set clean. The sibling network gates skip-and-pass
-    instead; this one diverges by house rule (decision-016 point 4).
+    one that measured and found the set clean. Every CI-only network gate here follows the
+    same house rule (decision-016 point 4).
 
     Stubbed at the module boundary, so no test here opens a socket or runs a subprocess.
     """
