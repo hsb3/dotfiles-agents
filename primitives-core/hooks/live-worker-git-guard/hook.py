@@ -20,6 +20,18 @@ Read-only git is never touched — `status`, `diff`, `log`, `show`, `branch`,
 `rev-list`, `rev-parse`, `ls-files`, `fetch` are how a session orients, and a
 guard that made orientation expensive would be turned off.
 
+Scoped to ONE working tree. The pending set is keyed on the session's
+transcript, which says nothing about where a command points, and a session can
+hold workers in its own tree while a call runs in a checkout of a different
+repo entirely — those workers are unreachable from there. So the tree targeted
+(`git rev-parse --show-toplevel` from its cwd, moved by any `-C`) is compared
+against the tree the session's non-isolated workers occupy (the same
+resolution from CLAUDE_PROJECT_DIR, which Claude Code sets on the hook process
+to the session's main checkout). Different trees, no block. `--show-toplevel`
+rather than `--git-common-dir` because the hazard is a shared WORKING TREE: a
+sibling linked worktree of the same repository has its own index and its own
+files, and a commit or push there takes nothing off disk in this one.
+
 Doc sources verified against:
   https://code.claude.com/docs/en/hooks
   https://code.claude.com/docs/en/hooks-guide
@@ -28,7 +40,9 @@ Contract (PreToolUse):
   - stdin JSON fields consumed: session_id, transcript_path, cwd, tool_name,
     tool_input.command, and agent_id (present ONLY when the call comes from
     inside a subagent). `transcript_path` is used only to locate the
-    `subagents/` directory.
+    `subagents/` directory; `cwd` is where the git call runs.
+  - env consumed: CLAUDE_PROJECT_DIR (the session's main checkout, for the
+    tree comparison), plus the two ledger path overrides below.
   - stdout JSON (exit 0), on a deny only:
       {"hookSpecificOutput": {"hookEventName": "PreToolUse",
                               "permissionDecision": "deny",
@@ -43,14 +57,31 @@ Contract (PreToolUse):
 Fail-open on every error path — no transcript_path, no `subagents/` dir,
 unreadable ledger, malformed stdin — because a hook that cannot decide must not
 block. The consequence, stated rather than hidden: a session whose records the
-hook cannot read is unguarded exactly as it was before this hook existed. The
-one deliberate exception: a sidecar that exists but will not parse still counts
-its agent as live and sharing the tree (its `worktreePath` is unreadable), so a
-corrupt sidecar fails closed rather than exempting an unknown worker.
+hook cannot read is unguarded exactly as it was before this hook existed. Two
+deliberate exceptions, both fail-CLOSED, because each is a record that exists
+and cannot be read rather than a record that is absent: a sidecar that will not
+parse still counts its agent as live (its `worktreePath` is unreadable), and a
+tree comparison that does not resolve — no git binary, a cwd outside any
+repository, an unset CLAUDE_PROJECT_DIR — decides as the guard did before it
+could compare trees at all.
 
-Tokenizer ceilings, stated: a git call hidden inside `bash -c "..."`, a `$( )`
-substitution, or glued to a separator with no whitespace (`ls&&git commit`) is
-not seen. An honest session does not write those; a bypass is the override.
+Anything that aims the command away from the payload's cwd by a rule this does
+not reimplement is an unresolved comparison rather than a guess, and so counts
+the workers: the `--git-dir`/`--work-tree` flags, the same relocation spelled
+`GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR`, and a `cd`/`pushd`/`popd` before
+the git word.
+
+Tokenizer ceiling, stated as a rule rather than a list, because a list of ways
+to hide a word invites the belief that it is complete: the `git` word and the
+`cd` are read only in COMMAND POSITION of the single command string the hook is
+handed, so whatever displaces them is not seen. A wrapper that execs the real
+command (`env`, `command`, `nice`, `time` and their equivalents) does; so do
+`bash -c "..."`, a `$( )` substitution, a token glued to a separator
+(`ls&&git commit`), and heredoc body text. A `GIT_*` variable exported by an
+EARLIER Bash call is the same ceiling in another place — it is not among this
+command's tokens at all. None of these is the sanctioned bypass; the override
+is, and it leaves a row. Seeing through them means interpreting the command
+line rather than tokenizing it, with its own over-denial surface.
 
 The pending set is `_lib/pending.py`, shared with `subagent-telemetry` so the
 two cannot disagree about who is live. Agents holding their own checkout
@@ -75,6 +106,7 @@ must stay compatible with Python 3.9.
 import json
 import os
 import shlex
+import subprocess
 import sys
 
 # The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
@@ -108,6 +140,21 @@ GLOBAL_FLAGS_WITH_VALUE = frozenset((
     "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
     "--config-env", "--attr-source", "--super-prefix",
 ))
+
+# ...and the two of those that move the working tree itself, in either
+# spelling. They make the targeted tree unknowable rather than wrong.
+TREE_AIMING_FLAGS = ("--git-dir", "--work-tree")
+
+# The same relocation spelled as environment, which git honours identically.
+TREE_AIMING_VARS = frozenset(("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"))
+
+# Builtins that move the cwd, which makes the payload's cwd stale for any git
+# call later in the same command line.
+CWD_MOVING_BUILTINS = frozenset(("cd", "pushd", "popd"))
+
+# Per `git rev-parse` call. At most two run, and only once a mutating verb is
+# already in hand, so the worst case sits well inside the hook's 10s budget.
+GIT_TIMEOUT = 3
 
 # A token ENDING in one of these is a shell separator, so the next token starts
 # a fresh command: `a && git commit`, `a; git commit`, `a | git commit`.
@@ -238,6 +285,93 @@ def _override_before(tokens, limit):
 
 
 # ---------------------------------------------------------------------------
+# Which tree the command targets
+# ---------------------------------------------------------------------------
+
+def _repo_root(directory):
+    """Realpath'd working-tree root containing `directory`, or None when that
+    does not resolve.
+
+    realpath because the two sides of the comparison arrive by different
+    routes — a payload cwd and an env var — and on macOS the same tree reached
+    through a symlink (`/var` for `/private/var`) is spelled two ways.
+    """
+    if not isinstance(directory, str) or not directory:
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", directory, "rev-parse", "--show-toplevel"],
+            capture_output=True, timeout=GIT_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    root = proc.stdout.decode("utf-8", "replace").strip()
+    if not root:
+        return None
+    try:
+        return os.path.realpath(root)
+    except OSError:
+        return None
+
+
+def _target_directory(tokens, git_at, cwd):
+    """The directory this git call resolves paths against, or None when
+    something in the line aims it somewhere this hook does not compute.
+
+    Anything BEFORE the git word that invalidates the payload's cwd — a cwd
+    -moving builtin in command position, a tree-aiming environment assignment
+    anywhere in the line, since a bare one carries to the rest of it — is
+    unresolvable rather than wrong. After it, `-C` is cumulative and each value
+    is taken relative to the one before it, which is exactly `os.path.join`;
+    git accepts only the separate-value spelling, so there is no `-C/repo`
+    form to handle.
+    """
+    if not isinstance(cwd, str) or not cwd:
+        return None
+    command_position = True
+    for token in tokens[:git_at]:
+        if command_position and os.path.basename(token) in CWD_MOVING_BUILTINS:
+            return None
+        if _is_assignment(token) and token.partition("=")[0] in TREE_AIMING_VARS:
+            return None
+        command_position = (
+            token.endswith(SEPARATOR_TAILS) or _is_assignment(token)
+        )
+    directory = cwd
+    index = git_at + 1
+    while index < len(tokens):
+        token = tokens[index]
+        if not token.startswith("-"):
+            break
+        if any(token == flag or token.startswith(flag + "=")
+               for flag in TREE_AIMING_FLAGS):
+            return None
+        if token == "-C":
+            if index + 1 >= len(tokens):
+                return None
+            directory = os.path.join(directory, tokens[index + 1])
+            index += 2
+            continue
+        if token in GLOBAL_FLAGS_WITH_VALUE:
+            index += 2
+            continue
+        index += 1
+    return directory
+
+
+def _shares_session_tree(tokens, git_at, cwd):
+    """True when the command targets the working tree the session's workers
+    occupy — and when that cannot be decided, which counts as sharing."""
+    target = _repo_root(_target_directory(tokens, git_at, cwd))
+    if target is None:
+        return True
+    session = _repo_root(os.environ.get("CLAUDE_PROJECT_DIR"))
+    return session is None or target == session
+
+
+# ---------------------------------------------------------------------------
 # Who is live
 # ---------------------------------------------------------------------------
 
@@ -342,17 +476,20 @@ def main():
         if verb is None:
             sys.exit(0)
 
+        overridden = _override_before(tokens, git_at)
         workers = _live_workers(
             payload.get("transcript_path"),
             pending.agent_key(payload.get("agent_id")),
         )
-        if not workers:
+        if workers and not _shares_session_tree(
+                tokens, git_at, payload.get("cwd")):
+            workers = []
+        if not workers and not overridden:
             sys.exit(0)
 
-        overridden = _override_before(tokens, git_at)
-        if overridden:
+        if workers and overridden:
             _emit({"systemMessage": _override_message(verb, workers)})
-        else:
+        elif workers:
             _emit({
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
@@ -361,8 +498,11 @@ def main():
                 },
             })
 
-        # One row per decision that reached the session — never one per Bash
-        # call, so the stream stays a record of contested commands.
+        # A row per decision that reached the session, plus one for an override
+        # used where nothing was going to block: an override that leaves no
+        # trace is exactly the silence this stream exists to end. An empty
+        # `pending` is what separates the two. Still never one row per Bash
+        # call — both early exits above run first.
         agentlog.append(LOG_STREAM, {
             "session_id": payload.get("session_id"),
             "decision": "override" if overridden else "deny",

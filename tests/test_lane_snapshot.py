@@ -37,10 +37,14 @@ HOOK_DIR = os.path.join(
 )
 HOOK_PATH = os.path.join(HOOK_DIR, "hook.py")
 DAEMON_PATH = os.path.join(HOOK_DIR, "snapshot_lanes.py")
-# This checkout. Nothing in this module may leave a daemon running against it:
-# the test suite's own cwd is a repo, so a hook run with no payload `cwd` will
-# happily protect it forever.
+# This checkout. Nothing in this module may START a daemon against it: the test
+# suite's own cwd is a repo, so a hook run with no payload `cwd` will happily
+# protect it forever. Escaped and boundary-terminated like every other pattern
+# here, because `pgrep -f` takes an ERE and matches a substring: a path holding
+# a regex metacharacter, a lane worktree under this root, and a sibling whose
+# path merely extends it must all fall outside this count.
 REPO_ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+REPO_PATTERN = "snapshot_lanes\\.py " + re.escape(REPO_ROOT) + "($| )"
 
 sys.path.insert(0, HOOK_DIR)
 import snapshot_lanes  # noqa: E402  (path must be primed before this import)
@@ -299,9 +303,13 @@ class HookGuard(unittest.TestCase):
         # count IS the assertion in the two collision tests, so a looser one
         # here would swallow the very daemon they are checking is separate.
         self.pattern = "snapshot_lanes\\.py " + re.escape(self.box.root) + "($| )"
+        # Scoped to the sandbox, never the checkout: a daemon this machine was
+        # already running for the checkout is not something a test could have
+        # spawned, and an absolute assertion over it fails on any tree that is
+        # protecting itself.
         self.addCleanup(
             lambda: self.assertEqual(
-                self.repo_daemons(), [], "a test left a daemon running against this checkout",
+                self.daemons(), [], "a test left a daemon running against its sandbox",
             )
         )
 
@@ -330,7 +338,7 @@ class HookGuard(unittest.TestCase):
             time.sleep(0.2)
 
     def repo_daemons(self):
-        return self._pgrep("snapshot_lanes.py " + REPO_ROOT)
+        return self._pgrep(REPO_PATTERN)
 
     def kill_all(self):
         for pid in self.daemons():
@@ -452,13 +460,20 @@ class HookGuard(unittest.TestCase):
         daemon against the checkout it was running in."""
         outside = os.path.join(self.box.base, "cwd-not-a-repo")
         os.makedirs(outside)
+        before = set(self.repo_daemons())
         result = subprocess.run(
             [sys.executable, HOOK_PATH],
             input="not json", capture_output=True, text=True, timeout=60,
             env=self.box.env(), cwd=outside,
         )
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(self.repo_daemons(), [])
+        # The NEW pids, not the count: this machine may already be running a
+        # daemon for the checkout, and one of the pids in `before` may exit
+        # mid-test, which would send a length delta negative.
+        self.assertEqual(
+            set(self.repo_daemons()) - before, set(),
+            "the hook started a daemon against this checkout",
+        )
 
 
 class ReadmeContract(unittest.TestCase):

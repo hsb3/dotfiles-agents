@@ -30,6 +30,11 @@ HOOK_PATH = os.path.join(HOOKS_ROOT, "live-worker-git-guard", "hook.py")
 sys.path.insert(0, os.path.join(HOOKS_ROOT, "_lib"))
 import pending  # noqa: E402  (path must be primed before this import)
 
+# Sibling helper: `tests/` is on sys.path under `discover -s tests` but not
+# under `-t .`, so prime the path the same way the hooks prime `_lib`.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
 _SEQ = itertools.count()
 
 
@@ -319,10 +324,15 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertIn("ATELIER_GIT_GUARD_OVERRIDE", message)
         self.assertIn("d1111111111111111", message)
 
-    def test_override_without_pending_children_is_silent(self):
+    def test_override_without_pending_children_says_nothing_but_is_recorded(self):
         os.makedirs(self.subagents_dir, exist_ok=True)
-        self._assert_silent(self._run(self._payload(
-            "ATELIER_GIT_GUARD_OVERRIDE=1 git commit -m x")))
+        result = self._run(self._payload(
+            "ATELIER_GIT_GUARD_OVERRIDE=1 git commit -m x"))
+        self.assertEqual(result.stdout.strip(), "", result.stdout)
+        rows = _read_rows(self.guard_log)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["decision"], "override")
+        self.assertEqual(rows[0]["pending"], [])
 
     def test_override_after_the_git_word_does_not_count(self):
         self._sidecar("d2222222222222222")
@@ -349,6 +359,163 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             with self.subTest(command=command):
                 self._assert_denied(self._run(self._payload(command)))
 
+    # -- the tree the command targets --------------------------------------
+
+    def _repo(self, name):
+        """A real git repo under the tempdir.
+
+        realpath'd because on macOS a tempdir is reached through a symlink and
+        git reports the resolved path, so an unresolved fixture path would make
+        every comparison in these tests spuriously unequal.
+        """
+        require_git()
+        root = os.path.realpath(os.path.join(self.tmp.name, name))
+        os.makedirs(root, exist_ok=True)
+        subprocess.run(["git", "init", "-q", root],
+                       capture_output=True, check=True, timeout=60)
+        return root
+
+    def _run_in(self, command, cwd, project_dir, agent_id=None):
+        """Run the hook for a command issued in `cwd`, with the session's main
+        checkout advertised as `project_dir` — CLAUDE_PROJECT_DIR, which Claude
+        Code sets on the hook process."""
+        payload = self._payload(command, agent_id=agent_id)
+        payload["cwd"] = cwd
+        env = {} if project_dir is None else {"CLAUDE_PROJECT_DIR": project_dir}
+        return self._run(payload, extra_env=env)
+
+    def test_a_mutating_command_in_an_unrelated_repo_is_not_blocked(self):
+        # The field case: a manager dispatched from this session works in a
+        # checkout of a DIFFERENT repo. The workers occupy this session's tree,
+        # which that command cannot reach.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("g1111111111111111")
+        self._assert_silent(self._run_in("git push origin dev", other, session))
+
+    def test_the_session_tree_still_denies_when_both_sides_resolve(self):
+        session = self._repo("session-repo")
+        self._sidecar("g2222222222222222")
+        reason = self._assert_denied(
+            self._run_in("git push origin dev", session, session))
+        self.assertIn("g2222222222222222", reason)
+
+    def test_a_subdirectory_of_the_session_tree_still_denies(self):
+        session = self._repo("session-repo")
+        deep = os.path.join(session, "a", "b")
+        os.makedirs(deep, exist_ok=True)
+        self._sidecar("g3333333333333333")
+        self._assert_denied(self._run_in("git commit -m x", deep, session))
+
+    def test_a_linked_worktree_of_the_session_repo_is_not_blocked(self):
+        # Same repository, different WORKING TREE: a mutating call here writes
+        # this tree's index and the shared refs, and takes no file off disk in
+        # the tree the workers hold.
+        require_git()
+        main_dir, worktree_dir = make_worktree(self.tmp.name)
+        self._sidecar("g4444444444444444")
+        self._assert_silent(
+            self._run_in("git commit -m x", worktree_dir, main_dir))
+
+    def test_dash_c_aims_the_check_at_the_named_repo(self):
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("g5555555555555555")
+        self._assert_silent(self._run_in(
+            "git -C {0} commit -m x".format(other), session, session))
+        reason = self._assert_denied(self._run_in(
+            "git -C {0} commit -m x".format(session), other, session))
+        self.assertIn("g5555555555555555", reason)
+
+    def test_a_git_dir_or_work_tree_flag_fails_closed(self):
+        # Both flags relocate the working tree by a rule this hook does not
+        # reimplement, so the target is unknowable and the guard denies.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("g6666666666666666")
+        for command in (
+            "git --git-dir={0}/.git commit -m x".format(other),
+            "git --work-tree {0} commit -m x".format(other),
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(command, other, session))
+
+    def test_a_cd_before_the_git_word_fails_closed(self):
+        # The payload cwd is then stale, so the target is unknowable — the
+        # same answer the two tree-aiming flags get.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("j1111111111111111")
+        for command in (
+            "cd {0} && git commit -m x".format(session),
+            "( cd {0} ; git commit -m x )".format(session),
+            "pushd {0} && git commit -m x".format(session),
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(command, other, session))
+
+    def test_a_git_tree_env_assignment_fails_closed(self):
+        # GIT_WORK_TREE and GIT_DIR are the same relocation `--work-tree` and
+        # `--git-dir` spell as flags, so they get the same answer.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("j2222222222222222")
+        for command in (
+            "GIT_WORK_TREE={0} git -C {1} commit -m x".format(session, other),
+            "GIT_DIR={0}/.git git commit -m x".format(session),
+            "GIT_COMMON_DIR={0}/.git git commit -m x".format(session),
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run_in(command, other, session))
+
+    def test_a_cd_word_that_is_not_a_command_still_compares(self):
+        # `cd` only moves the cwd in command position; as an argument it is
+        # just a word, and over-denying on it would be noise.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("j3333333333333333")
+        self._assert_silent(
+            self._run_in("echo cd && git commit -m x", other, session))
+
+    def test_a_non_string_cwd_fails_closed(self):
+        session = self._repo("session-repo")
+        self._sidecar("j4444444444444444")
+        for bad in ({"a": 1}, 123, ["x"]):
+            with self.subTest(cwd=bad):
+                self._assert_denied(self._run_in("git commit -m x", bad, session))
+
+    def test_a_cwd_outside_any_repo_fails_closed(self):
+        session = self._repo("session-repo")
+        self._sidecar("g7777777777777777")
+        self._assert_denied(self._run_in("git commit -m x", self.cwd, session))
+
+    def test_an_unset_project_dir_fails_closed(self):
+        other = self._repo("other-repo")
+        self._sidecar("g8888888888888888")
+        self._assert_denied(self._run_in("git commit -m x", other, None))
+
+    def test_a_project_dir_outside_any_repo_fails_closed(self):
+        other = self._repo("other-repo")
+        self._sidecar("g9999999999999999")
+        self._assert_denied(self._run_in("git commit -m x", other, self.cwd))
+
+    def test_a_symlinked_path_on_either_side_still_matches(self):
+        session = self._repo("session-repo")
+        link = os.path.join(self.tmp.name, "session-link")
+        os.symlink(session, link)
+        self._sidecar("h1111111111111111")
+        self._assert_denied(self._run_in("git commit -m x", link, link))
+        self._assert_denied(self._run_in("git commit -m x", session, link))
+        self._assert_denied(self._run_in("git commit -m x", link, session))
+
+    def test_init_and_clone_are_not_guarded_verbs(self):
+        # Neither is in MUTATING_VERBS, so neither reaches the tree comparison
+        # — creating a repo in a fresh directory stays free.
+        self._sidecar("h2222222222222222")
+        for command in ("git init .", "git clone https://example.invalid/r.git"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
     # -- the ledger --------------------------------------------------------
 
     def test_deny_writes_one_ledger_row(self):
@@ -373,6 +540,44 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertEqual(rows[0]["decision"], "override")
         self.assertEqual(rows[0]["verb"], "merge")
         self.assertEqual(rows[0]["pending"], ["e3333333333333333"])
+
+    def test_an_override_that_suppressed_nothing_is_still_recorded(self):
+        # The scoping fix would otherwise make this exit before the append and
+        # leave the use of the override with no trace at all.
+        session = self._repo("session-repo")
+        other = self._repo("other-repo")
+        self._sidecar("h3333333333333333")
+        result = self._run_in(
+            "ATELIER_GIT_GUARD_OVERRIDE=1 git push origin dev", other, session)
+        self.assertEqual(result.stdout.strip(), "", result.stdout)
+        rows = _read_rows(self.guard_log)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["decision"], "override")
+        self.assertEqual(rows[0]["verb"], "push")
+        # An empty `pending` is what separates an override that suppressed
+        # nothing from one that suppressed a block.
+        self.assertEqual(rows[0]["pending"], [])
+
+    def test_an_override_that_suppressed_a_block_names_who_it_freed(self):
+        session = self._repo("session-repo")
+        self._sidecar("h4444444444444444")
+        result = self._run_in(
+            "ATELIER_GIT_GUARD_OVERRIDE=1 git push origin dev", session, session)
+        self.assertIn("h4444444444444444",
+                      json.loads(result.stdout)["systemMessage"])
+        rows = _read_rows(self.guard_log)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["decision"], "override")
+        self.assertEqual(rows[0]["pending"], ["h4444444444444444"])
+
+    def test_an_override_prefix_on_a_read_only_git_call_writes_no_row(self):
+        # The stream must stay a record of contested commands, not one row per
+        # Bash call that happens to carry the prefix.
+        self._sidecar("h5555555555555555")
+        self._assert_silent(self._run(self._payload(
+            "ATELIER_GIT_GUARD_OVERRIDE=1 git status --short")))
+        self._assert_silent(self._run(self._payload(
+            "ATELIER_GIT_GUARD_OVERRIDE=1 ls -la")))
 
 
 class SharedLedgerTests(unittest.TestCase):

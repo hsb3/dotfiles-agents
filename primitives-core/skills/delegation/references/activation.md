@@ -46,11 +46,18 @@ dispatch shape isolation exists to protect. Every hook that reads the file now f
 main checkout when it finds nothing at the worktree's own path, so a project that keeps the file
 local keeps its enforcement.
 
-**A tracked activation file is seen at its committed version there.** When the file *is* tracked,
-the worktree carries its own copy at the worktree's base ref, and that copy is what the hooks
-read — the fallback never fires. Uncommitted edits to a tracked activation file therefore do not
-reach workers until they are committed. Tracking the file is still worth it (it travels to a
-fresh clone and to a second machine); just commit a policy change before dispatching against it.
+**A tracked activation file is seen at its committed version there — by `config-custody`.** When
+the file *is* tracked, the worktree carries its own copy, and that copy at the worktree's `HEAD` is
+the policy `config-custody` enforces. Uncommitted edits to a tracked activation file therefore do
+not reach workers until they are committed, and a copy that is present but untracked governs
+nothing. Tracking the file is still worth it (it travels to a fresh clone and to a second machine);
+just commit a policy change before dispatching against it.
+
+The other hooks that read this file — `worker-context`, `worktree-isolation`,
+`worker-git-scope-guard`, `handoff-freshness-guard`, `session-handoff-surfacer` — resolve from the
+project directory alone, which Claude Code sets to the main checkout for the hook process even
+inside a worktree. A worktree's own copy does not yet steer them, so a committed policy change on a
+worker's branch can leave the covenant it is handed disagreeing with the gate it hits.
 
 The fallback also covers what the file *names*, not only the file: a `handoff:` path and its
 freshness stamp resolve through the main checkout too, so a worker in a worktree is neither told

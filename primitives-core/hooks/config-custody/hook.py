@@ -56,12 +56,18 @@ import agentlog  # noqa: E402  (path must be primed before this import)
 # ---------------------------------------------------------------------------
 
 ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
+# `git show HEAD:<path>` takes a repo-relative path with forward slashes.
+ACTIVATION_GIT_PATH = ".claude/atelier.local.md"
 LOG_STREAM = "config-custody"
 LOG_PATH_ENV = "ATELIER_CUSTODY_LOG_PATH"
 
 # A frontmatter block is a few dozen lines; anything larger is not an activation
 # file and reading it into a hook that runs on every edit is not worth it.
 ACTIVATION_MAX_BYTES = 256 * 1024
+
+# Both git reads can run on one call, so the pair has to fit inside the hook
+# timeout `config.json` declares (10s) with room for interpreter startup.
+GIT_TIMEOUT = 3
 
 OFF = "off"
 ADVISORY = "advisory"
@@ -114,7 +120,7 @@ def _main_checkout(path):
     try:
         proc = subprocess.run(
             ["git", "-C", path, "rev-parse", "--git-common-dir"],
-            capture_output=True, timeout=5,
+            capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
         return path
@@ -314,17 +320,67 @@ def _worktree_root(abs_path, project_dir):
     finds the tree that file actually lives in, innermost first, which is the
     right answer when worktrees are nested.
 
-    The walk stops at `project_dir` rather than at the filesystem root, so a
-    worktree outside the project can never become a jurisdiction: custody
-    governs this project's trees, nothing above them.
+    The walk stops AT `project_dir`, inclusive, so a worktree outside the
+    project can never become a jurisdiction while the common case of the project
+    dir being the worktree itself is still found. Whatever the `.git` file points
+    at is trusted: this is a guardrail, not a sandbox.
     """
     prefix = project_dir + os.sep
     current = os.path.dirname(abs_path)
-    while current.startswith(prefix):
+    while current == project_dir or current.startswith(prefix):
         if os.path.isfile(os.path.join(current, ".git")):
             return current
+        if current == project_dir:
+            break
         current = os.path.dirname(current)
     return None
+
+
+def _committed_activation(worktree_root):
+    """The worktree's activation file as committed at HEAD, or None.
+
+    None means "this tree has no committed copy" and every caller must read it
+    that way: an untracked file, an unborn HEAD, a missing `git`, and a timeout
+    all land here, and all of them have to fall back to the upstream policy
+    rather than to bytes the worker can rewrite.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", worktree_root, "show", "HEAD:" + ACTIVATION_GIT_PATH],
+            capture_output=True, timeout=GIT_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0 or len(proc.stdout) > ACTIVATION_MAX_BYTES:
+        return None
+    return proc.stdout.decode("utf-8", "replace")
+
+
+def _load_policy(abs_path, project_dir):
+    """(mode, patterns) for the tree the edited file lives in.
+
+    A linked worktree with its own tracked activation file is governed by the
+    version committed on its branch: policy inside a worktree belongs to that
+    branch, where it is diffable and reviewable, and reading it from disk
+    instead would let a worker disarm the gate with one permitted `Edit`. The
+    committed copy governs even when it parses to "off" — that is the same
+    tolerant-parse rule the direct path already follows.
+
+    Everything else — no worktree, no copy, nothing committed, no git — falls
+    back to `project_dir` and its main-checkout lookup. The `isfile` probe keeps
+    the subprocess off the path of every tree that has no copy at all.
+    """
+    if os.environ.get("ATELIER_ACTIVATION_FILE"):
+        return _load_activation(project_dir)
+    root = _worktree_root(abs_path, project_dir)
+    if root and os.path.isfile(os.path.join(root, ACTIVATION_RELPATH)):
+        text = _committed_activation(root)
+        if text is not None:
+            try:
+                return _parse_frontmatter(text)
+            except Exception:
+                return OFF, []
+    return _load_activation(project_dir)
 
 
 def _normalize(raw_path, project_dir):
@@ -343,8 +399,8 @@ def _normalize(raw_path, project_dir):
     worktree, so relativizing everything against it turns every path an
     isolated worker touches into `.claude/worktrees/agent-<id>/...` — a shape
     no project-relative pattern matches, which silently exempts exactly the
-    workers custody is aimed at. Policy comes from the main checkout;
-    jurisdiction is the worktree.
+    workers custody is aimed at. Jurisdiction is the worktree; which copy of the
+    activation file supplies the patterns is `_load_policy`'s separate question.
     """
     try:
         abs_path = raw_path if os.path.isabs(raw_path) else os.path.join(project_dir, raw_path)
@@ -400,10 +456,6 @@ def main():
         if not project_dir:
             sys.exit(0)
 
-        mode, patterns = _load_activation(project_dir)
-        if mode not in ACTIVE_MODES or not patterns:
-            sys.exit(0)
-
         tool_input = payload.get("tool_input")
         if not isinstance(tool_input, dict):
             sys.exit(0)
@@ -414,6 +466,12 @@ def main():
         abs_path, relpath = _normalize(raw_path, project_dir)
         if relpath is None:
             sys.exit(0)  # outside the project: out of jurisdiction
+
+        # The path is resolved first because the policy that governs the edit is
+        # the one belonging to the tree the edited file lives in.
+        mode, patterns = _load_policy(abs_path, project_dir)
+        if mode not in ACTIVE_MODES or not patterns:
+            sys.exit(0)
 
         pattern = _first_match(relpath, abs_path, patterns)
         if not pattern:

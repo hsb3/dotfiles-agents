@@ -64,7 +64,7 @@ its commitment, the other cuts comments that cannot.
 | `config-custody` | hook (`PreToolUse`) | Denies **subagent** edits to the config listed under `protected:` in the activation file — the ownership map made machine-readable, so a worker cannot quietly edit the gate that defines its own acceptance. The main session is never restricted; only `enforce: strict` actually denies. |
 | `context-watermark` | hook (`UserPromptSubmit`) | Warns when session context crosses the soft (120k) / hard (160k) token watermarks and nudges toward `/handoff` then `/clear` or `/compact`. Fails open; never blocks a prompt. |
 | `delegation-watermark` | hook (`PostToolUse`) | Watches how much labor a session is *retaining*: counts delegable tool calls in an unbroken run with no dispatch, and past the watermark (25) nudges the session to delegate the remainder or name which floor item the stretch is. Observational; never blocks. |
-| `live-worker-git-guard` | hook (`PreToolUse`) | Denies a mutating git call (`commit`, `push`, `merge`, `pull`, `rebase`, `checkout`, `stash`, `reset`, …) while this session has a live delegation sharing its checkout — a commit mid-run captures a half-applied edit, and a pull or checkout removes a worker's uncommitted files out from under it. Workers in their own worktree do not count. Read-only git never fires. Override, loudly, by prefixing `ATELIER_GIT_GUARD_OVERRIDE=1`; never `git stash` around it. |
+| `live-worker-git-guard` | hook (`PreToolUse`) | Denies a mutating git call (`commit`, `push`, `merge`, `pull`, `rebase`, `checkout`, `stash`, `reset`, …) while this session has a live delegation sharing its checkout — a commit mid-run captures a half-applied edit, and a pull or checkout removes a worker's uncommitted files out from under it. Workers in their own worktree do not count, and neither does a command aimed at a different working tree than the one those workers share — the guard resolves the target tree from the command's cwd and its `-C`, and an ambiguity it cannot resolve leaves it deciding exactly as it did before it could compare trees at all. Read-only git never fires. Override, loudly, by prefixing `ATELIER_GIT_GUARD_OVERRIDE=1`; the override is recorded in the guard's ledger whether or not it suppressed a block, so it is never silent; never `git stash` around it. |
 | `worker-git-scope-guard` | hook (`PreToolUse`) | Denies a **subagent's** mutating git that would destroy work it does not own. Two halves. A mutating `git stash` from a worker sharing the session's checkout is always denied — a stash takes the whole tree, so it sweeps up every sibling's uncommitted work and a conflicted pop plus a drop loses it; a worker in its own worktree is untouched, and `stash list` / `stash show` are reads. Separately, `commit`/`merge`/`rebase`/`cherry-pick`/`revert`/`am` with HEAD on a branch named in `protected-branches:`, and any `push` aimed at one, are denied — a worktree shares `.git` and the remote, so isolation is no protection there. The complement of `live-worker-git-guard`, which covers the orchestrator-versus-its-own-children case instead. |
 | `manager-package-gate` | hook (`SubagentStop`) | Refuses a `manager`'s turn ending on a progress note: the final message must start `## Proof package` or `## Stopped: <condition>`, or the manager is sent back once to finish — every worker report it was "waiting on" has already been delivered. One nudge, never a loop; other agent types are untouched. |
 | `handoff-freshness-guard` | hook (`PreCompact`) | Blocks a **manual** `/compact` when the project's handoff is stale or missing (run `/handoff` first); never blocks auto-compaction — fails open with non-blocking guidance instead. |
@@ -175,10 +175,26 @@ convention, and a worktree is a clean checkout, so a worker dispatched with `iso
 used to land somewhere the file simply was not — and ran with custody and the covenant off, in
 exactly the dispatch shape isolation exists to protect. Every hook that reads the file now falls
 back to the main checkout's copy when it finds nothing at its own project directory, and the same
-fallback covers what the file *names* (a `handoff:` path, its freshness stamp). The lookup is lazy,
-which has one visible consequence worth knowing: if you **track** this file, a worktree sees it at
-the version committed on that worktree's branch, not as your working tree currently has it — so
-commit a policy change before dispatching against it.
+fallback covers what the file *names* (a `handoff:` path, its freshness stamp).
+
+**A worktree that has its own copy is governed by that copy.** `config-custody` resolves policy
+from the tree the *edited file* sits in before it consults `CLAUDE_PROJECT_DIR`, which Claude Code
+sets on the hook process to the main checkout even for an isolated worker. So if you **track** this
+file, a worktree is held to the version committed on its own branch — read at that worktree's
+`HEAD`, so an uncommitted edit to it changes nothing and an untracked copy governs nothing. A
+permissive copy **committed** there does un-govern that worktree, deliberately: the change is a
+commit rather than a live edit. Read that as "whatever commit the worktree's `HEAD` resolves to",
+not "the branch you will review" — a detached `HEAD` is not the branch tip. It reaches no further,
+because policy is resolved from the tree
+the edited file sits in and nothing else — an edit aimed at the main checkout or at a second
+worktree is judged by that tree's copy. Full precedence order in
+[`hooks/config-custody/README.md`](hooks/config-custody/README.md).
+
+Only `config-custody` resolves this way so far. The other activation-reading hooks still read the
+project directory alone and fall back to the main checkout, and one of them is `worker-context`,
+which injects the covenant at subagent start. So a worker in a worktree whose committed copy
+differs from the main checkout's can be handed covenant text that disagrees with the gate it
+actually hits. Keep the two copies in step until the sibling hooks resolve the same way.
 
 The main session is never restricted at any level: custody is scoped to subagents, so the
 strategist keeps ownership of config and git and lifting a pattern is always available. Run

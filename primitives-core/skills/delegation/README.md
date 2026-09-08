@@ -54,7 +54,8 @@ workers get their own checkout), `protected-branches` (a worker may not commit o
 named branch, and may not `git stash` in a tree it shares with a peer), `handoff`, and `effort`.
 It also records which copy of the activation file a hook reads when the worker is running inside
 a linked worktree — including that the same fallback covers what the file *names*, so a
-`handoff:` path and its freshness stamp resolve through the main checkout too — and the design
+`handoff:` path and its freshness stamp resolve through the main checkout too, and that the
+worktree's own committed copy currently steers `config-custody` alone — and the design
 commitments behind the enforcement layer: fail-open everywhere, custody scoped to subagents so
 the strategy layer is never restricted, and each guard stating its own ceiling instead of
 implying containment it does not have.

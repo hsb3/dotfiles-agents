@@ -93,7 +93,7 @@ class ConfigCustodyTests(unittest.TestCase):
         return payload
 
     def _run_hook(self, payload, set_log_env=True, log_path=None, stdin_text=None,
-                  project_dir=None):
+                  project_dir=None, env_extra=None):
         env = {
             "PATH": os.environ.get("PATH", ""),
             # HOME as well as XDG_DATA_HOME: expanduser("~") falls back to the
@@ -106,6 +106,7 @@ class ConfigCustodyTests(unittest.TestCase):
             env["CLAUDE_PROJECT_DIR"] = project_dir
         if set_log_env:
             env["ATELIER_CUSTODY_LOG_PATH"] = log_path if log_path is not None else self.log_path
+        env.update(env_extra or {})
         stdin_text = json.dumps(payload) if stdin_text is None else stdin_text
         return subprocess.run(
             [sys.executable, HOOK_PATH],
@@ -118,6 +119,7 @@ class ConfigCustodyTests(unittest.TestCase):
 
     def _assert_denied(self, result):
         self.assertEqual(result.returncode, 0)
+        self.assertNotEqual(result.stdout.strip(), "", "hook stayed silent, expected a deny")
         hso = json.loads(result.stdout)["hookSpecificOutput"]
         self.assertEqual(hso["permissionDecision"], "deny")
         return hso
@@ -371,6 +373,217 @@ class ConfigCustodyTests(unittest.TestCase):
                     file_path=os.path.join(root, "docs", "Makefile"), cwd=root,
                 )
                 self._assert_silent(self._run_hook(payload, project_dir=main_dir))
+
+    # -- whose policy governs ----------------------------------------------
+
+    def _commit_in(self, tree, text):
+        """Commit an activation file on the branch checked out in `tree`."""
+        relpath = os.path.join(".claude", "atelier.local.md")
+        path = os.path.join(tree, relpath)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        identity = ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+                    "-c", "commit.gpgsign=false"]
+        for args in (["add", "--", relpath], identity + ["commit", "-q", "-m", "policy"]):
+            proc = subprocess.run(["git"] + args, cwd=tree, capture_output=True,
+                                  text=True, timeout=60)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+        clean = subprocess.run(["git", "status", "--porcelain"], cwd=tree,
+                               capture_output=True, text=True, timeout=60)
+        self.assertEqual(clean.stdout, "", "clean tree: on-disk is the committed version")
+        return path
+
+    def test_a_worktrees_committed_activation_governs_that_worktree(self):
+        """Production shape: CLAUDE_PROJECT_DIR names the MAIN checkout while the
+        edited file lives in a linked worktree whose committed copy drops a
+        pattern the main checkout still lists."""
+        main_dir = self._repo(patterns=("Makefile", "docs/*"))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-z", "wt-z")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - docs/*\n---\n")
+
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+        # Control: the worktree's own patterns are read, not a blanket exemption.
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "docs", "guide.md"),
+                          cwd=worktree),
+            project_dir=main_dir,
+        ))
+        # Control: the main checkout stays governed by its own copy.
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(main_dir, "Makefile"), cwd=main_dir),
+            project_dir=main_dir,
+        ))
+
+    def test_the_edited_files_worktree_outranks_the_payload_cwds(self):
+        """Two worktrees, opposite policies: the tree the edited file lives in
+        decides, whichever tree the call came from."""
+        main_dir = self._repo(patterns=("Makefile",))
+        open_tree = self._add_worktree(main_dir, ".claude/worktrees/agent-a", "wt-a")
+        strict_tree = self._add_worktree(main_dir, ".claude/worktrees/agent-b", "wt-b")
+        self._commit_in(open_tree, "---\nenforce: off\n---\n")
+        self._commit_in(strict_tree,
+                        "---\nenforce: strict\nprotected:\n  - Makefile\n---\n")
+
+        with self.subTest("edit in the strict tree, called from the open one"):
+            self._assert_denied(self._run_hook(
+                self._payload(file_path=os.path.join(strict_tree, "Makefile"),
+                              cwd=open_tree),
+                project_dir=main_dir,
+            ))
+        with self.subTest("edit in the open tree, called from the strict one"):
+            self._assert_silent(self._run_hook(
+                self._payload(file_path=os.path.join(open_tree, "Makefile"),
+                              cwd=strict_tree),
+                project_dir=main_dir,
+            ))
+
+    def test_a_worktree_policy_never_reaches_the_main_checkout(self):
+        """`enforce: off` committed in a worktree un-governs that worktree —
+        intended — and nothing else: an absolute edit aimed at the main checkout
+        is still judged by the main checkout's copy."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-m", "wt-m")
+        self._commit_in(worktree, "---\nenforce: off\n---\n")
+
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(main_dir, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_an_uncommitted_edit_to_the_worktrees_copy_has_no_effect(self):
+        """The committed version governs. Editing the activation file in your
+        own worktree is a permitted `Edit` on most boards, and it must not be a
+        way to stand custody down for the rest of the session."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-d", "wt-d")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - Makefile\n---\n")
+        self._write_activation(mode="off", project_dir=worktree)
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_the_committed_copy_governs_when_the_worktree_is_the_project_dir(self):
+        """`CLAUDE_PROJECT_DIR` does not always name the main checkout: it can
+        name the worktree, and with it unset the payload `cwd` does. The
+        committed copy has to govern in all three shapes."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-p", "wt-p")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - Makefile\n---\n")
+        self._write_activation(mode="off", project_dir=worktree)
+        edit = self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree)
+
+        with self.subTest("the project dir is the worktree"):
+            self._assert_denied(self._run_hook(edit, project_dir=worktree))
+        with self.subTest("no project dir, so the payload cwd is the worktree"):
+            self._assert_denied(self._run_hook(edit))
+        with self.subTest("jurisdiction is still that tree's root, not a basename"):
+            self._assert_silent(self._run_hook(
+                self._payload(file_path=os.path.join(worktree, "docs", "Makefile"),
+                              cwd=worktree),
+                project_dir=worktree,
+            ))
+
+    def test_an_oversized_committed_copy_falls_back(self):
+        """A blob past the size ceiling is 'no committed copy', not 'off'."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-big", "wt-big")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - docs/*\n---\n"
+                        + "x" * (256 * 1024))
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "docs", "guide.md"),
+                          cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_a_committed_copy_deleted_from_disk_does_not_govern(self):
+        """The `isfile` probe is the gate on the whole committed read: a tree
+        whose copy is gone from disk falls back rather than resurrecting it."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-g", "wt-g")
+        self._commit_in(worktree, "---\nenforce: off\n---\n")
+        os.remove(os.path.join(worktree, ".claude", "atelier.local.md"))
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_an_empty_committed_copy_disarms_that_worktree(self):
+        """Empty or unparseable means "off" for that tree — the same tolerant
+        rule the on-disk reader follows, and it is reached only by committing."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-e", "wt-e")
+        self._commit_in(worktree, "")
+
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_an_untracked_worktree_copy_does_not_govern(self):
+        """AC#1 promises the *tracked* copy. A file that exists only on disk is
+        not on the branch, so the main checkout's policy still applies."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-u", "wt-u")
+        self._write_activation(mode="off", project_dir=worktree)
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir,
+        ))
+
+    def test_a_relative_edit_is_judged_by_one_tree_for_both_questions(self):
+        """A relative tool path anchors on the project dir, so the project
+        dir's policy is what judges it: policy and jurisdiction resolve to the
+        same tree by construction, whatever the payload cwd says."""
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-r", "wt-r")
+        self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - docs/*\n---\n")
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path="Makefile", cwd=worktree), project_dir=main_dir))
+        self._assert_silent(self._run_hook(
+            self._payload(file_path="docs/guide.md", cwd=worktree), project_dir=main_dir))
+
+    def test_a_foreign_trees_activation_file_never_arms_the_hook(self):
+        """Out of jurisdiction is decided before policy is read, so an edit
+        outside the project cannot import a stranger's `protected:` list."""
+        main_dir = self._repo(patterns=("Makefile",))
+        foreign = os.path.join(self.tmp.name, "foreign")
+        self._write_activation(mode="strict", patterns=["Makefile", "*"],
+                               project_dir=foreign)
+        self._assert_silent(self._run_hook(
+            self._payload(file_path=os.path.join(foreign, "Makefile"), cwd=foreign),
+            project_dir=main_dir,
+        ))
+
+    def test_the_activation_override_outranks_every_tree(self):
+        main_dir = self._repo(patterns=("Makefile",))
+        worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-o", "wt-o")
+        self._commit_in(worktree, "---\nenforce: off\n---\n")
+        override = os.path.join(self.tmp.name, "override.md")
+        with open(override, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\nprotected:\n  - Makefile\n---\n")
+
+        self._assert_denied(self._run_hook(
+            self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
+            project_dir=main_dir, env_extra={"ATELIER_ACTIVATION_FILE": override},
+        ))
 
 
 if __name__ == "__main__":
