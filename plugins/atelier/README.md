@@ -82,6 +82,18 @@ its commitment, the other cuts comments that cannot.
 claude plugin install atelier@dotfiles-agents
 ```
 
+### Codex role setup
+
+Codex discovers the skills through the same marketplace. Its native agent loader needs
+project TOML profiles, so run the installed package's `hooks/_lib/codex_roles.py` with the
+consumer project path, then repeat with `--check`. Setup renders the five canonical roles as
+`atelier-<role>` profiles under `.codex/agents/`, preserves user-owned or edited profiles,
+and resolves models through the OpenAI tier map. Start a fresh session after setup.
+
+The [Codex dispatch procedures](skills/delegation/references/dispatch-knobs.md#codex-distribution)
+cover role selection, native waits and follow-ups. Role setup alone does not establish hook
+trust or worker isolation; verify the project safeguards before dispatching writers.
+
 ## A worked example
 
 ```
