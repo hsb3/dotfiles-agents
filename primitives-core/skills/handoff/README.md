@@ -26,3 +26,5 @@ skill runs and the waves skill drives across a backlog.
 ## Codex
 
 The same activation routing, external-update-before-stamp ordering, and cold-start pointer apply. Trusted native PreCompact hooks interrupt manual compaction for stale or absent signals; automatic compaction warns.
+
+Codex lifecycle guidance shares the file/external handoff contract while the separate OpenCode port retains its own lifecycle integration.

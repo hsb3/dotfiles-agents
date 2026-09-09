@@ -374,3 +374,5 @@ Since the decision-020 sweep this bundle is the only home for `comment-hygiene`,
 `deletion-pass`, `handoff`, `layer-cycle` and `rubric-panel` — all five used to ship from
 `solo-skills` as well, and no longer do. `test-quality`, which `layer-cycle` cites, still
 ships only from `solo-skills`.
+
+The lifecycle notes ship for both Claude Code and Codex here; the separate OpenCode port keeps its own runtime instructions.
