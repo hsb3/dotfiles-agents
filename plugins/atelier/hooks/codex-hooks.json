@@ -158,7 +158,7 @@
           {
             "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-context/hook.py\"",
             "statusMessage": "Briefing worker on the delegation covenant...",
-            "timeout": 10,
+            "timeout": 30,
             "type": "command"
           }
         ],
