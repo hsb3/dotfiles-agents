@@ -1,6 +1,6 @@
 ---
 name: task-authoring
-description: Write tracked work items a cold agent can actually execute — titles, acceptance criteria, thresholds, approval gates, scope ownership. Use whenever creating or rewriting a Kata issue, a Kaneo task, a GitHub issue, an OpenSpec change, or any tracker item, and when reviewing an existing task for executability.
+description: Write tracked work items a cold agent can actually execute — titles, acceptance criteria, thresholds, approval gates, scope ownership. Use whenever creating or rewriting a Kata issue, a GitHub issue, an OpenSpec change, or any tracker item, and when reviewing an existing task for executability.
 ---
 
 # Task authoring
@@ -10,16 +10,20 @@ coin flip you delegated.
 
 ## Titles: for scanning, not describing
 
-- **Shape `area: outcome`** — first token is the component touched (`api`, `docs`,
-  `ci`, `ops`). Scanning the list then groups related items for free.
+- **The title is the outcome in one clause, <=70 chars, with no `word: ` prefix of any
+  kind** — not `feat:`/`fix:`/`chore:`, and not an area prefix like `api:`/`docs:`/`ci:`
+  either. The prefix burns the highest-value characters in the title and puts the grouping
+  somewhere no filter can reach.
+- **Area and type live in labels**: `area:<x>` (exactly one, project-defined) and
+  `type:feat`/`type:fix`/`type:chore` (exactly one).
+- **Containers are labelled `epic`**, not prefixed.
+- Vocabulary comes from the project's declared label set.
 - **Outcome, not symptom or activity** — "runs fail loudly on infra errors", not
   "investigate why errors surface as normal replies". A finding-shaped title goes stale the
   moment work starts; an outcome-shaped one *is* the acceptance criterion.
-- **One clause, <=70 chars.** Evidence, issue/PR numbers, and "follow-up to X" belong in
-  the body; past the limit most tracker UIs truncate anyway.
-- **No `feat:`/`fix:`/`chore:` prefixes** — labels carry type; the prefix burns the
-  highest-value characters in the title.
-- **Prefix non-work items by kind** (`DECISION:`, `REF:`, `HANDOFF —`) so they never
+- Evidence, issue/PR numbers, and "follow-up to X" belong in the body; past the 70-char
+  limit most tracker UIs truncate anyway.
+- **Mark non-work items by label** (decision, handoff, meta) so they never
   masquerade as buildable work.
 - Before renaming anything, grep for what points at the old title by exact string (hooks,
   docs, automation) and exempt those.
@@ -51,7 +55,7 @@ given a judgment word produce two results; given a threshold, one.
 
 - "Apply after owner review" is not executable. Reference the ritual explicitly, in the
   tracker's own signal: post the artifact as a comment on the item -> raise its blocked /
-  needs-human state (Kata `work.attention needs-human`, a Kaneo blocked lane, a GitHub label)
+  needs-human state (Kata `work.attention needs-human`, a GitHub label)
   -> stop -> owner approves by comment -> resume. Otherwise a cold agent blocks forever or
   self-approves.
 - Say what the task may **not** touch — CI workflows, pre-commit gate scripts, anything

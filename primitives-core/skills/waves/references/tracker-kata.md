@@ -28,6 +28,20 @@ kata next --project <name> --unowned --agent        # single highest-priority re
 by hand from `blocked_by` arrays unless you need the raw edges (e.g. to explain *why* something
 is blocked).
 
+## Labels
+
+Labels are the grouping a wave plans against, so they carry the whole classification — a title
+prefix is not queryable and does not count. The core vocabulary is a closed set of names plus
+one family: exactly one type label per item from type:feat, type:fix or type:chore; the
+container and behaviour labels epic, decision, handoff, meta, needs-review and up-next; and
+exactly one area label, whose values each project defines for itself. A project adds labels on
+top of that core, never instead of it.
+
+Declaring the core somewhere a tool can read matters for one check: `board_health.py` takes
+`--vocabulary <file>`, a declared label list, one name per line. Without it the tool has only
+the board's own label options — derived from its whole history, retired names included — so its
+fossil check is skipped rather than answered.
+
 ## Triage view
 
 Backed by **one epic issue's body**, rewritten wholesale — the closest kata analog to a pinned

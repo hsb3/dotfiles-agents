@@ -22,8 +22,14 @@ So the set is CLOSED (owner ruling, 2026-09-07), and closed means exactly this:
 Set equality in both directions, and every problem carries its own fix command, because
 a gate whose output has to be translated into commands is a gate people argue with.
 
-`VOCABULARY` is a constant here rather than a parsed file because no tracked file in this
-repo declares the set. `.github/ISSUE_TEMPLATE/bug.yml` names one label it assigns, and
+`VOCABULARY` is a constant here rather than a parsed file because no tracked file declares
+THIS set. `primitives-core/skills/board-triage/scripts/core-labels.txt` declares the core
+KATA-BOARD vocabulary (decision-023), and the set below is a strict SUBSET of it: the
+board-only names (`handoff`, `meta`, `needs-review`, `up-next`, the whole `area:*` family)
+never reach GitHub, because the sync here is import-only and board labels do not propagate
+outward. Reading that file would therefore make this gate demand labels the repo must not
+have. `tests/test_core_labels.py` pins the subset relation instead, so the two cannot drift
+apart silently. `.github/ISSUE_TEMPLATE/bug.yml` names one label it assigns, and
 `primitives-core/hooks/plugin-feedback-session/report_issue.py` carries overridable
 defaults for a CONSUMER's repo; neither is a declaration of ours. Deleting a label a
 template depends on still goes red — through the missing-label path, check 2.

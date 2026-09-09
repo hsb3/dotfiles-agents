@@ -26,6 +26,17 @@ that answer whether the board has rotted enough to be worth a pass, and afterwar
 pass took. It reads the same §2 snapshot every adapter already emits, so it is backend-agnostic
 for free and talks to no board itself.
 
+One of the six needs an input the board cannot supply: `--vocabulary` takes a declared label
+list, one name per line, and `scripts/core-labels.txt` ships as that declaration. Without it
+the fossil check reports SKIP on every run, because the only label set a snapshot carries is
+derived from the board's whole history and so can never go green. The shipped file holds the
+core vocabulary — one type label, the container and behaviour names — and deliberately no area
+name, since areas are each project's own. A project that adds labels on top of the core points
+`--vocabulary` at its own copy. On a board that has not adopted the vocabulary yet, read the
+fossil finding as the adoption gap rather than as retired vocabulary — the adapter says so.
+A project with no open items exports as an empty snapshot rather than crashing, and every
+check then has nothing to judge, which is not the same answer as a clean board.
+
 It measures whether a field **discriminates**, not just whether it is filled — a priority band
 holding most of the backlog, items with no band or no label at all, a grouping convention living
 in title prefixes that no filter can reach, and two spellings of one concept splitting it across
@@ -33,6 +44,23 @@ two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read.
 machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
 norms. Every check that can fail judges open items only, so a board's retired label history can
 never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
+
+## Putting a board back on the vocabulary
+
+`scripts/relabel_board.py` migrates one project's labels onto the core set: it reads the
+rename table in `scripts/label-map.yaml` beside it, computes the minimum label delta per open
+card, and prints the plan. **It is a dry run unless `APPLY=1` is set in the environment** — not
+a flag, so it cannot be half-typed into a live run, and every mutating call goes through the
+one place that checks it. Three things it refuses to do rather than guess: it skips a GitHub
+mirror (the sync owns a mirror's labels and re-applies them), it plans nothing at all for a
+card that would end up with two `type:` or two `area:` labels, and it reports a label absent
+from the map instead of inventing a home for it. The map is the only file that changes when a
+mapping decision changes, and a label deliberately left out of it is a decision, not an
+oversight. An apply that fails partway stops, prints every operation that had already
+landed, and exits 3 rather than 1, so a wrapper can tell a half-written board from a list
+of findings. Title-prefix promotion is a separate mode, `--strip-prefixes`, off by default and
+inert unless the caller supplies that project's area list with `--areas` — with no list it
+promotes nothing and reports every prefixed title, which is the fail-safe.
 
 The Kata adapter also states how kata's import-only GitHub sync constrains the loop: a mirror is an
 epic to decompose, and anything rewritten in place must be a native card.

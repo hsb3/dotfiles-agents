@@ -121,10 +121,20 @@ start, in order:
    every warn is wiring debt to fix).
 2. `audit_issues.py --project dotfiles-agents` — definition and dependency hygiene over open
    issues.
-3. `board_health.py` — does the board still *discriminate*? Ships in the board-triage skill
-   (code-desk plugin):
-   `python3 ~/.claude/plugins/cache/dotfiles-agents/code-desk/<version>/skills/board-triage/scripts/board_health.py <(python3 primitives-core/skills/board-triage/scripts/kata_board.py export --project dotfiles-agents)`
-   Exit 0 means no pass is due and you can skip step 4.
+3. `board_health.py` — does the board still *discriminate*? **This step now runs itself.** The
+   `.claude/hooks/board-health/` SessionStart hook prints the verdict into session context at
+   every `startup`/`resume`/`clear`, warn-only and exit 0 always, so a finding never blocks a
+   session. `make board-health` runs the same measurement on demand and goes non-zero when a
+   pass is due (make reports the script's own exit as its own error, the way `make labels`
+   does; run `board_health.py` directly for the exact 0 clean / 1 findings / 2 could-not-measure
+   code). `PROJECT=<name>` points it at another board. Both read the in-tree copy of the script
+   and pass
+   `--vocabulary primitives-core/skills/board-triage/scripts/core-labels.txt`, the core label
+   set of decision-023 — without a declaration the `vocabulary-fossils` check is SKIPped every
+   run, because a board's own label history is not a declaration. A verdict line saying it
+   **could not measure** is not a clean board: it names which failure it hit (no `kata` binary,
+   unreachable daemon, missing declaration) and nothing was checked. Read the hook's line; run
+   step 4 only when it reports findings.
 4. The board-triage kata adapter, **only if step 3 exited non-zero**. Re-run step 3 after to
    confirm the pass took.
 5. `make board-reconcile` — GitHub issues against the board (see below).
@@ -142,12 +152,15 @@ still *discriminate*. On 2026-09-08 the audit reported `no-priority: 0` and `bod
 board where 34 of 55 open items sat in one priority band, 16 carried no label, and the area
 grouping lived only in title prefixes. A per-card check cannot see a distribution. Run both.
 
-**Board conventions** (owner ruling 2026-09-08). Every open card carries exactly one
-`area:*` label and exactly one type label from the closed vocabulary (`type:feat`, `type:fix`,
-`type:chore`, `decision`, `epic`) — the same vocabulary decision-016 closes on GitHub, so a
-card and its mirror read alike. Areas are the 10 in use; add one only when a genuine new domain
-appears, never for a single card. `meta`, `handoff`, `needs-review`, `up-next` are behavioural
-labels, not types. Board labels do NOT propagate to GitHub — `make labels` proves it.
+**Board conventions.** The vocabulary is not restated here — it is
+[`decision-023`](docs/decisions/decision-023%20-%20kata-labels-are-the-triage-system-and-title-prefixes-are-not.md),
+declared machine-readably in `primitives-core/skills/board-triage/scripts/core-labels.txt`, and
+that record is the copy to change. What it means day to day: every open card carries exactly one
+`area:*` and exactly one `type:*`, titles carry **no prefix of any kind** (the grouping lives in
+labels, where a query can reach it), and this project adds areas on top of the core rather than
+instead of it — add one only when a genuine new domain appears, never for a single card. Board
+labels do NOT propagate to GitHub, and GitHub's own closed set (decision-016) is a *subset* of
+the core: the board-only names never reach the repo. `make labels` proves it.
 
 **Step 5 — the GitHub reconcile** (owner ruling 2026-09-08). `scripts/reconcile_github.py`
 classifies every open GitHub issue against the board and is dry-run by default; `APPLY=1 make

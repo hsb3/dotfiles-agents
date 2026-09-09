@@ -1,0 +1,16 @@
+# Core label vocabulary (decision-023) — pass as `board_health.py --vocabulary`.
+# Exactly one type label per item; the rest are containers and behaviour.
+# `area:<x>` is deliberately absent: the family is project-defined, and a name no open item
+# carries is reported as a vocabulary fossil forever.
+# A project adds labels on top of these names, never instead of them.
+
+type:feat
+type:fix
+type:chore
+
+epic
+decision
+handoff
+meta
+needs-review
+up-next

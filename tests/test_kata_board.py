@@ -84,6 +84,21 @@ class Snapshot(unittest.TestCase):
         snap = kb.build_snapshot("demo", [{"short_id": "z9", "labels": None}], [])
         self.assertEqual([], snap["items"][0]["labels"])
 
+    def test_a_null_list_from_the_daemon_reads_as_empty(self):
+        """kata answers a project with no labels as `{"labels": null}`, not `{}`.
+
+        `.get(key, default)` returns the explicit null, so the default never applies and
+        the snapshot build raises. An idle project is a legal board, not a crash.
+        """
+        original = kb._kata
+        kb._kata = lambda args, project: {"issues": None} if args[0] == "list" else {"labels": None}
+        try:
+            snap = kb.fetch_snapshot("empty")
+        finally:
+            kb._kata = original
+        self.assertEqual([], snap["items"])
+        self.assertEqual([], snap["fields"]["labels"]["options"])
+
 
 class Normalize(unittest.TestCase):
     def test_bands_resolve_to_kata_integers(self):

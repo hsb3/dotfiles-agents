@@ -19,7 +19,9 @@ land a wave and close its items. Bindings ship for GitHub issues and kata under
 `references/`; a tracker without one is usable by naming those three operations up front.
 
 Under the kata binding, note that its GitHub sync is import-only: an imported mirror is an epic to
-decompose, never a card to rewrite.
+decompose, never a card to rewrite. That binding also states the core label vocabulary a wave
+plans against — one type label, one area label, plus the container and behaviour names — since
+the grouping has to be queryable rather than living in a title prefix.
 
 Tracker and code forge are separate everywhere except GitHub, so closing an item and landing
 its code are two steps unless the tracker is GitHub itself.

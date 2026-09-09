@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels models-drift
+.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels models-drift board-health board-reconcile
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -80,6 +80,15 @@ labels: ## GitHub label set vs the closed vocabulary, decision-016 (needs gh + n
 
 board-reconcile: ## Open GitHub issues vs the kata board; APPLY=1 closes stale mirrors (needs gh + the daemon; NOT in ci)
 	@python3 scripts/reconcile_github.py $(if $(APPLY),--apply,)
+
+# Curation rhythm step 3. Same measurement the SessionStart hook prints, run on demand and
+# non-zero when a pass is due. The vocabulary is the core label set (decision-023) — without
+# it the fossil check is SKIPped every run.
+board-health: ## Board decay checks vs the core label vocabulary; PROJECT= overrides (needs kata + the daemon; NOT in ci)
+	@python3 primitives-core/skills/board-triage/scripts/kata_board.py export \
+	  --project $(or $(PROJECT),dotfiles-agents) \
+	  | python3 primitives-core/skills/board-triage/scripts/board_health.py \
+	      --vocabulary primitives-core/skills/board-triage/scripts/core-labels.txt
 
 harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
 	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q
