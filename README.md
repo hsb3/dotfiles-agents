@@ -16,7 +16,9 @@ codex plugin add atelier@dotfiles-agents
 ```
 
 Atelier needs [project activation and native role setup](plugins/atelier/README.md#codex-role-setup)
-before dispatching isolated workers. Code-desk and PocketBase also provide project role setup;
+before dispatching isolated workers. To refresh, run `codex plugin marketplace upgrade dotfiles-agents`, then repeat
+`codex plugin add <plugin>@dotfiles-agents` and rerun that plugin’s project setup.
+Code-desk and PocketBase also provide project role setup;
 Claude slash commands remain convenience entry points for invoking their corresponding skills.
 
 

@@ -128,3 +128,6 @@ bundle's other skills (layer-cycle, waves) build on.
 Uses the same workflow with generated project roles and native worker routing. See the
 [Codex distribution procedures](references/dispatch-knobs.md#codex-distribution)
 for setup, ownership-safe refresh, role names, and completion handling.
+
+Codex managers may assemble verified child commits on their own worktree branch; final
+project integration remains with the strategist. Native role setup enables the required nesting.

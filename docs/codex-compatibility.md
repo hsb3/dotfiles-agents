@@ -25,7 +25,8 @@ Setup renders five project role TOMLs from canonical agent Markdown and the Open
 map, plus the narrow writable roots needed for worker Git operations. It refuses conflicting
 or edited user configuration. Restart the session and review/trust the package in `/hooks`.
 Configuration checks deliberately do not certify trust from parsed settings.
-After upgrading a plugin, rerun setup and start a fresh session; a versioned cache path can
+Refresh with `codex plugin marketplace upgrade dotfiles-agents`, then repeat
+`codex plugin add <plugin>@dotfiles-agents`. After upgrading a plugin, rerun setup and start a fresh session; a versioned cache path can
 change, and the rendered role instructions contain paths to that installed package.
 
 Code-desk and PocketBase use the same role renderer with `--plugin-root` naming their

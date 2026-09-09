@@ -99,7 +99,8 @@ With `isolate: writers`, native worker IDs own separate worktrees and Git indexe
 Git’s common directory. Hooks route shell commands and every patch destination into the
 owned checkout. New workers start from their immediate dispatcher’s committed HEAD; native
 messages, follow-ups and completion still use the original worker ID. Uncommitted parent
-changes do not travel. Missing or invalid worker state denies writes. Worker setup and context injection share the
+changes do not travel. Managers can assemble verified child commits on their own branch;
+final project integration remains with the strategist. Missing or invalid worker state denies writes. Worker setup and context injection share the
 same startup timeout so a slow checkout cannot silently skip the role briefing.
 
 This prevents workers colliding in one checkout. It is not a separate OS sandbox per worker:
