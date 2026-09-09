@@ -1,17 +1,25 @@
-# .claude/plugins — local workbench plugins (vendored, not distributed)
+# .claude/plugins — vendored development tools
 
-These three plugin directories are copies of Anthropic's official Claude Code plugins
-(Apache-2.0, author "Anthropic" per each `.claude-plugin/plugin.json`), vendored
-2026-07-22 as local workbench tooling for developing this repo's primitives:
+These copies of Anthropic's official plugins support development of this repository.
+They are excluded from the published marketplace on `main`, but **are distributed
+with the source repository**. Public source visibility therefore requires preserving
+their licenses and attribution too.
 
-- `plugin-dev` — plugin development toolkit
-- `skill-creator` — skill creation + eval toolkit
-- `mcp-server-dev` — MCP server development skills
+All files in each directory match the following complete upstream subtree, verified
+2026-09-09 against [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official):
 
-They are wired through the file-based `workbench` marketplace
-(`.claude-plugin/marketplace.json`) and enabled in `.claude/settings.json`
-(`extraKnownMarketplaces` + `enabledPlugins`).
+| Local directory | Upstream path | Exact matching revision | Files |
+|---|---|---|---|
+| `plugin-dev` | `plugins/plugin-dev` | `ce721c1f1d5da2c281588818e072ae01a05d2e73` | 60 |
+| `skill-creator` | `plugins/skill-creator` | `2a40fd2e7c52207aa903bd33fc4c65716126966e` | 21 |
+| `mcp-server-dev` | `plugins/mcp-server-dev` | `f4b5494fb45946c1256e883001300dad87ffa036` | 22 |
 
-They are **not** part of the distributed marketplace this repo publishes. Per
-`flow.yaml`, everything under `.claude/` is local dev tooling, never distributed.
-`skill-creator` is additionally recorded by reference in `externals.yaml`.
+Each contains its upstream Apache-2.0 `LICENSE`; each manifest identifies Anthropic
+as author. The skill-creator skill also retains its own `LICENSE.txt`. No local
+modifications were found in these three copied subtrees. The MIT sentence in
+`plugin-dev/README.md` is upstream text; its included license is Apache-2.0.
+
+The file-based `workbench` marketplace (`.claude-plugin/marketplace.json`) enables
+these tools through `.claude/settings.json`. They are not entries in the current
+`externals.yaml`. See [the license inventory](../../docs/licenses.md) for the wider
+repository and historical-copy limitations.
