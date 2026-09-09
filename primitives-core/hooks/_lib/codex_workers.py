@@ -108,7 +108,7 @@ def _write(path, record):
             os.unlink(tmp)
 
 
-def lookup(payload):
+def lookup(payload, validate_worktree=True):
     if not payload.get('agent_id'):
         return None
     path = _record_path(payload)
@@ -118,7 +118,7 @@ def lookup(payload):
         record = json.loads(path.read_text(encoding='utf-8'))
         if record['session_id'] != payload['session_id'] or record['agent_id'] != payload['agent_id']:
             raise WorkerError('Worker registry identity mismatch')
-        if record.get('worktree'):
+        if validate_worktree and record.get('worktree'):
             actual = _git_identity(record['worktree'])
             if any(actual[key] != record[key] for key in actual):
                 raise WorkerError('Owned worker Git identity changed; stop and redispatch the worker')
@@ -132,7 +132,8 @@ def records(payload):
     result = []
     for path in sorted(directory.glob('*.json')):
         probe = dict(payload, agent_id=path.stem)
-        result.append(lookup(probe))
+        record = lookup(probe, validate_worktree=False)
+        result.append(record if record.get('status') == 'stopped' else lookup(probe))
     return result
 
 
