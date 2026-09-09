@@ -100,3 +100,17 @@ claude plugin install pocketbase@dotfiles-agents
 This is the only bundle that ships the two PocketBase skills. They used to also ship in
 `solo-skills`; as of decision-020 the topical plugin owns a skill, so enable this plugin to
 get them.
+
+## Codex
+
+Install with `codex plugin add pocketbase@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
+project roles from its installed root (the path returned by `codex plugin add --json`):
+
+```sh
+python3 "$PLUGIN_ROOT/hooks/_lib/codex_roles.py" /path/to/project --plugin-root "$PLUGIN_ROOT"
+```
+
+Start a fresh session and trust the package hooks in `/hooks`. The native `worker-context` and `worktree-isolation` hooks inject
+canonical role instructions and enforce each role’s dispatch and patch-tool exclusions.
+They do not require Atelier activation or provide worktree isolation; shell access remains
+subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.

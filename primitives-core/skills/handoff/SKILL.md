@@ -177,3 +177,15 @@ _Cold-start onboarding. Last updated: YYYY-MM-DD. Keep updated at session bounda
   so duplicating it is wasted context that loads twice - but a README fact restated here is
   the same debt, just paid on read instead of on load.
   <!-- /harness -->
+
+
+<!-- harness:codex -->
+## Codex lifecycle
+
+Read routing from `.claude/atelier.local.md` exactly as above. In external mode, update the
+external handoff first and touch its configured local stamp last. Trusted Codex PreCompact
+hooks interrupt manual compaction when that stamp or file is missing or stale; automatic
+compaction only warns. A new Codex session receives the file excerpt or external pointer
+through SessionStart. Use the native `/hooks` screen to check trust if either signal is
+missing; a configured activation file alone does not prove the hook ran.
+<!-- /harness -->

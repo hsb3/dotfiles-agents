@@ -27,86 +27,86 @@ primitives:
     source: primitives-core/skills/handoff
     origin: authored
     disposition: qualified
-    # atelier member — claude-code only; see the atelier block further down.
-    targets: [claude-code]
+    # Atelier member; see the Atelier block further down.
+    targets: [claude-code, codex]
   - id: board-triage
     type: skill
     source: primitives-core/skills/board-triage
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: comms
     type: skill
     source: primitives-core/skills/comms
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: mise-en-place-scaffold
     type: skill
     source: primitives-core/skills/mise-en-place-scaffold
     origin: authored
     disposition: qualified
     requires: [cli:cc-project-memory]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: project-memory
     type: skill
     source: primitives-core/skills/project-memory
     origin: authored
     disposition: qualified
     requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: planning-desk
     type: skill
     source: primitives-core/skills/planning-desk
     origin: authored
     disposition: qualified
     requires: [cli:kata]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: pull-request
     type: skill
     source: primitives-core/skills/pull-request
     origin: authored
     disposition: qualified
     requires: [cli:gh]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: private-fork
     type: skill
     source: primitives-core/skills/private-fork
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: readme-value-and-proof
     type: skill
     source: primitives-core/skills/readme-value-and-proof
     origin: authored
     disposition: qualified
     requires: [cli:capture-console-errors]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: repo-compliance-audit
     type: skill
     source: primitives-core/skills/repo-compliance-audit
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: repo-meta-structure
     type: skill
     source: primitives-core/skills/repo-meta-structure
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: starting-conditions
     type: skill
     source: primitives-core/skills/starting-conditions
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: bun
     type: skill
     source: primitives-core/skills/bun
     origin: authored
     disposition: qualified
     requires: [cli:bun]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: kenn-forge
     type: skill
     source: primitives-core/skills/kenn-forge
@@ -115,23 +115,23 @@ primitives:
     requires: [cli:kenn-forge]
     # claude-code only: the skill's primary surface is the kenn_forge_* MCP tools of a
     # locally running daemon, which the opencode lane has no equivalent registration for.
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: context-watermark
     type: hook
     source: primitives-core/hooks/context-watermark
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: handoff-freshness-guard
     type: hook
     source: primitives-core/hooks/handoff-freshness-guard
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   # --- most of atelier starts here (membership is the symlink assembly under
   # plugins/atelier/, not this file; `handoff` sits at the top and `rig-builder` below
   # belongs to code-desk, not atelier) ---
-  # Every atelier member is claude-code only, deliberately: atelier's opencode port ships
+  # Atelier supports Claude Code and Codex here, deliberately: atelier's opencode port ships
   # from its own repo under the parity contract (docs/atelier-parity.md), hand-authored
   # against opencode's real agent model, so gen_opencode.py no longer emits it. Two
   # copies of one doctrine, one generated and one authored, is the drift that contract
@@ -141,141 +141,141 @@ primitives:
     source: primitives-core/skills/delegation
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: waves
     type: skill
     source: primitives-core/skills/waves
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: activation
     type: skill
     source: primitives-core/skills/activation
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: rubric-panel
     type: skill
     source: primitives-core/skills/rubric-panel
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: deletion-pass
     type: skill
     source: primitives-core/skills/deletion-pass
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: layer-cycle
     type: skill
     source: primitives-core/skills/layer-cycle
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: comment-hygiene
     type: skill
     source: primitives-core/skills/comment-hygiene
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: test-quality
     type: skill
     source: primitives-core/skills/test-quality
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: scout
     type: agent
     source: primitives-core/agents/scout.md
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: builder
     type: agent
     source: primitives-core/agents/builder.md
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: reviewer
     type: agent
     source: primitives-core/agents/reviewer.md
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: manager
     type: agent
     source: primitives-core/agents/manager.md
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: rig-builder
     type: agent
     source: primitives-core/agents/rig-builder.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: code-reviewer
     type: agent
     source: primitives-core/agents/code-reviewer.md
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: session-handoff-surfacer
     type: hook
     source: primitives-core/hooks/session-handoff-surfacer
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: subagent-telemetry
     type: hook
     source: primitives-core/hooks/subagent-telemetry
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: manager-package-gate
     type: hook
     source: primitives-core/hooks/manager-package-gate
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: live-worker-git-guard
     type: hook
     source: primitives-core/hooks/live-worker-git-guard
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: worker-git-scope-guard
     type: hook
     source: primitives-core/hooks/worker-git-scope-guard
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: plugin-feedback-session
     type: hook
     source: primitives-core/hooks/plugin-feedback-session
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
     requires: [cli:gh]
   - id: plugin-feedback-worker
     type: hook
     source: primitives-core/hooks/plugin-feedback-worker
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
     requires: [cli:gh]
   - id: opencode-expertise
     type: skill
     source: primitives-core/skills/opencode-expertise
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: pocketbase
     type: skill
     source: primitives-core/skills/pocketbase
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: carbon-builder
     type: skill
     source: primitives-core/skills/carbon-builder
@@ -284,14 +284,14 @@ primitives:
     ref: 3cbe743d8bc36d6dd3bcfea98ac3ac09bca71f9c
     disposition: qualified
     requires: [hosted-mcp]
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: carbon-design-server
     type: mcp
     source: primitives-core/mcp/carbon-design.json
     origin: authored
     disposition: qualified
     requires: [hosted-mcp]
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: pocketbase-best-practices
     type: skill
     source: primitives-core/skills/pocketbase-best-practices
@@ -299,27 +299,27 @@ primitives:
     upstream: https://github.com/greendesertsnow/pocketbase-skills
     ref: c573263e84a2066d0564f428dd8160e74fc54226
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: pb-builder
     type: agent
     source: primitives-core/agents/pb-builder.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
     requires: [cli:pocketbase]
   - id: pb-reviewer
     type: agent
     source: primitives-core/agents/pb-reviewer.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
     requires: [cli:pocketbase]
   - id: pocketbase-security-auditor
     type: agent
     source: primitives-core/agents/pocketbase-security-auditor.md
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
     requires: [cli:pocketbase]
   - id: pptx-themes
     type: skill
@@ -328,155 +328,155 @@ primitives:
     upstream: https://github.com/anthropics/skills
     ref: fa0fa64bdc967915dc8399e803be67759e1e62b8
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: diagrams
     type: skill
     source: primitives-core/skills/diagrams
     origin: authored
     disposition: qualified
     requires: [cli:graphviz]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: mermaid
     type: skill
     source: primitives-core/skills/mermaid
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: drawio
     type: skill
     source: primitives-core/skills/drawio
     origin: authored
     disposition: qualified
     requires: [cli:drawio]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: excalidraw
     type: skill
     source: primitives-core/skills/excalidraw
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: obsidian-api-basics
     type: skill
     source: primitives-core/skills/obsidian-api-basics
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: obsidian-chat-ui
     type: skill
     source: primitives-core/skills/obsidian-chat-ui
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: obsidian-cli
     type: skill
     source: primitives-core/skills/obsidian-cli
     origin: authored
     disposition: qualified
     requires: [cli:obsidian]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: obsidian-mcp-server
     type: skill
     source: primitives-core/skills/obsidian-mcp-server
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: owner-signoff
     type: skill
     source: primitives-core/skills/owner-signoff
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: deep-research
     type: skill
     source: primitives-core/skills/deep-research
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: tech-eval-research
     type: skill
     source: primitives-core/skills/tech-eval-research
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: dataviz
     type: skill
     source: primitives-core/skills/dataviz
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: claude-code-config
     type: skill
     source: primitives-core/skills/claude-code-config
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: claude-code-expertise
     type: skill
     source: primitives-core/skills/claude-code-expertise
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: iterm2
     type: skill
     source: primitives-core/skills/iterm2
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: delegation-watermark
     type: hook
     source: primitives-core/hooks/delegation-watermark
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: lane-snapshot
     type: hook
     source: primitives-core/hooks/lane-snapshot
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: branch-activity-surfacer
     type: hook
     source: primitives-core/hooks/branch-activity-surfacer
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: comment-hygiene-gate
     type: hook
     source: primitives-core/hooks/comment-hygiene-gate
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: config-custody
     type: hook
     source: primitives-core/hooks/config-custody
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: worker-context
     type: hook
     source: primitives-core/hooks/worker-context
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: worktree-isolation
     type: hook
     source: primitives-core/hooks/worktree-isolation
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: editor-project-config
     type: skill
     source: primitives-core/skills/editor-project-config
     origin: authored
     disposition: qualified
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: opencode-sandbox
     type: skill
     source: primitives-core/skills/opencode-sandbox
     origin: authored
     disposition: qualified
     requires: [cli:opencode-sandbox]
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: activate
     type: command
     source: primitives-core/commands/activate.md
@@ -495,16 +495,16 @@ primitives:
     source: primitives-core/skills/task-authoring
     origin: authored
     disposition: qualified
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: api-craft
     type: skill
     source: primitives-core/skills/api-craft
     origin: authored
     disposition: untriaged
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]
   - id: tui-craft
     type: skill
     source: primitives-core/skills/tui-craft
     origin: authored
     disposition: untriaged
-    targets: [claude-code, opencode]
+    targets: [claude-code, opencode, codex]

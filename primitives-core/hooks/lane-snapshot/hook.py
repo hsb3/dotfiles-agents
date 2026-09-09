@@ -46,6 +46,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 
 LOG_STREAM = "lane-snapshot"
 LOG_PATH_ENV = "LANE_SNAPSHOT_LOG_PATH"
@@ -94,7 +95,8 @@ def _pattern(root):
     and a lane worktree UNDER this root, whose daemon would otherwise answer
     for the whole repo while snapshotting nothing.
     """
-    literal = "{0} {1}".format(DAEMON_NAME, root.rstrip("/") or "/")
+    literal = "{0}{1} {2}".format(DAEMON_NAME,
+        " --harness codex" if codex_lifecycle.enabled() else "", root.rstrip("/") or "/")
     escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", literal)
     # `/` is NOT in the class: it would match `<root>/anything`, so a daemon
     # rooted at a lane worktree would answer for the repo above it — the same
@@ -122,7 +124,8 @@ def _launch(root):
     devnull = open(os.devnull, "wb")  # noqa: SIM115 (handed to the child, then closed)
     try:
         proc = subprocess.Popen(
-            [sys.executable, DAEMON_PATH, root],
+            [sys.executable, DAEMON_PATH]
+            + (["--harness", "codex"] if codex_lifecycle.enabled() else []) + [root],
             stdin=subprocess.DEVNULL, stdout=devnull, stderr=devnull,
             start_new_session=True, close_fds=True,
         )
@@ -141,8 +144,19 @@ def main():
         if not isinstance(payload, dict):
             payload = {}
 
+        payload = codex_lifecycle.prepare(payload)
+        if payload is None:
+            return
+
         cwd = payload.get("cwd") or os.getcwd()
         root = _repo_root(cwd)
+        if root and codex_lifecycle.enabled() and not os.environ.get("LANE_SNAPSHOT_ROOT"):
+            common = subprocess.check_output(
+                ["git", "-C", root, "rev-parse", "--git-common-dir"], text=True).strip()
+            common = os.path.realpath(os.path.join(root, common))
+            if os.path.basename(common) != ".git":
+                raise ValueError("Codex lane snapshots require a non-bare checkout")
+            root = os.path.dirname(common)
         log = agentlog.make_logger(
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(cwd),
         )

@@ -22,3 +22,7 @@ claude plugin install atelier@dotfiles-agents
 
 Ships in the `atelier` bundle — it closes the session that the delegation
 skill runs and the waves skill drives across a backlog.
+
+## Codex
+
+The same activation routing, external-update-before-stamp ordering, and cold-start pointer apply. Trusted native PreCompact hooks interrupt manual compaction for stale or absent signals; automatic compaction warns.

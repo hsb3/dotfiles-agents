@@ -205,3 +205,13 @@ The stash half fires wherever the plugin is installed; the protected-branch half
 - **An unknown `stash` subcommand is left alone.** Only the first token after `stash` can
   be a subcommand — a later bare word is a message or a pathspec, so `git stash -m list`
   does not read as `git stash list`.
+
+## Codex
+
+With `ATELIER_HARNESS=codex`, the shared worker registry supplies the effective cwd
+and native identity before parsing Git commands. Existing protected-branch and stash
+rules still apply. Literal mutating Git commands aimed at another checkout in the
+same repository are denied; unrelated repositories and read-only verbs retain their
+existing treatment. Missing identity in an armed project denies instead of evaluating
+the inherited parent checkout. Shell scripts and indirect Git invocation remain outside
+this parser's contract; this guard is not filesystem containment.

@@ -14,32 +14,78 @@ import model_tiers
 
 ROLES = ("builder", "code-reviewer", "manager", "reviewer", "scout")
 PACKAGE = Path(__file__).resolve().parents[2]
-MANAGED = "# atelier managed sha256="
 HARNESS_BLOCK = re.compile(r"^[ \t]*<!-- harness:[^\n]+ -->\n.*?^[ \t]*<!-- /harness -->\n?",
                            re.MULTILINE | re.DOTALL)
 
 
-def _role(role):
+def package_id(plugin_root=None):
+    if plugin_root is None:
+        return "atelier"
+    for relative in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", "plugin.json"):
+        path = Path(plugin_root) / relative
+        if path.is_file():
+            data = json.loads(path.read_text())
+            name = data.get("name") if isinstance(data, dict) else None
+            if isinstance(name, str) and re.fullmatch(r"[a-z][a-z0-9-]*", name):
+                return name
+            raise ValueError(f"invalid package identity: {path}")
+    raise ValueError(f"package manifest missing: {plugin_root}")
+
+
+def roles(plugin_root=None):
+    if plugin_root is None:
+        return ROLES
+    package_id(plugin_root)
+    names = tuple(sorted(path.stem for path in (Path(plugin_root) / "agents").glob("*.md")
+                         if path.is_file()))
+    if not names or any(not re.fullmatch(r"[a-z][a-z0-9-]*", name) for name in names):
+        raise ValueError("package has no valid agent assembly")
+    return names
+
+
+def role_names(plugin_root=None):
+    return tuple(package_id(plugin_root) + "-" + role for role in roles(plugin_root))
+
+
+def _role(role, plugin_root=None):
     if not isinstance(role, str):
-        raise ValueError("atelier role must be a string")
-    role = role.removeprefix("atelier-")
-    if role not in ROLES:
-        raise ValueError(f"unknown atelier role: {role!r}")
+        raise ValueError("role must be a string")
+    names = roles(plugin_root)
+    if role not in names:
+        role = role.removeprefix(package_id(plugin_root) + "-")
+    if role not in names:
+        raise ValueError(f"unknown package role: {role!r}")
     return role
 
 
+def _managed(plugin_root=None):
+    return "# " + package_id(plugin_root) + " managed sha256="
+
+
 def _source(role, plugin_root):
-    text = (Path(plugin_root or PACKAGE) / "agents" / f"{_role(role)}.md").read_text()
+    text = (Path(plugin_root or PACKAGE) / "agents" / f"{_role(role, plugin_root)}.md").read_text()
     if not text.startswith("---\n"):
-        raise ValueError(f"role {_role(role)} has no frontmatter")
+        raise ValueError(f"role {_role(role, plugin_root)} has no frontmatter")
     frontmatter, body = text[4:].split("\n---\n", 1)
-    fields = dict(re.findall(r"^(name|description|tier|effort): (.+)$", frontmatter, re.MULTILINE))
+    fields = dict(re.findall(r"^(name|description|tier|effort|tools): (.+)$", frontmatter, re.MULTILINE))
     return fields, body
+
+
+def role_tools(role, plugin_root=None):
+    fields, _ = _source(role, plugin_root)
+    return frozenset(tool.strip() for tool in fields['tools'].split(','))
 
 
 def role_instructions(role, plugin_root=None):
     """Canonical neutral role + Codex procedures; lifecycle injects this as developer context."""
     _, body = _source(role, plugin_root)
+    package = Path(plugin_root or PACKAGE).resolve()
+    if package_id(plugin_root) != "atelier":
+        location = (f"Package: {package}. Companion skills live beneath skills/; "
+                    "companion agent bodies live beneath agents/. Read those files from "
+                    "this package. Native registration and instructions do not remove tools; "
+                    "follow the canonical role authority.")
+        return HARNESS_BLOCK.sub("", body).strip() + "\n\n" + location + "\n"
     reference = (Path(plugin_root or PACKAGE) /
                  "skills/delegation/references/dispatch-knobs.md").read_text()
     start = reference.index("## Codex distribution\n")
@@ -61,12 +107,12 @@ def render(role, plugin_root=None):
     description = fields["description"].strip('"')
     # Claude-specific tier hints are instructions, not part of the portable role description.
     description = description.split(" Defaults to", 1)[0]
-    values = {"name": "atelier-" + _role(role), "description": description,
+    values = {"name": package_id(plugin_root) + "-" + _role(role, plugin_root), "description": description,
               "model": model, "model_reasoning_effort": fields.get("effort", "medium"),
               "developer_instructions": role_instructions(role, plugin_root)}
     body = "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n"
                    for key, value in values.items())
-    return MANAGED + hashlib.sha256(body.encode()).hexdigest() + "\n" + body
+    return _managed(plugin_root) + hashlib.sha256(body.encode()).hexdigest() + "\n" + body
 
 
 def setup(project_root, plugin_root=None, check=False):
@@ -80,24 +126,25 @@ def setup(project_root, plugin_root=None, check=False):
     for parent in (project / ".codex", directory):
         if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
             raise ValueError(f"refusing symlink or non-directory: {parent}")
-    names = {"atelier-" + role for role in ROLES}
+    names = set(role_names(plugin_root))
+    managed = _managed(plugin_root)
     for path in directory.glob("*.toml"):
         if path.stem in names:
             continue
         if path.is_file() and tomllib.loads(path.read_text()).get("name") in names:
             raise ValueError(f"atelier role name already declared in user profile: {path}")
     changed = {}
-    for role in ROLES:
-        path = directory / f"atelier-{role}.toml"
+    for role in roles(plugin_root):
+        path = directory / f"{package_id(plugin_root)}-{role}.toml"
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise ValueError(f"refusing non-regular profile: {path}")
         desired = render(role, plugin_root)
         if path.exists():
             current = path.read_text()
             header, _, body = current.partition("\n")
-            if not header.startswith(MANAGED):
+            if not header.startswith(managed):
                 raise ValueError(f"refusing unmanaged profile: {path}")
-            if header != MANAGED + hashlib.sha256(body.encode()).hexdigest():
+            if header != managed + hashlib.sha256(body.encode()).hexdigest():
                 raise ValueError(f"refusing modified managed profile: {path}")
             if current == desired:
                 continue
@@ -122,17 +169,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project", nargs="?", default=".")
     parser.add_argument("--check", action="store_true", help="report missing/stale profiles without writing")
-    parser.add_argument("--instructions", choices=["atelier-" + r for r in ROLES])
+    parser.add_argument("--plugin-root", type=Path)
+    parser.add_argument("--instructions")
     args = parser.parse_args(argv)
     try:
         if args.instructions:
-            print(role_instructions(args.instructions), end="")
+            print(role_instructions(args.instructions, args.plugin_root), end="")
             return 0
-        changed = setup(args.project, check=args.check)
+        changed = setup(args.project, args.plugin_root, check=args.check)
         for path in changed:
             print(f"{'needs refresh' if args.check else 'wrote'}: {path}")
         if not changed:
-            print("atelier Codex profiles are current")
+            print(package_id(args.plugin_root) + " Codex profiles are current")
         return int(args.check and bool(changed))
     except (OSError, ValueError, KeyError) as exc:
         print(f"atelier Codex roles: {exc}")

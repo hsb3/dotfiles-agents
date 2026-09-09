@@ -26,13 +26,11 @@ The render/QA script needs, per platform:
 
 ## Workflow
 
-1. Read the base PPTX skill if present — check `~/.claude/skills/pptx/SKILL.md`,
-   then `~/.agents/skills/pptx/SKILL.md` — and its relevant creation
-   (`pptxgenjs.md`) or editing (`editing.md`) guide. Ignore its "Color
-   Palettes" and "Typography" font-pairing tables — those are replaced by this
-   skill's resources. If the base skill is absent, proceed with this skill's
-   resources alone: build with PptxGenJS and QA with the bundled render
-   script.
+1. Read the bundled [base/SKILL.md](base/SKILL.md). Resolve its `scripts/` paths
+   beneath `base/`; resolve this skill's script and asset paths beside this file.
+   Its palette and typography suggestions are replaced by this skill's resources.
+   Check its listed dependencies in the current environment; a preinstalled tool in
+   the upstream authoring environment may need installation in a Codex consumer.
 2. Read [references/narrative.md](references/narrative.md) before outlining
    slide content — action titles, one message per slide, deck recipes.
 3. Read [references/color-palettes.md](references/color-palettes.md) before
@@ -50,7 +48,7 @@ The render/QA script needs, per platform:
 8. Fix discovered issues and render again before reporting completion.
 
 When the deliverable is an HTML or PDF briefing rather than a .pptx file,
-prefer a dedicated deck-builder MCP server over this skill.
+use the bundled comms engine; a dedicated deck-builder MCP server is optional.
 
 ## Themes
 

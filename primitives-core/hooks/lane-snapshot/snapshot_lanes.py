@@ -57,7 +57,9 @@ import agentlog  # noqa: E402  (path must be primed before this import)
 # ---------------------------------------------------------------------------
 
 INTERVAL_DEFAULT = 180
-WORKTREES_DEFAULT = os.path.join(".claude", "worktrees", "agent-*")
+WORKTREES_DEFAULT = (os.path.join(".git", "atelier-codex", "checkouts", "*", "*")
+                     if os.environ.get("ATELIER_HARNESS") == "codex"
+                     else os.path.join(".claude", "worktrees", "agent-*"))
 LOG_STREAM = "lane-snapshot"
 LOG_PATH_ENV = "LANE_SNAPSHOT_LOG_PATH"
 REF_PREFIX = "refs/lane-snapshots/"
@@ -327,6 +329,7 @@ def build_parser():
         help="repo root to protect; overridden by $LANE_SNAPSHOT_ROOT, and "
              "derived from this script's own location when neither is given",
     )
+    parser.add_argument("--harness", choices=("claude-code", "codex"), default=None)
     parser.add_argument("--once", action="store_true", help="one scan pass, then exit")
     parser.add_argument(
         "--check", action="store_true",
@@ -342,7 +345,11 @@ def build_parser():
 
 
 def main(argv=None):
+    global WORKTREES_DEFAULT
     args = build_parser().parse_args(argv)
+    if args.harness == "codex":
+        WORKTREES_DEFAULT = os.path.join(".git", "atelier-codex", "checkouts", "*", "*")
+        agentlog.HARNESS = "codex"
     interval = args.interval if args.interval is not None else env_int(
         "LANE_SNAPSHOT_INTERVAL", INTERVAL_DEFAULT
     )

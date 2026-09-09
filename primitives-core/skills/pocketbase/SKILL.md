@@ -26,6 +26,36 @@ Use resources in this skill directory first:
 
 Prefer `--help` output and this guide first. If behavior is unclear, read only the relevant script file.
 
+In commands below, replace `<skill-dir>` with the absolute installed directory
+containing this SKILL.md. Keep the consuming project as cwd: the helpers resolve its
+`.env` there, and generated migrations belong to that project, not the plugin cache.
+
+
+## Codex companion setup
+
+Resolve `<plugin-root>` from this installed skill's `skills/` parent. With Python
+3.11+, register or refresh the package's project profiles before delegation:
+
+```bash
+python3 "<plugin-root>/hooks/_lib/codex_roles.py" --plugin-root "<plugin-root>" .
+python3 "<plugin-root>/hooks/_lib/codex_roles.py" --plugin-root "<plugin-root>" --check .
+```
+
+Start a fresh Codex session and use the exact native role selector:
+
+| Work | Native role |
+|---|---|
+| Scoped implementation | `pocketbase-pb-builder` |
+| Independent verification | `pocketbase-pb-reviewer` |
+| Access-control audit | `pocketbase-pocketbase-security-auditor` |
+
+The companion hook injects canonical role context from this package. Registration
+and instructions do not themselves remove tools. Reviewer roles remain report-only;
+all three keep their canonical Git restrictions. If a session lacks a native role
+selector, report the gap rather than substituting a role name in its spawn prompt.
+For operational proof, each role needs its own disposable PocketBase binary/server,
+port and test data; a profile-loading check does not prove backend behavior.
+
 ## 0. Fast Start
 
 ### Mode Detection
@@ -68,7 +98,7 @@ nohup ./pocketbase serve --http=127.0.0.1:8090 > pb.log 2>&1 &
 5. Health check:
 
 ```bash
-python3 scripts/pb_health.py
+python3 "<skill-dir>/scripts/pb_health.py"
 ```
 
 Never hardcode a latest-version claim: resolve it at run time with the release query in
@@ -112,13 +142,13 @@ Default to `null` and open only what is required.
 Superuser auth:
 
 ```bash
-python3 scripts/pb_auth.py
+python3 "<skill-dir>/scripts/pb_auth.py"
 ```
 
 User auth:
 
 ```bash
-python3 scripts/pb_auth.py --collection users --identity user@example.com --password secret
+python3 "<skill-dir>/scripts/pb_auth.py" --collection users --identity user@example.com --password secret
 ```
 
 ### 2.2 Collections
@@ -126,22 +156,22 @@ python3 scripts/pb_auth.py --collection users --identity user@example.com --pass
 List / get:
 
 ```bash
-python3 scripts/pb_collections.py list
-python3 scripts/pb_collections.py get posts
+python3 "<skill-dir>/scripts/pb_collections.py" list
+python3 "<skill-dir>/scripts/pb_collections.py" get posts
 ```
 
 Create / update / delete:
 
 ```bash
-python3 scripts/pb_collections.py create --file schema.json
-python3 scripts/pb_collections.py update posts --file updates.json
-python3 scripts/pb_collections.py delete posts
+python3 "<skill-dir>/scripts/pb_collections.py" create --file schema.json
+python3 "<skill-dir>/scripts/pb_collections.py" update posts --file updates.json
+python3 "<skill-dir>/scripts/pb_collections.py" delete posts
 ```
 
 Batch import (recommended for multi-collection setup):
 
 ```bash
-python3 scripts/pb_collections.py import --file collections.json
+python3 "<skill-dir>/scripts/pb_collections.py" import --file collections.json
 ```
 
 Important:
@@ -153,20 +183,20 @@ Important:
 ### 2.3 Records
 
 ```bash
-python3 scripts/pb_records.py list posts --filter 'status="published"' --sort "-created" --expand "author"
-python3 scripts/pb_records.py get posts <recordId>
-python3 scripts/pb_records.py create posts --file record.json
-python3 scripts/pb_records.py update posts <recordId> '{"status":"published"}'
-python3 scripts/pb_records.py delete posts <recordId>
+python3 "<skill-dir>/scripts/pb_records.py" list posts --filter 'status="published"' --sort "-created" --expand "author"
+python3 "<skill-dir>/scripts/pb_records.py" get posts <recordId>
+python3 "<skill-dir>/scripts/pb_records.py" create posts --file record.json
+python3 "<skill-dir>/scripts/pb_records.py" update posts <recordId> '{"status":"published"}'
+python3 "<skill-dir>/scripts/pb_records.py" delete posts <recordId>
 ```
 
 ### 2.4 Backups
 
 ```bash
-python3 scripts/pb_backups.py list
-python3 scripts/pb_backups.py create
-python3 scripts/pb_backups.py restore <backupKey>
-python3 scripts/pb_backups.py delete <backupKey>
+python3 "<skill-dir>/scripts/pb_backups.py" list
+python3 "<skill-dir>/scripts/pb_backups.py" create
+python3 "<skill-dir>/scripts/pb_backups.py" restore <backupKey>
+python3 "<skill-dir>/scripts/pb_backups.py" delete <backupKey>
 ```
 
 Restore replaces all data; always create a backup before restore.
@@ -182,15 +212,15 @@ Primary workflow (both modes):
 Manual migration template generation (only for seed/data transform/raw SQL):
 
 ```bash
-python3 scripts/pb_create_migration.py "backfill_user_slugs"
-python3 scripts/pb_create_migration.py "seed_categories" --dir ./pb_migrations
+python3 "<skill-dir>/scripts/pb_create_migration.py" "backfill_user_slugs"
+python3 "<skill-dir>/scripts/pb_create_migration.py" "seed_categories" --dir ./pb_migrations
 ```
 
 ## 3. Verification
 
 After schema or rule changes, run:
 
-1. `python3 scripts/pb_collections.py get <collection>`
+1. `python3 "<skill-dir>/scripts/pb_collections.py" get <collection>`
 2. CRUD smoke test (create/list/get/update/delete)
 3. Rule test with non-superuser token
 

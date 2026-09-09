@@ -1,12 +1,26 @@
 # dotfiles-agents
 
-A Claude Code plugin marketplace of coding-agent extenders (skills, agents, and hooks),
+A Claude Code and Codex plugin marketplace of coding-agent extenders (skills, agents, and hooks),
 installed by name. Everything is authored in this repo unless it says otherwise:
 `pptx-themes` layers a curated theme system over Anthropic's `pptx` skill, vendored verbatim
 with its license. Every bundle closes with an "Honest scope" section stating what it does
 not do.
 
 ## Install
+
+Codex uses the same repository and plugin names:
+
+```sh
+codex plugin marketplace add hsb3/dotfiles-agents
+codex plugin add atelier@dotfiles-agents
+```
+
+Atelier needs [project activation and native role setup](plugins/atelier/README.md#codex-role-setup)
+before dispatching isolated workers. To refresh, run `codex plugin marketplace upgrade dotfiles-agents`, then repeat
+`codex plugin add <plugin>@dotfiles-agents` and rerun that plugin’s project setup.
+Code-desk and PocketBase also provide project role setup;
+Claude slash commands remain convenience entry points for invoking their corresponding skills.
+
 
 ```sh
 # Claude Code — add the marketplace once, then install plugins by name
@@ -66,12 +80,12 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
 | [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone with no topical plugin: harness config, research, test quality, chart design, API and TUI craft, repo setup. | 14 skills |
-| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 1 command |
+| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 2 hooks · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 14 hooks · 1 command |
 | [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout and memory standards, read-only audit, fill-only scaffold, item-body form. | 6 skills |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
-| [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents |
+| [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents · 2 hooks |
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill · 1 MCP server |
 | [`bun`](plugins/bun/README.md) | standalone | The bun toolchain as the default JS and TS runtime: command mapping off npm habits, built-ins that replace dependencies, measured traps. | 1 skill |
 | [`kenn-forge`](plugins/kenn-forge/README.md) | standalone | Maintainer triage over a running kenn-forge daemon: review candidates, diffs and CI, local review state, coding-agent handoff. | 1 skill |

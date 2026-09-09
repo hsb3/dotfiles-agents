@@ -176,8 +176,10 @@ ID-based surface. Native `resume_agent` reopens a closed agent when available; i
 replace sending the amendment. Do not close/remove a worker while another amendment is possible.
 If a completion reaches the strategist instead, relay it verbatim to its owning manager and
 resume that manager as needed. Never substitute a guessed report or inspect another worker's
-private conversation to reconstruct it. Integrating commits, pushing, merging, and retiring
-worktrees remain the strategist's work.
+private conversation to reconstruct it. Final integration into the project branch, pushing, merging PRs, and retiring
+worktrees remain the strategist's work. A manager may cherry-pick its children's verified
+commits into its own owned worktree branch to assemble and test the chain; it never
+modifies the strategist's checkout or another worker's branch.
 
 Companion skills are the installed sibling `skills/<name>/SKILL.md` paths in this package:
 `delegation`, `waves`, `rubric-panel`, `deletion-pass`, `layer-cycle`, and `comment-hygiene`.

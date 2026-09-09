@@ -130,3 +130,9 @@ would record only that a constant string was emitted.
 - **No restart needed to change policy.** The activation file is read on every subagent start, so
   edits take effect on the next dispatch. Only a change to `hooks.json` requires restarting the
   session.
+
+## Codex
+
+Native Codex workers register their identity and owned checkout idempotently before receiving the covenant. Named atelier roles also receive the canonical role instructions here, covering both native collaboration paths. This does not depend on sibling SubagentStart hooks running in order.
+
+Other native role bundles may set `ATELIER_ROLE_PLUGIN_ROOT` to their installed package. A validated non-atelier package injects only its matching role body before atelier activation or registry logic; it receives no atelier covenant or isolation policy.

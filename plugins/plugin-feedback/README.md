@@ -129,3 +129,9 @@ not judge whether a report is worth filing. It does not route a report to the re
 plugin it is about — one marketplace, one destination. It has no opinion on the receiving
 repo's workflow beyond one label. It cannot make a session notice a defect it did not
 notice; it only makes reporting one cheap once it has.
+
+## Codex
+
+`codex plugin add plugin-feedback@dotfiles-agents` installs native session and worker hooks.
+Trust them in `/hooks`; generated reports are local drafts until explicitly approved for publication.
+The reporter resolves the installed Codex plugin path for source attribution.

@@ -41,3 +41,10 @@ Close by stating which parts of atelier are enforcing in this project right now 
 not. Do not reduce that to a single yes or no: armed and inert keys routinely coexist, and a
 blanket "atelier is not enforcing anything" is false whenever any key is armed. If the file
 was already present and nothing changed, say so in one line and stop.
+
+<!-- harness:codex -->
+In Codex, invoke the activation skill directly. Run its `codex-setup` and
+`check --harness codex` steps, then verify the reviewed hooks in native `/hooks`.
+Report parsed settings and runtime trust separately; do not claim enforcement from
+the activation file alone.
+<!-- /harness -->

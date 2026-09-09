@@ -49,6 +49,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 
 LOG_STREAM = "branch-activity"
 LOG_PATH_ENV = "BRANCH_ACTIVITY_LOG_PATH"
@@ -137,7 +138,7 @@ def _owner_pid():
             if answer is None:
                 break
             ppid, comm = answer
-            if os.path.basename(comm.split()[0] if comm.split() else comm) == "claude":
+            if os.path.basename(comm.split()[0] if comm.split() else comm) == ("codex" if codex_lifecycle.enabled() else "claude"):
                 return pid
             if ppid <= 1:
                 break
@@ -270,7 +271,8 @@ def _live_peers(rows, session_id, owner_pid, ttl, now):
     newest = {}
     for row in rows:
         pid = row.get("owner_pid")
-        keyed_by_pid = isinstance(pid, int) and owner_pid is not None
+        keyed_by_pid = (not codex_lifecycle.enabled()
+                        and isinstance(pid, int) and owner_pid is not None)
         key = ("pid", pid) if keyed_by_pid else ("sid", row["session_id"])
         if key not in newest or row["ts"] > newest[key]["ts"]:
             newest[key] = row
@@ -284,6 +286,9 @@ def _live_peers(rows, session_id, owner_pid, ttl, now):
                 continue
         elif value == session_id:
             continue
+        elif codex_lifecycle.enabled() and isinstance(row.get("owner_pid"), int):
+            if not _pid_alive(row["owner_pid"]):
+                continue
         stamp = _parse_ts(row["ts"])
         if stamp is None:
             continue
@@ -418,6 +423,9 @@ def _format(branch, head, moved_from, peers, commits, dropped, pr):
 
 def main():
     payload = json.loads(sys.stdin.read())
+    payload = codex_lifecycle.prepare(payload)
+    if payload is None:
+        return
 
     session_id = payload.get("session_id") or "unknown"
     cwd = payload.get("cwd") or os.getcwd()

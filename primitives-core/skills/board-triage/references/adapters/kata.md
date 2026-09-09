@@ -27,8 +27,12 @@ changeset cannot write to the wrong issue.
 
 ## Export
 
+Replace `<board-triage-skill-dir>` with the absolute installed directory containing
+board-triage SKILL.md. Run from the consuming project; plugin environment variables
+are not required.
+
 ```bash
-S="${CLAUDE_PLUGIN_ROOT}/skills/board-triage/scripts"
+S="<board-triage-skill-dir>/scripts"
 python3 "$S/kata_board.py" export --project keel --out board-snapshot.json
 ```
 

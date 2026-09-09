@@ -21,3 +21,9 @@ handed to the `rig-builder` agent, which ships in the same bundle.
 ```
 claude plugin install code-desk@dotfiles-agents
 ```
+
+## Codex
+
+SKILL.md includes ownership-checked project setup for code-desk-rig-builder. Refresh
+profiles after plugin updates, start a fresh session, and use the native role selector.
+A session without that selector cannot substitute prompt prose for registered dispatch.

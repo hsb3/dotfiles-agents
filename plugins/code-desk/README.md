@@ -135,3 +135,18 @@ claude plugin install code-desk@dotfiles-agents
 Since the decision-020 sweep this bundle is the only home for `pptx-themes` and
 `readme-value-and-proof`, and the topical owner of `project-memory`, which also ships in
 `mise-en-place`. All three used to ship from `solo-skills` as well, and no longer do.
+
+## Codex
+
+Install with `codex plugin add code-desk@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
+project roles from its installed root (the path returned by `codex plugin add --json`):
+
+```sh
+python3 "$PLUGIN_ROOT/hooks/_lib/codex_roles.py" /path/to/project --plugin-root "$PLUGIN_ROOT"
+```
+
+Start a fresh session and trust the package hooks in `/hooks`. The native `worker-context` and `worktree-isolation` hooks inject
+canonical role instructions and enforce each role’s dispatch and patch-tool exclusions.
+They do not require Atelier activation or provide worktree isolation; shell access remains
+subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.
+Invoke the `pull-request` skill for the `/pr-findings` workflow; the Claude command itself is not a native Codex command.

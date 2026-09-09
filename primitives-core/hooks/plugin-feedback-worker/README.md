@@ -34,3 +34,12 @@ error path.
 ```
 claude plugin install plugin-feedback@dotfiles-agents
 ```
+
+## Codex
+
+The same lifecycle event injects additionalContext with ATELIER_HARNESS=codex.
+Codex reminders default to --draft and require explicit user authorization before
+filing. The reporter accepts CODEX_PLUGIN_ROOT, preserves repository attribution from
+the reporting package, and can read Claude, Codex or root plugin manifests. Existing
+Claude reminders and the worker feature-request tier rule remain unchanged. Tests
+use local manifests/mocked transport; they create no GitHub issues.

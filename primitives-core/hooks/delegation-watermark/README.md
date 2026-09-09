@@ -158,3 +158,7 @@ The append path is `hooks/_lib/agentlog.py`; no hook writes its own rows.
 
 The streak distribution is the input to re-calibrating `SOFT` — see `tier-cutoff.md` for the
 sibling protocol on model tiers, and `provenance.md` for what is measured versus assumed.
+
+## Codex
+
+Codex counts authoritative PostToolUse events because rollout `exec` calls hide their nested shell arguments. Both native spawn spellings reset the retained-work streak; Bash and patch calls count, with the existing coordination-command exemptions. A per-session locked counter deduplicates recent native tool IDs; its scope begins with the first observed event. Worker calls are skipped by native agent_id. Missing event identity is reported explicitly. The native matcher must include spawn events as well as file tools.

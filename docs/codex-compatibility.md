@@ -1,158 +1,162 @@
-# Atelier's Codex runtime contract
+# Codex distribution and runtime contract
 
-Measured 2026-09-09 against **codex-cli 0.153.4**, macOS 26.6.2 arm64,
-source `2cb732a`, atelier **0.30.4**. This is a porting contract, not a claim
-that atelier's current release enforces its Claude guarantees in Codex.
-Tracked work: kata **t0a8**, implementation children under **64bm**.
+Validated against **codex-cli 0.153.4**, macOS arm64, on 2026-09-09. The supported
+execution surface is a fresh CLI session with native project roles and trusted hooks.
+The existing desktop conversation proved skill discovery only; its already-loaded tool
+schema cannot establish native role or hook parity. Work is tracked under kata **64bm**.
 
-## Evidence and limits
+## Distribution and setup
 
-The current desktop conversation loads atelier 0.30.4 skills from the existing
-marketplace. That establishes discovery only; no desktop enforcement was tested.
-The CLI probes used disposable repositories and `CODEX_HOME`, a private copy of
-existing ChatGPT authentication, and a synthetic Claude-format plugin 0.0.1.
-Production configuration, plugin installation and hook trust were untouched.
-The temporary authentication copy is deleted, not retained with evidence.
-
-| Probe | Observed result |
-|---|---|
-| Authentication | Isolated CLI returned `AUTH_OK`; this was an authenticated run. |
-| Shell denial | `PreToolUse` returned deny; attempted `touch denied-marker` failed and the file stayed absent. |
-| Shell and patch rewrite | Replacing `ORIGINAL` with `REWRITTEN` in `updatedInput.command` changed actual file contents. Patch input was `tool_name: apply_patch`, `tool_input.command: <whole patch>`, not a file path. |
-| Context | SessionStart token reached the parent final reply; SubagentStart token reached the worker final reply. |
-| Worker identity | Worker tool hooks contained `agent_id`, `agent_type`, parent `session_id`, worker transcript path and worker `cwd`. SubagentStop supplied `agent_transcript_path` and `last_assistant_message`. |
-| Plugin discovery | Synthetic plugin installed through `.claude-plugin/marketplace.json`; its skill was read. Bare agent type `plugin_probe` was rejected. Source review confirms plugin manifests have no agent-registration field and the role loader discovers TOML files, not plugin Markdown agents. |
-| Native TOML agent | `$CODEX_HOME/agents/probe_worker.toml` registered. A luna parent/luna worker run delivered its developer-instruction token. A terra parent selected luna for this named role, but the instruction token was absent from that worker's reply. Role instruction parity on that path is **unverified**, not proven by model selection. |
-| Native worktree | Hook rewrote a luna spawn with `cwd` pointing at a pre-created worker worktree and `isolation: worktree`. The call succeeded, but actual worker `pwd` and hook `cwd` stayed in the parent repository. These added fields did **not** enforce isolation. |
-| Native routed worktrees | SubagentStart created a worktree per `agent_id`; worker Bash commands entered that tree and patch destinations were rewritten into it. Two native workers wrote `ALPHA`/`BETA` to the same relative filename, staged separate indexes, and retained native follow-up replies. Parent file stayed absent and parent Git status stayed clean. All eight assertions passed for both luna and terra parent paths. This establishes collision avoidance, not per-worker OS confinement. |
-| Reply routing | Native worker completion reached its parent; a follow-up produced the requested worker reply. This does not prove Claude's tool exclusions or manager-only dispatch authority. |
-| Compaction | App-server `thread/compact/start` produced a completed `contextCompaction` item. No PreCompact/PostCompact payload was captured through that invocation; hook trust/effect was not established there. Manual blocking and automatic-compaction behavior remain **unverified**, not declared unsupported. |
-
-Tool identity varies **within the same CLI version**:
-
-| Parent model | Hook tool name | Observed spawn input |
-|---|---|---|
-| `gpt-5.6-luna` | `spawn_agent` | `agent_type`, `fork_context`, plaintext `message`; brief rewrite took effect. |
-| `gpt-5.6-terra` | `collaborationspawn_agent` | `task_name`, `agent_type`, `fork_turns`, encrypted message string. No message rewrite attempted on this path. |
-
-Do not decrypt that message or claim a matcher alias normalizes the handler's
-payload. Isolation routing passed both paths; role authority and instruction
-delivery still need explicit acceptance before full native delegation ships.
-Worker records were separate dated rollout JSONL files, not Claude's
-`<parent-stem>/subagents/agent-*.meta.json` sidecars. Codex hook `permission_mode`
-reported `bypassPermissions` in these runs despite requesting CLI sandbox modes.
-Actual sandbox checks still applied: the first routed-worktree experiment rejected
-patches outside writable roots and denied Git metadata writes. It passed after
-explicitly adding the worker base, `.git/worktrees` and `.git/objects` as writable
-roots under `workspace-write`. No full-access bypass was needed. The hook label
-alone is not evidence of effective filesystem permissions.
-
-## Repeatable probe
-
-Requires an installed authenticated Codex CLI and permission to make a small
-number of model requests. This is an opt-in local probe, not a network CI gate:
+The existing `main` marketplace serves both harnesses. Shared primitives and thin symlink
+assemblies remain the source; the publish workflow dereferences them. Native hook bundles
+add a small `.codex-plugin/plugin.json` selecting `hooks/codex-hooks.json`. Its version must
+match the Claude manifest and catalog. There is no generated source tree or separate release
+ledger. Omitting the native version was tested: Codex caches it as `local`, so the overlay
+must carry the same release version.
 
 ```sh
-python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-codex-luna --model gpt-5.6-luna
-python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-codex-terra --model gpt-5.6-terra
-python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-native-luna --model gpt-5.6-luna --native-isolation
-python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-native-terra --model gpt-5.6-terra --native-isolation
+codex plugin marketplace add hsb3/dotfiles-agents
+codex plugin add atelier@dotfiles-agents
 ```
 
-Each output directory must be new. The probe reviews and runs **only its synthetic
-hooks** using the CLI's explicit `--dangerously-bypass-hook-trust` automation flag;
-it does not persist trust or bypass approvals/sandbox through that flag. It writes
-the CLI version, raw synthetic event payloads, effect checks and negative/conditional
-observations, redacting authentication string values. A passed `checks.json` is
-proof of those narrow effects only. Read `observations.json` for role, model,
-spawn and cwd differences; unknown behavior does not become a green guarantee.
-The `--native-isolation` mode additionally asserts separate native-worker file
-contents, staged contents, Git indexes, actual shell directories, follow-up replies
-and a clean parent checkout. Its hook handles the single controlled Add File
-fixture; it is not a production patch parser or a cross-tree security boundary.
+Codex setup requires Python 3.11 or newer. Use the installed activation skill’s `create --harness codex`, `codex-setup`, then
+`check --harness codex`. Skip creation when a project already has its local policy.
+Setup renders five project role TOMLs from canonical agent Markdown and the OpenAI tier
+map, plus the narrow writable roots needed for worker Git operations. It refuses conflicting
+or edited user configuration. Restart the session and review/trust the package in `/hooks`.
+Configuration checks deliberately do not certify trust from parsed settings.
+For V1, the manager layer requires `agents.max_depth >= 2`; the default is one.
+Setup checks this without replacing an existing user-owned agents table.
+Refresh with `codex plugin marketplace upgrade dotfiles-agents`, then repeat
+`codex plugin add <plugin>@dotfiles-agents`. After upgrading a plugin, rerun setup and start a fresh session; a versioned cache path can
+change, and the rendered role instructions contain paths to that installed package.
 
-The compaction discovery used `codex app-server --stdio`, initialized a client,
-then sent `thread/start`, `turn/start` and `thread/compact/start` with the returned
-thread ID. The installed CLI's `app-server generate-json-schema --experimental`
-provides the exact request shapes. A trusted manual-compaction probe is still
-required before closing the corresponding enforcement criterion in **dq22**.
+Code-desk and PocketBase use the same role renderer with `--plugin-root` naming their
+installed package. Their hooks inject canonical instructions and enforce declared dispatch
+and patch-tool exclusions without requiring Atelier activation. They do not themselves
+provide worktree isolation. Claude commands are convenience entry points: invoke `activation`
+or `pull-request` directly in Codex instead of claiming native slash-command registration.
 
-## Assembly inventory and implementation ownership
+## Worker isolation
 
-This is the observed source contract, not a second packaging catalog. Membership
-comes from symlinks under `plugins/atelier/{skills,agents,hooks,commands}` and their
-records in `primitives-core.yaml`: **28 primitives**, all currently declaring
-`targets: [claude-code]`. `_lib` is support, not a primitive. Re-derive the rows when
-membership changes. **Reuse** below means reusable implementation/doctrine with the
-stated runtime qualification; it does not certify an unexecuted workflow.
+Native spawn `cwd` and `isolation` fields do not relocate a worker in this runtime. Native
+SubagentStart instead registers its real worker ID and creates an owned Git worktree when
+`isolate` selects that writer. PreToolUse routes supported shell commands and all patch
+Add/Update/Delete/Move destinations into that checkout. `updatedInput` requires an explicit
+`permissionDecision: allow`; any denying hook overrides all rewrites.
 
-| Primitive | Actual trigger/input → output | Verdict; proof or remaining work | Owner |
-|---|---|---|---|
-| skill `activation` | Target project → activation file, loader-state report | **Adapt**: parsed settings are not proof of runtime enforcement. Full Codex activation unverified. | dq22 |
-| skill `comment-hygiene` | Comments + tracker context → rationale harvest and cleanup | **Reuse** procedure; end-to-end workflow unverified. | x9ma |
-| skill `delegation` | Goal/contract → roles, briefs, dispatch and verification | **Adapt** tool names, models, role authority, isolation and reply routing; native probe results above. | x9ma |
-| skill `deletion-pass` | Target + contract + green gate → behavior-preserving deletion | **Reuse** procedure; end-to-end workflow unverified. | x9ma |
-| skill `handoff` | Session state + destination → body update, stamp last | **Adapt** invocation/hot-context and compaction claims; external destination procedure reusable. | dq22 |
-| skill `layer-cycle` | Target/rubric/gate/budget → reviewed implementation | **Reuse** doctrine; companion role dispatch unverified. | x9ma |
-| skill `rubric-panel` | Target/rubric/personas → independently derived scores | **Reuse** doctrine; independent role contexts unverified. | x9ma |
-| skill `waves` | Tracker work → crews, verified landings, board/handoff | **Adapt** messages, dispatch and hook-backed claims; end-to-end unverified. | x9ma |
-| agent `builder` | Owned files + criteria → implementation/evidence; sonnet, edit/shell tools | **Adapt** Markdown registration, tier mapping and actual authority; generate native role material from shared source. | x9ma |
-| agent `scout` | Read scope → cited findings; haiku, read/shell tools | **Adapt** registration/model/read-only tool contract; native role probe is conditional. | x9ma |
-| agent `reviewer` | Claims/diff → independent verdict; opus, read/shell tools | **Adapt** registration/model/context/authority; complete role workflow unverified. | x9ma |
-| agent `code-reviewer` | Diff → quality findings; sonnet, read/shell tools | **Adapt** registration/model/authority; complete role workflow unverified. | x9ma |
-| agent `manager` | Chain scope → briefs and proof package; opus, Agent/SendMessage | **Adapt** hierarchy, messages, identity and authority; preserve native dispatch and replies. | x9ma |
-| command `activate` | Optional project argument → load activation skill | **Adapt** invocation to existing skill; Claude command registration unverified. | dq22 |
-| hook `comment-hygiene-gate` | PreToolUse Bash command → diff advisory context | **Adapt** effective command directory; shell name/input proven, real gate output unverified. | x37s |
-| hook `config-custody` | Worker edit + protected paths → deny/advisory | **Adapt** all patch paths, moves and effective directory. Current file_path reader misses actual patch command. Denial mechanism proven. | x37s |
-| hook `worker-git-scope-guard` | Worker Bash + cwd + topology → deny shared stash/protected writes | **Adapt** effective command directory; identity and shell fields proven, guard-specific cases unverified. | x37s |
-| hook `live-worker-git-guard` | Parent Bash + live worker records → deny shared-tree mutation | **Adapt** Claude sidecar discovery returns no Codex workers; runtime ledger required. | x37s |
-| hook `worktree-isolation` | PreToolUse literal Agent + subagent_type → updated isolation input | **Adapt**: Claude-style spawn fields are ignored; native identity registry plus supported shell/patch routing passed collision-isolation prototype. Full production guard unverified. | x37s |
-| hook `worker-context` | SubagentStart + activation → developer covenant | **Reuse** native event/context mechanism proven; strict guarantees depend on actual safeguards. | dq22 |
-| hook `manager-package-gate` | SubagentStop manager + final reply → one continuation block | **Adapt** registered native manager identity and completion boundary. Reply fields proven; continuation effect unverified. | dq22 |
-| hook `context-watermark` | Prompt/worker tool event + usage tail → nudge/state | **Adapt** Claude usage records and model windows; no Codex usage measurement proven. | dq22 |
-| hook `delegation-watermark` | Parent PostToolUse + transcript → count/nudge | **Adapt** Claude tool_use reader; current Codex rollout is not measured. | dq22 |
-| hook `subagent-telemetry` | Worker stop/parent stop + sidecars → completion/stall ledger | **Adapt** worker source, usage and completion records; missing sidecars currently drop rows. | dq22 |
-| hook `handoff-freshness-guard` | PreCompact manual/auto + stamp → block/notice | **Adapt/verify** event effect; stamp policy reusable, trusted compaction still unverified. | dq22 |
-| hook `session-handoff-surfacer` | SessionStart startup/clear + destination → context | **Reuse** context mechanism proven; complete external-handoff invocation unverified. | dq22 |
-| hook `branch-activity-surfacer` | SessionStart + branch/process ledger → peer/moved-tip context | **Adapt** owning-process detection recognizes only claude; actual Codex liveness unverified. | dq22 |
-| hook `lane-snapshot` | SessionStart → daemon snapshots matching worktrees | **Adapt** default `.claude/worktrees/agent-*`; existing env override can describe chosen topology. Snapshot engine not live-probed. | dq22 |
+Two actual workers wrote different bytes to the same relative filename, staged different
+indexes, and answered follow-ups on their original native IDs while the parent stayed clean.
+Actual installed custody hooks refused both workers’ protected patch attempts. Registry
+validation checks the worktree, common Git directory, administrative directory and index:
+missing/replaced state cannot silently route a write to the parent. Enabling isolation during
+an existing unisolated writer session requires redispatch. Existing mapped workers keep their
+routing if activation is later removed.
 
-Source entry points are each primitive's `SKILL.md`, agent Markdown, or `hook.py`
-under `primitives-core/`; event wiring is `plugins/atelier/hooks/hooks.json`.
-Shared seams are `_lib/pending.py` (worker discovery), `_lib/agentlog.py` (currently
-hardcodes `claude-code`), and `_lib/model_tiers.py` (Anthropic default windows).
-Missing measurement must be reported as unavailable, never an empty worker set.
+Workers start from their immediate dispatcher’s committed HEAD. Native thread cwd metadata
+remains inherited; the registry records the effective checkout. This provides collision
+isolation between cooperating workers, **not a separate OS sandbox per worker**. The project
+sandbox and role instructions still govern shell access. Required writable roots cover owned
+checkouts, Git worktrees/objects, and only Atelier branch refs/reflogs for commits. Retain
+worker branches until integration; no automatic cleanup discards unfinished work.
 
-## Port constraints and candidate mechanisms
+Tool names differ within the same CLI version: Luna uses `spawn_agent` with a plain brief;
+Terra uses `collaborationspawn_agent` with an encrypted brief. The adapter preserves both
+native paths without decrypting or rewriting those briefs. Because role developer text was
+not delivered on one measured Terra path, SubagentStart injects the canonical role text too.
 
-**Worker isolation is a hard requirement.** Native identity plus tool routing now
-has an actual two-worker collision-isolation proof. Native thread cwd metadata stays
-at the parent, so consumers must resolve effective cwd from the registry. The port
-preserves native workers.
+## Atelier member verdicts
 
-1. Keep shared source and thin assemblies. Existing catalog distribution works;
-   no second repo or universal translation framework is needed.
-2. At native SubagentStart, create and record an owned worktree by `agent_id`.
-   Route supported worker shell commands and patch destinations into that checkout.
-   Preserve native identity, reply routing and lifecycle. Provision compatible
-   writable roots explicitly; failure to establish a tree must deny worker writes,
-   never silently fall back to the parent. Keep registry/state generated at run time.
-3. Generate any Codex role/config material at activation/run time from canonical
-   source. Both supported tool paths must preserve role instructions and authority.
-   Do not silently discard Claude tool lists or confuse model selection with complete
-   role delivery.
-4. Adapt shell/patch guards at their shared input boundary, using actual command
-   directories and every edited path. The production router must handle all patch
-   operations, absolute paths, failure and permission modes, not just this fixture.
-   Existing custody and Git guards still apply; collision avoidance alone is not a
-   promise that an adversarial worker cannot reach another tree.
-5. Activation must report each Codex mechanism as verified, advisory, unsupported
-   or unverified. Do not print “armed” from parsed settings when events never arrive.
-   Trusted compaction and completion blocking need focused probes in **dq22**.
-6. Changes land through green PRs into `dev`; **h168** owns sanctioned publishing
-   to `main`, installed-version checks and consumer verification. A merged adapter
-   is not yet a distributed release. Shared doctrine changes also need the opencode
-   parity wave described in [atelier parity](atelier-parity.md).
+Membership is derived from the assembly: eight skills, five agents, fourteen hooks and one
+Claude command. `codex` roster targets describe supported runtime surfaces; commands retain
+their original target. A mechanism test is evidence for that boundary, not proof of every
+possible project workflow.
+
+| Member | Codex implementation and evidence scope |
+|---|---|
+| `activation` | Project setup, collision refusal and currency checks; trust remains an explicit native step. |
+| `delegation` | Native role selection, bounded waits and follow-ups; five roles generated from canonical source. |
+| `waves` | Tracker-driven coordination with native worker identities and isolated writing. |
+| `comment-hygiene` | Shared procedure, with native tool guidance and package-local references. |
+| `deletion-pass` | Shared contract-preserving simplification procedure. |
+| `layer-cycle` | Shared create/evaluate/refine procedure using native role dispatch. |
+| `rubric-panel` | Shared independent-judge procedure using native role dispatch. |
+| `handoff` | File/external target procedure; board body first, freshness stamp last. |
+| `builder` | Native role, owned checkout, patch routing and native replies exercised. |
+| `manager` | Actual native manager → builder commit → manager integration → reviewer chain, with distinct nested ownership and proof upward. |
+| `scout` | Native role with canonical read/dispatch restrictions; no writer worktree. |
+| `reviewer` | Native review role with canonical read/dispatch restrictions; no writer worktree. |
+| `code-reviewer` | Native review role with canonical read/dispatch restrictions; no writer worktree. |
+| `activate` | Invoke the activation skill; no native command registration claimed. |
+| `worktree-isolation` | Actual installed collision isolation, distinct indexes, native follow-ups and clean parent. |
+| `config-custody` | Actual installed protected patch denial; parser regressions cover every patch destination. |
+| `worker-git-scope-guard` | Effective worker cwd and native command normalization; shared/protected Git refusal regressions. |
+| `live-worker-git-guard` | Native registry replaces Claude sidecars; live-worker mutation refusal regressions. |
+| `comment-hygiene-gate` | Reads the effective routed diff; existing advisory behavior preserved. |
+| `worker-context` | Canonical role and owned-checkout context observed in actual installed worker input. |
+| `subagent-telemetry` | Actual installed completion rows retain native worker identity and model usage. |
+| `manager-package-gate` | Actual native malformed final → gate rejection → corrected proof package; permits one correction, never an endless loop. |
+| `context-watermark` | Actual trusted nudge using rollout effective context limit and latest usage, not cumulative/cache double-counting. |
+| `delegation-watermark` | Actual trusted nudge from authoritative PostToolUse events, including wrapped shell calls; native spawn resets the counter. |
+| `branch-activity-surfacer` | Actual peer detection distinguishes sessions sharing one app-server PID. |
+| `lane-snapshot` | Actual daemon snapshot captured worker bytes while preserving its index and parent checkout. |
+| `session-handoff-surfacer` | Actual cold-session file and external handoff context. |
+| `handoff-freshness-guard` | Actual trusted manual compaction denied missing/stale handoff and accepted fresh handoff. Native output uses `continue: false`; automatic-compaction behavior was not live-probed. |
+
+The runtime contract’s synthetic collision probe passed all eight assertions for Luna and
+Terra. Installed package tests additionally exercise production hook composition. The installed isolation probe passed 11 checks and the installed manager workflow passed
+nine, including real child model/usage accounting. Unit tests
+cover routing failure, hostile paths, modified Git identity, activation transitions, setup
+ownership and native event contracts. Shared neutral doctrine landed in the sibling opencode
+repository in the same wave; harness-specific execution details stay outside its transform.
+
+## Other bundles and prerequisites
+
+| Bundle | Verified behavior and limits |
+|---|---|
+| Bun | Installed skill and actual Bun test. |
+| Carbon | Installed wrapper plus all five authenticated MCP read/audit tools; new-account OAuth onboarding not exercised. |
+| Diagrams | Graphviz SVG/PNG, Excalidraw helper/render and persistent consumer-local memory. Python provider-icon library, draw.io export and Mermaid CLI rendering remain separate prerequisites/unverified paths. |
+| kenn-forge | Native MCP registration command shape and portable guidance; daemon absent, actual daemon workflow pending. |
+| mise-en-place | Installed audit, scaffold plan/apply/replan, synthetic tracker reconcile. No live tracker mutation needed for the proof. |
+| Obsidian toolkit | Portable API/MCP/vault guidance; executable found, disposable-vault integration not exercised. |
+| solo-skills | Portable subject/procedure documents; installed signoff builder plus actual local HTTP save. opencode-sandbox executable absent. Product-specific skills still configure their named product, including Claude Code memory/configuration. |
+| code-desk | Installed rig-builder created a gate and proved green/red cases; independent artifact checks passed. Presentation rendering still needs its documented application dependencies. |
+| PocketBase | Installed builder, reviewer and auditor each used a disposable PocketBase 0.40.3 backend to verify allowed reads, refused writes, unchanged source and cleanup. This is fixture coverage, not full backend assurance. |
+| plugin-feedback | Actual installed parent and non-forked worker received distinct reminders; fixed-template local draft chose the installed-source repository. No external issue or message filed. |
+
+Missing services are pending proof, not successful integrations. Skill discovery does not
+certify backend behavior. Detailed per-member evidence and remaining prerequisites are on
+kata `7d7v` and `kzw6`.
+
+## Repeatable local checks
+
+`make ci` remains offline and stdlib-only. Catalog validation rejects native version drift,
+missing hook files and missing referenced handlers. Dereferenced-package tests render actual
+assembled roles, including their shipped helper dependencies. Removing a required handler
+makes the catalog check fail. Claude manifest validation runs against the same dereferenced
+publish shape.
+
+Authenticated checks are opt-in and use disposable consumer repositories and private auth
+copies, never the user’s mutable auth file. They scope state to scratch storage and stop only
+verified scratch-owned snapshot daemons. Evidence is sanitized before temporary credentials
+and homes are removed.
+
+```sh
+python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-installed-proof --plugin-root plugins/atelier
+python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-manager-proof --plugin-root plugins/atelier --production-workflow
+python3 harness/codex_lifecycle_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-handoff-proof --package-root primitives-core
+```
+
+The runtime probe reviews only the package explicitly selected for the disposable run through
+`--dangerously-bypass-hook-trust`. This automation flag neither changes persistent consumer
+trust nor removes the requested sandbox. A passed check certifies its named observed effect. The manager stop diagnostic explicitly
+injects one test-only malformed-final stimulus; it leaves the production gate unchanged
+and requires an observed rejection followed by a corrected proof package. Add
+`--marketplace hsb3/dotfiles-agents` to a runtime probe to install the published GitHub
+package into a fresh consumer cache instead of copying the local assembly. Private GitHub
+marketplaces require authenticated `gh`; the probe scopes its credential helper to GitHub
+and does not import arbitrary global Git configuration.
 
 Official references checked against the installed runtime: [plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [hooks](https://learn.chatgpt.com/docs/hooks), and [custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).

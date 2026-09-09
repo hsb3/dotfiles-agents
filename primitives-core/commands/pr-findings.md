@@ -21,3 +21,9 @@ there and follow it; do not restate it here and do not re-derive it from memory.
 A report that leads with the check status has answered the wrong question — this runs
 because a green check hides unaddressed comments. Lead with the findings, in the shape the
 skill's report step fixes.
+
+## Codex invocation
+
+This command is a Claude Code shortcut. In Codex, invoke the installed pull-request
+skill directly with the PR number or current-branch request; follow the identical
+collection and reporting procedure. No separate command registration is required.

@@ -41,6 +41,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 import atelier_local  # noqa: E402
 import model_tiers  # noqa: E402
 import pending  # noqa: E402
@@ -400,6 +401,15 @@ def _measure(transcript_path, project_dir, session_id, cwd):
     """
     if not transcript_path or not os.path.isfile(transcript_path):
         return None, None, None, "transcript_path missing or not a file", None
+    if codex_lifecycle.enabled():
+        try:
+            measured = codex_lifecycle.measure(transcript_path)
+        except (OSError, ValueError) as exc:
+            return None, None, None, str(exc), None
+        complexity, tracked = _session_complexity(session_id, cwd)
+        soft, hard, info = resolve_watermarks(project_dir, measured["window"], complexity)
+        info["tracked_files"] = tracked
+        return measured["ctx_tokens"], measured["model"], (soft, hard), None, info
     usage, model = _find_last_assistant_usage(_read_tail(transcript_path, TAIL_BYTES))
     if usage is None:
         return None, None, None, "no assistant usage found in tail window", None
@@ -446,11 +456,13 @@ def handle_session(payload, log):
     """UserPromptSubmit: the session's own context against soft and hard."""
     session_id = payload.get("session_id", "unknown")
     cwd = payload.get("cwd") or os.getcwd()
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
+    project_dir = (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or cwd
 
     ctx_tokens, model, tiers, error, info = _measure(
         payload.get("transcript_path"), project_dir, session_id, cwd)
     if error:
+        if codex_lifecycle.enabled():
+            codex_lifecycle.diagnostic(error)
         log(_row("session", session_id, None, "none", False, error=error))
         return
 
@@ -474,7 +486,11 @@ def handle_session(payload, log):
             # makes the nudge visible to the user; additionalContext is only
             # ever seen by the model.
             print(json.dumps({
-                "additionalContext": _format_message(tier, ctx_tokens, soft, hard),
+                **({"hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": _format_message(tier, ctx_tokens, soft, hard)}}
+                   if codex_lifecycle.enabled() else {
+                    "additionalContext": _format_message(tier, ctx_tokens, soft, hard)}),
                 "systemMessage": (
                     "atelier: context ~{0}k tokens — {1} watermark ({2}k/{3}k) crossed; "
                     "nudging /handoff + /clear.".format(
@@ -495,9 +511,10 @@ def handle_subagent(payload, log):
     session_id = payload.get("session_id", "unknown")
     agent_id = payload.get("agent_id")
     cwd = payload.get("cwd") or os.getcwd()
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
+    project_dir = (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or cwd
 
-    transcript = _subagent_transcript(payload.get("transcript_path"), agent_id)
+    transcript = (payload.get("transcript_path") if codex_lifecycle.enabled()
+                  else _subagent_transcript(payload.get("transcript_path"), agent_id))
     if not transcript:
         log(dict(_row("subagent", session_id, None, "none", False,
                       error="no subagent transcript for this agent_id"),
@@ -507,6 +524,8 @@ def handle_subagent(payload, log):
     ctx_tokens, model, tiers, error, info = _measure(
         transcript, project_dir, session_id, cwd)
     if error:
+        if codex_lifecycle.enabled():
+            codex_lifecycle.diagnostic(error)
         log(dict(_row("subagent", session_id, None, "none", False, error=error),
                  agent_id=agent_id))
         return
@@ -555,6 +574,10 @@ def handle_subagent(payload, log):
 def main():
     try:
         payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            payload = codex_lifecycle.prepare(payload)
+            if payload is None:
+                return
         log = agentlog.make_logger(
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(payload.get("cwd")))
 
@@ -568,6 +591,8 @@ def main():
         sys.exit(0)
 
     except Exception as e:
+        if codex_lifecycle.enabled():
+            codex_lifecycle.diagnostic(e)
         # Fail-open: never break a prompt or a tool call. Log what we can.
         try:
             agentlog.append(LOG_STREAM, {

@@ -139,3 +139,9 @@ UTC), `project` — plus an `event` naming which of the three shapes it is (`ses
 The `skip` rows are what distinguishes "never fired" from "fired and had nothing to say" after
 the fact, and their reasons are kept distinct — `not a git repository`, `git could not be run`,
 `detached HEAD` and `no commits` are four different diagnoses, not one.
+
+## Codex
+
+Codex uses its own ledger harness label and follows the native Codex process ancestry for peer liveness. Existing Git branch/head comparisons and session sources are retained; activation is checked before emitting context.
+
+Codex session IDs distinguish peers even when an app-server process hosts both sessions; the shared process ID supplies liveness, not session identity.

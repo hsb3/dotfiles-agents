@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/plugin-feedback-session/hook.py\"",
+            "statusMessage": "Noting how to report a plugin defect...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/plugin-feedback-worker/hook.py\"",
+            "statusMessage": "Briefing worker on the plugin-report tier rule...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}

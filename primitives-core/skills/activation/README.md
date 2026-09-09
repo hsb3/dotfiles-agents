@@ -44,3 +44,11 @@ claude plugin install atelier@dotfiles-agents
 
 Ships in the `atelier` bundle — it arms the hooks the rest of the bundle
 depends on.
+
+## Codex
+
+`codex-setup` renders native roles and project writable roots without touching global config or hook trust. `check --harness codex` verifies generated role/config currency and reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
+
+Setup rejects symlink or non-regular config/exclude destinations before writing any project files and clears inherited Git routing variables during discovery. Existing user permission tables are preserved.
+
+Native manager workflows need `agents.max_depth >= 2`. Setup adds depth two when the agents table is absent, retains higher configured depths, and reports disabled agents or a known concurrency below two before any mutation. User-owned tables are never rewritten.

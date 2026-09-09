@@ -40,6 +40,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib"))
+import codex_workers  # noqa: E402
+
 GIT_TIMEOUT = int(os.environ.get("COMMENT_HYGIENE_GIT_TIMEOUT", "10") or 10)
 MAX_DIFF_BYTES = 4 * 1024 * 1024
 MAX_FILES_LISTED = 6
@@ -126,6 +129,7 @@ def _git(cwd, *args):
         p = subprocess.run(
             ("git",) + args,
             cwd=cwd,
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             timeout=GIT_TIMEOUT,
@@ -288,6 +292,7 @@ def _format(findings):
 def main():
     try:
         payload = json.loads(sys.stdin.read())
+        payload = codex_workers.effective_payload(payload)
         if payload.get("tool_name") != "Bash":
             sys.exit(0)
         command = (payload.get("tool_input") or {}).get("command") or ""
@@ -298,7 +303,8 @@ def main():
         if not is_pr and not LANDING[0].search(command):
             sys.exit(0)
 
-        cwd = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd")
+        cwd = (payload.get("cwd") if codex_workers.is_codex(payload)
+               else os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd"))
         if not cwd or not os.path.isdir(cwd):
             sys.exit(0)
 

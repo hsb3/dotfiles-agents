@@ -38,7 +38,7 @@ AGENTS = os.path.join(PC, "agents")
 TYPES = {"skill", "agent", "command", "mcp", "hook"}
 # The runtime enum (ADR 0017): claude-code installs the symlink assemblies natively;
 # opencode is generated at install time by gen_opencode.py (task-4).
-TARGETS = {"claude-code", "opencode"}
+TARGETS = {"claude-code", "opencode", "codex"}
 ORIGINS = {"authored", "sourced", "vendored"}
 DISPOSITIONS = {"qualified", "grandfathered-pending-use", "demoted", "untriaged", "orphaned"}
 CAPABILITIES = {"hooks", "local-mcp", "hosted-mcp"}

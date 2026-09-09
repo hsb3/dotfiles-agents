@@ -125,6 +125,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 from pending import (  # noqa: E402  (same — `_lib` must be on the path first)
     AGENT_FILE_PREFIX,
     SIBLING_PROBE_LIMIT,  # noqa: F401  (re-export: the probe knob is read here)
@@ -460,11 +461,52 @@ def _is_stop_event(payload):
 # Main
 # ---------------------------------------------------------------------------
 
+def _codex_stop(payload):
+    import codex_workers
+    agent_id = payload.get("agent_id")
+    if agent_id:
+        record = codex_workers.lookup(payload)
+        if record is None:
+            raise ValueError("stopped worker has no registry record")
+        row = {key: record.get(key) for key in
+               ("session_id", "agent_id", "agent_type", "parent_agent_id", "worktree", "branch")}
+        try:
+            row.update(codex_lifecycle.measure(record.get("transcript_path")))
+        except (OSError, ValueError) as exc:
+            row.update(ctx_tokens=None, model=None, error=str(exc))
+            codex_lifecycle.diagnostic(exc)
+        row["duration_ms"] = _elapsed_ms(row.get("started_at"), datetime.now(timezone.utc))
+        agentlog.append(LOG_STREAM, row, agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV)
+        codex_workers.set_status(payload, "stopped")
+    pending = []
+    now = datetime.now(timezone.utc)
+    for record in codex_workers.records(payload):
+        if record.get("status") != "running":
+            continue
+        started = _first_transcript_timestamp(record.get("transcript_path"))
+        elapsed = _elapsed_ms(started, now)
+        if elapsed is not None and elapsed >= STALL_SECONDS * 1000:
+            pending.append({"agent_id": record["agent_id"], "agent_type": record["agent_type"],
+                            "started_at": started, "pending_ms": elapsed})
+    if pending:
+        agentlog.append(LOG_STREAM, {"event": STALL_EVENT,
+            "session_id": payload.get("session_id"), "pending": pending},
+            agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV)
+
+
 def main():
     try:
         payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            payload = codex_lifecycle.prepare(payload)
+            if payload is None:
+                return
         if not isinstance(payload, dict):
             sys.exit(0)
+
+        if codex_lifecycle.enabled():
+            _codex_stop(payload)
+            return
 
         just_stopped_id = None
         if not _is_stop_event(payload):
@@ -486,6 +528,8 @@ def main():
     except SystemExit:
         raise
     except Exception as e:
+        if codex_lifecycle.enabled():
+            codex_lifecycle.diagnostic(e)
         # Fail-open: never break the subagent-stop flow on our own error, and
         # never leave a partial row behind. Diagnostics only under an explicit
         # opt-in, so the ledger's row count stays equal to the delegation count.

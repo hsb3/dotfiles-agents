@@ -572,6 +572,44 @@ def version_problems():
     return problems
 
 
+def codex_problems():
+    """Native overlays share the catalog release and reference packaged files."""
+    problems = []
+    for pid, entry, _ in _plugin_manifests():
+        root = os.path.join(PLUGINS_DIR, pid)
+        manifest = os.path.join(root, '.codex-plugin', 'plugin.json')
+        if not os.path.isfile(manifest):
+            continue
+        try:
+            with open(manifest, encoding='utf-8') as stream:
+                native = json.load(stream)
+            if native.get('name') != pid or native.get('version') != entry.get('version'):
+                problems.append(f'plugins/{pid}: Codex name/version differs from the catalog release')
+            for key in ('skills', 'hooks'):
+                if key not in native:
+                    continue
+                relative = native.get(key)
+                if not isinstance(relative, str) or not relative.startswith('./') or '..' in relative.split('/'):
+                    problems.append(f'plugins/{pid}: Codex {key} must reference a package-relative path')
+                    continue
+                target = os.path.join(root, relative)
+                if not os.path.exists(target):
+                    problems.append(f'plugins/{pid}: missing Codex {key} path {relative}')
+                    continue
+                if key == 'hooks':
+                    with open(target, encoding='utf-8') as stream:
+                        hooks = json.load(stream)['hooks']
+                    for groups in hooks.values():
+                        for group in groups:
+                            for hook in group['hooks']:
+                                for path in re.findall(r'\$\{CLAUDE_PLUGIN_ROOT\}/([^"\s]+)', hook.get('command', '')):
+                                    if '..' in path.split('/') or not os.path.isfile(os.path.join(root, path)):
+                                        problems.append(f'plugins/{pid}: missing Codex hook handler {path}')
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            problems.append(f'plugins/{pid}: unreadable Codex assembly: {exc}')
+    return problems
+
+
 def _token_number(token):
     """Return the integer a token states (`20`, `sixteen`, `twenty-four`), or None."""
     t = token.lower()
@@ -717,6 +755,7 @@ def main():
         + link_problems()
         + description_problems()
         + version_problems()
+        + codex_problems()
         + metadata_problems()
         + truncation_problems()
     )

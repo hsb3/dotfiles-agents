@@ -48,6 +48,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -211,6 +212,38 @@ def _save_state(session_id, state):
         pass
 
 
+def _codex_counts(payload):
+    """Count actual native tool events; outer exec transcripts hide shell arguments."""
+    import fcntl
+    tool_id = payload.get("tool_use_id")
+    if not isinstance(tool_id, str) or not tool_id:
+        raise ValueError("Codex PostToolUse has no native tool_use_id")
+    session = payload.get("session_id")
+    if not isinstance(session, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", session):
+        raise ValueError("Codex PostToolUse has no valid session_id")
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(_state_path(session) + ".counts", "a+", encoding="utf-8") as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        stream.seek(0)
+        text = stream.read()
+        state = json.loads(text) if text else {"streak": 0, "dispatches": 0, "total": 0, "seen": []}
+        if tool_id not in state["seen"]:
+            name = payload.get("tool_name", "").replace(".", "").replace("_", "")
+            command = (payload.get("tool_input") or {}).get("command")
+            if name in ("spawnagent", "collaborationspawnagent"):
+                state["dispatches"] += 1
+                state["streak"] = 0
+            elif name in ("Bash", "applypatch") and not (name == "Bash" and _is_floor_command(command)):
+                state["total"] += 1
+                state["streak"] += 1
+            state["seen"] = (state["seen"] + [tool_id])[-256:]
+            stream.seek(0)
+            stream.truncate()
+            json.dump(state, stream)
+            stream.flush()
+        return state["streak"], state["dispatches"], state["total"]
+
+
 def _scan(path):
     """Walk the whole transcript; return (streak, dispatches, delegable_total).
 
@@ -224,6 +257,7 @@ def _scan(path):
     streak = 0
     dispatches = 0
     delegable_total = 0
+
 
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
@@ -294,6 +328,10 @@ def main():
     payload = None
     try:
         payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            payload = codex_lifecycle.prepare(payload)
+            if payload is None:
+                return
 
         # Never nudge a subagent: a worker delegating is not the behavior we want.
         if payload.get("agent_id"):
@@ -305,14 +343,14 @@ def main():
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(payload.get("cwd")),
         )
 
-        if not transcript_path or not os.path.isfile(transcript_path):
+        if not codex_lifecycle.enabled() and (not transcript_path or not os.path.isfile(transcript_path)):
             log({
                 "session_id": session_id, "fired": False,
                 "error": "transcript_path missing or not a file",
             })
             sys.exit(0)
 
-        size = os.path.getsize(transcript_path)
+        size = 0 if codex_lifecycle.enabled() else os.path.getsize(transcript_path)
         if size > MAX_BYTES:
             log({
                 "session_id": session_id, "fired": False,
@@ -320,7 +358,8 @@ def main():
             })
             sys.exit(0)
 
-        streak, dispatches, delegable_total = _scan(transcript_path)
+        streak, dispatches, delegable_total = (
+            _codex_counts(payload) if codex_lifecycle.enabled() else _scan(transcript_path))
         ratio = (delegable_total / dispatches) if dispatches else None
 
         state = _load_state(session_id)
@@ -362,6 +401,8 @@ def main():
         sys.exit(0)
 
     except Exception as e:
+        if codex_lifecycle.enabled():
+            codex_lifecycle.diagnostic(e)
         try:
             if not isinstance(payload, dict):
                 payload = {}

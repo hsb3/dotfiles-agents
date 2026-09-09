@@ -40,3 +40,10 @@ claude plugin install code-desk@dotfiles-agents
 ```
 
 Ships in the `code-desk` bundle.
+
+## Installed resources
+
+The bundled base/SKILL.md is the production reference; a global Claude skill is not
+required. Resolve its scripts beneath base/ and this skill's scripts beside SKILL.md.
+Check Node/PptxGenJS and the selected render toolchain in each consumer before claiming
+a deck was rendered; upstream preinstalled dependencies are not a Codex guarantee.

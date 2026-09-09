@@ -127,3 +127,37 @@ This skill covers create/check mechanics only. For the deep behavioral tables �
 `handoff` fallback matrix — read
 [`delegation/references/activation.md`](../delegation/references/activation.md), which is
 authoritative.
+
+
+<!-- harness:codex -->
+## Codex setup
+
+Use the installed skill directory to locate `scripts/activation.py`; Codex does not set
+`CLAUDE_PLUGIN_ROOT`. The activation file remains `.claude/atelier.local.md`.
+
+```bash
+python3 /path/to/activation/scripts/activation.py create --harness codex
+python3 /path/to/activation/scripts/activation.py codex-setup
+python3 /path/to/activation/scripts/activation.py check --harness codex
+```
+
+Skip `create` when the file already exists. `codex-setup` generates project-local native
+role TOMLs from the installed canonical agents and adds the derived writable roots needed
+by isolated checkouts, Git indexes, objects, refs, and logs to `.codex/config.toml`.
+It sets `agents.max_depth = 2` when the project has no agents table: Codex V1 defaults
+to one level, which leaves an atelier manager unable to dispatch an execution worker.
+An existing agents table must enable agents, allow depth at least two, and must not set
+concurrency below two. Setup reports the exact needed entries before any write instead
+of replacing a user-owned table; higher existing depth is retained.
+It refuses to replace a conflicting user-owned permission table or role file. It adds
+local Git excludes for these generated files; nothing generated belongs in a commit.
+The writable roots support collision isolation between cooperating workers, not separate
+OS security boundaries for each worker. A configured permission profile can override the
+legacy sandbox settings: verify the actual session permissions before dispatch.
+
+Restart Codex after setup. Open `/hooks`, review and approve the installed atelier hooks,
+and verify that they are enabled and trusted for this project. `check` explicitly reports
+hook trust as unverified: parsing an activation file cannot establish runtime enforcement.
+Missing or outdated role files and missing writable roots are failing setup checks.
+Context watermarks use the rollout’s actual effective context limit and latest usage.
+<!-- /harness -->

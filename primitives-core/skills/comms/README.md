@@ -79,3 +79,11 @@ claude plugin install code-desk@dotfiles-agents
 ```
 
 Ships in the `code-desk` bundle only — its topical plugin owns it (decision-020).
+
+## Codex delivery
+
+The stdlib engine runs unchanged. Resolve scripts from the installed skill directory
+and keep cwd in the consuming project. Deliver HTML/PDF and optional audio with
+clickable absolute file links when no file-delivery tool exists. PDF rendering needs
+Chrome; narration needs its selected local/provider tool. An HTML build does not
+prove either optional output.

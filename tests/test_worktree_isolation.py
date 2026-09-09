@@ -112,6 +112,18 @@ class WorktreeIsolationTests(unittest.TestCase):
 
     # -- the rewrite ---------------------------------------------------
 
+    def test_claude_routing_does_not_require_codex_toml_parser(self):
+        self._write_activation(isolate="writers")
+        result = subprocess.run(
+            [sys.executable, "-c", "import runpy,sys; sys.modules['tomllib']=None; "
+             "runpy.run_path(sys.argv[1],run_name='__main__')", HOOK_PATH],
+            input=json.dumps(self._payload()), capture_output=True, text=True,
+            env={"PATH": os.environ.get("PATH", ""), "HOME": self.tmp.name,
+                 "XDG_DATA_HOME": self.xdg}, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["hookSpecificOutput"]
+                         ["updatedInput"]["isolation"], "worktree")
+
     def test_writers_mode_isolates_builder(self):
         self._write_activation(isolate="writers")
         body, updated = self._rewrite(self._payload())

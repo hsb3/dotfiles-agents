@@ -109,3 +109,7 @@ claude plugin install atelier@dotfiles-agents
 ```
 
 Ships only in the atelier bundle, alongside the handoff skill it surfaces.
+
+## Codex
+
+Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. The shared activation file remains `.claude/atelier.local.md`; Codex payload cwd is authoritative even if a Claude environment variable is inherited.

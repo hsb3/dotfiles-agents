@@ -453,6 +453,32 @@ class CatalogGuard(unittest.TestCase):
             any("beta" in p and "version drift" in p and "9.9.9" in p for p in problems), problems
         )
 
+    def test_codex_overlay_checks_release_and_required_handler(self):
+        root = os.path.join(C.PLUGINS_DIR, 'alpha')
+        os.makedirs(os.path.join(root, '.codex-plugin'))
+        native = {'name': 'alpha', 'version': '0.0.1',
+                  'skills': './skills', 'hooks': './hooks/codex-hooks.json'}
+        manifest = os.path.join(root, '.codex-plugin/plugin.json')
+        with open(manifest, 'w') as stream:
+            json.dump(native, stream)
+        handler = os.path.join(root, 'hooks/required.py')
+        with open(handler, 'w') as stream:
+            stream.write('pass\n')
+        with open(os.path.join(root, 'hooks/codex-hooks.json'), 'w') as stream:
+            json.dump({'hooks': {'PreToolUse': [{'hooks': [{
+                'command': 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/required.py"'}]}]}}, stream)
+        self.assertEqual(C.codex_problems(), [])
+        del native['skills']
+        with open(manifest, 'w') as stream:
+            json.dump(native, stream)
+        self.assertEqual(C.codex_problems(), [])  # Hook-only plugins are valid.
+        os.unlink(handler)
+        self.assertTrue(any('required.py' in p for p in C.codex_problems()))
+        native['version'] = '9.9.9'
+        with open(manifest, 'w') as stream:
+            json.dump(native, stream)
+        self.assertTrue(any('name/version' in p for p in C.codex_problems()))
+
     def test_missing_version_in_plugin_json_is_red(self):
         self._write_plugin("beta", BETA_DESC, version=None)
         problems = C.version_problems()

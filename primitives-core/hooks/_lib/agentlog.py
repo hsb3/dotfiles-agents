@@ -45,7 +45,7 @@ import os
 from datetime import datetime, timezone
 
 SCHEMA_VERSION = 1
-HARNESS = "claude-code"
+HARNESS = "codex" if os.environ.get("ATELIER_HARNESS") == "codex" else "claude-code"
 # ponytail: single default plugin id — every hook that uses this today ships in
 # `atelier`. A hook in another plugin passes plugin="<id>" to make_logger rather
 # than growing a registry here.
@@ -79,7 +79,7 @@ def resolve_project(cwd=None):
     logging — the row lands in the partitioned root either way and simply
     carries a null project.
     """
-    return os.environ.get("CLAUDE_PROJECT_DIR") or cwd or None
+    return (os.environ.get("CLAUDE_PROJECT_DIR") if HARNESS != "codex" else None) or cwd or None
 
 
 def stream_path(stream, override_env=None, plugin=PLUGIN):

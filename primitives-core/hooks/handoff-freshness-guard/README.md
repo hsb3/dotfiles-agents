@@ -104,3 +104,7 @@ claude plugin install atelier@dotfiles-agents
 ```
 
 Ships only in the atelier bundle, alongside the handoff skill it enforces.
+
+## Codex
+
+Codex PreCompact uses only `continue: false`, `stopReason`, and `systemMessage` to interrupt manual compaction; its strict schema rejects Claude decision/reason fields. Trusted CLI 0.153.4 app-server probes verified missing and stale external stamps interrupt before PostCompact, while a fresh stamp permits compaction. Automatic compaction remains nonblocking.

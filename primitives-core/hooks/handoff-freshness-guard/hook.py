@@ -63,6 +63,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 import atelier_local  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -110,7 +111,7 @@ def _resolve_project_dir(cwd):
     same anchor config-custody/worker-context use to locate
     .claude/atelier.local.md, and the same anchor agentlog.resolve_project
     uses for the `project` field on this hook's rows."""
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
+    base = (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or cwd
     try:
         return os.path.abspath(base)
     except Exception:
@@ -373,6 +374,10 @@ def main():
     try:
         raw_stdin = sys.stdin.read()
         payload = json.loads(raw_stdin)
+        if isinstance(payload, dict):
+            payload = codex_lifecycle.prepare(payload)
+            if payload is None:
+                return
 
         session_id = payload.get("session_id", "unknown")
         cwd = payload.get("cwd") or os.getcwd()
@@ -429,6 +434,9 @@ def main():
                 out = {"systemMessage": msg}
 
         if out is not None:
+            if blocked and codex_lifecycle.enabled():
+                out = {"continue": False, "stopReason": out["reason"],
+                       "systemMessage": out["reason"]}
             print(json.dumps(out))
 
         log({
