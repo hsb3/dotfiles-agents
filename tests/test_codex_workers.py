@@ -45,6 +45,57 @@ class CodexWorkersTests(unittest.TestCase):
                     cwd=str(self.repo), tool_name=tool, tool_input={'command': command},
                     transcript_path=str(transcript))
 
+    def test_lifecycle_only_activation_matches_checker(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('codex_activation_policy_test',
+            ROOT / 'primitives-core/skills/activation/scripts/activation.py')
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        modules, _ = checker.load_hooks()
+        cases = [
+            ('handoff', 'handoff: handoff.md'),
+            ('handoff', 'handoff:\n  path: notes/handoff.md'),
+            ('handoff', 'handoff:\n  mode: external\n  stamp: .claude/handoff.stamp'),
+            ('handoff', 'handoff:\n  mode: disabled\n  path: handoff.md'),
+            ('handoff', 'handoff:\n  mode: external\n  location: board'),
+            ('handoff', 'handoff: ../outside.md'),
+            ('handoff', 'handoff: [not-a-path]'),
+            ('watermark', 'watermark:\n  soft: 10000'),
+            ('watermark', 'watermark:\n  hard: 20000'),
+            ('watermark', 'watermark:\n  complexity: 0.5'),
+            ('watermark', 'watermark:\n  soft: invalid\n  hard: 0\n  complexity: -1'),
+            ('watermark', 'watermark: disabled'),
+        ]
+        activation = self.repo / '.claude/atelier.local.md'
+        payload = {'session_id': 'session-a', 'cwd': str(self.repo)}
+        for key, body in cases:
+            with self.subTest(body=body):
+                activation.write_text('---\nenforce: off\nisolate: off\n' + body + '\n---\n')
+                result = checker.evaluate(str(self.repo), modules)
+                row = next(row for row in result['rows'] if row['key'] == key)
+                self.assertEqual(self.mod.active(payload), row['state'] == 'armed')
+        activation.unlink()
+        self.assertFalse(self.mod.active(payload))
+        activation.write_text('---\nenforce: off\nisolate: off\n---\n')
+        self.assertFalse(self.mod.active(payload))
+
+    def test_handoff_only_worker_registers_without_isolation_or_custody(self):
+        (self.repo / '.claude/atelier.local.md').write_text(
+            '---\nenforce: off\nisolate: off\nhandoff: handoff.md\nprotected: [config.toml]\n---\n')
+        payload = self.payload()
+        parent = dict(payload, hook_event_name='PreCompact', trigger='manual')
+        parent.pop('agent_id')
+        self.assertIs(self.hook('handoff-freshness-guard', parent)['continue'], False)
+        record = self.mod.ensure_worker(payload)
+        self.assertIsNone(record['worktree'])
+        self.assertEqual(Path(self.mod.effective_payload(payload)['cwd']), self.repo.resolve())
+        payload['tool_name'] = 'apply_patch'
+        payload['tool_input'] = {'command': '*** Begin Patch\n*** Add File: config.toml\n+x\n*** End Patch'}
+        self.assertEqual(self.hook('config-custody', payload), {})
+        (self.repo / '.claude/atelier.local.md').unlink()
+        self.assertTrue(self.mod.active(payload))
+        self.assertEqual(self.mod.lookup(payload)['agent_id'], payload['agent_id'])
+
     def test_two_real_worktrees_stage_independently(self):
         indexes = []
         for agent, contents in [('worker-a', 'ALPHA'), ('worker-b', 'BETA')]:

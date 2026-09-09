@@ -165,6 +165,25 @@ def active(payload):
             return True
         if enforce in ('strict', 'advisory') or isinstance(protected, list) and bool(protected):
             return True
+        handoff = atelier_local.parse_key(text, 'handoff')
+        if isinstance(handoff, str):
+            handoff = {'path': handoff}
+        if isinstance(handoff, dict):
+            mode = (handoff.get('mode') or 'file').lower()
+            named = handoff.get('stamp' if mode == 'external' else 'path')
+            if mode in ('file', 'external') and named:
+                cwd = payload.get('original_cwd') or payload.get('cwd')
+                path = os.path.normpath(os.path.join(cwd, named))
+                if os.path.relpath(path, cwd).split(os.sep)[0] != '..':
+                    return True
+        watermark = atelier_local.parse_key(text, 'watermark')
+        if isinstance(watermark, dict):
+            for key, cast in (('soft', int), ('hard', int), ('complexity', float)):
+                try:
+                    if cast(watermark.get(key)) > 0:
+                        return True
+                except (TypeError, ValueError):
+                    pass
     if not payload.get('agent_id'):
         return False
     try:
