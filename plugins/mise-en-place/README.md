@@ -86,3 +86,7 @@ does not require this plugin.
 ```
 claude plugin install mise-en-place@dotfiles-agents
 ```
+
+Since the decision-020 sweep this bundle is the only home for `task-authoring`, and one
+of only two for `project-memory` (the other being `code-desk`, which owns it topically).
+Both used to ship from `solo-skills` as well, and no longer do.

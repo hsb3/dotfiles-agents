@@ -129,3 +129,7 @@ what is missing.
 ```
 claude plugin install code-desk@dotfiles-agents
 ```
+
+Since the decision-020 sweep this bundle is the only home for `pptx-themes` and
+`readme-value-and-proof`, and the topical owner of `project-memory`, which also ships in
+`mise-en-place`. All three used to ship from `solo-skills` as well, and no longer do.

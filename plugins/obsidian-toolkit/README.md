@@ -41,3 +41,6 @@ worked examples, and assume a standard Obsidian plugin dev setup (TypeScript, es
 `obsidian-cli` needs the Obsidian app's official CLI available on the machine
 (`cli:obsidian`); `obsidian-mcp-server` additionally needs `@modelcontextprotocol/sdk` and
 `zod` from npm; the other two need only an editor and a vault to test in.
+
+Since the decision-020 sweep this bundle is the only home for all four skills — they
+used to ship from `solo-skills` as well, and no longer do.

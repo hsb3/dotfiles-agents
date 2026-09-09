@@ -45,7 +45,7 @@ joins it.
 | `iterm2` | iTerm2 past its silent failures: the preferences model, dynamic profiles, shell integration, and default-terminal bindings that report success while dropping the change. |
 | `opencode-sandbox` | Spin up a disposable, isolated opencode instance and hand it to the session as an MCP server — its workspace is a volume, so it cannot see the host filesystem. |
 
-**Session discipline**
+**Test quality**
 
 | Skill | What it does |
 |---|---|
