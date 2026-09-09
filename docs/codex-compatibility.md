@@ -24,7 +24,7 @@ The temporary authentication copy is deleted, not retained with evidence.
 | Plugin discovery | Synthetic plugin installed through `.claude-plugin/marketplace.json`; its skill was read. Bare agent type `plugin_probe` was rejected: `unknown agent_type 'plugin_probe'`. Qualified plugin-agent registration remains unverified. |
 | Native TOML agent | `$CODEX_HOME/agents/probe_worker.toml` registered. A luna parent/luna worker run delivered its developer-instruction token. A terra parent selected luna for this named role, but the instruction token was absent from that worker's reply. Role instruction parity on that path is **unverified**, not proven by model selection. |
 | Native worktree | Hook rewrote a luna spawn with `cwd` pointing at a pre-created worker worktree and `isolation: worktree`. The call succeeded, but actual worker `pwd` and hook `cwd` stayed in the parent repository. These added fields did **not** enforce isolation. |
-| Process worker | `codex exec -C <worker worktree> -m gpt-5.6-luna -s read-only -c developer_instructions=...` ran `pwd` and `git branch --show-current` in the intended worktree/branch and returned its developer-instruction token. Filesystem denial outside that tree was not tested. |
+| Native routed worktrees | SubagentStart created a worktree per `agent_id`; worker Bash commands entered that tree and patch destinations were rewritten into it. Two native workers wrote `ALPHA`/`BETA` to the same relative filename, staged separate indexes, and retained native follow-up replies. Parent file stayed absent and parent Git status stayed clean. All eight assertions passed for both luna and terra parent paths. This establishes collision avoidance, not per-worker OS confinement. |
 | Reply routing | Native worker completion reached its parent; a follow-up produced the requested worker reply. This does not prove Claude's tool exclusions or manager-only dispatch authority. |
 | Compaction | App-server `thread/compact/start` produced a completed `contextCompaction` item. No PreCompact/PostCompact payload was captured through that invocation; hook trust/effect was not established there. Manual blocking and automatic-compaction behavior remain **unverified**, not declared unsupported. |
 
@@ -36,11 +36,16 @@ Tool identity varies **within the same CLI version**:
 | `gpt-5.6-terra` | `collaborationspawn_agent` | `task_name`, `agent_type`, `fork_turns`, encrypted message string. No message rewrite attempted on this path. |
 
 Do not decrypt that message or claim a matcher alias normalizes the handler's
-payload. Both model paths need explicit acceptance before native delegation ships.
+payload. Isolation routing passed both paths; role authority and instruction
+delivery still need explicit acceptance before full native delegation ships.
 Worker records were separate dated rollout JSONL files, not Claude's
 `<parent-stem>/subagents/agent-*.meta.json` sidecars. Codex hook `permission_mode`
-reported `bypassPermissions` in these runs despite requesting CLI sandbox modes;
-these observations do **not** certify filesystem sandbox enforcement.
+reported `bypassPermissions` in these runs despite requesting CLI sandbox modes.
+Actual sandbox checks still applied: the first routed-worktree experiment rejected
+patches outside writable roots and denied Git metadata writes. It passed after
+explicitly adding the worker base, `.git/worktrees` and `.git/objects` as writable
+roots under `workspace-write`. No full-access bypass was needed. The hook label
+alone is not evidence of effective filesystem permissions.
 
 ## Repeatable probe
 
@@ -50,6 +55,8 @@ number of model requests. This is an opt-in local probe, not a network CI gate:
 ```sh
 python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-codex-luna --model gpt-5.6-luna
 python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-codex-terra --model gpt-5.6-terra
+python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-native-luna --model gpt-5.6-luna --native-isolation
+python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/atelier-native-terra --model gpt-5.6-terra --native-isolation
 ```
 
 Each output directory must be new. The probe reviews and runs **only its synthetic
@@ -59,6 +66,10 @@ the CLI version, raw synthetic event payloads, effect checks and negative/condit
 observations, redacting authentication string values. A passed `checks.json` is
 proof of those narrow effects only. Read `observations.json` for role, model,
 spawn and cwd differences; unknown behavior does not become a green guarantee.
+The `--native-isolation` mode additionally asserts separate native-worker file
+contents, staged contents, Git indexes, actual shell directories, follow-up replies
+and a clean parent checkout. Its hook handles the single controlled Add File
+fixture; it is not a production patch parser or a cross-tree security boundary.
 
 The compaction discovery used `codex app-server --stdio`, initialized a client,
 then sent `thread/start`, `turn/start` and `thread/compact/start` with the returned
@@ -95,7 +106,7 @@ stated runtime qualification; it does not certify an unexecuted workflow.
 | hook `config-custody` | Worker edit + protected paths → deny/advisory | **Adapt** all patch paths, moves and effective directory. Current file_path reader misses actual patch command. Denial mechanism proven. | x37s |
 | hook `worker-git-scope-guard` | Worker Bash + cwd + topology → deny shared stash/protected writes | **Adapt** effective command directory; identity and shell fields proven, guard-specific cases unverified. | x37s |
 | hook `live-worker-git-guard` | Parent Bash + live worker records → deny shared-tree mutation | **Adapt** Claude sidecar discovery returns no Codex workers; runtime ledger required. | x37s |
-| hook `worktree-isolation` | PreToolUse literal Agent + subagent_type → updated isolation input | **Unsupported current mechanism**: rewritten cwd/isolation ignored in live native spawn. Replace dispatch mechanism; never report isolated from the rewrite alone. | x37s |
+| hook `worktree-isolation` | PreToolUse literal Agent + subagent_type → updated isolation input | **Adapt**: Claude-style spawn fields are ignored; native identity registry plus supported shell/patch routing passed collision-isolation prototype. Full production guard unverified. | x37s |
 | hook `worker-context` | SubagentStart + activation → developer covenant | **Reuse** event/context mechanism proven; strict guarantees depend on actual safeguards. Process workers require explicit covenant injection. | dq22 |
 | hook `manager-package-gate` | SubagentStop manager + final reply → one continuation block | **Adapt** registered manager identity/process completion boundary. Reply fields proven; continuation effect unverified. | dq22 |
 | hook `context-watermark` | Prompt/worker tool event + usage tail → nudge/state | **Adapt** Claude usage records and model windows; no Codex usage measurement proven. | dq22 |
@@ -104,7 +115,7 @@ stated runtime qualification; it does not certify an unexecuted workflow.
 | hook `handoff-freshness-guard` | PreCompact manual/auto + stamp → block/notice | **Adapt/verify** event effect; stamp policy reusable, trusted compaction still unverified. | dq22 |
 | hook `session-handoff-surfacer` | SessionStart startup/clear + destination → context | **Reuse** context mechanism proven; complete external-handoff invocation unverified. | dq22 |
 | hook `branch-activity-surfacer` | SessionStart + branch/process ledger → peer/moved-tip context | **Adapt** owning-process detection recognizes only claude; actual Codex liveness unverified. | dq22 |
-| hook `lane-snapshot` | SessionStart → daemon snapshots matching worktrees | **Adapt** default `.claude/worktrees/agent-*`; existing env override can describe chosen topology. Snapshot engine not live-probed. | x37s |
+| hook `lane-snapshot` | SessionStart → daemon snapshots matching worktrees | **Adapt** default `.claude/worktrees/agent-*`; existing env override can describe chosen topology. Snapshot engine not live-probed. | dq22 |
 
 Source entry points are each primitive's `SKILL.md`, agent Markdown, or `hook.py`
 under `primitives-core/`; event wiring is `plugins/atelier/hooks/hooks.json`.
@@ -114,28 +125,27 @@ Missing measurement must be reported as unavailable, never an empty worker set.
 
 ## Port constraints and candidate mechanisms
 
-**Worker isolation is a hard requirement.** The ignored Claude-style fields above
-rule out that particular rewrite, not every native Codex isolation mechanism.
-Native worktree/cwd mechanisms require further source/schema research and an actual
-binding probe before choosing the dispatch implementation. The process-worker
-experiment below is a measured alternative, not an architecture decision.
+**Worker isolation is a hard requirement.** Native identity plus tool routing now
+has an actual two-worker collision-isolation proof. Native thread cwd metadata stays
+at the parent, so consumers must resolve effective cwd from the registry. The port
+preserves native workers.
 
 1. Keep shared source and thin assemblies. Existing catalog distribution works;
    no second repo or universal translation framework is needed.
-2. One proven cwd-binding candidate creates the owned git worktree explicitly and launches
-   `codex exec -C <worktree>` with an explicit model and rendered role instructions.
-   Verify actual cwd, branch, role token and result. This is a **process worker**,
-   not a native subagent: its root hooks do not imply `agent_id`, SubagentStart or
-   SubagentStop. Supply explicit worker identity and record process lifecycle before
-   applying custody, live-worker guards, telemetry or package validation to it.
-   Select it only after evaluating the native isolation mechanism; changing a worker
-   prompt alone never satisfies the isolation requirement.
+2. At native SubagentStart, create and record an owned worktree by `agent_id`.
+   Route supported worker shell commands and patch destinations into that checkout.
+   Preserve native identity, reply routing and lifecycle. Provision compatible
+   writable roots explicitly; failure to establish a tree must deny worker writes,
+   never silently fall back to the parent. Keep registry/state generated at run time.
 3. Generate any Codex role/config material at activation/run time from canonical
-   source. Native TOML registration is optional until both supported tool paths
-   preserve instructions and authority. Do not silently discard Claude tool lists.
+   source. Both supported tool paths must preserve role instructions and authority.
+   Do not silently discard Claude tool lists or confuse model selection with complete
+   role delivery.
 4. Adapt shell/patch guards at their shared input boundary, using actual command
-   directories and every edited path. Bind process workers to owned files and
-   verify their restrictions; an instruction to stay in a directory is not enforcement.
+   directories and every edited path. The production router must handle all patch
+   operations, absolute paths, failure and permission modes, not just this fixture.
+   Existing custody and Git guards still apply; collision avoidance alone is not a
+   promise that an adversarial worker cannot reach another tree.
 5. Activation must report each Codex mechanism as verified, advisory, unsupported
    or unverified. Do not print “armed” from parsed settings when events never arrive.
    Trusted compaction and completion blocking need focused probes in **dq22**.
@@ -147,3 +157,10 @@ experiment below is a measured alternative, not an architecture decision.
 Official references checked against the installed runtime: [plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [hooks](https://learn.chatgpt.com/docs/hooks), and [custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 The runtime observations above take precedence over an assumed translation of those interfaces.
+
+The source review used official Codex commit `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`
+(0.153.4). Native spawn [reapplies parent cwd and permissions after role configuration](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/tools/handlers/multi_agents_common.rs#L235).
+The supported relocation seams are [shell command rewriting](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/tools/handlers/unified_exec/exec_command.rs#L508)
+and [patch command rewriting](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/tools/handlers/apply_patch.rs#L468),
+which the two-worker probe exercises. These are operation-level adapters; they do
+not mutate the native thread's cwd metadata.

@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import signal
 import subprocess
@@ -17,10 +18,47 @@ import sys
 import tempfile
 
 
+def routed_hook(root, payload):
+    event, agent = payload["hook_event_name"], payload.get("agent_id")
+    tree = root / "workers" / str(agent)
+    if event == "SubagentStart":
+        result = subprocess.run(["git", "-C", str(root / "repo"), "worktree", "add", "-b",
+                                 "worker-" + agent, str(tree)], text=True, capture_output=True, timeout=30)
+        return {"hookEventName": event, "additionalContext":
+                f"Native worker identity: {agent}. Worktree setup exit: {result.returncode}. Use relative file paths."}
+    if event != "PreToolUse" or not agent:
+        return {}
+    if not tree.is_dir():
+        return {"hookEventName": event, "permissionDecision": "deny",
+                "permissionDecisionReason": "Probe worktree setup did not complete."}
+    tool, command = payload.get("tool_name"), payload.get("tool_input", {}).get("command", "")
+    if tool == "Bash":
+        command = "cd -- " + shlex.quote(str(tree)) + " && ( " + command + "\n)"
+    elif tool == "apply_patch":
+        lines = []
+        for line in command.splitlines():
+            if line.startswith("*** Add File: "):
+                path = line.removeprefix("*** Add File: ")
+                # This fixture tests one Add File; it is not a production patch parser.
+                if path not in ("shared-name.txt", str(root / "repo/shared-name.txt")):
+                    return {"hookEventName": event, "permissionDecision": "deny",
+                            "permissionDecisionReason": "Unexpected probe patch destination."}
+                line = "*** Add File: " + str(tree / "shared-name.txt")
+            lines.append(line)
+        command = "\n".join(lines)
+    else:
+        return {}
+    return {"hookEventName": event, "permissionDecision": "allow", "updatedInput": {"command": command}}
+
+
 def hook(root):
     payload = json.load(sys.stdin)
     with (root / "hooks.jsonl").open("a") as stream:
         stream.write(json.dumps(payload) + "\n")
+    if (root / "route-workers").exists():
+        output = routed_hook(root, payload)
+        print(json.dumps({"hookSpecificOutput": output} if output else {}))
+        return
     event = payload["hook_event_name"]
     args = payload.get("tool_input", {})
     command = args.get("command", "")
@@ -42,7 +80,57 @@ def hook(root):
     print(json.dumps({"hookSpecificOutput": output} if output else {}))
 
 
-def run(auth_source, output, model):
+def native_probe(root, command, model):
+    (root / "route-workers").touch()
+    workers = root / "workers"
+    workers.mkdir()
+    prompt = """This is a native worker collision-isolation probe. Spawn exactly two independent default agents.
+Worker A must run shell pwd, git branch --show-current and git rev-parse --git-path index,
+use apply_patch to add relative file shared-name.txt with ALPHA, run git add shared-name.txt,
+then cat shared-name.txt and git diff --cached -- shared-name.txt.
+Worker B must do the identical procedure with BETA. Use default cwd, relative paths,
+no explicit workdir, no manual cd or worktree creation. The hook owns disposable routing.
+Wait for both; send EACH a followup to re-read shared-name.txt and report its worker identity and literal final text.
+Wait for both replies. Do not inspect or modify hooks/config. Do not repair failures.
+Parent must run pwd and git status --porcelain at end. Never commit/push.
+"""
+    command("native-isolation", ["codex", "exec", "--json", "-C", str(root / "repo"), "--model", model,
+                                 "--sandbox", "workspace-write", "--add-dir", str(workers),
+                                 "--add-dir", str(root / "repo/.git/worktrees"),
+                                 "--add-dir", str(root / "repo/.git/objects"),
+                                 "--dangerously-bypass-hook-trust", prompt])
+    payloads = [json.loads(line) for line in (root / "hooks.jsonl").read_text().splitlines()]
+    observations = []
+    for tree in sorted(workers.iterdir()):
+        data = (tree / "shared-name.txt").read_text() if (tree / "shared-name.txt").exists() else None
+        index = command("index-" + tree.name, ["git", "-C", str(tree), "rev-parse", "--git-path", "index"]).strip()
+        staged = command("staged-" + tree.name, ["git", "-C", str(tree), "show", ":shared-name.txt"])
+        replies = [event.get("last_assistant_message", "") or "" for event in payloads
+                   if event["hook_event_name"] == "SubagentStop" and event.get("agent_id") == tree.name]
+        observations.append({"agent_id": tree.name, "cwd": str(tree), "index": index, "bytes": data,
+                             "staged": staged, "replies": replies})
+    checks = {
+        "two_native_workers": len(observations) == 2,
+        "separate_file_bytes": sorted(item["bytes"] or "" for item in observations) == ["ALPHA\n", "BETA\n"],
+        "separate_staged_bytes": sorted(item["staged"] for item in observations) == ["ALPHA\n", "BETA\n"],
+        "distinct_indexes": len({item["index"] for item in observations}) == 2,
+        "parent_file_absent": not (root / "repo/shared-name.txt").exists(),
+        "parent_clean": command("parent-status", ["git", "status", "--porcelain"]) == "",
+        "native_followups": all(len(item["replies"]) >= 2 and item["agent_id"] in item["replies"][-1]
+                                and (item["bytes"] or "").strip() in item["replies"][-1] for item in observations),
+        "actual_worker_cwds": all(any(event.get("agent_id") == item["agent_id"] and
+                                      event["hook_event_name"] == "PostToolUse" and
+                                      item["cwd"] in str(event.get("tool_response", ""))
+                                      for event in payloads) for item in observations),
+    }
+    (root / "observations.json").write_text(json.dumps(observations, indent=2))
+    (root / "checks.json").write_text(json.dumps(checks, indent=2))
+    print(json.dumps(checks, indent=2))
+    if not all(checks.values()):
+        raise RuntimeError("Native isolation effect failed; inspect evidence, do not claim parity")
+
+
+def run(auth_source, output, model, native_isolation=False):
     output.mkdir(parents=True, exist_ok=False)
     script = Path(__file__).resolve()
     with tempfile.TemporaryDirectory(prefix="atelier-codex-probe-") as directory:
@@ -90,7 +178,6 @@ def run(auth_source, output, model):
                 'approval_policy = "never"\n[agents]\nenabled = true\nmax_concurrent_threads_per_session = 2\n')
             events = ("SessionStart", "SubagentStart", "PreToolUse", "PostToolUse", "SubagentStop", "Stop",
                       "PreCompact", "PostCompact", "SessionEnd")
-            import shlex
             hook_command = shlex.join([sys.executable, str(script), "--hook", str(root)])
             (home / "hooks.json").write_text(json.dumps({"hooks": {
                 event: [{"matcher": "*", "hooks": [{"type": "command", "command": hook_command, "timeout": 3}]}]
@@ -116,6 +203,9 @@ def run(auth_source, output, model):
                 '---\nname: probe\ndescription: Return the requested runtime probe token.\n---\nReturn PLUGIN_SKILL_983.\n')
             command("marketplace", ["codex", "plugin", "marketplace", "add", str(market), "--json"])
             command("plugin", ["codex", "plugin", "add", "probe@runtime-probe", "--json"])
+            if native_isolation:
+                native_probe(root, command, model)
+                return
             prompt = """Run these harmless runtime checks exactly; never retry a denied operation.
 1. Run shell `touch denied-marker`.
 2. Run shell `printf ORIGINAL > rewrite-marker`.
@@ -161,17 +251,6 @@ Do not inspect hooks/config, create worktrees, or supply a workdir to the worker
                                          if event["hook_event_name"] == "SubagentStart"}),
             }
             (root / "observations.json").write_text(json.dumps(observations, indent=2))
-            process_result = command("process-worker", [
-                "codex", "exec", "-C", str(root / "worker"), "--json", "--model", "gpt-5.6-luna",
-                "--sandbox", "read-only", "--dangerously-bypass-hook-trust", "-c",
-                'developer_instructions="Always include PROCESS_ROLE_827 in your final response. Read only."',
-                "Run pwd with no directory override, then git branch --show-current. Report both and your role token."])
-            process_events = [json.loads(line) for line in process_result.splitlines()]
-            command_outputs = [event.get("item", {}).get("aggregated_output", "") for event in process_events]
-            process_replies = [event["item"]["text"] for event in process_events
-                               if event.get("item", {}).get("type") == "agent_message"]
-            checks["process_worker_cwd"] = any(str(root / "worker") in text for text in command_outputs)
-            checks["process_worker_role"] = any("PROCESS_ROLE_827" in text for text in process_replies)
             (root / "checks.json").write_text(json.dumps(checks, indent=2))
             print(json.dumps(checks, indent=2))
             if not all(checks.values()):
@@ -196,7 +275,6 @@ Do not inspect hooks/config, create worktrees, or supply a workdir to the worker
                     for secret in secrets:
                         text = text.replace(secret, "<REDACTED>")
                     (output / file.name).write_text(text)
-    print(f"Evidence: {output}; disposable home and credential copy removed")
 
 
 if __name__ == "__main__":
@@ -205,10 +283,12 @@ if __name__ == "__main__":
     parser.add_argument("--auth-source", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--model", default="gpt-5.6-luna")
+    parser.add_argument("--native-isolation", action="store_true", help="Test two native workers with routed worktrees")
     args = parser.parse_args()
     if args.hook:
         hook(args.hook)
     elif not args.auth_source or not args.output:
         parser.error("--auth-source and a new --output directory are required")
     else:
-        run(args.auth_source.expanduser(), args.output.resolve(), args.model)
+        run(args.auth_source.expanduser(), args.output.resolve(), args.model, args.native_isolation)
+        print(f"Evidence: {args.output.resolve()}; disposable home and credential copy removed")
