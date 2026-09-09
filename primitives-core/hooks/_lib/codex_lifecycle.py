@@ -4,6 +4,10 @@ import json
 import os
 
 
+class PendingMeasurement(ValueError):
+    """The runtime has not emitted its first token_count yet."""
+
+
 def enabled():
     return os.environ.get("ATELIER_HARNESS") == "codex"
 
@@ -46,6 +50,7 @@ def measure(path):
     model = None
     info = None
     started = None
+    saw_token_count = False
     for item in entries(path):
         body = item.get("payload") or {}
         if item.get("type") == "session_meta":
@@ -53,7 +58,11 @@ def measure(path):
         elif item.get("type") == "turn_context":
             model = body.get("model") or model
         elif item.get("type") == "event_msg" and body.get("type") == "token_count":
-            info = body.get("info") or info
+            saw_token_count = True
+            candidate = body.get("info")
+            info = candidate if isinstance(candidate, dict) else None
+    if not saw_token_count:
+        raise PendingMeasurement("runtime token_count initialization pending")
     usage = (info or {}).get("last_token_usage") or {}
     tokens = usage.get("total_tokens")
     window = (info or {}).get("model_context_window")

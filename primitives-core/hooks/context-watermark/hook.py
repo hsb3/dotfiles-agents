@@ -404,6 +404,8 @@ def _measure(transcript_path, project_dir, session_id, cwd):
     if codex_lifecycle.enabled():
         try:
             measured = codex_lifecycle.measure(transcript_path)
+        except codex_lifecycle.PendingMeasurement as exc:
+            return None, None, None, exc, None
         except (OSError, ValueError) as exc:
             return None, None, None, str(exc), None
         complexity, tracked = _session_complexity(session_id, cwd)
@@ -421,7 +423,7 @@ def _measure(transcript_path, project_dir, session_id, cwd):
 
 
 def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
-         soft=None, hard=None, error=None):
+         soft=None, hard=None, error=None, pending=False):
     row = {
         "scope": scope,
         "session_id": session_id,
@@ -449,6 +451,8 @@ def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
             row["sources"]["hard"] = info.get("hard_source")
     if error:
         row["error"] = error
+    if pending:
+        row["pending"] = True
     return row
 
 
@@ -461,9 +465,12 @@ def handle_session(payload, log):
     ctx_tokens, model, tiers, error, info = _measure(
         payload.get("transcript_path"), project_dir, session_id, cwd)
     if error:
-        if codex_lifecycle.enabled():
+        pending_measurement = isinstance(error, codex_lifecycle.PendingMeasurement)
+        if codex_lifecycle.enabled() and not pending_measurement:
             codex_lifecycle.diagnostic(error)
-        log(_row("session", session_id, None, "none", False, error=error))
+        log(_row("session", session_id, None, "none", False,
+                 error=None if pending_measurement else error,
+                 pending=pending_measurement))
         return
 
     soft, hard = tiers
@@ -524,9 +531,12 @@ def handle_subagent(payload, log):
     ctx_tokens, model, tiers, error, info = _measure(
         transcript, project_dir, session_id, cwd)
     if error:
-        if codex_lifecycle.enabled():
+        pending_measurement = isinstance(error, codex_lifecycle.PendingMeasurement)
+        if codex_lifecycle.enabled() and not pending_measurement:
             codex_lifecycle.diagnostic(error)
-        log(dict(_row("subagent", session_id, None, "none", False, error=error),
+        log(dict(_row("subagent", session_id, None, "none", False,
+                      error=None if pending_measurement else error,
+                      pending=pending_measurement),
                  agent_id=agent_id))
         return
 
