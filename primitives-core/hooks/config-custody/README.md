@@ -1,8 +1,12 @@
 # config-custody
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 Makes a project's ownership map machine-readable. `PreToolUse` on `Edit`, `Write`, `MultiEdit`, and
 `NotebookEdit`: when a **subagent** tries to edit a path listed under `protected:` in
-`.claude/atelier.local.md`, the hook denies the call and tells the worker what to do instead —
+the selected `atelier.local.md`, the hook denies the call and tells the worker what to do instead —
 stop and report, do not route around it.
 
 The main session is never restricted. No `agent_id` in the payload means the orchestrator is
@@ -21,7 +25,7 @@ holds at the point the edit happens rather than at the point someone remembers t
 
 ## Activation
 
-Both hooks are inert until `<project>/.claude/atelier.local.md` exists and turns them on. YAML
+Both hooks are inert until the harness-selected activation path exists and turns them on. YAML
 frontmatter, parsed by a small tolerant reader (stdlib only, no PyYAML):
 
 ```markdown
@@ -55,9 +59,9 @@ activation file supplies the patterns (**policy**), and what the edited path is 
 Policy resolves in this order, first hit wins:
 
 1. `ATELIER_ACTIVATION_FILE` — an explicit override, never re-resolved.
-2. `.claude/atelier.local.md` in the linked worktree the **edited file** sits in — including when
+2. the selected `atelier.local.md` in the linked worktree the **edited file** sits in — including when
    that worktree *is* the project dir — read at `HEAD` via `git show`, never from disk.
-3. `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` on disk, falling back to the payload `cwd`'s.
+3. harness-selected project policy (see above) on disk, falling back to the payload `cwd`'s.
 4. The **main checkout's** copy, when 3 holds no file and that dir is a linked worktree — asked via
    `git rev-parse --git-common-dir`, so an activation file that is gitignored and therefore never
    travelled still governs the worktree it did not reach.
@@ -66,11 +70,11 @@ Step 2 is tried only when that worktree holds a copy on disk, so a tree with no 
 extra; when it does hold one, the `git show` is one subprocess per `Edit`/`Write` — measured at
 ~50 ms end to end on a live worktree. Both git reads are bounded at 3 s and can run on the same
 call, so the worst case is 6 s plus interpreter startup, inside the 10 s `config.json` declares
-with room to spare. Each failure falls to the next step, so with no `git` on `PATH` policy comes
+with room to spare. A failed read falls to the next step; a selected invalid or oversized policy stays off, so with no `git` on `PATH` policy comes
 from step 3 on disk, which is where it came from before any of this resolution existed.
 
 **The committed version is what governs, deliberately, and an uncommitted one has no effect at
-all.** Editing your own `.claude/atelier.local.md` is a permitted `Edit` in most projects, so
+all.** Editing the selected `atelier.local.md` is a permitted `Edit` in most projects, so
 reading it from disk would let a worker turn the gate off for the rest of the session with one
 tool call and no trace. Untracked, deleted, unborn `HEAD`, no `git`, timeout: none of those is a
 committed copy, and each falls through to step 3.
@@ -142,7 +146,7 @@ governed at all. No subprocess: a handful of `os.path` calls on the miss.
 | Env var | Default | Meaning |
 |---|---|---|
 | `CLAUDE_PROJECT_DIR` | set by Claude Code | Jurisdiction anchor; falls back to the payload `cwd` |
-| `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Activation file location |
+| `ATELIER_ACTIVATION_FILE` | harness-selected project policy (see above) | Activation file location |
 | `ATELIER_CUSTODY_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/config-custody.jsonl` | Ledger |
 
 ## Design notes

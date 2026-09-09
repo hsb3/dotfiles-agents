@@ -112,5 +112,5 @@ python3 "$PLUGIN_ROOT/hooks/_lib/codex_roles.py" /path/to/project --plugin-root 
 
 Start a fresh session and trust the package hooks in `/hooks`. The native `worker-context` and `worktree-isolation` hooks inject
 canonical role instructions and enforce each role’s dispatch and patch-tool exclusions.
-They do not require Atelier activation or provide worktree isolation; shell access remains
-subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.
+These roles run without an Atelier activation file. Install Atelier separately for worktree
+isolation; shell access remains subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.

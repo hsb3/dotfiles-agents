@@ -1,5 +1,9 @@
 # handoff-freshness-guard
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 Guards the handoff loop's "produce" edge: before compaction proceeds it checks whether
 the project's handoff file is fresh. A manual `/compact` blocks with instructions to
 run `/handoff` first; an auto-compaction never blocks (it could wedge the session near
@@ -21,7 +25,7 @@ Env-overridable; shipped wiring leaves both at hook.py's built-in defaults:
 
 **Per-project handoff location override.** A project that keeps its handoff somewhere
 other than the standard candidate paths can say so with a `handoff:` key in
-`.claude/atelier.local.md`. Two forms.
+the selected `atelier.local.md`. Two forms.
 
 File mode — a bare scalar, or `{mode: file, path: ...}`:
 

@@ -37,16 +37,16 @@ isolate: writers           # off (default when absent) | writers | [builder, my-
 # handoff: .claude/HANDOFF.md
 #
 # Or, for a handoff that lives on a tracker/board outside the repo (external mode):
-# `stamp` is a freshness signal /handoff touches instead of writing a file; `location`
+# `stamp` is a freshness signal the handoff skill touches instead of writing a file; `location`
 # is free text describing where the real handoff lives. The same fail-open rule applies
 # to `stamp` as to the scalar path above — missing, blank, or out-of-root leaves this
 # inert and the standard search runs.
 # handoff:
 #   mode: external
-#   stamp: .claude/handoff.stamp
-#   location: Kaneo board task DFA-233
+#   stamp: .claudethe handoff skill.stamp
+#   location: tracker issue PROJECT-123
 
-# context-watermark: where the /handoff nudge fires. Every sub-key is optional and
+# context-watermark: where the the handoff skill nudge fires. Every sub-key is optional and
 # independent — `soft` and `hard` are absolute token counts, `complexity` is a
 # multiplier on both. Anything absent, blank, or not a positive number leaves that
 # one computed from the lead model's context window, so this key is only worth

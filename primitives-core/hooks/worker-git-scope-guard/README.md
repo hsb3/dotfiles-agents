@@ -1,12 +1,16 @@
 # worker-git-scope-guard
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 Refuses a **subagent's** mutating git call that would destroy work the subagent does not
 own. `PreToolUse` on `Bash`, two independent halves:
 
 | Half | Fires when | Armed by |
 |---|---|---|
 | **Stash in a shared tree** | a worker runs a mutating `git stash` form while the resolved directory is the **main checkout**, not its own linked worktree | nothing — live wherever the hook is installed |
-| **Write on a protected branch** | `commit`, `merge`, `rebase`, `cherry-pick`, `revert`, `am` with HEAD on a protected branch, or a `push` whose refspec targets one | `protected-branches:` in `.claude/atelier.local.md` |
+| **Write on a protected branch** | `commit`, `merge`, `rebase`, `cherry-pick`, `revert`, `am` with HEAD on a protected branch, or a `push` whose refspec targets one | `protected-branches:` in the selected `atelier.local.md` |
 
 Read-only git never fires. Neither do the read forms of the verbs above: `stash list` and
 `stash show` are how a session orients, and are never blocked — the same read/write split
@@ -56,7 +60,7 @@ and a guard that is off protects nobody.
 
 ## Configuration
 
-One key, in the project's `.claude/atelier.local.md` frontmatter:
+One key, in the project's selected `atelier.local.md` frontmatter:
 
 ```yaml
 protected-branches:
@@ -88,7 +92,7 @@ hook. It is armed by the shape of the checkout, not by a setting.
 In order, first hit wins:
 
 1. `$ATELIER_ACTIVATION_FILE`, if set. It wins outright and is never second-guessed.
-2. `<project>/.claude/atelier.local.md`.
+2. the harness-selected activation path.
 3. **The main checkout's copy, when the project directory is a linked worktree.**
 
 That third step exists because without it this half switches itself off precisely where it

@@ -26,7 +26,7 @@ Contract (PreCompact):
     default is possible without special-casing exit codes.
   - Fail-open: any internal error -> exit 0, no JSON (compaction proceeds).
 
-Per-project override: a `handoff:` key in `.claude/atelier.local.md` either
+Per-project override: a `handoff:` key in the selected `atelier.local.md` either
 names the project's handoff file (`handoff: docs/HANDOFF.md`), or declares
 that the handoff lives outside the repo entirely — on a tracker board, say —
 with a stamp file standing in as its only freshness signal:
@@ -94,10 +94,9 @@ def _describe_candidates(paths):
 CANDIDATE_PATHS_DESC = _describe_candidates(CANDIDATE_PATHS)
 
 # ---------------------------------------------------------------------------
-# Per-project override (.claude/atelier.local.md `handoff:` key)
+# Per-project override (the selected atelier.local.md `handoff:` key)
 # ---------------------------------------------------------------------------
 
-ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
 HANDOFF_KEY = "handoff"
 
 # A frontmatter block is a few dozen lines; anything larger is not an
@@ -109,7 +108,7 @@ ACTIVATION_MAX_BYTES = 256 * 1024
 def _resolve_project_dir(cwd):
     """CLAUDE_PROJECT_DIR env anchor first, else the resolved payload cwd —
     same anchor config-custody/worker-context use to locate
-    .claude/atelier.local.md, and the same anchor agentlog.resolve_project
+    the selected atelier.local.md, and the same anchor agentlog.resolve_project
     uses for the `project` field on this hook's rows."""
     base = (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or cwd
     try:
@@ -154,26 +153,7 @@ def _main_checkout(path):
     return os.path.dirname(common)
 
 
-def _resolve_activation_path(project_dir):
-    """The activation file this hook reads.
-
-    ATELIER_ACTIVATION_FILE wins outright — an explicit override is never
-    re-resolved. Otherwise it is the project dir's own copy, falling back to
-    the main checkout's copy when no file sits at the direct path and the
-    project dir is a linked worktree. The fallback is lazy — it costs a `git`
-    subprocess only on the miss, and an activation file that IS present in the
-    worktree (a tracked one, at its committed version) still wins.
-    """
-    override = os.environ.get("ATELIER_ACTIVATION_FILE")
-    if override:
-        return override
-    path = os.path.join(project_dir, ACTIVATION_RELPATH)
-    if os.path.isfile(path):
-        return path
-    main_dir = _main_checkout(project_dir)
-    if main_dir == project_dir:
-        return path
-    return os.path.join(main_dir, ACTIVATION_RELPATH)
+_resolve_activation_path = atelier_local.activation_path
 
 
 def _normalize_handoff(children):
@@ -305,7 +285,7 @@ def _find_handoff(cwd):
     not exist — searched is a human-readable description of where the hook
     looked, used only in the block message.
 
-    A valid, in-project-root `handoff:` override in .claude/atelier.local.md
+    A valid, in-project-root `handoff:` override in the selected atelier.local.md
     is authoritative — found or not, it is the only location checked, and
     the standard candidate search below never runs. In external mode the
     file being stat'ed is the stamp, not a handoff; `mode` says which, so

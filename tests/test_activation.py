@@ -27,7 +27,7 @@ HOOKS_DIR = os.path.join(REPO_ROOT, "primitives-core", "hooks")
 BUNDLE_README = os.path.join(REPO_ROOT, "plugins", "atelier", "README.md")
 SKILL_MD = os.path.join(SKILL_DIR, "SKILL.md")
 
-SCRUBBED_ENV = ("CLAUDE_PROJECT_DIR", "ATELIER_ACTIVATION_FILE")
+SCRUBBED_ENV = ("CLAUDE_PROJECT_DIR", "ATELIER_ACTIVATION_FILE", "ATELIER_HARNESS", "CODEX_THREAD_ID")
 
 COMMENT = "# "
 

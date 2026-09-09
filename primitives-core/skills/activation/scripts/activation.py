@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Write and audit `.claude/atelier.local.md`, the per-project activation file.
+"""Write and audit the harness-selected per-project activation file.
 
 Two subcommands:
 
-  create   copy the shipped example into <project-dir>/.claude/ and make sure
-           `.claude/*.local.md` is gitignored.
+  create   copy the shipped example to the selected project policy and make sure
+           the selected local policy is gitignored.
   check    report, key by key, what the enforcement hooks actually resolve —
            separating "not configured" (fine) from "written but inert" (the silent
            failure this tool exists to surface).
@@ -44,10 +44,7 @@ HOOK_NAMES = (
     "context-watermark",
 )
 
-ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
 EXAMPLE_RELPATH = os.path.join("..", "examples", "atelier.local.md")
-GITIGNORE_PATTERN = ".claude/*.local.md"
-GITIGNORE_EQUIVALENTS = (GITIGNORE_PATTERN, "*.local.md", ".claude/*.local.md/")
 
 EXIT_OK = 0
 EXIT_PROBLEM = 1
@@ -227,7 +224,7 @@ def evaluate(project_dir, modules):
     watermark = modules["context-watermark"]
 
     # The hooks all resolve the activation path the same way (ATELIER_ACTIVATION_FILE
-    # first, else <project-dir>/.claude/atelier.local.md), so ask one of them rather
+    # first, then harness-local / legacy / inherited policy), so ask one of them rather
     # than recomputing it: this line is ground truth about which file is in play.
     path = worker._resolve_activation_path(project_dir)
 
@@ -237,8 +234,10 @@ def evaluate(project_dir, modules):
         size = os.path.getsize(path)
         with open(path, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
-    except OSError:
+    except OSError as exc:
         result["exists"] = False
+        if os.environ.get("ATELIER_ACTIVATION_FILE") or os.path.lexists(path):
+            result["problems"].append("selected activation file is unreadable or missing: " + str(exc))
         return result
     result["exists"] = True
 
@@ -468,6 +467,9 @@ def render(result, out):
     print("", file=out)
 
     if not result.get("exists"):
+        if result["problems"]:
+            print("ERROR  " + "; ".join(result["problems"]), file=out)
+            return EXIT_PROBLEM
         print("not configured - no activation file here, so every key is off and no "
               "hook acts.", file=out)
         return EXIT_OK
@@ -522,23 +524,30 @@ def cmd_check(project_dir, out):
     return render(evaluate(project_dir, modules), out)
 
 
-def _ensure_gitignore(project_dir, out):
-    """`.claude/*.local.md` must be ignored: the file is per-machine, per-project."""
+def _ensure_gitignore(project_dir, out, dest):
+    """Ignore the selected per-machine, per-project policy."""
+    relpath = os.path.relpath(dest, project_dir).replace(os.sep, "/")
+    if relpath.startswith("../"):
+        print("note   activation is outside this project; no ignore rule added", file=out)
+        return
+    pattern = relpath.rsplit("/", 1)[0] + "/*.local.md" if relpath in (
+        ".claude/atelier.local.md", ".codex/atelier.local.md") else relpath
+    equivalents = (pattern, "*.local.md", pattern + "/")
     path = os.path.join(project_dir, ".gitignore")
     if not os.path.isfile(path):
         print("note   no .gitignore here, so nothing was changed - ignore "
-              "{0} however this project does it.".format(GITIGNORE_PATTERN), file=out)
+              "{0} however this project does it.".format(pattern), file=out)
         return
     with open(path, encoding="utf-8", errors="replace") as fh:
         text = fh.read()
-    if any(line.strip() in GITIGNORE_EQUIVALENTS for line in text.splitlines()):
+    if any(line.strip() in equivalents for line in text.splitlines()):
         print("ok     .gitignore already ignores it", file=out)
         return
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(("" if text.endswith("\n") or not text else "\n")
                  + "\n# atelier per-project activation - local, never committed\n"
-                 + GITIGNORE_PATTERN + "\n")
-    print("wrote  {0} appended to {1}".format(GITIGNORE_PATTERN, path), file=out)
+                 + pattern + "\n")
+    print("wrote  {0} appended to {1}".format(pattern, path), file=out)
 
 
 def cmd_create(project_dir, force, out):
@@ -548,8 +557,12 @@ def cmd_create(project_dir, force, out):
         print("ERROR  the shipped example is missing: {0}".format(example), file=out)
         return EXIT_ERROR
 
-    dest = os.path.join(project_dir, ACTIVATION_RELPATH)
-    if os.path.exists(dest) and not force:
+    modules, tried = load_hooks()
+    if modules is None:
+        print("ERROR  cannot find the atelier hooks: " + ", ".join(tried), file=out)
+        return EXIT_ERROR
+    dest = modules["worker-context"]._resolve_activation_path(project_dir)
+    if os.path.lexists(dest) and not force:
         print("refused  {0} already exists - not overwriting it.".format(dest), file=out)
         print("         Re-run with --force to replace it, or edit it in place.", file=out)
         return EXIT_PROBLEM
@@ -557,8 +570,14 @@ def cmd_create(project_dir, force, out):
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     shutil.copyfile(example, dest)
     print("wrote  {0}".format(dest), file=out)
-    _ensure_gitignore(project_dir, out)
-    print("next   python3 {0} check".format(os.path.abspath(__file__)), file=out)
+    _ensure_gitignore(project_dir, out, dest)
+    harness = os.environ.get("ATELIER_HARNESS", "claude-code")
+    if harness == "codex":
+        text = Path(dest).read_text()
+        text = text.replace('"${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py" check',
+                            '"' + os.path.abspath(__file__) + '" check --harness codex')
+        Path(dest).write_text(text)
+    print("next   python3 {0} check --harness {1}".format(os.path.abspath(__file__), harness), file=out)
     return EXIT_OK
 
 
@@ -655,12 +674,12 @@ def main(argv=None, out=None):
     out = out or sys.stdout
     parser = argparse.ArgumentParser(
         prog="activation.py",
-        description="Write and audit .claude/atelier.local.md, the per-project "
+        description="Write and audit the harness-selected per-project "
                     "activation file for the atelier plugin.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     create = sub.add_parser(
-        "create", help="copy the shipped example to <project-dir>/.claude/ and "
+        "create", help="copy the shipped example to the selected project policy and "
                        "gitignore it")
     create.add_argument("--force", action="store_true",
                         help="overwrite an existing activation file")
@@ -672,13 +691,12 @@ def main(argv=None, out=None):
     setup = sub.add_parser("codex-setup", help="generate project-local Codex roles and writable roots")
     for p in (create, check, setup):
         p.add_argument("--harness", choices=("claude-code", "codex"),
-                       default=os.environ.get("ATELIER_HARNESS", "claude-code"))
+                       default=os.environ.get("ATELIER_HARNESS") or ("codex" if os.environ.get("CODEX_THREAD_ID") else "claude-code"))
         p.add_argument("--project-dir", default=None,
                        help="project root (default: $CLAUDE_PROJECT_DIR, else cwd)")
 
     args = parser.parse_args(argv)
-    if args.harness == "codex" or args.command == "codex-setup":
-        os.environ["ATELIER_HARNESS"] = "codex"
+    os.environ["ATELIER_HARNESS"] = "codex" if args.command == "codex-setup" else args.harness
     project_dir = _project_dir(args.project_dir)
     if args.command == "codex-setup":
         return codex_setup(project_dir, out)

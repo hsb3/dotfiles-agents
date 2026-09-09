@@ -1,4 +1,4 @@
-"""atelier_local — read one top-level key out of `.claude/atelier.local.md`.
+"""atelier_local — select the harness-appropriate activation file and parse a top-level key.
 
 The activation file's frontmatter, parsed narrowly: one named key as a scalar, a
 mapping of sub-keys, or a sequence. Everything else is ignored, and anything
@@ -7,23 +7,65 @@ unreadable answers None, so a malformed file behaves exactly as an absent one
 
 Every hook that reads the activation file parses it here, and nothing else does
 (ADR 0017: `_lib/` is a member of every hooks assembly, so importing it is safe
-where importing another hook's module is not). Each hook keeps its OWN sourcing
-— which bytes to parse, its size cap, its fail-open default — because those
-rules differ per hook and are load-bearing; only the parsing is shared.
+where importing another hook's module is not). Each hook keeps its own byte-source
+and parsing limits, including committed custody policy. Harness paths and worktree inheritance are selected here for every reader.
 
 Stdlib-only, Python 3.9 compatible.
 """
 
 import os
+import subprocess
 
-ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
 ACTIVATION_MAX_BYTES = 256 * 1024
 
 
-def activation_path(project_dir):
-    """The activation file to read. `ATELIER_ACTIVATION_FILE` wins outright."""
-    return os.environ.get("ATELIER_ACTIVATION_FILE") or os.path.join(
-        project_dir, ACTIVATION_RELPATH)
+def harness_name():
+    """An explicit harness wins over inherited native-session markers."""
+    return os.environ.get("ATELIER_HARNESS") or (
+        "codex" if os.environ.get("CODEX_THREAD_ID") else "claude-code")
+
+
+def activation_candidates(project_dir):
+    """Ordered local policy names; existence and parsing never change this order."""
+    directories = (".codex", ".claude") if harness_name() == "codex" else (".claude",)
+    return [os.path.join(project_dir, directory, "atelier.local.md")
+            for directory in directories]
+
+
+def activation_path(project_dir, inherit=True):
+    """Select one file: explicit override, harness-local file, legacy, main checkout.
+
+    A present malformed/unreadable file (including a dangling symlink) still wins.
+    Only absence permits inheritance; never merge policies or migrate user files.
+    """
+    override = os.environ.get("ATELIER_ACTIVATION_FILE")
+    if override:
+        return os.path.abspath(os.path.join(project_dir or os.getcwd(), override))
+    if not project_dir:
+        return None
+    candidates = activation_candidates(project_dir)
+    for path in candidates:
+        if os.path.lexists(path):
+            return path
+    if inherit:
+        try:
+            # Discovery belongs to this cwd, even when called from a routed worker tool.
+            env = {key: value for key, value in os.environ.items()
+                   if not key.startswith("GIT_")}
+            proc = subprocess.run(
+                ["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
+                env=env, capture_output=True, text=True, timeout=3)
+            if proc.returncode == 0 and proc.stdout.strip():
+                common = os.path.abspath(os.path.join(project_dir, proc.stdout.strip()))
+                if os.path.basename(common) == ".git":
+                    main = os.path.dirname(common)
+                    if main != os.path.abspath(project_dir):
+                        for path in activation_candidates(main):
+                            if os.path.lexists(path):
+                                return path
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return candidates[0]
 
 
 def unquote(value):

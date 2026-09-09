@@ -54,7 +54,7 @@ its commitment, the other cuts comments that cannot.
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. Its defect branch now cites `test-quality` (ships in `solo-skills`) for what "red observed" has to mean, so a fix cannot be encoded as a test that could never fail. |
 | `comment-hygiene` | skill | Strip history and commentary out of source comments before the work lands: harvest the reasoning onto its tracker item first, then keep only what a competent reader would break something without. The prose counterpart of `deletion-pass` — that one cuts code that cannot name its commitment, this one cuts comments that cannot. |
-| `activation` | skill | Create and verify the per-project `.claude/atelier.local.md` activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
+| `activation` | skill | Create and verify the harness-appropriate per-project activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
 | `activate` | command | `/atelier:activate` — arms atelier in the current project: creates the activation file if it is missing, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and is safe to hand to an agent: it never overwrites an existing file unasked. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Declares the `light` tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
@@ -89,7 +89,7 @@ codex plugin add atelier@dotfiles-agents
 ```
 
 Use Python 3.11 or newer for Codex setup. Invoke the installed activation skill for the consumer project. It creates the local
-`.claude/atelier.local.md` policy, then its `codex-setup` command renders five canonical
+`.codex/atelier.local.md` policy (preserving an existing legacy `.claude` policy), then its `codex-setup` command renders five canonical
 `atelier-<role>` profiles under `.codex/agents/` and project sandbox writable roots. It preserves
 user-owned and edited configuration. Restart the session
 and review/trust the installed hooks in native `/hooks`; setup cannot grant trust.
@@ -146,17 +146,29 @@ Meanwhile, every delegation
 Everything ships with working defaults and none of this is required. There are two override
 layers, and the practical difference between them is when a change takes effect.
 
-### Per-project settings — `.claude/atelier.local.md`
+### Per-project settings — `atelier.local.md`
 
 The Claude Code convention for plugin-local settings is a `.claude/<plugin-name>.local.md` file
 in the project root: YAML frontmatter for the settings, markdown below it for your own notes.
-atelier reads `.claude/atelier.local.md`. It does not exist by default, and its absence is the
-normal state — without it the enforcement layer is entirely off. Run `/atelier:activate` and it
+Fresh Codex projects use `.codex/atelier.local.md`; Claude Code uses `.claude/atelier.local.md`. It does not exist by default, and its absence is the
+normal state — without it the enforcement layer is entirely off. In Claude Code, run `/atelier:activate` and it
 is done for you: the file is created if missing, then checked, and you get back what each hook
 actually resolved in plain language. Ask an agent to run it and the same thing happens
 unattended. Reach for either instead of hand-copying the schema block below.
 
-Under the command sits the `activation` skill, which is what an agent loads when it needs to
+Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
+existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
+`.claude` file. A relative explicit override is anchored at the target project root. When
+both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
+malformed, unreadable or missing explicit file never falls back to another policy; `check`
+reports it. A linked worktree uses its own selected file, or inherits the main checkout's
+selection when neither local candidate exists. Config custody retains its additional rule:
+worker edits are governed by the selected policy committed at that worktree's HEAD, so
+uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
+
+In Codex invoke the activation skill directly and follow the Codex setup steps above.
+
+Under the Claude command sits the `activation` skill, which is what an agent loads when it needs to
 reason about activation mid-task rather than just perform it. To drive it directly from the
 project root:
 
@@ -304,7 +316,7 @@ machine-local change):
 | `LANE_SNAPSHOT_ROOT` | derived (hook payload `cwd`, else the script's own repo) | Repo whose lanes are snapshotted; overrides the derivation |
 | `BRANCH_ACTIVITY_PEER_TTL_SECONDS` | `3600` | How recently another session must have started on this branch to be reported as possibly live (its process must also still exist). `0` reports moves only |
 | `BRANCH_ACTIVITY_GH` | `1` | `0` skips the merged-PR lookup entirely (offline, or no `gh`) |
-| `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Where the activation file lives |
+| `ATELIER_ACTIVATION_FILE` | Harness-selected project policy | Explicit activation file override; relative paths use the project root |
 | `<HOOK>_LOG_PATH` | the hook's stream under the log root (see **Ledgers** below) | Overrides one stream's path. `CONTEXT_WATERMARK_LOG_PATH` → `context-watermark`; `DELEGATION_WATERMARK_LOG_PATH` → `delegation-watermark`; `ATELIER_CUSTODY_LOG_PATH` → `config-custody`; `HANDOFF_GUARD_LOG_PATH` → `handoff-guard`; `HANDOFF_SURFACER_LOG_PATH` → `handoff-surfacer`; `SUBAGENT_TELEMETRY_LOG_PATH` → `delegation`; `WORKTREE_ISOLATION_LOG_PATH` → `worktree-isolation`; `LIVE_WORKER_GIT_GUARD_LOG_PATH` → `live-worker-git-guard`; `MANAGER_PACKAGE_GATE_LOG_PATH` → `manager-package-gate`; `LANE_SNAPSHOT_LOG_PATH` → `lane-snapshot`; `BRANCH_ACTIVITY_LOG_PATH` → `branch-activity` |
 | `XDG_DATA_HOME` | `~/.local/share` | Base of the log root. Ignored when relative. |
 

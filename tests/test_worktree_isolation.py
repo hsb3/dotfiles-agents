@@ -425,7 +425,7 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.assertEqual(
             body["systemMessage"],
             "atelier worktree-isolation: 'builder' dispatched with isolation:worktree "
-            "(isolate: writers in .claude/atelier.local.md). It gets its own checkout, "
+            "(isolate: writers in the selected atelier.local.md). It gets its own checkout, "
             "so uncommitted work in this tree is NOT visible to it.",
         )
         self.assertFalse(self._rows()[0]["nested"])

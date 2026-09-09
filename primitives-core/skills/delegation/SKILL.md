@@ -585,7 +585,7 @@ over 20k → 0.75). At a 200k window that is 120k/160k; at 1M it is still 120k/1
 because percent-of-window thresholds are inert against the ~967k auto-compact default; at 64k it
 is 38.4k/51.2k. An unknown model falls back to the absolute pair and says so in its ledger row.
 Override with `CONTEXT_WATERMARK_SOFT`/`_HARD`, or a `watermark:` key (`soft`/`hard`/`complexity`)
-in `.claude/atelier.local.md` — env beats file beats computed. A delegated worker is watched too,
+in the selected activation file — env beats file beats computed. A delegated worker is watched too,
 on `PostToolUse`, at half the session's soft line and with no hard tier: it cannot hand off or
 clear, so the nudge tells it to wrap up and report. The fresh session is `/clear`; downtiering is
 a `model:` value on the dispatch; and the handoff skill has no slash command — a command would
