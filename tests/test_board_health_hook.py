@@ -29,15 +29,29 @@ import sys
 import tempfile
 import unittest
 
-HOOK_PATH = os.path.join(
-    os.path.dirname(__file__), "..", ".claude", "hooks", "board-health", "hook.py",
-)
+HOOK_DIR = os.path.join(os.path.dirname(__file__), "..", ".claude", "hooks", "board-health")
+HOOK_PATH = os.path.join(HOOK_DIR, "hook.py")
+CONFIG_PATH = os.path.join(HOOK_DIR, "config.json")
 
 SNAPSHOT = json.dumps({
     "board": {"name": "fixture", "backend": "kata"},
     "fields": {"labels": {"options": ["area:docs"]}},
     "items": [{"key": "aaaa", "title": "t", "state": "open", "labels": ["area:docs"],
                "fields": {"priority": "P1"}}],
+})
+
+EMPTY_SNAPSHOT = json.dumps({
+    "board": {"name": "fixture", "backend": "kata"},
+    "fields": {"labels": {"options": []}},
+    "items": [],
+})
+
+# board_health.analyze() short-circuits on no OPEN items, so an all-done snapshot exits 0
+# the same way an empty one does — both judged nothing.
+ALL_DONE_SNAPSHOT = json.dumps({
+    "board": {"name": "fixture", "backend": "kata"},
+    "fields": {"labels": {"options": ["area:docs"]}},
+    "items": [{"key": "aaaa", "title": "t", "state": "done", "labels": [], "fields": {}}],
 })
 
 CHECKER_CLEAN_STDOUT = "board health — fixture (kata) · 1 open item(s)\n\nclean — no decay found"
@@ -197,6 +211,27 @@ class CouldNotMeasureTests(BoardHealthHookBase):
         self.assertIn(self.hook.UNMEASURED_MARKER, line)
         self.assertIn("adapter", line)
 
+    def test_an_empty_item_list_is_could_not_measure_not_clean(self):
+        """A board with no open items exits 0 from board_health.analyze() having judged
+        nothing, and a degraded backend answering with an empty result set is the same
+        bytes on the wire. The hook must not claim a measurement happened."""
+        run = FakeRun(self._proc(0, EMPTY_SNAPSHOT), self._proc(0, CHECKER_CLEAN_STDOUT))
+        line = self.hook.verdict(self._config(), run=run)
+        self.assertIn(self.hook.UNMEASURED_MARKER, line)
+        self.assertNotIn(self.hook.CLEAN_MARKER, line)
+        self.assertIn("no open items", line)
+
+    def test_an_all_done_item_list_is_could_not_measure_too(self):
+        run = FakeRun(self._proc(0, ALL_DONE_SNAPSHOT), self._proc(0, CHECKER_CLEAN_STDOUT))
+        line = self.hook.verdict(self._config(), run=run)
+        self.assertIn(self.hook.UNMEASURED_MARKER, line)
+        self.assertNotIn(self.hook.CLEAN_MARKER, line)
+
+    def test_an_empty_export_never_reaches_the_checker(self):
+        run = FakeRun(self._proc(0, EMPTY_SNAPSHOT), self._proc(0, CHECKER_CLEAN_STDOUT))
+        self.hook.verdict(self._config(), run=run)
+        self.assertEqual(len(run.calls), 1, "the checker was run on a board with nothing to judge")
+
     def test_checker_exit_two_is_could_not_measure_not_findings(self):
         run = FakeRun(self._proc(0, SNAPSHOT),
                       self._proc(2, "", "snapshot is not a board snapshot"))
@@ -226,6 +261,15 @@ class AntiFalseCleanTests(BoardHealthHookBase):
              dict(run=FakeRun(self._proc(0, "not json")))),
             ("export is JSON but not a board snapshot",
              dict(run=FakeRun(self._proc(0, '{"ok": true}')))),
+            # Both queue a clean checker result, because board_health.py really does exit 0
+            # on a snapshot with nothing to judge — a FakeRun that ran dry would make these
+            # pass on a raised AssertionError rather than on the hook getting it right.
+            ("export carries no open items",
+             dict(run=FakeRun(self._proc(0, EMPTY_SNAPSHOT),
+                              self._proc(0, CHECKER_CLEAN_STDOUT)))),
+            ("export carries only done items",
+             dict(run=FakeRun(self._proc(0, ALL_DONE_SNAPSHOT),
+                              self._proc(0, CHECKER_CLEAN_STDOUT)))),
             ("checker exits 2",
              dict(run=FakeRun(self._proc(0, SNAPSHOT), self._proc(2, "", "bad input")))),
             ("checker exits an unknown code",
@@ -281,10 +325,36 @@ class ConfigTests(BoardHealthHookBase):
         self.assertGreater(cfg.timeout, 0)
 
 
+class TimeoutBudgetTests(BoardHealthHookBase):
+    """The docstring's arithmetic, machine-checked against both real numbers.
+
+    The hook runs two subprocesses SEQUENTIALLY, each with the same per-subprocess
+    timeout, so the worst case is twice the default — not once, which is what the
+    docstring claimed until an adversarial run measured 35.1s against a registered 30s
+    and got killed with no verdict at all. This goes red if either number moves such
+    that the harness could win the race again.
+    """
+
+    OVERHEAD_ALLOWANCE = 4.0  # two interpreter starts plus the hook's own
+
+    def test_two_sequential_subprocesses_fit_under_the_registered_hook_timeout(self):
+        with open(CONFIG_PATH, encoding="utf-8") as handle:
+            registered = json.load(handle)["timeout"]
+        worst_case = 2 * self.hook.DEFAULT_TIMEOUT + self.OVERHEAD_ALLOWANCE
+        self.assertLessEqual(
+            worst_case, registered,
+            f"worst case {worst_case}s (2 x DEFAULT_TIMEOUT {self.hook.DEFAULT_TIMEOUT}s"
+            f" + {self.OVERHEAD_ALLOWANCE}s overhead) exceeds the {registered}s registered in"
+            " config.json — the harness would kill the hook with no verdict, which is the"
+            " silence the could-not-measure verdict exists to prevent",
+        )
+
+
 class EndToEndTests(BoardHealthHookBase):
     """The real invocation: hook JSON on stdin, SessionStart envelope out, exit 0."""
 
     ADAPTER_OK = "import sys; sys.stdout.write(%r)" % SNAPSHOT
+    ADAPTER_EMPTY = "import sys; sys.stdout.write(%r)" % EMPTY_SNAPSHOT
     ADAPTER_FAIL = "import sys; sys.stderr.write('connection refused'); sys.exit(1)"
     CHECKER_CLEAN = "import sys; sys.stdin.read(); print(%r); sys.exit(0)" % CHECKER_CLEAN_STDOUT
     CHECKER_FINDINGS = (
@@ -315,6 +385,13 @@ class EndToEndTests(BoardHealthHookBase):
         context = self._run_hook()
         self.assertIn(self.hook.FINDINGS_MARKER, context)
         self.assertIn("priority-missing", context)
+
+    def test_empty_board_end_to_end(self):
+        self._write(self.adapter, self.ADAPTER_EMPTY)
+        self._write(self.script, self.CHECKER_CLEAN)
+        context = self._run_hook()
+        self.assertIn(self.hook.UNMEASURED_MARKER, context)
+        self.assertNotIn(self.hook.CLEAN_MARKER, context)
 
     def test_missing_kata_binary_end_to_end(self):
         context = self._run_hook(BOARD_HEALTH_KATA_BIN="definitely-not-a-real-binary")

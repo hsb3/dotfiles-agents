@@ -25,9 +25,18 @@ thirty-minute debug respectively, the same house rule scripts/check_labels.py st
 gates that cannot measure.
 
 Named failures: the `kata` binary absent from PATH · the adapter, the checker, or the
-label declaration missing from the tree · the export failing, timing out, or emitting
-something that is not a §2 snapshot · the checker timing out, exiting 2, or exiting any
-code but 0 or 1 · any unexpected exception, reported by its class name.
+label declaration missing from the tree · the export failing, timing out, emitting
+something that is not a §2 snapshot, or coming back with NO OPEN ITEMS · the checker
+timing out, exiting 2, or exiting any code but 0 or 1 · any unexpected exception,
+reported by its class name.
+
+The no-open-items case is the subtle one and is checked HERE rather than in
+`board_health.py`, which is a shipped script with other consumers and whose exit 0 on an
+empty board is defensible on its own terms. What is not defensible is this hook claiming
+a measurement happened: `analyze()` short-circuits on an empty open set, so a daemon
+answering with no rows — the shape a partially degraded backend produces — was
+indistinguishable from a healthy board. Four registered kata projects are legitimately
+empty right now, so this is reachable, not hypothetical.
 
 Environment. Per docs/override-convention.md a hook takes env-var overrides; every one
 here has a default, and a blank or unparseable value falls back to it.
@@ -38,14 +47,24 @@ here has a default, and a blank or unparseable value falls back to it.
     BOARD_HEALTH_ADAPTER     snapshot exporter                (default: <root>/SCRIPTS/kata_board.py)
     BOARD_HEALTH_SCRIPT      decay checker                    (default: <root>/SCRIPTS/board_health.py)
     BOARD_HEALTH_VOCABULARY  declared labels, one per line    (default: <root>/SCRIPTS/core-labels.txt)
-    BOARD_HEALTH_TIMEOUT     seconds per subprocess           (default: 20)
+    BOARD_HEALTH_TIMEOUT     seconds PER SUBPROCESS           (default: 12)
 
     SCRIPTS = primitives-core/skills/board-triage/scripts
 
 The timeout exists because the kata daemon is hosted and remote: an unmeasured board
-costs one line of context, a hung session start costs the session. 20s sits under the
-30s registered in config.json, so this hook's own named timeout reason wins rather than
-the harness killing it with no verdict at all.
+costs one line of context, a hung session start costs the session.
+
+The arithmetic, because it was wrong once. The timeout is PER SUBPROCESS and the two run
+SEQUENTIALLY, so the worst case is TWICE it: 2 x 12s + ~4s of interpreter startup = 28s,
+under the 30s registered in config.json. That is what makes this hook's own named timeout
+reason win rather than the harness killing it with no verdict at all — the silence the
+could-not-measure verdict exists to prevent. It read "20s sits under 30s" until an
+adversarial run measured 35.1s and got killed. A per-subprocess cap was kept over a
+shared wall-clock budget because it is the smaller change and keeps each stage's timeout
+message plainly about that stage; the cost is that the invariant is arithmetic rather
+than structural, so `TimeoutBudgetTests` asserts it from DEFAULT_TIMEOUT and config.json's
+own `timeout` and goes red if either moves. An override raises BOTH stages: keep any
+BOARD_HEALTH_TIMEOUT under half the registered hook timeout.
 
 Output is the SessionStart JSON envelope — {"hookSpecificOutput": {"hookEventName":
 "SessionStart", "additionalContext": ...}} — which is the form every SessionStart hook
@@ -70,7 +89,7 @@ UNMEASURED_MARKER = "board health: COULD NOT MEASURE"
 SCRIPTS = ("primitives-core", "skills", "board-triage", "scripts")
 DEFAULT_PROJECT = "dotfiles-agents"
 DEFAULT_KATA_BIN = "kata"
-DEFAULT_TIMEOUT = 20.0
+DEFAULT_TIMEOUT = 12.0
 DETAIL_CAP = 300
 
 Proc = namedtuple("Proc", "returncode stdout stderr")
@@ -129,12 +148,21 @@ def _run(argv, timeout, stdin=""):
     return Proc(proc.returncode, proc.stdout, proc.stderr)
 
 
-def _is_snapshot(text):
+def open_items(text):
+    """The snapshot's OPEN items, or None when `text` is not a §2 snapshot at all.
+
+    Mirrors `board_health.open_items()` rather than counting raw rows: a snapshot whose
+    every row is done is judged by exactly the same empty set as one with no rows, and
+    both must be told apart from a board that was actually measured.
+    """
     try:
         parsed = json.loads(text)
     except (ValueError, TypeError):
-        return False
-    return isinstance(parsed, dict) and isinstance(parsed.get("items"), list)
+        return None
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("items"), list):
+        return None
+    return [i for i in parsed["items"]
+            if not isinstance(i, dict) or i.get("state", "open") != "done"]
 
 
 def verdict(cfg, run=None, which=shutil.which):
@@ -169,10 +197,18 @@ def verdict(cfg, run=None, which=shutil.which):
                 f"the board export exited {export.returncode} — the hosted kata daemon is"
                 f" unreachable or refused the request: {_detail(export.stderr)}"
             )
-        if not _is_snapshot(export.stdout):
+        items = open_items(export.stdout)
+        if items is None:
             return unmeasured(
                 "the board export produced something that is not a snapshot (board-triage"
                 f" SKILL.md §2 expects an object with an 'items' list): {_detail(export.stdout)}"
+            )
+        if not items:
+            return unmeasured(
+                f"the board export came back with no open items for {cfg.project}, so the decay"
+                " checks would judge an empty set and exit 0 having measured nothing — an idle"
+                " board and a degraded backend are the same answer from here; check the project"
+                " name and that the hosted kata daemon is returning real rows"
             )
 
         try:
