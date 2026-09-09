@@ -127,3 +127,7 @@ claude plugin install atelier@dotfiles-agents
 ```
 
 Ships only in the atelier bundle, recording delegation telemetry for the crew.
+
+## Codex
+
+Codex rows use the shared native worker registry and each worker rollout for identity, model, context, start time, and duration. SubagentStop marks the registry stopped without deleting the checkout; validated resumed tool activity marks it running again in the worker router. Registry entries also supply pending workers for stall reports. Missing usage is recorded and surfaced, never silently reported as zero.

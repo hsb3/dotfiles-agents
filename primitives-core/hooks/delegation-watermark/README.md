@@ -158,3 +158,7 @@ The append path is `hooks/_lib/agentlog.py`; no hook writes its own rows.
 
 The streak distribution is the input to re-calibrating `SOFT` — see `tier-cutoff.md` for the
 sibling protocol on model tiers, and `provenance.md` for what is measured versus assumed.
+
+## Codex
+
+Codex rollout function/custom calls are counted directly. Both native spawn spellings reset the retained-work streak; shell and patch calls count, with the existing coordination-command exemptions. Worker calls are skipped by native agent_id. A missing rollout is reported explicitly.

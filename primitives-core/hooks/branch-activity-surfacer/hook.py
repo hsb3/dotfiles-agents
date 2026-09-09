@@ -49,6 +49,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 
 LOG_STREAM = "branch-activity"
 LOG_PATH_ENV = "BRANCH_ACTIVITY_LOG_PATH"
@@ -137,7 +138,7 @@ def _owner_pid():
             if answer is None:
                 break
             ppid, comm = answer
-            if os.path.basename(comm.split()[0] if comm.split() else comm) == "claude":
+            if os.path.basename(comm.split()[0] if comm.split() else comm) == ("codex" if codex_lifecycle.enabled() else "claude"):
                 return pid
             if ppid <= 1:
                 break
@@ -418,6 +419,9 @@ def _format(branch, head, moved_from, peers, commits, dropped, pr):
 
 def main():
     payload = json.loads(sys.stdin.read())
+    payload = codex_lifecycle.prepare(payload)
+    if payload is None:
+        return
 
     session_id = payload.get("session_id") or "unknown"
     cwd = payload.get("cwd") or os.getcwd()

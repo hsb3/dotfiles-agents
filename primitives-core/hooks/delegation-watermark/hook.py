@@ -48,6 +48,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -225,6 +226,18 @@ def _scan(path):
     dispatches = 0
     delegable_total = 0
 
+    if codex_lifecycle.enabled():
+        for name, args in codex_lifecycle.tool_calls(path):
+            if name in ("spawnagent", "collaborationspawnagent"):
+                dispatches += 1
+                streak = 0
+            elif name in ("execcommand", "shellcommand", "applypatch"):
+                if name != "applypatch" and _is_floor_command(args.get("cmd") or args.get("command")):
+                    continue
+                delegable_total += 1
+                streak += 1
+        return streak, dispatches, delegable_total
+
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
             if TOOL_USE_MARKER not in line:
@@ -294,6 +307,10 @@ def main():
     payload = None
     try:
         payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            payload = codex_lifecycle.prepare(payload)
+            if payload is None:
+                return
 
         # Never nudge a subagent: a worker delegating is not the behavior we want.
         if payload.get("agent_id"):
@@ -306,6 +323,8 @@ def main():
         )
 
         if not transcript_path or not os.path.isfile(transcript_path):
+            if codex_lifecycle.enabled():
+                codex_lifecycle.diagnostic("delegation rollout missing")
             log({
                 "session_id": session_id, "fired": False,
                 "error": "transcript_path missing or not a file",

@@ -59,6 +59,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import codex_lifecycle
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -112,6 +113,8 @@ def _is_managed(agent_type):
     if not isinstance(agent_type, str):
         return False
     name = agent_type.strip().rsplit(":", 1)[-1].rsplit("/", 1)[-1]
+    if codex_lifecycle.enabled() and name.startswith("atelier-"):
+        name = name[len("atelier-"):]
     return name == MANAGED_AGENT
 
 
@@ -128,6 +131,10 @@ def _decide(payload):
 def main():
     try:
         payload = json.loads(sys.stdin.read())
+        if isinstance(payload, dict):
+            payload = codex_lifecycle.prepare(payload)
+            if payload is None:
+                return
         if not isinstance(payload, dict):
             sys.exit(0)
 

@@ -24,6 +24,9 @@ import argparse
 import difflib
 import importlib.util
 import os
+import json
+from pathlib import Path
+import subprocess
 import shutil
 import sys
 
@@ -563,8 +566,57 @@ def cmd_create(project_dir, force, out):
 # CLI
 # ---------------------------------------------------------------------------
 
+def codex_setup(project_dir, out, check=False):
+    """Generate local roles and the narrow writable-root addition; never approve hooks."""
+    roots = _hook_roots()
+    sys.path.insert(0, os.path.join(roots[0], "_lib"))
+    import codex_roles
+    try:
+        import tomllib
+        common = subprocess.check_output(
+            ["git", "-C", project_dir, "rev-parse", "--git-common-dir"], text=True).strip()
+        common = (Path(project_dir) / common).resolve()
+        writable = [str(common / path) for path in
+                    ("atelier-codex/checkouts", "worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
+        config = Path(project_dir) / ".codex/config.toml"
+        text = config.read_text() if config.exists() else ""
+        parsed = tomllib.loads(text)
+        existing = parsed.get("sandbox_workspace_write", {})
+        configured = existing.get("writable_roots", [])
+        missing = [path for path in writable if path not in configured]
+        marker = "# atelier managed writable roots\n"
+        if missing and "sandbox_workspace_write" in parsed:
+            print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
+                  + json.dumps(missing), file=out)
+            return EXIT_PROBLEM
+        codex_roles.setup(project_dir, check=True)
+        if missing and not check:
+            config.parent.mkdir(parents=True, exist_ok=True)
+            config.write_text(text.rstrip() + "\n\n" + marker
+                + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable) + "\n")
+        changed = codex_roles.setup(project_dir, check=check)
+        print(("needs " if check and changed else "ok    ") + " Codex roles: "
+              + (", ".join(str(path) for path in changed) if changed else "current"), file=out)
+        print(("needs " if check and missing else "ok    ") + " Codex writable roots: "
+              + json.dumps(writable), file=out)
+        if not check:
+            exclude = common / "info/exclude"
+            exclude.parent.mkdir(parents=True, exist_ok=True)
+            old = exclude.read_text() if exclude.exists() else ""
+            additions = [line for line in ("/.codex/agents/atelier-*.toml", "/.codex/config.toml")
+                         if line not in old.splitlines()]
+            if additions:
+                exclude.write_text(old.rstrip() + "\n" + "\n".join(additions) + "\n")
+        print("unverified  hook trust: open /hooks in Codex for this project and approve the reviewed atelier hooks. "
+              "Parsed activation settings alone do not prove loaded, enabled, trusted hooks. Restart after setup.", file=out)
+        return EXIT_PROBLEM if check and (changed or missing) else EXIT_OK
+    except (OSError, ValueError, subprocess.SubprocessError, ImportError) as exc:
+        print("ERROR  Codex setup: " + str(exc), file=out)
+        return EXIT_ERROR
+
+
 def _project_dir(value):
-    return os.path.abspath(value or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    return os.path.abspath(value or (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or os.getcwd())
 
 
 def main(argv=None, out=None):
@@ -585,15 +637,27 @@ def main(argv=None, out=None):
         "check", help="report what each key actually resolves to: armed, inert, or "
                       "not configured")
 
-    for p in (create, check):
+    setup = sub.add_parser("codex-setup", help="generate project-local Codex roles and writable roots")
+    for p in (create, check, setup):
+        p.add_argument("--harness", choices=("claude-code", "codex"),
+                       default=os.environ.get("ATELIER_HARNESS", "claude-code"))
         p.add_argument("--project-dir", default=None,
                        help="project root (default: $CLAUDE_PROJECT_DIR, else cwd)")
 
     args = parser.parse_args(argv)
+    if args.harness == "codex" or args.command == "codex-setup":
+        os.environ["ATELIER_HARNESS"] = "codex"
     project_dir = _project_dir(args.project_dir)
+    if args.command == "codex-setup":
+        return codex_setup(project_dir, out)
     if args.command == "create":
         return cmd_create(project_dir, args.force, out)
-    return cmd_check(project_dir, out)
+    if args.harness == "codex":
+        print("Codex parsed policy only; runtime hook trust is checked separately below.", file=out)
+    code = cmd_check(project_dir, out)
+    if args.harness == "codex":
+        code = max(code, codex_setup(project_dir, out, check=True))
+    return code
 
 
 if __name__ == "__main__":

@@ -44,3 +44,7 @@ claude plugin install atelier@dotfiles-agents
 
 Ships in the `atelier` bundle — it arms the hooks the rest of the bundle
 depends on.
+
+## Codex
+
+`codex-setup` renders native roles and project writable roots without touching global config or hook trust. `check --harness codex` verifies generated role/config currency and reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.

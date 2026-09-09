@@ -134,3 +134,7 @@ The append path is `hooks/_lib/agentlog.py`; no hook writes its own rows.
 `decision` is `pass`, `nudge`, or `skip`. A run of `nudge` rows with no following `pass` for the
 same `agent_id` means the correction did not take, and the doctrine — not the hook — is what
 needs the next change.
+
+## Codex
+
+The native `atelier-manager` role is recognized when `ATELIER_HARNESS=codex`. Codex SubagentStop accepts the same block/reason response and one-nudge limit. Other roles remain outside this gate.

@@ -98,7 +98,7 @@ def _covenant(mode):
 
 def _resolve_project_dir(payload_cwd):
     """Env anchor first, else the payload cwd, else None (hook goes inert)."""
-    base = os.environ.get("CLAUDE_PROJECT_DIR") or payload_cwd
+    base = (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or payload_cwd
     if not base or not isinstance(base, str):
         return None
     try:
@@ -225,19 +225,44 @@ def main():
         if not isinstance(payload, dict):
             sys.exit(0)
 
+        role_root = os.environ.get("ATELIER_ROLE_PLUGIN_ROOT")
+        if os.environ.get("ATELIER_HARNESS") == "codex" and role_root:
+            import codex_roles
+            if codex_roles.package_id(role_root) != "atelier":
+                role = payload.get("agent_type")
+                if role in codex_roles.role_names(role_root):
+                    _emit({"hookSpecificOutput": {"hookEventName": "SubagentStart",
+                           "additionalContext": codex_roles.role_instructions(role, role_root)}})
+                return
+
+        context = ""
+        if os.environ.get("ATELIER_HARNESS") == "codex":
+            import codex_workers
+            import codex_roles
+            record = codex_workers.ensure_worker(payload)
+            if record is None:
+                return
+            payload = codex_workers.effective_payload(payload)
+            role = codex_workers.role_name(payload.get("agent_type"))
+            if role in ("builder", "manager", "scout", "reviewer", "code-reviewer"):
+                context = codex_roles.role_instructions(role) + "\n\n"
+            context += "Owned checkout: " + (record.get("worktree") or record["source"]) + "\n"
+
         mode = _load_mode(_resolve_project_dir(payload.get("cwd")))
-        if mode not in ACTIVE_MODES:
+        if mode not in ACTIVE_MODES and not context:
             sys.exit(0)
 
         _emit({
             "hookSpecificOutput": {
                 "hookEventName": "SubagentStart",
-                "additionalContext": _covenant(mode),
+                "additionalContext": context + (_covenant(mode) if mode in ACTIVE_MODES else ""),
             },
         })
         sys.exit(0)
 
-    except Exception:
+    except Exception as exc:
+        if os.environ.get("ATELIER_HARNESS") == "codex":
+            _emit({"continue": False, "stopReason": "atelier worker setup failed: " + str(exc)})
         # Fail open and silent: a worker briefed by its dispatcher is the normal
         # case, and a broken injection must never keep a subagent from starting.
         sys.exit(0)

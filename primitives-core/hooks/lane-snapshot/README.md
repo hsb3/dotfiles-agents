@@ -186,3 +186,7 @@ UTC), `project` — plus an `event` naming which of the five shapes it is (`hook
 ```
 
 The `scan` rows are the dataset that answers "was the net ever actually up?" after the fact.
+
+## Codex
+
+Codex resolves the main checkout through Git’s common directory and scans `.git/atelier-codex/checkouts/*/*` by default. `LANE_SNAPSHOT_WORKTREES` still overrides the derived glob. Snapshot refs preserve isolated native worker changes without changing their working indexes.

@@ -1,0 +1,83 @@
+"""Codex rollout measurements and the shared worker identity boundary."""
+
+import json
+import os
+
+
+def enabled():
+    return os.environ.get("ATELIER_HARNESS") == "codex"
+
+
+def prepare(payload):
+    """Inactive projects are silent; mapped workers keep their owned checkout."""
+    if not enabled():
+        return payload
+    import codex_workers
+    if not codex_workers.active(payload):
+        return None
+    return codex_workers.effective_payload(payload)
+
+
+def diagnostic(message):
+    print(json.dumps({"systemMessage": "atelier: could not measure Codex lifecycle: " + str(message)}))
+
+
+def entries(path):
+    if not path or not os.path.isfile(path):
+        raise ValueError("rollout transcript missing")
+    if os.path.getsize(path) > 64 * 1024 * 1024:
+        raise ValueError("rollout exceeds 64 MiB measurement limit")
+    with open(path, encoding="utf-8", errors="replace") as source:
+        for line in source:
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(item, dict):
+                yield item
+
+
+def measure(path):
+    """Use runtime occupancy and effective window, including post-compact estimates.
+
+    Cached input is already part of input_tokens. total_token_usage is cumulative
+    across requests, so neither is added to last_token_usage.total_tokens.
+    """
+    model = None
+    info = None
+    started = None
+    for item in entries(path):
+        body = item.get("payload") or {}
+        if item.get("type") == "session_meta":
+            started = body.get("timestamp") or item.get("timestamp")
+        elif item.get("type") == "turn_context":
+            model = body.get("model") or model
+        elif item.get("type") == "event_msg" and body.get("type") == "token_count":
+            info = body.get("info") or info
+    usage = (info or {}).get("last_token_usage") or {}
+    tokens = usage.get("total_tokens")
+    window = (info or {}).get("model_context_window")
+    if not isinstance(tokens, int) or isinstance(tokens, bool) or tokens < 0:
+        raise ValueError("no runtime last_token_usage.total_tokens")
+    if not isinstance(window, int) or isinstance(window, bool) or window <= 0:
+        raise ValueError("no runtime model_context_window")
+    return {"ctx_tokens": tokens, "window": window, "model": model,
+            "started_at": started}
+
+
+def tool_calls(path):
+    """Yield recorded calls, normalizing the two native collaboration spellings."""
+    for item in entries(path):
+        body = item.get("payload") or {}
+        if item.get("type") != "response_item":
+            continue
+        kind = body.get("type")
+        if kind not in ("function_call", "custom_tool_call"):
+            continue
+        name = body.get("name", "").removeprefix("functions.").replace(".", "").replace("_", "")
+        raw = body.get("arguments") if kind == "function_call" else body.get("input")
+        try:
+            args = json.loads(raw) if isinstance(raw, str) else raw
+        except ValueError:
+            args = {"command": raw}
+        yield name, args if isinstance(args, dict) else {}
