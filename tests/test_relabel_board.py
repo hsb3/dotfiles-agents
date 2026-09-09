@@ -105,7 +105,7 @@ class ShippedMap(unittest.TestCase):
     def test_it_parses_and_carries_the_rulings_renames(self):
         self.assertEqual("type:fix", self.mapping["bug"])
         self.assertEqual("type:feat", self.mapping["enhancement"])
-        self.assertEqual("type:chore", self.mapping["task"])
+        self.assertEqual("type:chore", self.mapping["chore"])
         self.assertEqual("decision", self.mapping["decide"])
         self.assertEqual("area:backend", self.mapping["workstream:backend"])
 
@@ -113,6 +113,37 @@ class ShippedMap(unittest.TestCase):
         for name in ("kaneo-status:to-do", "priority:high", "effort:l", "priority:-low"):
             with self.subTest(name=name):
                 self.assertEqual("drop", rb.resolve(name, self.mapping))
+
+    def test_the_labels_live_evidence_disqualified_are_unmapped_not_renamed(self):
+        """Three entries were removed after measurement. Pinned so nobody re-adds them.
+
+        `task` reads as a chore only if you never look at a board: where it is live it is
+        the residual "a work item" value, sitting in the same slot as `bug` and `feature`
+        and mutually exclusive with them, on cards whose titles are features and fixes.
+        `blocked` and `parked` were dropped as duplicates of state kata computes — but the
+        measured cards carry no `blocked_by` edge and no `someday`/`scheduled_on`, so the
+        label is the only record, not a copy of one.
+        """
+        for name in ("task", "blocked", "parked"):
+            with self.subTest(name=name):
+                self.assertIsNone(rb.resolve(name, self.mapping))
+
+    def test_the_states_that_are_genuinely_computed_still_drop(self):
+        for name in ("backlog", "triage"):
+            with self.subTest(name=name):
+                self.assertEqual("drop", rb.resolve(name, self.mapping))
+
+    def test_no_key_is_dead_under_another_key(self):
+        """An exact key a glob already answers identically is noise pretending to be intent."""
+        globs = [k for k in self.mapping if k.endswith("*")]
+        dead = [
+            key
+            for key in self.mapping
+            if not key.endswith("*")
+            for glob in globs
+            if key.startswith(glob[:-1]) and self.mapping[key] == self.mapping[glob]
+        ]
+        self.assertEqual([], dead)
 
     def test_every_core_name_is_present_so_no_board_reports_its_own_vocabulary(self):
         for name in rb.CORE_NAMES:
@@ -237,6 +268,20 @@ class PrefixStrip(unittest.TestCase):
         self.assertEqual([], rb.plan(self.CARDS, MAP)["relabels"])
         self.assertNotIn("prefixes", rb.plan(self.CARDS, MAP))
 
+    def test_a_stripped_title_that_would_read_as_an_option_is_refused(self):
+        """`kata edit --title --force ...` is an argv injection, not a title."""
+        cards = [issue("a1", [], title="skills: --force the thing")]
+        report = rb.plan(cards, MAP, strip_prefixes=True, areas=["skills"])
+        self.assertEqual([], report["relabels"])
+        self.assertFalse(report["prefixes"][0]["promoted"])
+        self.assertIn("-", report["prefixes"][0]["reason"])
+
+    def test_a_prefix_that_is_the_whole_title_is_refused_rather_than_blanked(self):
+        cards = [issue("a1", [], title="skills:   ")]
+        report = rb.plan(cards, MAP, strip_prefixes=True, areas=["skills"])
+        self.assertEqual([], report["relabels"])
+        self.assertFalse(report["prefixes"][0]["promoted"])
+
 
 class Operations(unittest.TestCase):
     def test_a_record_becomes_kata_argv_in_a_stable_order(self):
@@ -295,12 +340,75 @@ class WriteGate(unittest.TestCase):
         )
         self.assertEqual(0, code, out)
 
+    def test_the_affirmative_set_is_exactly_what_the_docstring_claims(self):
+        """Pinned in both directions: the docstring said `APPLY=1` and four other values
+        wrote too. A gate whose documented set is smaller than its real set is a lie that
+        reads as safety."""
+        for value in ("1", "true", "TRUE", "yes", "Yes", " 1 "):
+            with self.subTest(apply=value):
+                self.assertTrue(rb.apply_enabled({"APPLY": value}))
+                _, _, writes = self.run_main(["--project", "demo"], value)
+                self.assertTrue(writes, f"APPLY={value!r} is affirmative and must write")
+        for value in ("", "0", "  ", "no", "false", "2", "01", "1x", "yes please"):
+            with self.subTest(apply=value):
+                self.assertFalse(rb.apply_enabled({"APPLY": value}))
+        self.assertFalse(rb.apply_enabled({}), "unset is a dry run")
+
     def test_a_conflicted_card_is_never_written_even_under_apply(self):
         code, out, writes = self.run_main(
             ["--project", "demo"], "1", issues=[issue("z9", ["bug", "docs"])]
         )
         self.assertEqual([], writes)
         self.assertEqual(1, code, "an unresolved conflict is a finding")
+
+
+class PartialApply(unittest.TestCase):
+    """A bulk write that dies partway is the worst state this script can leave behind.
+
+    `kata` mutates one label per call, so an abort halfway through a card leaves it with the
+    old label already removed and the new one never added — no type at all. That has to be
+    (a) visible, so the operator knows exactly what landed, and (b) a DIFFERENT exit code
+    from an ordinary finding, or a wrapper cannot tell "there is work to review" from "the
+    board is half-rewritten".
+    """
+
+    def run_apply(self, fail_on):
+        calls = {"n": 0}
+        writes = []
+
+        def run(cmd, **_):
+            if "list" in cmd:
+                return mock.Mock(
+                    returncode=0,
+                    stdout=json.dumps({"issues": [issue("a1", ["bug", "kaneo-status:to-do"])]}),
+                    stderr="",
+                )
+            calls["n"] += 1
+            if calls["n"] == fail_on:
+                return mock.Mock(returncode=1, stdout="", stderr="daemon said no")
+            writes.append(list(cmd))
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {**os.environ, "APPLY": "1"}), \
+                mock.patch.object(rb.subprocess, "run", run), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = rb.main(["--project", "demo"])
+        return code, out.getvalue() + err.getvalue(), writes
+
+    def test_an_abort_has_its_own_exit_code_and_names_what_landed(self):
+        code, text, writes = self.run_apply(fail_on=3)
+        self.assertEqual(3, code, text)
+        self.assertEqual(2, len(writes), "the two ops before the failure did land")
+        self.assertIn("daemon said no", text, "the reason survives")
+        self.assertIn("a1 -bug", text, "an operator has to see what already applied")
+        self.assertIn("+type:fix", text, "and what did not")
+
+    def test_an_abort_on_the_first_operation_still_reports_cleanly(self):
+        code, text, writes = self.run_apply(fail_on=1)
+        self.assertEqual(3, code)
+        self.assertEqual([], writes)
+        self.assertIn("0 operation(s)", text)
 
 
 class ExitCodes(unittest.TestCase):
@@ -327,6 +435,16 @@ class ExitCodes(unittest.TestCase):
     def test_an_unmapped_label_alone_is_a_finding(self):
         code, _ = self.run_main(["--project", "d"], [issue("a1", ["spike"])])
         self.assertEqual(1, code)
+
+    def test_a_board_that_cannot_be_read_is_two_like_any_other_unreadable_input(self):
+        def run(cmd, **_):
+            return mock.Mock(returncode=1, stdout="", stderr="no such project")
+
+        err = io.StringIO()
+        with mock.patch.object(rb.subprocess, "run", run), contextlib.redirect_stderr(err):
+            code = rb.main(["--project", "nope"])
+        self.assertEqual(2, code)
+        self.assertIn("no such project", err.getvalue())
 
     def test_an_unreadable_map_is_two_not_a_traceback(self):
         code, text = self.run_main(

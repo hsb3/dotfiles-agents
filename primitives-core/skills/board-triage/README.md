@@ -56,7 +56,9 @@ mirror (the sync owns a mirror's labels and re-applies them), it plans nothing a
 card that would end up with two `type:` or two `area:` labels, and it reports a label absent
 from the map instead of inventing a home for it. The map is the only file that changes when a
 mapping decision changes, and a label deliberately left out of it is a decision, not an
-oversight. Title-prefix promotion is a separate mode, `--strip-prefixes`, off by default and
+oversight. An apply that fails partway stops, prints every operation that had already
+landed, and exits 3 rather than 1, so a wrapper can tell a half-written board from a list
+of findings. Title-prefix promotion is a separate mode, `--strip-prefixes`, off by default and
 inert unless the caller supplies that project's area list with `--areas` — with no list it
 promotes nothing and reports every prefixed title, which is the fail-safe.
 

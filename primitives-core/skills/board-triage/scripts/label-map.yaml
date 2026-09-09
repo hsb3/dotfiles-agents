@@ -68,15 +68,15 @@ up-next: keep
 "area:-database": area:database
 "area:-forecast": area:forecast
 "area:-infra": area:infra
-"priority:-medium": drop
-"priority:-low": drop
+# `priority:-medium` / `priority:-low` need no entry: the `priority:*` glob above already
+# answers them with the same `drop`. An exact key a glob answers identically is noise
+# pretending to be intent, and a test refuses one.
 
 # --- retired type words -----------------------------------------------------
 bug: type:fix
 feature: type:feat
 enhancement: type:feat
 chore: type:chore
-task: type:chore
 cleanup: type:chore
 housekeeping: type:chore
 maintenance: type:chore
@@ -89,6 +89,15 @@ refactor: type:chore
 doc: type:chore
 docs: type:chore
 documentation: type:chore
+# NOT MAPPED, and this is the interesting one: `task`. It reads like a chore and is not.
+# Measured on the boards where it is live (42 uses): it is the residual "a work item"
+# value, occupying the same slot as `bug` and `feature` and mutually exclusive with them —
+# on one board 39 of 121 open cards, co-occurring only with area words (frontend, backend,
+# tooling) and never with `bug` or `feature`, on titles that are plainly features and fixes
+# ("List rows are selectable and keyboard-navigable", "Security headers residue: no CSP").
+# Mapping it to type:chore mistypes every one of them, and the conflict guard cannot catch
+# it precisely BECAUSE it never co-occurs with another type word. Whatever it should be is
+# per-card judgment, so it stays unmapped.
 
 # --- decision, said three ways ----------------------------------------------
 decide: decision
@@ -120,16 +129,26 @@ architecture: area:architecture
 tooling: area:tooling
 toolchain: area:toolchain
 
-# --- workflow states this backend already models ----------------------------
-# Dropped because the state is COMPUTED and the label can only disagree with it:
-#   blocked  — blockedness comes from the blocked_by graph (`ready`/`next` read the graph).
-#   parked   — parking is a future scheduled_on or someday=true; both gate ready/next.
+# --- workflow states -------------------------------------------------------
+# A state label is droppable ONLY where the backend genuinely holds the same fact, so that
+# dropping de-duplicates rather than deletes. Two survive that test:
 #   backlog  — every open item is in the backlog; the label divides nothing.
 #   triage   — "needs triage" is an unset priority, which board_health.py already reports.
-# Other states (`draft`, `spike`, `unverified`, `blocked-external`, `owner-gated`, ...) are
-# deliberately UNMAPPED: this backend models none of them, so dropping one would delete a
-# fact rather than de-duplicate it, and none is a type or an area.
-blocked: drop
-parked: drop
+#
+# `blocked` and `parked` LOOK like the same case and were mapped to drop until the boards
+# were measured. They are not:
+#   blocked — the theory was that blockedness comes from the blocked_by graph. Every one of
+#     the 6 live `blocked` cards has NO blocked_by edge; one is blocked on an external
+#     release ("lift the cap once the 7.1 API lands"), which an issue graph structurally
+#     cannot express. It is the short spelling of `blocked-external`, which is unmapped for
+#     exactly this reason.
+#   parked — the theory was someday=true / scheduled_on. It holds on one board (3 cards,
+#     all someday=true, label redundant) and fails on another (2 cards, empty metadata), so
+#     dropping there erases the only record that they are parked.
+# Both are therefore UNMAPPED, with everything else this backend does not model — `draft`,
+# `spike`, `unverified`, `blocked-external`, `owner-gated`, and the rest.
+#
+# The general lesson, since it cost a wrong mapping: "the backend models this" is a claim
+# about DATA, and it has to be checked against the cards, not against the schema.
 backlog: drop
 triage: drop

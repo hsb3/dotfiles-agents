@@ -15,11 +15,14 @@ minimum label delta that puts one project back on the core vocabulary.
 
 Four rules, and three of them are refusals:
 
-**APPLY=1 in the environment is the only thing that writes.** Not a flag, so it cannot be
-half-typed into a live run, and it is checked in exactly one place (`apply_enabled`); every
-mutating call goes through `_kata_write`, which nothing else reaches. A bulk relabeler is
-one bad map away from rewriting every open card on a board, so the default has to be the
-harmless one and the plan has to be readable before anyone commits to it.
+**Only an affirmative APPLY in the environment writes** — `1`, `true` or `yes`, matched
+case-insensitively with surrounding whitespace ignored. Everything else writes nothing:
+`0`, an empty value, `2`, `01`, `1x`, a typo, or the variable unset. It is an env var and
+not a flag so it cannot be half-typed into a live run, it is decided in exactly one place
+(`apply_enabled`), and every mutating call goes through `_kata_write`, which nothing else
+reaches. A bulk relabeler is one bad map away from rewriting every open card on a board, so
+the default has to be the harmless one and the plan has to be readable before anyone
+commits to it.
 
 **A mirror is skipped.** An issue carrying `metadata.github_issue` is owned by the GitHub
 sync, which re-applies the upstream labels and title whenever that issue next changes — so
@@ -38,8 +41,17 @@ disposition: a label whose right home is an owner's call stays out of the map on
 and this run counts it so someone can decide. A wrong rename is worse than a gap — it is
 invisible in a diff and wrong on every card at once.
 
+**An apply that dies partway says so, loudly and in its own exit code.** `kata` mutates one
+label per call, so a failure between the removal and the addition leaves a card with no
+type label at all. On the first failing call the run stops, prints every operation that had
+already landed and the one that failed, and exits 3 — not 1, because a wrapper has to be
+able to tell "there is work to review" from "the board is half-rewritten". Re-running is
+the repair: the plan is recomputed from a fresh `kata list`, so the operations that already
+landed simply do not appear again.
+
 Exit 0 when there is nothing to do, 1 on a finding or a pending change, 2 when an input
-cannot be read. Stdlib only, no install — shells out to the `kata` binary already on PATH.
+cannot be read (the map, or the board), 3 when an apply aborted partway. Stdlib only, no
+install — shells out to the `kata` binary already on PATH.
 """
 
 from __future__ import annotations
@@ -71,6 +83,10 @@ DEFAULT_MAP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "label-ma
 
 class MapError(Exception):
     """The label map could not be read, parsed, or believed."""
+
+
+class KataError(Exception):
+    """A `kata` call failed. Fatal for a read; on a write it aborts the apply (exit 3)."""
 
 
 # --- the map ----------------------------------------------------------------
@@ -183,13 +199,22 @@ def plan(issues: list[dict], mapping: dict, areas=(), strip_prefixes: bool = Fal
             match = TITLE_PREFIX.match(issue.get("title") or "")
             if match:
                 prefix = match.group(1)
-                promoted = prefix in wanted
-                report["prefixes"].append(
-                    {"key": key, "prefix": prefix, "promoted": promoted}
-                )
-                if promoted:
-                    title = issue["title"][match.end() :].strip()
-                    add.add(f"area:{prefix}")
+                entry = {"key": key, "prefix": prefix, "promoted": prefix in wanted}
+                report["prefixes"].append(entry)
+                if entry["promoted"]:
+                    stripped = issue["title"][match.end() :].strip()
+                    # What is left has to survive being handed to `kata edit --title`. A
+                    # title of "skills: --force the thing" strips to an OPTION, and a title
+                    # that is only its prefix strips to nothing at all.
+                    if not stripped or stripped.startswith("-"):
+                        entry["promoted"] = False
+                        entry["reason"] = (
+                            "the stripped title is empty or starts with '-', which would"
+                            " reach `kata edit --title` as an option rather than a title"
+                        )
+                    else:
+                        title = stripped
+                        add.add(f"area:{prefix}")
 
         final = (set(labels) - remove) | add
         conflicted = False
@@ -256,7 +281,9 @@ def _kata(args, project):
         ["kata", *args, "--project", project, "--json"], capture_output=True, text=True
     )
     if proc.returncode != 0:
-        sys.exit(f"kata {' '.join(args)} -> exit {proc.returncode}: {proc.stderr.strip()}")
+        raise KataError(
+            f"kata {' '.join(args)} -> exit {proc.returncode}: {proc.stderr.strip()}"
+        )
     return json.loads(proc.stdout) if proc.stdout.strip() else {}
 
 
@@ -266,10 +293,30 @@ def _kata_write(args, project):
         ["kata", *args, "--project", project, "--agent"], capture_output=True, text=True
     )
     if proc.returncode != 0:
-        sys.exit(f"kata {' '.join(args)} -> exit {proc.returncode}: {proc.stderr.strip()}")
+        raise KataError(
+            f"kata {' '.join(args)} -> exit {proc.returncode}: {proc.stderr.strip()}"
+        )
 
 
-def render(project: str, report: dict, open_items: int, applying: bool) -> str:
+def apply_all(records: list[dict], project: str):
+    """Execute the plan, stopping at the first failure. -> (applied descriptions, error).
+
+    Stopping rather than pressing on is deliberate: the usual cause is the daemon or the
+    auth, and every later call would fail the same way while burying the first message.
+    """
+    ops = operations(records)
+    applied = []
+    for index, (argv, description) in enumerate(ops):
+        try:
+            _kata_write(argv, project)
+        except KataError as exc:
+            remaining = [d for _, d in ops[index:]]
+            return applied, (str(exc), remaining)
+        applied.append(description)
+    return applied, None
+
+
+def render(project: str, report: dict, open_items: int, applying: bool, applied: int = 0) -> str:
     lines = [
         f"relabel plan — {project} · {open_items} open item(s)"
         f" · {report['mirrors_skipped']} mirror(s) skipped",
@@ -304,21 +351,25 @@ def render(project: str, report: dict, open_items: int, applying: bool) -> str:
         lines.append("")
     if report.get("prefixes"):
         stuck = [p for p in report["prefixes"] if not p["promoted"]]
+        refused = [p for p in stuck if "reason" in p]
         lines.append(
             f"title prefixes ({len(report['prefixes'])}):"
             f" {len(report['prefixes']) - len(stuck)} promoted, {len(stuck)} reported"
         )
-        if stuck:
-            counts = collections.Counter(p["prefix"] for p in stuck)
+        counts = collections.Counter(p["prefix"] for p in stuck if "reason" not in p)
+        if counts:
             lines.append(
                 "  not in the area list: "
                 + " · ".join(f"{n} {c}" for n, c in counts.most_common())
             )
+        for entry in refused:
+            lines.append(f"  {entry['key']:<6} refused: {entry['reason']}")
         lines.append("")
     if not report["relabels"] and not findings(report):
         lines.append("clean — every open label is already core")
     elif applying:
-        lines.append(f"applied {len(operations(report['relabels']))} label change(s)")
+        planned = len(operations(report["relabels"]))
+        lines.append(f"applied {applied} of {planned} operation(s)")
     else:
         lines.append("dry run — set APPLY=1 to write these changes")
     return "\n".join(lines)
@@ -327,11 +378,13 @@ def render(project: str, report: dict, open_items: int, applying: bool) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Migrate one Kata project's labels onto the core vocabulary, using the"
-        " rename table in label-map.yaml. DRY RUN unless APPLY=1 is set in the environment."
-        " Mirrors (metadata.github_issue) are skipped, cards with two type: or two area:"
-        " labels are reported rather than guessed, and a label absent from the map is"
+        " rename table in label-map.yaml. DRY RUN unless APPLY is set to 1, true or yes in"
+        " the environment (case-insensitive; anything else, including 0 and empty, is a dry"
+        " run). Mirrors (metadata.github_issue) are skipped, cards with two type: or two"
+        " area: labels are reported rather than guessed, and a label absent from the map is"
         " reported and left alone. Exit 0 nothing to do, 1 on a finding or a pending change,"
-        " 2 on an unreadable input.",
+        " 2 on an unreadable input (the map or the board), 3 when an apply aborted partway"
+        " — which prints every operation that had already landed.",
         epilog="examples: relabel_board.py --project keel   |   APPLY=1 relabel_board.py"
         " --project keel   |   relabel_board.py --project keel --strip-prefixes"
         " --areas skills,repo,ci",
@@ -366,7 +419,12 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    issues = _kata(["list", "--status", "open", "--limit", "0"], args.project).get("issues", [])
+    try:
+        listed = _kata(["list", "--status", "open", "--limit", "0"], args.project)
+    except KataError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    issues = listed.get("issues", [])
     report = plan(
         issues,
         mapping,
@@ -375,14 +433,31 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     applying = apply_enabled()
+    applied, abort = ([], None)
     if applying:
-        for argv_, _ in operations(report["relabels"]):
-            _kata_write(argv_, args.project)
+        applied, abort = apply_all(report["relabels"], args.project)
 
     if args.json:
-        print(json.dumps({"project": args.project, "open_items": len(issues), **report}, indent=2))
+        print(json.dumps(
+            {"project": args.project, "open_items": len(issues), "applied": applied,
+             "aborted": abort[0] if abort else None, **report},
+            indent=2,
+        ))
     else:
-        print(render(args.project, report, len(issues), applying))
+        print(render(args.project, report, len(issues), applying, len(applied)))
+
+    if abort:
+        reason, remaining = abort
+        sys.stdout.flush()  # so the plan is above the abort in a redirected transcript
+        print(
+            f"\nAPPLY ABORTED after {len(applied)} operation(s): {reason}\n"
+            "  applied: " + (" · ".join(applied) or "(none)") + "\n"
+            "  not applied: " + " · ".join(remaining) + "\n"
+            "  A card can be mid-change — re-run to finish; the plan is recomputed from a"
+            " fresh `kata list`, so what already landed will not repeat.",
+            file=sys.stderr,
+        )
+        return 3
 
     pending = bool(report["relabels"]) and not applying
     return 1 if pending or findings(report) else 0
