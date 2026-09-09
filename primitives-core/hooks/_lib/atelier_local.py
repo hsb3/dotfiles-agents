@@ -44,9 +44,37 @@ def activation_candidates(project_dir):
     target = activation_destination(project_dir)
     candidates = [shared] if os.path.lexists(shared) else []
     candidates.append(target)
-    candidates.extend(os.path.join(project_dir, "." + agent, "atelier.local.md")
-                      for agent in agents)
+    preferred = "codex" if harness_name() == "codex" else "claude"
+    agents = sorted(agents, key=lambda agent: agent != preferred)
+    candidates.extend(os.path.join(project_dir, "." + agent, "atelier.local.md") for agent in agents)
     return list(dict.fromkeys(candidates))
+
+
+def committed_activation_candidates(project_dir):
+    """Policy paths selected from HEAD, never from mutable directories on disk."""
+    try:
+        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        names = subprocess.run(["git", "-C", project_dir, "ls-tree", "-d", "--name-only", "HEAD"],
+                               env=env, capture_output=True, text=True, timeout=3, check=True).stdout.splitlines()
+        agents = [name[1:] for name in (".claude", ".codex", ".opencode") if name in names]
+        for name in ("opencode.json", "opencode.jsonc"):
+            if subprocess.run(["git", "-C", project_dir, "cat-file", "-e", "HEAD:" + name],
+                              env=env, capture_output=True, timeout=3).returncode == 0:
+                if "opencode" not in agents:
+                    agents.append("opencode")
+        shared = subprocess.run(["git", "-C", project_dir, "cat-file", "-e",
+                                 "HEAD:.agents/atelier.local.md"], env=env,
+                                capture_output=True, timeout=3).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return []
+    target = ".agents" if len(agents) > 1 else ("." + agents[0] if agents else
+                                                   (".codex" if harness_name() == "codex" else ".claude"))
+    paths = ([".agents/atelier.local.md"] if shared else [])
+    paths.append(target + "/atelier.local.md")
+    preferred = "codex" if harness_name() == "codex" else "claude"
+    paths.extend("." + agent + "/atelier.local.md"
+                 for agent in sorted(agents, key=lambda agent: agent != preferred))
+    return list(dict.fromkeys(paths))
 
 
 def policy_paths(project_dir):

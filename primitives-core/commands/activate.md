@@ -16,10 +16,9 @@ directly with `.codex/atelier.local.md` and legacy fallback; no native slash com
 ## What to do
 
 1. Load `atelier:activation`.
-2. If the target's activation file does **not** exist, run the skill's `create`. If it
-   already exists, leave it as it is — **never pass `--force`** unless the person asked
-   for a reset in this same turn. The file holds hand-tuned local settings, it is
-   gitignored, and overwriting it destroys the only copy.
+2. Run the skill's `create` without `--force`. It safely migrates an existing identical
+   policy to its canonical location, and refuses a divergent copy. Use `--force` only
+   when the person asked for a reset in this same turn.
 3. Run the skill's `check`.
 4. Report the result in the form below.
 

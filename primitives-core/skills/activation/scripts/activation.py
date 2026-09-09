@@ -522,7 +522,11 @@ def cmd_check(project_dir, out):
             print("       tried  {0}".format(root), file=out)
         return EXIT_ERROR
     local = modules["worker-context"].atelier_local
-    moves = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=True)
+    try:
+        moves = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=True)
+    except ValueError as exc:
+        print("ERROR  policy migration: " + str(exc), file=out)
+        return EXIT_PROBLEM
     if moves:
         print("NEEDS  policy migration: " + ", ".join(moves), file=out)
         return EXIT_PROBLEM
@@ -555,7 +559,10 @@ def reconcile_policy(project_dir, local, check=False):
         return moves
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists():
-        target.write_bytes(contents[0])
+        mode = paths[0].stat().st_mode & 0o777
+        fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(contents[0])
     for path in stale:
         path.unlink()
     return moves

@@ -194,9 +194,7 @@ def _committed_activation(worktree_root):
     """
     # Probe HEAD, not the live directory layout. A worker could otherwise add/remove
     # a native config directory and make the selector choose a different policy.
-    paths = (".agents/atelier.local.md", ".claude/atelier.local.md",
-             ".codex/atelier.local.md", ".opencode/atelier.local.md")
-    for relpath in paths:
+    for relpath in atelier_local.committed_activation_candidates(worktree_root):
         try:
             proc = subprocess.run(
                 ["git", "-C", worktree_root, "show", "HEAD:" + relpath],
