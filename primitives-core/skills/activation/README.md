@@ -47,15 +47,10 @@ depends on.
 
 ## Codex
 
-Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
-existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
-`.claude` file. A relative explicit override is anchored at the target project root. When
-both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
-malformed, unreadable or missing explicit file never falls back to another policy; `check`
-reports it. A linked worktree uses its own selected file, or inherits the main checkout's
-selection when neither local candidate exists. Config custody retains its additional rule:
-worker edits are governed by the selected policy committed at that worktree's HEAD, so
-uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
+`ATELIER_ACTIVATION_FILE` is authoritative. Otherwise a shared `.agents/atelier.local.md`
+wins when present; one configured agent uses its native directory and multiple agents use
+`.agents`. Existing native policies remain readable until safe setup migrates identical bytes.
+Malformed selected policies never fall back. Custody reads the selected policy from HEAD.
 
 
 `codex-setup` renders native roles and project writable roots without touching global config or hook trust. `check --harness codex` verifies generated role/config currency and reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.

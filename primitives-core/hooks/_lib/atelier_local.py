@@ -31,7 +31,7 @@ def configured_agents(project_dir):
     for name in ("claude", "codex", "opencode"):
         if os.path.isdir(os.path.join(project_dir, "." + name)):
             agents.append(name)
-    if any(os.path.isfile(os.path.join(project_dir, name))
+    if "opencode" not in agents and any(os.path.isfile(os.path.join(project_dir, name))
            for name in ("opencode.json", "opencode.jsonc")):
         agents.append("opencode")
     return tuple(agents)
@@ -68,7 +68,7 @@ def committed_activation_candidates(project_dir):
     except (OSError, subprocess.SubprocessError):
         return []
     target = ".agents" if len(agents) > 1 else ("." + agents[0] if agents else
-                                                   (".codex" if harness_name() == "codex" else ".claude"))
+                                                   ("." + ("codex" if harness_name() == "codex" else "opencode" if harness_name() == "opencode" else "claude")))
     paths = ([".agents/atelier.local.md"] if shared else [])
     paths.append(target + "/atelier.local.md")
     preferred = "codex" if harness_name() == "codex" else "claude"
@@ -91,7 +91,7 @@ def activation_destination(project_dir):
     elif agents:
         directory = "." + agents[0]
     else:
-        directory = ".codex" if harness_name() == "codex" else ".claude"
+        directory = "." + ("codex" if harness_name() == "codex" else "opencode" if harness_name() == "opencode" else "claude")
     return os.path.join(project_dir, directory, "atelier.local.md")
 
 

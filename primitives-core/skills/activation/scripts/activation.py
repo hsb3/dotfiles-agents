@@ -613,9 +613,8 @@ def cmd_create(project_dir, force, out):
         print("moved  activation policy to {0}".format(dest), file=out)
         return EXIT_OK
     if os.path.lexists(dest) and not force:
-        print("refused  {0} already exists - not overwriting it.".format(dest), file=out)
-        print("         Re-run with --force to replace it, or edit it in place.", file=out)
-        return EXIT_PROBLEM
+        print("ok     {0} already exists - left unchanged.".format(dest), file=out)
+        return EXIT_OK
 
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     shutil.copyfile(example, dest)
