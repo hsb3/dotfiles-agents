@@ -1,5 +1,7 @@
 # carbon-builder
 
+Codex uses the available Carbon MCP tool names and client connection controls; an approved Carbon account remains a prerequisite.
+
 IBM Carbon Design System expertise: component code, variants, and props for Carbon React
 and Web Components (Core + IBM Products), Carbon Charts, icons and pictograms, design
 tokens and IBM Plex, accessibility guidance, AI Chat integration, and code-compliance

@@ -4,5 +4,5 @@
   },
   "description": "Maintainer-workflow triage over a running kenn-forge daemon — PR/issue review, diffs and CI checks, local review state, and coding-agent handoff. Two surfaces over the same daemon API: the kenn_forge_* MCP tools for an agent driving its own loop, and the kenn-forge CLI for shell, scripts, and humans. The daemon must be running locally; the MCP surface additionally needs it enabled in the daemon config. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "kenn-forge",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

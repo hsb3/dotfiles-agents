@@ -1,5 +1,7 @@
 # kenn-forge
 
+Codex registers the daemon endpoint with its own MCP client; the kenn-forge CLI and a running daemon remain prerequisites.
+
 Maintainer-workflow triage over a running [kenn-forge](https://github.com/kenn-io/forge)
 daemon: find the PRs and issues worth reviewing, read diffs, CI, and stack context, track
 local review state, and hand work off to a coding agent — without leaving the session.

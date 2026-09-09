@@ -4,5 +4,5 @@
   },
   "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, test quality, research and decision tooling, chart design, API and TUI craft, repo and project setup, and sandboxed opencode instances. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "solo-skills",
-  "version": "0.15.0"
+  "version": "0.16.0"
 }

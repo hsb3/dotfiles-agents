@@ -1,5 +1,7 @@
 # mise-en-place
 
+Codex and Claude Code use the same audit and scaffold helpers. Pass the installed package path explicitly with `--plugin-root`.
+
 An in-repo planning system built on `_meta/`: a documented directory standard, a memory
 taxonomy beside it, a read-only audit against both, an additive-only scaffolder, and a
 planning desk that holds one build plan per unit of work as a file you review before anything
