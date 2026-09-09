@@ -144,7 +144,8 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
 - **No unguarded counts in prose or metadata** (owner rule). A count needs a gate behind it, or
   phrasing that survives growth.
 - A new plugin is `plugins/<id>/` plus a hand-authored `marketplace.json` entry. The
-  `pptx-themes` README keeps its Anthropic attribution section — never drop it.
+  replacement of a vendored component must preserve its historical provenance record;
+  see `docs/presentations-replacement.md` for the PPTX replacement and approval boundary.
 - **A plugin's `description` is the only free-text field a user ever sees.** Measured
   2026-08-22: `claude plugin details <name>` prints name, version, description verbatim,
   component inventory, and token cost — nothing else. `homepage` and `repository` are

@@ -20,10 +20,10 @@ Never run `/update-dashboard` or scaffold a `_project-dashboard/` for a comm.
 
 ## Two toolchains
 
-| | `deliver.py` (bundled engine) | pptx-themes (skill) |
+| | `deliver.py` (bundled engine) | presentations (skill) |
 | --- | --- | --- |
 | Source | a spec (`spec.json` / `.yaml`: type, title, repo, theme, voice, sections of slides) or a bare `slides.json` array; 17 block types: heading / subtitle / lead / bullets / columns / stat / callout / divider / table / steps / timeline / matrix / quote / code / image / svg / chart | `deck.js` (pptxgenjs) + `package.json` |
-| Theme | `themes/*.json` by name (7 palettes, `boardroom` default) | semantic tokens from the pptx-themes skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
+| Theme | `themes/*.json` by name (7 palettes, `boardroom` default) | semantic tokens from the presentations skill's `assets/theme-tokens.js` (e.g. `actuarial-signal`) |
 | Output | `.html` + `.pdf` (+ narration script and `.m4a` via `narrate`) | `.pptx` + `.pdf` |
 | Strengths | fast, structured, validated + voice-linted with rule ids, linkifies bare #refs, zero install | hand-laid layout (cards, 2x2, tables, dividers), confidential footer, presentation-grade |
 | Use for | internal, frequent, decision-first (morning, EOD, weekly) | external, high-stakes (advisor board, client overview) |
@@ -38,7 +38,7 @@ plus per-project defaults in `.claude/comms.local.md` (`theme` / `voice` / `repo
 under `_meta/briefings/` across three repos (22 decks / 256 slides) when the bare-array path
 replaced the MCP renderer; a bare `slides.json` array still builds today.
 
-For pptx-themes decks, invoke the **`pptx-themes` skill** - it owns the approved palette, semantic
+For presentations decks, invoke the **`presentations` skill** - it owns the approved palette, semantic
 theme tokens, typography, and the visual-QA workflow. Available token themes: `actuarial-signal`,
 `boardroom`, `clinical-intelligence`, `human-outcomes`, `carbon-white`, `ivory`, `midnight`.
 
@@ -59,9 +59,9 @@ The skill is global; outputs are per-project. Each deliverable is a dated folder
 
 ```
 <project>/<briefings-dir>/<YYYY-MM-DD>-<slug>/
-  spec.json | slides.json | deck.js (+ package.json)   # source: deliver.py OR pptx-themes
+  spec.json | slides.json | deck.js (+ package.json)   # source: deliver.py OR presentations
   <name>.pdf                                # exported deck (always)
-  <name>.pptx                               # pptx-themes only
+  <name>.pptx                               # presentations only
   <name>.m4a                                # audio, if the playbook calls for it
   sources.md                                # claim-by-claim provenance
 ```
@@ -122,10 +122,10 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 7. Write `sources.md` (provenance per claim + "board is the live source of truth").
 8. Deliver the PDF (and audio) with the harness file-delivery tool, or absolute file links in Codex.
 
-**pptx-themes path** (advisor board, client overview):
+**presentations path** (advisor board, client overview):
 
 1. Gather + decide the narrative arc and the ask (see playbook).
-2. Invoke the `pptx-themes` skill; author `deck.js` against the chosen token theme.
+2. Invoke the `presentations` skill; author `deck.js` against the chosen token theme.
 3. `node deck.js` to write the `.pptx`; export / convert the `.pdf`.
 4. Run the skill's visual-QA pass (overflow, contrast, alignment).
 5. Write `sources.md`; deliver with the harness file-delivery tool, or absolute file links in Codex.
@@ -145,7 +145,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 - **Prettier table-cell trap** (only matters if a `.md` gets committed): no unicode width chars
   (em-dash, middle-dot, arrows, ellipsis) or literal `|` inside markdown table cells - use ASCII
   (`-`, `to`, `vs`). Prose and JSON and code blocks are fine.
-- **pptx-themes leaves `node_modules/` + `package-lock.json`** in the output folder; that's fine
+- **presentations leaves `node_modules/` + `package-lock.json`** in the output folder; that's fine
   - the folder is typically gitignored. Don't commit them.
 
 In command examples, replace `<comms-skill-dir>` with the absolute directory containing

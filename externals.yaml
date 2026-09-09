@@ -30,13 +30,6 @@
 version: 1
 
 externals:
-  - id: pptx
-    kind: skill
-    upstream: https://github.com/anthropics/skills
-    path: skills/pptx
-    ref: fa0fa64bdc967915dc8399e803be67759e1e62b8
-    provides: "The .pptx create/edit/analyze base composed under the authored pptx-themes skill (vendored verbatim in primitives-core/skills/pptx-themes/base/). Triggers whenever a .pptx or .potx file is input, output, or referenced. Creates new decks via pptxgenjs scripting; edits existing decks/templates by unzip, modify slide XML, rezip, with scripts to duplicate/reorder slides, prune orphaned parts, and schema/relationship-validate the OOXML; extracts slide text via markitdown and renders labeled thumbnail grids for layout selection; converts formats via headless LibreOffice. Supplies file-format mechanics only — pptx-themes supplies the palette/motif/design-judgment layer this skill omits."
-    targets: [claude-code]
   - id: pocketbase-best-practices
     kind: skill
     upstream: https://github.com/greendesertsnow/pocketbase-skills

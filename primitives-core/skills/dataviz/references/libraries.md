@@ -13,7 +13,7 @@ orientation notes and the house-rule gotchas for each — not tutorials.
 | Bespoke, pixel-exact, novel web visualizations | **d3** | Total control; high effort. Use when a standard chart won't do the job. |
 | React web apps, product dashboards | **Recharts** (or a peer React chart lib) | Declarative charts inside a component tree. |
 | Tiny, dependency-free, embeddable marks (sparklines, inline bars, emails) | **inline SVG** | No runtime, renders anywhere, diffable. Ideal for word-sized graphics. |
-| A deck or .pptx | see the `pptx-themes` skill | Deck charts inherit the deck's theme tokens; don't bake a chart palette into a slide. |
+| A deck or .pptx | see the `presentations` skill | Deck charts inherit the deck's theme tokens; don't bake a chart palette into a slide. |
 | A structural diagram (boxes/arrows, not data) | see the `diagrams` / `mermaid` skills | Not this skill's job — that's the boundary. |
 
 ## Per-library house-rule reminders

@@ -19,7 +19,7 @@ Audience and stakes pick the toolchain, theme, and voice:
 | Audience | Comm type | Toolchain |
 |---|---|---|
 | You | morning briefing · end-of-day wrap-up · weekly planning | `scripts/deliver.py`, fast and decision-first |
-| External | advisor board readout · client product overview | `pptx-themes`, polished and hand-laid |
+| External | advisor board readout · client product overview | `presentations`, polished and hand-laid |
 
 Each type has a self-contained playbook and a real worked example under `examples/<type>/`;
 the shared machinery lives in `references/comm-package-standard.md`. The examples run on a
@@ -47,7 +47,7 @@ Doctrine is config selected by name, authored once here and never restated per u
 - **`types/`** — a deliverable's ordered sections with page budgets, guide strings, runnable
   source-gathering commands, and default theme and voice. A new type is one JSON file and
   zero engine changes. Shipped so far: `morning-briefing`.
-- **`themes/`** — 7 palettes x 28 semantic tokens (transliterated from the pptx-themes token
+- **`themes/`** — 7 palettes x 28 semantic tokens (transliterated from the presentations token
   contract), injected into the deck CSS as custom properties.
 - **`voices/`** — register, id policy, numeric budgets, guidance. Voice doctrine runs as lint
   with rule ids — all errors at once, waivable per spec.
@@ -68,7 +68,7 @@ python3 scripts/deliver.py narrate /tmp/vo.txt --audio /tmp/briefing.m4a   # mac
 python3 scripts/deliver.py briefings-dir .                                # resolved <briefings-dir>
 ```
 
-Composes with two sibling skills without replacing them: `pptx-themes` for the external decks,
+Composes with two sibling skills without replacing them: `presentations` for the external decks,
 and `handoff` (ships in `atelier`) for the end-of-day wrap-up. Install those alongside it
 if you want the full set — neither arrives by way of this plugin.
 

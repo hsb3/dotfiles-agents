@@ -12,7 +12,7 @@ composition, axis/legend/tooltip, and interaction rules with static degradation.
 Use it whenever a chart, graph, dashboard, KPI tile, sparkline, or heatmap is about to be
 produced — HTML, inline SVG, matplotlib, plotly, d3, Recharts, or a rendered image. A
 final validation checklist runs before any visualization is delivered. Data charts only:
-structural diagrams belong to the `diagrams` bundle, deck theming to `code-desk`.
+structural diagrams belong to the `diagrams` bundle, deck theming to `presentations` in `code-desk`.
 
 ## Install
 

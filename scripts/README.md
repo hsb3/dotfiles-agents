@@ -32,7 +32,7 @@ measured and found the tree clean.
 |---|---|---|
 | `check_version_bump.py` | none — CI step only | changed published bytes ship under a moved version (compares against `origin/main`) |
 | `check_removals.py` | none — CI step only | a unit published on `origin/main` and absent here was declared by the commit that removed it (both sets derived from the two trees, never an inventory). `--notes` renders the removals as the release-page section |
-| `check_vendored_drift.py` | `vendored-drift` | every `origin: vendored` `base/` still matches its pinned upstream ref |
+| `check_vendored_drift.py` | `vendored-drift` | every remaining `origin: vendored` `base/` matches its pinned upstream ref (authored replacements leave this check) |
 | `check_manifests.py` | `manifests` | `claude plugin validate --strict` over the marketplace and every assembly (needs the `claude` binary) |
 | `check_labels.py` | `labels` | the repo's live GitHub label set is exactly the closed vocabulary (decision-016); names the `gh label delete`/`create` fix for each difference |
 

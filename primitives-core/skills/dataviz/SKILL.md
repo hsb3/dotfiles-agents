@@ -22,7 +22,7 @@ One owner per fact — these boundaries keep skills from fighting over triggers:
 - **Structural diagrams** (boxes, arrows, flow, containment, architecture, sequence, ER, org,
   process) → the `diagrams` and `mermaid` skills. Do not use a chart library for structure, and
   do not use diagram tools (or Mermaid `pie`/`xychart`) for real data.
-- **Deck/slide theming and PowerPoint charts** → `pptx-themes`. A chart on a slide inherits the
+- **Deck/slide theming and PowerPoint charts** → `presentations`. A chart on a slide inherits the
   deck's theme tokens; don't bake a chart palette into a slide.
 
 ## Workflow — before you draw

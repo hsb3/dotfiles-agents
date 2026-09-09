@@ -4,13 +4,13 @@ _Advisor board readout playbook. Shared machinery: `references/comm-package-stan
 
 Monthly or as-called, audience advisors / board. **The one job: show progress against the thesis
 and make the ask of the board** - the open questions are commercial, not technical, which is
-exactly what the board is for. Toolchain pptx-themes (NOT `deliver.py`); theme `actuarial-signal`;
+exactly what the board is for. Toolchain presentations (NOT `deliver.py`); theme `actuarial-signal`;
 `.pptx` + `.pdf` with a confidential footer; audio optional. Folder slug `-advisor-overview`.
 
-> Invoke the `pptx-themes` skill for palette, typography, and visual QA. `sample.deck.js`
+> Invoke the `presentations` skill for palette, typography, and visual QA. `sample.deck.js`
 > is the gold reference for layout (cards, ledger columns, 2x2 matrix, status chips); it
 > reads its tokens from this skill's own `themes/actuarial-signal.json`, so it runs on a bare
-> install - keep that pattern. When you do author against pptx-themes, take its token set
+> install - keep that pattern. When you do author against presentations, take its token set
 > there; do not hardcode a path into another skill's install directory.
 
 ## The one rule

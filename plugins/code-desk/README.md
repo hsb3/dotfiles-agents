@@ -30,7 +30,7 @@ flowchart TD
     PR --> Build
     Build --> Board[board-triage ranks the external board weekly]
     Board --> Comms[comms assembles the recurring deck]
-    Comms --> PPT[pptx-themes renders it to the house theme]
+    Comms --> PPT[presentations renders it to the house theme]
     PPT --> Build
     Repo --> RM[readme-value-and-proof writes the honest pitch]
 
@@ -45,7 +45,7 @@ flowchart TD
 | `starting-conditions` | Interview-first. Decides what is being built, in what language, and which rules a machine enforces, then writes a `RULES.md` contract, one gate command that proves it, and the baseline of what that gate says about the tree today. Measures; never remediates. |
 | `board-triage` | The weekly routine that ranks the un-ranked items on a task board so its prioritization and roadmap views stay useful instead of drifting into noise. The Impact×Effort judgment is backend-agnostic; a thin adapter does the board's I/O (GitHub Projects v2 and Kata ship). `board_health.py` decides whether a pass is due at all, and confirms afterwards that it took, by checking whether the board's fields still discriminate rather than merely being filled. The Kata adapter writes out the full maintenance rhythm the pass sits inside and how an import-only GitHub sync constrains it; every check that can fail judges open items only, so label history never holds it red. `core-labels.txt` is the declared vocabulary that check reads, and `relabel_board.py` migrates a board onto it — dry run unless `APPLY=1`, mirrors skipped, and a label with no mapping reported rather than renamed on a guess. The 2026-09-08 ruling closes decision-023's open question in the map: documentation is a domain, so `doc`/`docs`/`documentation` rename onto `area:docs` (additive — the card still needs a type) and a card that already has an area is vetoed as a conflict instead of given a second one; `gh-import` drops, since the card's `github_issue` metadata is the provenance record. |
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
-| `pptx-themes` | Builds the decks `comms` ships as, with a curated theme layer — semantic theme tokens, approved color palettes, monospaced typography, and a visual-QA workflow — composed over Anthropic's vendored pptx base skill. |
+| `presentations` | Builds the decks `comms` ships as, with authored semantic palettes, typography, portable PptxGenJS sources, existing-deck editing and rendered visual verification. |
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app, not mockups. |
 | `pull-request` | The pass that runs after the checks go green: collect a PR's inline review comments, its review and summary comments, and its gate statuses, then classify each finding as actionable (it sits on a line this PR changed, or it is a failing hard gate) or as pre-existing rot named as deferred rather than dropped. |
 | `project-memory` | The memory taxonomy and the tooling that realizes it — where agent memory lives (global vs. project-level), memory vs. rules vs. skills, and when a fact is worth promoting up a layer, plus opting a repo into tracked, in-repo auto-memory (wires `.claude/memory/` as the memory directory; never overwrites) and recovering memory after a folder move (dry-run by default). Pure Python 3 stdlib. |
@@ -62,7 +62,7 @@ And one command:
 |---|---|
 | `/pr-findings [<n>]` | Loads `pull-request` and drives it over one PR — the current branch's open PR when no number is given. |
 
-Per-skill plugins have been retired. The members that stand alone — `pptx-themes`,
+Per-skill plugins have been retired. The members that stand alone — `presentations`,
 `project-memory`, `readme-value-and-proof` — ship only from this bundle. `project-memory`
 ships in `mise-en-place` as well, whose audit and scaffold read its checklist off their own
 plugin root and cannot run without it. `comms` and `pull-request` do not: this desk is their
@@ -92,7 +92,7 @@ Later: "run board triage"
 End of week: "produce the weekly planning briefing"
 → comms assembles the deck from the same sources the board already tracks, to the
   standard's format — no one-off slide deck from scratch.
-→ pptx-themes renders it: the approved palette, monospaced type, and a visual-QA pass
+→ presentations renders it: the approved palette, deliberate typography, and a visual-QA pass
   before it ships, instead of the generic pptx skill's defaults.
 ```
 
@@ -120,11 +120,12 @@ answer: a `briefings_dir` key in `.claude/comms.local.md` redirects the output f
 that follows neither convention, and `deliver.py briefings-dir <project>` prints what the
 chain resolved to.
 
-`pptx-themes` is a themed layer over Anthropic's vendored `pptx` base skill, not a full
-authoring replacement for it — and it names where to report an error in that base, since the
-vendored copy is never hand-edited. Its render/QA script also needs `pdftoppm` (poppler) plus
-LibreOffice or PowerPoint for PDF conversion; it probes for whichever is present and says
-what is missing.
+`presentations` replaces and renames `pptx-themes`; the vendored Anthropic base is removed.
+Its portable source packages retain direct PptxGenJS authoring and the existing authored
+palettes. Independent ZIP/XML tools support inspection, exact text edits, selection and
+merge; rendering supplies PDF, slide images and a contact sheet. Full XSD conformance
+is outside the replacement's structural validator. See the skill's migration and editing
+references for supported features and runtime dependency limitations.
 
 ## Install
 
@@ -132,7 +133,7 @@ what is missing.
 claude plugin install code-desk@dotfiles-agents
 ```
 
-Since the decision-020 sweep this bundle is the only home for `pptx-themes` and
+Since the decision-020 sweep this bundle is the only home for `presentations` and
 `readme-value-and-proof`, and the topical owner of `project-memory`, which also ships in
 `mise-en-place`. All three used to ship from `solo-skills` as well, and no longer do.
 

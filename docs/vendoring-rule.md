@@ -6,10 +6,9 @@ gates the `origin: vendored` provenance class; the [ADR 0015](decisions/0015-sel
 amendment and `scripts/check_provenance.py` enforcement are built under backlog task-10 and
 cite this document._
 
-> **Readiness correction (2026-09-09):** The historical PPTX example below does not
-> establish redistribution permission. Its pinned license expressly prohibits third-party
-> distribution. Public redistribution requires resolving current and reachable historical copies;
-> decision-018 records the retirement direction. See the
+> **Readiness correction (2026-09-09):** The former PPTX example failed the license
+> requirement. Its authored replacement is documented in [presentations replacement](presentations-replacement.md).
+> Current-file replacement does not clear reachable historical copies; see the
 > [license inventory](licenses.md). The four-part bar below still applies.
 
 ## The default: do not vendor
@@ -46,11 +45,9 @@ Two composition shapes are known to clear the bar (owner-ruled 2026-08-04). They
 not an exhaustive list — a new shape must still pass all four criteria above.
 
 1. **Modification of an external** — we compose our own layer on top of a third-party body and
-   need that base in-tree for the layer to build on. _Example:_ `pptx-themes` = the Anthropic
-   `pptx` base (`skills/pptx` @ `anthropics/skills`) vendored under
-   `primitives-core/skills/pptx-themes/base/`, with our palette / motif / design-judgment layer
-   authored on top. The theme layer is meaningless without the base mechanics, and cannot reach
-   them by reference at author time.
+   need that base in-tree for the layer to build on. This describes a composition shape,
+   not permission: evidence that the exact upstream license permits redistribution
+   is required independently. The former PPTX example did not meet that requirement.
 2. **Bundle of homegrown + external** — a plugin or bundle that must ship first-party and
    third-party pieces together as one coherent, self-contained unit, where splitting the
    third-party piece out to install-from-upstream would break the bundle's promise of working

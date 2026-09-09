@@ -132,7 +132,7 @@ each of them still ships, from its topical plugin. Enable that plugin to get it.
 | `obsidian-chat-ui` | `obsidian-toolkit` |
 | `obsidian-cli` | `obsidian-toolkit` |
 | `obsidian-mcp-server` | `obsidian-toolkit` |
-| `pptx-themes` | `code-desk` |
+| `presentations` | `code-desk` |
 | `readme-value-and-proof` | `code-desk` |
 | `project-memory` | `code-desk` and `mise-en-place` |
 | `task-authoring` | `mise-en-place` |

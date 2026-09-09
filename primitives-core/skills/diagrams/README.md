@@ -15,7 +15,7 @@ structural diagram of components and relationships. It also decides *which* rend
 request: Mermaid for GitHub-rendered docs, this skill for provider-icon or icon-free graph
 diagrams, `drawio` for legacy `.drawio` files, `excalidraw` for sketch-style visuals. Data
 charts and plots are out of scope (the `dataviz` skill owns those), as is deck palette styling
-(`pptx-themes`).
+(`presentations`).
 
 ## Install
 

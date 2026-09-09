@@ -109,4 +109,4 @@ The palette is intentionally brand-neutral. To rebrand:
    series.
 4. **Do not scatter raw hex through chart code.** Load the palette once (import the JSON, or copy
    it into the project as a single theme module) and reference roles — never paste `#0072B2` into
-   twelve call sites. This mirrors the deck-theming discipline in the `pptx-themes` skill.
+   twelve call sites. This mirrors the deck-theming discipline in the `presentations` skill.
