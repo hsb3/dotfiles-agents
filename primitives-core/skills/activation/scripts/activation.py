@@ -446,6 +446,9 @@ def evaluate(project_dir, modules):
     for key in present:
         if key in KEYS:
             continue
+        if key in ("models", "complexity", "worktreebaseref"):
+            result["rows"].append(_row(key, "other harness", "read by OpenCode; not enforced here", ["OpenCode"]))
+            continue
         near = difflib.get_close_matches(key, KEYS, n=1)
         detail = "unknown key - no hook reads it, so it does nothing"
         if near:
@@ -562,6 +565,7 @@ def reconcile_policy(project_dir, local, check=False):
         mode = paths[0].stat().st_mode & 0o777
         fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
         with os.fdopen(fd, "wb") as fh:
+            os.fchmod(fh.fileno(), mode)
             fh.write(contents[0])
     for path in stale:
         path.unlink()

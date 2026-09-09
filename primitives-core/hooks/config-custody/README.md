@@ -1,8 +1,8 @@
 # config-custody
 
 Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
-fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
-use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+the sole configured native agent directory, or `.agents` for multiple agents. Explicit
+overrides win; runtime reads never migrate policies.
 
 Makes a project's ownership map machine-readable. `PreToolUse` on `Edit`, `Write`, `MultiEdit`, and
 `NotebookEdit`: when a **subagent** tries to edit a path listed under `protected:` in
@@ -66,18 +66,15 @@ Policy resolves in this order, first hit wins:
    `git rev-parse --git-common-dir`, so an activation file that is gitignored and therefore never
    travelled still governs the worktree it did not reach.
 
-Step 2 is tried only when that worktree holds a copy on disk, so a tree with no copy costs nothing
-extra; when it does hold one, the `git show` is one subprocess per `Edit`/`Write` — measured at
-~50 ms end to end on a live worktree. Both git reads are bounded at 3 s and can run on the same
-call, so the worst case is 6 s plus interpreter startup, inside the 10 s `config.json` declares
-with room to spare. A failed read falls to the next step; a selected invalid or oversized policy stays off, so with no `git` on `PATH` policy comes
-from step 3 on disk, which is where it came from before any of this resolution existed.
+Step 2 reads configured-agent markers and policy candidates from HEAD, even when the
+working copy or its parent directory has been deleted. Git reads are individually bounded;
+a failed read falls to the next step. A selected invalid or oversized policy stays off.
 
 **The committed version is what governs, deliberately, and an uncommitted one has no effect at
 all.** Editing the selected `atelier.local.md` is a permitted `Edit` in most projects, so
 reading it from disk would let a worker turn the gate off for the rest of the session with one
-tool call and no trace. Untracked, deleted, unborn `HEAD`, no `git`, timeout: none of those is a
-committed copy, and each falls through to step 3.
+tool call and no trace. Untracked policy bytes cannot replace committed policy. Unborn `HEAD`, unavailable git,
+or a failed lookup with no committed copy falls through to step 3.
 
 Two ceilings on that, because it is a guardrail on honest tool calls and not a sandbox. **The
 `.git` file is trusted.** A worktree root is any directory under the project whose `.git` is a
@@ -215,3 +212,6 @@ With `ATELIER_HARNESS=codex`, custody examines every path header in normalized
 registry's effective checkout. Strict mode denies the entire patch when any path
 matches; advisory emits context, and off remains inert. Routing/identity failures
 in an armed project deny the operation. Claude file-path handling is unchanged.
+
+Atelier policy selection follows configured agent directories, using `.agents` for
+multiple agents; setup migrates identical policies safely and runtime reads stay read-only.

@@ -26,15 +26,23 @@ the project declared.
 
 ## Atelier activation selection
 
-Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
-existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
-`.claude` file. A relative explicit override is anchored at the target project root. When
-both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
-malformed, unreadable or missing explicit file never falls back to another policy; `check`
-reports it. A linked worktree uses its own selected file, or inherits the main checkout's
-selection when neither local candidate exists. Config custody retains its additional rule:
-worker edits are governed by the selected policy committed at that worktree's HEAD, so
-uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
+Atelier selects policy from configured agents: the sole native directory (`.claude`,
+`.codex`, `.opencode`), or `.agents` for multiple agents. Native directories and regular
+root `opencode.json`/`opencode.jsonc` files count; binaries and instruction files do not.
+Zero agents defaults creation to the current harness.
+
+`ATELIER_ACTIVATION_FILE` wins, relative to the project root when relative. Runtime
+selection uses existing `.agents`, canonical destination, then `.claude`, `.codex`,
+`.opencode` in fixed order. A missing explicit or malformed selected file never falls
+back. Local worktree policies win before main-checkout inheritance. Custody selects
+from committed HEAD's policy and agent markers, ignoring uncommitted changes.
+
+Readers never mutate files. Create/setup relocate policy bytes and permissions, coalesce
+identical duplicates, and reject divergent copies without mutation even with `--force`.
+Codex setup reconciles after creating `.codex`; its native config and profiles stay there.
+Existing handoff paths and stamps remain unchanged. Repeated create is unchanged success.
+Python check reports OpenCode's `models`, `complexity`, and `worktreeBaseRef` as other-harness
+settings; it does not validate their values, and unknown keys still fail.
 
 This uses the existing per-project file mechanism; no second policy schema is introduced.
 

@@ -537,8 +537,8 @@ class CreateTests(_Base):
     def test_create_refuses_to_clobber_without_force(self):
         self.write("---\nenforce: strict\n---\n")
         code, output = self._create()
-        self.assertEqual(code, 1, output)
-        self.assertIn("refused", output)
+        self.assertEqual(code, 0, output)
+        self.assertIn("left unchanged", output)
         self.assertIn(os.path.join(self.project, ".claude", "atelier.local.md"), output)
 
         code, output = self._create("--force")

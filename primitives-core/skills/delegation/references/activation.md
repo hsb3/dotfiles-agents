@@ -1,15 +1,14 @@
 # Per-project activation — `atelier.local.md`
 
 The plugin's enforcement layer is off until a project turns it on. One file controls it:
-`atelier.local.md`, in the harness's own config directory at the project root (gitignored by
+`atelier.local.md`, in the selected native or shared directory at the project root (gitignored by
 convention — the harness attaches no behavior to this file; atelier's skill and hooks read it
 themselves, per call, so editing it needs no restart).
 
 <!-- harness:claude-code -->
-Use `.codex/atelier.local.md` in fresh Codex projects; Claude Code uses
-`.claude/atelier.local.md`. Codex preserves the legacy file when no Codex file exists.
-The activation skill documents explicit-override and worktree precedence; read that
-selected file, never merge both policies.
+Use the activation skill’s selected policy: the sole native agent directory, or
+`.agents` for multiple configured agents. Explicit overrides win; runtime reads never
+migrate files. Setup safely relocates policies and rejects divergent copies.
 
 ```markdown
 ---

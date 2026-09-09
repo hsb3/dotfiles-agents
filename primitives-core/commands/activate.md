@@ -9,8 +9,8 @@ it there and follow it; do not restate it here and do not re-derive it from memo
 
 <!-- harness:claude-code -->
 Target project: `$1` if one was given, otherwise the current project root. Its activation
-file is `.claude/atelier.local.md` in Claude Code. Codex uses the activation skill
-directly with `.codex/atelier.local.md` and legacy fallback; no native slash command is registered.
+file follows the activation skill’s configured-agent selection. Codex invokes that
+skill directly; no native slash command is registered.
 <!-- /harness -->
 
 ## What to do

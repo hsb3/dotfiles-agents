@@ -43,3 +43,6 @@ printf '/atelier:activate' | claude -p --plugin-dir /tmp/atelier-deref
 Confirm the load rather than trusting the output — a model with `Skill` and `Bash` will
 improvise a plausible answer for a command that never loaded. Add `--debug-file /tmp/x.log`
 and check `Total plugin commands loaded:` is not `0`.
+
+Atelier policy selection follows configured agent directories, using `.agents` for
+multiple agents; setup migrates identical policies safely and runtime reads stay read-only.

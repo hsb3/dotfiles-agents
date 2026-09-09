@@ -54,17 +54,17 @@ class ActivationPathsTests(unittest.TestCase):
     def test_legacy_and_both_file_precedence_without_migration(self):
         legacy = self.write(self.root / '.claude/atelier.local.md')
         self.assert_readers(self.root, legacy)
-        self.assertEqual(activation.main(['create', '--harness', 'codex', '--project-dir', str(self.root)], out=io.StringIO()), 1)
+        self.assertEqual(activation.main(['create', '--harness', 'codex', '--project-dir', str(self.root)], out=io.StringIO()), 0)
         self.assertFalse((self.root / '.codex').exists())
         native = self.write(self.root / '.codex/atelier.local.md', FULL.replace('strict', 'advisory'))
-        self.assert_readers(self.root, native, 'advisory')
+        self.assert_readers(self.root, legacy)
         with patch.dict(os.environ, ATELIER_HARNESS='claude-code'):
             self.assertEqual(atelier_local.activation_path(str(self.root)), str(legacy))
             self.assertEqual(HOOKS['worker-context']._load_mode(str(self.root)), 'strict')
 
     def test_selected_malformed_missing_and_explicit_files_never_fall_back(self):
         self.write(self.root / '.claude/atelier.local.md')
-        native = self.write(self.root / '.codex/atelier.local.md', 'not frontmatter')
+        native = self.write(self.root / '.agents/atelier.local.md', 'not frontmatter')
         self.assert_readers(self.root, native, 'off')
         self.assertEqual(activation.cmd_check(str(self.root), io.StringIO()), 1)
         explicit = self.write(self.root / 'policy.md')
@@ -89,8 +89,8 @@ class ActivationPathsTests(unittest.TestCase):
 
     def test_committed_codex_custody_survives_worker_policy_edits(self):
         main, worker = make_worktree(str(self.root), tracked={
-            '.codex/atelier.local.md': FULL,
-            '.claude/atelier.local.md': FULL.replace('strict', 'off')})
+            '.agents/atelier.local.md': FULL,
+            '.codex/atelier.local.md': FULL.replace('strict', 'off')})
         worker = Path(worker)
         (worker / '.codex/atelier.local.md').write_text('---\nenforce: off\n---\n')
         custody = HOOKS['config-custody']

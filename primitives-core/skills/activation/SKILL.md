@@ -5,20 +5,22 @@ description: Create and verify the harness-appropriate per-project activation fi
 
 # Activation
 
-<!-- harness:claude-code -->
-The activation file is `.codex/atelier.local.md` for fresh Codex projects and
-`.claude/atelier.local.md` for Claude Code.
+Atelier keeps `atelier.local.md` in the sole configured agent's native directory
+(`.claude`, `.codex` or `.opencode`), or `.agents` when multiple agents are configured.
+Native directories and root `opencode.json`/`opencode.jsonc` files identify agents;
+installed binaries, instruction files and `.agents` itself do not.
+Symlinks are not configuration markers. With no configured
+agent, creation defaults to the current harness.
 
-Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
-existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
-`.claude` file. A relative explicit override is anchored at the target project root. When
-both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
-malformed, unreadable or missing explicit file never falls back to another policy; `check`
-reports it. A linked worktree uses its own selected file, or inherits the main checkout's
-selection when neither local candidate exists. Config custody retains its additional rule:
-worker edits are governed by the selected policy committed at that worktree's HEAD, so
-uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
-<!-- /harness -->
+`ATELIER_ACTIVATION_FILE` is authoritative, relative to the project root when relative.
+Otherwise readers select an existing `.agents` policy first, the canonical location next,
+then legacy `.claude`, `.codex`, `.opencode` locations in that fixed order. A selected
+malformed file never falls back. A worktree's local policy wins before main-checkout
+inheritance. Runtime readers never migrate files. `create` and setup move an existing
+policy without changing its bytes or permissions, coalesce byte-identical duplicates,
+and reject divergent policies before any mutation, even with `--force`. Repeating
+`create` leaves an existing canonical policy unchanged. Existing handoff paths and
+stamps remain unchanged.
 
 It is the one file that arms atelier's enforcement layer. Absent, it means everything is off.
 This skill creates it and tells you whether it is actually doing anything — the two states look
@@ -45,12 +47,13 @@ are not there. `--project-dir` defaults to the cwd in Codex; Claude Code uses
 <!-- /harness -->
 
 `create` installs the copyable starting point at
-[examples/atelier.local.md](examples/atelier.local.md), and refuses to overwrite an existing
-file unless `--force`.
+[examples/atelier.local.md](examples/atelier.local.md), and leaves an existing
+canonical file unchanged unless `--force`.
 
 <!-- harness:claude-code -->
-It writes the selected path and refuses to replace an existing legacy policy unless
-`--force` was explicitly requested. Fresh Codex creation writes `.codex/atelier.local.md`.
+It safely migrates existing policies before checking their contents. Config custody
+selects from the committed HEAD tree, including configured-agent markers, so uncommitted
+policy or directory changes cannot weaken worker protection.
 
 `check` reads the installed file *through the hooks' own loader functions* rather than parsing
 it itself, then reports per key what each hook actually resolved. That is why its answer cannot
@@ -149,8 +152,8 @@ authoritative.
 ## Codex setup
 
 Use the installed skill directory to locate `scripts/activation.py`; Codex does not set
-`CLAUDE_PLUGIN_ROOT`. Fresh projects use `.codex/atelier.local.md`; existing legacy
-policies remain at `.claude/atelier.local.md`. Invoke the activation skill directly;
+`CLAUDE_PLUGIN_ROOT`. Setup reconciles policy placement after creating `.codex`, which can make a project
+multi-agent. Native role and config files stay under `.codex`. Invoke the activation skill directly;
 `/atelier:activate` is a Claude Code command, not a registered Codex slash command.
 
 ```bash

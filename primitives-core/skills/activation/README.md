@@ -60,3 +60,7 @@ Setup rejects symlink or non-regular config/exclude destinations before writing 
 Native manager workflows need `agents.max_depth >= 2`. Setup adds depth two when the agents table is absent, retains higher configured depths, and reports disabled agents or a known concurrency below two before any mutation. User-owned tables are never rewritten.
 
 Codex setup guidance ships alongside the Claude activation workflow; the separate OpenCode port retains its own setup procedure.
+
+The checker labels OpenCode `models`, `complexity`, and `worktreeBaseRef` as other-harness
+settings without validating their values; unknown keys still fail. Migration preserves
+source bytes and permission bits, and repeated creation leaves canonical policy unchanged.

@@ -20,10 +20,11 @@ codex plugin add atelier@dotfiles-agents
 ```
 
 Codex setup requires Python 3.11 or newer. Use the installed activation skill’s `create --harness codex`, `codex-setup`, then
-`check --harness codex`. Fresh creation uses `.codex/atelier.local.md`; existing
-`.claude/atelier.local.md` policies stay in place. Skip creation when a project already has
-its selected policy. `ATELIER_ACTIVATION_FILE` wins; otherwise Codex selects its own file
-before the legacy file, without merging or falling back from malformed selected content.
+`check --harness codex`. Policy placement follows configured agents: the sole native
+directory, or `.agents` for multiple agents. Setup reconciles placement after creating
+`.codex`; roles and native config remain there. Existing policies migrate without byte
+changes; divergent copies are rejected before mutation. Repeated creation is a no-op.
+`ATELIER_ACTIVATION_FILE` wins, including missing or malformed selected content.
 See [activation selection](override-convention.md#atelier-activation-selection) for worktrees.
 Setup renders five project role TOMLs from canonical agent Markdown and the OpenAI tier
 map, plus the narrow writable roots needed for worker Git operations. It refuses conflicting
