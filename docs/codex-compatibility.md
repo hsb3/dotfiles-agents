@@ -27,9 +27,56 @@ or edited user configuration. Restart the session and review/trust the package i
 Configuration checks deliberately do not certify trust from parsed settings.
 For V1, the manager layer requires `agents.max_depth >= 2`; the default is one.
 Setup checks this without replacing an existing user-owned agents table.
-Refresh with `codex plugin marketplace upgrade dotfiles-agents`, then repeat
-`codex plugin add <plugin>@dotfiles-agents`. After upgrading a plugin, rerun setup and start a fresh session; a versioned cache path can
-change, and the rendered role instructions contain paths to that installed package.
+Before upgrading, finish or checkpoint affected parent and worker sessions in every process
+sharing the same `CODEX_HOME`, then exit those sessions. Marketplace upgrades and plugin
+reinstallation can remove the versioned files their loaded hooks still reference. Run the
+update from an ordinary terminal after those sessions exit:
+
+```sh
+codex plugin marketplace upgrade dotfiles-agents
+codex plugin add atelier@dotfiles-agents
+```
+
+Rerun setup against the installed package, then start a fresh session and inspect `/hooks`.
+Rendered role instructions also contain versioned package paths. Defer updates while a live
+session or worker still needs its installed version; an update in one process does not
+refresh other running processes.
+
+### Recovering a missing installed hook
+
+If shell commands report a missing versioned `hook.py`, preserve the session IDs, worker
+checkouts and pending command results before restarting. A command may have finished even
+when its result could not be read. Restart the affected Codex process against the installed
+version, then inspect the original result before deciding whether to rerun it.
+
+For a temporary project-only disable, merge this table into the trusted project's
+`.codex/config.toml` (edit an existing table instead of duplicating it):
+
+```toml
+[plugins."atelier@dotfiles-agents"]
+enabled = false
+```
+
+This disables the whole Atelier plugin, including its guards and worker routing. Finish or
+checkpoint isolated workers before the transition; retain their worktrees and resume work
+from their actual checkout paths. Keep the temporary override out of commits. Start a fresh
+Codex process in that project and verify `/hooks` contains no Atelier hooks. Editing the
+project file alone does not prove an already-running session reloaded it. Leave the installed
+cache intact so other projects can continue using it.
+
+After repair, remove only the temporary override (restoring any prior value), rerun setup if
+the installed package changed, and restart/review `/hooks` before relying on Atelier again.
+Do not link an old version directory to a new release: that substitutes different code at a
+previously loaded path. Recovery requiring the old path must restore the exact old bundle
+and its dependencies from verified release material.
+
+In Codex 0.153.4, this is an upstream cache-lifetime limitation. The
+[plugin store](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core-plugins/src/store.rs#L699)
+removes older version directories during installation; already-loaded hook handlers retain
+their versioned root. Python exits 2 when its script is missing, and the
+[PreToolUse handler](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/hooks/src/events/pre_tool_use.rs#L261)
+interprets that exit as a tool block. An Atelier handler cannot repair this before its own
+entrypoint is found. The safe update order above is a mitigation, not a runtime fix.
 
 Code-desk and PocketBase use the same role renderer with `--plugin-root` naming their
 installed package. Their hooks inject canonical instructions and enforce declared dispatch
