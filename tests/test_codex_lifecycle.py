@@ -49,8 +49,21 @@ class RolloutTests(unittest.TestCase):
     def test_missing_measurement_never_reads_as_zero(self):
         for items in ([], [self.usage(20, None)], [self.usage(None)]):
             self.write(*items)
-            with self.assertRaises(ValueError):
+            with self.assertRaises(ValueError) as caught:
                 codex_lifecycle.measure(self.path)
+            self.assertNotIsInstance(caught.exception, codex_lifecycle.PendingMeasurement)
+
+    def test_pending_requires_an_initialized_rollout(self):
+        for content in ('', 'not json\n'):
+            self.path.write_text(content)
+            with self.assertRaises(ValueError) as caught:
+                codex_lifecycle.measure(self.path)
+            self.assertNotIsInstance(caught.exception, codex_lifecycle.PendingMeasurement)
+
+    def test_null_token_count_info_keeps_the_previous_valid_measurement(self):
+        self.write(self.usage(26117),
+                   {'type': 'event_msg', 'payload': {'type': 'token_count', 'info': None}})
+        self.assertEqual(codex_lifecycle.measure(self.path)['ctx_tokens'], 26117)
 
     def test_initial_rollout_is_pending_until_the_first_usable_usage(self):
         # Sanitized from the 0.153.4 rollout: UserPromptSubmit precedes the
@@ -91,6 +104,17 @@ class RolloutTests(unittest.TestCase):
             module.handle_session({'session_id': 'malformed', 'cwd': self.tmp.name,
                                    'transcript_path': str(self.path)}, rows.append)
         self.assertEqual(rows[-1]['ctx_tokens'], None)
+        self.assertEqual(rows[-1]['error'], 'no runtime last_token_usage.total_tokens')
+        self.assertIn('atelier: could not measure Codex lifecycle', output.getvalue())
+
+    def test_corrupt_rollout_still_has_a_diagnostic(self):
+        module = hook('context-watermark')
+        self.path.write_text('not json\n')
+        rows, output = [], io.StringIO()
+        with patch.dict(os.environ, ATELIER_HARNESS='codex'), patch.object(sys, 'stdout', output):
+            module.handle_session({'session_id': 'corrupt', 'cwd': self.tmp.name,
+                                   'transcript_path': str(self.path)}, rows.append)
+        self.assertNotIn('pending', rows[-1])
         self.assertEqual(rows[-1]['error'], 'no runtime last_token_usage.total_tokens')
         self.assertIn('atelier: could not measure Codex lifecycle', output.getvalue())
 
@@ -264,6 +288,24 @@ class BranchSessionTests(unittest.TestCase):
 
 
 class TelemetryTranscriptTests(unittest.TestCase):
+    def test_worker_corrupt_rollout_still_has_a_diagnostic(self):
+        module = hook('subagent-telemetry')
+        with tempfile.TemporaryDirectory() as directory:
+            child = Path(directory) / 'child'
+            child.write_text('not json\n')
+            record = {'session_id': 'parent', 'agent_id': 'child', 'agent_type': 'atelier-builder',
+                      'transcript_path': str(child)}
+            workers = SimpleNamespace(lookup=lambda value: record, records=lambda value: [],
+                                      set_status=lambda value, status: None)
+            rows = []
+            with patch.dict(sys.modules, codex_workers=workers), \
+                 patch.object(module.agentlog, 'append', side_effect=lambda stream, row, *args: rows.append(row)), \
+                 patch.object(sys, 'stdout', io.StringIO()) as output:
+                module._codex_stop(dict(record, cwd=directory))
+            self.assertNotIn('pending', rows[-1])
+            self.assertEqual(rows[-1]['error'], 'no runtime last_token_usage.total_tokens')
+            self.assertIn('atelier: could not measure Codex lifecycle', output.getvalue())
+
     def test_worker_initial_rollout_is_pending_without_diagnostic(self):
         module = hook('subagent-telemetry')
         with tempfile.TemporaryDirectory() as directory:
