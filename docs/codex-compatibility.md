@@ -21,7 +21,7 @@ The temporary authentication copy is deleted, not retained with evidence.
 | Shell and patch rewrite | Replacing `ORIGINAL` with `REWRITTEN` in `updatedInput.command` changed actual file contents. Patch input was `tool_name: apply_patch`, `tool_input.command: <whole patch>`, not a file path. |
 | Context | SessionStart token reached the parent final reply; SubagentStart token reached the worker final reply. |
 | Worker identity | Worker tool hooks contained `agent_id`, `agent_type`, parent `session_id`, worker transcript path and worker `cwd`. SubagentStop supplied `agent_transcript_path` and `last_assistant_message`. |
-| Plugin discovery | Synthetic plugin installed through `.claude-plugin/marketplace.json`; its skill was read. Bare agent type `plugin_probe` was rejected: `unknown agent_type 'plugin_probe'`. Qualified plugin-agent registration remains unverified. |
+| Plugin discovery | Synthetic plugin installed through `.claude-plugin/marketplace.json`; its skill was read. Bare agent type `plugin_probe` was rejected. Source review confirms plugin manifests have no agent-registration field and the role loader discovers TOML files, not plugin Markdown agents. |
 | Native TOML agent | `$CODEX_HOME/agents/probe_worker.toml` registered. A luna parent/luna worker run delivered its developer-instruction token. A terra parent selected luna for this named role, but the instruction token was absent from that worker's reply. Role instruction parity on that path is **unverified**, not proven by model selection. |
 | Native worktree | Hook rewrote a luna spawn with `cwd` pointing at a pre-created worker worktree and `isolation: worktree`. The call succeeded, but actual worker `pwd` and hook `cwd` stayed in the parent repository. These added fields did **not** enforce isolation. |
 | Native routed worktrees | SubagentStart created a worktree per `agent_id`; worker Bash commands entered that tree and patch destinations were rewritten into it. Two native workers wrote `ALPHA`/`BETA` to the same relative filename, staged separate indexes, and retained native follow-up replies. Parent file stayed absent and parent Git status stayed clean. All eight assertions passed for both luna and terra parent paths. This establishes collision avoidance, not per-worker OS confinement. |
@@ -96,19 +96,19 @@ stated runtime qualification; it does not certify an unexecuted workflow.
 | skill `layer-cycle` | Target/rubric/gate/budget → reviewed implementation | **Reuse** doctrine; companion role dispatch unverified. | x9ma |
 | skill `rubric-panel` | Target/rubric/personas → independently derived scores | **Reuse** doctrine; independent role contexts unverified. | x9ma |
 | skill `waves` | Tracker work → crews, verified landings, board/handoff | **Adapt** messages, dispatch and hook-backed claims; end-to-end unverified. | x9ma |
-| agent `builder` | Owned files + criteria → implementation/evidence; sonnet, edit/shell tools | **Adapt** Markdown registration, tier mapping and actual authority; plugin registration unverified. | x9ma |
+| agent `builder` | Owned files + criteria → implementation/evidence; sonnet, edit/shell tools | **Adapt** Markdown registration, tier mapping and actual authority; generate native role material from shared source. | x9ma |
 | agent `scout` | Read scope → cited findings; haiku, read/shell tools | **Adapt** registration/model/read-only tool contract; native role probe is conditional. | x9ma |
 | agent `reviewer` | Claims/diff → independent verdict; opus, read/shell tools | **Adapt** registration/model/context/authority; complete role workflow unverified. | x9ma |
 | agent `code-reviewer` | Diff → quality findings; sonnet, read/shell tools | **Adapt** registration/model/authority; complete role workflow unverified. | x9ma |
-| agent `manager` | Chain scope → briefs and proof package; opus, Agent/SendMessage | **Adapt** hierarchy, messages, identity and authority; process alternative below. | x9ma |
+| agent `manager` | Chain scope → briefs and proof package; opus, Agent/SendMessage | **Adapt** hierarchy, messages, identity and authority; preserve native dispatch and replies. | x9ma |
 | command `activate` | Optional project argument → load activation skill | **Adapt** invocation to existing skill; Claude command registration unverified. | dq22 |
 | hook `comment-hygiene-gate` | PreToolUse Bash command → diff advisory context | **Adapt** effective command directory; shell name/input proven, real gate output unverified. | x37s |
 | hook `config-custody` | Worker edit + protected paths → deny/advisory | **Adapt** all patch paths, moves and effective directory. Current file_path reader misses actual patch command. Denial mechanism proven. | x37s |
 | hook `worker-git-scope-guard` | Worker Bash + cwd + topology → deny shared stash/protected writes | **Adapt** effective command directory; identity and shell fields proven, guard-specific cases unverified. | x37s |
 | hook `live-worker-git-guard` | Parent Bash + live worker records → deny shared-tree mutation | **Adapt** Claude sidecar discovery returns no Codex workers; runtime ledger required. | x37s |
 | hook `worktree-isolation` | PreToolUse literal Agent + subagent_type → updated isolation input | **Adapt**: Claude-style spawn fields are ignored; native identity registry plus supported shell/patch routing passed collision-isolation prototype. Full production guard unverified. | x37s |
-| hook `worker-context` | SubagentStart + activation → developer covenant | **Reuse** event/context mechanism proven; strict guarantees depend on actual safeguards. Process workers require explicit covenant injection. | dq22 |
-| hook `manager-package-gate` | SubagentStop manager + final reply → one continuation block | **Adapt** registered manager identity/process completion boundary. Reply fields proven; continuation effect unverified. | dq22 |
+| hook `worker-context` | SubagentStart + activation → developer covenant | **Reuse** native event/context mechanism proven; strict guarantees depend on actual safeguards. | dq22 |
+| hook `manager-package-gate` | SubagentStop manager + final reply → one continuation block | **Adapt** registered native manager identity and completion boundary. Reply fields proven; continuation effect unverified. | dq22 |
 | hook `context-watermark` | Prompt/worker tool event + usage tail → nudge/state | **Adapt** Claude usage records and model windows; no Codex usage measurement proven. | dq22 |
 | hook `delegation-watermark` | Parent PostToolUse + transcript → count/nudge | **Adapt** Claude tool_use reader; current Codex rollout is not measured. | dq22 |
 | hook `subagent-telemetry` | Worker stop/parent stop + sidecars → completion/stall ledger | **Adapt** worker source, usage and completion records; missing sidecars currently drop rows. | dq22 |
@@ -164,3 +164,7 @@ The supported relocation seams are [shell command rewriting](https://github.com/
 and [patch command rewriting](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/tools/handlers/apply_patch.rs#L468),
 which the two-worker probe exercises. These are operation-level adapters; they do
 not mutate the native thread's cwd metadata.
+The [plugin manifest fields](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/plugin/src/manifest.rs#L19)
+cover skills, MCP, apps and hooks; the [role loader](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/agent-roles/src/loader.rs#L23)
+uses [TOML agent discovery](https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/agent-roles/src/discovery.rs#L27).
+The existing plugin Markdown agents therefore require native role adaptation.
