@@ -40,7 +40,7 @@ reads it. Every entry carries the schema (fields and values in
 Plugin **membership** is not a roster field — membership is the symlink assemblies under
 `plugins/<id>/`.
 
-- **`origin: authored | sourced`** is provenance and is immutable per entry.
+- **`origin: authored | sourced | vendored`** is provenance and is immutable per entry.
   `primitives-core/` holds **self-authored** bodies only — every entry sourced from under
   `primitives-core/` must be `origin: authored`
   ([ADR 0015](../docs/decisions/0015-self-authored-primitives-only.md)). Third-party material is

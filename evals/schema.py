@@ -36,6 +36,10 @@ from pb import PB
 
 # "plugin" covers whole-plugin externals recorded by reference (externals.yaml kind: plugin)
 EXTENDER_KINDS = ["skill", "agent", "hook", "mcp", "command", "plugin"]
+ROSTER_ORIGINS = ["authored", "sourced", "vendored"]
+ROSTER_DISPOSITIONS = [
+    "qualified", "grandfathered-pending-use", "demoted", "untriaged", "orphaned"
+]
 
 
 def text(name, required=False, max_len=0):
@@ -183,7 +187,7 @@ def collection_specs(ids):
                 text("name"),
                 select("kind", EXTENDER_KINDS, required=True),
                 text("description"),
-                select("origin", ["authored", "sourced", "external", "vendored"]),
+                select("origin", ROSTER_ORIGINS + ["external"]),
                 text("upstream"),
                 text("upstream_ref"),
                 text("repo_path"),
@@ -191,7 +195,7 @@ def collection_specs(ids):
                 select("shelf", ["core", "toggle"]),
                 select(
                     "disposition",
-                    ["qualified", "grandfathered-pending-use", "demoted", "untriaged"],
+                    ROSTER_DISPOSITIONS,
                 ),
                 js("requires"),
                 js("frontmatter"),
