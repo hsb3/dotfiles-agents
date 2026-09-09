@@ -73,8 +73,8 @@ Existing `deck.js` sources and comms `slides.json` workflows remain supported. F
 
 ## Roadmap
 
-- Follow the [replacement review and rollout](https://github.com/hsb3/dotfiles-agents/pull/530)
-  for current decisions; implementation work is tracked on kata `dotfiles-agents#rqen`.
+- In the source checkout, follow the [replacement roadmap](../../../docs/presentations-replacement.md#roadmap)
+  for the live review and tracker; installed copies contain the working skill and proof images.
 - Retire the temporary parser substitute after the
   [upstream dependency removal](https://github.com/gitbrent/PptxGenJS/pull/1529)
   reaches a verified release.
@@ -83,7 +83,7 @@ Existing `deck.js` sources and comms `slides.json` workflows remain supported. F
 
 The palettes, narrative and typography are the retained authored layer. The small layout
 helper comes from the owner's `spike-make-decks` experiment; package/editor/render tools
-are independently authored. The [replacement record](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/presentations-replacement.md)
+are independently authored. The [source-checkout replacement record](../../../docs/presentations-replacement.md)
 records provenance and capability decisions. No Anthropic base implementation, instructions
 or nested schemas are included. PptxGenJS is a separately installed MIT dependency;
 this skill does not grant a blanket license over the marketplace's work.

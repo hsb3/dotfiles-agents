@@ -77,3 +77,10 @@ installs. None of those alternatives is shipped or silently substituted for Pptx
 
 The dependency remedy remains reviewable on rqen/PR #530 before merge. Preserve the
 worker branch/worktree at that boundary; publication and historical rights remain separate.
+
+## Roadmap
+
+[The replacement review](https://github.com/hsb3/dotfiles-agents/pull/530) tracks the rollout;
+implementation decisions and evidence live on kata `dotfiles-agents#rqen`. These are the
+live records, rather than a second task list in the skill. The next dependency milestone
+is a verified upstream release that removes the unused parser declaration.
