@@ -465,6 +465,74 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             with self.subTest(command=command):
                 self._assert_silent(self._run(self._payload(command)))
 
+    def test_an_option_value_is_not_read_as_a_subcommand(self):
+        """`git stash -m list` is `stash push` with a message. Taking the first
+        bare token as the subcommand read `list` and let a real stash through."""
+        self._sidecar("e6666666666666666")
+        for command in ("git stash -m list", "git stash -m show",
+                        "git stash --message list"):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("stash", reason)
+
+    def test_a_double_dash_ends_the_options_a_read_form_could_hide_in(self):
+        """Past `--` every token is a path: `git rm -- -n` deletes a file NAMED
+        `-n`, and matching the dry-run flag anywhere made that silent."""
+        self._sidecar("e7777777777777777")
+        for command, verb in (("git rm -- -n", "rm"),
+                              ("git mv -- -n other", "mv"),
+                              ("git stash -- show", "stash")):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
+
+    def test_a_help_flag_that_is_an_option_value_is_not_a_help_call(self):
+        """`git commit -m -h` commits with the message `-h`."""
+        self._sidecar("e8888888888888888")
+        for command in ("git commit -m -h", "git commit -m --help",
+                        "git commit --message --help"):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("commit", reason)
+
+    def test_a_help_call_is_still_a_help_call(self):
+        self._sidecar("e9999999999999999")
+        for command in ("git commit --help", "git rm -h", "git submodule --help",
+                        "git bisect --help log"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_the_git_word_is_matched_case_insensitively(self):
+        """macOS filesystems are case-insensitive, so `GIT rm` runs git."""
+        self._sidecar("ea111111111111111")
+        for command, verb in (("GIT rm src/x.py", "rm"),
+                              ("Git commit -m x", "commit"),
+                              ("/usr/bin/GIT push", "push")):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
+
+    def test_a_read_form_glued_to_a_separator_is_still_a_read(self):
+        """shlex leaves `status|grep` one token, so the read form no longer
+        matched and an orientation command started denying."""
+        self._sidecar("ea222222222222222")
+        for command in ("git submodule status|grep vendor",
+                        "git bisect log;git status",
+                        "git submodule status&&echo ok",
+                        "git submodule status||true",
+                        "git submodule status>/tmp/x",
+                        "git sparse-checkout list|wc -l"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_write_form_glued_to_a_separator_still_denies(self):
+        self._sidecar("ea333333333333333")
+        for command, verb in (("git submodule update|tee /tmp/x", "submodule"),
+                              ("git pull;git status", "pull")):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
+
     # -- the tree the command targets --------------------------------------
 
     def _repo(self, name):

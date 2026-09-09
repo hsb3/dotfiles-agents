@@ -122,7 +122,12 @@ def parse_key(text, key):
 
     A key written twice resolves to its last written FORM, except that repeated
     sequence forms merge — naming a list twice must never silently shrink the list
-    a guard enforces.
+    a guard enforces. Mixing forms is the case that clause does NOT cover:
+    `protected: [main]` then `protected: junk` resolves to the scalar, every
+    sequence consumer coerces a scalar to no items, and the guard stays armed
+    over nothing. That is the fail-open rule of `docs/override-convention.md`
+    applied to a malformed file rather than a bug — and it is why
+    `activation.py check` exists, which reports such a key as inert.
     """
     block = _frontmatter(text)
     if block is None:

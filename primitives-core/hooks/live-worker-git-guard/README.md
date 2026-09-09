@@ -46,6 +46,13 @@ pins this table to `MUTATING_VERBS` and `READ_FORMS` in both directions).
 `--help` and `-h` are a read on every verb in the set, so they are not repeated per row. `bare`
 in the reads column means the verb with no subcommand.
 
+**A read form only counts as one when it is the call's own argument.** Three things are not:
+anything past a `--`, where every token is a path and `git rm -- -n` deletes a file named `-n`;
+anything past a shell separator, glued (`git submodule status|grep vendor`) or trailing, which
+belongs to the next command; and the value of an option that takes one, so `git stash -m list`
+is a stash with the message `list` and `git commit -m -h` is a commit with the message `-h`.
+All three were measured passing silently against real git before they were closed.
+
 | verb | ruling | reads that never fire | why |
 |---|---|---|---|
 | `add` | not denied | — | Writes the index only and takes nothing off disk. Every path from a dirty index to lost work runs through `commit`, `stash`, `reset` or `checkout`, each already denied, so denying the one call every commit sequence opens would cost a session more than it buys. Staging a worker's half-written file is recorded, not destroyed. |
@@ -108,6 +115,12 @@ workers are live. Each is a stated cost, not an oversight:
 - **Foreign-SCM front ends and GUIs** — `git svn rebase`, `git p4 sync`, `git quiltimport`,
   `git citool`. Each is a denied verb wearing another tool's name, and none is installed, or in
   the GUIs' case reachable without a display. A session that starts using one adds its row first.
+- **A value-taking option the hook does not list.** `OPTS_WITH_VALUE` names the options whose
+  next token is data rather than a subcommand or a help flag, and it is a list, so it is
+  incomplete. The failure is one-sided: an unlisted option makes its value *visible* to the
+  read-form match, so the residual miss is an unlisted option whose value happens to spell
+  `-h`, `--help`, or a read subcommand. Adding a row costs nothing; the alternative is the
+  per-verb flag parser this guard refuses to grow.
 - **The tokenizer ceiling**, which is a different axis entirely and has its own section:
   ["What it cannot see"](#what-it-cannot-see). A verb in the set still goes unread when the `git`
   word itself is displaced.
