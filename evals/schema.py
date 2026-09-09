@@ -191,7 +191,7 @@ def collection_specs(ids):
                 select("shelf", ["core", "toggle"]),
                 select(
                     "disposition",
-                    ["qualified", "grandfathered-pending-use", "demoted", "untriaged"],
+                    ["qualified", "grandfathered-pending-use", "demoted", "untriaged", "orphaned"],
                 ),
                 js("requires"),
                 js("frontmatter"),
