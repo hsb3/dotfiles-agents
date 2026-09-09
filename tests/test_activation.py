@@ -258,11 +258,23 @@ class CheckTests(_Base):
         self.assertIn("enforce is off", row)
         self.assertIn("Makefile", row)
 
-    def test_trailing_comment_empties_protected(self):
+    def test_trailing_comment_on_the_bare_key_line_still_reads_protected(self):
+        """A comment where the value belongs is not a value.
+
+        This answer INVERTED when the hooks' seven private parsers were consolidated
+        onto `_lib/atelier_local.py` (card ef7m). config-custody used to read
+        `# patterns` as the key's value, so the block never opened and the list came
+        back empty; the handoff hooks and context-watermark already read the same
+        shape as an empty value. The shared parser takes the second reading, which is
+        YAML's. The `protected` row's inert wording still names a trailing comment as
+        a cause — that text is activation.py's and is now stale.
+        """
         self.write("---\nenforce: strict\nprotected:  # patterns\n  - Makefile\n---\n")
         code, output = self.check()
-        self.assertEqual(code, 1, output)
-        self.assertIn("inert", self.row(output, "protected"))
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "protected")
+        self.assertIn("armed", row)
+        self.assertIn("Makefile", row)
 
     def test_handoff_outside_the_project_root_is_inert(self):
         self.write("---\nhandoff: ../../etc/passwd\n---\n")

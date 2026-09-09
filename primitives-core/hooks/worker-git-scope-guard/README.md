@@ -64,15 +64,15 @@ protected-branches:
   - release
 ```
 
-The inline form `protected-branches: ["main", "release"]` works too. Keep the block form's
-key line bare: like `protected:`, anything after the colon is read as the value, so a
-trailing comment there empties the list.
+The inline form `protected-branches: ["main", "release"]` works too. A trailing comment on
+the key line is fine — `protected-branches:  # publish only` is a blank value, so the block
+below it is still read.
 
 Three rules worth stating outright:
 
 - **This is a distinct key from `protected:`.** That one names protected *file paths* for
   `config-custody` and is never read here — a file glob must not become a branch name.
-  The two coexist in one frontmatter block and neither parser sees the other's key.
+  The two coexist in one frontmatter block and each hook asks for its own key by name.
 - **There is no built-in list.** Absent, empty, or unparseable means the protected-branch
   half is **inert**. Shipping a `{main, master}` default would be wrong wherever the
   default branch is a publish-only surface and day-to-day work happens elsewhere: it would
@@ -196,10 +196,12 @@ The stash half fires wherever the plugin is installed; the protected-branch half
 - **No ledger.** Every other guard in this bundle appends a row; this one deliberately does
   not, because nothing yet reads it and a deny is already visible where it matters — in the
   transcript, to the worker that hit it. Add one when there is a question to answer with it.
-- **The frontmatter parser is duplicated, on purpose.** Each hook owns its own reading of
-  the activation file so one hook's parser change cannot silently move another hook's
-  behaviour. `activation.py check` is what keeps the copies honest: it reports every key by
-  calling the hooks' own loaders rather than parsing the file itself.
+- **The frontmatter parser is shared; the sourcing is not.** Parsing lives in
+  `hooks/_lib/atelier_local.py`, which every reader of the activation file imports — six
+  hand-rolled copies used to disagree about the same shapes. Which bytes to parse stays
+  here, because this hook's fallback to the main checkout's copy is its own rule.
+  `activation.py check` still reports every key by calling the hooks' own loaders rather
+  than parsing the file itself.
 - **An unknown `stash` subcommand is left alone.** Only the first token after `stash` can
   be a subcommand — a later bare word is a message or a pathspec, so `git stash -m list`
   does not read as `git stash list`.

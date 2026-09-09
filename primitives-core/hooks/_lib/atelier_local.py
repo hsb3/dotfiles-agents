@@ -1,15 +1,15 @@
 """atelier_local — read one top-level key out of `.claude/atelier.local.md`.
 
-The activation file's frontmatter, parsed narrowly: one named key, either its
-scalar value or one level of indented sub-keys beneath it. Everything else is
-ignored, and anything unreadable answers None, so a malformed file behaves
-exactly as an absent one (`docs/override-convention.md`, fail-open).
+The activation file's frontmatter, parsed narrowly: one named key as a scalar, a
+mapping of sub-keys, or a sequence. Everything else is ignored, and anything
+unreadable answers None, so a malformed file behaves exactly as an absent one
+(`docs/override-convention.md`, fail-open).
 
-`context-watermark` is the only reader today. The five older hooks each carry
-their own copy of this parser (ADR 0017: a hook directory is symlinked on its
-own, so one of them importing another's module would break the moment it is
-installed alone) — importing from `_lib/` is safe because `_lib/` is a member
-of every hooks assembly, but converting those five is a separate change.
+Every hook that reads the activation file parses it here, and nothing else does
+(ADR 0017: `_lib/` is a member of every hooks assembly, so importing it is safe
+where importing another hook's module is not). Each hook keeps its OWN sourcing
+— which bytes to parse, its size cap, its fail-open default — because those
+rules differ per hook and are load-bearing; only the parsing is shared.
 
 Stdlib-only, Python 3.9 compatible.
 """
@@ -58,11 +58,76 @@ def _frontmatter(text):
     return None
 
 
-def parse_key(text, key):
-    """The named key's value: a str (scalar form), a dict (mapping form), or None.
+def _inline_list(raw):
+    """`["a", "b"]` / `[a, b]` -> ["a", "b"]. Commas inside quotes are respected."""
+    items = []
+    buf = []
+    quote = None
+    for ch in raw.strip()[1:-1]:
+        if quote:
+            if ch == quote:
+                quote = None
+            else:
+                buf.append(ch)
+        elif ch in ("'", '"'):
+            quote = ch
+        elif ch == ",":
+            items.append("".join(buf).strip())
+            buf = []
+        else:
+            buf.append(ch)
+    items.append("".join(buf).strip())
+    return [item for item in items if item]
 
-    A key written twice takes the last value, matching every other atelier
-    parser. A sequence under the key is unreadable here and yields None.
+
+def _block(lines, index, end):
+    """The lines under a bare `key:` -> (next index, mapping or None, sequence or None).
+
+    A block is a sequence the moment it holds one `- ` item, a mapping when it holds
+    only `sub: value` lines, and neither when it is empty. Only an unindented line
+    carrying a colon ends it — the next top-level key — so a comment or a stray word
+    at any indent is skipped rather than treated as the end.
+    """
+    children = {}
+    items = []
+    is_sequence = False
+    while index < end:
+        line = lines[index]
+        item = line.strip()
+        if not item or item.startswith("#"):
+            index += 1
+            continue
+        if item == "-" or item.startswith("- "):
+            index += 1
+            is_sequence = True
+            entry = unquote(item[2:])
+            if entry:
+                items.append(entry)
+            continue
+        if not line[:1].isspace():
+            if ":" in item:
+                break
+            index += 1
+            continue
+        index += 1
+        colon = item.find(":")
+        if colon != -1:
+            children[item[:colon].strip().lower()] = unquote(item[colon + 1:])
+    return index, (children or None), (items if is_sequence else None)
+
+
+def parse_key(text, key):
+    """The named key's value: a str (scalar), a dict (mapping), a list (sequence),
+    or None when the key is absent, blank or unreadable.
+
+    A key written twice resolves to its last written FORM, except that repeated
+    sequence forms merge — naming a list twice must never silently shrink the list
+    a guard enforces. Mixing forms is the case that clause does NOT cover:
+    `protected: [main]` then `protected: junk` resolves to the scalar, every
+    sequence consumer coerces a scalar to no items, and the guard stays armed
+    over nothing. That is the fail-open rule of `docs/override-convention.md`
+    applied to a malformed file rather than a bug — and it is why
+    `activation.py check` exists, which reports such a key as inert.
     """
     block = _frontmatter(text)
     if block is None:
@@ -70,6 +135,8 @@ def parse_key(text, key):
     lines, index, end = block
     key = key.lower()
     value = None
+    items = []
+    sequence = False
     while index < end:
         line = lines[index]
         index += 1
@@ -80,33 +147,23 @@ def parse_key(text, key):
         if colon == -1 or item[:colon].strip().lower() != key:
             continue
         rest = item[colon + 1:].strip()
+        if rest.startswith("[") and rest.endswith("]"):
+            items.extend(_inline_list(rest))
+            sequence = True
+            continue
         # A comment where the value would be reads as no value at all, so
-        # `watermark:  # note` opens the mapping form.
+        # `watermark:  # note` opens the block form rather than yielding "# note".
         scalar = "" if rest.startswith("#") else unquote(rest)
         if scalar:
-            value = scalar
+            value, sequence = scalar, False
             continue
-        children = {}
-        while index < end:
-            child = lines[index]
-            if not child.strip():
-                index += 1
-                continue
-            if not child[:1].isspace():
-                break  # back at the top level: the mapping is over
-            index += 1
-            sub = child.strip()
-            if sub.startswith("#"):
-                continue
-            if sub.startswith("-"):
-                children = None  # a sequence where a mapping belongs
-                break
-            sub_colon = sub.find(":")
-            if sub_colon == -1:
-                continue
-            children[sub[:sub_colon].strip().lower()] = unquote(sub[sub_colon + 1:])
-        value = children or None
-    return value
+        index, children, entries = _block(lines, index, end)
+        if entries is None:
+            value, sequence = children, False
+        else:
+            items.extend(entries)
+            sequence = True
+    return items if sequence else value
 
 
 def read_key(project_dir, key):

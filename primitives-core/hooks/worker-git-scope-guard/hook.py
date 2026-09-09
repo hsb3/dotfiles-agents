@@ -35,6 +35,14 @@ import shlex
 import subprocess
 import sys
 
+# The shared modules live beside the hook dirs, at `<hooks-root>/_lib/`. That
+# relative hop resolves both here in primitives-core/ and in an installed
+# plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
+)
+import atelier_local  # noqa: E402  (path must be primed before this import)
+
 # git subcommands that write a commit onto the current branch
 WRITE_SUBS = {"commit", "merge", "rebase", "cherry-pick", "revert", "am"}
 
@@ -55,11 +63,7 @@ PROTECTED_BRANCHES_KEY = "protected-branches"
 
 
 # ---------------------------------------------------------------------------
-# Activation file (tolerant hand parser — stdlib only, no PyYAML)
-#
-# Deliberately duplicated per hook rather than shared: each hook owns its own reading of
-# the file so one hook's parser change cannot silently move another hook's behaviour.
-# Narrowed here to the single sequence key this hook reads.
+# Activation file — sourced here, parsed by `_lib/atelier_local.py`
 # ---------------------------------------------------------------------------
 
 def _resolve_project_dir(payload_cwd):
@@ -100,106 +104,6 @@ def _resolve_activation_path(project_dir):
     return local
 
 
-def _unquote(value):
-    """Strip surrounding quotes and any trailing YAML comment."""
-    value = value.strip()
-    if value[:1] in ("'", '"'):
-        quote = value[0]
-        close = value.find(quote, 1)
-        return value[1:close] if close != -1 else value[1:]
-    hash_at = value.find(" #")
-    if hash_at != -1:
-        value = value[:hash_at].rstrip()
-    return value
-
-
-def _split_inline_list(raw):
-    """`["a", "b"]` / `[a, b]` -> ["a", "b"]. Commas inside quotes are respected."""
-    inner = raw.strip()[1:-1]
-    items = []
-    buf = []
-    quote = None
-    for ch in inner:
-        if quote:
-            if ch == quote:
-                quote = None
-            else:
-                buf.append(ch)
-        elif ch in ("'", '"'):
-            quote = ch
-        elif ch == ",":
-            items.append("".join(buf).strip())
-            buf = []
-        else:
-            buf.append(ch)
-    items.append("".join(buf).strip())
-    return [item for item in items if item]
-
-
-def _parse_frontmatter(text):
-    """Branch names under `protected-branches:` in a YAML frontmatter block.
-
-    Block or inline form. Anything it cannot make sense of — no fences, no closing
-    fence, a trailing comment where the value belongs — returns [], which leaves the
-    protected-branch half inert rather than half-armed.
-    """
-    lines = text.splitlines()
-
-    start = None
-    for index, line in enumerate(lines):
-        stripped = line.lstrip("﻿").strip()
-        if not stripped:
-            continue
-        if stripped == "---":
-            start = index + 1
-        break  # the first non-blank line must be the opening fence
-    if start is None:
-        return []
-
-    end = None
-    for index in range(start, len(lines)):
-        if lines[index].strip() in ("---", "..."):
-            end = index
-            break
-    if end is None:
-        return []
-
-    branches = []
-    in_key = False
-    for line in lines[start:end]:
-        if not line.strip() or line.strip().startswith("#"):
-            continue
-        indented = line[:1].isspace()
-        item = line.strip()
-
-        if in_key and item.startswith("- "):
-            value = _unquote(item[2:])
-            if value:
-                branches.append(value)
-            continue
-        if in_key and item == "-":
-            continue
-        if indented:
-            continue  # nested mapping under some other key: not ours
-
-        colon = item.find(":")
-        if colon == -1:
-            continue
-        key = item[:colon].strip().lower()
-        raw_value = item[colon + 1:].strip()
-        in_key = False
-
-        # `protected:` (config-custody's file-path key) is a DIFFERENT key and is never
-        # read here: a file glob must never be mistaken for a branch name.
-        if key == PROTECTED_BRANCHES_KEY:
-            if raw_value.startswith("[") and raw_value.endswith("]"):
-                branches.extend(_split_inline_list(raw_value))
-            elif not raw_value:
-                in_key = True
-
-    return branches
-
-
 def _load_protected_branches(project_dir):
     """The protected-branch set for this project. Any trouble at all -> empty."""
     path = _resolve_activation_path(project_dir)
@@ -213,9 +117,12 @@ def _load_protected_branches(project_dir):
     except Exception:
         return frozenset()
     try:
-        return frozenset(_parse_frontmatter(text))
+        # `protected:` (config-custody's file-path key) is a DIFFERENT key and is never
+        # read here: a file glob must never be mistaken for a branch name.
+        branches = atelier_local.parse_key(text, PROTECTED_BRANCHES_KEY)
     except Exception:
         return frozenset()
+    return frozenset(branches) if isinstance(branches, list) else frozenset()
 
 
 # ---------------------------------------------------------------------------

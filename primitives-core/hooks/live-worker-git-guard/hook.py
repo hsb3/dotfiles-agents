@@ -20,6 +20,15 @@ Read-only git is never touched — `status`, `diff`, `log`, `show`, `branch`,
 `rev-list`, `rev-parse`, `ls-files`, `fetch` are how a session orients, and a
 guard that made orientation expensive would be turned off.
 
+The verb set is ruled on one verb at a time in the README's table, and the
+line it draws is this hazard rather than "writes something": what can remove,
+overwrite or swap a tracked file in THIS tree, move the branch the tree sits
+on, or capture and publish its half-finished state. What writes only the index
+(`add`), only the object database, only a ref that has an everyday read
+spelling (`branch`, `tag`, `symbolic-ref`), only another working tree, or only
+the files named on the command line (`merge-file`, `mergetool`, which are the
+destructive-write case below) is out, with its reason recorded beside it.
+
 Scoped to ONE working tree. The pending set is keyed on the session's
 transcript, which says nothing about where a command points, and a session can
 hold workers in its own tree while a call runs in a checkout of a different
@@ -133,14 +142,17 @@ LOG_PATH_ENV = "LIVE_WORKER_GIT_GUARD_LOG_PATH"
 OVERRIDE_VAR = "ATELIER_GIT_GUARD_OVERRIDE"
 OVERRIDE_TRUTHY = ("1", "true", "yes", "on")
 
-# The verbs this guard fires on — NOT every verb that writes. `add`, `rm`, `mv`,
-# `update-ref`, `tag`, `bisect` and `submodule` also write and are absent; see
-# the README, widening the set is a per-verb read-form decision tracked on the
-# board. `fetch` moves no tracked file, and `branch` as a session runs it is a
-# read.
+# Verbs that can take a tracked file off THIS working tree, move the branch it
+# sits on, or publish its half-finished state. What writes only the index
+# (`add`), only the object database, only a ref that has an everyday read
+# spelling (`branch`, `tag`), or only files named on the command line is
+# deliberately out — the README's ruling table gives the reason for every verb,
+# in the set or out of it.
 MUTATING_VERBS = frozenset((
     "commit", "push", "merge", "pull", "rebase", "checkout", "switch", "stash",
     "reset", "cherry-pick", "revert", "clean", "restore", "am", "apply",
+    "rm", "mv", "bisect", "submodule", "sparse-checkout", "update-ref",
+    "read-tree", "checkout-index",
 ))
 
 # git's own global options, the ones that take a SEPARATE value token. Without
@@ -219,7 +231,11 @@ GIT_TIMEOUT = 3
 # A token ENDING in one of these is a shell separator, so the next token starts
 # a fresh command: `a && git commit`, `a; git commit`, `a | git commit`.
 SEPARATOR_TAILS = ("&", "|", ";", "(", ")", "{", "}")
-SEPARATORS = "".join(SEPARATOR_TAILS)
+
+# The same characters plus redirection, looked for INSIDE a token: shlex leaves
+# `status|grep` and `log;git` whole, so a verb or a read form glued to one
+# matched nothing and the call was read as neither.
+SEPARATOR_CHARS = "&|;(){}<>"
 
 # `git commit --help` opens a man page and touches nothing. Orientation has to
 # stay cheap, or the guard is the thing that gets turned off.
@@ -232,12 +248,40 @@ SHELL_KEYWORDS = frozenset(("do", "then", "else", "elif", "if", "while",
 
 # Read-only forms of verbs that otherwise write: `git stash list` is how a
 # session orients, `git apply --check` touches nothing. Keyed by verb; a call
-# whose first non-option argument (stash) or any option (apply) is listed here
-# is a read and never fires.
+# whose first non-option argument (a SUBCOMMAND_VERBS one) or any option (every
+# other) is listed here is a read and never fires. `""` is the bare call.
 READ_FORMS = {
     "stash": frozenset(("list", "show")),
     "apply": frozenset(("--check", "--stat", "--numstat", "--summary")),
+    "bisect": frozenset(("", "log", "view", "visualize", "terms", "help")),
+    "submodule": frozenset(("", "status", "summary")),
+    "sparse-checkout": frozenset(("", "list", "check-rules")),
+    "rm": frozenset(("--dry-run", "-n")),
+    "mv": frozenset(("--dry-run", "-n")),
+    "read-tree": frozenset(("--dry-run", "-n")),
 }
+
+# Verbs whose read forms are subcommands rather than options, so the FIRST bare
+# argument decides. Bare is a read for all but `stash`, where bare means push:
+# `git submodule` is `status`, and the other two print usage.
+SUBCOMMAND_VERBS = frozenset((
+    "stash", "bisect", "submodule", "sparse-checkout"))
+
+# Options on the denied verbs that consume the NEXT token, which is therefore
+# neither a subcommand nor a help flag: `git stash -m list` stashes for real,
+# and `git commit -m -h` commits with the message `-h`. A `--opt=value` needs no
+# row. Incomplete by construction, and the README names the residual miss —
+# but the failure is one-sided, since an unlisted option can only make a read
+# form visible that this set would have hidden.
+OPTS_WITH_VALUE = frozenset((
+    "-m", "--message", "-F", "--file", "-C", "--reuse-message",
+    "-c", "--reedit-message", "--author", "--date", "-t", "--template",
+    "--fixup", "--squash", "--cleanup", "--trailer", "--gpg-sign",
+    "-s", "--strategy", "-X", "--strategy-option", "--onto", "--exec",
+    "-b", "-B", "--orphan", "--conflict", "--source", "--pathspec-from-file",
+    "-e", "--exclude", "--whitespace", "--prefix", "--index-output",
+    "--separate-git-dir",
+))
 
 MAX_NAMED_AGENTS = 4
 
@@ -382,7 +426,9 @@ def _first_mutating_verb(tokens):
     for index, token in enumerate(tokens):
         if command_position:
             git_at, _relocated = _unwrap(tokens, index)
-            if git_at is not None and os.path.basename(tokens[git_at]) == "git":
+            # Lowercased: a case-insensitive filesystem runs `GIT rm` as git.
+            if git_at is not None and os.path.basename(
+                    tokens[git_at]).lower() == "git":
                 verb, verb_at = _subcommand(tokens, git_at + 1)
                 if verb in MUTATING_VERBS and not _is_read_form(
                         verb, tokens, verb_at + 1):
@@ -392,15 +438,23 @@ def _first_mutating_verb(tokens):
     return None, None, None
 
 
+def _head(token):
+    """The token up to its first shell separator, glued or trailing:
+    `status|grep` and `pull;` are both one shlex token."""
+    for index, char in enumerate(token):
+        if char in SEPARATOR_CHARS:
+            return token[:index]
+    return token
+
+
 def _subcommand(tokens, start):
     """(subcommand, its index) at or after `start`, skipping global options;
-    (None, None) when the command ends first. A trailing separator is stripped:
-    `while git pull; do` tokenizes the verb as `pull;`, which matched nothing."""
+    (None, None) when the command ends first."""
     i = start
     while i < len(tokens):
         token = tokens[i]
         if not token.startswith("-"):
-            return token.rstrip(SEPARATORS), i
+            return _head(token), i
         if token in GLOBAL_FLAGS_WITH_VALUE:
             i += 2  # the flag and its separate value
             continue
@@ -408,21 +462,46 @@ def _subcommand(tokens, start):
     return None, None
 
 
-def _is_read_form(verb, tokens, start):
-    """True when this call of a mutating verb is one of its read-only forms
-    (READ_FORMS), judged on the arguments up to the next shell separator."""
+def _call_args(tokens, start):
+    """This git call's own argument tokens, with everything that is not one of
+    them dropped.
+
+    Three exclusions, each of which was a hole: past a `--` every token is a
+    path (`git rm -- -n` deletes a file NAMED `-n`), past a shell separator the
+    tokens belong to the next command, and the value of an option that takes
+    one is data (`git stash -m list` is a stash, not `stash list`).
+    """
     args = []
     for token in tokens[start:]:
-        args.append(token.rstrip(SEPARATORS))
-        if token.endswith(SEPARATOR_TAILS):
+        head = _head(token)
+        if head == "--":
             break
+        if head:
+            args.append(head)
+        if head != token:
+            break
+    kept = []
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+            continue
+        kept.append(arg)
+        skip = arg in OPTS_WITH_VALUE
+    return kept
+
+
+def _is_read_form(verb, tokens, start):
+    """True when this call of a mutating verb is one of its read-only forms
+    (READ_FORMS), judged on the call's own arguments."""
+    args = _call_args(tokens, start)
     if any(a in HELP_FLAGS for a in args):
         return True
     forms = READ_FORMS.get(verb)
     if not forms:
         return False
-    if verb == "stash":
-        first = next((a for a in args if not a.startswith("-")), None)
+    if verb in SUBCOMMAND_VERBS:
+        first = next((a for a in args if not a.startswith("-")), "")
         return first in forms
     return any(a in forms for a in args)
 

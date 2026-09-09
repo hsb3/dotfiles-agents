@@ -4,8 +4,8 @@
 enforce: strict            # off (default when absent) | advisory | strict
 
 # fnmatch patterns, project-relative; `*` crosses `/`. Read by config-custody, and
-# consulted only while `enforce` is armed. Keep this line bare: the hooks treat
-# anything after the colon as the value, so a trailing comment here empties the list.
+# consulted only while `enforce` is armed. A trailing comment on the key line is fine:
+# a comment where the value would be is no value, so the block below is still read.
 protected:
   - Makefile
   - .github/workflows/*
@@ -13,7 +13,7 @@ protected:
 
 # worker-git-scope-guard: branch NAMES a subagent may not commit, merge, rebase or push
 # onto. A different key from `protected` above (that one is file paths) and independent of
-# `enforce`. Keep the key line bare, same trap as `protected`.
+# `enforce`.
 #
 # Ships commented out on purpose: there is no sensible default. Name your own publish-only
 # or release branches here — a built-in main/master guard protects the wrong branch in any

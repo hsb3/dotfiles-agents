@@ -289,8 +289,8 @@ def evaluate(project_dir, modules):
     elif not patterns:
         result["rows"].append(_row(
             "protected", "inert",
-            "written, but no patterns were parsed - a trailing comment on the "
-            "`protected:` line, or an empty list", ["config-custody"]))
+            "written, but no patterns were parsed - an empty list, or a scalar "
+            "where a sequence belongs", ["config-custody"]))
     elif enforce in (None, "off"):
         result["rows"].append(_row(
             "protected", "inert",
@@ -313,8 +313,8 @@ def evaluate(project_dir, modules):
     elif not branches:
         result["rows"].append(_row(
             "protected-branches", "inert",
-            "written, but no branch names were parsed - a trailing comment on the "
-            "`protected-branches:` line, or an empty list", ["worker-git-scope-guard"]))
+            "written, but no branch names were parsed - an empty list, or a scalar "
+            "where a sequence belongs", ["worker-git-scope-guard"]))
     else:
         result["rows"].append(_row(
             "protected-branches", "armed", ", ".join(branches),

@@ -14,6 +14,7 @@ settled. Stdlib-only; fixtures build into a tempdir per test, and the
 subprocess environment is built from scratch with only PATH inherited.
 """
 
+import importlib.util
 import itertools
 import json
 import os
@@ -34,6 +35,21 @@ import pending  # noqa: E402  (path must be primed before this import)
 # under `-t .`, so prime the path the same way the hooks prime `_lib`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from worktree_fixture import make_worktree, require_git  # noqa: E402
+
+
+def _load_hook():
+    """The hook as a module, for the tests that read its verb set directly.
+
+    Importing runs only module-level definitions — `main()` is behind the
+    `__main__` guard — so nothing decides anything at import time.
+    """
+    spec = importlib.util.spec_from_file_location("_lwgg_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+HOOK = _load_hook()
 
 _SEQ = itertools.count()
 
@@ -365,6 +381,157 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
                         "git apply fix.diff"):
             with self.subTest(command=command):
                 self._assert_denied(self._run(self._payload(command)))
+
+    # -- the widened verb set (card p03n) ----------------------------------
+
+    def test_verbs_that_take_a_tracked_file_off_this_tree_are_denied(self):
+        # Each row was measured silent on 2026-09-08, and each does what the
+        # hook's opening line describes.
+        self._sidecar("e1111111111111111")
+        for command, verb in (
+            ("git rm stale_module.py", "rm"),
+            # All forms: carving the index-only one out would make the guard
+            # parse flags to decide a milder mutation is acceptable.
+            ("git rm --cached stale_module.py", "rm"),
+            ("git mv old_name.py new_name.py", "mv"),
+            ("git bisect start HEAD HEAD~10", "bisect"),
+            ("git bisect reset", "bisect"),
+            ("git bisect run make ci", "bisect"),
+            ("git submodule update --init --recursive", "submodule"),
+            ("git submodule deinit -f vendor/lib", "submodule"),
+            ("git sparse-checkout set src", "sparse-checkout"),
+            ("git sparse-checkout disable", "sparse-checkout"),
+            ("git update-ref refs/heads/dev HEAD", "update-ref"),
+            ("git read-tree -u -m HEAD", "read-tree"),
+            ("git checkout-index -a -f", "checkout-index"),
+        ):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
+
+    def test_the_read_forms_of_the_widened_verbs_stay_silent(self):
+        # A read that starts denying is a regression: the guard's premise is
+        # that orientation stays cheap.
+        self._sidecar("e2222222222222222")
+        for command in (
+            "git rm --dry-run stale_module.py",
+            "git rm -n stale_module.py",
+            "git mv -n old_name.py new_name.py",
+            "git mv --dry-run old_name.py new_name.py",
+            "git bisect log",
+            "git bisect view",
+            "git bisect visualize",
+            "git bisect terms",
+            "git bisect help",
+            "git submodule status",
+            "git submodule summary",
+            "git sparse-checkout list",
+            "git sparse-checkout check-rules",
+            "git read-tree -n -m HEAD",
+            "git read-tree --dry-run -m HEAD",
+            # `--help` is orientation on the new verbs too.
+            "git rm --help", "git update-ref -h", "git submodule --help",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_subcommand_verb_with_no_subcommand_writes_nothing(self):
+        # Measured 2026-09-08: bare `git submodule` is `status` (exit 0), bare
+        # `git bisect` and `git sparse-checkout` print usage (exit 129).
+        # `stash` is the exception below — bare means push.
+        self._sidecar("e3333333333333333")
+        for command in ("git submodule", "git bisect", "git sparse-checkout"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+        self._assert_denied(self._run(self._payload("git stash")))
+
+    def test_index_only_writes_are_deliberately_not_denied(self):
+        # Nothing leaves the disk, and every path from a dirty index to lost
+        # work runs through a verb already in the set.
+        self._sidecar("e4444444444444444")
+        for command in ("git add -A", "git add -p src/",
+                        "git update-index --refresh"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_ref_writes_with_an_everyday_read_spelling_stay_out(self):
+        # Telling these from their read forms needs the per-verb flag parser
+        # this guard refuses to build, and none takes a file off disk.
+        self._sidecar("e5555555555555555")
+        for command in ("git branch -D old", "git tag -a v1 -m x",
+                        "git symbolic-ref --short HEAD", "git notes add -m x",
+                        "git remote add up https://example.invalid/r.git",
+                        "git reflog expire --expire=now --all"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_an_option_value_is_not_read_as_a_subcommand(self):
+        """`git stash -m list` is `stash push` with a message. Taking the first
+        bare token as the subcommand read `list` and let a real stash through."""
+        self._sidecar("e6666666666666666")
+        for command in ("git stash -m list", "git stash -m show",
+                        "git stash --message list"):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("stash", reason)
+
+    def test_a_double_dash_ends_the_options_a_read_form_could_hide_in(self):
+        """Past `--` every token is a path: `git rm -- -n` deletes a file NAMED
+        `-n`, and matching the dry-run flag anywhere made that silent."""
+        self._sidecar("e7777777777777777")
+        for command, verb in (("git rm -- -n", "rm"),
+                              ("git mv -- -n other", "mv"),
+                              ("git stash -- show", "stash")):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
+
+    def test_a_help_flag_that_is_an_option_value_is_not_a_help_call(self):
+        """`git commit -m -h` commits with the message `-h`."""
+        self._sidecar("e8888888888888888")
+        for command in ("git commit -m -h", "git commit -m --help",
+                        "git commit --message --help"):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn("commit", reason)
+
+    def test_a_help_call_is_still_a_help_call(self):
+        self._sidecar("e9999999999999999")
+        for command in ("git commit --help", "git rm -h", "git submodule --help",
+                        "git bisect --help log"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_the_git_word_is_matched_case_insensitively(self):
+        """macOS filesystems are case-insensitive, so `GIT rm` runs git."""
+        self._sidecar("ea111111111111111")
+        for command, verb in (("GIT rm src/x.py", "rm"),
+                              ("Git commit -m x", "commit"),
+                              ("/usr/bin/GIT push", "push")):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
+
+    def test_a_read_form_glued_to_a_separator_is_still_a_read(self):
+        """shlex leaves `status|grep` one token, so the read form no longer
+        matched and an orientation command started denying."""
+        self._sidecar("ea222222222222222")
+        for command in ("git submodule status|grep vendor",
+                        "git bisect log;git status",
+                        "git submodule status&&echo ok",
+                        "git submodule status||true",
+                        "git submodule status>/tmp/x",
+                        "git sparse-checkout list|wc -l"):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_write_form_glued_to_a_separator_still_denies(self):
+        self._sidecar("ea333333333333333")
+        for command, verb in (("git submodule update|tee /tmp/x", "submodule"),
+                              ("git pull;git status", "pull")):
+            with self.subTest(command=command):
+                reason = self._assert_denied(self._run(self._payload(command)))
+                self.assertIn(verb, reason)
 
     # -- the tree the command targets --------------------------------------
 
@@ -896,6 +1063,73 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "ATELIER_GIT_GUARD_OVERRIDE=1 git status --short")))
         self._assert_silent(self._run(self._payload(
             "ATELIER_GIT_GUARD_OVERRIDE=1 ls -la")))
+
+
+class VerbRulingTableTests(unittest.TestCase):
+    """The README's ruling table is the verb set, checked against the code.
+
+    Card p03n's failure mode was a verb left out with no stated reason and a
+    comment that no longer described the set. Pinning the table to
+    `MUTATING_VERBS` and `READ_FORMS` means a verb cannot move in the code
+    without its row moving with it, in either direction.
+    """
+
+    SECTION = "## The verb set, verb by verb"
+
+    def setUp(self):
+        readme = os.path.join(
+            HOOKS_ROOT, "live-worker-git-guard", "README.md")
+        with open(readme, encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertIn(self.SECTION, text, "the ruling table is missing")
+        section = text.split(self.SECTION, 1)[1].split("\n## ", 1)[0]
+        self.rows = [
+            [cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in section.splitlines() if line.startswith("| `")
+        ]
+        self.assertTrue(self.rows, "no ruled rows in the table")
+
+    @staticmethod
+    def _terms(cell):
+        """The backticked tokens in a cell; `bare` is the no-subcommand call,
+        which READ_FORMS spells as the empty string."""
+        return {"" if term == "bare" else term
+                for term in re.findall(r"`([^`]+)`", cell)}
+
+    def _ruled(self, ruling):
+        verbs = set()
+        for row in self.rows:
+            if row[1] == ruling:
+                verbs |= self._terms(row[0])
+        return verbs
+
+    def test_the_table_names_exactly_the_verbs_the_hook_denies(self):
+        self.assertEqual(self._ruled("denied"), set(HOOK.MUTATING_VERBS))
+
+    def test_the_table_publishes_exactly_the_carve_outs_the_hook_honours(self):
+        self.assertEqual(set(HOOK.READ_FORMS) - self._ruled("denied"), set())
+        for row in self.rows:
+            if row[1] != "denied":
+                continue
+            for verb in self._terms(row[0]):
+                self.assertEqual(self._terms(row[2]),
+                                 set(HOOK.READ_FORMS.get(verb, ())), verb)
+
+    def test_no_verb_the_table_excludes_is_denied_in_the_code(self):
+        excluded = self._ruled("not denied")
+        self.assertTrue(excluded, "the table records no exclusion")
+        self.assertEqual(excluded & set(HOOK.MUTATING_VERBS), set())
+
+    def test_every_ruling_states_a_reason(self):
+        # An omission with no stated reason is what produced card p03n.
+        for row in self.rows:
+            self.assertGreater(len(row[3]), 20, row[0])
+
+    def test_a_subcommand_verb_is_one_whose_carve_outs_are_subcommands(self):
+        for verb in HOOK.SUBCOMMAND_VERBS:
+            self.assertIn(verb, HOOK.READ_FORMS, verb)
+            self.assertFalse(
+                [f for f in HOOK.READ_FORMS[verb] if f.startswith("-")], verb)
 
 
 class SharedLedgerTests(unittest.TestCase):

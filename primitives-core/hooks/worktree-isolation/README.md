@@ -236,9 +236,10 @@ string test reports every subdirectory as a worktree.
   can trace the behaviour to this hook rather than to the harness.
 - **Fail-open, always.** Every path exits 0. An un-isolated worker is the pre-hook status quo and
   merely risky; a hook that crashes on every dispatch is an outage.
-- **The activation parser is duplicated, on purpose.** Each hook directory is copied and symlinked
-  on its own, so a shared module would be a cross-hook import path that breaks the moment one hook
-  is installed without the other.
+- **The activation parser is shared; the sourcing is not.** Parsing lives in
+  `hooks/_lib/atelier_local.py` — `_lib/` is a member of every hooks assembly (ADR 0017), so
+  importing it is safe where importing another hook's module is not. This hook keeps its own path
+  resolution, size cap and fail-open default.
 - **Base ref is a separate setting.** A new worktree branches from `origin/<default-branch>` unless
   the project sets `{"worktree": {"baseRef": "head"}}` in settings.json (values `fresh`, the
   default, or `head`). Where the default branch is a publish-only surface, `head` is the one that

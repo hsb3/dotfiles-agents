@@ -292,9 +292,15 @@ class GitPublishedTree:
     def prepare(self):
         try:
             self._fetch()
-            rc, out, _ = self._git(
-                ["rev-parse", "--verify", "--quiet", f"{PUBLISHED_FULL_REF}^{{commit}}"]
-            )
+            # Existence by exact ref path first: `rev-parse --verify` applies all six
+            # resolution rules even to a full refname, so with no tracking ref a local
+            # branch named `refs/remotes/origin/main` would become the published tree.
+            rc, out, _ = self._git(["show-ref", "--verify", "--quiet", PUBLISHED_FULL_REF])
+            if rc == 0:
+                # A second call because `show-ref` takes no `^{commit}` suffix.
+                rc, out, _ = self._git(
+                    ["rev-parse", "--verify", "--quiet", f"{PUBLISHED_FULL_REF}^{{commit}}"]
+                )
             if rc != 0 or not out.strip():
                 detail = f" ({self._fetch_error})" if self._fetch_error else ""
                 return f"{self.ref} could not be resolved{detail}"

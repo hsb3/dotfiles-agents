@@ -4,8 +4,8 @@
 enforce: strict            # off (default when absent) | advisory | strict
 
 # fnmatch patterns, project-relative; `*` crosses `/`. Read by config-custody, and
-# consulted only while `enforce` is armed. Keep this line bare: the hooks treat
-# anything after the colon as the value, so a trailing comment here empties the list.
+# consulted only while `enforce` is armed. A trailing comment on the key line is fine:
+# a comment where the value would be is no value, so the block below is still read.
 protected:
   - Makefile
   - .github/workflows/*

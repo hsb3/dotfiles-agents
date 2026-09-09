@@ -251,10 +251,17 @@ class ProtectedBranchesKeyTests(unittest.TestCase):
         self.write("---\nprotected-branches: []\n---\n")
         self.assertEqual(self.load(), frozenset())
 
-    def test_a_trailing_comment_on_the_bare_key_line_empties_the_list(self):
-        """Same trap `protected:` has, and the same answer: keep the key line bare."""
+    def test_a_trailing_comment_on_the_bare_key_line_still_reads_the_list(self):
+        """A comment where the value belongs is not a value.
+
+        This answer INVERTED when the seven private parsers were consolidated onto
+        `_lib/atelier_local.py` (card ef7m): this hook used to read `# publish only`
+        as the key's value, so the block never opened and the list came back empty,
+        while the handoff hooks and context-watermark already read the same shape as
+        an empty value. One rule now, and it is YAML's.
+        """
         self.write("---\nprotected-branches:  # publish only\n  - main\n---\n")
-        self.assertEqual(self.load(), frozenset())
+        self.assertEqual(self.load(), frozenset({"main"}))
 
     def test_no_frontmatter_is_inert(self):
         self.write("notes\n\n---\nprotected-branches:\n  - main\n---\n")

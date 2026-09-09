@@ -56,13 +56,14 @@ import sys
 import time
 import traceback
 
-# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# The shared modules live beside the hook dirs, at `<hooks-root>/_lib/`.
 # That relative hop resolves both here in primitives-core/ and in an installed
 # plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import atelier_local  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -174,23 +175,6 @@ def _resolve_activation_path(project_dir):
     return os.path.join(main_dir, ACTIVATION_RELPATH)
 
 
-def _unquote(value):
-    """Strip surrounding quotes and any trailing YAML comment.
-
-    Quote handling comes first: `handoff: "docs/HANDOFF.md"  # note` must
-    yield `docs/HANDOFF.md`, while a quoted path is allowed to contain a `#`.
-    """
-    value = value.strip()
-    if value[:1] in ("'", '"'):
-        quote = value[0]
-        close = value.find(quote, 1)
-        return value[1:close] if close != -1 else value[1:]
-    hash_at = value.find(" #")
-    if hash_at != -1:
-        value = value[:hash_at].rstrip()
-    return value
-
-
 def _normalize_handoff(children):
     """The two written forms collapsed into one shape, or None when there is
     nothing to collapse (an empty `handoff:` with no children, or a sequence
@@ -211,92 +195,23 @@ def _normalize_handoff(children):
     }
 
 
-def _parse_handoff_config(text):
-    """Return the `handoff:` key from a YAML frontmatter block as a config
-    dict, or None if absent/blank/unparseable.
+def _handoff_config(text):
+    """The `handoff:` key as a config dict, or None if absent/blank/unreadable.
 
         handoff: docs/HANDOFF.md   ->  {"mode": "file", "path": "docs/HANDOFF.md", ...}
 
         handoff:                   ->  {"mode": "external", "stamp": "...", ...}
           mode: external
           stamp: .claude/handoff.stamp
-          location: the DFA board task
+          location: the board task
 
-    Deliberately narrow (mirrors worker-context's `enforce`-only parser):
-    understands one top-level key, either its scalar value or one level of
-    indented sub-keys beneath it, and ignores everything else. Anything it
-    cannot make sense of — no fences, no closing fence, a sequence under the
-    key — returns None, so a malformed activation file behaves exactly as if
-    the key were absent (fall back to the standard search).
+    A sequence under the key is neither form and reads as absent, so a malformed
+    activation file falls back to the standard search.
     """
-    lines = text.splitlines()
-
-    start = None
-    for index, line in enumerate(lines):
-        stripped = line.lstrip("﻿").strip()
-        if not stripped:
-            continue
-        if stripped == "---":
-            start = index + 1
-        break  # the first non-blank line must be the opening fence
-    if start is None:
-        return None
-
-    end = None
-    for index in range(start, len(lines)):
-        if lines[index].strip() in ("---", "..."):
-            end = index
-            break
-    if end is None:
-        return None
-
-    config = None
-    index = start
-    while index < end:
-        line = lines[index]
-        index += 1
-        if not line.strip() or line[:1].isspace() or line.strip().startswith("#"):
-            continue
-        item = line.strip()
-        colon = item.find(":")
-        if colon == -1:
-            continue
-        if item[:colon].strip().lower() != HANDOFF_KEY:
-            continue
-        # A comment where the value would be reads as no value at all, so
-        # `handoff:  # note` opens the mapping form rather than resolving a
-        # path named "# note". _unquote only strips a comment that follows a
-        # value, which is why the leading case is caught before it.
-        rest = item[colon + 1:].strip()
-        value = "" if rest.startswith("#") else _unquote(rest)
-        if value:
-            config = _normalize_handoff({"path": value})
-            continue
-        # Nothing after the colon: the mapping form, whose children are the
-        # indented lines that follow. The scan advances the shared cursor
-        # rather than returning, so a key written twice still takes the last
-        # value — the same duplicate rule the top level has always had.
-        children = {}
-        while index < end:
-            child = lines[index]
-            if not child.strip():
-                index += 1
-                continue
-            if not child[:1].isspace():
-                break  # back at the top level: the mapping is over
-            index += 1
-            sub = child.strip()
-            if sub.startswith("#"):
-                continue
-            if sub.startswith("-"):
-                children = None  # a list, not a mapping: unreadable, stay inert
-                break
-            sub_colon = sub.find(":")
-            if sub_colon == -1:
-                continue
-            children[sub[:sub_colon].strip().lower()] = _unquote(sub[sub_colon + 1:])
-        config = _normalize_handoff(children)
-    return config
+    value = atelier_local.parse_key(text, HANDOFF_KEY)
+    if isinstance(value, str):
+        return _normalize_handoff({"path": value})
+    return _normalize_handoff(value if isinstance(value, dict) else None)
 
 
 def _load_handoff_config(project_dir):
@@ -310,7 +225,7 @@ def _load_handoff_config(project_dir):
     except Exception:
         return None
     try:
-        return _parse_handoff_config(text)
+        return _handoff_config(text)
     except Exception:
         return None
 

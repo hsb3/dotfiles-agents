@@ -43,13 +43,14 @@ import subprocess
 import sys
 import traceback
 
-# The shared append path lives beside the hook dirs, at `<hooks-root>/_lib/`.
+# The shared modules live beside the hook dirs, at `<hooks-root>/_lib/`.
 # That relative hop resolves both here in primitives-core/ and in an installed
 # plugin, where `hooks/_lib` is a member of the symlink assembly (ADR 0017).
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import atelier_local  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -112,10 +113,9 @@ def _main_checkout(path):
     as "not a linked worktree", so a machine without git behaves exactly as it
     did before.
 
-    Duplicated across the atelier hooks by design, like the activation parser
-    below: each hook dir is copied and symlinked on its own, so a shared module
-    would be a cross-hook import that breaks the moment one of them is
-    installed without the other.
+    Duplicated across the atelier hooks by design: each hook dir is copied and
+    symlinked on its own, so a shared module would be a cross-hook import that
+    breaks the moment one of them is installed without the other.
     """
     try:
         proc = subprocess.run(
@@ -164,7 +164,7 @@ def _resolve_activation_path(project_dir):
 
 
 # ---------------------------------------------------------------------------
-# Activation file (tolerant hand parser — stdlib only, no PyYAML)
+# Activation file — sourced here, parsed by `_lib/atelier_local.py`
 # ---------------------------------------------------------------------------
 
 def _emit(obj):
@@ -181,112 +181,20 @@ def _emit(obj):
             pass
 
 
-def _unquote(value):
-    """Strip surrounding quotes and any trailing YAML comment.
+def _policy(text):
+    """(mode, patterns) from an activation file's frontmatter.
 
-    Quote handling comes first: `enforce: "strict"  # armed` must yield `strict`,
-    while a quoted pattern is allowed to contain a `#`.
+    Deliberately narrow: one scalar key (`enforce`) and one sequence key
+    (`protected`). Anything it cannot make sense of — no fences, an unknown
+    `enforce` value, a `protected` that is not a sequence — leaves ("off", []),
+    so a malformed activation file disables enforcement instead of half-enforcing
+    it.
     """
-    value = value.strip()
-    if value[:1] in ("'", '"'):
-        quote = value[0]
-        close = value.find(quote, 1)
-        return value[1:close] if close != -1 else value[1:]
-    hash_at = value.find(" #")
-    if hash_at != -1:
-        value = value[:hash_at].rstrip()
-    return value
-
-
-def _split_inline_list(raw):
-    """`["a", "b"]` / `[a, b]` -> ["a", "b"]. Commas inside quotes are respected."""
-    inner = raw.strip()[1:-1]
-    items = []
-    buf = []
-    quote = None
-    for ch in inner:
-        if quote:
-            if ch == quote:
-                quote = None
-            else:
-                buf.append(ch)
-        elif ch in ("'", '"'):
-            quote = ch
-        elif ch == ",":
-            items.append("".join(buf).strip())
-            buf = []
-        else:
-            buf.append(ch)
-    items.append("".join(buf).strip())
-    return [item for item in items if item]
-
-
-def _parse_frontmatter(text):
-    """Return (mode, patterns) from a YAML frontmatter block.
-
-    Deliberately narrow: it understands one scalar key (`enforce`) and one
-    sequence key (`protected`), in block or inline form, and ignores everything
-    else. Anything it cannot make sense of — no fences, no closing fence, an
-    unknown `enforce` value — returns ("off", []), so a malformed activation
-    file disables enforcement instead of half-enforcing it.
-    """
-    lines = text.splitlines()
-
-    start = None
-    for index, line in enumerate(lines):
-        stripped = line.lstrip("\ufeff").strip()
-        if not stripped:
-            continue
-        if stripped == "---":
-            start = index + 1
-        break  # the first non-blank line must be the opening fence
-    if start is None:
-        return OFF, []
-
-    end = None
-    for index in range(start, len(lines)):
-        if lines[index].strip() in ("---", "..."):
-            end = index
-            break
-    if end is None:
-        return OFF, []
-
-    mode = OFF
-    patterns = []
-    in_protected = False
-    for line in lines[start:end]:
-        if not line.strip() or line.strip().startswith("#"):
-            continue
-        indented = line[:1].isspace()
-        item = line.strip()
-
-        if in_protected and item.startswith("- "):
-            value = _unquote(item[2:])
-            if value:
-                patterns.append(value)
-            continue
-        if in_protected and item == "-":
-            continue
-        if indented:
-            continue  # nested mapping under some other key: not ours
-
-        colon = item.find(":")
-        if colon == -1:
-            continue
-        key = item[:colon].strip().lower()
-        raw_value = item[colon + 1:].strip()
-        in_protected = False
-
-        if key == "enforce":
-            candidate = _unquote(raw_value).lower()
-            mode = candidate if candidate in ACTIVE_MODES else OFF
-        elif key == "protected":
-            if raw_value.startswith("[") and raw_value.endswith("]"):
-                patterns.extend(_split_inline_list(raw_value))
-            elif not raw_value:
-                in_protected = True
-
-    return mode, patterns
+    enforce = atelier_local.parse_key(text, "enforce")
+    mode = enforce.lower() if isinstance(enforce, str) else OFF
+    patterns = atelier_local.parse_key(text, "protected")
+    return (mode if mode in ACTIVE_MODES else OFF,
+            patterns if isinstance(patterns, list) else [])
 
 
 def _load_activation(project_dir):
@@ -302,7 +210,7 @@ def _load_activation(project_dir):
     except Exception:
         return OFF, []
     try:
-        return _parse_frontmatter(text)
+        return _policy(text)
     except Exception:
         return OFF, []
 
@@ -377,7 +285,7 @@ def _load_policy(abs_path, project_dir):
         text = _committed_activation(root)
         if text is not None:
             try:
-                return _parse_frontmatter(text)
+                return _policy(text)
             except Exception:
                 return OFF, []
     return _load_activation(project_dir)
