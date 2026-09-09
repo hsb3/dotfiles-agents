@@ -57,6 +57,30 @@ class AreaIsProjectDefined(unittest.TestCase):
         self.assertEqual(areas, [], f"area names are project-defined, found {areas}")
 
 
+class DocsIsTheOneRecognisedAreaName(unittest.TestCase):
+    """(owner ruling 2026-09-08) `area:docs` is core, and recorded as prose on purpose.
+
+    The ruling makes `area:docs` the target of `doc`/`docs`/`documentation`, so a board may
+    use it without adding it to its own area list. It still cannot be a CHECKED line: a
+    declared name no open item carries is a vocabulary fossil, so every board with no
+    documentation work would report a finding it can never clear. The comment carries the
+    recognition; the checked lines stay area-free.
+    """
+
+    def test_the_file_names_area_docs_in_its_comments(self):
+        text = open(CORE_LABELS, encoding="utf-8").read()
+        commented = [
+            line for line in text.splitlines() if line.lstrip().startswith("#")
+        ]
+        self.assertTrue(
+            any("area:docs" in line for line in commented),
+            "core-labels.txt must record that area:docs is the one recognised area name",
+        )
+
+    def test_area_docs_is_not_a_checked_line(self):
+        self.assertNotIn("area:docs", declared())
+
+
 class NamesAreWellFormed(unittest.TestCase):
     """A label is matched case-insensitively but compared as a string — no surprises in it."""
 

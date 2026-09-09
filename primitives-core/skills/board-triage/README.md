@@ -31,7 +31,10 @@ list, one name per line, and `scripts/core-labels.txt` ships as that declaration
 the fossil check reports SKIP on every run, because the only label set a snapshot carries is
 derived from the board's whole history and so can never go green. The shipped file holds the
 core vocabulary — one type label, the container and behaviour names — and deliberately no area
-name, since areas are each project's own. A project that adds labels on top of the core points
+name, since areas are each project's own. `area:docs` is the single exception and is recorded
+there as a comment rather than as a declared line (owner ruling 2026-09-08): it is recognised as
+core, so a board may use it without adding it to its own list, but declaring it would make every
+board with no open documentation work report a fossil it could never clear. A project that adds labels on top of the core points
 `--vocabulary` at its own copy. On a board that has not adopted the vocabulary yet, read the
 fossil finding as the adoption gap rather than as retired vocabulary — the adapter says so.
 A project with no open items exports as an empty snapshot rather than crashing, and every
@@ -56,7 +59,10 @@ mirror (the sync owns a mirror's labels and re-applies them), it plans nothing a
 card that would end up with two `type:` or two `area:` labels, and it reports a label absent
 from the map instead of inventing a home for it. The map is the only file that changes when a
 mapping decision changes, and a label deliberately left out of it is a decision, not an
-oversight. An apply that fails partway stops, prints every operation that had already
+oversight. The two-of-a-family veto is not hypothetical: `doc`/`docs`/`documentation` rename
+onto `area:docs` under that ruling, additively — the card still needs a type — so a card that
+already carries its own area is reported rather than given a second one. An apply that fails
+partway stops, prints every operation that had already
 landed, and exits 3 rather than 1, so a wrapper can tell a half-written board from a list
 of findings. Title-prefix promotion is a separate mode, `--strip-prefixes`, off by default and
 inert unless the caller supplies that project's area list with `--areas` — with no list it

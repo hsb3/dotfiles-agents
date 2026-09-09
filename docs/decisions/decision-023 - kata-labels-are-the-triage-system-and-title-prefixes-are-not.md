@@ -98,3 +98,13 @@ changes: its set, its gate, and its CI-only placement all stand as written.
 fact they carried — that an item is documentation work. Whether `area:docs` joins the area
 vocabulary as the replacement is an owner call, and **this record does not make it**. Until it
 is made, documentation work is `type:chore` plus whichever `area:*` its subject already sits in.
+
+**Amended 2026-09-08 — the call is made: `area:docs` is a core area.** The owner ruled that
+documentation is a domain, not a kind of work, so `doc`, `docs` and `documentation` map to
+`area:docs` rather than to `type:chore`, and the rename is **additive**: it supplies the area
+and the card still needs one of `type:feat|fix|chore`. `area:docs` is the one `area:` name the
+core vocabulary recognises, so a board may use it without adding it to its own area list. It is
+recorded in `core-labels.txt` as a comment and not as a declared line, because a declared name
+is checked against open items and every board with no open documentation work would otherwise
+report a permanent vocabulary fossil. The paragraph above stands as the record of what was open;
+this note is what closed it.

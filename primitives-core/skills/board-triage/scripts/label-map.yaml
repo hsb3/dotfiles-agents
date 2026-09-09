@@ -13,6 +13,17 @@
 #   (absent)  UNMAPPED: relabel_board.py reports it for a human and touches nothing.
 #             This is a legitimate outcome, not an oversight. A label whose right home is
 #             a genuine owner judgment stays out: a wrong mapping is worse than a gap.
+#
+# RULED UNMAPPED (owner ruling 2026-09-08). These were put to the owner and deliberately
+# left out, so a later reader does not "complete" the map by adding them:
+#   task                      — measured and disqualified; see its note further down.
+#   the workflow states       — draft, spike, unverified, blocked, blocked-external,
+#                               owner-gated, parked: this backend does not model them, so a
+#                               drop deletes the only record rather than de-duplicating one.
+#   group:* batch:* surface:* — per-project routing families. What they group is a fact
+#   server:* plugin:*           about one project's work, not about this vocabulary, and
+#                               only that project's owner can say which area (if any) each
+#                               becomes. Reported every run, which is the intended outcome.
 # `keep` and `drop` are reserved values and cannot be label names.
 #
 # CONVENTION FOR CORE NAMES: they are present, mapped to `keep`. Absence already means
@@ -59,6 +70,12 @@ up-next: keep
 # second source of truth that drifts from the field the moment one of them is edited.
 "priority:*": drop
 "effort:*": drop
+# `gh-import` is the same objection one step further out: it marks a card as having come
+# from a GitHub import, which the card's own `github_issue` metadata already records —
+# exactly and permanently, with the issue number attached. That metadata is the provenance
+# record and the sync maintains it; a label restating it is a copy that stops agreeing the
+# first time the link changes, and it cannot say WHICH issue. (Owner ruling 2026-09-08.)
+gh-import: drop
 
 # --- malformed twins: a stray hyphen after the namespace colon --------------
 "type:-chore": type:chore
@@ -81,14 +98,19 @@ cleanup: type:chore
 housekeeping: type:chore
 maintenance: type:chore
 refactor: type:chore
-# OPEN OWNER CALL: these three land on type:chore because the closed type vocabulary has no
-# documentation term, so the fact "this is documentation work" is LOST by the rename. If the
-# answer is that documentation is a domain rather than a kind of work, the right target is
-# `area:docs` and it is additive (the card still needs a type). Decide before a bulk apply —
-# the map is the only place the answer has to change.
-doc: type:chore
-docs: type:chore
-documentation: type:chore
+# RULED 2026-09-08, closing decision-023's open question: documentation is a DOMAIN, not a
+# kind of work, so these three become `area:docs` and not `type:chore`. Two consequences the
+# reader needs:
+#   - The rename is ADDITIVE. It supplies an area, never a type, so a card carrying only
+#     `docs` comes out of this pass still needing one. That is correct: "documentation" was
+#     never an answer to "is this a feature, a fix or a chore".
+#   - `area:docs` is the ONE area name the core vocabulary recognises (see core-labels.txt),
+#     so this is the only rename in the file that can collide with a label the card already
+#     has. A card with its own `area:*` gets two areas and is vetoed as a conflict for a
+#     human, not silently given a second area.
+doc: area:docs
+docs: area:docs
+documentation: area:docs
 # NOT MAPPED, and this is the interesting one: `task`. It reads like a chore and is not.
 # Measured on the boards where it is live (42 uses): it is the residual "a work item"
 # value, occupying the same slot as `bug` and `feature` and mutually exclusive with them —

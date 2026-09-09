@@ -151,6 +151,76 @@ class ShippedMap(unittest.TestCase):
                 self.assertEqual("keep", rb.resolve(name, self.mapping))
         self.assertEqual("keep", rb.resolve("area:whatever", self.mapping))
 
+    def test_gh_import_drops_because_the_metadata_is_the_provenance_record(self):
+        """(owner ruling 2026-09-08) `github_issue` metadata already records the import.
+
+        A label restating it is a second source of truth that no longer changes when the
+        metadata does — the same objection that retires `priority:*`.
+        """
+        self.assertEqual("drop", rb.resolve("gh-import", self.mapping))
+
+    def test_the_documentation_words_are_a_domain_so_they_land_on_area_docs(self):
+        """(owner ruling 2026-09-08) closing decision-023's open question.
+
+        `type:chore` lost the one fact these carried. Documentation is a DOMAIN, so the
+        target is an area and the rename is additive: the card still needs a type.
+        """
+        for name in ("doc", "docs", "documentation"):
+            with self.subTest(name=name):
+                self.assertEqual("area:docs", rb.resolve(name, self.mapping))
+
+    def test_the_families_the_ruling_left_unmapped_stay_unmapped(self):
+        """Ruled-unmapped 2026-09-08, not oversights — pinned so nobody "completes" the map.
+
+        `task` and the workflow states were measured and disqualified; the namespaced
+        families are per-project routing this vocabulary has no opinion about.
+        """
+        for name in (
+            "task",
+            "draft",
+            "spike",
+            "unverified",
+            "blocked",
+            "blocked-external",
+            "owner-gated",
+            "parked",
+            "group:alpha",
+            "batch:3",
+            "surface:cli",
+            "server:api",
+            "plugin:code-desk",
+        ):
+            with self.subTest(name=name):
+                self.assertIsNone(rb.resolve(name, self.mapping))
+
+
+class DocsIsAnArea(unittest.TestCase):
+    """`docs -> area:docs` puts a rename inside the family the one-area rule guards.
+
+    Every other rename in the map targets a type or a container, so the docs ruling is the
+    first that can collide with a label the card already carries. The veto that catches it is
+    the existing two-of-one-family conflict rule; these pin that it actually covers this
+    case, against the SHIPPED map rather than a fixture, because the ruling lives there.
+    """
+
+    def setUp(self):
+        self.mapping = rb.load_label_map(SHIPPED_MAP)
+
+    def test_docs_onto_a_card_that_already_has_an_area_is_reported_not_applied(self):
+        report = rb.plan([issue("a1", ["area:backend", "docs", "bug"])], self.mapping)
+        self.assertEqual(
+            [{"key": "a1", "kind": "area", "labels": ["area:backend", "area:docs"]}],
+            report["conflicts"],
+        )
+        self.assertEqual([], report["relabels"], "no half-fix: the bug rename waits too")
+
+    def test_docs_on_a_card_with_no_area_is_an_ordinary_additive_rename(self):
+        report = rb.plan([issue("a1", ["docs", "type:chore"])], self.mapping)
+        self.assertEqual(
+            [{"key": "a1", "add": ["area:docs"], "remove": ["docs"]}], report["relabels"]
+        )
+        self.assertEqual([], report["conflicts"])
+
 
 class Plan(unittest.TestCase):
     """The delta is pure: a list of issue dicts in, a report out, no `kata` anywhere."""
@@ -355,8 +425,12 @@ class WriteGate(unittest.TestCase):
         self.assertFalse(rb.apply_enabled({}), "unset is a dry run")
 
     def test_a_conflicted_card_is_never_written_even_under_apply(self):
+        """The card is `area:backend` + `docs` + `bug`: the 2026-09-08 docs ruling renames
+        `docs` onto `area:docs`, giving two areas, and the veto has to hold the `bug` rename
+        back with it. (It read `bug`+`docs` until that ruling made `docs` an area rather
+        than a second type; same shape, same assertion, a pair that still conflicts.)"""
         code, out, writes = self.run_main(
-            ["--project", "demo"], "1", issues=[issue("z9", ["bug", "docs"])]
+            ["--project", "demo"], "1", issues=[issue("z9", ["area:backend", "docs", "bug"])]
         )
         self.assertEqual([], writes)
         self.assertEqual(1, code, "an unresolved conflict is a finding")
