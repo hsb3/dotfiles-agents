@@ -73,3 +73,7 @@ Normalized `Bash` calls use the shared worker registry's effective cwd, so the g
 reads the worker's staged index instead of the inherited parent index. It remains
 observational: findings emit context and never deny a commit. Unsupported registry
 state is enforced by the worktree boundary hook; this observer still fails open.
+
+Stage and commit in separate tool calls when relying on this advisory. The hook inspects
+the index before a command executes; a combined `git add && git commit` can have no staged
+bytes yet at that boundary.

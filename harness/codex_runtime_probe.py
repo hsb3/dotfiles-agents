@@ -323,6 +323,10 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
         env['CODEX_HOME'] = str(home)
         env["GIT_CONFIG_NOSYSTEM"] = "1"
         env["GIT_CONFIG_GLOBAL"] = os.devnull
+        if marketplace_source:
+            # Read existing GitHub credentials without importing arbitrary global Git settings.
+            env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='credential.https://github.com.helper',
+                       GIT_CONFIG_VALUE_0='!gh auth git-credential')
 
         def command(name, argv):
             process = subprocess.Popen(argv, env=env, cwd=repo, text=True, stdout=subprocess.PIPE,

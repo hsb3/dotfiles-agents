@@ -121,9 +121,9 @@ repository in the same wave; harness-specific execution details stay outside its
 | mise-en-place | Installed audit, scaffold plan/apply/replan, synthetic tracker reconcile. No live tracker mutation needed for the proof. |
 | Obsidian toolkit | Portable API/MCP/vault guidance; executable found, disposable-vault integration not exercised. |
 | solo-skills | Portable subject/procedure documents; installed signoff builder plus actual local HTTP save. opencode-sandbox executable absent. Product-specific skills still configure their named product, including Claude Code memory/configuration. |
-| code-desk | Package-local comms/report helpers and native companion role setup; presentation rendering still needs its documented application dependencies. |
-| PocketBase | Package-local helper CLI and migration generation, plus native role setup. Backend tests require a disposable runnable PocketBase entrypoint. |
-| plugin-feedback | Native session/worker context and fixed-template local draft with correct installed-source attribution; no external issue or message filed by these tests. |
+| code-desk | Installed rig-builder created a gate and proved green/red cases; independent artifact checks passed. Presentation rendering still needs its documented application dependencies. |
+| PocketBase | Installed builder, reviewer and auditor each used a disposable PocketBase 0.40.3 backend to verify allowed reads, refused writes, unchanged source and cleanup. This is fixture coverage, not full backend assurance. |
+| plugin-feedback | Actual installed parent and non-forked worker received distinct reminders; fixed-template local draft chose the installed-source repository. No external issue or message filed. |
 
 Missing services are pending proof, not successful integrations. Skill discovery does not
 certify backend behavior. Detailed per-member evidence and remaining prerequisites are on
@@ -154,7 +154,9 @@ trust nor removes the requested sandbox. A passed check certifies its named obse
 injects one test-only malformed-final stimulus; it leaves the production gate unchanged
 and requires an observed rejection followed by a corrected proof package. Add
 `--marketplace hsb3/dotfiles-agents` to a runtime probe to install the published GitHub
-package into a fresh consumer cache instead of copying the local assembly.
+package into a fresh consumer cache instead of copying the local assembly. Private GitHub
+marketplaces require authenticated `gh`; the probe scopes its credential helper to GitHub
+and does not import arbitrary global Git configuration.
 
 Official references checked against the installed runtime: [plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [hooks](https://learn.chatgpt.com/docs/hooks), and [custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
