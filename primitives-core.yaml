@@ -291,7 +291,7 @@ primitives:
     origin: authored
     disposition: qualified
     requires: [hosted-mcp]
-    targets: [claude-code]
+    targets: [claude-code, codex]
   - id: pocketbase-best-practices
     type: skill
     source: primitives-core/skills/pocketbase-best-practices

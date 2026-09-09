@@ -90,8 +90,8 @@ codex plugin add atelier@dotfiles-agents
 
 Invoke the installed activation skill for the consumer project. It creates the local
 `.claude/atelier.local.md` policy, then its `codex-setup` command renders five canonical
-`atelier-<role>` profiles under `.codex/agents/` and a project sandbox profile. It preserves
-user-owned and edited configuration. Restart the session, select the generated profile,
+`atelier-<role>` profiles under `.codex/agents/` and project sandbox writable roots. It preserves
+user-owned and edited configuration. Restart the session
 and review/trust the installed hooks in native `/hooks`; setup cannot grant trust.
 The [activation instructions](skills/activation/SKILL.md#codex-setup) give the exact commands.
 
