@@ -698,8 +698,11 @@ def _deny_reason(verb, workers):
         "Wait for their completion notifications, then re-run this command. Do NOT "
         "`git stash` by hand to get around it — hand-stashing reopens the exact window "
         "this closes, and the work lands in a stash entry the agent will never look "
-        "for. If the change is genuinely unrelated to what they hold, re-run with the "
-        "override prefix and say why in your next message:\n\n"
+        "for. Restructure the operation to avoid an override first. An override is only "
+        "legitimate for a git write whose target is provably outside every live worker "
+        "tree; it is never for this project repository or any of its worktrees. If one "
+        "is legitimate, report the exact command and cwd, and explain why that target "
+        "is not shared:\n\n"
         "    {var}=1 git {verb} ...\n"
     ).format(verb=verb, count=len(workers), who=_describe(workers), var=OVERRIDE_VAR)
 

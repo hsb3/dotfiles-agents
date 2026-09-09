@@ -273,12 +273,15 @@ change with its own over-denial surface.
 ## Override
 
 ```bash
-ATELIER_GIT_GUARD_OVERRIDE=1 git commit -m "unrelated work"
+ATELIER_GIT_GUARD_OVERRIDE=1 git -C /verified/unshared/repo commit -m "..."
 ```
 
 The assignment must come **before** the `git` word; the same string as an argument is not an
-override. The command goes through, and a `systemMessage` states that the override was used and
-which agents are still live.
+override. Restructure the operation to avoid an override first. It is only legitimate for a git
+write whose target is provably outside every live worker tree, never for this project repository
+or any of its worktrees. When it is legitimate, report the exact command and cwd, and explain why
+that target is not shared. The command goes through, and a `systemMessage` states that the
+override was used and which agents are still live.
 
 **Every use of the override is logged, including one that suppressed nothing.** A prefix on a
 command the guard was not going to block (no live workers, or a different tree) prints no

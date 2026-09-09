@@ -247,6 +247,66 @@ class CodexWorkersTests(unittest.TestCase):
         self.mod.set_status(p, 'stopped')
         self.assertEqual(self.hook('live-worker-git-guard', parent), {})
 
+    def test_retired_checkout_does_not_block_native_consumers(self):
+        retired = self.payload('retired')
+        retired_record = self.mod.register(retired, isolate=True)
+        self.mod.set_status(retired, 'stopped')
+        shutil.rmtree(retired_record['worktree'])
+        with self.assertRaises(self.mod.WorkerError):
+            self.mod.lookup(retired)
+        active = self.payload('active')
+        self.mod.register(active, isolate=True)
+        with Path(active['transcript_path']).open('a') as stream:
+            stream.write(json.dumps({'timestamp': '2000-01-01T00:00:00Z'}) + '\n')
+        self.assertEqual([row['agent_id'] for row in self.mod.records(active)],
+                         ['active', 'retired'])
+        parent = dict(active); parent.pop('agent_id'); parent.pop('agent_type')
+        parent['original_cwd'] = parent['cwd']
+        parent['cwd'] = self.mod.lookup(active)['worktree']
+        parent['tool_input'] = {'command': 'git commit -m test'}
+        reason = self.hook('live-worker-git-guard', parent)['hookSpecificOutput']['permissionDecisionReason']
+        self.assertIn('active', reason)
+        self.assertNotIn('retired', reason)
+        parent['hook_event_name'] = 'Stop'
+        telemetry_log = Path(self.tmp.name) / 'telemetry.jsonl'
+        os.environ['SUBAGENT_TELEMETRY_LOG_PATH'] = str(telemetry_log)
+        self.assertEqual(self.hook('subagent-telemetry', parent), {})
+        telemetry = json.loads(telemetry_log.read_text())
+        self.assertEqual(telemetry['event'], 'stall')
+        self.assertEqual(telemetry['pending'][0]['agent_id'], 'active')
+
+    def test_records_rejects_missing_or_changed_running_checkout(self):
+        for kind in ('missing', 'changed'):
+            with self.subTest(kind=kind):
+                p = self.payload('worker-' + kind)
+                record = self.mod.register(p, isolate=True)
+                tree = Path(record['worktree'])
+                shutil.rmtree(tree)
+                if kind == 'changed':
+                    tree.mkdir()
+                    self.git('init', '-b', 'unrelated', cwd=tree)
+                with self.assertRaises(self.mod.WorkerError):
+                    self.mod.records(p)
+
+    def test_stopped_record_still_validates_identity_and_json(self):
+        for kind in ('identity', 'json'):
+            with self.subTest(kind=kind):
+                p = self.payload('worker-' + kind)
+                self.mod.register(p)
+                self.mod.set_status(p, 'stopped')
+                path = self.repo / '.git/atelier-codex/workers/session-a' / (p['agent_id'] + '.json')
+                if kind == 'identity':
+                    record = json.loads(path.read_text())
+                    record['agent_id'] = 'other-worker'
+                    path.write_text(json.dumps(record))
+                    error = 'identity mismatch'
+                else:
+                    path.write_text('not json')
+                    error = 'Unreadable worker registry'
+                with self.assertRaisesRegex(self.mod.WorkerError, error):
+                    self.mod.records(p)
+                path.unlink()
+
     def test_comment_gate_scans_worker_index(self):
         p = self.payload(command='git commit -m test')
         r = self.mod.register(p, isolate=True)
