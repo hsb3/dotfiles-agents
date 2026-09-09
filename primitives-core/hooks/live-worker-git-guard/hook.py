@@ -133,6 +133,7 @@ import sys
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
+import codex_workers  # noqa: E402
 import agentlog  # noqa: E402  (path must be primed before this import)
 import pending  # noqa: E402  (same)
 
@@ -547,6 +548,7 @@ def _repo_root(directory):
     try:
         proc = subprocess.run(
             ["git", "-C", directory, "rev-parse", "--show-toplevel"],
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
@@ -716,6 +718,15 @@ def main():
         payload = json.loads(sys.stdin.read())
         if not isinstance(payload, dict):
             sys.exit(0)
+        native = codex_workers.is_codex(payload)
+        if native:
+            try:
+                if not codex_workers.active(payload):
+                    return
+                payload = codex_workers.effective_payload(payload)
+            except Exception as exc:
+                _emit(codex_workers.deny(exc))
+                return
         if payload.get("tool_name") != "Bash":
             sys.exit(0)
 
@@ -732,13 +743,22 @@ def main():
             sys.exit(0)
 
         overridden = _override_before(tokens, cmd_start, git_at)
-        workers = _live_workers(
-            payload.get("transcript_path"),
-            pending.agent_key(payload.get("agent_id")),
-        )
-        if workers and not _shares_session_tree(
-                tokens, git_at, payload.get("cwd")):
-            workers = []
+        if native:
+            try:
+                target = _repo_root(_target_directory(tokens, git_at, payload.get("cwd")))
+                workers = [dict(row, description="native worker")
+                           for row in codex_workers.records(payload)
+                           if row["agent_id"] != payload.get("agent_id")
+                           and row["status"] == "running"
+                           and (target is None or _repo_root(row.get("worktree") or row["source"]) == target)]
+            except Exception as exc:
+                _emit(codex_workers.deny(exc))
+                return
+        else:
+            workers = _live_workers(
+                payload.get("transcript_path"), pending.agent_key(payload.get("agent_id")))
+            if workers and not _shares_session_tree(tokens, git_at, payload.get("cwd")):
+                workers = []
         if not workers and not overridden:
             sys.exit(0)
 

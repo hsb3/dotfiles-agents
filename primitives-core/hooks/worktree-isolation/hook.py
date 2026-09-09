@@ -84,6 +84,7 @@ import traceback
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
+import codex_workers  # noqa: E402
 import agentlog  # noqa: E402  (path must be primed before this import)
 import atelier_local  # noqa: E402
 
@@ -188,6 +189,7 @@ def _main_checkout(path):
     try:
         proc = subprocess.run(
             ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
@@ -251,6 +253,7 @@ def _in_linked_worktree(path):
     try:
         proc = subprocess.run(
             ["git", "-C", path, "rev-parse", "--git-dir", "--git-common-dir"],
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
@@ -376,11 +379,39 @@ def _emit(obj):
             pass
 
 
+def _codex(payload):
+    if not payload.get("agent_id"):
+        return
+    try:
+        if not codex_workers.active(payload):
+            return
+        if payload.get("hook_event_name") == "SubagentStart":
+            record = codex_workers.ensure_worker(payload)
+            if record["worktree"]:
+                _emit({"hookSpecificOutput": {"hookEventName": "SubagentStart",
+                       "additionalContext": "Atelier worker checkout: " + record["worktree"]
+                       + ". Relative shell and patch operations route here; native cwd metadata is inherited."}})
+        elif payload.get("hook_event_name") == "PreToolUse":
+            updated = codex_workers.route_tool(payload)
+            if updated != payload.get("tool_input"):
+                _emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": updated}})
+    except Exception as exc:
+        if payload.get("hook_event_name") == "PreToolUse":
+            _emit(codex_workers.deny(exc))
+        else:
+            _emit({"hookSpecificOutput": {"hookEventName": "SubagentStart",
+                   "additionalContext": "Atelier worker registration failed; tools will be denied: " + str(exc)}})
+
+
 def main():
     try:
         payload = json.loads(sys.stdin.read())
         if not isinstance(payload, dict):
             sys.exit(0)
+
+        if codex_workers.is_codex(payload):
+            _codex(payload)
+            return
 
         if payload.get("tool_name") != TOOL_NAME:
             sys.exit(0)

@@ -374,3 +374,13 @@ partitioned root shared with every other hook in this plugin; the append path is
  "ts":"2026-09-02T15:37:08.666Z","project":"/repo/x","session_id":"...",
  "decision":"deny","verb":"pull","pending":["a31412cbc7cdb39e8"]}
 ```
+
+## Codex
+
+With `ATELIER_HARNESS=codex`, live workers come from the shared `codex_workers`
+registry, not Claude transcript sidecars. Lifecycle hooks mark running/stopped status;
+a worker is excluded from its own pending set. The target Git checkout is compared to
+each running worker's effective checkout, so isolated siblings do not block ordinary
+parent integration while a command targeting their live checkout does. The existing
+explicit override remains visible and unchanged. Registry failures in an armed project
+deny rather than reporting an empty live set.

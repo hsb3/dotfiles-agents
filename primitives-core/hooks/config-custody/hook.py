@@ -49,6 +49,7 @@ import traceback
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
+import codex_workers  # noqa: E402
 import agentlog  # noqa: E402  (path must be primed before this import)
 import atelier_local  # noqa: E402
 
@@ -120,6 +121,7 @@ def _main_checkout(path):
     try:
         proc = subprocess.run(
             ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
@@ -255,6 +257,7 @@ def _committed_activation(worktree_root):
     try:
         proc = subprocess.run(
             ["git", "-C", worktree_root, "show", "HEAD:" + ACTIVATION_GIT_PATH],
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
@@ -347,6 +350,39 @@ def _first_match(relpath, abs_path, patterns):
     return None
 
 
+def _codex_custody(payload):
+    if not payload.get("agent_id") or payload.get("tool_name") != "apply_patch":
+        return
+    try:
+        if not codex_workers.active(payload):
+            return
+        effective = codex_workers.effective_payload(payload)
+        project = effective["cwd"]
+        for absolute in codex_workers.patch_paths(payload):
+            abs_path, relative = _normalize(absolute, project)
+            if relative is None:
+                continue
+            mode, patterns = _load_policy(abs_path, project)
+            if mode not in ACTIVE_MODES:
+                continue
+            pattern = _first_match(relative, abs_path, patterns)
+            if not pattern:
+                continue
+            denied = mode == STRICT
+            agentlog.make_logger(LOG_STREAM, LOG_PATH_ENV, project)({
+                "session_id": payload.get("session_id"), "agent_type": effective["agent_type"],
+                "tool_name": "apply_patch", "path": relative, "pattern": pattern,
+                "mode": mode, "denied": denied})
+            reason = DENY_REASON_TEMPLATE.format(path=relative, pattern=pattern)
+            if denied:
+                _emit(codex_workers.deny(reason))
+                return
+            _emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": reason}})
+            return
+    except Exception as exc:
+        _emit(codex_workers.deny(exc))
+
+
 def main():
     log = None
     payload = None
@@ -354,6 +390,10 @@ def main():
         payload = json.loads(sys.stdin.read())
         if not isinstance(payload, dict):
             sys.exit(0)
+
+        if codex_workers.is_codex(payload):
+            _codex_custody(payload)
+            return
 
         # No agent_id means the main session: the orchestrator owns config and is
         # never restricted by this hook.

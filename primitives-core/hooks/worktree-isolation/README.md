@@ -246,3 +246,37 @@ string test reports every subdirectory as a worktree.
   gives workers the branch the session is actually on.
 - **No restart needed to change policy.** The activation file is read on every dispatch, so edits
   take effect on the next one. Only a change to `hooks.json` requires restarting the session.
+
+## Codex workers
+
+Codex hook commands select `ATELIER_HARNESS=codex`. `SubagentStart` calls the shared
+`codex_workers.ensure_worker(payload)` before tools; worker-context may call it too,
+so registration does not depend on sibling hook ordering. Registry updates are atomic
+and locked per actual session/agent identity. The first rollout `session_meta` record
+must match the worker ID. Its immediate `parent_thread_id` selects the registered
+manager checkout as the child branch's base; the root session is the only parent
+allowed without a worker record. Missing ancestry or registration denies later tools.
+
+`PreToolUse` routes normalized `Bash` command text into that checkout and rewrites
+all `apply_patch` Add/Update/Delete/Move paths. Existing worker absolute paths remain
+valid; parent paths map into the worker; traversal, symlink escapes, other worktrees,
+Git metadata edits and unsupported tool inputs are denied. Inherited Git routing
+variables are cleared for commands and hook Git lookups. Each guard independently
+resolves the same effective payload, retaining `original_cwd`; none relies on another
+PreToolUse hook having already rewritten the input.
+
+State lives under the repository's common Git directory:
+`atelier-codex/workers/<session>/<agent>.json` and
+`atelier-codex/checkouts/<session>/<agent>`. There is no automatic branch or worktree
+deletion. With `workspace-write`, the caller must authorize the checkout directory,
+`.git/worktrees` and `.git/objects` as writable roots. Registration failure never
+silently leaves an armed worker operating in its inherited checkout. Unarmed projects
+are inert, including non-Git projects; existing mappings persist across policy edits
+so an already-isolated worker never falls back to the parent by accident.
+
+This provides worktree collision avoidance. The native thread's cwd metadata and
+sandbox remain inherited. Absolute shell paths, explicit shell cwd changes and scripts
+can still access other permitted trees; this is not an OS containment boundary.
+Read-only roles cannot use patch tools. Builder/scout/reviewer/code-reviewer roles
+cannot invoke native or collaboration spawn/message/control tools; their shell
+read-only obligations remain part of their role instructions.

@@ -203,3 +203,11 @@ rather than a transcript of every edit:
 
 `"denied": false` with `"mode": "advisory"` is a would-be denial: the edit went through, and this
 row is the evidence for whether `strict` would have been right.
+
+## Codex
+
+With `ATELIER_HARNESS=codex`, custody examines every path header in normalized
+`apply_patch` command text, including both sides of moves, using the shared worker
+registry's effective checkout. Strict mode denies the entire patch when any path
+matches; advisory emits context, and off remains inert. Routing/identity failures
+in an armed project deny the operation. Claude file-path handling is unchanged.

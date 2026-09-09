@@ -66,3 +66,10 @@ list, and the harvest-before-you-cut rule.
    targets `[claude-code]`).
 4. Add the `PreToolUse` entry with matcher `Bash` inside the existing top-level `"hooks"`
    object of `plugins/atelier/hooks/hooks.json`.
+
+## Codex
+
+Normalized `Bash` calls use the shared worker registry's effective cwd, so the gate
+reads the worker's staged index instead of the inherited parent index. It remains
+observational: findings emit context and never deny a commit. Unsupported registry
+state is enforced by the worktree boundary hook; this observer still fails open.

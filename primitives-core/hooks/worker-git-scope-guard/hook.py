@@ -41,6 +41,7 @@ import sys
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
+import codex_workers  # noqa: E402
 import atelier_local  # noqa: E402  (path must be primed before this import)
 
 # git subcommands that write a commit onto the current branch
@@ -298,6 +299,7 @@ def _git(cwd, *args):
     try:
         out = subprocess.run(
             ["git", "-C", cwd, "rev-parse"] + list(args),
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, text=True, timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
@@ -383,6 +385,25 @@ def _deny_branch(what, branch):
     )
 
 
+def _codex_owner_decision(data):
+    record = codex_workers.lookup(data)
+    if not record or not record.get("worktree"):
+        return None
+    owned = os.path.realpath(record["worktree"])
+    common, _ = _tree_dirs(owned)
+    writes = WRITE_SUBS | {"add", "reset", "restore", "checkout", "switch", "clean", "pull"}
+    command = (data.get("tool_input") or {}).get("command") or ""
+    for sub, args, where in invocations(command, data["cwd"]):
+        if sub not in writes and not (sub == "stash" and stash_moves_work(args)):
+            continue
+        target = _git(where, "--show-toplevel")
+        target_common, _ = _tree_dirs(where)
+        if target and common and target_common == common and os.path.realpath(target) != owned:
+            return _deny("atelier worker-git-scope-guard: mutating another worker or parent "
+                         "checkout is not allowed. Run Git in your owned worktree.")
+    return None
+
+
 def main():
     """The whole entry point is fail-open, not just its `__main__` wrapper: the module is
     also imported and called directly, and a guard that raises there would take its caller
@@ -391,11 +412,25 @@ def main():
         data = json.load(sys.stdin)
         if not isinstance(data, dict):
             return
+        if codex_workers.is_codex(data):
+            try:
+                if not codex_workers.active(data):
+                    return
+                data = codex_workers.effective_payload(data)
+                owner_decision = _codex_owner_decision(data)
+                if owner_decision:
+                    print(json.dumps(owner_decision))
+                    return
+            except Exception as exc:
+                print(json.dumps(codex_workers.deny(exc)))
+                return
+
         # `invocations` can only yield on a literal `git` token, so without one there is
         # nothing to decide — and this hook runs on EVERY Bash call, so the file read and
         # the main-checkout lookup behind it must not.
         command = (data.get("tool_input") or {}).get("command") or ""
-        protected = (_load_protected_branches(_resolve_project_dir(data.get("cwd")))
+        protected = (_load_protected_branches(data.get("cwd") if codex_workers.is_codex(data)
+                                            else _resolve_project_dir(data.get("cwd")))
                      if "git" in command else frozenset())
         out = decide(data, current_branch, shared_tree, protected)
         if out is not None:
