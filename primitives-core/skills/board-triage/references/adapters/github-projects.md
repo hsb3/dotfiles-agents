@@ -22,8 +22,12 @@ dropped from the snapshot.
 
 ## Export
 
+Replace `<board-triage-skill-dir>` with the absolute installed directory containing
+board-triage SKILL.md. Run from the consuming project; plugin environment variables
+are not required.
+
 ```bash
-S="${CLAUDE_PLUGIN_ROOT}/skills/board-triage/scripts"
+S="<board-triage-skill-dir>/scripts"
 python3 "$S/github_projects_board.py" export -o acme -n 8 --out board-snapshot.json
 ```
 

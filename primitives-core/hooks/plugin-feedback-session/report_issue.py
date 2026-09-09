@@ -171,15 +171,16 @@ def _manifest_repo(plugin_root):
     """The `repository` recorded in a plugin's own manifest, or None."""
     if not plugin_root:
         return None
-    path = os.path.join(plugin_root, ".claude-plugin", "plugin.json")
-    try:
-        with open(path, encoding="utf-8") as fh:
-            manifest = json.load(fh)
-    except Exception:
-        return None
-    if not isinstance(manifest, dict):
-        return None
-    return normalize_repo(manifest.get("repository"))
+    for relative in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", "plugin.json"):
+        try:
+            with open(os.path.join(plugin_root, relative), encoding="utf-8") as fh:
+                manifest = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        repo = normalize_repo(manifest.get("repository")) if isinstance(manifest, dict) else None
+        if repo:
+            return repo
+    return None
 
 
 def _default_plugin_root():
@@ -193,7 +194,7 @@ def resolve_repo(env, plugin_root=None):
     override = (env.get(REPO_ENV) or "").strip()
     if override:
         return normalize_repo(override)
-    root = plugin_root or env.get("CLAUDE_PLUGIN_ROOT") or _default_plugin_root()
+    root = plugin_root or env.get("CODEX_PLUGIN_ROOT") or env.get("CLAUDE_PLUGIN_ROOT") or _default_plugin_root()
     return _manifest_repo(root)
 
 
@@ -355,7 +356,7 @@ def membership(plugin, env, repo, runner):
     repo before it can cost anyone a refusal. That buys the rare refusal one gh call, and
     a wrong refusal is far more expensive than the call.
     """
-    local = _local_marketplace_ids(env.get("CLAUDE_PLUGIN_ROOT") or _default_plugin_root())
+    local = _local_marketplace_ids(env.get("CODEX_PLUGIN_ROOT") or env.get("CLAUDE_PLUGIN_ROOT") or _default_plugin_root())
     if local and plugin in local:
         return True, local
     listed = _remote_marketplace_ids(repo, runner) or local

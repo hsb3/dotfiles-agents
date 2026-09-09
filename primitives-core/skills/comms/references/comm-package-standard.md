@@ -98,7 +98,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 3. Check:
 
    ```
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/deliver.py" check spec.json
+   python3 "<comms-skill-dir>/scripts/deliver.py" check spec.json
    ```
 
    Every problem at once, with rule ids: spec schema, sections vs the type, block schema,
@@ -108,7 +108,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 4. Export:
 
    ```
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/comms/scripts/deliver.py" build spec.json \
+   python3 "<comms-skill-dir>/scripts/deliver.py" build spec.json \
      --html <name>.html --pdf <name>.pdf --repo "<owner>/<repo>"
    ```
 
@@ -120,7 +120,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 6. Export audio: `deliver.py narrate <name>.txt --audio <name>.m4a` (macOS `say` by
    default; `audio` in `.claude/comms.local.md` picks another provider or `none`).
 7. Write `sources.md` (provenance per claim + "board is the live source of truth").
-8. Deliver: `SendUserFile` the PDF (and audio).
+8. Deliver the PDF (and audio) with the harness file-delivery tool, or absolute file links in Codex.
 
 **pptx-themes path** (advisor board, client overview):
 
@@ -128,7 +128,7 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 2. Invoke the `pptx-themes` skill; author `deck.js` against the chosen token theme.
 3. `node deck.js` to write the `.pptx`; export / convert the `.pdf`.
 4. Run the skill's visual-QA pass (overflow, contrast, alignment).
-5. Write `sources.md`; deliver via `SendUserFile`.
+5. Write `sources.md`; deliver with the harness file-delivery tool, or absolute file links in Codex.
 
 ## Gotchas
 
@@ -148,7 +148,11 @@ Slugs by type: `-morning-status`, `-eod-wrapup`, `-weekly-plan`, `-advisor-overv
 - **pptx-themes leaves `node_modules/` + `package-lock.json`** in the output folder; that's fine
   - the folder is typically gitignored. Don't commit them.
 
+In command examples, replace `<comms-skill-dir>` with the absolute directory containing
+the installed comms SKILL.md. Run the engine from the consuming project so local defaults
+resolve there.
+
 ## Delivery
 
-`SendUserFile` the PDF (and audio) so they surface in a viewer, not the terminal. the reader reads long
-content in a viewer; the terminal is for tap-to-answer decisions.
+Use the harness file-delivery tool for the PDF and audio when present. In Codex, provide
+clickable absolute file links. Verify each linked file exists.

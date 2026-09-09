@@ -52,6 +52,24 @@ and the assumptions ship.
    — writing the contract and satisfying it are separate jobs, and a baseline measured
    after remediation is worthless.
 
+## Codex companion setup
+
+This package's native profile is `code-desk-rig-builder`. Before dispatch, resolve
+`<plugin-root>` from this installed skill's `skills/` parent and run:
+
+```bash
+python3 "<plugin-root>/hooks/_lib/codex_roles.py" --plugin-root "<plugin-root>" .
+python3 "<plugin-root>/hooks/_lib/codex_roles.py" --plugin-root "<plugin-root>" --check .
+```
+
+Setup needs Python 3.11+ and writes owned `.codex/agents/` profiles in the consuming
+project; repeat after a plugin update to refresh them. Start a fresh Codex session
+and dispatch using that exact native role selector. If the active tool schema has
+no role selector, report that capability gap; putting the role name in a prompt
+does not register or select it. The companion hook supplies canonical role context.
+The role's tool and file ownership limits still apply; registration is not an OS
+sandbox or a claim that every undesired tool disappeared.
+
 ## Hard rules
 
 - **Machine-enforce everything a tool can check.** Quality holds exactly where a machine

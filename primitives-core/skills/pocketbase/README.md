@@ -51,3 +51,10 @@ claude plugin install pocketbase@dotfiles-agents
 ```
 
 Ships in the `pocketbase` bundle only — its topical plugin owns it (decision-020).
+
+## Codex
+
+SKILL.md documents project profile setup and the three native role names. Scripts run
+by absolute installed path while cwd remains the consuming project for .env and
+migration destinations. Authenticated operations require a reachable PocketBase server
+and credentials; profile discovery or --help alone is not a backend smoke test.

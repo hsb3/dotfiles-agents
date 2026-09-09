@@ -43,6 +43,7 @@ stay compatible with Python 3.9.
 
 import json
 import os
+import shlex
 import sys
 
 # ---------------------------------------------------------------------------
@@ -73,6 +74,8 @@ REMINDER = (
 )
 
 
+CODEX_REMINDER = 'plugin-feedback: draft a bug or feature report about this marketplace with `python3 {reporter} --help` and `--draft`. Filing requires explicit user authorization. The reporter fixes the template and names the marketplace repository; defects in other marketplaces belong in their own trackers. A worker must hand feature drafts to its dispatcher; only the primary session may file a feature request.'
+
 def _reporter_path():
     """Absolute path to the reporter, or the plugin-relative pointer if it is absent.
 
@@ -80,7 +83,7 @@ def _reporter_path():
     path covers a hook run directly (tests, a manual invocation) where it is not.
     """
     candidates = []
-    root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    root = os.environ.get("CODEX_PLUGIN_ROOT") or os.environ.get("CLAUDE_PLUGIN_ROOT")
     if root and isinstance(root, str):
         candidates.append(os.path.join(root, "hooks", REPORTER_DIR, REPORTER_FILE))
     here = os.path.dirname(os.path.abspath(__file__))
@@ -120,7 +123,7 @@ def main():
         _emit({
             "hookSpecificOutput": {
                 "hookEventName": "SubagentStart",
-                "additionalContext": REMINDER.format(reporter=_reporter_path()),
+                "additionalContext": (CODEX_REMINDER if os.environ.get("ATELIER_HARNESS") == "codex" else REMINDER).format(reporter=shlex.quote(_reporter_path())),
             },
         })
         sys.exit(0)

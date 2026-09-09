@@ -45,7 +45,8 @@ toolchain, theme, voice, and how honest framing is phrased.
 5. **Build**: `deliver.py check` until clean, `build --html` to trim overflow, then `--pdf`
    (self-comms); or render + visual-QA (pptx-themes). Narrate if the comm calls for it.
 6. **Write `sources.md`** - claim-by-claim provenance; the board / registry is the live truth.
-7. **Deliver** with `SendUserFile` so it opens in a viewer, not the terminal.
+7. **Deliver** the exported files through the harness file-delivery tool when available.
+   In Codex, return clickable absolute file links for the PDF/HTML and optional audio.
 
 ## The engine (`scripts/deliver.py`)
 
@@ -94,5 +95,5 @@ autofit: content past a 1280x720 slide clips, and overflow means the slide does 
 - `examples/<type>/sample.*` - a real worked artifact for that comm type (where one exists)
 - `scripts/deliver.py`, `types/`, `themes/`, `voices/` - the engine and its named config
 
-Done when `deliver.py check` is clean, the exported deck/PDF is delivered via `SendUserFile`,
+Done when `deliver.py check` is clean, the exported deck/PDF is delivered as an accessible file,
 and `sources.md` traces every claim back to a live source.

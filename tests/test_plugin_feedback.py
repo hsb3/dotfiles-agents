@@ -865,5 +865,42 @@ class LiveLabelTests(unittest.TestCase):
                 )
 
 
+class CodexReporterTests(unittest.TestCase):
+    def test_codex_manifest_draft_uses_reporting_repository_without_transport(self):
+        with tempfile.TemporaryDirectory() as root:
+            meta = os.path.join(root, '.codex-plugin')
+            os.makedirs(meta)
+            with open(os.path.join(meta, 'plugin.json'), 'w') as stream:
+                json.dump({'name': 'plugin-feedback', 'repository': 'acme/marketplace'}, stream)
+            marketplace = os.path.join(root, '.claude-plugin')
+            os.makedirs(marketplace)
+            with open(os.path.join(marketplace, 'marketplace.json'), 'w') as stream:
+                json.dump({'plugins': [{'name': 'atelier'}]}, stream)
+            calls = []
+            def transport(*args, **kwargs):
+                calls.append(args)
+                raise RuntimeError('No transport allowed')
+            output = io.StringIO()
+            code = R.main(MainTests.BUG_ARGS + ['--draft'],
+                          env={'CODEX_PLUGIN_ROOT': root}, runner=transport,
+                          today='2026-09-09', out=output)
+            self.assertEqual(code, 0)
+            self.assertIn('acme/marketplace', output.getvalue())
+            self.assertIn('## Field observation', output.getvalue())
+            self.assertIn('DRAFT', output.getvalue())
+            self.assertEqual(calls, [])
+
+    def test_codex_hooks_provide_local_reporter_and_draft_boundary(self):
+        for hook, event in [(SESSION_HOOK, 'SessionStart'), (WORKER_HOOK, 'SubagentStart')]:
+            with self.subTest(event=event):
+                result = subprocess.run([sys.executable, hook],
+                    input=json.dumps({'source': 'startup', 'hook_event_name': event}),
+                    text=True, capture_output=True, check=True,
+                    env={'PATH': os.environ.get('PATH', ''), 'ATELIER_HARNESS': 'codex'})
+                context = json.loads(result.stdout)['hookSpecificOutput']['additionalContext']
+                self.assertIn('--draft', context)
+                self.assertIn('user authorization', context)
+
+
 if __name__ == "__main__":
     unittest.main()
