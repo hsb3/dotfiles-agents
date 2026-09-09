@@ -32,7 +32,8 @@ the fossil check reports SKIP on every run, because the only label set a snapsho
 derived from the board's whole history and so can never go green. The shipped file holds the
 core vocabulary — one type label, the container and behaviour names — and deliberately no area
 name, since areas are each project's own. A project that adds labels on top of the core points
-`--vocabulary` at its own copy.
+`--vocabulary` at its own copy. On a board that has not adopted the vocabulary yet, read the
+fossil finding as the adoption gap rather than as retired vocabulary — the adapter says so.
 
 It measures whether a field **discriminates**, not just whether it is filled — a priority band
 holding most of the backlog, items with no band or no label at all, a grouping convention living

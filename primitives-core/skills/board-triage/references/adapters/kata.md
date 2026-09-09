@@ -119,6 +119,11 @@ adds labels **on top of** the core, never instead of it, and points `--vocabular
 own copy once it does. The grouping lives in these labels, never in a title prefix — a
 prefix is the smell `check_grouping_latent` reports.
 
+Read the fossil finding correctly on a board that has not adopted the core yet: every core
+name no open item carries is reported, and on such a board that is the **adoption gap**, not
+retired vocabulary anyone still offers. The check means what its name says only once the
+board is on the vocabulary it is being judged against.
+
 **If the project imports GitHub issues** (`kata sync github`), know that the sync is
 **import-only by design** — a card never becomes an issue, and a kata close never closes one.
 Kata's intended loop closes the issue through the code: the fixing PR says `Fixes #N` and
