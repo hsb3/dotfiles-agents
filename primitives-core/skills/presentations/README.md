@@ -10,8 +10,9 @@ Install the code-desk bundle, then read [SKILL.md](SKILL.md).
 ```sh
 claude plugin install code-desk@dotfiles-agents
 ```
- Python's stdlib handles
-package creation and ZIP/XML operations. Install PptxGenJS in each generated project
+
+Python's stdlib handles package creation and ZIP/XML operations. XML content types
+are validated whether declared by part override or default extension. Install PptxGenJS in each generated project
 for authoring, and Poppler plus LibreOffice/PowerPoint for rendering. These tools are
 runtime prerequisites; repository tests remain stdlib-only and need no install.
 

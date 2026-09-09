@@ -99,6 +99,14 @@ class PresentationPackages(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 pptx.validate(parts)
 
+    def test_xml_default_content_type_cannot_bypass_entity_guard(self):
+        parts = fixture()
+        parts['[Content_Types].xml'] = parts['[Content_Types].xml'].replace(
+            b'</Types>', b'<Default Extension="data" ContentType="application/xml"/></Types>')
+        parts['custom/item.data'] = b'<!DOCTYPE x [<!ENTITY y "bad">]><x>&y;</x>'
+        with self.assertRaisesRegex(ValueError, 'DTD/entity'):
+            pptx.validate(parts)
+
     def test_zip_load_and_exclusive_output(self):
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory) / 'deck.pptx'

@@ -140,7 +140,8 @@ def validate(parts):
         safe_name(name)
         if name != '[Content_Types].xml' and '/' + name not in overrides and name.rsplit('.', 1)[-1] not in defaults:
             raise ValueError(f'No content type for {name}')
-        if name.endswith(('.xml', '.rels')) or overrides.get('/' + name, '').endswith(('+xml', '/xml')):
+        content_type = overrides.get('/' + name, defaults.get(name.rsplit('.', 1)[-1], ''))
+        if name.endswith(('.xml', '.rels')) or content_type.endswith(('+xml', '/xml')):
             root = xml(data)
             if name.endswith('.rels'):
                 if root.tag != f'{{{REL}}}Relationships':
