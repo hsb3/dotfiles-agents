@@ -45,7 +45,7 @@ reordering, splitting, merging and duplication by merge/select. The authored ren
 entry point produces PDF, slide JPEGs and a labeled HTML contact sheet. Raw slide
 objects are still editable in the native application or their PptxGenJS source.
 
-## Decisions required at retirement review
+## Retirement review decisions
 
 - Full ISO/ECMA XSD conformance is replaced by structural validation plus application
   rendering. The old nested schema rights are unresolved. No schema bytes are salvaged.
@@ -53,10 +53,27 @@ objects are still editable in the native application or their PptxGenJS source.
   object/chart edits and unsupported package features use a native application on a copy.
   Merge preserves slide-level part graphs; deck-wide settings come from the first deck.
   The editing reference names unsupported comments/custom shows/extensions and strict OOXML.
-- PptxGenJS 4.0.1's image-size dependency still has the two upstream image-parser DoS
-  advisories listed in the migration reference. No safe current dependency update was
-  available in the registry check. Authoring proof uses only trusted generated inputs.
 
-These are explicit limits, not an assertion of unrestricted feature parity. Review
-must approve the capability change and retirement after examining the PR evidence.
-The worker must keep rqen open/needs-human and preserve its branch/worktree at that gate.
+The owner approved the replacement/rename, editing boundaries and structural-validation
+change on 2026-09-09 after reviewing PR #530. These are explicit limits, not an assertion
+of unrestricted feature parity. The owner requested a remedy for the remaining
+dependency advisories instead of accepting that exposure.
+
+PptxGenJS 4.0.1 declares but never imports `image-size`. Its official release remains
+unchanged; generated packages substitute a local module that throws if imported for
+that exact version's unused dependency. No vulnerable parser bytes are installed.
+The [migration reference](../primitives-core/skills/presentations/references/migration.md)
+explains the native npm override, legacy-package migration and upstream removal trigger.
+The source package remains portable, with no global configuration changes or vendored
+runtime dependency. Fresh installation/audit and image/chart/notes consumer checks
+verify the remedy independently of the zero-install repository checks.
+
+Alternatives investigated: `image-size-next` 1.2.2 is an MIT community fork retaining
+the 1.x API; direct tests reproduce the original ICNS/JXL failures and confirm that
+fork completes. It is unnecessary when the caller uses no parser. Switching to
+`pptxgenjs-plus` would change the authoring engine and dependency tree. The upstream
+manifest-only removal PR remains unmerged, and this environment disables Git dependency
+installs. None of those alternatives is shipped or silently substituted for PptxGenJS.
+
+The dependency remedy remains reviewable on rqen/PR #530 before merge. Preserve the
+worker branch/worktree at that boundary; publication and historical rights remain separate.

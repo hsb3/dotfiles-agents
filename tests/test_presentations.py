@@ -1,7 +1,9 @@
 """Package edits must preserve notes/chart bytes and reject broken input before output."""
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -147,10 +149,51 @@ class PresentationPackages(unittest.TestCase):
             self.assertIn('require("./deck-kit/deck-kit")', source)
             self.assertNotIn(str(ROOT), source)
             self.assertEqual((out / 'deck-kit/theme-tokens.js').read_bytes(), (SCRIPTS.parent / 'assets/theme-tokens.js').read_bytes())
-            self.assertEqual(json.loads((out / 'package.json').read_text())['dependencies'], {'pptxgenjs': '4.0.1'})
+            manifest = json.loads((out / 'package.json').read_text())
+            self.assertEqual(manifest['dependencies'], {'pptxgenjs': '4.0.1', 'image-size': 'file:./deck-kit/unused-image-size'})
+            self.assertEqual(manifest['overrides'], {'pptxgenjs@4.0.1': {'image-size': '$image-size'}})
+            self.assertTrue((out / 'deck-kit/unused-image-size/index.js').is_file())
             with self.assertRaises(ValueError): creator.create(out, 'board', 'advisor')
             with self.assertRaises(ValueError): creator.create(root / 'bad', '../escape', 'status')
             self.assertFalse((root / 'bad').exists())
+
+    @unittest.skipUnless(os.environ.get('PRESENTATIONS_PACKAGE'), 'requires an installed generated deck package')
+    def test_installed_package_omits_parser_and_preserves_native_content(self):
+        project = Path(os.environ['PRESENTATIONS_PACKAGE']).resolve()
+        script = '''
+const assert = require('node:assert/strict');
+const {createRequire} = require('node:module');
+const local = createRequire(process.argv[1] + '/package.json');
+const fromPptx = createRequire(local.resolve('pptxgenjs'));
+assert.throws(() => fromPptx('image-size'), /image-size is intentionally unavailable/);
+const PptxGenJS = local('pptxgenjs');
+const deck = new PptxGenJS();
+const slide = deck.addSlide();
+slide.addText('Dependency proof', {x:1, y:1, w:4, h:1});
+slide.addNotes('Speaker notes preserved');
+slide.addImage({path:process.argv[3], x:1, y:2, w:1, h:1});
+slide.addChart(deck.ChartType.bar, [{name:'Series', labels:['A'], values:[3]}],
+              {x:3, y:2, w:4, h:3});
+deck.writeFile({fileName:process.argv[2]}).catch(e => {console.error(e); process.exitCode=1;});
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            out = root / 'proof.pptx'
+            # Construct a real 1x1 RGB PNG with stdlib, not a parser-specific mock.
+            import struct
+            import zlib
+            def chunk(kind, data):
+                return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+            png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+            png += chunk(b'IDAT', zlib.compress(b'\x00\xff\x00\x00')) + chunk(b'IEND', b'')
+            (root / 'pixel.png').write_bytes(png)
+            result = subprocess.run(['node', '-e', script, str(project), str(out), str(root / 'pixel.png')],
+                                    capture_output=True, text=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            parts = pptx.load(out)
+            self.assertIn('Speaker notes preserved', pptx.inspect(parts)['slides'][0]['notes'])
+            self.assertEqual(len(pptx.inspect(parts)['charts']), 1)
+            self.assertIn(png, parts.values())
 
 
 if __name__ == '__main__':

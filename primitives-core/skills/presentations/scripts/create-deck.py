@@ -26,13 +26,24 @@ def create(output, slug, kind):
         kit.mkdir()
         for name in ('deck-kit.js', 'theme-tokens.js'):
             shutil.copyfile(ASSETS / name, kit / name)
+        # 4.0.1 declares image-size but never imports it. Omit the vulnerable parser;
+        # a future caller must fail visibly rather than receive fabricated dimensions.
+        unused = kit / 'unused-image-size'
+        unused.mkdir()
+        (unused / 'package.json').write_text(json.dumps({
+            'name': '@presentations/unused-image-size', 'version': '0.0.0',
+            'private': True, 'main': 'index.js',
+        }, indent=2) + '\n')
+        (unused / 'index.js').write_text(
+            'throw new Error("image-size is intentionally unavailable; PptxGenJS 4.0.1 does not use it");\n')
         source = (ASSETS / 'starter.js').read_text()
         source = source.replace('__TYPE__', kind).replace('__SLUG__', slug)
         (package / 'deck.js').write_text(source)
         (package / '.gitignore').write_text('node_modules/\n*.pptx\nrender/\n')
         (package / 'package.json').write_text(json.dumps({
             'name': slug, 'private': True, 'scripts': {'build': 'node deck.js'},
-            'dependencies': {'pptxgenjs': '4.0.1'},
+            'dependencies': {'pptxgenjs': '4.0.1', 'image-size': 'file:./deck-kit/unused-image-size'},
+            'overrides': {'pptxgenjs@4.0.1': {'image-size': '$image-size'}},
         }, indent=2) + '\n')
         # mkdir exclusively reserves the destination, including against a symlink race.
         output.mkdir()

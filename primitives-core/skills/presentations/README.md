@@ -15,6 +15,8 @@ Python's stdlib handles package creation and ZIP/XML operations. XML content typ
 are validated whether declared by part override or default extension. Install PptxGenJS in each generated project
 for authoring, and Poppler plus LibreOffice/PowerPoint for rendering. These tools are
 runtime prerequisites; repository tests remain stdlib-only and need no install.
+Generated packages omit PptxGenJS 4.0.1's unused vulnerable image parser through a
+local npm override that throws if called; the official authoring library stays unchanged.
 
 The generated `deck.js` is editable source with an illustrative native chart and
 speaker notes. It imports local helper/theme files, so it builds outside the source

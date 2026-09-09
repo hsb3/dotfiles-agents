@@ -47,7 +47,7 @@ Inputs are limited to 10,000 entries and 256 MiB expanded; use a native applicat
 for larger decks. Outputs must be new `.pptx`/`.potx` files in an existing directory.
 
 **Full ISO/ECMA XSD validation is not implemented.** This is an explicit capability
-change from the retired base, pending the replacement's owner approval. No nested
+change from the retired base, approved by the owner on 2026-09-09. No nested
 schemas were copied. Rendering plus these checks provides package and visual evidence,
 not a standards-conformance certificate. A workflow needing that certificate must
 use an independently obtained/licensed validator and record its result separately.
