@@ -547,6 +547,20 @@ class PolicyPlacementTests(_Base):
             atelier_local.activation_path(self.project, inherit=False),
             os.path.join(self.project, ".agents", "atelier.local.md"))
 
+    def test_multiple_agents_fall_back_to_an_existing_native_policy(self):
+        os.makedirs(os.path.join(self.project, ".codex"))
+        path = os.path.join(self.project, ".claude", "atelier.local.md")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
+
+    def test_shared_policy_outranks_one_native_policy(self):
+        path = os.path.join(self.project, ".agents", "atelier.local.md")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
+
     def test_shared_policy_is_discovered_without_a_native_directory(self):
         os.rmdir(os.path.join(self.project, ".claude"))
         path = os.path.join(self.project, ".agents", "atelier.local.md")

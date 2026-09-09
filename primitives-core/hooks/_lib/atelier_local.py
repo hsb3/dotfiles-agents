@@ -28,7 +28,7 @@ def harness_name():
 def configured_agents(project_dir):
     """Native agents configured by project files, never installed executables."""
     agents = []
-    for name in ("claude", "codex"):
+    for name in ("claude", "codex", "opencode"):
         if os.path.isdir(os.path.join(project_dir, "." + name)):
             agents.append(name)
     if any(os.path.isfile(os.path.join(project_dir, name))
@@ -38,16 +38,15 @@ def configured_agents(project_dir):
 
 
 def activation_candidates(project_dir):
-    """The sole canonical local policy path for this configured project."""
+    """Canonical policy first, then existing native policies during migration."""
     agents = configured_agents(project_dir)
-    if len(agents) > 1 or (not agents and os.path.lexists(
-            os.path.join(project_dir, ".agents", "atelier.local.md"))):
-        directory = ".agents"
-    elif agents:
-        directory = "." + agents[0]
-    else:
-        directory = ".codex" if harness_name() == "codex" else ".claude"
-    return [os.path.join(project_dir, directory, "atelier.local.md")]
+    shared = os.path.join(project_dir, ".agents", "atelier.local.md")
+    target = activation_destination(project_dir)
+    candidates = [shared] if os.path.lexists(shared) else []
+    candidates.append(target)
+    candidates.extend(os.path.join(project_dir, "." + agent, "atelier.local.md")
+                      for agent in agents)
+    return list(dict.fromkeys(candidates))
 
 
 def policy_paths(project_dir):

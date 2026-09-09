@@ -522,7 +522,7 @@ def cmd_check(project_dir, out):
             print("       tried  {0}".format(root), file=out)
         return EXIT_ERROR
     local = modules["worker-context"].atelier_local
-    moves = reconcile_policy(project_dir, local, check=True)
+    moves = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=True)
     if moves:
         print("NEEDS  policy migration: " + ", ".join(moves), file=out)
         return EXIT_PROBLEM
@@ -599,8 +599,9 @@ def cmd_create(project_dir, force, out):
         print("ERROR  cannot find the atelier hooks: " + ", ".join(tried), file=out)
         return EXIT_ERROR
     local = modules["worker-context"].atelier_local
-    moved = reconcile_policy(project_dir, local)
-    dest = local.activation_destination(project_dir)
+    override = os.environ.get("ATELIER_ACTIVATION_FILE")
+    moved = [] if override else reconcile_policy(project_dir, local)
+    dest = modules["worker-context"]._resolve_activation_path(project_dir) if override else local.activation_destination(project_dir)
     if moved:
         print("moved  activation policy to {0}".format(dest), file=out)
         return EXIT_OK
@@ -637,7 +638,9 @@ def codex_setup(project_dir, out, check=False):
         import tomllib
         # Read every existing policy before setup creates .codex and changes the
         # configured-agent set. A conflict must leave roles and config untouched.
-        reconcile_policy(project_dir, __import__("atelier_local"), check=True)
+        local = __import__("atelier_local")
+        if not os.environ.get("ATELIER_ACTIVATION_FILE"):
+            reconcile_policy(project_dir, local, check=True)
         common = subprocess.check_output(
             ["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
             text=True, env=codex_workers.clean_git_env()).strip()
@@ -689,7 +692,7 @@ def codex_setup(project_dir, out, check=False):
             config.parent.mkdir(parents=True, exist_ok=True)
             config.write_text(text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n")
         changed = codex_roles.setup(project_dir, check=check)
-        moved = reconcile_policy(project_dir, __import__("atelier_local"), check=check)
+        moved = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=check)
         print(("needs " if check and changed else "ok    ") + " Codex roles: "
               + (", ".join(str(path) for path in changed) if changed else "current"), file=out)
         print(("needs " if check and missing else "ok    ") + " Codex writable roots: "
@@ -700,8 +703,6 @@ def codex_setup(project_dir, out, check=False):
         if moved:
             print(("needs " if check else "moved ") + " activation policy: "
                   + ", ".join(moved), file=out)
-        if moved and not check:
-            reconcile_policy(project_dir, __import__("atelier_local"))
         if not check:
             exclude.parent.mkdir(parents=True, exist_ok=True)
             old = exclude.read_text() if exclude.exists() else ""
