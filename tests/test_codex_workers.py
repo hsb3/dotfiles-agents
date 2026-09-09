@@ -148,7 +148,9 @@ class CodexWorkersTests(unittest.TestCase):
         self.hook('worktree-isolation', p)
         self.assertTrue(self.mod.lookup(p)['worktree'])
         p['hook_event_name'] = 'PreToolUse'
-        routed = self.hook('worktree-isolation', p)['hookSpecificOutput']['updatedInput']['command']
+        output = self.hook('worktree-isolation', p)['hookSpecificOutput']
+        self.assertEqual(output['permissionDecision'], 'allow')
+        routed = output['updatedInput']['command']
         self.assertIn(self.mod.lookup(p)['worktree'], routed)
 
     def test_custody_all_patch_paths_and_modes(self):

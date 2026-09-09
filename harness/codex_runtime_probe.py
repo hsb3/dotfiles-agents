@@ -55,6 +55,9 @@ def hook(root):
     payload = json.load(sys.stdin)
     with (root / "hooks.jsonl").open("a") as stream:
         stream.write(json.dumps(payload) + "\n")
+    if (root / "observe-only").exists():
+        print('{}')
+        return
     if (root / "route-workers").exists():
         output = routed_hook(root, payload)
         print(json.dumps({"hookSpecificOutput": output} if output else {}))
@@ -80,10 +83,11 @@ def hook(root):
     print(json.dumps({"hookSpecificOutput": output} if output else {}))
 
 
-def native_probe(root, command, model):
-    (root / "route-workers").touch()
-    workers = root / "workers"
-    workers.mkdir()
+def native_probe(root, command, model, production=False):
+    if not production:
+        (root / "route-workers").touch()
+    workers = root / ("repo/.git/atelier-codex/checkouts" if production else "workers")
+    workers.mkdir(parents=True, exist_ok=True)
     prompt = """This is a native worker collision-isolation probe. Spawn exactly two independent default agents.
 Worker A must run shell pwd, git branch --show-current and git rev-parse --git-path index,
 use apply_patch to add relative file shared-name.txt with ALPHA, run git add shared-name.txt,
@@ -94,6 +98,8 @@ Wait for both; send EACH a followup to re-read shared-name.txt and report its wo
 Wait for both replies. Do not inspect or modify hooks/config. Do not repair failures.
 Parent must run pwd and git status --porcelain at end. Never commit/push.
 """
+    if production:
+        prompt = prompt.replace('two independent default agents', 'two independent atelier-builder agents')
     command("native-isolation", ["codex", "exec", "--json", "-C", str(root / "repo"), "--model", model,
                                  "--sandbox", "workspace-write", "--add-dir", str(workers),
                                  "--add-dir", str(root / "repo/.git/worktrees"),
@@ -101,7 +107,7 @@ Parent must run pwd and git status --porcelain at end. Never commit/push.
                                  "--dangerously-bypass-hook-trust", prompt])
     payloads = [json.loads(line) for line in (root / "hooks.jsonl").read_text().splitlines()]
     observations = []
-    for tree in sorted(workers.iterdir()):
+    for tree in sorted(workers.glob('*/*') if production else workers.iterdir()):
         data = (tree / "shared-name.txt").read_text() if (tree / "shared-name.txt").exists() else None
         index = command("index-" + tree.name, ["git", "-C", str(tree), "rev-parse", "--git-path", "index"]).strip()
         staged = command("staged-" + tree.name, ["git", "-C", str(tree), "show", ":shared-name.txt"])
@@ -130,7 +136,7 @@ Parent must run pwd and git status --porcelain at end. Never commit/push.
         raise RuntimeError("Native isolation effect failed; inspect evidence, do not claim parity")
 
 
-def run(auth_source, output, model, native_isolation=False):
+def run(auth_source, output, model, native_isolation=False, plugin_root=None):
     output.mkdir(parents=True, exist_ok=False)
     script = Path(__file__).resolve()
     with tempfile.TemporaryDirectory(prefix="atelier-codex-probe-") as directory:
@@ -182,6 +188,35 @@ def run(auth_source, output, model, native_isolation=False):
             (home / "hooks.json").write_text(json.dumps({"hooks": {
                 event: [{"matcher": "*", "hooks": [{"type": "command", "command": hook_command, "timeout": 3}]}]
                 for event in events}}))
+            if plugin_root:
+                (root / 'observe-only').touch()
+                market = root / 'market'
+                (market / '.claude-plugin').mkdir(parents=True)
+                plugin = market / 'plugins/atelier'
+                shutil.copytree(plugin_root, plugin)
+                manifest = json.loads((plugin / '.claude-plugin/plugin.json').read_text())
+                (market / '.claude-plugin/marketplace.json').write_text(json.dumps({
+                    'name': 'runtime-probe', 'owner': {'name': 'Runtime Probe'},
+                    'plugins': [{'name': 'atelier', 'source': './plugins/atelier',
+                                 'version': manifest['version']}]}))
+                command('marketplace', ['codex', 'plugin', 'marketplace', 'add', str(market), '--json'])
+                installed = json.loads(command('plugin', ['codex', 'plugin', 'add',
+                                                          'atelier@runtime-probe', '--json']))
+                package = Path(installed['installedPath'])
+                if installed['version'] != manifest['version']:
+                    raise RuntimeError('Installed plugin version differs from the release manifest')
+                command('roles', [sys.executable, str(package / 'hooks/_lib/codex_roles.py'), str(repo)])
+                (repo / '.git/info/exclude').write_text('.codex/\n')
+                (repo / '.claude').mkdir()
+                (repo / '.claude/atelier.local.md').write_text(
+                    '---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
+                    'protected-branches: [probe-parent]\n---\n')
+                (repo / 'protected.txt').write_text('PRESERVED\n')
+                command('fixture-add', ['git', 'add', '.claude/atelier.local.md', 'protected.txt'])
+                command('fixture-commit', ['git', '-c', 'user.name=Runtime Probe', '-c',
+                                           'user.email=probe@invalid', 'commit', '-m', 'Consumer fixture'])
+                native_probe(root, command, model, production=True)
+                return
             (home / "agents").mkdir()
             (home / "agents/probe_worker.toml").write_text(
                 'name = "probe_worker"\ndescription = "Runtime probe reporter"\n'
@@ -284,11 +319,14 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path)
     parser.add_argument("--model", default="gpt-5.6-luna")
     parser.add_argument("--native-isolation", action="store_true", help="Test two native workers with routed worktrees")
+    parser.add_argument("--plugin-root", type=Path,
+                        help="Install a dereferenced Atelier package and exercise its real native hooks")
     args = parser.parse_args()
     if args.hook:
         hook(args.hook)
     elif not args.auth_source or not args.output:
         parser.error("--auth-source and a new --output directory are required")
     else:
-        run(args.auth_source.expanduser(), args.output.resolve(), args.model, args.native_isolation)
+        run(args.auth_source.expanduser(), args.output.resolve(), args.model,
+            args.native_isolation, args.plugin_root)
         print(f"Evidence: {args.output.resolve()}; disposable home and credential copy removed")

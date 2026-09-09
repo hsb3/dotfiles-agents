@@ -394,7 +394,8 @@ def _codex(payload):
         elif payload.get("hook_event_name") == "PreToolUse":
             updated = codex_workers.route_tool(payload)
             if updated != payload.get("tool_input"):
-                _emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": updated}})
+                _emit({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                       "permissionDecision": "allow", "updatedInput": updated}})
     except Exception as exc:
         if payload.get("hook_event_name") == "PreToolUse":
             _emit(codex_workers.deny(exc))
