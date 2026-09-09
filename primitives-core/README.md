@@ -30,7 +30,7 @@ guarded by [`../scripts/check_symlinks.py`](../scripts/check_symlinks.py):
 | `source` | repo-relative path | must exist on disk (drift guard) |
 | `origin` | `authored` \| `sourced` | provenance; immutable per entry. `sourced` requires non-null `upstream` + `ref`. |
 | `disposition` | `qualified` \| `grandfathered-pending-use` \| `demoted` \| `untriaged` | owner-curated verdict. |
-| `targets` | `[claude-code, opencode]` subset | claude-code installs the assemblies natively; opencode is generated at install time (task-4). |
+| `targets` | `[claude-code, opencode, codex]` subset | Claude Code and Codex install the assemblies; Codex roles are rendered at project setup. opencode is generated at install time (task-4). |
 | `requires` | optional capability/dependency words | `{hooks,local-mcp,hosted-mcp}` + `cli:<kebab>` / `env:<kebab>`. |
 
 `primitives-core` holds **self-authored** primitives only

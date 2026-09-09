@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ATELIER_HARNESS=codex ATELIER_ROLE_PLUGIN_ROOT=\"${CLAUDE_PLUGIN_ROOT}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-context/hook.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ATELIER_HARNESS=codex ATELIER_ROLE_PLUGIN_ROOT=\"${CLAUDE_PLUGIN_ROOT}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-isolation/hook.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

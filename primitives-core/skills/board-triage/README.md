@@ -107,3 +107,6 @@ top of its own file, and carries its backend's one-time setup (project/board cre
 provisioning, views and workflows) alongside the day-to-day export/apply commands. Where a
 setup step is a board write rather than a read, the adapter says so at that step and names
 the legal values, so a snippet is never copied blind.
+
+Codex uses the same Kata and GitHub board adapters. Resolve bundled scripts from the installed
+skill path; adapter prerequisites and write authorization remain part of the board workflow.

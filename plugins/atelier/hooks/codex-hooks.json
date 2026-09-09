@@ -10,7 +10,7 @@
             "type": "command"
           }
         ],
-        "matcher": "apply_patch|Bash"
+        "matcher": "*"
       },
       {
         "hooks": [
@@ -109,7 +109,7 @@
       {
         "hooks": [
           {
-            "command": "ATELIER_HARNESS=codex LANE_SNAPSHOT_INTERVAL=\"${LANE_SNAPSHOT_INTERVAL:-180}\" LANE_SNAPSHOT_WORKTREES=\"${LANE_SNAPSHOT_WORKTREES:-.claude/worktrees/agent-*}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lane-snapshot/hook.py\"",
+            "command": "ATELIER_HARNESS=codex LANE_SNAPSHOT_INTERVAL=\"${LANE_SNAPSHOT_INTERVAL:-180}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lane-snapshot/hook.py\"",
             "statusMessage": "Starting the lane-snapshot daemon...",
             "timeout": 10,
             "type": "command"

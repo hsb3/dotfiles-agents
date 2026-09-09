@@ -586,6 +586,8 @@ def codex_problems():
             if native.get('name') != pid or native.get('version') != entry.get('version'):
                 problems.append(f'plugins/{pid}: Codex name/version differs from the catalog release')
             for key in ('skills', 'hooks'):
+                if key not in native:
+                    continue
                 relative = native.get(key)
                 if not isinstance(relative, str) or not relative.startswith('./') or '..' in relative.split('/'):
                     problems.append(f'plugins/{pid}: Codex {key} must reference a package-relative path')
@@ -603,7 +605,7 @@ def codex_problems():
                                 for path in re.findall(r'\$\{CLAUDE_PLUGIN_ROOT\}/([^"\s]+)', hook.get('command', '')):
                                     if '..' in path.split('/') or not os.path.isfile(os.path.join(root, path)):
                                         problems.append(f'plugins/{pid}: missing Codex hook handler {path}')
-        except (OSError, ValueError, KeyError, TypeError) as exc:
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
             problems.append(f'plugins/{pid}: unreadable Codex assembly: {exc}')
     return problems
 

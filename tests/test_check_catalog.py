@@ -468,6 +468,10 @@ class CatalogGuard(unittest.TestCase):
             json.dump({'hooks': {'PreToolUse': [{'hooks': [{
                 'command': 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/required.py"'}]}]}}, stream)
         self.assertEqual(C.codex_problems(), [])
+        del native['skills']
+        with open(manifest, 'w') as stream:
+            json.dump(native, stream)
+        self.assertEqual(C.codex_problems(), [])  # Hook-only plugins are valid.
         os.unlink(handler)
         self.assertTrue(any('required.py' in p for p in C.codex_problems()))
         native['version'] = '9.9.9'

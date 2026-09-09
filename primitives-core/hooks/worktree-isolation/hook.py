@@ -85,6 +85,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import codex_workers  # noqa: E402
+import codex_roles  # noqa: E402
 import agentlog  # noqa: E402  (path must be primed before this import)
 import atelier_local  # noqa: E402
 
@@ -383,6 +384,17 @@ def _codex(payload):
     if not payload.get("agent_id"):
         return
     try:
+        package = os.environ.get('ATELIER_ROLE_PLUGIN_ROOT')
+        if package:
+            role = payload.get('agent_type')
+            if role not in codex_roles.role_names(package):
+                return
+            allowed = codex_roles.role_tools(role, package)
+            tool = payload.get('tool_name')
+            if (tool in codex_workers.CONTROL_TOOLS and 'Agent' not in allowed
+                    or tool == 'apply_patch' and not allowed.intersection({'Edit', 'Write'})):
+                _emit(codex_workers.deny('Tool is outside the canonical role authority: ' + str(tool)))
+            return
         if not codex_workers.active(payload):
             return
         if payload.get("hook_event_name") == "SubagentStart":

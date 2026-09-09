@@ -1,0 +1,6 @@
+{
+  "name": "plugin-feedback",
+  "version": "0.2.0",
+  "description": "Draft plugin defect reports with source attribution and explicit publication approval.",
+  "hooks": "./hooks/codex-hooks.json"
+}

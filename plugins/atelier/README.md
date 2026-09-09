@@ -84,15 +84,34 @@ claude plugin install atelier@dotfiles-agents
 
 ### Codex role setup
 
-Codex discovers the skills through the same marketplace. Its native agent loader needs
-project TOML profiles, so run the installed package's `hooks/_lib/codex_roles.py` with the
-consumer project path, then repeat with `--check`. Setup renders the five canonical roles as
-`atelier-<role>` profiles under `.codex/agents/`, preserves user-owned or edited profiles,
-and resolves models through the OpenAI tier map. Start a fresh session after setup.
+```sh
+codex plugin add atelier@dotfiles-agents
+```
 
-The [Codex dispatch procedures](skills/delegation/references/dispatch-knobs.md#codex-distribution)
-cover role selection, native waits and follow-ups. Role setup alone does not establish hook
-trust or worker isolation; verify the project safeguards before dispatching writers.
+Invoke the installed activation skill for the consumer project. It creates the local
+`.claude/atelier.local.md` policy, then its `codex-setup` command renders five canonical
+`atelier-<role>` profiles under `.codex/agents/` and a project sandbox profile. It preserves
+user-owned and edited configuration. Restart the session, select the generated profile,
+and review/trust the installed hooks in native `/hooks`; setup cannot grant trust.
+The [activation instructions](skills/activation/SKILL.md#codex-setup) give the exact commands.
+
+With `isolate: writers`, native worker IDs own separate worktrees and Git indexes beneath
+Git’s common directory. Hooks route shell commands and every patch destination into the
+owned checkout. New workers start from their immediate dispatcher’s committed HEAD; native
+messages, follow-ups and completion still use the original worker ID. Uncommitted parent
+changes do not travel. Missing or invalid worker state denies writes.
+
+This prevents workers colliding in one checkout. It is not a separate OS sandbox per worker:
+the project sandbox and role instructions still govern shell access. Native thread `cwd`
+metadata remains inherited; the registry records the effective checkout. Keep the worker
+branches until their commits are integrated, then remove them with ordinary Git worktree
+and branch commands. The plugin does not delete unfinished worker work.
+
+The native manifest and the Claude manifest share one release version. See the
+[dispatch procedures](skills/delegation/references/dispatch-knobs.md#codex-distribution)
+for role selection, waits and follow-ups. A Codex interface without native role selection
+or trusted lifecycle hooks cannot provide this delegation contract; report that missing
+capability before dispatching writers.
 
 ## A worked example
 
