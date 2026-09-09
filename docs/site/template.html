@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$pagetitle$ · dotfiles-agents</title>
+<link rel="stylesheet" href="$base$/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header><a class="brand" href="$base$/index.html">dotfiles-agents</a><a href="https://github.com/hsb3/dotfiles-agents">Repository</a></header>
+<div class="layout">
+<nav aria-label="Documentation">
+<a href="$base$/index.html">Documentation</a>
+<a href="$base$/README.html">Install &amp; catalog</a>
+<a href="$base$/docs/codex-compatibility.html">Codex support</a>
+<a href="$base$/plugins/atelier/README.html">Atelier setup</a>
+<a href="$base$/.github/CONTRIBUTING.html">Contribute</a>
+<a href="$base$/docs/decisions/README.html">Decision history</a>
+</nav>
+<main id="content" tabindex="-1">
+$if(toc)$<details class="contents"><summary>On this page</summary>$toc$</details>$endif$
+$body$
+<footer><a href="$source$">View canonical Markdown</a> · <a href="$base$/docs/licenses.html">Licenses</a></footer>
+</main>
+</div>
+<script type="module">
+const diagrams = document.querySelectorAll('pre.mermaid');
+if (diagrams.length) {
+  try {
+    const {default: mermaid} = await import('https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.esm.min.mjs');
+    mermaid.initialize({startOnLoad: false, securityLevel: 'strict', theme: 'neutral'});
+    await mermaid.run({nodes: diagrams});
+  } catch { /* The readable source diagram remains available offline. */ }
+}
+for (const link of document.querySelectorAll('nav[aria-label="Documentation"] a')) {
+  if (link.pathname === (location.pathname.endsWith('/') ? location.pathname + 'index.html' : location.pathname)) link.setAttribute('aria-current', 'page');
+}
+</script>
+</body>
+</html>

@@ -56,6 +56,10 @@ jobs:
         with:
           python-version: "3.13"
       - run: make check symlinks flow
+      - name: Install Pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+      - name: Documentation build and project-subpath links
+        run: make docs-build
       # Version-bump gate (TASK-032): each plugin's assembly, dereferenced, against the
       # same plugin as published on origin/main — changed bytes must ship under a moved
       # version or consumers keep serving the cached one. It rides THIS job rather than

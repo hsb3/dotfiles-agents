@@ -22,14 +22,14 @@ would restate an existing one.
 2. **Classify each pair.** Only *same job, different tool* is a real overlap family.
    *Same tool, different job* (github-project-board vs planning-desk) and
    *composes-rather-than-duplicates* (waves over delegation) are not — leave them alone.
-3. **Pick the resolution by the doctrine/mechanics ratio.** All four patterns already
-   ship in this repo; match, don't invent a fifth:
+3. **Pick the resolution by the doctrine/mechanics ratio.** The historical examples below illustrate four patterns; check current membership
+   before reusing an example:
 
    | Ratio / shape | Resolution | Shipped example |
    |---|---|---|
    | Mostly mechanics (≳80%) | Keep the tool skill; shared doctrine dedupes to a pointer at its canonical home | kaneo, github-project-board |
    | Mostly doctrine | Tool-agnostic core + per-tool adapter files under a written contract | board-triage |
-   | Behavior switches per project | Config key in `.claude/atelier.local.md`, read by hooks | handoff `mode: file\|external` |
+   | Behavior switches per project | Config key in the [selected activation file](override-convention.md), read by hooks | handoff `mode: file\|external` |
    | The job is choosing the tool | Hub skill + thin per-tool skills | diagrams |
 
 4. **Rules that bound the outcome.**
@@ -41,8 +41,8 @@ would restate an existing one.
    - A tool-bound skill never ships where its tool can't run (the roster comment above
      the kaneo entries): prose that names absent tools makes a session improvise.
    - Tool-free doctrine is marked in the roster by omitting `requires:`.
-   - A new hook-read config key inherits the frontmatter parser, which is currently
-     copy-pasted per hook — budget for that duplication or fix it first.
+   - A new hook-read config key follows the shared activation loader and the
+     [override convention](override-convention.md).
 5. **Prove it.** The cheap metric: duplicated doctrine lines removed with zero behavior
    change (each removal maps to the section that now owns the rule). The real test, when
    the change is contested: a cold-agent trial — the same tracker task run under the old
@@ -74,3 +74,10 @@ workflows, the status-update mutation) recovered from the retired skill. The
 its shipped example, and `board-triage` itself demonstrates the "mostly doctrine -> adapter
 per tool" row instead. The 2026-08-23 record above is left as written; this note is the
 correction.
+
+
+## Current examples (2026-09-09)
+
+Kaneo is also retired (decision-021); the preceding dated correction describes the
+intermediate state. Current tracker mechanics live in the kata plugin and in the
+board-triage adapters. The catalog and plugin assemblies are the current inventory.

@@ -1,11 +1,14 @@
 ---
 title: "Externals are tracked-and-cloned, never vendored"
 type: decision
-status: Accepted
+status: Accepted (amended by decision-6)
 created: 2026-06-28
 updated: 2026-07-03
 summary: Third-party extenders are references (upstream + pinned ref) cloned at build; never copied into primitives-core.
 ---
+
+> **Amendment note (2026-09-09):** Decision-6 later permits narrowly qualified pinned vendoring; see [the current rule](../vendoring-rule.md). The absolute ban below describes the original decision.
+
 
 # 0003 · Externals are tracked-and-cloned, never vendored
 

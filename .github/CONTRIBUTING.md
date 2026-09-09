@@ -12,7 +12,7 @@ in [`../CLAUDE.md`](../CLAUDE.md) and [`../primitives-core/README.md`](../primit
 1. **Branch off `dev`.** All work integrates on `dev`; `main` is CI-published and off-limits
    (publish is `.github/workflows/publish.yml`, never a local checkout). Never commit to or merge
    into the default branch.
-2. **Edit `primitives-core/` only.** It is the single canonical source copy of every primitive.
+2. **Edit primitive bodies in `primitives-core/` only.** It is the single canonical source copy of every primitive.
    `plugins/<id>/` are thin symlink assemblies over it (ADR 0017) — hand-authored
    `plugin.json`/`hooks.json`/bundle READMEs, symlinks for everything else; the root
    `.claude-plugin/marketplace.json` lists each plugin. An edit at source is live everywhere
@@ -158,3 +158,11 @@ only on the default branch).
 
 Architecture decisions are a separate thing from tracked work: they are ADRs under
 [`../docs/decisions/`](../docs/decisions/), append-only, and they stay in the repo.
+
+
+## Publication and documentation
+
+Use the [sanctioned publish runbook](../.claude/skills/publish-to-main/SKILL.md) after
+consumer-facing changes land. It dispatches the guarded workflow; it never merges into
+`main`. The [documentation site guide](../docs/site.md) covers local preview and the
+Pages deployment tied to that publication.

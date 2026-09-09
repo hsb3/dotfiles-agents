@@ -2,8 +2,11 @@
 id: decision-8
 title: Repo structure future-state — backlog absorbs docs/, _meta removed
 date: '2026-08-06'
-status: accepted
+status: accepted (partly superseded by decision-011 and decision-014)
 ---
+
+> **Amendment note (2026-09-09):** Decision-011 returned documentation to `docs/` when Backlog.md retired; decision-014 later moved task tracking to kata. The `_meta/` removal remains repo policy. Historical `backlog/` paths below are provenance, not current navigation.
+
 ## Context
 
 The 2026-08-06 cleanup removed the empty top-level `hooks/` placeholder and dissolved

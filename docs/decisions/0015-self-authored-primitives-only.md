@@ -1,10 +1,13 @@
 ---
 title: "primitives-core is self-authored only; externals by reference"
 type: decision
-status: Accepted
+status: Accepted (amended by decision-6)
 created: 2026-07-22
 summary: Every body under primitives-core/ is origin authored; third-party material is recorded by reference in externals.yaml, never vendored into the source tree.
 ---
+
+> **Amendment note (2026-09-09):** Decision-6 and [the vendoring rule](../vendoring-rule.md) add the qualified `origin: vendored` exception enforced by `check_provenance.py`. The original self-authored-only rationale is preserved below.
+
 
 # 0015 · primitives-core is self-authored only; externals by reference
 
