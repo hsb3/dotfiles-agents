@@ -593,21 +593,45 @@ def codex_setup(project_dir, out, check=False):
         existing = parsed.get("sandbox_workspace_write", {})
         configured = existing.get("writable_roots", [])
         missing = [path for path in writable if path not in configured]
+        agents = parsed.get("agents")
+        agent_settings = []
+        if agents is not None:
+            if not isinstance(agents, dict):
+                raise ValueError("agents must be a TOML table")
+            depth = agents.get("max_depth", 1)
+            if not isinstance(depth, int) or isinstance(depth, bool) or depth < 2:
+                agent_settings.append("max_depth = 2")
+            if agents.get("enabled") is False:
+                agent_settings.append("enabled = true")
+            concurrency = agents.get("max_concurrent_threads_per_session")
+            if isinstance(concurrency, int) and concurrency < 2:
+                agent_settings.append("max_concurrent_threads_per_session = 2")
+        if agent_settings:
+            print("ERROR  existing agents table is user-owned; set these entries under [agents]: "
+                  + "; ".join(agent_settings), file=out)
+            return EXIT_PROBLEM
         marker = "# atelier managed writable roots\n"
         if missing and "sandbox_workspace_write" in parsed:
             print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
                   + json.dumps(missing), file=out)
             return EXIT_PROBLEM
         codex_roles.setup(project_dir, check=True)
-        if missing and not check:
+        additions = []
+        if missing:
+            additions.append(marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable))
+        if agents is None:
+            additions.append("[agents]\nmax_depth = 2")
+        if additions and not check:
             config.parent.mkdir(parents=True, exist_ok=True)
-            config.write_text(text.rstrip() + "\n\n" + marker
-                + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable) + "\n")
+            config.write_text(text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n")
         changed = codex_roles.setup(project_dir, check=check)
         print(("needs " if check and changed else "ok    ") + " Codex roles: "
               + (", ".join(str(path) for path in changed) if changed else "current"), file=out)
         print(("needs " if check and missing else "ok    ") + " Codex writable roots: "
               + json.dumps(writable), file=out)
+        print(("needs " if check and agents is None else "ok    ")
+              + " Codex manager depth: agents.max_depth = "
+              + str(2 if agents is None else agents["max_depth"]), file=out)
         if not check:
             exclude.parent.mkdir(parents=True, exist_ok=True)
             old = exclude.read_text() if exclude.exists() else ""
@@ -617,7 +641,7 @@ def codex_setup(project_dir, out, check=False):
                 exclude.write_text(old.rstrip() + "\n" + "\n".join(additions) + "\n")
         print("unverified  hook trust: open /hooks in Codex for this project and approve the reviewed atelier hooks. "
               "Parsed activation settings alone do not prove loaded, enabled, trusted hooks. Restart after setup.", file=out)
-        return EXIT_PROBLEM if check and (changed or missing) else EXIT_OK
+        return EXIT_PROBLEM if check and (changed or missing or agents is None) else EXIT_OK
     except (OSError, ValueError, subprocess.SubprocessError, ImportError) as exc:
         print("ERROR  Codex setup: " + str(exc), file=out)
         return EXIT_ERROR

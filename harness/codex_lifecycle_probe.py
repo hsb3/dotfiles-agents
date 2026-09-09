@@ -94,7 +94,11 @@ def run(args):
         (repo / '.claude').mkdir(parents=True)
         shutil.copyfile(args.auth_source, home / 'auth.json')
         (home / 'auth.json').chmod(0o600)
-        env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+        excluded = ('GIT_', 'ATELIER_', 'CLAUDE_', 'LANE_SNAPSHOT_', 'CONTEXT_WATERMARK_',
+                    'DELEGATION_WATERMARK_', 'SUBAGENT_TELEMETRY_', 'BRANCH_ACTIVITY_',
+                    'HANDOFF_', 'SESSION_HANDOFF_')
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith(excluded) and not key.endswith(('_LOG_PATH', '_STATE_DIR'))}
         env.update(CODEX_HOME=str(home), ATELIER_HARNESS='codex',
                    GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM='1',
                    XDG_DATA_HOME=str(root / 'data'),

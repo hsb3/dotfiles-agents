@@ -130,6 +130,7 @@ class SetupTests(unittest.TestCase):
             self.assertEqual(module.codex_setup(directory, io.StringIO()), 0)
             written = config.read_text()
             self.assertIn('model = "user-choice"', written)
+            self.assertIn('[agents]\nmax_depth = 2', written)
             self.assertIn('/refs/heads/atelier', written)
             self.assertNotIn('"' + str(root / '.git/refs') + '"', written)
             self.assertEqual(module.codex_setup(directory, io.StringIO(), check=True), 0)
@@ -137,6 +138,37 @@ class SetupTests(unittest.TestCase):
             config.write_text('[sandbox_workspace_write]\nwritable_roots = ["/user-owned"]\n')
             self.assertEqual(module.codex_setup(directory, io.StringIO()), 1)
             self.assertEqual(config.read_text(), '[sandbox_workspace_write]\nwritable_roots = ["/user-owned"]\n')
+
+    def test_manager_settings_are_checked_before_any_project_mutation(self):
+        spec = importlib.util.spec_from_file_location('codex_activation_agents_test',
+            HOOKS.parent / 'skills/activation/scripts/activation.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for settings, valid in [('', False), ('max_depth = 1', False),
+                                ('max_depth = 2\nenabled = false', False),
+                                ('max_depth = 2\nmax_concurrent_threads_per_session = 1', False),
+                                ('max_depth = 4', True)]:
+            with self.subTest(settings=settings), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                subprocess.run(['git', 'init', '-q', directory], check=True)
+                (root / '.codex').mkdir()
+                config = root / '.codex/config.toml'
+                original = '[agents]\n' + settings + '\n'
+                config.write_text(original)
+                calls = []
+                roles = SimpleNamespace(setup=lambda *args, **kwargs: calls.append(kwargs['check']) or [])
+                worker = SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith('GIT_')})
+                with patch.dict(sys.modules, codex_roles=roles, codex_workers=worker):
+                    report = io.StringIO()
+                    self.assertEqual(module.codex_setup(directory, report), 0 if valid else 1)
+                if valid:
+                    self.assertIn('max_depth = 4', config.read_text())
+                    self.assertNotIn('max_depth = 2', config.read_text())
+                else:
+                    self.assertEqual(config.read_text(), original)
+                    self.assertEqual(calls, [])
+                    self.assertIn('under [agents]', report.getvalue())
+                    self.assertFalse((root / '.codex/agents').exists())
 
     def test_setup_refuses_symlink_files_before_any_write(self):
         spec = importlib.util.spec_from_file_location('codex_activation_symlink_test',
