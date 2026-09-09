@@ -105,7 +105,7 @@ Read it at session start; at session end rewrite its
 tree, and there is no handoff branch — never create either.**
 
 `handoff-freshness-guard` knows this via the `handoff: {mode: external, …}` block in
-`.claude/atelier.local.md` (tracked since 2026-09-07 by owner ruling, so worktree workers and both Macs share it; the stamp stays ignored): it stats `.claude/handoff.stamp` instead
+`.agents/atelier.local.md` (tracked since 2026-09-07 by owner ruling, so worktree workers and both Macs share it; the stamp stays ignored): it stats `.claude/handoff.stamp` instead
 of searching for a handoff file. **Update the board issue first, touch the stamp last** — the
 guard reads the stamp's age, never the board's content, so an early touch certifies a handoff
 that has not happened. No stamp yet in a fresh clone means the first manual `/compact` is
@@ -177,8 +177,8 @@ already on the board as `wvkc`, byte-identical, missing only the `github_issue` 
 the link rather than filing a duplicate). Not a `make ci` gate; it reads the live hosted board,
 which CI cannot reach.
 
-Why it has to exist: the sync mints an issue on card creation but propagates no close, so the
-drift grows by one every time a card closes. Before the first run (2026-09-08) 13 of 27 open
+Why it has to exist: import-only sync leaves the GitHub issue open when its kata card closes,
+so each missed manual close adds drift. Before the first run (2026-09-08) 13 of 27 open
 issues were finished work. It also defuses a live hazard —
 `kata sync github enable` resets the sync cursor and re-applies GitHub state onto the board,
 **reopening every closed card whose mirror is still open**

@@ -79,8 +79,8 @@ nodes:
     layer: workbench
     class: authored
     status: current
-    paths: [.claude, .vscode, .kata.toml]
-    note: "Project-local session tooling: under .claude/, the publish-to-main skill, tracked project memory (.claude/memory/), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — the tracker itself is off-tree since the Backlog.md retirement, 2026-08-11; Kaneo until 2026-09-02, kata since); under .vscode/, git.branchProtection for main. At the root, .kata.toml binds the workspace to its kata project by name (the per-machine .kata.local.toml override is gitignored). The kata MCP server and its schema-flattening shim come from the kata plugin (kata@kata-oversight, enabled at project scope in .claude/settings.json so both machines get it; the project-local .mcp.json copy of the shim was retired 2026-09-07, nrxn). Not roster primitives; never distributed."
+    paths: [.agents, .claude, .vscode, .kata.toml]
+    note: "Project-local session tooling: under .agents/, the tracked shared Atelier policy; under .claude/, the publish-to-main skill, tracked project memory (.claude/memory/), the project hooks settings, and the no-main-checkout PreToolUse guard (.claude/hooks/); the autoMemoryDirectory redirect is machine-local (settings.local.json, untracked — the tracker itself is off-tree since the Backlog.md retirement, 2026-08-11; Kaneo until 2026-09-02, kata since); under .vscode/, git.branchProtection for main. At the root, .kata.toml binds the workspace to its kata project by name (the per-machine .kata.local.toml override is gitignored). The kata MCP server and its schema-flattening shim come from the kata plugin (kata@kata-oversight, enabled at project scope in .claude/settings.json so both machines get it; the project-local .mcp.json copy of the shim was retired 2026-09-07, nrxn). Not roster primitives; never distributed."
   - id: runtime-logs
     layer: runtime
     class: runtime

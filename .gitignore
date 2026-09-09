@@ -57,11 +57,14 @@ harness/campaign-logs/
 # (owner ruling 2026-09-07) so worktree-isolated workers and the other Mac get the same
 # enforcement; a gitignored copy left every worktree worker with custody silently off (9r04).
 .claude/*.local.md
-!.claude/atelier.local.md
+.codex/*.local.md
+.agents/*.local.md
+!.agents/atelier.local.md
 
 # handoff freshness signal. The handoff itself is kata issue 4w08; this file carries no
 # content, only an mtime, and machine-local mtime is not something to share. A fresh clone
 # has no stamp, so the guard refuses the first manual /compact until /handoff runs — which
 # is the correct answer for a session that has not written a handoff yet.
 .claude/handoff.stamp
+.agents/handoff.stamp
 .kata.local.toml
