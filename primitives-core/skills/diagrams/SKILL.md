@@ -29,7 +29,8 @@ Default for repo docs is Mermaid (renders in place on GitHub, diffable). Reach f
 
 **Self-improving workflow**: plan → code → render → review → adjust → **record learnings**
 
-This skill accumulates knowledge in `memory/MEMORY.md`. Each diagram session:
+This skill reads bundled guidance from `memory/MEMORY.md` and saves new learnings in the
+consumer project, so plugin refreshes cannot erase them. Each diagram session:
 1. **Starts** by checking memory for relevant past learnings
 2. **Ends** by recording any new discoveries
 
@@ -45,7 +46,7 @@ brew install graphviz          # macOS
 # apt-get install -y graphviz  # Debian/Ubuntu
 ```
 
-Confirm both landed before the first render: `python3 scripts/diagram_helper.py validate`
+Confirm both landed before the first render: `python3 "<skill-dir>/scripts/diagram_helper.py" validate`
 reports Graphviz and the `diagrams` library and exits non-zero if either is missing.
 
 ## Workflow
@@ -54,11 +55,21 @@ This skill is **self-improving**. Always check the memory file before starting, 
 
 ### Phase 0: Check Memory (ALWAYS DO FIRST)
 
-Before creating any diagram, read `memory/MEMORY.md` for accumulated learnings:
+Resolve `<skill-dir>` from this loaded skill's absolute location. Run helpers by that
+absolute path while keeping the working directory in the consumer project. First read the
+bundled seed and the project's accumulated learnings:
 
 ```bash
-cat /path/to/skill/memory/MEMORY.md
+cat "<skill-dir>/memory/MEMORY.md"
+python3 "<skill-dir>/scripts/memory_manager.py" view
 ```
+
+The learned-memory file is `.claude/memory/diagrams.md` when that memory directory exists,
+otherwise `.claude/diagrams-memory.md`. A `memory-path:` key in the frontmatter of
+`.claude/diagrams.local.md` overrides it with a project-relative file. Blank, malformed, or
+out-of-project overrides fall back to the detected default. The `.claude` location is a
+shared project convention and requires no Claude runtime. `memory_manager.py path` prints
+the resolved destination. Never write learnings into the installed package.
 
 Review relevant sections based on your task:
 - **Import Errors** - Correct import paths discovered through trial
@@ -388,7 +399,8 @@ After completing a diagram, reflect on the process:
 3. **What fixed the issues?** (specific attribute values, import paths)
 4. **Would this help future diagrams?**
 
-If you learned something new, append it to `memory/MEMORY.md`:
+If you learned something new, use `memory_manager.py add` to append it to the consumer
+project's learned-memory file. Entries use this format:
 
 ```markdown
 ### [Date] - [Brief Title]
@@ -622,7 +634,8 @@ dot -Tpng -Gdpi=150 arch.dot -o diagrams/03-deploy-process.png
 
 ## References
 
-- **Memory file**: `memory/MEMORY.md` - **CHECK FIRST** - Accumulated learnings
+- **Bundled seed**: `memory/MEMORY.md` — read-only guidance; also check the consumer memory
+  returned by `scripts/memory_manager.py path`
 - **Node imports**: `references/nodes.md` - Complete import paths by provider
 - **Patterns**: `references/patterns.md` - Ready-to-use architecture templates  
 - **Graphviz attrs**: `references/graphviz-attrs.md` - Professional formatting attributes
@@ -634,16 +647,16 @@ dot -Tpng -Gdpi=150 arch.dot -o diagrams/03-deploy-process.png
 
 ```bash
 # View all memory
-python scripts/memory_manager.py view
+python3 "<skill-dir>/scripts/memory_manager.py" view
 
 # View specific section
-python scripts/memory_manager.py view --section "Import Errors"
+python3 "<skill-dir>/scripts/memory_manager.py" view --section "Import Errors"
 
 # Search memory
-python scripts/memory_manager.py search "spacing"
+python3 "<skill-dir>/scripts/memory_manager.py" search "spacing"
 
 # Add new entry
-python scripts/memory_manager.py add \
+python3 "<skill-dir>/scripts/memory_manager.py" add \
   --section "Layout Issues" \
   --title "Wide diagrams need LR direction" \
   --problem "Diagram too tall and narrow" \
@@ -651,5 +664,5 @@ python scripts/memory_manager.py add \
   --example 'with Diagram("Wide", direction="LR"): ...'
 
 # List sections
-python scripts/memory_manager.py sections
+python3 "<skill-dir>/scripts/memory_manager.py" sections
 ```

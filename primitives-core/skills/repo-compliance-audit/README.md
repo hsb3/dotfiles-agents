@@ -23,3 +23,9 @@ claude plugin install mise-en-place@dotfiles-agents
 ```
 
 Ships in the `mise-en-place` bundle.
+
+## Installed clients
+
+Resolve helper paths from the loaded skill's absolute package location. The documented
+commands work in Codex without assuming `CLAUDE_PLUGIN_ROOT` is exported; explicit package
+paths preserve the same Claude Code behavior.

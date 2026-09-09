@@ -6,7 +6,7 @@ Fill the {PLACEHOLDERS} and launch one agent per candidate group (2–3 candidat
 
 You are a research agent evaluating {CATEGORY} candidates. Today is {DATE}. Research these candidates from PRIMARY SOURCES ONLY (official repos, LICENSE files, official docs, pricing pages — never listicles or blog roundups): {CANDIDATE LIST WITH REPO/ORG POINTERS}.
 
-Load WebSearch via ToolSearch first. Use WebSearch, web_fetch, and the GitHub MCP tools (mcp__github__get_file_contents, list_releases, list_commits, search_repositories — load via ToolSearch, batch the loads) for repo facts and activity stats. If web_fetch reports a domain cannot be fetched, do NOT work around it with curl/python — note the gap and use another primary source or mark the item unverifiable.
+Discover the session's available web search, page retrieval, and repository tools first; use the harness's tool-discovery surface when present. Use those capabilities for repo facts and activity stats, with official repository APIs or the available GitHub CLI as needed. Claude Code may expose WebSearch/ToolSearch and GitHub MCP tools; Codex may expose web search/open and differently prefixed repository tools. Never require a tool solely by its name. If web_fetch reports a domain cannot be fetched, do NOT work around it with curl/python — note the gap and use another primary source or mark the item unverifiable.
 
 For EACH candidate return a structured findings block:
 

@@ -24,3 +24,11 @@ claude plugin install diagrams@dotfiles-agents
 ```
 
 Ships in the `diagrams` bundle.
+
+## Consumer memory and installed paths
+
+Run helpers by their absolute installed skill path from the consumer project. Bundled
+`memory/MEMORY.md` is read-only seed guidance; new learnings go to existing project
+`.claude/memory/diagrams.md`, otherwise `.claude/diagrams-memory.md`. Override with
+`memory-path:` in `.claude/diagrams.local.md`; `memory_manager.py path` prints the resolved
+file. This project convention works in Claude Code and Codex and survives cache updates.

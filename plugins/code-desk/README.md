@@ -1,5 +1,7 @@
 # code-desk
 
+Codex can use the project-memory taxonomy and maintain a Claude memory setup. The project-memory scripts configure Claude Code, not native Codex memory.
+
 Set the quality contract a repo is held to, build the one gate command that enforces it, and
 run next-release work through it — plus the executive-desk overhead around that work: the
 review findings a green check hides, weekly board triage, recurring status comms, the themed

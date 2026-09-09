@@ -9,7 +9,8 @@ Excalidraw produces sketch-style diagrams — the hand-drawn look that reads as 
 
 ## Tooling availability — check first
 
-Some sessions expose Excalidraw MCP tools (`mcp__claude_ai_Excalidraw__*` — create_view, export_to_excalidraw, checkpoints). **They are NOT always available.**
+Some sessions expose Excalidraw MCP tools (create_view, export_to_excalidraw, checkpoints).
+Discover the callable names; client prefixes differ. **They are NOT always available.**
 
 1. **MCP tools present** → use them: create the view, iterate visually, and export/checkpoint through the tools.
 2. **MCP tools absent** (the common case in terminal sessions) → **author the `.excalidraw` JSON directly** with the schema below. Do not stall or tell the user it can't be done — the file format is plain JSON and fully authorable.
@@ -81,10 +82,11 @@ and on each bound shape: `"boundElements": [{ "id": "arrow-1", "type": "arrow" }
 
 ## Render it and check it — the headless loop
 
-Upstream ships no headless CLI, so this skill carries its own renderer. `scripts/render_check.py` draws the scene to SVG, screenshots it through headless Chromium (Playwright), and lints the scene as data. **Run it before handing any scene to the user** — you author blind otherwise.
+Resolve `<skill-dir>` from this loaded skill's absolute location; keep scene/output paths
+in the consumer workspace. Upstream ships no headless CLI, so this skill carries its own renderer. `scripts/render_check.py` draws the scene to SVG, screenshots it through headless Chromium (Playwright), and lints the scene as data. **Run it before handing any scene to the user** — you author blind otherwise.
 
 ```
-python3 scripts/render_check.py path/to/scene.excalidraw --out "$(mktemp -d)"
+python3 "<skill-dir>/scripts/render_check.py" path/to/scene.excalidraw --out "$(mktemp -d)"
 ```
 
 Writes `<stem>.svg` and `<stem>.png` to the out dir, prints both paths, and exits 1 when the lint finds defects (it still renders — you read the finding and look at the picture together). Default scene is the bundled `examples/request-path.excalidraw`.

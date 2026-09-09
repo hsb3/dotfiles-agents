@@ -18,8 +18,12 @@ commands below (CLI) — everything else is read-only.
 If `kenn_forge_*` tools aren't available: confirm the daemon is running
 (`kenn-forge daemon status --json`), confirm `mcp_listen_addr` is present in that
 output (means `[mcp].enabled = true` took effect), and confirm the client has the
-server registered (`claude mcp list` should show `kenn-forge` connected at
-`http://127.0.0.1:8092/mcp`). After editing `[mcp]` in config, `kenn-forge daemon restart`
+server registered in the current client (`claude mcp list` for Claude Code;
+`codex mcp list` for Codex). Read the current endpoint from `kenn-forge mcp quickstart`,
+which also reports auth requirements; do not assume the default port. In Codex register
+with `codex mcp add kenn-forge --url <reported-endpoint>` and start a fresh session
+when required for discovery. Use the callable tool names the client exposes; prefixes
+may differ. The CLI remains available over the same daemon when MCP is unavailable. After editing `[mcp]` in config, `kenn-forge daemon restart`
 is required — it isn't hot-reloaded. `[mcp]` must be its own top-level TOML table;
 adding it mid-file above other bare keys silently absorbs them into the table.
 

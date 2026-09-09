@@ -10,6 +10,17 @@ description: >-
 
 # Project memory — taxonomy and tooling
 
+**Codex scope:** this skill documents and configures Claude Code memory. Codex may use the
+taxonomy or maintain an existing Claude setup, but `autoMemoryDirectory` and the migration
+scripts do not configure native Codex memory. Do not run `init` merely to make Codex remember
+something. Follow the consuming project's AGENTS.md memory instructions; native Codex memory
+setup is outside this skill's supported scope.
+
+Resolve `<plugin-root>` to the installed package directory containing this skill's `skills/`
+parent, using the loaded skill's absolute path. Do not assume a shell variable is set by the
+client. Substitute that absolute path in the commands below; both Claude Code and Codex can
+run them from the target repository.
+
 The **single consultable source** for where agent memory lives, how it moves, and how a
 repo is wired to hold it. The first half is the memory taxonomy standard a session applies;
 the second half is the two bundled scripts that realize its structural side. The system
@@ -91,13 +102,13 @@ Run from the target repo's root. Inspect first, then apply:
 
 ```bash
 # See how the current repo is configured (read-only)
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/project-memory/scripts/project_memory.py" status
+python3 "<plugin-root>/skills/project-memory/scripts/project_memory.py" status
 
 # Opt the repo in (writes settings.local.json + managed .gitignore block)
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/project-memory/scripts/project_memory.py" init
+python3 "<plugin-root>/skills/project-memory/scripts/project_memory.py" init
 
 # Opt in with a portable, committed setting and copy any hidden native memory into the repo
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/project-memory/scripts/project_memory.py" init --portable --migrate
+python3 "<plugin-root>/skills/project-memory/scripts/project_memory.py" init --portable --migrate
 ```
 
 | Subcommand | What it does |
@@ -123,13 +134,13 @@ default** — always preview, then re-run with `--apply`:
 
 ```bash
 # List every project dir that still has a memory/ subdir
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/project-memory/scripts/migrate_memory.py" --list
+python3 "<plugin-root>/skills/project-memory/scripts/migrate_memory.py" --list
 
 # Preview the move (writes nothing)
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/project-memory/scripts/migrate_memory.py" /old/path /new/path
+python3 "<plugin-root>/skills/project-memory/scripts/migrate_memory.py" /old/path /new/path
 
 # Apply it, once the plan looks right
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/project-memory/scripts/migrate_memory.py" /old/path /new/path --apply
+python3 "<plugin-root>/skills/project-memory/scripts/migrate_memory.py" /old/path /new/path --apply
 ```
 
 Flags: `--apply` (do the copy — omit for a dry run); `--force` (overwrite files that
@@ -178,4 +189,4 @@ path and lists fuzzy candidates.
   condition` with stable `MEM-xx` IDs, same contract as the repo-meta-structure checklist
   (closed check-type vocabulary; see the file's header). IDs are stable across skill renames.
 - Locate this content from a sibling skill via the plugin root:
-  `${CLAUDE_PLUGIN_ROOT}/skills/project-memory/references/checklist.md`.
+  `<plugin-root>/skills/project-memory/references/checklist.md`.

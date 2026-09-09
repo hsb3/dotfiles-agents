@@ -8,11 +8,46 @@ Memory management for diagrams skill.
 
 import argparse
 import re
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
 
-MEMORY_FILE = Path(__file__).parent.parent / "memory" / "MEMORY.md"
+MEMORY_FILE = None
+
+
+def resolve_memory_file(project_root=None) -> Path:
+    """Detect project memory, with a project-local memory-path override."""
+    if project_root is None:
+        try:
+            result = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                                    capture_output=True, text=True, check=True)
+            project_root = result.stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            project_root = Path.cwd()
+    root = Path(project_root).resolve()
+    default = (root / ".claude/memory/diagrams.md" if (root / ".claude/memory").is_dir()
+               else root / ".claude/diagrams-memory.md")
+    try:
+        text = (root / ".claude/diagrams.local.md").read_text()
+    except OSError:
+        text = ""
+    frontmatter = re.match(r"^---\n(.*?)\n---(?:\n|$)", text, re.DOTALL)
+    if frontmatter:
+        match = re.search(r'''(?m)^memory-path:[ \t]*(?:"([^"\n]+)"|'([^'\n]+)'|([^#'"\n]+))[ \t]*(?:#.*)?$''',
+                          frontmatter[1])
+        value = next((v.strip() for v in match.groups() if v is not None), "") if match else ""
+        if value and value[0] not in "[{>|":
+            candidate = (root / value).resolve()
+            if candidate.is_relative_to(root) and not candidate.is_dir():
+                return candidate
+    if not default.resolve().is_relative_to(root):
+        raise ValueError("project memory directory resolves outside the project")
+    return default
+
+
+def memory_file() -> Path:
+    return MEMORY_FILE if MEMORY_FILE is not None else resolve_memory_file()
 
 SECTIONS = [
     "Import Errors",
@@ -26,9 +61,10 @@ SECTIONS = [
 
 def read_memory() -> str:
     """Read the memory file contents."""
-    if not MEMORY_FILE.exists():
+    path = memory_file()
+    if not path.exists():
         return ""
-    return MEMORY_FILE.read_text()
+    return path.read_text()
 
 
 def view_memory(section: str = None) -> None:
@@ -84,6 +120,8 @@ def add_entry(section: str, title: str, problem: str, solution: str, example: st
         return
     
     content = read_memory()
+    path = memory_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
     date = datetime.now().strftime("%Y-%m-%d")
     
     # Build the entry
@@ -103,14 +141,14 @@ def add_entry(section: str, title: str, problem: str, solution: str, example: st
         if match:
             insert_pos = match.end(1)
             new_content = content[:insert_pos] + entry + content[insert_pos:]
-            MEMORY_FILE.write_text(new_content)
+            path.write_text(new_content)
             print(f"Added entry to '{section}': {title}")
         else:
             print(f"Could not find section: {section}")
     else:
         # Section doesn't exist, append at end
         content += f"\n{section_header}\n{entry}"
-        MEMORY_FILE.write_text(content)
+        path.write_text(content)
         print(f"Created section '{section}' and added entry: {title}")
 
 
@@ -143,6 +181,7 @@ def main():
     
     # Sections command
     subparsers.add_parser("sections", help="List available sections")
+    subparsers.add_parser("path", help="Print the consumer project's learned-memory path")
     
     args = parser.parse_args()
     
@@ -154,6 +193,8 @@ def main():
         add_entry(args.section, args.title, args.problem, args.solution, args.example)
     elif args.command == "sections":
         list_sections()
+    elif args.command == "path":
+        print(memory_file())
     else:
         parser.print_help()
 

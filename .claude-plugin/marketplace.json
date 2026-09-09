@@ -34,7 +34,7 @@
       "description": "Build and audit IBM Carbon Design System UIs with IBM's own tooling packaged as one install: the official carbon-builder skill (vendored verbatim at a pinned upstream ref) driving the hosted Carbon MCP server this plugin registers — component/variant/prop search, docs and accessibility guidance, Carbon Charts source, Carbon Labs, and code-compliance audits — plus the official docs-index fallback and IBM's prompt-writing guidance for when the server is unreachable. The hosted server requires an IBM-approved account (authenticate via /mcp). Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "carbon",
       "source": "./plugins/carbon",
-      "version": "0.1.3"
+      "version": "0.2.0"
     },
     {
       "author": {
@@ -52,7 +52,7 @@
       "description": "Structural diagrams for repo docs, decks, and briefings, with consistent SVG and PNG output: Mermaid for GitHub-rendered markdown, Python diagrams for cloud architecture with provider icons, draw.io reading and headless export, Excalidraw sketches, and raw Graphviz. Data charts belong to the dataviz skill, deck theming to pptx-themes. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
-      "version": "0.2.2"
+      "version": "0.3.0"
     },
     {
       "author": {
@@ -61,7 +61,7 @@
       "description": "Maintainer-workflow triage over a running kenn-forge daemon — PR/issue review, diffs and CI checks, local review state, and coding-agent handoff. Two surfaces over the same daemon API: the kenn_forge_* MCP tools for an agent driving its own loop, and the kenn-forge CLI for shell, scripts, and humans. The daemon must be running locally; the MCP surface additionally needs it enabled in the daemon config. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "kenn-forge",
       "source": "./plugins/kenn-forge",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "author": {
@@ -70,7 +70,7 @@
       "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The supporting standards ship with it: the project-memory taxonomy whose checklist rows the audit and the scaffold both read, and the item-body form the desk writes tracker items to. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "mise-en-place",
       "source": "./plugins/mise-en-place",
-      "version": "0.4.2"
+      "version": "0.5.0"
     },
     {
       "author": {
@@ -106,7 +106,7 @@
       "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, test quality, research and decision tooling, chart design, API and TUI craft, repo and project setup, and sandboxed opencode instances. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.15.0"
+      "version": "0.16.0"
     }
   ]
 }
