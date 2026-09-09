@@ -55,7 +55,7 @@ its commitment, the other cuts comments that cannot.
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. Its defect branch now cites `test-quality` (ships in `solo-skills`) for what "red observed" has to mean, so a fix cannot be encoded as a test that could never fail. |
 | `comment-hygiene` | skill | Strip history and commentary out of source comments before the work lands: harvest the reasoning onto its tracker item first, then keep only what a competent reader would break something without. The prose counterpart of `deletion-pass` — that one cuts code that cannot name its commitment, this one cuts comments that cannot. |
 | `activation` | skill | Create and verify the harness-appropriate per-project activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
-| `activate` | command | `/atelier:activate` — arms atelier in the current project: creates the activation file if it is missing, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and is safe to hand to an agent: it never overwrites an existing file unasked. |
+| `activate` | command | `/atelier:activate` — arms atelier in the current project: creates or safely relocates the activation file, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and preserves existing policy unless a reset is requested. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Declares the `light` tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. Routes each out-of-scope finding to a destination — a sibling site, an open item, the wave's hardening list, or a new item — as a recommendation for its dispatcher, since it may not file one itself. |
@@ -283,6 +283,9 @@ It is a local file, so ignore it:
 
 ```gitignore
 .claude/*.local.md
+.codex/*.local.md
+.opencode/*.local.md
+.agents/*.local.md
 ```
 
 ### Session-wide settings — environment variables
