@@ -189,5 +189,40 @@ class BranchSessionTests(unittest.TestCase):
             self.assertEqual(module._live_peers([row], 'this-thread', 42, 300, now), [])
 
 
+class TelemetryTranscriptTests(unittest.TestCase):
+    def test_worker_stop_uses_registered_child_not_parent_transcript(self):
+        module = hook('subagent-telemetry')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, model, tokens, started in (
+                    ('parent', 'gpt-5.6-luna', 99000, '2026-09-08T00:00:00Z'),
+                    ('child', 'gpt-5.6-terra', 12000, '2026-09-09T00:00:00Z')):
+                (root / name).write_text('\n'.join(json.dumps(value) for value in [
+                    {'type': 'session_meta', 'payload': {'timestamp': started}},
+                    {'type': 'turn_context', 'payload': {'model': model}},
+                    {'type': 'event_msg', 'payload': {'type': 'token_count', 'info': {
+                        'last_token_usage': {'total_tokens': tokens}, 'model_context_window': 258400}}}]))
+            record = {'session_id': 'parent', 'agent_id': 'child', 'agent_type': 'atelier-builder',
+                      'transcript_path': str(root / 'child')}
+            payload = dict(record, cwd=directory, transcript_path=str(root / 'parent'),
+                           agent_transcript_path=str(root / 'child'))
+            statuses = []
+            workers = SimpleNamespace(lookup=lambda value: record, records=lambda value: [],
+                set_status=lambda value, status: statuses.append(status))
+            rows = []
+            with patch.dict(sys.modules, codex_workers=workers), \
+                 patch.object(module.agentlog, 'append', side_effect=lambda stream, row, *args: rows.append(row)):
+                module._codex_stop(payload)
+                self.assertEqual((rows[-1]['model'], rows[-1]['ctx_tokens'], rows[-1]['started_at']),
+                                 ('gpt-5.6-terra', 12000, '2026-09-09T00:00:00Z'))
+                self.assertEqual(statuses, ['stopped'])
+                (root / 'child').unlink()
+                with patch.object(sys, 'stdout', io.StringIO()) as output:
+                    module._codex_stop(payload)
+                self.assertIsNone(rows[-1]['ctx_tokens'])
+                self.assertIsNone(rows[-1]['model'])
+                self.assertIn('could not measure', output.getvalue())
+
+
 if __name__ == '__main__':
     unittest.main()

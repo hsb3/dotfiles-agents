@@ -471,7 +471,7 @@ def _codex_stop(payload):
         row = {key: record.get(key) for key in
                ("session_id", "agent_id", "agent_type", "parent_agent_id", "worktree", "branch")}
         try:
-            row.update(codex_lifecycle.measure(payload.get("transcript_path")))
+            row.update(codex_lifecycle.measure(record.get("transcript_path")))
         except (OSError, ValueError) as exc:
             row.update(ctx_tokens=None, model=None, error=str(exc))
             codex_lifecycle.diagnostic(exc)
