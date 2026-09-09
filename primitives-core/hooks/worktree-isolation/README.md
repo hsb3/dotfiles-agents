@@ -272,7 +272,13 @@ deletion. With `workspace-write`, the caller must authorize the checkout directo
 `.git/worktrees` and `.git/objects` as writable roots. Registration failure never
 silently leaves an armed worker operating in its inherited checkout. Unarmed projects
 are inert, including non-Git projects; existing mappings persist across policy edits
-so an already-isolated worker never falls back to the parent by accident.
+so an already-isolated worker never falls back to the parent by accident. If a policy
+edit selects an existing unisolated writer, subsequent tools are denied until the worker
+is stopped and redispatched; its edits are never silently migrated. Routing uses the
+registered role when checking that policy. Each isolated record also pins the resolved
+Git common directory, worktree administration directory and index path. Replaced
+repositories, redirected metadata/indexes, and old records lacking that identity are
+denied; stop and redispatch those workers instead of repairing their records in place.
 
 This provides worktree collision avoidance. The native thread's cwd metadata and
 sandbox remain inherited. Absolute shell paths, explicit shell cwd changes and scripts

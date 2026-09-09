@@ -63,6 +63,15 @@ def _git(cwd, *args):
     return result.stdout.strip()
 
 
+def _git_identity(cwd):
+    values = _git(cwd, 'rev-parse', '--show-toplevel', '--git-common-dir',
+                  '--git-dir', '--git-path', 'index').splitlines()
+    if len(values) != 4:
+        raise WorkerError('Unrecognized worker Git identity')
+    return dict(zip(('worktree', 'git_common_dir', 'git_dir', 'git_index'),
+                    (str((Path(cwd) / value).resolve()) for value in values)))
+
+
 def _key(value):
     if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,160}', value):
         raise WorkerError('Missing or invalid native worker/session identity')
@@ -110,9 +119,9 @@ def lookup(payload):
         if record['session_id'] != payload['session_id'] or record['agent_id'] != payload['agent_id']:
             raise WorkerError('Worker registry identity mismatch')
         if record.get('worktree'):
-            actual = Path(_git(record['worktree'], 'rev-parse', '--show-toplevel')).resolve()
-            if actual != Path(record['worktree']):
-                raise WorkerError('Owned worker checkout is missing')
+            actual = _git_identity(record['worktree'])
+            if any(actual[key] != record[key] for key in actual):
+                raise WorkerError('Owned worker Git identity changed; stop and redispatch the worker')
         return record
     except (OSError, KeyError, json.JSONDecodeError) as exc:
         raise WorkerError('Unreadable worker registry: ' + str(exc)) from exc
@@ -165,16 +174,20 @@ def active(payload):
     return lookup(payload) is not None if path.exists() else False
 
 
+def selected_writer(payload, role):
+    """Whether the current project policy requires this role to own a worktree."""
+    isolate = atelier_local.parse_key(_activation_text(payload), 'isolate')
+    armed = ('builder', 'manager', 'general-purpose', 'default') if isolate == 'writers' else isolate
+    role = role_name(role)
+    return (isinstance(armed, (list, tuple)) and role in {role_name(x) for x in armed}
+            and role not in READ_ONLY_ROLES | {'explore', 'plan', 'fork'})
+
+
 def ensure_worker(payload):
     """Idempotent SubagentStart registration, independent of sibling hook order."""
     if not active(payload):
         return None
-    isolate = atelier_local.parse_key(_activation_text(payload), 'isolate')
-    armed = ('builder', 'manager', 'general-purpose', 'default') if isolate == 'writers' else isolate
-    role = role_name(payload.get('agent_type'))
-    selected = (isinstance(armed, (list, tuple)) and role in {role_name(x) for x in armed}
-                and role not in READ_ONLY_ROLES | {'explore', 'plan', 'fork'})
-    return register(payload, isolate=selected)
+    return register(payload, isolate=selected_writer(payload, payload.get('agent_type')))
 
 
 def _parent(payload):
@@ -201,7 +214,7 @@ def register(payload, isolate=False):
         existing = lookup(payload)
         if existing:
             if isolate and not existing.get('worktree'):
-                raise WorkerError('Existing worker lacks its required isolated checkout')
+                raise WorkerError('Existing worker lacks its required isolated checkout; stop and redispatch the worker')
             return existing
         agent = _key(payload.get('agent_id'))
         session = _key(payload.get('session_id'))
@@ -223,7 +236,10 @@ def register(payload, isolate=False):
             branch = 'atelier/' + session + '/' + agent
             tree.parent.mkdir(parents=True, exist_ok=True)
             _git(source, 'worktree', 'add', '-b', branch, str(tree), 'HEAD')
-            record.update(worktree=str(tree), branch=branch)
+            identity = _git_identity(tree)
+            if identity['git_common_dir'] != str(common) or identity['git_dir'] == str(common):
+                raise WorkerError('New worker checkout has an unexpected Git identity')
+            record.update(identity, branch=branch)
         _write(path, record)
         return record
 
@@ -245,6 +261,8 @@ def _required(payload):
     record = lookup(payload)
     if record is None:
         raise WorkerError('Native worker is not registered; refusing inherited checkout')
+    if selected_writer(payload, record['agent_type']) and not record.get('worktree'):
+        raise WorkerError('Existing worker lacks its required isolated checkout; stop and redispatch the worker')
     return record
 
 

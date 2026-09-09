@@ -253,6 +253,60 @@ class CodexWorkersTests(unittest.TestCase):
         shutil.rmtree(r['worktree'])
         self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
 
+    def test_arming_isolation_denies_existing_unisolated_writer_without_migration(self):
+        p = self.payload(); p['hook_event_name'] = 'PreToolUse'
+        policy = self.repo / '.claude/atelier.local.md'
+        policy.write_text('---\nenforce: strict\nisolate: []\n---\n')
+        self.mod.ensure_worker(p)
+        before = self.mod.lookup(p)
+        for selection in ('writers', '[atelier-builder]'):
+            policy.write_text('---\nenforce: strict\nisolate: '+selection+'\n---\n')
+            p['agent_type'] = 'atelier-scout'  # runtime tool metadata cannot replace registered authority
+            for tool, command in [('Bash', 'pwd'), ('apply_patch',
+                    '*** Begin Patch\n*** Add File: x\n+x\n*** End Patch')]:
+                p.update(tool_name=tool, tool_input={'command': command})
+                with self.subTest(selection=selection, tool=tool):
+                    output = self.hook('worktree-isolation', p)
+                    self.assertEqual(self.decision(output), 'deny')
+                    self.assertIn('redispatch', output['hookSpecificOutput']['permissionDecisionReason'])
+            self.assertEqual(self.mod.lookup(p), before)
+        self.assertFalse((self.repo / '.git/atelier-codex/checkouts').exists())
+
+    def test_replacement_repository_at_owned_path_denies(self):
+        p = self.payload(); p['hook_event_name'] = 'PreToolUse'
+        record = self.mod.register(p, isolate=True)
+        tree = Path(record['worktree'])
+        shutil.rmtree(tree)
+        tree.mkdir()
+        self.git('init', '-b', 'unrelated', cwd=tree)
+        self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
+
+    def test_missing_recorded_git_identity_denies_without_backfill(self):
+        p = self.payload(); p['hook_event_name'] = 'PreToolUse'
+        record = self.mod.register(p, isolate=True)
+        del record['git_index']
+        path = self.repo / '.git/atelier-codex/workers/session-a/worker-a.json'
+        path.write_text(json.dumps(record))
+        before = path.read_bytes()
+        self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_redirected_worker_admin_or_index_denies(self):
+        for redirect in ('admin', 'index'):
+            with self.subTest(redirect=redirect):
+                p = self.payload('worker-'+redirect); p['hook_event_name'] = 'PreToolUse'
+                record = self.mod.register(p, isolate=True)
+                other = self.mod.register(self.payload('other-'+redirect), isolate=True)
+                tree, sibling = Path(record['worktree']), Path(other['worktree'])
+                if redirect == 'admin':
+                    (tree / '.git').write_bytes((sibling / '.git').read_bytes())
+                else:
+                    index = Path(self.git('rev-parse', '--git-path', 'index', cwd=tree))
+                    other_index = Path(self.git('rev-parse', '--git-path', 'index', cwd=sibling))
+                    index.unlink(missing_ok=True)
+                    index.symlink_to(other_index)
+                self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
+
     def test_routed_followup_revives_stopped_worker(self):
         p = self.payload()
         self.mod.register(p, isolate=True)
