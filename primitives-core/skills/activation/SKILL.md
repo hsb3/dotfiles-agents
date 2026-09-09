@@ -129,7 +129,7 @@ This skill covers create/check mechanics only. For the deep behavioral tables â€
 authoritative.
 
 
-<!-- harness:codex -->
+<!-- harness:claude-code -->
 ## Codex setup
 
 Use the installed skill directory to locate `scripts/activation.py`; Codex does not set

@@ -42,7 +42,7 @@ not. Do not reduce that to a single yes or no: armed and inert keys routinely co
 blanket "atelier is not enforcing anything" is false whenever any key is armed. If the file
 was already present and nothing changed, say so in one line and stop.
 
-<!-- harness:codex -->
+<!-- harness:claude-code -->
 In Codex, invoke the activation skill directly. Run its `codex-setup` and
 `check --harness codex` steps, then verify the reviewed hooks in native `/hooks`.
 Report parsed settings and runtime trust separately; do not claim enforcement from

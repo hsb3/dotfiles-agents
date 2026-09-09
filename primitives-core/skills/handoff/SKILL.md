@@ -179,7 +179,7 @@ _Cold-start onboarding. Last updated: YYYY-MM-DD. Keep updated at session bounda
   <!-- /harness -->
 
 
-<!-- harness:codex -->
+<!-- harness:claude-code -->
 ## Codex lifecycle
 
 Read routing from `.claude/atelier.local.md` exactly as above. In external mode, update the
