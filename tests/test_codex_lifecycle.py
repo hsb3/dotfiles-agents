@@ -52,14 +52,19 @@ class RolloutTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 codex_lifecycle.measure(self.path)
 
-    def test_both_native_delegation_names_reset_retained_work(self):
-        self.write(*[{'type': 'response_item', 'payload': {'type': 'function_call', 'name': name,
-                    'arguments': json.dumps(args)}} for name, args in [
-            ('exec_command', {'cmd': 'cat a.py'}), ('spawn_agent', {}),
-            ('exec_command', {'cmd': 'cat b.py'}), ('collaboration.spawn_agent', {}),
-            ('exec_command', {'cmd': 'git status'}), ('exec_command', {'cmd': 'cat c.py'})]])
-        with patch.dict(os.environ, ATELIER_HARNESS='codex'):
-            self.assertEqual(hook('delegation-watermark')._scan(self.path), (1, 2, 3))
+    def test_native_tool_events_preserve_floor_reset_and_duplicate_rules(self):
+        with patch.dict(os.environ, ATELIER_HARNESS='codex', DELEGATION_WATERMARK_STATE_DIR=self.tmp.name):
+            module = hook('delegation-watermark')
+            calls = [('Bash', 'cat a.py'), ('spawn_agent', ''), ('Bash', 'cat b.py'),
+                     ('collaborationspawn_agent', ''), ('Bash', 'git status'), ('Bash', 'cat c.py')]
+            for index, (name, command) in enumerate(calls):
+                payload = {'session_id': 'native-session', 'tool_use_id': str(index),
+                           'tool_name': name, 'tool_input': {'command': command}}
+                result = module._codex_counts(payload)
+            self.assertEqual(result, (1, 2, 3))
+            self.assertEqual(module._codex_counts(payload), result)
+            with self.assertRaises(ValueError):
+                module._codex_counts({'session_id': 'native-session'})
 
     def test_manager_native_prefix_only_in_codex(self):
         module = hook('manager-package-gate')
@@ -113,7 +118,8 @@ class SetupTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as directory, \
-             patch.dict(sys.modules, codex_roles=SimpleNamespace(setup=lambda *args, **kwargs: [])):
+             patch.dict(sys.modules, codex_roles=SimpleNamespace(setup=lambda *args, **kwargs: []),
+                        codex_workers=SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith("GIT_")})):
             root = Path(directory)
             subprocess.run(['git', 'init', '-q', directory], check=True)
             (root / '.codex').mkdir()
@@ -132,6 +138,31 @@ class SetupTests(unittest.TestCase):
             self.assertEqual(module.codex_setup(directory, io.StringIO()), 1)
             self.assertEqual(config.read_text(), '[sandbox_workspace_write]\nwritable_roots = ["/user-owned"]\n')
 
+    def test_setup_refuses_symlink_files_before_any_write(self):
+        spec = importlib.util.spec_from_file_location('codex_activation_symlink_test',
+            HOOKS.parent / 'skills/activation/scripts/activation.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for destination in ('.codex/config.toml', '.git/info/exclude'):
+            with self.subTest(destination=destination), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                subprocess.run(['git', 'init', '-q', directory], check=True)
+                (root / '.codex').mkdir()
+                outside = root / 'outside'
+                outside.write_text('UNCHANGED')
+                target = root / destination
+                target.unlink(missing_ok=True)
+                target.symlink_to(outside)
+                roles = SimpleNamespace(setup=lambda *args, **kwargs: self.fail('preflight must precede role writes'))
+                worker = SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith('GIT_')})
+                with patch.dict(sys.modules, codex_roles=roles, codex_workers=worker), \
+                     patch.dict(os.environ, GIT_DIR='/unrelated', GIT_WORK_TREE='/unrelated'):
+                    self.assertEqual(module.codex_setup(directory, io.StringIO()), 2)
+                self.assertEqual(outside.read_text(), 'UNCHANGED')
+                self.assertFalse((root / '.codex/agents').exists())
+                if destination != '.codex/config.toml':
+                    self.assertFalse((root / '.codex/config.toml').exists())
+
     def test_other_bundle_role_injection_does_not_need_atelier_registry(self):
         module = hook('worker-context')
         roles = SimpleNamespace(package_id=lambda root: 'pocketbase',
@@ -144,6 +175,18 @@ class SetupTests(unittest.TestCase):
              patch.object(sys, 'stdin', io.StringIO(json.dumps(payload))):
             module.main()
         self.assertEqual(json.loads(out.getvalue())['hookSpecificOutput']['additionalContext'], 'CANONICAL_PACKAGE_ROLE')
+
+
+class BranchSessionTests(unittest.TestCase):
+    def test_shared_server_pid_does_not_collapse_native_sessions(self):
+        from datetime import datetime, timezone
+        module = hook('branch-activity-surfacer')
+        now = datetime.now(timezone.utc)
+        row = {'owner_pid': 42, 'session_id': 'other-thread', 'ts': now.isoformat()}
+        with patch.dict(os.environ, ATELIER_HARNESS='codex'), patch.object(module, '_pid_alive', return_value=True):
+            self.assertEqual(len(module._live_peers([row], 'this-thread', 42, 300, now)), 1)
+        with patch.dict(os.environ, ATELIER_HARNESS='claude-code'), patch.object(module, '_pid_alive', return_value=True):
+            self.assertEqual(module._live_peers([row], 'this-thread', 42, 300, now), [])
 
 
 if __name__ == '__main__':

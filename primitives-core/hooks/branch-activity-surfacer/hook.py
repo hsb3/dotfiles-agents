@@ -271,7 +271,8 @@ def _live_peers(rows, session_id, owner_pid, ttl, now):
     newest = {}
     for row in rows:
         pid = row.get("owner_pid")
-        keyed_by_pid = isinstance(pid, int) and owner_pid is not None
+        keyed_by_pid = (not codex_lifecycle.enabled()
+                        and isinstance(pid, int) and owner_pid is not None)
         key = ("pid", pid) if keyed_by_pid else ("sid", row["session_id"])
         if key not in newest or row["ts"] > newest[key]["ts"]:
             newest[key] = row
@@ -285,6 +286,9 @@ def _live_peers(rows, session_id, owner_pid, ttl, now):
                 continue
         elif value == session_id:
             continue
+        elif codex_lifecycle.enabled() and isinstance(row.get("owner_pid"), int):
+            if not _pid_alive(row["owner_pid"]):
+                continue
         stamp = _parse_ts(row["ts"])
         if stamp is None:
             continue

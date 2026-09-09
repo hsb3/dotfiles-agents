@@ -63,21 +63,3 @@ def measure(path):
         raise ValueError("no runtime model_context_window")
     return {"ctx_tokens": tokens, "window": window, "model": model,
             "started_at": started}
-
-
-def tool_calls(path):
-    """Yield recorded calls, normalizing the two native collaboration spellings."""
-    for item in entries(path):
-        body = item.get("payload") or {}
-        if item.get("type") != "response_item":
-            continue
-        kind = body.get("type")
-        if kind not in ("function_call", "custom_tool_call"):
-            continue
-        name = body.get("name", "").removeprefix("functions.").replace(".", "").replace("_", "")
-        raw = body.get("arguments") if kind == "function_call" else body.get("input")
-        try:
-            args = json.loads(raw) if isinstance(raw, str) else raw
-        except ValueError:
-            args = {"command": raw}
-        yield name, args if isinstance(args, dict) else {}

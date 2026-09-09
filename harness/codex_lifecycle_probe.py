@@ -96,7 +96,10 @@ def run(args):
         (home / 'auth.json').chmod(0o600)
         env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
         env.update(CODEX_HOME=str(home), ATELIER_HARNESS='codex',
-                   GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM='1')
+                   GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM='1',
+                   XDG_DATA_HOME=str(root / 'data'),
+                   CONTEXT_WATERMARK_STATE_DIR=str(root / 'context-state'),
+                   DELEGATION_WATERMARK_STATE_DIR=str(root / 'delegation-state'))
         subprocess.run(['git', 'init', '-b', 'probe-parent', str(repo)], check=True, capture_output=True)
         (repo / '.claude/atelier.local.md').write_text('---\nenforce: advisory\nhandoff:\n  mode: external\n'
             '  stamp: .claude/handoff.stamp\n  location: kata card COLD_EXTERNAL_TOKEN\n---\n')

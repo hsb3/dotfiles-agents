@@ -570,15 +570,24 @@ def codex_setup(project_dir, out, check=False):
     """Generate local roles and the narrow writable-root addition; never approve hooks."""
     roots = _hook_roots()
     sys.path.insert(0, os.path.join(roots[0], "_lib"))
-    import codex_roles
     try:
+        import codex_roles
+        import codex_workers
         import tomllib
         common = subprocess.check_output(
-            ["git", "-C", project_dir, "rev-parse", "--git-common-dir"], text=True).strip()
+            ["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
+            text=True, env=codex_workers.clean_git_env()).strip()
         common = (Path(project_dir) / common).resolve()
         writable = [str(common / path) for path in
                     ("atelier-codex/checkouts", "worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
         config = Path(project_dir) / ".codex/config.toml"
+        exclude = common / "info/exclude"
+        for path in (config.parent, common / "info"):
+            if path.is_symlink() or path.exists() and not path.is_dir():
+                raise ValueError("Refusing non-directory or symlink setup directory: " + str(path))
+        for path in (config, exclude):
+            if path.is_symlink() or path.exists() and not path.is_file():
+                raise ValueError("Refusing non-regular or symlink setup file: " + str(path))
         text = config.read_text() if config.exists() else ""
         parsed = tomllib.loads(text)
         existing = parsed.get("sandbox_workspace_write", {})
@@ -600,7 +609,6 @@ def codex_setup(project_dir, out, check=False):
         print(("needs " if check and missing else "ok    ") + " Codex writable roots: "
               + json.dumps(writable), file=out)
         if not check:
-            exclude = common / "info/exclude"
             exclude.parent.mkdir(parents=True, exist_ok=True)
             old = exclude.read_text() if exclude.exists() else ""
             additions = [line for line in ("/.codex/agents/atelier-*.toml", "/.codex/config.toml")

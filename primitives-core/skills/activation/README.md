@@ -48,3 +48,5 @@ depends on.
 ## Codex
 
 `codex-setup` renders native roles and project writable roots without touching global config or hook trust. `check --harness codex` verifies generated role/config currency and reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
+
+Setup rejects symlink or non-regular config/exclude destinations before writing any project files and clears inherited Git routing variables during discovery. Existing user permission tables are preserved.

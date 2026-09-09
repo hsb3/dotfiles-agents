@@ -143,3 +143,5 @@ the fact, and their reasons are kept distinct — `not a git repository`, `git c
 ## Codex
 
 Codex uses its own ledger harness label and follows the native Codex process ancestry for peer liveness. Existing Git branch/head comparisons and session sources are retained; activation is checked before emitting context.
+
+Codex session IDs distinguish peers even when an app-server process hosts both sessions; the shared process ID supplies liveness, not session identity.
