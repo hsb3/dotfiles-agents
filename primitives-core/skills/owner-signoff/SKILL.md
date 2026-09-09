@@ -8,7 +8,7 @@ description: Present a batch of decisions, approvals, or questions to the projec
 Standing pattern (owner-ratified 2026-07-18: "this is a good pattern to adopt in
 general — will help us go faster"). Instead of a wall of chat questions, serve a
 form; the owner answers inline at their own pace; the answers land in a file; the
-session is notified the moment they submit.
+session reads the saved answers after the server exits.
 
 ## The loop
 
@@ -32,19 +32,26 @@ session is notified the moment they submit.
 
    Validates the spec and writes `index.html` next to it; on schema errors it prints
    every problem and exits 1 — fix the spec and rerun.
-3. **Start the one-shot server** as a background Bash task (`run_in_background: true`):
+3. **Start the one-shot server** as a managed long-running process:
 
    ```bash
    python3 <skill-dir>/scripts/serve_signoff.py <batch-dir> [port]
    ```
 
+   Claude Code uses a background Bash task (`run_in_background: true`). In Codex, use
+   `exec_command` with a short yield and retain its returned session ID; keep that process
+   attached to the tool session instead of detaching it with `&`.
+
    Default port 8737; the script walks forward to the next free port if taken —
    **read the first line of its output for the actual URL** before opening.
 4. **Open it**: `open "http://localhost:<port>/"`. Tell the owner it's open and list
    the items in one line each.
-5. **Wait — do not poll.** The server accepts exactly one POST `/save`, writes
-   `answers.json` next to `index.html`, then exits. Its exit is the background-task
-   notification: when it fires, Read `answers.json` and act.
+5. **Wait for submission.** The server accepts exactly one POST `/save`, writes
+   `answers.json` next to `index.html`, then exits. In Claude Code, use the background
+   task completion. In Codex, resume the retained process with `write_stdin` using a
+   bounded wait, continuing other work between waits. After a successful exit, read
+   `answers.json` and act. A timeout or an empty file is not an answer; keep the question
+   pending. A process failure is reported, never interpreted as approval.
 6. **Fallback**: if the server is gone when he submits (much-later submit, reopened
    tab), the page downloads `*-answers-*.json` to `~/Downloads` and tells him to say
    so — pick it up there.

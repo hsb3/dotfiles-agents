@@ -23,3 +23,7 @@ Ships inside the `solo-skills` bundle:
 ```
 claude plugin install solo-skills@dotfiles-agents
 ```
+
+## Codex
+
+Research briefs name search, page retrieval, and repository capabilities rather than requiring Claude-specific tool names. Discover the tools available in the current client and keep inaccessible evidence explicitly unverified.

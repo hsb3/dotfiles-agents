@@ -30,3 +30,13 @@ hard dependency rather than a convenience: this skill owns the `MEM-xx` rows in
 `references/checklist.md`, and that bundle's audit and scaffold both load the file off their
 own plugin root and refuse to start without it. Issuing the pass/gap verdict over those rows is
 not this skill's job. Needs only `python3` (stdlib) and `git`.
+
+## Installed clients
+
+Resolve helper paths from the loaded skill's absolute package location. The documented
+commands work in Codex without assuming `CLAUDE_PLUGIN_ROOT` is exported; explicit package
+paths preserve the same Claude Code behavior.
+
+In Codex, the taxonomy and existing Claude setup maintenance remain useful; the settings and
+migration helpers configure Claude memory, not native Codex memory. Follow the consumer's
+AGENTS.md for its Codex memory conventions.

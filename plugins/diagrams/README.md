@@ -1,5 +1,7 @@
 # diagrams
 
+Codex runs the installed helpers by absolute path from the consuming project. New diagram learnings stay in project memory and survive plugin refreshes.
+
 Structural diagrams for repo docs, decks, and architecture briefings — one toolkit that
 picks the right tool for the job and feeds consistent SVG+PNG output pipelines with
 light/dark-friendly styling.

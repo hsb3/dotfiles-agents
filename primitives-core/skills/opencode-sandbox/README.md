@@ -9,7 +9,7 @@ read or write anything on the host.
 Use it when an agent should work somewhere that cannot touch the real machine: on a copy of
 a project, on generated code, or on a long task that deserves its own scratch space. Covers
 installing the CLI, seeding project context, custom config and plugins, worktrees inside the
-instance, registering it with `claude mcp add`, and destroying it afterward. Also documents
+instance, registering it with the current client, and destroying it afterward. Also documents
 that neither container ships the GitHub CLI, the non-persistent manual-install workaround,
 and why logging it in as the operator's own account defeats the sandbox's isolation.
 
@@ -20,3 +20,7 @@ claude plugin install solo-skills@dotfiles-agents
 ```
 
 Ships in the `solo-skills` bundle.
+
+## Codex
+
+Codex registration uses `codex mcp add <name> --url <endpoint>` and cleanup uses `codex mcp remove <name>`. The sandbox CLI prints a Claude command; use its reported URL with the current client, then start a fresh session to discover the server.

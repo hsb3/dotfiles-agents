@@ -2,8 +2,8 @@
 """One-shot sign-off server for the owner-signoff skill.
 
 Serves a sign-off form directory and waits for a single POST /save; writes the
-answers as answers.json next to index.html, then shuts down — so a harness
-background-task notification tells the session the answers are ready.
+answers as answers.json next to index.html, then shuts down. The calling harness
+observes process completion before reading the saved answers.
 
 Usage: python3 serve_signoff.py <form-dir> [port]
   <form-dir>  directory containing index.html; answers.json is written there

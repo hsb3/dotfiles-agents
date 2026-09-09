@@ -71,3 +71,6 @@ claude plugin install mise-en-place@dotfiles-agents
 ```
 
 Ships in the `mise-en-place` bundle.
+
+Setup copies scripts and assets from the loaded skill's absolute directory into the
+consumer desk. Those source paths do not depend on a Claude-specific environment variable.

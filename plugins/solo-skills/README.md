@@ -1,5 +1,7 @@
 # solo-skills
 
+Codex uses these skills through the existing marketplace, with native tool discovery and process sessions. Skills whose subject is Claude Code still configure Claude Code; they do not configure native Codex memory.
+
 The home for skills that stand on their own and have no topical plugin, in one install. A
 skill belongs here when it needs no agent, no hook, and no sibling skill to do its job — so
 whichever one you reach for works the moment it activates, with nothing else to set up.
