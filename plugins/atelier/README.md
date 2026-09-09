@@ -107,7 +107,8 @@ This prevents workers colliding in one checkout. It is not a separate OS sandbox
 the project sandbox and role instructions still govern shell access. Native thread `cwd`
 metadata remains inherited; the registry records the effective checkout. Keep the worker
 branches until their commits are integrated, then remove them with ordinary Git worktree
-and branch commands. The plugin does not delete unfinished worker work.
+and branch commands. Stopped workers remain in registry history after their checkouts are removed;
+active workers still require a valid checkout. The plugin does not delete unfinished worker work.
 
 The native manifest and the Claude manifest share one release version. See the
 [dispatch procedures](skills/delegation/references/dispatch-knobs.md#codex-distribution)

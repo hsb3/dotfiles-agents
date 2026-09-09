@@ -139,7 +139,7 @@ Since the decision-020 sweep this bundle is the only home for `pptx-themes` and
 ## Codex
 
 Install with `codex plugin add code-desk@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
-project roles from its installed root (the path returned by `codex plugin add --json`):
+project roles with the shared Codex helper from its installed root (the path returned by `codex plugin add --json`):
 
 ```sh
 python3 "$PLUGIN_ROOT/hooks/_lib/codex_roles.py" /path/to/project --plugin-root "$PLUGIN_ROOT"
