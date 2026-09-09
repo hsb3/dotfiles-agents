@@ -50,7 +50,6 @@ def measure(path):
     model = None
     info = None
     started = None
-    initialized = False
     saw_measurement_info = False
     for item in entries(path):
         body = item.get("payload") or {}
@@ -58,7 +57,6 @@ def measure(path):
             timestamp = body.get("timestamp") or item.get("timestamp")
             if isinstance(timestamp, str) and timestamp:
                 started = timestamp
-                initialized = True
         elif item.get("type") == "turn_context":
             model = body.get("model") or model
         elif item.get("type") == "event_msg" and body.get("type") == "token_count":
@@ -66,7 +64,7 @@ def measure(path):
             if candidate is not None:
                 saw_measurement_info = True
                 info = candidate if isinstance(candidate, dict) else None
-    if not saw_measurement_info and initialized:
+    if not saw_measurement_info and started is not None:
         raise PendingMeasurement("runtime token_count initialization pending")
     usage = (info or {}).get("last_token_usage") or {}
     tokens = usage.get("total_tokens")
