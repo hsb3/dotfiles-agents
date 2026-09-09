@@ -131,7 +131,7 @@ primitives:
   # --- most of atelier starts here (membership is the symlink assembly under
   # plugins/atelier/, not this file; `handoff` sits at the top and `rig-builder` below
   # belongs to code-desk, not atelier) ---
-  # Every atelier member is claude-code only, deliberately: atelier's opencode port ships
+  # Atelier supports Claude Code and Codex here, deliberately: atelier's opencode port ships
   # from its own repo under the parity contract (docs/atelier-parity.md), hand-authored
   # against opencode's real agent model, so gen_opencode.py no longer emits it. Two
   # copies of one doctrine, one generated and one authored, is the drift that contract

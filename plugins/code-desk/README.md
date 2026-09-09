@@ -138,7 +138,7 @@ Since the decision-020 sweep this bundle is the only home for `pptx-themes` and
 
 ## Codex
 
-Install with `codex plugin add code-desk@dotfiles-agents`. Generate this package’s
+Install with `codex plugin add code-desk@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
 project roles from its installed root (the path returned by `codex plugin add --json`):
 
 ```sh

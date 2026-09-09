@@ -286,3 +286,6 @@ can still access other permitted trees; this is not an OS containment boundary.
 Read-only roles cannot use patch tools. Builder/scout/reviewer/code-reviewer roles
 cannot invoke native or collaboration spawn/message/control tools; their shell
 read-only obligations remain part of their role instructions.
+
+The Codex role loader is imported only on the native package-role path, so Claude hook
+invocation retains its Python 3.9 floor. Codex project setup requires Python 3.11 or newer.

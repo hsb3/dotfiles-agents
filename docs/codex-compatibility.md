@@ -19,12 +19,14 @@ codex plugin marketplace add hsb3/dotfiles-agents
 codex plugin add atelier@dotfiles-agents
 ```
 
-Use the installed activation skill’s `create --harness codex`, `codex-setup`, then
+Codex setup requires Python 3.11 or newer. Use the installed activation skill’s `create --harness codex`, `codex-setup`, then
 `check --harness codex`. Skip creation when a project already has its local policy.
 Setup renders five project role TOMLs from canonical agent Markdown and the OpenAI tier
 map, plus the narrow writable roots needed for worker Git operations. It refuses conflicting
 or edited user configuration. Restart the session and review/trust the package in `/hooks`.
 Configuration checks deliberately do not certify trust from parsed settings.
+For V1, the manager layer requires `agents.max_depth >= 2`; the default is one.
+Setup checks this without replacing an existing user-owned agents table.
 Refresh with `codex plugin marketplace upgrade dotfiles-agents`, then repeat
 `codex plugin add <plugin>@dotfiles-agents`. After upgrading a plugin, rerun setup and start a fresh session; a versioned cache path can
 change, and the rendered role instructions contain paths to that installed package.
@@ -99,7 +101,7 @@ possible project workflow.
 | `branch-activity-surfacer` | Actual peer detection distinguishes sessions sharing one app-server PID. |
 | `lane-snapshot` | Actual daemon snapshot captured worker bytes while preserving its index and parent checkout. |
 | `session-handoff-surfacer` | Actual cold-session file and external handoff context. |
-| `handoff-freshness-guard` | Actual trusted manual compaction denied missing/stale handoff and accepted fresh handoff. Native output uses `continue: false`. |
+| `handoff-freshness-guard` | Actual trusted manual compaction denied missing/stale handoff and accepted fresh handoff. Native output uses `continue: false`; automatic-compaction behavior was not live-probed. |
 
 The runtime contract’s synthetic collision probe passed all eight assertions for Luna and
 Terra. Installed package tests additionally exercise production hook composition. Unit tests
@@ -141,12 +143,17 @@ and homes are removed.
 
 ```sh
 python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-installed-proof --plugin-root plugins/atelier
+python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-manager-proof --plugin-root plugins/atelier --production-workflow
 python3 harness/codex_lifecycle_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-handoff-proof --package-root primitives-core
 ```
 
 The runtime probe reviews only the package explicitly selected for the disposable run through
 `--dangerously-bypass-hook-trust`. This automation flag neither changes persistent consumer
-trust nor removes the requested sandbox. A passed check certifies its named observed effect.
+trust nor removes the requested sandbox. A passed check certifies its named observed effect. The manager stop diagnostic explicitly
+injects one test-only malformed-final stimulus; it leaves the production gate unchanged
+and requires an observed rejection followed by a corrected proof package. Add
+`--marketplace hsb3/dotfiles-agents` to a runtime probe to install the published GitHub
+package into a fresh consumer cache instead of copying the local assembly.
 
 Official references checked against the installed runtime: [plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [hooks](https://learn.chatgpt.com/docs/hooks), and [custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).

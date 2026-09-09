@@ -103,7 +103,7 @@ get them.
 
 ## Codex
 
-Install with `codex plugin add pocketbase@dotfiles-agents`. Generate this package’s
+Install with `codex plugin add pocketbase@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
 project roles from its installed root (the path returned by `codex plugin add --json`):
 
 ```sh

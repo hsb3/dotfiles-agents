@@ -85,7 +85,6 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import codex_workers  # noqa: E402
-import codex_roles  # noqa: E402
 import agentlog  # noqa: E402  (path must be primed before this import)
 import atelier_local  # noqa: E402
 
@@ -386,6 +385,7 @@ def _codex(payload):
     try:
         package = os.environ.get('ATELIER_ROLE_PLUGIN_ROOT')
         if package:
+            import codex_roles
             role = payload.get('agent_type')
             if role not in codex_roles.role_names(package):
                 return
