@@ -180,7 +180,9 @@ def plan(snapshot, rows):
 def fetch_snapshot(project):
     listed = _kata(["list", "--status", "open", "--limit", "0"], project)
     labeled = _kata(["labels"], project)
-    return build_snapshot(project, listed.get("issues", []), labeled.get("labels", []))
+    # `or []`, not a .get default: kata answers an empty project with an explicit null,
+    # which a default never replaces.
+    return build_snapshot(project, listed.get("issues") or [], labeled.get("labels") or [])
 
 
 def cmd_export(args):

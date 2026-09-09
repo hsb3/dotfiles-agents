@@ -34,6 +34,8 @@ core vocabulary — one type label, the container and behaviour names — and de
 name, since areas are each project's own. A project that adds labels on top of the core points
 `--vocabulary` at its own copy. On a board that has not adopted the vocabulary yet, read the
 fossil finding as the adoption gap rather than as retired vocabulary — the adapter says so.
+A project with no open items exports as an empty snapshot rather than crashing, and every
+check then has nothing to judge, which is not the same answer as a clean board.
 
 It measures whether a field **discriminates**, not just whether it is filled — a priority band
 holding most of the backlog, items with no band or no label at all, a grouping convention living
