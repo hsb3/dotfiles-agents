@@ -5,5 +5,5 @@
   "description": "Build and audit IBM Carbon Design System UIs with IBM's own tooling packaged as one install: the official carbon-builder skill (vendored verbatim at a pinned upstream ref) driving the hosted Carbon MCP server this plugin registers — component/variant/prop search, docs and accessibility guidance, Carbon Charts source, Carbon Labs, and code-compliance audits — plus the official docs-index fallback and IBM's prompt-writing guidance for when the server is unreachable. The hosted server requires an IBM-approved account (authenticate via /mcp). Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "carbon",
   "repository": "https://github.com/hsb3/dotfiles-agents",
-  "version": "0.1.2"
+  "version": "0.1.3"
 }

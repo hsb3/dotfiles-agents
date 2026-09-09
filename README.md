@@ -52,7 +52,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | I want to… | Install |
 |---|---|
-| Get a cited research answer, fix a setting that will not take effect, make an honest chart, draw a diagram, or set up a repo — anything that works on its own and has no plugin of its own | [`solo-skills`](plugins/solo-skills/README.md) |
+| Get a cited research answer, fix a setting that will not take effect, make an honest chart, check that a test can fail, or set up a repo — anything that works on its own and has no plugin of its own | [`solo-skills`](plugins/solo-skills/README.md) |
 | Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
 | Decide what a repo's quality gate must enforce, then run review triage, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
 | Run a planning desk over a tracker (kata first), or lay out/audit/scaffold a repo's in-repo _meta/ structure | [`mise-en-place`](plugins/mise-en-place/README.md) |
@@ -65,7 +65,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone and has no topical plugin: harness config, session discipline, research, diagrams, repo setup, Obsidian dev. | 32 skills |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone with no topical plugin: harness config, research, test quality, chart design, API and TUI craft, repo setup. | 14 skills |
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 1 command |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 14 hooks · 1 command |
@@ -99,11 +99,13 @@ actually want, `scripts/install_claude_skills.sh --only <id>[,<id>]` copies thos
 folders straight into `~/.claude/skills/` or a project's `.claude/skills/`, with no
 marketplace in the loop.
 
-Some skills are still dual-homed, shipping in `solo-skills` and in at least one bundle. Each
-is one source symlinked into every assembly that carries it, not a copy, so they all ship
-identical bytes — but a session with more than one of those plugins enabled lists that skill
-more than once, which is why a skill a topical plugin owns now ships only from that plugin
-(decision-020).
+`solo-skills` carries no dual-homed skill. A skill a topical plugin owns ships only from
+that plugin (decision-020), and the eighteen that were still dual-homed at the ruling were
+swept out of `solo-skills` on kata `8tw0` — enable the topical plugin to get one of those.
+The reason is what a session does with two memberships of one source: each skill is one
+source symlinked into every assembly that carries it, not a copy, so every bundle ships
+identical bytes, but the harness lists that skill once per enabled plugin and neither
+plugin can suppress the other.
 
 ## How this repo is built
 

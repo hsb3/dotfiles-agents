@@ -65,8 +65,8 @@ class TestCarriers(unittest.TestCase):
     """An exclusion reason points somewhere that actually fixes the problem."""
 
     def test_only_assemblies_providing_the_capability_are_named(self):
-        # solo-skills symlinks carbon-builder but ships no .mcp.json, so installing it
-        # lands the same dead skill the laydown refuses to ship.
+        # carbon is the only assembly that both ships carbon-builder and registers the
+        # MCP server it needs; a bundle without the server would land a dead skill.
         where = G.carriers("carbon-builder", ["hosted-mcp"])
         self.assertIn("carbon", where)
         self.assertNotIn("solo-skills", where)

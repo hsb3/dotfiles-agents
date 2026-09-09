@@ -73,11 +73,25 @@ The second direction narrowed on 2026-09-08 (decision-020): the topical plugin o
 skill, and `solo-skills` is the home for skills with no topical plugin. "Has a topical
 plugin" is DERIVED from the symlink assemblies — any `plugins/<id>/skills/<skill>` where
 `<id>` is not `solo-skills` — never from a hand-maintained list, so a skill acquires or
-loses its topical home the moment the assembly changes. The narrowing is PERMISSIVE: a
-skill with a topical home MAY still be a solo-skills member, because ~20 skills are
-deliberately dual-homed and decision-020 is executed per-skill, not swept. What survives
-is the case the direction exists for — a skill nothing else ships being quietly left out
-of the everything-bundle.
+loses its topical home the moment the assembly changes.
+
+The narrowing is PERMISSIVE and stays that way: this gate does not force a dual-homed
+skill out of `solo-skills`, and one that stayed would still be green. Nothing is dual-homed
+with it any more, though — the ruling was swept across the remaining eighteen on 2026-09-08
+(kata `8tw0`), so a skill a topical plugin owns ships only from that plugin and
+`solo-skills` is exactly the skills with nowhere topical to live. The permissiveness now
+describes what this gate REFUSES to decide, not a population it tolerates.
+
+**One skill has TWO topical homes, by deliberate exception** (owner ruling 2026-09-08):
+`project-memory` is owned topically by `code-desk` and shipped mechanically by
+`mise-en-place`, whose `audit.py` and `scaffold.py` both load
+`skills/project-memory/references/checklist.md` off their own plugin root and abort without
+it. Exactly-one-home is the rule and this is the recorded exception to it; either way the
+skill is not a `solo-skills` member, so this gate reads it as topically homed like any
+other.
+
+What survives is the case the direction exists for — a skill nothing else ships being
+quietly left out of the everything-bundle.
 
 One narrow escape exists: `SYSTEM_EXEMPTIONS`, for a skill that is standalone-CAPABLE
 (no sibling, agent, or hook need) but prescribes a system the consumer must opt into

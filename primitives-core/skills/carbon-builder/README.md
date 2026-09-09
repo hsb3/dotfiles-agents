@@ -57,5 +57,7 @@ vendored-drift gate.
 
 ```
 claude plugin install carbon@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
+
+Since the decision-020 sweep the `carbon` plugin is this skill's only home — it used to
+ship from `solo-skills` as well, which registered no Carbon MCP server for it.

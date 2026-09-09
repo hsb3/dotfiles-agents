@@ -23,10 +23,9 @@ move, previewing by default and copying only with `--apply`.
 ```
 claude plugin install code-desk@dotfiles-agents
 claude plugin install mise-en-place@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Also ships inside the `code-desk` and `mise-en-place` bundles. `mise-en-place` carries it as a
+Ships inside the `code-desk` and `mise-en-place` bundles. `mise-en-place` carries it as a
 hard dependency rather than a convenience: this skill owns the `MEM-xx` rows in
 `references/checklist.md`, and that bundle's audit and scaffold both load the file off their
 own plugin root and refuse to start without it. Issuing the pass/gap verdict over those rows is

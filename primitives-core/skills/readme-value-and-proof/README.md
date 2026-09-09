@@ -39,7 +39,6 @@ README gets pushed to `docs/` and linked.
 
 ```
 claude plugin install code-desk@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `code-desk` and `solo-skills` bundles.
+Ships in the `code-desk` bundle.

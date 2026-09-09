@@ -43,3 +43,6 @@ Structural diagrams only: data charts belong to a dataviz skill, deck theming to
 `pptx-themes`. The cloud-architecture and Graphviz paths need `graphviz` installed
 (`cli:graphviz`); headless draw.io export needs the draw.io desktop app (`cli:drawio`);
 Mermaid renders natively on GitHub without any local install.
+
+Since the decision-020 sweep this bundle is the only home for all four skills — they
+used to ship from `solo-skills` as well, and no longer do.

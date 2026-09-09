@@ -18,8 +18,7 @@ fuller treatment.
 
 ```
 claude plugin install atelier@dotfiles-agents
-claude plugin install solo-skills@dotfiles-agents
 ```
 
-Ships in the `atelier` and `solo-skills` bundles — pairs with rubric-panel and deletion-pass,
-both also in the bundle.
+Ships in the `atelier` bundle — pairs with rubric-panel and deletion-pass, both also in the
+bundle.

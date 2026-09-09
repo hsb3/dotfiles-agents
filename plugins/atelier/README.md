@@ -336,3 +336,8 @@ denials but blocks nothing), it never restricts the main session, and it matches
 calls rather than a sandbox, which is also why its deny message names the correct move (stop and
 report) instead of pretending to be airtight. The mechanism is covered by fixtures and an
 adversarial matrix, but no real project has run under `strict` yet.
+
+Since the decision-020 sweep this bundle is the only home for `comment-hygiene`,
+`deletion-pass`, `handoff`, `layer-cycle` and `rubric-panel` — all five used to ship from
+`solo-skills` as well, and no longer do. `test-quality`, which `layer-cycle` cites, still
+ships only from `solo-skills`.

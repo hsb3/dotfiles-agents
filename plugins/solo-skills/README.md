@@ -21,7 +21,7 @@ flowchart TD
     Q -->|no| Sys{Prescribes an opt-in system, in-repo or external}
     Sys -->|yes| MEP[Ships only in that system's own plugin]
     Sys -->|no| Top{Has a topical plugin of its own}
-    Top -->|yes| Own[Owned by that topical plugin and free to leave this one]
+    Top -->|yes| Own[Owned by that topical plugin and gone from this one]
     Top -->|no| Solo[Ships in solo-skills]
     Q -->|dispatches agents, reads the covenant hooks| At[Ships in atelier]
     Q -->|assumes the desk's other pieces| CD[Ships in code-desk]
@@ -42,19 +42,13 @@ joins it.
 | `claude-code-config` | Configure Claude Code itself — permissions, hooks, env vars, MCP servers, and settings routed to the right file by precedence, closing with a check that the change actually took effect. |
 | `claude-code-expertise` | The map of Claude Code's extension surfaces: which surface fits a need, what each one's frontmatter and config contract is, and how to debug one that is not firing. |
 | `opencode-expertise` | opencode's extension surfaces end to end, the TypeScript constraint, and how each Claude Code equivalent translates onto them. Reference content — it answers and maps, it does not port. |
-| `project-memory` | Where agent memory lives and how it moves — the global/project split, the loading modes, and two scripts to wire a repo for tracked memory or recover it after a move. |
 | `iterm2` | iTerm2 past its silent failures: the preferences model, dynamic profiles, shell integration, and default-terminal bindings that report success while dropping the change. |
 | `opencode-sandbox` | Spin up a disposable, isolated opencode instance and hand it to the session as an MCP server — its workspace is a volume, so it cannot see the host filesystem. |
 
-**Session discipline**
+**Test quality**
 
 | Skill | What it does |
 |---|---|
-| `handoff` | Maintain the session handoff so a cold session can pick the work up — a file this skill writes, or an external tracker it signals via a freshness stamp — the externalization pass that makes a session safe to clear. |
-| `layer-cycle` | Drive a module through create, evaluate, and refine cycles until it converges or the budget runs out, turning findings into scoped fix briefs. |
-| `rubric-panel` | Score artifacts against an anchored rubric with a persona-diverse judge panel, classifying each finding as defect, noise, spec-hole, or undeclared commitment. |
-| `deletion-pass` | Reduce a module to irreducible against its contract — remove every line that cannot name the commitment it keeps, without changing observable behavior. |
-| `comment-hygiene` | Strip history and commentary out of source comments before the work lands — harvest the reasoning onto its tracker item first, then keep only what a competent reader would break something without. |
 | `test-quality` | Check that a test can actually fail — the pre-write gate ("what production change should make this fail?"), the five-mutation check for tests that already exist, and the four shapes that stay green no matter what the production code does. |
 
 **Research and decisions**
@@ -65,16 +59,11 @@ joins it.
 | `tech-eval-research` | Comparative technology evaluation: ranked shortlist, capability matrix, and a recommendation built from primary sources, including license and free-tier boundaries. |
 | `owner-signoff` | Put a batch of decisions in a local browser form instead of a wall of chat questions; the answers flow back into the session automatically. |
 
-**Diagrams and visuals**
+**Charts and visuals**
 
 | Skill | What it does |
 |---|---|
-| `diagrams` | The structural-diagram hub — cloud architecture with provider icons via Python's `diagrams` library, raw Graphviz for dependency graphs, and the shared SVG/PNG output pipelines. |
-| `mermaid` | Mermaid for GitHub-rendered markdown — flowcharts, sequence, ER, state, and class diagrams, with the house rule that node labels carry no parentheses or special characters. |
-| `drawio` | Read, convert, and headlessly export draw.io files — compressed and uncompressed mxGraph XML, legacy-to-Mermaid conversion, and CLI export to PNG/SVG. |
-| `excalidraw` | Sketch-style diagrams as `.excalidraw` files, using the Excalidraw MCP tools when a session exposes them and authoring the scene JSON directly when it does not. |
 | `dataviz` | Chart design rules to consult *before* writing chart code, in any library: mark selection, the anti-patterns to refuse, and a colorblind-safe palette, closing with the validation checklist to run before delivering. |
-| `pptx-themes` | PowerPoint decks with a curated theme layer — semantic tokens, approved palettes, monospaced typography, and a visual QA pass, over a vendored base that is never hand-edited. |
 
 **Building software**
 
@@ -82,7 +71,6 @@ joins it.
 |---|---|
 | `api-craft` | HTTP/REST API servers by layer — route, schema, service, repository, model — with the rejection cascade that maps every failure to a status code and outside-in build order. |
 | `tui-craft` | Full-screen terminal apps — layering, state ownership, repaint and streaming discipline, key routing, and the fixes for flicker, resize corruption, and a terminal left broken after exit. |
-| `carbon-builder` | IBM Carbon Design System for React and Web Components — components, IBM Products UI, Carbon Charts, design tokens, IBM Plex, and Carbon compliance audits, grounded in the hosted Carbon MCP server. |
 
 **Repos and projects**
 
@@ -90,22 +78,6 @@ joins it.
 |---|---|
 | `editor-project-config` | Tracked `.vscode/` and `.zed/` folders designed in one pass — associations, toolchain-matched settings, tasks, debug configs, and cross-editor parity. |
 | `private-fork` | Run a private mirror of an upstream repo: remotes, branch model, a delete-vs-disable rubric, a divergence ledger, and the merge cycle. Every command it hands you names the upstream tracking ref in full, so a local ref of that name in your fork cannot shadow it. |
-| `readme-value-and-proof` | Rewrite a README as an honest pitch backed by screenshots captured from the app actually running, never mockups. |
-
-**Planning**
-
-| Skill | What it does |
-|---|---|
-| `task-authoring` | Write tracked work items a cold agent can execute — titles, acceptance criteria, thresholds, approval gates, and scope ownership, on any tracker. |
-
-**Obsidian plugin development**
-
-| Skill | What it does |
-|---|---|
-| `obsidian-api-basics` | Obsidian plugin fundamentals — lifecycle (`onload`/`onunload`), settings persistence, the vault API, commands, and ribbon icons. |
-| `obsidian-chat-ui` | Chat and conversational interfaces inside an Obsidian plugin: `ItemView`, sidebars, and streaming message rendering. |
-| `obsidian-cli` | Drive an Obsidian vault from the terminal for automation and scripting. |
-| `obsidian-mcp-server` | Expose vault operations as MCP tools from inside an Obsidian plugin, over Streamable HTTP. |
 
 ## Install
 
@@ -134,26 +106,52 @@ on a repo that has not chosen them. The system can be in-repo (the `_meta/` plan
 and its layout standard, in `mise-en-place`) or external (the `bun` toolchain, the
 `kenn-forge` daemon, each in a plugin of that name).
 
-**A skill with a topical plugin does not have to be here.** The topical plugin owns a
-skill; this bundle is the home for the ones with nowhere topical to live (decision-020,
-2026-09-08). That ruling is executed per skill rather than swept, so the dual-homed members
-under *Overlaps* below stay members. Where it has been executed the skill is gone from here:
-PocketBase work lives in `pocketbase`; the pull-request and comms skills live in `code-desk`.
-Enable the topical plugin to get those. This is a break if you were getting them from here —
-nothing was duplicated, they simply stopped being members.
+**A skill with a topical plugin is not here at all.** The topical plugin owns a skill; this
+bundle is the home for the ones with nowhere topical to live (decision-020, 2026-09-08). That
+ruling was first executed on four skills — PocketBase work moved to `pocketbase`, the
+pull-request and comms skills to `code-desk` — and has now been swept across every skill that
+still had two homes. **That shrinks what this bundle ships, and it is a break if you installed
+`solo-skills` for one of the eighteen below.** Nothing was duplicated and nothing was deleted:
+each of them still ships, from its topical plugin. Enable that plugin to get it.
 
-**External tools some of these need.** `diagrams` needs `graphviz`; `drawio` needs the
-draw.io desktop app for headless export; `obsidian-cli` needs the Obsidian binary;
-`opencode-sandbox` needs the `opencode-sandbox` CLI and Docker; `carbon-builder` needs the hosted
-Carbon MCP server. Each says so at the point of use.
+| Skill that left | Now ships from |
+|---|---|
+| `carbon-builder` | `carbon` |
+| `comment-hygiene` | `atelier` |
+| `deletion-pass` | `atelier` |
+| `handoff` | `atelier` |
+| `layer-cycle` | `atelier` |
+| `rubric-panel` | `atelier` |
+| `diagrams` | `diagrams` |
+| `drawio` | `diagrams` |
+| `excalidraw` | `diagrams` |
+| `mermaid` | `diagrams` |
+| `obsidian-api-basics` | `obsidian-toolkit` |
+| `obsidian-chat-ui` | `obsidian-toolkit` |
+| `obsidian-cli` | `obsidian-toolkit` |
+| `obsidian-mcp-server` | `obsidian-toolkit` |
+| `pptx-themes` | `code-desk` |
+| `readme-value-and-proof` | `code-desk` |
+| `project-memory` | `code-desk` and `mise-en-place` |
+| `task-authoring` | `mise-en-place` |
+
+**One skill has two topical homes, deliberately.** Exactly one home is the rule above;
+`project-memory` is the recorded exception to it (owner ruling 2026-09-08). `code-desk` owns it
+topically, and `mise-en-place` needs it mechanically — that plugin's `audit.py` and
+`scaffold.py` both load `skills/project-memory/references/checklist.md` off their own plugin
+root and abort without it, so the skill has to travel with them. Either way it is not a
+`solo-skills` member; take it from whichever of the two you already have.
+
+**External tools some of these need.** `opencode-sandbox` needs the `opencode-sandbox` CLI
+and Docker; `iterm2` needs iTerm2 itself installed locally, since its default-terminal and
+shell-integration paths configure the real app; `owner-signoff` needs PyYAML on the system
+`python3` to read a YAML spec, and nothing outside the standard library for a JSON one. Each
+says so at the point of use.
 
 **Overlaps worth knowing.** `diagrams` covers structural diagrams and `dataviz` covers
 data charts — they hand off to each other rather than competing. `claude-code-config`
-changes configuration; `claude-code-expertise` explains the surfaces. Several of these
-skills also ship inside a topical plugin (`handoff`, `layer-cycle`, `rubric-panel`,
-`deletion-pass`, and `comment-hygiene` in `atelier`, the diagram skills in
-`diagrams`, the Obsidian skills in `obsidian-toolkit`, `carbon-builder` in `carbon`, several
-in `code-desk`, and `project-memory` plus `task-authoring` in `mise-en-place`, which reads
-both as standards its audit and its desk depend on). Enable more than one home and the skill
-is listed once per membership in a session — one source, several memberships, no way for any
-of them to suppress the others — so pick the one home you want it from.
+changes configuration; `claude-code-expertise` explains the surfaces. No member is
+dual-homed any more, so nothing here is listed twice in a session that also enables a topical
+plugin — that was the whole point of the sweep above, since a skill with two memberships is
+one source the harness lists once per enabled plugin, with no way for either to suppress the
+other.
