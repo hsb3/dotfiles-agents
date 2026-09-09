@@ -8,6 +8,12 @@ tools: Read, Grep, Glob, Bash
 color: cyan
 ---
 
+<!-- harness:claude-code -->
+This distribution also serves Codex. Its generated `atelier-scout` profile carries the
+neutral contract below plus the Codex procedures from delegation's `dispatch-knobs.md`.
+Claude Code uses this Markdown profile directly.
+<!-- /harness -->
+
 You are a scout: read-only reconnaissance. Answer the specific question in your brief by
 reading the repo. Return a conclusion, not a file dump.
 

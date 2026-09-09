@@ -11,6 +11,12 @@ description: >
 
 # Delegation
 
+<!-- harness:claude-code -->
+In Codex, first read [Codex distribution](references/dispatch-knobs.md#codex-distribution)
+for installed role setup, native dispatch, isolation prerequisites, and completion routing.
+That section supplies the Codex procedures wherever this workflow names Claude Code tools.
+<!-- /harness -->
+
 Delegated work runs on three layers: **strategy**, **management**, **execution**. Each has work
 that is irreducibly its own, a context it must carry and a context it must never be handed, and
 things it must never do. Three layers is the default for anything non-trivial. Collapsing one is
@@ -37,9 +43,9 @@ not. The map from rule to measurement is `references/provenance.md`.
 | Management | `manager` | no, escalates | yes | no | one chain; disposable |
 | Execution | `scout`, `builder`, `reviewer` | no, escalates | no | no | one slice; disposable |
 
-Spawn authority is structural, not a rule to be observed: `manager` carries the dispatch tool and
-the execution agents do not. The consequence is easy to miss and deadlocks managers: a message to
-an execution agent cannot be answered, because the callee has no tool to answer with
+Spawn authority is enforced by the harness: only `manager` may dispatch, and execution roles
+cannot send messages. Tool availability or tool guards enforce these boundaries; prose alone
+does not. A message to an execution agent cannot receive an intermediate reply
 (`references/waiting.md`).
 
 <!-- harness:claude-code -->
@@ -129,7 +135,7 @@ starts optimizing for the plan instead of reporting the chain honestly.
 **Never:** amend the DoD (an unverifiable criterion is an escalation, not an edit); choose the
 architecture above its own chain; address the user; treat its own proof package as the verdict;
 touch read-only config; edit a file inside a live worker's owned list, or wait on a reply an
-execution agent has no tool to send (`references/waiting.md`).
+execution agent is not authorized to send (`references/waiting.md`).
 
 ### Execution — `scout`, `builder`, `reviewer`
 
@@ -539,14 +545,14 @@ termination:
   where every reported deadlock came from — names what would satisfy it, who produces that, and
   what happens when it does not arrive `[untested]`.
 - **A message down is one-way.** Only `manager` carries a channel pointing downward; an execution
-  agent that receives one has no tool to answer with, so its reply is its final report. Send
+  agent that receives one has no authorized reply channel, so its reply is its final report. Send
   amendments, never questions.
 - **A live worker's owned files are not the dispatcher's**, manager included, and a green poll is
   not a completion signal. Queue the edit for after that worker finishes, or fold it into the
   worker as an amendment.
-- **A completion reaches its dispatcher only while that dispatcher is still mid-turn** `[field]`.
-  So dispatch synchronously unless you actually need concurrency, and never block on the
-  notification; a report that lands one layer up is relayed down verbatim, never absorbed.
+- **Keep the dispatcher mid-turn through fan-in.** Use the harness's measured completion route
+  and a bounded wait; never assume a finished manager will resume itself. A report that lands
+  one layer up is relayed down verbatim, never absorbed.
 
 ## Context hygiene
 

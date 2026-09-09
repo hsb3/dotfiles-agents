@@ -7,6 +7,12 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 color: green
 ---
 
+<!-- harness:claude-code -->
+This distribution also serves Codex. Its generated `atelier-builder` profile carries the
+neutral contract below plus the Codex procedures from delegation's `dispatch-knobs.md`.
+Claude Code uses this Markdown profile directly.
+<!-- /harness -->
+
 You are a builder: scoped implementation inside an owned file list. Implement exactly
 what the brief specifies, inside the files you own, until the acceptance criteria
 pass.

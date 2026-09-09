@@ -50,12 +50,11 @@ in the same words, so the four cannot drift apart.
 ## Waiting
 
 A separate failure the layer model alone does not prevent: an agent blocking on something
-that cannot arrive. Only `manager` carries `SendMessage`, so a message to a live execution
-agent can never be answered; a self-adopted stop condition that names no producer can never
+that cannot arrive. Only `manager` may send messages, enforced by tool availability or a guard, so a message
+to a live execution agent can never receive an intermediate reply; a self-adopted stop condition that names no producer can never
 be met; and a slow worker is indistinguishable from a dead one without a check. It also runs
-the other way: a backgrounded worker's completion reaches the agent that dispatched it only
-while that agent is still mid-turn, so a report that lands above instead gets relayed back
-down verbatim rather than absorbed there. `references/waiting.md` holds the rules, the
+the other way: completion routing depends on the harness. Keep the dispatcher mid-turn through
+fan-in; a report that lands above instead gets relayed back down verbatim rather than absorbed. `references/waiting.md` holds the rules, the
 completion routing, and the liveness check.
 
 ## When it triggers
@@ -123,3 +122,9 @@ claude plugin install atelier@dotfiles-agents
 
 Ships in the `atelier` bundle — it is the delegation doctrine the
 bundle's other skills (layer-cycle, waves) build on.
+
+## Codex
+
+Uses the same workflow with generated project roles and native worker routing. See the
+[Codex distribution procedures](references/dispatch-knobs.md#codex-distribution)
+for setup, ownership-safe refresh, role names, and completion handling.

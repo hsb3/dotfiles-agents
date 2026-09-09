@@ -5,6 +5,12 @@ description: Score one or more code artifacts against an anchored rubric using a
 
 # Rubric panel
 
+<!-- harness:claude-code -->
+In Codex, first read [Codex distribution](../delegation/references/dispatch-knobs.md#codex-distribution)
+for installed role setup, native dispatch, isolation prerequisites, and completion routing.
+That section supplies the Codex procedures wherever this workflow names Claude Code tools.
+<!-- /harness -->
+
 Judge the artifact, not the process. Score absolutely against anchors,
 never on a curve.
 

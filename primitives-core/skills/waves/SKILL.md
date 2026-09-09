@@ -15,6 +15,12 @@ description: >
 
 # Waves
 
+<!-- harness:claude-code -->
+In Codex, first read [Codex distribution](../delegation/references/dispatch-knobs.md#codex-distribution)
+for installed role setup, native dispatch, isolation prerequisites, and completion routing.
+That section supplies the Codex procedures wherever this workflow names Claude Code tools.
+<!-- /harness -->
+
 Run one session as a **backlog-execution loop**: orient from the handoff and the triage view,
 refresh the triage, plan items into waves, launch isolated crews, personally verify and land
 each wave, reconcile, and externalize — so the owner's only inputs are the launch prompt and

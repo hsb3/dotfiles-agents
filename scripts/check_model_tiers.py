@@ -27,7 +27,7 @@ Default mode is offline, and is a `make ci` gate:
      since `window_for` answers for any id a transcript names
 
 The catalog is a PINNED, MINIMAL PROJECTION of `https://models.dev/api.json`: every model
-the provider lists, with its context window and nothing else. It is vendored in-tree
+with a positive integer token window, with that window and nothing else. It is vendored in-tree
 because `make ci` is offline-and-zero-install by design, and an in-tree catalog is what
 makes an invented id detectable with no network. The network half is the drift guard, the
 same split `scripts/check_vendored_drift.py` already uses:
@@ -191,14 +191,15 @@ def _fetch(url=UPSTREAM):
 
 
 def project(upstream, providers):
-    """Upstream -> `{provider: {model_id: {"context": int}}}` for the named providers."""
+    """Project models with positive token windows; image-only models have none."""
     out = {}
     for prov in sorted(providers):
         models = (upstream.get(prov) or {}).get("models") or {}
         out[prov] = {
             mid: {"context": (models[mid].get("limit") or {}).get("context")}
             for mid in sorted(models)
-            if isinstance((models[mid].get("limit") or {}).get("context"), int)
+            if type((context := (models[mid].get("limit") or {}).get("context"))) is int
+            and context > 0
         }
     return out
 

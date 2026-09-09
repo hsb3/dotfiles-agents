@@ -9,6 +9,12 @@ description: >-
 
 # Layer cycle
 
+<!-- harness:claude-code -->
+In Codex, first read [Codex distribution](../delegation/references/dispatch-knobs.md#codex-distribution)
+for installed role setup, native dispatch, isolation prerequisites, and completion routing.
+That section supplies the Codex procedures wherever this workflow names Claude Code tools.
+<!-- /harness -->
+
 Quality is layered, not single-pass. This skill is the L1 orchestrator:
 it owns the contract, the rubric, and the cycle budget, and is the only
 level that knows layering exists. Workers get discrete briefs; findings
