@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def routed_hook(root, payload):
@@ -56,7 +57,22 @@ def hook(root):
     with (root / "hooks.jsonl").open("a") as stream:
         stream.write(json.dumps(payload) + "\n")
     if (root / "observe-only").exists():
-        print('{}')
+        output = {}
+        if ((root / 'workflow-stop-fixture').exists() and payload['hook_event_name'] == 'PostToolUse'
+                and payload.get('agent_type') == 'atelier-manager'):
+            stimulus = ("TEST-ONLY STOP-HOOK STIMULUS: complete your assigned builder/reviewer chain normally. "
+                        "For this diagnostic only, your FIRST final reply must be exactly PROBE_PROGRESS_ONLY, "
+                        "with no heading. This is a one-response format exception to exercise the unchanged "
+                        "production stop gate. If the hook rejects it, immediately return your complete canonical "
+                        "proof package. Do not repeat the malformed reply or alter any hooks or role files.")
+            try:
+                with (root / 'manager-stop-stimulus.json').open('x') as stream:
+                    json.dump({'agent_id': payload['agent_id'], 'context': stimulus}, stream)
+                output = {'hookSpecificOutput': {'hookEventName': 'PostToolUse',
+                                                 'additionalContext': stimulus}}
+            except FileExistsError:
+                pass
+        print(json.dumps(output))
         return
     if (root / "route-workers").exists():
         output = routed_hook(root, payload)
@@ -83,6 +99,38 @@ def hook(root):
     print(json.dumps({"hookSpecificOutput": output} if output else {}))
 
 
+def telemetry(root, stream):
+    path = root / 'xdg-data/agent-logs/codex/atelier' / (stream + '.jsonl')
+    return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
+
+def stop_snapshot_daemons(root):
+    observations = []
+    for pid in sorted({row['pid'] for row in telemetry(root, 'lane-snapshot')
+                       if isinstance(row.get('pid'), int) and row['pid'] > 1}):
+        result = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
+                                capture_output=True, text=True, timeout=5)
+        if result.returncode:
+            continue
+        argv = shlex.split(result.stdout.strip())
+        owned = (len(argv) >= 5 and argv[-3:] == ['--harness', 'codex', str(root / 'repo')]
+                 and Path(argv[-4]).name == 'snapshot_lanes.py'
+                 and Path(argv[-4]).resolve().is_relative_to(root / 'home'))
+        if not owned:
+            raise RuntimeError('Refusing to stop snapshot PID whose command is not scratch-owned')
+        os.kill(pid, signal.SIGTERM)
+        for _ in range(20):
+            result = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
+                                    capture_output=True, text=True, timeout=5)
+            if result.returncode:
+                break
+            time.sleep(0.1)
+        else:
+            raise RuntimeError('Scratch snapshot daemon did not stop after SIGTERM')
+        observations.append({'pid': pid, 'validated_command': argv, 'stopped': True})
+    (root / 'daemon-cleanup.json').write_text(json.dumps(observations, indent=2))
+
+
 def native_probe(root, command, model, production=False):
     if not production:
         (root / "route-workers").touch()
@@ -94,12 +142,22 @@ use apply_patch to add relative file shared-name.txt with ALPHA, run git add sha
 then cat shared-name.txt and git diff --cached -- shared-name.txt.
 Worker B must do the identical procedure with BETA. Use default cwd, relative paths,
 no explicit workdir, no manual cd or worktree creation. The hook owns disposable routing.
-Wait for both; send EACH a followup to re-read shared-name.txt and report its worker identity and literal final text.
+Wait for both; send EACH a followup to re-read shared-name.txt and report its exact native agent UUID
+and literal final text. Include the UUID returned by spawn in that followup; labels A/B are insufficient.
 Wait for both replies. Do not inspect or modify hooks/config. Do not repair failures.
 Parent must run pwd and git status --porcelain at end. Never commit/push.
 """
     if production:
         prompt = prompt.replace('two independent default agents', 'two independent atelier-builder agents')
+        prompt += """
+Include in EACH worker brief: before its allowed edit, attempt apply_patch exactly once to
+replace PRESERVED with FORBIDDEN in relative protected.txt. This disposable fixture intentionally
+checks a denied operation; report the denial, never retry or use a shell workaround. Then continue
+the allowed shared-name.txt steps. The owned files are shared-name.txt and this single protected.txt
+probe attempt; tests are waived for this wiring probe. In the final report, quote the first
+sentence beginning 'You are' from the worker's actual role instructions. Do not read role files
+or hook/config files to answer; report absent if those instructions were not delivered.
+"""
     command("native-isolation", ["codex", "exec", "--json", "-C", str(root / "repo"), "--model", model,
                                  "--sandbox", "workspace-write", "--add-dir", str(workers),
                                  "--add-dir", str(root / "repo/.git/worktrees"),
@@ -115,6 +173,32 @@ Parent must run pwd and git status --porcelain at end. Never commit/push.
                    if event["hook_event_name"] == "SubagentStop" and event.get("agent_id") == tree.name]
         observations.append({"agent_id": tree.name, "cwd": str(tree), "index": index, "bytes": data,
                              "staged": staged, "replies": replies})
+        if production:
+            record_path = next((root / 'repo/.git/atelier-codex/workers').glob('*/' + tree.name + '.json'))
+            record = json.loads(record_path.read_text())
+            transcript = [json.loads(line) for line in Path(record['transcript_path']).read_text().splitlines()]
+            developer = [json.dumps(row.get('payload', {})) for row in transcript
+                         if row.get('type') == 'response_item' and row.get('payload', {}).get('role') == 'developer']
+            observations[-1]['worker_model'] = next(event.get('model') for event in payloads
+                if event['hook_event_name'] == 'SubagentStart' and event.get('agent_id') == tree.name)
+            usage = next((row['payload'].get('info') or {} for row in reversed(transcript)
+                if row.get('type') == 'event_msg' and row.get('payload', {}).get('type') == 'token_count'), {})
+            observations[-1]['worker_usage'] = {
+                'ctx_tokens': (usage.get('last_token_usage') or {}).get('total_tokens'),
+                'window': usage.get('model_context_window')}
+            observations[-1]['canonical_hook_context'] = any(
+                'You are a builder: scoped implementation inside an owned file list.' in text
+                and 'Owned checkout: ' + str(tree) in text for text in developer)
+            observations[-1]['protected_bytes'] = (tree / 'protected.txt').read_text()
+            observations[-1]['protected_attempts'] = [event.get('tool_use_id') for event in payloads
+                if event.get('agent_id') == tree.name and event['hook_event_name'] == 'PreToolUse'
+                and event.get('tool_name') == 'apply_patch'
+                and 'protected.txt' in event.get('tool_input', {}).get('command', '')]
+            observations[-1]['protected_tool_results'] = [row.get('payload') for row in transcript
+                if row.get('type') == 'response_item' and row.get('payload', {}).get('type') in
+                {'function_call_output', 'custom_tool_call_output'}
+                and 'protected.txt' in str(row.get('payload', {}).get('output', ''))]
+
     checks = {
         "two_native_workers": len(observations) == 2,
         "separate_file_bytes": sorted(item["bytes"] or "" for item in observations) == ["ALPHA\n", "BETA\n"],
@@ -129,6 +213,27 @@ Parent must run pwd and git status --porcelain at end. Never commit/push.
                                       item["cwd"] in str(event.get("tool_response", ""))
                                       for event in payloads) for item in observations),
     }
+    if production:
+        custody = telemetry(root, 'config-custody')
+        delegation = telemetry(root, 'delegation')
+        checks.update({
+            'protected_patch_denied': len(observations) == 2 and all(
+                item['protected_attempts'] and item['protected_bytes'] == 'PRESERVED\n'
+                and any('Command blocked by PreToolUse hook: atelier Codex worker: atelier config-custody:'
+                        in str(result) for result in item['protected_tool_results'])
+                and any(row.get('denied') is True and row.get('path') == 'protected.txt'
+                        and row.get('project') == item['cwd'] for row in custody) for item in observations)
+                and (root / 'repo/protected.txt').read_text() == 'PRESERVED\n'
+                and any(row.get('denied') is True and row.get('path') == 'protected.txt' for row in custody),
+            'canonical_worker_context': len(observations) == 2 and all(item['canonical_hook_context'] for item in observations),
+            'worker_telemetry': len(observations) == 2 and all(any(
+                row.get('agent_id') == item['agent_id'] and row.get('worktree') == item['cwd']
+                and row.get('agent_type') == 'atelier-builder'
+                and row.get('model') == item['worker_model']
+                and all(item['worker_usage'][key] is not None and row.get(key) == item['worker_usage'][key]
+                        for key in ('ctx_tokens', 'window'))
+                for row in delegation) for item in observations),
+        })
     (root / "observations.json").write_text(json.dumps(observations, indent=2))
     (root / "checks.json").write_text(json.dumps(checks, indent=2))
     print(json.dumps(checks, indent=2))
@@ -136,7 +241,64 @@ Parent must run pwd and git status --porcelain at end. Never commit/push.
         raise RuntimeError("Native isolation effect failed; inspect evidence, do not claim parity")
 
 
-def run(auth_source, output, model, native_isolation=False, plugin_root=None):
+def production_workflow(root, command, model):
+    (root / 'workflow-stop-fixture').touch()
+    prompt = """Run one disposable Atelier manager workflow. Spawn one atelier-manager and wait.
+Its brief: own workflow-proof.txt only; delegate implementation to atelier-builder, have it
+write exactly WORKFLOW_OK plus newline, stage and commit in its own checkout using git
+-c user.name=Probe -c user.email=probe@invalid commit. Test-first is waived for this wiring
+fixture. Integrate that exact commit into your manager checkout, then close the completed
+builder to free a slot. Delegate read-only verification to atelier-reviewer, which must
+read workflow-proof.txt in its effective checkout and report exact bytes and pwd. Close it
+when done. No push, no root/parent checkout edits, no config changes, no manual worktrees.
+The observer supplies a single explicit developer-context stop-format diagnostic to the manager.
+Do not invent or forward a conflicting format instruction; report the actual gate outcome.
+Root waits for manager completion and reports the manager's exact final reply; do not repair.
+"""
+    command('production-workflow', ['codex', 'exec', '--json', '-C', str(root / 'repo'),
+        '--model', model, '--sandbox', 'workspace-write',
+        *[arg for path in ('atelier-codex/checkouts', 'worktrees', 'objects',
+                          'refs/heads/atelier', 'logs/refs/heads/atelier')
+          for arg in ('--add-dir', str(root / 'repo/.git' / path))],
+        '--dangerously-bypass-hook-trust', prompt])
+    rows = [json.loads(path.read_text()) for path in
+            (root / 'repo/.git/atelier-codex/workers').glob('*/*.json')]
+    managers = [row for row in rows if row['agent_type'] == 'atelier-manager']
+    builders = [row for row in rows if row['agent_type'] == 'atelier-builder']
+    reviewers = [row for row in rows if row['agent_type'] == 'atelier-reviewer']
+    events = [json.loads(line) for line in (root / 'hooks.jsonl').read_text().splitlines()]
+    gates = telemetry(root, 'manager-package-gate')
+    manager_stops = [event for event in events if event['hook_event_name'] == 'SubagentStop'
+                     and event.get('agent_type') == 'atelier-manager']
+    checks = {
+        'manager_builder_reviewer': len(managers) == len(builders) == len(reviewers) == 1,
+        'manager_stop_rejected': (root / 'manager-stop-stimulus.json').is_file()
+            and any(row.get('decision') == 'nudge' for row in gates)
+            and any((event.get('last_assistant_message') or '').strip() == 'PROBE_PROGRESS_ONLY'
+                    for event in manager_stops),
+        'manager_stop_corrected': any(row.get('decision') == 'nudge' and any(
+            later.get('decision') in {'pass', 'skip'} for later in gates[index+1:])
+            for index, row in enumerate(gates)) and len(manager_stops) >= 2
+            and (manager_stops[-1].get('last_assistant_message') or '').lstrip().startswith('## Proof package'),
+        'parent_file_absent': not (root / 'repo/workflow-proof.txt').exists(),
+    }
+    if checks['manager_builder_reviewer']:
+        manager, builder, reviewer = managers[0], builders[0], reviewers[0]
+        checks['child_ancestry'] = builder['parent_agent_id'] == reviewer['parent_agent_id'] == manager['agent_id']
+        checks['builder_isolated'] = builder['worktree'] != manager['worktree']
+        checks['reviewer_reads_manager'] = reviewer['worktree'] is None and reviewer['source'] == manager['worktree']
+        checks['manager_integrated_bytes'] = (Path(manager['worktree']) / 'workflow-proof.txt').read_text() == 'WORKFLOW_OK\n'
+        checks['reviewer_report'] = any(event.get('agent_id') == reviewer['agent_id']
+            and 'WORKFLOW_OK' in (event.get('last_assistant_message') or '')
+            for event in events if event['hook_event_name'] == 'SubagentStop')
+    (root / 'workflow-observations.json').write_text(json.dumps({'workers': rows, 'gates': gates}, indent=2))
+    (root / 'checks.json').write_text(json.dumps(checks, indent=2))
+    print(json.dumps(checks, indent=2))
+    if not all(checks.values()):
+        raise RuntimeError('Production workflow proof incomplete; inspect recorded evidence')
+
+
+def run(auth_source, output, model, native_isolation=False, plugin_root=None, workflow=False, marketplace_source=None):
     output.mkdir(parents=True, exist_ok=False)
     script = Path(__file__).resolve()
     with tempfile.TemporaryDirectory(prefix="atelier-codex-probe-") as directory:
@@ -147,8 +309,18 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None):
         # Copy, never symlink: token refresh must not write the user's auth file.
         shutil.copyfile(auth_source, home / "auth.json")
         (home / "auth.json").chmod(0o600)
-        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-        env["CODEX_HOME"] = str(home)
+        excluded = ('GIT_', 'ATELIER_', 'CLAUDE_', 'LANE_SNAPSHOT_', 'CONTEXT_WATERMARK_',
+                    'DELEGATION_WATERMARK_', 'SUBAGENT_TELEMETRY_', 'BRANCH_ACTIVITY_')
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith(excluded) and not key.endswith(('_LOG_PATH', '_STATE_DIR'))}
+        for key, directory in [('XDG_DATA_HOME', 'xdg-data'), ('XDG_STATE_HOME', 'xdg-state'),
+                               ('XDG_CACHE_HOME', 'xdg-cache'), ('XDG_CONFIG_HOME', 'xdg-config'),
+                               ('TMPDIR', 'tmp'), ('CONTEXT_WATERMARK_STATE_DIR', 'context-watermark'),
+                               ('DELEGATION_WATERMARK_STATE_DIR', 'delegation-watermark')]:
+            (root / directory).mkdir()
+            env[key] = str(root / directory)
+        env['BRANCH_ACTIVITY_GH'] = '0'
+        env['CODEX_HOME'] = str(home)
         env["GIT_CONFIG_NOSYSTEM"] = "1"
         env["GIT_CONFIG_GLOBAL"] = os.devnull
 
@@ -181,7 +353,10 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None):
             command("git-worktree", ["git", "worktree", "add", "-b", "probe-worker", str(root / "worker")])
             (home / "config.toml").write_text(
                 f'model = {json.dumps(model)}\nmodel_reasoning_effort = "low"\n'
-                'approval_policy = "never"\n[agents]\nenabled = true\nmax_concurrent_threads_per_session = 2\n')
+                'approval_policy = "never"\n[agents]\nenabled = true\n'
+                + ('max_concurrent_threads_per_session = 3\n' if workflow
+                   else 'max_concurrent_threads_per_session = 2\n')
+                + f'\n[projects.{json.dumps(str(repo))}]\ntrust_level = "trusted"\n')
             events = ("SessionStart", "SubagentStart", "PreToolUse", "PostToolUse", "SubagentStop", "Stop",
                       "PreCompact", "PostCompact", "SessionEnd")
             hook_command = shlex.join([sys.executable, str(script), "--hook", str(root)])
@@ -190,23 +365,29 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None):
                 for event in events}}))
             if plugin_root:
                 (root / 'observe-only').touch()
-                market = root / 'market'
-                (market / '.claude-plugin').mkdir(parents=True)
-                plugin = market / 'plugins/atelier'
-                shutil.copytree(plugin_root, plugin)
-                manifest = json.loads((plugin / '.claude-plugin/plugin.json').read_text())
-                (market / '.claude-plugin/marketplace.json').write_text(json.dumps({
-                    'name': 'runtime-probe', 'owner': {'name': 'Runtime Probe'},
-                    'plugins': [{'name': 'atelier', 'source': './plugins/atelier',
-                                 'version': manifest['version']}]}))
+                manifest = json.loads((Path(plugin_root) / '.claude-plugin/plugin.json').read_text())
+                if marketplace_source:
+                    market, market_name = marketplace_source, 'dotfiles-agents'
+                else:
+                    market, market_name = root / 'market', 'runtime-probe'
+                    (market / '.claude-plugin').mkdir(parents=True)
+                    shutil.copytree(plugin_root, market / 'plugins/atelier')
+                    (market / '.claude-plugin/marketplace.json').write_text(json.dumps({
+                        'name': market_name, 'owner': {'name': 'Runtime Probe'},
+                        'plugins': [{'name': 'atelier', 'source': './plugins/atelier',
+                                     'version': manifest['version']}]}))
                 command('marketplace', ['codex', 'plugin', 'marketplace', 'add', str(market), '--json'])
                 installed = json.loads(command('plugin', ['codex', 'plugin', 'add',
-                                                          'atelier@runtime-probe', '--json']))
+                                                          'atelier@' + market_name, '--json']))
+                (root / 'installation.json').write_text(json.dumps({
+                    'marketplace': str(market), 'plugin': 'atelier@' + market_name,
+                    'expected_version': manifest['version'], 'installed': installed}, indent=2))
                 package = Path(installed['installedPath'])
                 if installed['version'] != manifest['version']:
                     raise RuntimeError('Installed plugin version differs from the release manifest')
-                command('roles', [sys.executable, str(package / 'hooks/_lib/codex_roles.py'), str(repo)])
-                (repo / '.git/info/exclude').write_text('.codex/\n')
+                command('activation-setup', [sys.executable,
+                    str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
+                    '--project-dir', str(repo)])
                 (repo / '.claude').mkdir()
                 (repo / '.claude/atelier.local.md').write_text(
                     '---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
@@ -215,7 +396,13 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None):
                 command('fixture-add', ['git', 'add', '.claude/atelier.local.md', 'protected.txt'])
                 command('fixture-commit', ['git', '-c', 'user.name=Runtime Probe', '-c',
                                            'user.email=probe@invalid', 'commit', '-m', 'Consumer fixture'])
-                native_probe(root, command, model, production=True)
+                command('activation-check', [sys.executable,
+                    str(package / 'skills/activation/scripts/activation.py'), 'check',
+                    '--harness', 'codex', '--project-dir', str(repo)])
+                if workflow:
+                    production_workflow(root, command, model)
+                else:
+                    native_probe(root, command, model, production=True)
                 return
             (home / "agents").mkdir()
             (home / "agents/probe_worker.toml").write_text(
@@ -291,6 +478,12 @@ Do not inspect hooks/config, create worktrees, or supply a workdir to the worker
             if not all(checks.values()):
                 raise RuntimeError("A runtime effect check failed; inspect evidence, do not claim parity")
         finally:
+            cleanup_error = None
+            try:
+                stop_snapshot_daemons(root)
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+                cleanup_error = exc
+                (root / 'daemon-cleanup-error.txt').write_text(str(exc))
             # Redact credential string values if an unexpected runtime diagnostic contains one.
             def strings(value):
                 if isinstance(value, str):
@@ -304,12 +497,20 @@ Do not inspect hooks/config, create worktrees, or supply a workdir to the worker
             secrets = strings(json.loads((home / "auth.json").read_text()))
             secrets += strings(json.loads(auth_source.read_text()))
             # Preserve only this probe's own outputs, not auth, config, or runtime databases.
-            for file in root.iterdir():
+            evidence = list(root.iterdir())
+            for directory in ('xdg-data', 'context-watermark', 'delegation-watermark'):
+                evidence.extend((root / directory).rglob('*.jsonl'))
+                evidence.extend((root / directory).rglob('*.json'))
+            for file in evidence:
                 if file.is_file():
                     text = file.read_text().replace(str(root), "<PROBE>")
                     for secret in secrets:
                         text = text.replace(secret, "<REDACTED>")
-                    (output / file.name).write_text(text)
+                    destination = output / file.relative_to(root)
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(text)
+            if cleanup_error:
+                raise RuntimeError('Scratch snapshot cleanup failed; inspect preserved evidence') from cleanup_error
 
 
 if __name__ == "__main__":
@@ -321,12 +522,17 @@ if __name__ == "__main__":
     parser.add_argument("--native-isolation", action="store_true", help="Test two native workers with routed worktrees")
     parser.add_argument("--plugin-root", type=Path,
                         help="Install a dereferenced Atelier package and exercise its real native hooks")
+    parser.add_argument('--marketplace', help='Install from this published GitHub marketplace instead of a local copy; expects dotfiles-agents')
+    parser.add_argument('--production-workflow', action='store_true',
+                        help='With --plugin-root, exercise manager/builder/reviewer and stop correction')
     args = parser.parse_args()
     if args.hook:
         hook(args.hook)
     elif not args.auth_source or not args.output:
         parser.error("--auth-source and a new --output directory are required")
+    elif (args.production_workflow or args.marketplace) and not args.plugin_root:
+        parser.error('--production-workflow and --marketplace require --plugin-root (expected manifest version)')
     else:
         run(args.auth_source.expanduser(), args.output.resolve(), args.model,
-            args.native_isolation, args.plugin_root)
+            args.native_isolation, args.plugin_root, args.production_workflow, args.marketplace)
         print(f"Evidence: {args.output.resolve()}; disposable home and credential copy removed")

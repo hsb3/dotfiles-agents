@@ -83,7 +83,7 @@ possible project workflow.
 | `rubric-panel` | Shared independent-judge procedure using native role dispatch. |
 | `handoff` | File/external target procedure; board body first, freshness stamp last. |
 | `builder` | Native role, owned checkout, patch routing and native replies exercised. |
-| `manager` | Native role and nested worker ownership; completion sentinel checked by the package gate. |
+| `manager` | Actual native manager → builder commit → manager integration → reviewer chain, with distinct nested ownership and proof upward. |
 | `scout` | Native role with canonical read/dispatch restrictions; no writer worktree. |
 | `reviewer` | Native review role with canonical read/dispatch restrictions; no writer worktree. |
 | `code-reviewer` | Native review role with canonical read/dispatch restrictions; no writer worktree. |
@@ -95,7 +95,7 @@ possible project workflow.
 | `comment-hygiene-gate` | Reads the effective routed diff; existing advisory behavior preserved. |
 | `worker-context` | Canonical role and owned-checkout context observed in actual installed worker input. |
 | `subagent-telemetry` | Actual installed completion rows retain native worker identity and model usage. |
-| `manager-package-gate` | Sentinel check on native manager SubagentStop; permits one correction, never an endless loop. |
+| `manager-package-gate` | Actual native malformed final → gate rejection → corrected proof package; permits one correction, never an endless loop. |
 | `context-watermark` | Actual trusted nudge using rollout effective context limit and latest usage, not cumulative/cache double-counting. |
 | `delegation-watermark` | Actual trusted nudge from authoritative PostToolUse events, including wrapped shell calls; native spawn resets the counter. |
 | `branch-activity-surfacer` | Actual peer detection distinguishes sessions sharing one app-server PID. |
@@ -104,7 +104,8 @@ possible project workflow.
 | `handoff-freshness-guard` | Actual trusted manual compaction denied missing/stale handoff and accepted fresh handoff. Native output uses `continue: false`; automatic-compaction behavior was not live-probed. |
 
 The runtime contract’s synthetic collision probe passed all eight assertions for Luna and
-Terra. Installed package tests additionally exercise production hook composition. Unit tests
+Terra. Installed package tests additionally exercise production hook composition. The installed isolation probe passed 11 checks and the installed manager workflow passed
+nine, including real child model/usage accounting. Unit tests
 cover routing failure, hostile paths, modified Git identity, activation transitions, setup
 ownership and native event contracts. Shared neutral doctrine landed in the sibling opencode
 repository in the same wave; harness-specific execution details stay outside its transform.
