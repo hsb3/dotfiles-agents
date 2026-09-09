@@ -510,15 +510,14 @@ class ConfigCustodyTests(unittest.TestCase):
             project_dir=main_dir,
         ))
 
-    def test_a_committed_copy_deleted_from_disk_does_not_govern(self):
-        """The `isfile` probe is the gate on the whole committed read: a tree
-        whose copy is gone from disk falls back rather than resurrecting it."""
+    def test_a_committed_copy_deleted_from_disk_still_governs(self):
+        """Removing a policy file cannot switch custody away from HEAD's policy."""
         main_dir = self._repo(patterns=("Makefile",))
         worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-g", "wt-g")
         self._commit_in(worktree, "---\nenforce: off\n---\n")
         os.remove(os.path.join(worktree, ".claude", "atelier.local.md"))
 
-        self._assert_denied(self._run_hook(
+        self._assert_silent(self._run_hook(
             self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
             project_dir=main_dir,
         ))

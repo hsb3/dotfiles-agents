@@ -337,7 +337,7 @@ class _Base(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.project = os.path.join(self.tmp.name, "project")
-        os.makedirs(os.path.join(self.project, ".claude"))
+        os.makedirs(os.path.join(self.project, ".claude"), exist_ok=True)
 
         saved = {name: os.environ.pop(name, None) for name in SCRUBBED_ENV}
 
@@ -537,6 +537,37 @@ class OutOfRootTests(_Base):
             self.assertEqual(
                 HOOKS[name]._resolve_override_path("docs/H.md", self.project),
                 os.path.join(self.project, "docs", "H.md"), name)
+
+
+class PolicyPlacementTests(_Base):
+    def test_multiple_native_agents_use_the_shared_policy(self):
+        os.makedirs(os.path.join(self.project, ".claude"), exist_ok=True)
+        os.makedirs(os.path.join(self.project, ".codex"))
+        self.assertEqual(
+            atelier_local.activation_path(self.project, inherit=False),
+            os.path.join(self.project, ".agents", "atelier.local.md"))
+
+    def test_multiple_agents_fall_back_to_an_existing_native_policy(self):
+        os.makedirs(os.path.join(self.project, ".codex"))
+        path = os.path.join(self.project, ".claude", "atelier.local.md")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
+
+    def test_shared_policy_outranks_one_native_policy(self):
+        path = os.path.join(self.project, ".agents", "atelier.local.md")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
+
+    def test_shared_policy_is_discovered_without_a_native_directory(self):
+        os.rmdir(os.path.join(self.project, ".claude"))
+        path = os.path.join(self.project, ".agents", "atelier.local.md")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
 
 
 # ---------------------------------------------------------------------------

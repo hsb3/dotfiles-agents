@@ -125,8 +125,8 @@ bundle's other skills (layer-cycle, waves) build on.
 
 ## Codex
 
-Activation uses `.codex/atelier.local.md` in fresh projects, with existing `.claude`
-policies retained as fallback. The activation skill defines override and worktree precedence.
+Activation uses the sole configured native agent directory or `.agents` for multiple
+agents. The activation skill defines safe migration, overrides and worktree precedence.
 
 Uses the same workflow with generated project roles and native worker routing. See the
 [Codex distribution procedures](references/dispatch-knobs.md#codex-distribution)
@@ -134,3 +134,9 @@ for setup, ownership-safe refresh, role names, and completion handling.
 
 Codex managers may assemble verified child commits on their own worktree branch; final
 project integration remains with the strategist. Native role setup enables the required nesting.
+
+Atelier policy selection follows configured agent directories, using `.agents` for
+multiple agents; setup migrates identical policies safely and runtime reads stay read-only.
+
+Codex dispatch setup uses activation `codex-setup` followed by `check --harness codex`,
+so native profile generation and configured-agent policy placement stay consistent.

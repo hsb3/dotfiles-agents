@@ -55,7 +55,7 @@ its commitment, the other cuts comments that cannot.
 | `layer-cycle` | skill | Drive a module through create → evaluate → refine cycles until convergence or budget exhaustion — invokes `rubric-panel`, triages findings into scoped fix briefs and `deletion-pass` runs, amends the contract at the orchestrator level only. Its defect branch now cites `test-quality` (ships in `solo-skills`) for what "red observed" has to mean, so a fix cannot be encoded as a test that could never fail. |
 | `comment-hygiene` | skill | Strip history and commentary out of source comments before the work lands: harvest the reasoning onto its tracker item first, then keep only what a competent reader would break something without. The prose counterpart of `deletion-pass` — that one cuts code that cannot name its commitment, this one cuts comments that cannot. |
 | `activation` | skill | Create and verify the harness-appropriate per-project activation file that arms the hooks below — distinguishes not configured from armed from present-but-silently-inert, since every hook loader fails open and the three look identical otherwise. |
-| `activate` | command | `/atelier:activate` — arms atelier in the current project: creates the activation file if it is missing, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and is safe to hand to an agent: it never overwrites an existing file unasked. |
+| `activate` | command | `/atelier:activate` — arms atelier in the current project: creates or safely relocates the activation file, then says in plain language what each hook actually resolved, including any key that is present but silently doing nothing. Drives the `activation` skill rather than repeating it, and preserves existing policy unless a reset is requested. |
 | `scout` | agent | Read-only recon — locate definitions, confirm presence/absence, inventory a scope, or reconcile evidence across files; returns a conclusion with path:line evidence, never a file dump. Declares the `light` tier. |
 | `builder` | agent | Scoped implementation working inside an owned file list against explicit acceptance criteria. Defaults to a mid tier; dispatched at a higher tier for coupled or costly-to-unwind slices. |
 | `reviewer` | agent | Adversarial, report-only verification — re-derives each claim from its cited source and re-runs its commands; never edits or fixes. Routes each out-of-scope finding to a destination — a sibling site, an open item, the wave's hardening list, or a new item — as a recommendation for its dispatcher, since it may not file one itself. |
@@ -89,7 +89,8 @@ codex plugin add atelier@dotfiles-agents
 ```
 
 Use Python 3.11 or newer for Codex setup. Invoke the installed activation skill for the consumer project. It creates the local
-`.codex/atelier.local.md` policy (preserving an existing legacy `.claude` policy), then its `codex-setup` command renders five canonical
+policy in the sole configured native directory or `.agents` for multiple agents.
+Its `codex-setup` command reconciles placement after creating `.codex` and renders five canonical
 `atelier-<role>` profiles under `.codex/agents/` and project sandbox writable roots. It preserves
 user-owned and edited configuration. Restart the session
 and review/trust the installed hooks in native `/hooks`; setup cannot grant trust.
@@ -148,33 +149,29 @@ layers, and the practical difference between them is when a change takes effect.
 
 ### Per-project settings — `atelier.local.md`
 
-The Claude Code convention for plugin-local settings is a `.claude/<plugin-name>.local.md` file
-in the project root: YAML frontmatter for the settings, markdown below it for your own notes.
-Fresh Codex projects use `.codex/atelier.local.md`; Claude Code uses `.claude/atelier.local.md`. It does not exist by default, and its absence is the
-normal state — without it the enforcement layer is entirely off. In Claude Code, run `/atelier:activate` and it
-is done for you: the file is created if missing, then checked, and you get back what each hook
-actually resolved in plain language. Ask an agent to run it and the same thing happens
-unattended. Reach for either instead of hand-copying the schema block below.
+Atelier keeps `atelier.local.md` in the sole configured agent's native directory
+(`.claude`, `.codex` or `.opencode`), or `.agents` when multiple agents are configured.
+Native directories and root `opencode.json`/`opencode.jsonc` files identify agents;
+installed binaries, instruction files and `.agents` itself do not.
+Symlinks are not configuration markers. With no configured
+agent, creation defaults to the current harness.
 
-Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
-existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
-`.claude` file. A relative explicit override is anchored at the target project root. When
-both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
-malformed, unreadable or missing explicit file never falls back to another policy; `check`
-reports it. A linked worktree uses its own selected file, or inherits the main checkout's
-selection when neither local candidate exists. Config custody retains its additional rule:
-worker edits are governed by the selected policy committed at that worktree's HEAD, so
-uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
+`ATELIER_ACTIVATION_FILE` is authoritative, relative to the project root when relative.
+Otherwise readers select an existing `.agents` policy first, the canonical location next,
+then legacy `.claude`, `.codex`, `.opencode` locations in that fixed order. A selected
+malformed file never falls back. A worktree's local policy wins before main-checkout
+inheritance. Runtime readers never migrate files. `create` and setup move an existing
+policy without changing its bytes or permissions, coalesce byte-identical duplicates,
+and reject divergent policies before any mutation, even with `--force`. Repeating
+`create` leaves an existing canonical policy unchanged. Existing handoff paths and
+stamps remain unchanged.
 
-In Codex invoke the activation skill directly and follow the Codex setup steps above.
-
-Under the Claude command sits the `activation` skill, which is what an agent loads when it needs to
-reason about activation mid-task rather than just perform it. To drive it directly from the
-project root:
+Config custody selects the policy and configured-agent markers from committed HEAD;
+uncommitted policy and directory changes cannot weaken worker protection.
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py"
-python3 "$S" create   # write .claude/atelier.local.md and gitignore it
+python3 "$S" create   # create or safely migrate the selected policy
 python3 "$S" check    # per key: armed, inert, or not configured
 ```
 
@@ -286,6 +283,9 @@ It is a local file, so ignore it:
 
 ```gitignore
 .claude/*.local.md
+.codex/*.local.md
+.opencode/*.local.md
+.agents/*.local.md
 ```
 
 ### Session-wide settings — environment variables

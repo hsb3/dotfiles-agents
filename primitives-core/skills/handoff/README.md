@@ -25,8 +25,8 @@ skill runs and the waves skill drives across a backlog.
 
 ## Codex
 
-Activation uses `.codex/atelier.local.md` in fresh projects, with existing `.claude`
-policies retained as fallback. The activation skill defines override and worktree precedence.
+Activation uses the sole configured native agent directory or `.agents` for multiple
+agents. The activation skill defines safe migration, overrides and worktree precedence.
 
 The same activation routing, external-update-before-stamp ordering, and cold-start pointer apply. Trusted native PreCompact hooks interrupt manual compaction for stale or absent signals; automatic compaction warns.
 

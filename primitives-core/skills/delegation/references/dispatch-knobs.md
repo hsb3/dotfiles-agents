@@ -133,14 +133,15 @@ distribution-specific blocks. Claude Code continues to use the procedures above.
 
 **Set up before dispatch.** Locate the installed atelier package from this loaded skill's
 absolute path: it is three directories above `references/dispatch-knobs.md`. Run
-`python3 "<atelier-package>/hooks/_lib/codex_roles.py" "<project-root>"`, then repeat with
-`--check`. Start a fresh Codex session after initial setup so project agent discovery sees the
+`python3 "<atelier-package>/skills/activation/scripts/activation.py" codex-setup
+--project-dir "<project-root>"`, then run the same script with `check --harness codex
+--project-dir "<project-root>"`. Full setup reconciles policy placement after creating `.codex`. Start a fresh Codex session after initial setup so project agent discovery sees the
 profiles. Setup generates `.codex/agents/atelier-*.toml` from the installed package, and refreshes
 only files whose ownership checksum still matches. An existing user file or an edited generated
 file is a visible error; resolve it deliberately, never force an overwrite. Keep these generated
 profiles out of commits using the project's local git exclusion mechanism. No global agent or
-config file is required. Repeat setup after a plugin update; `--check` reports stale profiles
-without writing. Setup is the strategist's job, never a worker's.
+config file is required. Repeat setup after a plugin update; `check --harness codex` reports stale profiles
+and needed policy migration without writing. Setup is the strategist's job, never a worker's.
 
 Use native role names `atelier-manager`, `atelier-builder`, `atelier-reviewer`,
 `atelier-code-reviewer`, and `atelier-scout`. Profiles resolve their canonical `tier` through the

@@ -9,17 +9,16 @@ it there and follow it; do not restate it here and do not re-derive it from memo
 
 <!-- harness:claude-code -->
 Target project: `$1` if one was given, otherwise the current project root. Its activation
-file is `.claude/atelier.local.md` in Claude Code. Codex uses the activation skill
-directly with `.codex/atelier.local.md` and legacy fallback; no native slash command is registered.
+file follows the activation skill’s configured-agent selection. Codex invokes that
+skill directly; no native slash command is registered.
 <!-- /harness -->
 
 ## What to do
 
 1. Load `atelier:activation`.
-2. If the target's activation file does **not** exist, run the skill's `create`. If it
-   already exists, leave it as it is — **never pass `--force`** unless the person asked
-   for a reset in this same turn. The file holds hand-tuned local settings, it is
-   gitignored, and overwriting it destroys the only copy.
+2. Run the skill's `create` without `--force`. It safely migrates an existing identical
+   policy to its canonical location, and refuses a divergent copy. Use `--force` only
+   when the person asked for a reset in this same turn.
 3. Run the skill's `check`.
 4. Report the result in the form below.
 

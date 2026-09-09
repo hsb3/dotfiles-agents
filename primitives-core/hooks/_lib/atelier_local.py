@@ -25,11 +25,75 @@ def harness_name():
         "codex" if os.environ.get("CODEX_THREAD_ID") else "claude-code")
 
 
+def configured_agents(project_dir):
+    """Native agents configured by project files, never installed executables."""
+    agents = []
+    for name in ("claude", "codex", "opencode"):
+        if (os.path.isdir(os.path.join(project_dir, "." + name))
+                and not os.path.islink(os.path.join(project_dir, "." + name))):
+            agents.append(name)
+    if "opencode" not in agents and any(os.path.isfile(os.path.join(project_dir, name))
+           and not os.path.islink(os.path.join(project_dir, name))
+           for name in ("opencode.json", "opencode.jsonc")):
+        agents.append("opencode")
+    return tuple(agents)
+
+
+def _destination(agents):
+    if len(agents) > 1:
+        return ".agents/atelier.local.md"
+    native = agents[0] if agents else {"claude-code": "claude"}.get(harness_name(), harness_name())
+    return "." + native + "/atelier.local.md"
+
+
+def _candidates(agents, shared):
+    paths = ([".agents/atelier.local.md"] if shared else []) + [_destination(agents)]
+    paths.extend("." + name + "/atelier.local.md" for name in ("claude", "codex", "opencode"))
+    return list(dict.fromkeys(paths))
+
+
 def activation_candidates(project_dir):
-    """Ordered local policy names; existence and parsing never change this order."""
-    directories = (".codex", ".claude") if harness_name() == "codex" else (".claude",)
+    """Shared policy, canonical destination, then fixed native legacy order."""
+    return [os.path.join(project_dir, path) for path in _candidates(
+        configured_agents(project_dir),
+        os.path.lexists(os.path.join(project_dir, ".agents/atelier.local.md")))]
+
+
+def committed_activation_candidates(project_dir):
+    """Apply the same selector to HEAD's tree, never mutable working files."""
+    try:
+        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        result = subprocess.run(["git", "-C", project_dir, "ls-tree", "-z", "HEAD"],
+                                env=env, capture_output=True, text=True, timeout=3, check=True)
+        entries = {}
+        for record in result.stdout.split("\0"):
+            if record:
+                metadata, name = record.split("\t", 1)
+                entries[name] = metadata.split()[0]
+        agents = [name for name in ("claude", "codex", "opencode")
+                  if entries.get("." + name) == "040000"]
+        if "opencode" not in agents and any(entries.get(name) in ("100644", "100755")
+                for name in ("opencode.json", "opencode.jsonc")):
+            agents.append("opencode")
+        shared = subprocess.run(["git", "-C", project_dir, "cat-file", "-e",
+                                 "HEAD:.agents/atelier.local.md"], env=env,
+                                capture_output=True, timeout=3).returncode == 0
+        return _candidates(agents, shared)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+
+
+def policy_paths(project_dir):
+    """Every policy location setup must inspect before it changes placement."""
     return [os.path.join(project_dir, directory, "atelier.local.md")
-            for directory in directories]
+            for directory in (".claude", ".codex", ".opencode", ".agents")]
+
+
+def activation_destination(project_dir):
+    """Canonical creation location; explicit overrides remain authoritative."""
+    override = os.environ.get("ATELIER_ACTIVATION_FILE")
+    return os.path.abspath(os.path.join(project_dir, override)) if override else os.path.join(
+        project_dir, _destination(configured_agents(project_dir)))
 
 
 def activation_path(project_dir, inherit=True):

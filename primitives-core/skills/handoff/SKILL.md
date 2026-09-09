@@ -34,9 +34,9 @@ mismatch means the hooks act on a different file than this skill writes.
 file:
 
 <!-- harness:claude-code -->
-Use the activation skill’s selected file: `.codex/atelier.local.md` in fresh Codex
-projects, with existing `.claude/atelier.local.md` as legacy fallback; Claude Code uses
-`.claude/atelier.local.md`. `ATELIER_ACTIVATION_FILE` wins on both. Never merge both files.
+Use the activation skill’s selected policy in the sole native agent directory or
+`.agents` for multiple agents. `ATELIER_ACTIVATION_FILE` wins. Preserve existing
+handoff paths and stamps when policy placement changes.
 <!-- /harness -->
 
 ```markdown
