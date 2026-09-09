@@ -43,7 +43,7 @@
       "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.11.9"
+      "version": "0.11.10"
     },
     {
       "author": {
@@ -70,7 +70,7 @@
       "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The supporting standards ship with it: the project-memory taxonomy whose checklist rows the audit and the scaffold both read, and the item-body form the desk writes tracker items to. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "mise-en-place",
       "source": "./plugins/mise-en-place",
-      "version": "0.4.1"
+      "version": "0.4.2"
     },
     {
       "author": {
