@@ -33,3 +33,6 @@ claude plugin install diagrams@dotfiles-agents
 ```
 
 Ships in the `diagrams` bundle.
+
+Resolve the helper from the loaded skill's absolute directory in either client. MCP tool
+prefixes are discovered at runtime; direct scene authoring and the offline renderer need no MCP.

@@ -16,6 +16,11 @@ description: >-
 
 # Mise-en-place scaffold
 
+Resolve `<plugin-root>` to the installed package directory containing this skill's `skills/`
+parent, using the loaded skill's absolute path. Do not assume a shell variable is set by the
+client. Substitute that absolute path in the commands below; both Claude Code and Codex can
+run them from the target repository.
+
 The pair to the read-only compliance audit: the audit measures, this fills the gaps.
 One code path serves brownfield compliance and new-repo setup — against a fresh
 `git init` with a filled manifest, one `--apply` produces the full standard.
@@ -29,7 +34,7 @@ One code path serves brownfield compliance and new-repo setup — against a fres
 3. **Plan, and present the plan before applying** (from the target repo's root):
 
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/mise-en-place-scaffold/scripts/scaffold.py" --plan
+   python3 "<plugin-root>/skills/mise-en-place-scaffold/scripts/scaffold.py" --plugin-root "<plugin-root>" --plan
    ```
 
    Show the table verbatim: planned creations, conflicts (with diffs), and manual
@@ -37,7 +42,7 @@ One code path serves brownfield compliance and new-repo setup — against a fres
 4. **Apply** only after the plan is reviewed:
 
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/skills/mise-en-place-scaffold/scripts/scaffold.py" --apply
+   python3 "<plugin-root>/skills/mise-en-place-scaffold/scripts/scaffold.py" --plugin-root "<plugin-root>" --apply
    ```
 
 5. **Re-run the audit** — created rows PASS; conflict and deferred rows still GAP with
@@ -45,7 +50,7 @@ One code path serves brownfield compliance and new-repo setup — against a fres
 6. The owner resolves the judgment items (or accepts them) and commits — the scaffold
    never runs `git add`/`git commit`.
 
-Outside the harness pass `--plugin-root <dir>` pointing at a root that contains
+The `--plugin-root` package must contain
 `skills/repo-meta-structure/` (checklist + assets) and `skills/project-memory/`.
 
 ## Hard rules

@@ -51,3 +51,7 @@ claude plugin install solo-skills@dotfiles-agents
 ```
 
 Needs only `python3` (stdlib); YAML specs additionally need PyYAML, JSON specs never do.
+
+## Codex
+
+In Codex, keep the one-shot server in an `exec_command` session and use bounded `write_stdin` waits. Read saved answers after a successful process exit; a timeout never supplies approval.

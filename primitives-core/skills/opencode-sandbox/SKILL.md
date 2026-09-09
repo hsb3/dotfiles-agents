@@ -1,6 +1,6 @@
 ---
 name: opencode-sandbox
-description: Spin up a disposable, isolated opencode instance and hand it to this session as an MCP server — a sandboxed coding agent with its own workspace volume that cannot see the host filesystem. Use when the user asks for a sandbox, a scratch agent, an isolated or throwaway opencode instance, a place to let an agent work on a copy of a project, or says "opencode-sandbox", "sandbox this project", or "give me an isolated agent". Covers installing the CLI, seeding project context, custom config and plugins, worktrees inside the instance, registering with claude mcp add, and destroying it afterward.
+description: Spin up a disposable, isolated opencode instance and hand it to this session as an MCP server — a sandboxed coding agent with its own workspace volume that cannot see the host filesystem. Use when the user asks for a sandbox, a scratch agent, an isolated or throwaway opencode instance, a place to let an agent work on a copy of a project, or says "opencode-sandbox", "sandbox this project", or "give me an isolated agent". Covers installing the CLI, seeding project context, custom config and plugins, worktrees inside the instance, registering with the current client, and destroying it afterward.
 ---
 
 # opencode sandbox
@@ -75,11 +75,16 @@ Decide this before running `create`, not after:
 
 2. **Register.** `create` prints the exact registration line, and `opencode-sandbox url
    <name>` reprints it. Run that line rather than composing the URL yourself — note that
-   `url` emits the whole command, so it will not substitute into one:
+   `url` emits a Claude Code command, so it will not substitute into one. For Claude Code:
 
    ```
    claude mcp add --transport http <name> http://127.0.0.1:<port>/mcp
    ```
+
+   For Codex, take the URL from that output and use
+   `codex mcp add <name> --url http://127.0.0.1:<port>/mcp`. Check with
+   `codex mcp list`; use a unique name and do not overwrite an unrelated registration.
+   Registration changes the selected client's configuration, never the other client's.
 
    MCP servers load at session start, so the session that registers an instance cannot use
    it. Register, then start a new session in that directory.
@@ -89,6 +94,9 @@ Decide this before running `create`, not after:
    ```
    claude mcp remove <name> && opencode-sandbox destroy <name>
    ```
+
+   In Codex, unregister with `codex mcp remove <name>` instead, then run the same
+   `opencode-sandbox destroy <name>`. Remove only the registration created for this instance.
 
    `destroy` deletes the workspace volume with everything in it. Salvage first —
    `opencode-sandbox export <name> <dir>` copies the whole workspace out (works even while

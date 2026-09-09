@@ -15,6 +15,11 @@ description: >-
 
 # Repo compliance audit
 
+Resolve `<plugin-root>` to the installed package directory containing this skill's `skills/`
+parent, using the loaded skill's absolute path. Do not assume a shell variable is set by the
+client. Substitute that absolute path in the commands below; both Claude Code and Codex can
+run them from the target repository.
+
 The rollout's measuring instrument: one command, a pass/gap table, exit 0 either way.
 The output IS the compliance checklist — do not maintain a separate tracking document.
 
@@ -23,11 +28,11 @@ The output IS the compliance checklist — do not maintain a separate tracking d
 From the **audited repo's root** (the script resolves the git toplevel of the cwd):
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/repo-compliance-audit/scripts/audit.py"
+python3 "<plugin-root>/skills/repo-compliance-audit/scripts/audit.py" --plugin-root "<plugin-root>"
 ```
 
-The script finds the checklists via `$CLAUDE_PLUGIN_ROOT` automatically; outside the
-harness pass `--plugin-root <dir>` pointing at a root that contains
+The explicit `--plugin-root` locates the checklists without client-specific environment.
+When supplied, `$CLAUDE_PLUGIN_ROOT` remains the legacy default. The package must contain
 `skills/repo-meta-structure/references/checklist.md` and
 `skills/project-memory/references/checklist.md`.
 

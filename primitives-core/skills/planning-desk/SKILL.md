@@ -54,6 +54,9 @@ milestone/gate vocabulary a board speaks.
 
 ## Setup
 
+Resolve `scripts/` and `assets/` below from this loaded skill's absolute directory, not the
+consumer working directory. This applies in both Claude Code and Codex.
+
 1. `mkdir -p _meta/plans/_utils/adapters`; copy `tracker.py`, the three analysis scripts, and
    `adapters/` out of `scripts/_utils/`, and `assets/plans-README.md` to `_meta/plans/README.md`
    (its `ACTIVE plans` / `ARCHIVED (` markers are parsed - keep them). No install.

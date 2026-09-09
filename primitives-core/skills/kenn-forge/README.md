@@ -34,7 +34,9 @@ running any `kenn-forge` subcommand.
 
 A running kenn-forge daemon (`kenn-forge daemon status`). The MCP tools additionally need
 `[mcp].enabled = true` in the daemon's config and the server registered with the client:
-`claude mcp add --transport http kenn-forge http://127.0.0.1:8092/mcp`. Without the daemon
+`claude mcp add --transport http kenn-forge <endpoint>` for Claude Code, or
+`codex mcp add kenn-forge --url <endpoint>` for Codex. Get the current endpoint from
+`kenn-forge mcp quickstart`. Without the daemon
 the skill has nothing to read — it is a client, not a data store.
 
 ## Provenance
@@ -51,3 +53,7 @@ redistributed here. Full reasoning in the "Not externals" note in `externals.yam
 ```
 claude plugin install kenn-forge@dotfiles-agents
 ```
+
+## Codex
+
+Codex can use the same daemon: read its current endpoint with `kenn-forge mcp quickstart`, then `codex mcp add kenn-forge --url <endpoint>`. Discover callable tool prefixes in-session. The CLI also works when MCP is unavailable.

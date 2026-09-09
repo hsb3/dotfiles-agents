@@ -31,7 +31,7 @@ grid, or pattern is meant to be used; generating Carbon-faithful code with the
 
 ## Access
 
-The hosted server requires an **IBM-approved account** — authenticate with `/mcp` after
+The hosted server requires an **IBM-approved account** — authenticate through the current client's connection controls after
 install; request approval at <https://mcp.carbondesignsystem.com>. Unapproved sessions
 still get the skill's protocol knowledge and the public-docs fallback. The server URL is
 a literal in the spec (not `${ENV}`) deliberately: it is IBM's single public deployment,
@@ -61,3 +61,7 @@ claude plugin install carbon@dotfiles-agents
 
 Since the decision-020 sweep the `carbon` plugin is this skill's only home — it used to
 ship from `solo-skills` as well, which registered no Carbon MCP server for it.
+
+## Codex
+
+Discover MCP tools through the current client. Codex uses plugin connection controls or its MCP login command for a CLI registration; public-doc fallback uses the available page-fetch tool. No Claude runtime is required.
