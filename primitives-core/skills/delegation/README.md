@@ -125,6 +125,9 @@ bundle's other skills (layer-cycle, waves) build on.
 
 ## Codex
 
+Activation uses `.codex/atelier.local.md` in fresh projects, with existing `.claude`
+policies retained as fallback. The activation skill defines override and worktree precedence.
+
 Uses the same workflow with generated project roles and native worker routing. See the
 [Codex distribution procedures](references/dispatch-knobs.md#codex-distribution)
 for setup, ownership-safe refresh, role names, and completion handling.
