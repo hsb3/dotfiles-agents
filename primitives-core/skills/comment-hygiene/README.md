@@ -18,3 +18,9 @@ claude plugin install atelier@dotfiles-agents
 ```
 
 Ships in the atelier bundle, where layer-cycle invokes it as part of the refine phase.
+
+## Codex
+
+Uses the same workflow with generated project roles and native worker routing. See the
+[Codex distribution procedures](../delegation/references/dispatch-knobs.md#codex-distribution)
+for setup, ownership-safe refresh, role names, and completion handling.

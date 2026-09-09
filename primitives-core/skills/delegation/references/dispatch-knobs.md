@@ -68,9 +68,9 @@ The channel is `SendMessage` addressed to the agent's id. It reaches an agent th
 running as well as one that has finished.
 <!-- /harness -->
 
-**Downward it is one-way.** `scout`, `builder`, and `reviewer` have no channel of their own, so a
-message to a live execution agent arrives and cannot be answered: the callee has no tool with
-which to send anything before it finishes. Send amendments, never questions, and never block on
+**Downward it is one-way.** `scout`, `builder`, and `reviewer` have no authorized channel of their
+own, so a message to a live execution agent arrives and cannot be answered before it finishes.
+Send amendments, never questions, and never block on
 the reply — it is the callee's final report. `waiting.md` has the rule and the alternatives.
 
 <!-- harness:claude-code -->
@@ -80,13 +80,13 @@ carries the liveness check for telling a dead callee from a slow one.
 
 ## Agent capabilities and the git policy
 
-- **Spawn authority is structural.** `manager` is the only shipped agent that can dispatch;
-  `scout`, `builder`, and `reviewer` cannot delegate onward. That is the layer boundary enforced
-  by the tool list rather than by prose.
+- **Spawn authority is enforced.** `manager` is the only shipped agent that can dispatch;
+  execution roles cannot delegate onward. The harness enforces this through tool availability
+  or a tool guard; prose alone does not establish the layer boundary.
 - `builder`, `reviewer`, and `manager` have full shell. Briefs should require them to run their own
   verification commands and paste the actual output.
-- `scout` has a shell but no write or edit tools — it cannot write a file, and that half
-  of its read-only guarantee is structural (the tools are absent). Shell *authority* is not
+- `scout` has a shell but no authority to use write or edit tools. The harness must enforce
+  that boundary through tool availability or a tool guard. Shell *authority* is not
   structural: scout's default posture is no shell, and a brief must name the exact read-only
   command(s) it grants — no substitutes, no ungranted flags. Granting scout a command is a real
   decision with a real cost; grant reads only, and only what the brief needs answered.
@@ -120,4 +120,69 @@ carries the liveness check for telling a dead callee from a slow one.
 The tools behind the spawn-authority bullet: `manager` carries `Agent` and `SendMessage`, and
 `scout`, `builder`, and `reviewer` do not. `scout` additionally lacks `Edit`, `Write`, and
 `NotebookEdit`.
+<!-- /harness -->
+
+<!-- harness:claude-code -->
+## Codex distribution
+
+This block belongs to this repository's distribution, which serves Claude Code and Codex;
+the opencode peer supplies its own procedures. In Codex, use this section for tool names,
+model selection, setup, and routing wherever a workflow names Claude Code mechanics.
+The role renderer includes this section after the neutral role contract and removes all other
+distribution-specific blocks. Claude Code continues to use the procedures above.
+
+**Set up before dispatch.** Locate the installed atelier package from this loaded skill's
+absolute path: it is three directories above `references/dispatch-knobs.md`. Run
+`python3 "<atelier-package>/hooks/_lib/codex_roles.py" "<project-root>"`, then repeat with
+`--check`. Start a fresh Codex session after initial setup so project agent discovery sees the
+profiles. Setup generates `.codex/agents/atelier-*.toml` from the installed package, and refreshes
+only files whose ownership checksum still matches. An existing user file or an edited generated
+file is a visible error; resolve it deliberately, never force an overwrite. Keep these generated
+profiles out of commits using the project's local git exclusion mechanism. No global agent or
+config file is required. Repeat setup after a plugin update; `--check` reports stale profiles
+without writing. Setup is the strategist's job, never a worker's.
+
+Use native role names `atelier-manager`, `atelier-builder`, `atelier-reviewer`,
+`atelier-code-reviewer`, and `atelier-scout`. Profiles resolve their canonical `tier` through the
+OpenAI column in `hooks/_lib/model_catalog.json`; Claude keywords stay on the Claude path.
+The active parent model is unchanged. A deliberate model or reasoning override follows the
+available native spawn schema; preserve the requested role, and verify the actual selected
+model in the child's start evidence. Never replace a reviewer with a builder to buy a cheaper
+model. The model catalog records API windows; use measured Codex session context limits for
+context budgeting.
+
+**Dispatch through the native tool the session exposes.** On `spawn_agent`, set `agent_type`
+to the native role, `fork_context: false`, and supply the curated brief as `message`. On
+`collaboration.spawn_agent`, set `agent_type` to the same role, a unique `task_name`,
+`fork_turns: "none"`, and the curated brief as `message`. Do not hand-write encrypted hook
+payloads. If the exposed tool has no role selector, stop and report that unsupported interface;
+a role name mentioned only in the prompt is not registration. Each brief carries owned files,
+acceptance commands, absolute context paths, and an escalation contact. Only a manager may
+dispatch children; execution roles' spawn and message tools are denied by the worker guard.
+
+**Isolation is a prerequisite to writing.** Arm atelier activation and verify the worker's
+registered worktree, branch, and index before edits. The worker hook binds the actual native
+agent identity to its tree and routes shell and patch operations there. A `cwd` or `isolation`
+field injected into native spawn does not bind a worktree. A missing binding or removed tree
+must stop worker writes, never fall back to the parent checkout. Use absolute owned paths in
+the bound tree. Routing prevents worktree collisions; it is not an OS security sandbox.
+
+**Completion and continuation.** Record the returned native ID or task name and which manager
+owns it. Keep the manager turn open through fan-in. Use the available native wait with a bound
+(`wait_agent`, or `wait` on explicit IDs); after it wakes, read the worker's actual final report
+and status. A timeout is not completion. Send amendments to a running child with `send_message`;
+resume an idle child with `followup_task` on the collaboration surface, or `send_input` on the
+ID-based surface. Native `resume_agent` reopens a closed agent when available; it does not
+replace sending the amendment. Do not close/remove a worker while another amendment is possible.
+If a completion reaches the strategist instead, relay it verbatim to its owning manager and
+resume that manager as needed. Never substitute a guessed report or inspect another worker's
+private conversation to reconstruct it. Integrating commits, pushing, merging, and retiring
+worktrees remain the strategist's work.
+
+Companion skills are the installed sibling `skills/<name>/SKILL.md` paths in this package:
+`delegation`, `waves`, `rubric-panel`, `deletion-pass`, `layer-cycle`, and `comment-hygiene`.
+Use `atelier-reviewer` for independent verification and panel judges, `atelier-code-reviewer`
+for simplification review, and `atelier-builder` for scoped edits. Reviewers return reports;
+the dispatching layer writes any requested report artifact. The bundled scope counter is
+`skills/delegation/scripts/scope.py`; pass absolute owned paths to it from the consumer tree.
 <!-- /harness -->

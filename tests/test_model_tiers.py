@@ -286,6 +286,15 @@ class TestNetworkModesTakeTheUpstreamTheyAreGiven(unittest.TestCase):
         return unittest.mock.patch.object(
             GATE, "_fetch", side_effect=AssertionError("re-fetched an upstream it was handed"))
 
+    def test_projection_excludes_models_without_a_positive_token_window(self):
+        upstream = {"openai": {"models": {
+            str(value): {"limit": {"context": value}}
+            for value in (0, -1, True, None, "1000", 1000)
+        }}}
+        self.assertEqual(GATE.project(upstream, ["openai"]), {
+            "openai": {"1000": {"context": 1000}}
+        })
+
     def test_drift_does_not_refetch_an_empty_upstream(self):
         with self._no_network():
             found = GATE.drift(upstream={})
@@ -294,9 +303,10 @@ class TestNetworkModesTakeTheUpstreamTheyAreGiven(unittest.TestCase):
     def test_drift_is_clean_against_the_upstream_it_is_handed(self):
         catalog = _shipped()
         upstream = {
-            "anthropic": {"models": {
+            provider: {"models": {
                 mid: {"limit": {"context": row["context"]}}
-                for mid, row in catalog["providers"]["anthropic"].items()}}}
+                for mid, row in models.items()}}
+            for provider, models in catalog["providers"].items()}
         with self._no_network():
             self.assertEqual(GATE.drift(upstream=upstream), [])
 

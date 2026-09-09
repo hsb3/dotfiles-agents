@@ -5,6 +5,12 @@ description: Simplify a module to irreducible against its contract — remove or
 
 # Deletion pass
 
+<!-- harness:claude-code -->
+In Codex, first read [Codex distribution](../delegation/references/dispatch-knobs.md#codex-distribution)
+for installed role setup, native dispatch, isolation prerequisites, and completion routing.
+That section supplies the Codex procedures wherever this workflow names Claude Code tools.
+<!-- /harness -->
+
 Every line is a commitment: pure transformation (the spec's semantics),
 mutation control (validation, guards, error paths), development-time
 constraint (types), or observability. A line that can name none of these

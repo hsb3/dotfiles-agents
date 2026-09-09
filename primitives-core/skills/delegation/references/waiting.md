@@ -30,9 +30,9 @@ The three commonest producers that do not exist:
 
 ## Messages to a live execution agent are one-way
 
-`manager` is the only shipped agent with a channel pointing downward; `scout`, `builder`, and
-`reviewer` have none (`agents/*.md` frontmatter). So a message to a live execution agent
-**arrives and cannot be answered**. The callee has no tool with which to send anything before it
+`manager` is the only shipped agent authorized to send messages; execution roles have no
+authorized channel. The harness enforces that boundary through unavailable tools or a tool
+guard. A message to a live execution agent **arrives and cannot be answered** before it
 finishes. Waiting on that answer is the deadlock two managers hit in one session `[field]`.
 
 <!-- harness:claude-code -->
@@ -60,13 +60,10 @@ your report is the only thing you can send, and it is sent by finishing.
 
 ## Where a worker's completion actually goes
 
-**A worker's completion reaches the agent that dispatched it only if that agent is still mid-turn
-when the worker finishes** `[measured]`. An agent whose turn has already ended is never re-invoked by
-its child's completion. Delivery is therefore a race against the dispatcher's own turn ending, and
-a manager that dispatches in the background and then stops talking loses it by construction. This
-was established by a controlled headless probe rather than by unreproduced observation — but the
-probe ran on one harness, so the mechanism it measured is recorded as that harness's rather than as
-doctrine.
+**Keep the dispatcher's turn open through fan-in.** Completion routing and continuation are
+harness-specific; use the measured route in the distribution's dispatch procedures. Never assume
+a child's completion re-invokes a finished manager. The controlled headless probe below measured
+one harness, not a universal routing contract.
 
 <!-- harness:claude-code -->
 **The mechanism, measured here.** Every completion is enqueued to the top-level session first and
@@ -85,12 +82,12 @@ only in what the manager was doing at that moment:
   a signal that may simply never exist rather than one that is merely late.
 <!-- /harness -->
 
-**So never let a completion notification be the thing you are blocked on.**
+**Never wait indefinitely for a completion notification.** A bounded native wait with a named
+producer and a fallback is the supported fan-in; a notification assumed to arrive is not.
 
-- **Dispatch synchronously unless you actually need concurrency** `[measured]`. A synchronous
-  dispatch hands the worker's result back as an ordinary tool result — no queue, no notification,
-  no race — and it is the only route measured on this harness to deliver every time. It is the
-  default; a background dispatch is the deviation and needs a reason.
+- **Use a synchronous dispatch when the harness supplies it and concurrency is unnecessary.**
+  Otherwise use its native bounded wait, then read the actual completion record. A timeout is
+  neither completion nor a reason to invent the worker's report.
 - **Fan out inside one turn, and stay in that turn until the fan-in** `[untested]`. Concurrency is
   still worth having; what breaks it is ending the turn while workers run. Hold the turn open with
   your own real work — reviewing the last link, drafting the next brief — never with a sleep,

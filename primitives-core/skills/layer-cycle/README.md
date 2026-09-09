@@ -22,3 +22,9 @@ claude plugin install atelier@dotfiles-agents
 
 Ships in the `atelier` bundle — pairs with rubric-panel and deletion-pass, both also in the
 bundle.
+
+## Codex
+
+Uses the same workflow with generated project roles and native worker routing. See the
+[Codex distribution procedures](../delegation/references/dispatch-knobs.md#codex-distribution)
+for setup, ownership-safe refresh, role names, and completion handling.

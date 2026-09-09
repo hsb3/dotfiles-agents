@@ -59,7 +59,7 @@ gate, naming the tier and the provider, so the hole is fixed at build time rathe
 absorbed forever at runtime.
 
 **Refresh path.** The `providers` block is a pinned, minimal projection of
-`https://models.dev/api.json` (every model the provider lists, with its context window),
+`https://models.dev/api.json` (every model with a positive integer token window, with that window),
 vendored in-tree because `make ci` is offline by design and an in-tree catalog is what makes
 an invented id detectable with no network:
 
@@ -106,3 +106,15 @@ claude plugin install atelier@dotfiles-agents
 claude plugin install code-desk@dotfiles-agents
 claude plugin install pocketbase@dotfiles-agents
 ```
+
+## Codex atelier roles
+
+`hooks/_lib/codex_roles.py` renders the atelier roles into project `.codex/agents/` TOML at
+setup time. It strips Claude-specific blocks, preserves the neutral role body, adds the
+Codex dispatch procedures, and resolves the OpenAI tier without changing the active Anthropic
+provider. Refresh refuses user-owned or modified generated profiles. The lifecycle hook also
+injects the rendered role instructions because native role instruction delivery differs across
+Codex dispatch surfaces. No generated profile is tracked.
+
+The OpenAI catalog projection follows the existing complete-provider drift contract. Its API
+context window is not a claim about the smaller window a Codex session actually exposes.

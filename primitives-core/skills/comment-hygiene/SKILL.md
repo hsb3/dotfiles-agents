@@ -5,6 +5,12 @@ description: Strip history and commentary out of source comments before work lan
 
 # Comment hygiene
 
+<!-- harness:claude-code -->
+In Codex, first read [Codex distribution](../delegation/references/dispatch-knobs.md#codex-distribution)
+for installed role setup, native dispatch, isolation prerequisites, and completion routing.
+That section supplies the Codex procedures wherever this workflow names Claude Code tools.
+<!-- /harness -->
+
 History and commentary belong on the related task, not in the code. A
 comment is read at 3am by someone fixing something else; one that narrates
 how the code came to be costs that reader a paragraph and pays nothing.
