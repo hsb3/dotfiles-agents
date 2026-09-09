@@ -25,11 +25,47 @@ def harness_name():
         "codex" if os.environ.get("CODEX_THREAD_ID") else "claude-code")
 
 
+def configured_agents(project_dir):
+    """Native agents configured by project files, never installed executables."""
+    agents = []
+    for name in ("claude", "codex"):
+        if os.path.isdir(os.path.join(project_dir, "." + name)):
+            agents.append(name)
+    if any(os.path.isfile(os.path.join(project_dir, name))
+           for name in ("opencode.json", "opencode.jsonc")):
+        agents.append("opencode")
+    return tuple(agents)
+
+
 def activation_candidates(project_dir):
-    """Ordered local policy names; existence and parsing never change this order."""
-    directories = (".codex", ".claude") if harness_name() == "codex" else (".claude",)
+    """The sole canonical local policy path for this configured project."""
+    agents = configured_agents(project_dir)
+    if len(agents) > 1 or (not agents and os.path.lexists(
+            os.path.join(project_dir, ".agents", "atelier.local.md"))):
+        directory = ".agents"
+    elif agents:
+        directory = "." + agents[0]
+    else:
+        directory = ".codex" if harness_name() == "codex" else ".claude"
+    return [os.path.join(project_dir, directory, "atelier.local.md")]
+
+
+def policy_paths(project_dir):
+    """Every policy location setup must inspect before it changes placement."""
     return [os.path.join(project_dir, directory, "atelier.local.md")
-            for directory in directories]
+            for directory in (".claude", ".codex", ".opencode", ".agents")]
+
+
+def activation_destination(project_dir):
+    """Where create/setup writes; a legacy shared file is runtime-only at zero agents."""
+    agents = configured_agents(project_dir)
+    if len(agents) > 1:
+        directory = ".agents"
+    elif agents:
+        directory = "." + agents[0]
+    else:
+        directory = ".codex" if harness_name() == "codex" else ".claude"
+    return os.path.join(project_dir, directory, "atelier.local.md")
 
 
 def activation_path(project_dir, inherit=True):

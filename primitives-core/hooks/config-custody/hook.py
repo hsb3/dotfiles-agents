@@ -192,20 +192,23 @@ def _committed_activation(worktree_root):
     all land here, and all of them have to fall back to the upstream policy
     rather than to bytes the worker can rewrite.
     """
-    path = atelier_local.activation_path(worktree_root, inherit=False)
-    relpath = os.path.relpath(path, worktree_root).replace(os.sep, "/")
-    try:
-        proc = subprocess.run(
-            ["git", "-C", worktree_root, "show", "HEAD:" + relpath],
-            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
-            capture_output=True, timeout=GIT_TIMEOUT,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if proc.returncode != 0:
-        return None
-    # A selected oversized policy is invalid, not permission to select another file.
-    return proc.stdout.decode("utf-8", "replace") if len(proc.stdout) <= ACTIVATION_MAX_BYTES else ""
+    # Probe HEAD, not the live directory layout. A worker could otherwise add/remove
+    # a native config directory and make the selector choose a different policy.
+    paths = (".agents/atelier.local.md", ".claude/atelier.local.md",
+             ".codex/atelier.local.md", ".opencode/atelier.local.md")
+    for relpath in paths:
+        try:
+            proc = subprocess.run(
+                ["git", "-C", worktree_root, "show", "HEAD:" + relpath],
+                env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
+                capture_output=True, timeout=GIT_TIMEOUT,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if proc.returncode == 0:
+            return (proc.stdout.decode("utf-8", "replace")
+                    if len(proc.stdout) <= ACTIVATION_MAX_BYTES else "")
+    return None
 
 
 
@@ -226,7 +229,7 @@ def _load_policy(abs_path, project_dir):
     if os.environ.get("ATELIER_ACTIVATION_FILE"):
         return _load_activation(project_dir)
     root = _worktree_root(abs_path, project_dir)
-    if root and os.path.lexists(atelier_local.activation_path(root, inherit=False)):
+    if root:
         text = _committed_activation(root)
         if text is not None:
             try:
