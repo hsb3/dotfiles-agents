@@ -12,7 +12,7 @@ Two halves of one hazard: a worker's git call destroying work the worker does no
      its remote, so a commit made with HEAD on a protected branch lands on the real one.
      `commit`, `merge`, `rebase`, `cherry-pick`, `revert`, `am` while HEAD is protected,
      and any `push` aimed at a protected ref. Armed only by `protected-branches:` in
-     `.claude/atelier.local.md`; there is no built-in list, so this half is inert until a
+     the selected `atelier.local.md`; there is no built-in list, so this half is inert until a
      project names its own branches.
 
 Subagents only — the payload carries `agent_id` / `agent_type` inside a subagent and not
@@ -54,7 +54,6 @@ STASH_MUTATORS = {"push", "pop", "apply", "drop", "clear", "branch", "save",
 # git global options that consume a following value (skipped when locating the subcommand)
 VALUE_OPTS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 
-ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
 
 # A frontmatter block is a few dozen lines; anything larger is not an activation file.
 # The same cap every other hook in this bundle applies before it parses a byte.
@@ -78,31 +77,7 @@ def _resolve_project_dir(payload_cwd):
         return None
 
 
-def _resolve_activation_path(project_dir):
-    """The activation file to read: the env override, else this project's own copy, else
-    the main checkout's copy when `project_dir` is a linked worktree.
-
-    That last hop is what keeps the protected-branch half from switching itself off
-    exactly where it is needed. A linked worktree is a clean checkout and the activation
-    file is conventionally gitignored, so a worker inside one finds no file — while still
-    sharing the `.git` and remote that make its commit land on the real branch.
-
-    The hop shells out to git, so it runs only on the miss.
-    """
-    override = os.environ.get("ATELIER_ACTIVATION_FILE")
-    if override:
-        return override
-    if not project_dir:
-        return None
-    local = os.path.join(project_dir, ACTIVATION_RELPATH)
-    if os.path.isfile(local):
-        return local
-    main_checkout = _main_checkout(project_dir)
-    if main_checkout:
-        inherited = os.path.join(main_checkout, ACTIVATION_RELPATH)
-        if os.path.isfile(inherited):
-            return inherited
-    return local
+_resolve_activation_path = atelier_local.activation_path
 
 
 def _load_protected_branches(project_dir):
@@ -284,14 +259,6 @@ def shared_tree(cwd):
     if common is None:
         return None
     return common == gitdir
-
-
-def _main_checkout(cwd):
-    """The main checkout's root when `cwd` is a linked worktree, else None."""
-    common, gitdir = _tree_dirs(cwd)
-    if common is None or common == gitdir:
-        return None
-    return os.path.dirname(common)
 
 
 def _git(cwd, *args):

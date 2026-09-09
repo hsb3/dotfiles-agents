@@ -1,5 +1,9 @@
 # context-watermark
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 Watches context size and nudges toward `/handoff` + `/clear` (or `/compact`) before an
 overloaded window degrades cost and performance. It estimates context tokens from the last
 assistant usage block in the transcript and fires once a watermark crosses. Both the session
@@ -74,7 +78,7 @@ the shape a subagent acts on. `UserPromptSubmit` keeps its TOP-LEVEL `additional
 ## Configuration
 
 Precedence, highest first, applied per value: **environment variable → the `watermark:` key in
-`.claude/atelier.local.md` → the computed default**. Absent, blank, or unparseable at either
+the selected `atelier.local.md` → the computed default**. Absent, blank, or unparseable at either
 level falls through to the next and never errors.
 
 - `CONTEXT_WATERMARK_SOFT`, `CONTEXT_WATERMARK_HARD` — absolute token counts. **The wiring

@@ -1,5 +1,9 @@
 # worker-context
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 `SubagentStart` on every subagent. When the project's activation file turns enforcement on, the
 hook injects the delegation covenant as `additionalContext`, so the rules a worker is judged by
 arrive with the worker instead of depending on the dispatching session restating them in each
@@ -32,7 +36,7 @@ block that is not armed teaches a worker to discount the rest of the paragraph.
 
 ## Activation
 
-Shared with `config-custody`: `<project>/.claude/atelier.local.md`, YAML frontmatter, parsed by a
+Shared with `config-custody`: the harness-selected activation path, YAML frontmatter, parsed by a
 small tolerant reader (stdlib only, no PyYAML).
 
 ```markdown
@@ -106,7 +110,7 @@ committed on that worktree's branch rather than the main checkout's working-tree
 | Env var | Default | Meaning |
 |---|---|---|
 | `CLAUDE_PROJECT_DIR` | set by Claude Code | Anchor for the activation file; falls back to the payload `cwd` |
-| `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Activation file location |
+| `ATELIER_ACTIVATION_FILE` | harness-selected project policy (see above) | Activation file location |
 
 No ledger: the hook is stateless and deliberately has no log path, since a row per subagent start
 would record only that a constant string was emitted.

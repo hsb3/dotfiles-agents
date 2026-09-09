@@ -1,5 +1,9 @@
 # live-worker-git-guard
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 Refuses a **mutating git command while this session still has delegations running**.
 `PreToolUse` on `Bash`: if the command runs one of the verbs ruled *denied* in the table below
 (`commit`, `push`, `pull`, `checkout`, `rm`, `bisect start`, `submodule update` and the rest),
@@ -130,7 +134,7 @@ workers are live. Each is a stated cost, not an oversight:
 The destructive-write case: a root session backing up, breaking and restoring a file a live
 worker owns. Catching that needs an ownership registry mapping briefs to paths, and briefs are
 prose — the registry does not exist. **Worktree isolation covers it by construction** (`isolate:`
-in `.claude/atelier.local.md`, the `worktree-isolation` hook): an agent with its own checkout
+in the selected `atelier.local.md`, the `worktree-isolation` hook): an agent with its own checkout
 cannot be hurt by anything done in this tree, which is also why this guard skips it.
 
 ## Who counts as live

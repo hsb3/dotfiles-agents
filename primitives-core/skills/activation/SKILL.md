@@ -1,12 +1,23 @@
 ---
 name: activation
-description: Create and verify the per-project `.claude/atelier.local.md` activation file that arms atelier's hooks. Use when someone asks to turn on, configure, or check atelier enforcement (custody, worker context, worktree isolation, handoff routing) in a project, or when a hook that should be firing appears silent.
+description: Create and verify the harness-appropriate per-project activation file that arms atelier's hooks. Use when someone asks to turn on, configure, or check atelier enforcement (custody, worker context, worktree isolation, handoff routing) in a project, or when a hook that should be firing appears silent.
 ---
 
 # Activation
 
 <!-- harness:claude-code -->
-The activation file is `.claude/atelier.local.md`.
+The activation file is `.codex/atelier.local.md` for fresh Codex projects and
+`.claude/atelier.local.md` for Claude Code.
+
+Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
+existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
+`.claude` file. A relative explicit override is anchored at the target project root. When
+both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
+malformed, unreadable or missing explicit file never falls back to another policy; `check`
+reports it. A linked worktree uses its own selected file, or inherits the main checkout's
+selection when neither local candidate exists. Config custody retains its additional rule:
+worker edits are governed by the selected policy committed at that worktree's HEAD, so
+uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
 <!-- /harness -->
 
 It is the one file that arms atelier's enforcement layer. Absent, it means everything is off.
@@ -19,6 +30,8 @@ identical from the outside otherwise, because every loader in atelier fails open
 Run from the target project's root:
 
 <!-- harness:claude-code -->
+In Claude Code (for Codex, use the setup commands below):
+
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/activation/scripts/activation.py"
 python3 "$S" create [--project-dir DIR] [--force]
@@ -27,7 +40,8 @@ python3 "$S" check  [--project-dir DIR]
 
 Outside the harness `$CLAUDE_PLUGIN_ROOT` is unset — invoke the script by its own path
 instead; it finds the hooks relative to itself, and fails loudly naming what it tried if they
-are not there. `--project-dir` defaults to `$CLAUDE_PROJECT_DIR`, else the cwd.
+are not there. `--project-dir` defaults to the cwd in Codex; Claude Code uses
+`$CLAUDE_PROJECT_DIR` when set, else the cwd.
 <!-- /harness -->
 
 `create` installs the copyable starting point at
@@ -35,7 +49,8 @@ are not there. `--project-dir` defaults to `$CLAUDE_PROJECT_DIR`, else the cwd.
 file unless `--force`.
 
 <!-- harness:claude-code -->
-It writes `<project>/.claude/atelier.local.md`.
+It writes the selected path and refuses to replace an existing legacy policy unless
+`--force` was explicitly requested. Fresh Codex creation writes `.codex/atelier.local.md`.
 
 `check` reads the installed file *through the hooks' own loader functions* rather than parsing
 it itself, then reports per key what each hook actually resolved. That is why its answer cannot
@@ -117,6 +132,7 @@ no restart or session reload needed. Gitignore it as a local file:
 <!-- harness:claude-code -->
 ```gitignore
 .claude/*.local.md
+.codex/*.local.md
 ```
 <!-- /harness -->
 
@@ -133,7 +149,9 @@ authoritative.
 ## Codex setup
 
 Use the installed skill directory to locate `scripts/activation.py`; Codex does not set
-`CLAUDE_PLUGIN_ROOT`. The activation file remains `.claude/atelier.local.md`.
+`CLAUDE_PLUGIN_ROOT`. Fresh projects use `.codex/atelier.local.md`; existing legacy
+policies remain at `.claude/atelier.local.md`. Invoke the activation skill directly;
+`/atelier:activate` is a Claude Code command, not a registered Codex slash command.
 
 ```bash
 python3 /path/to/activation/scripts/activation.py create --harness codex

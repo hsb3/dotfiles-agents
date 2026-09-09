@@ -1,5 +1,9 @@
 # worktree-isolation
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 `PreToolUse` on the `Agent` tool. When the project's activation file turns it on, a dispatch that
 would put a **writing** worker in the orchestrator's own checkout is rewritten to carry
 `isolation: "worktree"`, so the worker gets its own git worktree instead of sharing the working
@@ -30,7 +34,7 @@ premise is continuity with the caller.
 
 ## Activation
 
-Shared with the other atelier hooks: `<project>/.claude/atelier.local.md`, YAML frontmatter, parsed
+Shared with the other atelier hooks: the harness-selected activation path, YAML frontmatter, parsed
 by a small tolerant reader (stdlib only, no PyYAML).
 
 ```markdown
@@ -194,7 +198,7 @@ Beyond an unarmed activation file, the hook stands down when:
 | Env var | Default | Meaning |
 |---|---|---|
 | `CLAUDE_PROJECT_DIR` | set by Claude Code | Anchor for the activation file and the git check; falls back to the payload `cwd` |
-| `ATELIER_ACTIVATION_FILE` | `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` | Activation file location |
+| `ATELIER_ACTIVATION_FILE` | harness-selected project policy (see above) | Activation file location |
 | `WORKTREE_ISOLATION_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/worktree-isolation.jsonl` | Ledger override |
 
 ## Ledger

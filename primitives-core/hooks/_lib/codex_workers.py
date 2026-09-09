@@ -141,15 +141,7 @@ def _activation_text(payload):
     raw = payload.get('original_cwd') or payload.get('cwd')
     if not isinstance(raw, str) or not raw or not Path(raw).is_absolute():
         raise WorkerError('Missing or invalid native working directory')
-    path = Path(os.environ.get('ATELIER_ACTIVATION_FILE') or Path(raw) / '.claude/atelier.local.md')
-    if not path.is_file() and not os.environ.get('ATELIER_ACTIVATION_FILE'):
-        try:
-            repo, directory = _location(payload)
-            common = directory.parents[2]
-            if common.name == '.git':
-                path = common.parent / '.claude/atelier.local.md'
-        except WorkerError:
-            return ''
+    path = Path(atelier_local.activation_path(raw))
     if path.is_file():
         return path.read_text(encoding='utf-8')[:256 * 1024]
     return ''

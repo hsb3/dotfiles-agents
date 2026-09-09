@@ -1,5 +1,9 @@
 # session-handoff-surfacer
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 Closes the handoff loop's "consume" edge: on a genuinely cold session start it finds
 the project's handoff file and injects a pointer plus a capped head excerpt, so the
 session picks up prior work without re-deriving it. Silent on resume or compact starts
@@ -17,12 +21,12 @@ instead surface a pointer to a handoff that lives outside the repo altogether.
 Env-overridable; shipped wiring leaves these at hook.py's built-in defaults:
 - `HANDOFF_SURFACER_HEAD_LINES` — default 15 (lines of the handoff excerpted).
 - `HANDOFF_SURFACER_LOG_PATH` — default `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/handoff-surfacer.jsonl`.
-- `ATELIER_ACTIVATION_FILE` — default `$CLAUDE_PROJECT_DIR/.claude/atelier.local.md` (activation file location).
+- `ATELIER_ACTIVATION_FILE` — default harness-selected project policy (see above) (activation file location).
 - `CLAUDE_PROJECT_DIR` — set by Claude Code; anchors the activation file lookup and the ledger's `project` field, falling back to the payload `cwd` when unset.
 
 **Per-project handoff location override.** A project that keeps its handoff somewhere
 other than the standard candidate paths can say so with a `handoff:` key in
-`.claude/atelier.local.md`. Two forms.
+the selected `atelier.local.md`. Two forms.
 
 File mode — a bare scalar, or `{mode: file, path: ...}`:
 
@@ -112,4 +116,4 @@ Ships only in the atelier bundle, alongside the handoff skill it surfaces.
 
 ## Codex
 
-Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. The shared activation file remains `.claude/atelier.local.md`; Codex payload cwd is authoritative even if a Claude environment variable is inherited.
+Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. Activation uses `.codex/atelier.local.md` with the documented legacy fallback; Codex payload cwd is authoritative even if a Claude environment variable is inherited.

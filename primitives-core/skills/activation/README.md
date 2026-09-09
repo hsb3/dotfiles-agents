@@ -1,6 +1,6 @@
 # activation
 
-Creates and verifies the per-project `.claude/atelier.local.md` file that arms atelier's
+Creates and verifies the harness-appropriate per-project activation file that arms atelier's
 enforcement hooks, then reports per key what each hook actually resolved — including a key
 that is present, looks configured, and is silently doing nothing.
 
@@ -18,7 +18,7 @@ report calls it inert only when nothing under it is readable at all.
 Reporting through the loaders is what keeps `check` honest, and the loaders now sit on one
 frontmatter parser (`hooks/_lib/atelier_local.py`) instead of seven private copies — so two
 hooks can no longer read the same key differently with no error on either side, which is the
-failure `check` exists to expose. Each hook still owns which BYTES it reads: `config-custody`
+failure `check` exists to expose. Path selection is shared too. Each hook still owns which BYTES it reads: `config-custody`
 governs a linked worktree by the copy committed on its branch, and the others fall back to the
 main checkout's copy, so `check` run in a worktree can legitimately differ from `check` run in
 the main tree.
@@ -46,6 +46,17 @@ Ships in the `atelier` bundle — it arms the hooks the rest of the bundle
 depends on.
 
 ## Codex
+
+Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
+existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
+`.claude` file. A relative explicit override is anchored at the target project root. When
+both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
+malformed, unreadable or missing explicit file never falls back to another policy; `check`
+reports it. A linked worktree uses its own selected file, or inherits the main checkout's
+selection when neither local candidate exists. Config custody retains its additional rule:
+worker edits are governed by the selected policy committed at that worktree's HEAD, so
+uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
+
 
 `codex-setup` renders native roles and project writable roots without touching global config or hook trust. `check --harness codex` verifies generated role/config currency and reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
 

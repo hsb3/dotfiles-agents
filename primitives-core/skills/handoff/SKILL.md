@@ -34,7 +34,9 @@ mismatch means the hooks act on a different file than this skill writes.
 file:
 
 <!-- harness:claude-code -->
-That file is `.claude/atelier.local.md`.
+Use the activation skill’s selected file: `.codex/atelier.local.md` in fresh Codex
+projects, with existing `.claude/atelier.local.md` as legacy fallback; Claude Code uses
+`.claude/atelier.local.md`. `ATELIER_ACTIVATION_FILE` wins on both. Never merge both files.
 <!-- /harness -->
 
 ```markdown
@@ -182,7 +184,7 @@ _Cold-start onboarding. Last updated: YYYY-MM-DD. Keep updated at session bounda
 <!-- harness:claude-code -->
 ## Codex lifecycle
 
-Read routing from `.claude/atelier.local.md` exactly as above. In external mode, update the
+Read routing from the selected activation file exactly as above. In external mode, update the
 external handoff first and touch its configured local stamp last. Trusted Codex PreCompact
 hooks interrupt manual compaction when that stamp or file is missing or stale; automatic
 compaction only warns. A new Codex session receives the file excerpt or external pointer

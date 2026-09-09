@@ -24,6 +24,20 @@ override means "this project has no handoff yet" rather than "fall back to the s
 search" — because falling back there would silently guard a different file than the one
 the project declared.
 
+## Atelier activation selection
+
+Codex selects `ATELIER_ACTIVATION_FILE` first, then `.codex/atelier.local.md`, then an
+existing `.claude/atelier.local.md`. Claude Code selects the explicit override or the
+`.claude` file. A relative explicit override is anchored at the target project root. When
+both files exist, Codex uses only `.codex`; policies are never merged or migrated. A selected
+malformed, unreadable or missing explicit file never falls back to another policy; `check`
+reports it. A linked worktree uses its own selected file, or inherits the main checkout's
+selection when neither local candidate exists. Config custody retains its additional rule:
+worker edits are governed by the selected policy committed at that worktree's HEAD, so
+uncommitted edits do not change that committed policy. Existing handoff paths and stamps are unchanged.
+
+This uses the existing per-project file mechanism; no second policy schema is introduced.
+
 ## Worked example 1 — hooks: `CONTEXT_WATERMARK_SOFT` / `_HARD`
 
 The environment wins, and here the wiring supplies **no** default:

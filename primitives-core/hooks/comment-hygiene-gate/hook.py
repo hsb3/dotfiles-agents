@@ -28,7 +28,7 @@ Contract (PreToolUse):
   - exit 0 always.
 
 Fires unconditionally, like the other observational hooks (context-watermark,
-delegation-watermark). Only the enforcing hooks read `.claude/atelier.local.md`.
+delegation-watermark). Only the enforcing hooks read the selected `atelier.local.md`.
 
 This file must have ZERO third-party dependencies (Python 3 stdlib only) and
 must stay compatible with Python 3.9.

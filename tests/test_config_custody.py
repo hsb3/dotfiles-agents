@@ -493,14 +493,14 @@ class ConfigCustodyTests(unittest.TestCase):
                 project_dir=worktree,
             ))
 
-    def test_an_oversized_committed_copy_falls_back(self):
-        """A blob past the size ceiling is 'no committed copy', not 'off'."""
+    def test_an_oversized_committed_copy_does_not_select_another_policy(self):
+        """A selected blob past the size ceiling is invalid; never switch policies."""
         main_dir = self._repo(patterns=("Makefile",))
         worktree = self._add_worktree(main_dir, ".claude/worktrees/agent-big", "wt-big")
         self._commit_in(worktree, "---\nenforce: strict\nprotected:\n  - docs/*\n---\n"
                         + "x" * (256 * 1024))
 
-        self._assert_denied(self._run_hook(
+        self._assert_silent(self._run_hook(
             self._payload(file_path=os.path.join(worktree, "Makefile"), cwd=worktree),
             project_dir=main_dir,
         ))

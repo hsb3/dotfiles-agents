@@ -1,5 +1,9 @@
 # comment-hygiene-gate
 
+Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
+fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
+use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.
+
 `PreToolUse` on `Bash`. Silent unless the command is about to land work — a `git commit` or a
 `gh pr create`. On those it reads the change (`git diff --cached` for a commit, the merge-base
 diff against the default branch for a PR), scans the **added comment lines only** for history
@@ -40,7 +44,7 @@ payload all exit silently. A hook that breaks someone's commit is worse than one
 
 Fires unconditionally, like `context-watermark` and `delegation-watermark`. It reads no
 activation file — only the enforcing hooks (`config-custody`, `worker-context`,
-`worktree-isolation`) gate on `.claude/atelier.local.md`.
+`worktree-isolation`) gate on the selected `atelier.local.md`.
 
 ## Why
 

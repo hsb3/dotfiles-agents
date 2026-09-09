@@ -3,7 +3,7 @@
 config-custody — PreToolUse hook.
 
 Makes a project's ownership map machine-readable: files listed as `protected:`
-in `.claude/atelier.local.md` are read-only to SUBAGENTS. The main session is
+in the selected `atelier.local.md` are read-only to SUBAGENTS. The main session is
 never restricted — the orchestrator owns the gate and may edit it freely.
 
 Motivation (the source lab's finding F2, the gate is orchestrator property): a
@@ -57,9 +57,6 @@ import atelier_local  # noqa: E402
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
-ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
-# `git show HEAD:<path>` takes a repo-relative path with forward slashes.
-ACTIVATION_GIT_PATH = ".claude/atelier.local.md"
 LOG_STREAM = "config-custody"
 LOG_PATH_ENV = "ATELIER_CUSTODY_LOG_PATH"
 
@@ -78,7 +75,7 @@ ACTIVE_MODES = (ADVISORY, STRICT)
 
 DENY_REASON_TEMPLATE = (
     "atelier config-custody: '{path}' matches protected pattern '{pattern}' in "
-    ".claude/atelier.local.md — this file defines acceptance and is read-only to "
+    "the selected atelier.local.md — this file defines acceptance and is read-only to "
     "subagents. If the gate it defines is unsatisfiable, stop and report that in your "
     "handoff note; if your brief explicitly grants you ownership of this file, report "
     "the conflict — the orchestrating session can lift the pattern for this wave or "
@@ -103,66 +100,7 @@ def _resolve_project_dir(payload_cwd):
         return None
 
 
-def _main_checkout(path):
-    """A linked worktree resolves to its main checkout; anything else returns
-    `path` unchanged.
-
-    `git rev-parse --git-common-dir` names the shared git dir: a bare `.git`
-    from a main checkout's root, a path ending in `/.git` from anywhere inside
-    a linked worktree. Every other answer — no git binary, not a repository, a
-    bare repo or a submodule whose common dir is not `<root>/.git` — is treated
-    as "not a linked worktree", so a machine without git behaves exactly as it
-    did before.
-
-    Duplicated across the atelier hooks by design: each hook dir is copied and
-    symlinked on its own, so a shared module would be a cross-hook import that
-    breaks the moment one of them is installed without the other.
-    """
-    try:
-        proc = subprocess.run(
-            ["git", "-C", path, "rev-parse", "--git-common-dir"],
-            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
-            capture_output=True, timeout=GIT_TIMEOUT,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return path
-    if proc.returncode != 0:
-        return path
-    common = proc.stdout.decode("utf-8", "replace").strip()
-    if not common or common == ".git":
-        return path  # a main checkout's own root
-    if not os.path.isabs(common):
-        common = os.path.join(path, common)
-    common = os.path.abspath(common)
-    if os.path.basename(common) != ".git":
-        return path
-    return os.path.dirname(common)
-
-
-def _resolve_activation_path(project_dir):
-    """The activation file this hook reads.
-
-    ATELIER_ACTIVATION_FILE wins outright — an explicit override is never
-    re-resolved. Otherwise it is the project dir's own copy, falling back to
-    the main checkout's copy when no file sits at the direct path and the
-    project dir is a linked worktree: custody follows the checkout that armed
-    it, so a worker handed its own worktree is not un-governed just because a
-    gitignored config did not travel. The fallback is lazy — it costs a `git`
-    subprocess only on the miss, and an activation file that IS present in the
-    worktree (a tracked one, at its committed version) still wins.
-    """
-    override = os.environ.get("ATELIER_ACTIVATION_FILE")
-    if override:
-        return override
-    if not project_dir:
-        return None
-    path = os.path.join(project_dir, ACTIVATION_RELPATH)
-    if os.path.isfile(path):
-        return path
-    main_dir = _main_checkout(project_dir)
-    if main_dir == project_dir:
-        return path
-    return os.path.join(main_dir, ACTIVATION_RELPATH)
+_resolve_activation_path = atelier_local.activation_path
 
 
 # ---------------------------------------------------------------------------
@@ -254,17 +192,21 @@ def _committed_activation(worktree_root):
     all land here, and all of them have to fall back to the upstream policy
     rather than to bytes the worker can rewrite.
     """
+    path = atelier_local.activation_path(worktree_root, inherit=False)
+    relpath = os.path.relpath(path, worktree_root).replace(os.sep, "/")
     try:
         proc = subprocess.run(
-            ["git", "-C", worktree_root, "show", "HEAD:" + ACTIVATION_GIT_PATH],
+            ["git", "-C", worktree_root, "show", "HEAD:" + relpath],
             env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
             capture_output=True, timeout=GIT_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError):
         return None
-    if proc.returncode != 0 or len(proc.stdout) > ACTIVATION_MAX_BYTES:
+    if proc.returncode != 0:
         return None
-    return proc.stdout.decode("utf-8", "replace")
+    # A selected oversized policy is invalid, not permission to select another file.
+    return proc.stdout.decode("utf-8", "replace") if len(proc.stdout) <= ACTIVATION_MAX_BYTES else ""
+
 
 
 def _load_policy(abs_path, project_dir):
@@ -278,13 +220,13 @@ def _load_policy(abs_path, project_dir):
     tolerant-parse rule the direct path already follows.
 
     Everything else — no worktree, no copy, nothing committed, no git — falls
-    back to `project_dir` and its main-checkout lookup. The `isfile` probe keeps
+    back to `project_dir` and its main-checkout lookup. The local presence probe keeps
     the subprocess off the path of every tree that has no copy at all.
     """
     if os.environ.get("ATELIER_ACTIVATION_FILE"):
         return _load_activation(project_dir)
     root = _worktree_root(abs_path, project_dir)
-    if root and os.path.isfile(os.path.join(root, ACTIVATION_RELPATH)):
+    if root and os.path.lexists(atelier_local.activation_path(root, inherit=False)):
         text = _committed_activation(root)
         if text is not None:
             try:

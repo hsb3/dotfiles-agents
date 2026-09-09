@@ -1,5 +1,5 @@
 ---
-description: Arm atelier in this project — create .claude/atelier.local.md if it is missing, then report per key what the hooks actually resolved, including any key that is present but silently doing nothing.
+description: Arm atelier in this project — create the selected per-project activation file if it is missing, then report per key what the hooks actually resolved, including any key that is present but silently doing nothing.
 argument-hint: "[project dir]"
 allowed-tools: Skill, Bash, Read
 ---
@@ -9,7 +9,8 @@ it there and follow it; do not restate it here and do not re-derive it from memo
 
 <!-- harness:claude-code -->
 Target project: `$1` if one was given, otherwise the current project root. Its activation
-file is `.claude/atelier.local.md`.
+file is `.claude/atelier.local.md` in Claude Code. Codex uses the activation skill
+directly with `.codex/atelier.local.md` and legacy fallback; no native slash command is registered.
 <!-- /harness -->
 
 ## What to do

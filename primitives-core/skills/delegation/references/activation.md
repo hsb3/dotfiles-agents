@@ -6,7 +6,10 @@ convention — the harness attaches no behavior to this file; atelier's skill an
 themselves, per call, so editing it needs no restart).
 
 <!-- harness:claude-code -->
-The path is `.claude/atelier.local.md`.
+Use `.codex/atelier.local.md` in fresh Codex projects; Claude Code uses
+`.claude/atelier.local.md`. Codex preserves the legacy file when no Codex file exists.
+The activation skill documents explicit-override and worktree precedence; read that
+selected file, never merge both policies.
 
 ```markdown
 ---

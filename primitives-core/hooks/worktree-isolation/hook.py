@@ -24,7 +24,7 @@ parent checkout, which is also where they are cheapest. `fork` is excluded for
 a second reason: it inherits the conversation, so its premise is continuity with
 the caller.
 
-Activated by `<project>/.claude/atelier.local.md`: `isolate: writers` arms the
+Activated by the selected project `atelier.local.md`: `isolate: writers` arms the
 built-in writer set, `isolate:` as a list arms exactly the named agent types.
 Anything else stays silent.
 
@@ -92,7 +92,6 @@ import atelier_local  # noqa: E402
 # Config (env-overridable)
 # ---------------------------------------------------------------------------
 
-ACTIVATION_RELPATH = os.path.join(".claude", "atelier.local.md")
 
 # A frontmatter block is a few dozen lines; anything larger is not an activation
 # file and reading it into a hook that runs on every dispatch is not worth it.
@@ -127,7 +126,7 @@ DEFAULT_AGENT_TYPE = "general-purpose"
 
 NOTICE_TEMPLATE = (
     "atelier worktree-isolation: '{agent_type}' dispatched with isolation:worktree "
-    "(isolate: {mode} in .claude/atelier.local.md). It gets its own checkout, so "
+    "(isolate: {mode} in the selected atelier.local.md). It gets its own checkout, so "
     "uncommitted work in this tree is NOT visible to it."
 )
 
@@ -170,68 +169,7 @@ def _resolve_project_dir(payload_cwd):
         return None
 
 
-def _main_checkout(path):
-    """A linked worktree resolves to its main checkout; anything else returns
-    `path` unchanged.
-
-    `git rev-parse --git-common-dir` names the shared git dir: a bare `.git`
-    from a main checkout's root, a path ending in `/.git` from anywhere inside
-    a linked worktree. Every other answer — no git binary, not a repository, a
-    bare repo or a submodule whose common dir is not `<root>/.git` — is treated
-    as "not a linked worktree", so a machine without git behaves exactly as it
-    did before.
-
-    Duplicated across the atelier hooks by design, like the activation parser
-    below: each hook dir is copied and symlinked on its own, so a shared module
-    would be a cross-hook import that breaks the moment one of them is
-    installed without the other.
-    """
-    try:
-        proc = subprocess.run(
-            ["git", "-C", path, "rev-parse", "--git-common-dir"],
-            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
-            capture_output=True, timeout=5,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return path
-    if proc.returncode != 0:
-        return path
-    common = proc.stdout.decode("utf-8", "replace").strip()
-    if not common or common == ".git":
-        return path  # a main checkout's own root
-    if not os.path.isabs(common):
-        common = os.path.join(path, common)
-    common = os.path.abspath(common)
-    if os.path.basename(common) != ".git":
-        return path
-    return os.path.dirname(common)
-
-
-def _resolve_activation_path(project_dir):
-    """The activation file this hook reads.
-
-    ATELIER_ACTIVATION_FILE wins outright — an explicit override is never
-    re-resolved. Otherwise it is the project dir's own copy, falling back to
-    the main checkout's copy when no file sits at the direct path and the
-    project dir is a linked worktree: a manager that is itself running in a
-    worktree still fans out writers, and the isolation policy is armed in the
-    gitignored file that did not travel with it. The fallback is lazy — it
-    costs a `git` subprocess only on the miss, and an activation file that IS
-    present in the worktree (a tracked one, at its committed version) still
-    wins.
-    """
-    override = os.environ.get("ATELIER_ACTIVATION_FILE")
-    if override:
-        return override
-    if not project_dir:
-        return None
-    path = os.path.join(project_dir, ACTIVATION_RELPATH)
-    if os.path.isfile(path):
-        return path
-    main_dir = _main_checkout(project_dir)
-    if main_dir == project_dir:
-        return path
-    return os.path.join(main_dir, ACTIVATION_RELPATH)
+_resolve_activation_path = atelier_local.activation_path
 
 
 def _in_linked_worktree(path):
