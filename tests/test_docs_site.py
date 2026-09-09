@@ -10,6 +10,9 @@ class DocsSiteTests(unittest.TestCase):
         link = {'t': 'Link', 'c': [['', [], []], [], ['../README.md#install', '']]}
         result = rewrite(link, Path('docs/site.md'), {Path('README.md')}, '/dotfiles-agents', 'dev')
         self.assertEqual(result['c'][-1][0], '/dotfiles-agents/README.html#install')
+        link['c'][-1][0] = '../.github/CONTRIBUTING.md'
+        result = rewrite(link, Path('docs/site.md'), {Path('.github/CONTRIBUTING.md')}, '/dotfiles-agents', 'dev')
+        self.assertEqual(result['c'][-1][0], '/dotfiles-agents/contributing.html')
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'index.html').write_text('<a href="/dotfiles-agents/README.html#install">Install</a>')

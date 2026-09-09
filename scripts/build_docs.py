@@ -21,6 +21,9 @@ def pages():
 
 
 def target(path):
+    # The official Pages artifact action excludes every hidden directory.
+    if path == Path('.github/CONTRIBUTING.md'):
+        return Path('contributing.html')
     return Path('index.html') if path == Path('docs/README.md') else path.with_suffix('.html')
 
 
@@ -67,6 +70,8 @@ class Links(HTMLParser):
 def validate(output, base):
     documents = {}
     for path in output.rglob('*.html'):
+        if any(part.startswith('.') for part in path.relative_to(output).parts):
+            raise ValueError(f'Pages artifact excludes hidden path: {path}')
         parser = Links()
         parser.feed(path.read_text())
         documents[path.relative_to(output).as_posix()] = parser
