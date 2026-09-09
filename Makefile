@@ -117,3 +117,11 @@ harness-campaign-uninstall: ## Remove the weekly launchd agent
 	@scripts/harness_campaign.sh uninstall
 harness-campaign-status: ## launchctl state of the weekly agent
 	@scripts/harness_campaign.sh status
+
+
+.PHONY: docs-build docs-serve
+docs-build: ## Build canonical Markdown with Pandoc and verify project-subpath links (needs pandoc)
+	@python3 scripts/build_docs.py
+
+docs-serve: docs-build ## Preview at http://localhost:8000/dotfiles-agents/ (Ctrl-C to stop)
+	@python3 -m http.server 8000 --bind 127.0.0.1 --directory /tmp/dotfiles-agents-site

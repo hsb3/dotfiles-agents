@@ -5,15 +5,14 @@ publishes where, and where the eval loop re-enters through the owner. Status: ac
 (2026-07-22). Machine form: `flow.yaml`, enforced by `make flow` (in `make ci`)._
 
 Other docs carry the pieces — `README.md` the layout and build-interface tables, `CLAUDE.md`
-the source-of-truth rules, `docs/extender-dev-sop.md` the extender-dev SOP, the ADRs the whys.
+the source-of-truth rules, the [contributor guide](../.github/CONTRIBUTING.md) the contribution loop, the ADRs the whys.
 This page carries the one thing none of them draw: the **edges**, in one graph, kept honest
 by a drift guard.
 
 ## The spine
 
 Hand-authored **sources** (`primitives-core/` bodies) and **control manifests** (the roster,
-bundle metadata, standalone catalog, externals) are assembled by the **toolchain** into
-**generated dist artifacts** (today: the Claude Code marketplace tree at the repo root),
+bundle metadata, standalone catalog, externals) form hand-authored **symlink plugin assemblies** (the marketplace tree at the repo root),
 **gated** by `make ci`, and **published** dev → main by the manual publish workflow, where
 **consumers** install from. In parallel, the **workbench loop** runs candidates from the
 sources through the agent **harness** and ingests results into **evals** (the extender-db
@@ -86,14 +85,14 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | Path | Node | Layer | Class | Notes |
 |---|---|---|---|---|
 | `primitives-core/` | primitive-bodies | source | H | the single source copy of every primitive body |
-| `primitives-core.yaml` | roster | roster | H | authoritative membership; `targets` selects vendor lanes; `disposition` is owner-curated |
+| `primitives-core.yaml` | roster | roster | H | authoritative provenance; `targets` selects harness support; `disposition` is owner-curated |
 | `externals.yaml` | externals | roster | H | third-party by reference; clone-at-build deferred (#36/#122) |
 | `scripts/` | toolchain | generator | H | generators + every checker + campaign runner |
 | `Makefile`, `tests/`, `.github/`, `.gitignore`, `flow.yaml` | gates | gate | H | task interface · unit tests · CI · tracking policy · this manifest |
 | `plugins/`, `.claude-plugin/` | plugin-assemblies | dist | H | pointer-based marketplace surface (ADR 0017): hand-authored thin symlink assemblies over `primitives-core/`, dereferenced at install; guarded by `scripts/check_symlinks.py` (`make symlinks`) |
 | `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page live under `docs/`) |
 | `docs/` | repo-law | docs | H | standing law in prose: `docs/decisions/` (ADRs), the extender-dev SOP, the vendoring rule, the diagram standard, this page |
-| `harness/` | harness | workbench | H | uv eval project; own CI lane; `results.jsonl` tracked |
+| `harness/` | harness | workbench | H | eval harness; own test lane; see its README |
 | `evals/` | evals | workbench | H | extender-db projection — never a source of truth |
 | `.claude/`, `.vscode/`, `.kata.toml` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
 | `logs/` | runtime-logs | runtime | **R** | hook telemetry; must stay untracked |

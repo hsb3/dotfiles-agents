@@ -1,10 +1,13 @@
 # dotfiles-agents
 
 A Claude Code and Codex plugin marketplace of coding-agent extenders (skills, agents, and hooks),
-installed by name. Everything is authored in this repo unless it says otherwise:
-`pptx-themes` layers a curated theme system over Anthropic's `pptx` skill, vendored verbatim
-with its license. Every bundle closes with an "Honest scope" section stating what it does
+installed by name. Original primitives are maintained here; Carbon builder, PocketBase best practices and
+the PPTX base include upstream material under component-specific licenses. See the
+[license inventory](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/licenses.md). Every bundle closes with an "Honest scope" section stating what it does
 not do.
+
+[Documentation](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/README.md) ·
+[Site preview and publication](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/site.md)
 
 ## Install
 

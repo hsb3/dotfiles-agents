@@ -28,12 +28,17 @@ jobs:
   publish:
     if: ${{ github.event.inputs.confirm == 'publish' }}
     runs-on: ubuntu-latest
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
     steps:
       - name: Checkout dev
         uses: actions/checkout@v7
         with:
           ref: dev
           fetch-depth: 0
+      - name: Capture the source actually being published
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -186,3 +191,37 @@ jobs:
             --notes-file "$RUNNER_TEMP/notes.md" \
             --verify-tag \
             --latest
+
+
+  pages:
+    needs: publish
+    # Public readiness is a prerequisite; never expose a private repository through Pages.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.publish.outputs.source_sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install Pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+      - name: Build and validate canonical docs
+        run: python3 scripts/build_docs.py --ref "${{ needs.publish.outputs.source_sha }}"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: /tmp/dotfiles-agents-site/dotfiles-agents
+      - uses: actions/deploy-pages@v4
+        id: deployment

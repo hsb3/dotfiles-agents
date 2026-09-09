@@ -6,6 +6,12 @@ gates the `origin: vendored` provenance class; the [ADR 0015](decisions/0015-sel
 amendment and `scripts/check_provenance.py` enforcement are built under backlog task-10 and
 cite this document._
 
+> **Readiness correction (2026-09-09):** The historical PPTX example below does not
+> establish redistribution permission. Its pinned license expressly prohibits third-party
+> distribution. Public redistribution requires resolving current and reachable historical copies;
+> decision-018 records the retirement direction. See the
+> [license inventory](licenses.md). The four-part bar below still applies.
+
 ## The default: do not vendor
 
 `primitives-core/` is self-authored (ADR 0015). Third-party content is normally **not copied
