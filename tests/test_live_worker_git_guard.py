@@ -181,14 +181,23 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertIn("atelier:builder", reason)
         self.assertIn("Rewrite the roster guard", reason)
 
-    def test_reason_explains_the_shared_tree_and_the_override(self):
+    def test_reason_explains_the_shared_tree_and_the_override_policy(self):
+        session = self._repo("session-repo")
         self._sidecar("a2222222222222222")
         reason = self._assert_denied(
-            self._run(self._payload("git commit -am wip")))
+            self._run_in("git commit -am wip", session, session))
         self.assertIn("ATELIER_GIT_GUARD_OVERRIDE=1", reason)
         # The stopgap's known failure mode: a blocked agent stashes by hand and
         # reintroduces the exact window the guard closes.
         self.assertIn("stash", reason.lower())
+        self.assertIn("Restructure the operation to avoid an override first.", reason)
+        self.assertIn(
+            "only legitimate for a git write whose target is provably outside "
+            "every live worker tree", reason)
+        self.assertIn(
+            "never for this project repository or any of its worktrees", reason)
+        self.assertIn("report the exact command and cwd", reason)
+        self.assertIn("explain why that target is not shared", reason)
 
     def test_pull_checkout_and_stash_are_denied(self):
         self._sidecar("a3333333333333333")
