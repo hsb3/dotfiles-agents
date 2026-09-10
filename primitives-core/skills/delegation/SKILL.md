@@ -441,7 +441,7 @@ All four are cheap to write and expensive to retrofit `[lab]`.
 **"Layer" is not "tier", and a brief author who fuses them buys the wrong thing** `[untested]`.
 Layer says what an agent is **for** and what it may do — amend the contract, spawn, address the
 user. Tier says how much judgment one dispatch buys. So: a slice needing more judgment takes a
-higher tier at dispatch, never a promotion to `manager`; a slice needing a decision made takes an
+higher tier, never a promotion to `manager`; a slice needing a decision made takes an
 escalation upward, never a bigger model on the same worker. Moving an agent up a layer to buy
 judgment hands it authority it must not have, and moving it up a tier to buy authority leaves the
 decision with an agent that has no standing to make it.

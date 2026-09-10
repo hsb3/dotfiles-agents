@@ -41,6 +41,10 @@ A doctrine change lands in **both** repos in the same wave. There is no "port it
 gate is the only thing standing between one text and two, and the port that gets deferred is
 the drift discovered a year later as a merge conflict of ideas.
 
+Derive a parity card from the PR's full changed-file list, including deletions and renames,
+not its title or headline file. Account for each shared artifact and each deliberately
+one-sided change before declaring the paired wave complete.
+
 ## Deliberately one-sided
 
 | Artifact | Side | Why |

@@ -114,6 +114,9 @@ These references are one text with two copies (`docs/atelier-parity.md`); the pe
 includes anything naming `protected-branches:`, `worker-git-scope-guard`, or how this harness
 resolves a worker's relative paths, none of which have an opencode counterpart.
 
+Choose the tier a task needs independently of its role; each harness defines how that
+tier is configured.
+
 ## Install
 
 ```
