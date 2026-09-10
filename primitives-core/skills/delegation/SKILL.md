@@ -237,17 +237,22 @@ calls with no delegation is the line** — calibrated between the clusters, not 
 which floor item this stretch is. The `delegation-watermark` hook counts the run and says so
 without being asked.
 
-## Step 0 — Assign the tier
+## Step 0 — Determine the effort level
+
+`standard` and `deep` describe the planning effort, independently of model rank. The user or an
+`effort:` key in `atelier.local.md` selects it; state the selected effort when proposing an
+architecture. Neither mode permits a dispatched frontier worker.
+
+Historical `[cost]` evidence recorded a former deep strategist at ~80–100k tokens to ground and
+another ~50–100k to drive a wave. That observation records past context economics; it does not
+justify the current tier hierarchy or change the frontier reservation.
+
+### Assign the tier
 
 Use four semantic bands. **Frontier is reserved for the root strategist**; never dispatch it to a
 manager, builder, scout, or reviewer. Heavy buys manager work and judgment-heavy review, mid buys
 bounded coding, and light buys read-only reconnaissance. Decompose a difficult coding link before
-trying to compensate with a frontier worker. The current mappings are frontier=Astra/Fable,
-heavy=Sol/Opus, mid=Terra/Sonnet, and light=Luna/Haiku.
-
-<!-- harness:claude-code -->
-Here the concrete mapping is frontier=`Fable`, heavy=`Opus`, mid=`Sonnet`, and light=`Haiku`.
-<!-- /harness -->
+trying to compensate with a frontier worker. The provider model catalog owns the concrete mapping.
 
 ## Step 1 — Size the job on four axes
 
@@ -458,15 +463,9 @@ Which concrete model a band buys is a harness question, never an agent's. For ea
 choose the least costly capable tier; decompose before escalating a worker to compensate for an
 oversized scope.
 
-<!-- harness:claude-code -->
-**Tier is a dispatch-time decision, not an agent choice.** Here a band renders to Claude Code's
-frontmatter keywords — frontier=`fable`, heavy=`opus`, mid=`sonnet`, light=`haiku` (with
-`effort: low`) — and that rendering lives in `hooks/_lib/model_catalog.json`, not in any agent
-file. The strategist is the frontier session; frontier is not a worker override. Use mid for
-bounded coding and heavy for a manager or judgment-heavy review. A reviewer or manager needing the
-premium remains heavy; a coding slice that seems to need frontier is oversized and must be
-decomposed.
-<!-- /harness -->
+The strategist is the frontier session; frontier is not a worker override. Use mid for bounded
+coding and heavy for a manager or judgment-heavy review. A reviewer or manager needing the premium
+remains heavy; a coding slice that seems to need frontier is oversized and must be decomposed.
 
 Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent
 shell capabilities, and the git policy are in **`references/dispatch-knobs.md`**.
