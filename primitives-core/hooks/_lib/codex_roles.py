@@ -138,7 +138,7 @@ def _changes(directory, plugin_root, selected=None, strict_declarations=False):
             if path != canonical:
                 raise ValueError(f"atelier role name already declared in user profile: {path}")
     changed = {}
-    for role in selected:
+    for role in sorted(selected):
         path = directory / f"{package_id(plugin_root)}-{role}.toml"
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise ValueError(f"refusing non-regular profile: {path}")

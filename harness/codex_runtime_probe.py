@@ -250,7 +250,9 @@ write exactly WORKFLOW_OK plus newline, stage and commit in its own checkout usi
 fixture. Integrate that exact commit into your manager checkout, then close the completed
 builder to free a slot. Delegate read-only verification to atelier-reviewer, which must
 read workflow-proof.txt in its effective checkout and report exact bytes and pwd. Close it
-when done. No push, no root/parent checkout edits, no config changes, no manual worktrees.
+when done. Then delegate a read-only pwd check to atelier-scout and wait for its report.
+Use each named role without model overrides. No push, no root/parent checkout edits,
+no config changes, no manual worktrees.
 The observer supplies a single explicit developer-context stop-format diagnostic to the manager.
 Do not invent or forward a conflicting format instruction; report the actual gate outcome.
 Root waits for manager completion and reports the manager's exact final reply; do not repair.
@@ -272,6 +274,11 @@ Root waits for manager completion and reports the manager's exact final reply; d
                      and event.get('agent_type') == 'atelier-manager']
     checks = {
         'manager_builder_reviewer': len(managers) == len(builders) == len(reviewers) == 1,
+        'native_role_models': all(any(event['hook_event_name'] == 'SubagentStart'
+            and event.get('agent_type') == role and event.get('model') == expected
+            for event in events) for role, expected in {
+                'atelier-scout': 'gpt-5.6-luna', 'atelier-builder': 'gpt-5.6-terra',
+                'atelier-manager': 'gpt-6-astra'}.items()),
         'manager_stop_rejected': (root / 'manager-stop-stimulus.json').is_file()
             and any(row.get('decision') == 'nudge' for row in gates)
             and any((event.get('last_assistant_message') or '').strip() == 'PROBE_PROGRESS_ONLY'

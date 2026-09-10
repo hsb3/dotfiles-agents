@@ -45,6 +45,7 @@ class CodexRoles(unittest.TestCase):
             shutil.copytree(ROOT / "plugins/atelier", source)
             planned = roles.setup(project, source, check=True)
             self.assertEqual(len(planned), len(roles.ROLES))
+            self.assertEqual(planned, sorted(planned))
             self.assertFalse((project / ".codex").exists())
             self.assertEqual(roles.setup(project, source), planned)
             self.assertEqual(roles.setup(project, source, check=True), [])
