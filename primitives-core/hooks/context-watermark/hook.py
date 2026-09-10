@@ -156,15 +156,6 @@ def _load_watermark_config(project_dir):
     return config
 
 
-def resolve_watermarks(project_dir, window, complexity):
-    """(soft, hard, info) under the full precedence chain:
-    env var > `watermark:` in the activation file > the computed default."""
-    _, soft, hard, stages = resolve_stages(project_dir, window, complexity)
-    info = {key: stages[key] for key in (
-        "window", "complexity_source", "complexity", "soft_source", "hard_source")}
-    return soft, hard, info
-
-
 def _model_tier(model):
     """Catalog tier for a transcript model; an unmapped model is frontier."""
     try:

@@ -184,7 +184,7 @@ watermark:
 class PrecedenceTests(_ScrubbedEnv):
 
     def resolve(self, window=200_000, complexity=1.0):
-        return hook.resolve_watermarks(self.tmp, window, complexity)
+        return hook.resolve_stages(self.tmp, window, complexity)[1:]
 
     def test_computed_default_when_nothing_overrides(self):
         soft, hard, info = self.resolve()
