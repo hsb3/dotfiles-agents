@@ -121,3 +121,6 @@ isolation; shell access remains subject to the role’s instructions and the pro
 When Atelier is installed, run its project setup after generating these roles. It reconciles
 policy into the sole configured agent's native directory or `.agents/atelier.local.md` when
 multiple coding agents are configured; this bundle ships the same policy-selection helpers.
+
+The shared catalog reserves Astra/Fable for the root strategist; heavy Codex subagents resolve
+to Sol, mid to Terra, and light to Luna. Refresh owned profiles after upgrading to apply the map.
