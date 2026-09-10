@@ -1,6 +1,6 @@
 # code-desk
 
-Version 0.14.1's shared hook library carries the session-handoff transaction helper; session certification
+Version 0.14.1's shared hook library carries the Codex session-handoff transaction helper; session certification
 is activated through Atelier, not through code-desk's hooks.
 
 Codex can use the project-memory taxonomy and maintain a Claude memory setup. The project-memory scripts configure Claude Code, not native Codex memory.

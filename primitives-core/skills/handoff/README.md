@@ -6,6 +6,7 @@ complete discovery, the persistence helper, and runtime limits. Every tool inval
 freshness; use the helper last and stop compaction on any failure. Project scope is unchanged.
 The helper verifies native predecessor labels, repository/work metadata and body readback;
 its immutable call binding prevents a delayed helper from borrowing a newer transaction.
+Session certification ships for Codex only; Claude and OpenCode session support is unavailable.
 
 Maintains the project's session-handoff file so a brand-new session can pick up work cold —
 externalizes current state, in-flight work, decisions made and pending, and gotchas into one

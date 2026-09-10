@@ -101,7 +101,7 @@ card `8xyk` on 2026-09-08 because the sync owns a mirror's body and reverted the
 whenever GitHub #329 changed (demonstrated live: closing that issue wiped the card's body and
 priority, and closed the card). `8xyk` and #329 are both closed; do not resurrect either.
 Read it at session start. The lead owns its **body** under the `handoff` skill's content rules.
-Concurrent independent sessions use opt-in external `scope: session`, one native handoff card
+Concurrent independent Codex sessions use opt-in external `scope: session`, one native handoff card
 and derived certificate per launch/native identity; they never overwrite the bridge. Each
 replacement process gets a fresh `ATELIER_WRITER_ID` and links its predecessor. Read the bridge,
 own/predecessor card and all relevant open `handoff` cards; flag unknown relevance and conflicts.

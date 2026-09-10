@@ -100,7 +100,7 @@ worktrees must read/write the handoff via the MAIN checkout's absolute path.
 
 ### Opt-in concurrent sessions
 
-When the existing external `handoff:` mapping declares `scope: session`, use separate native
+For supported Codex sessions, when the external `handoff:` mapping declares `scope: session`, use separate native
 cards and certificates. The configured `location` remains the lead-owned project bridge;
 never rewrite it from a concurrent session. Legacy configurations without this scope keep
 the update pass below.
@@ -110,8 +110,11 @@ resume. Generate it once for that launch with `python3 -c 'import uuid; print(uu
 For Codex, pass the same value in the process environment and
 `-c 'shell_environment_policy.set.ATELIER_WRITER_ID="<fresh value>"'`.
 Clients attached to one runtime/session are the same writer. Independent attached-client
-identity is unsupported. Claude Code session mode is unsupported until native transport is
-proved; do not substitute a shared stamp or guessed native ID.
+identity is unsupported. Session certification currently supports Codex only. Claude Code
+transport and OpenCode's current-compaction attribution are unproven or insufficient; session
+mode is unsupported there. Do not substitute a shared stamp or guessed identity. OpenCode
+keeps its legacy project handoff behavior; its native compaction hook is advisory, not a session
+certificate gate.
 
 1. Read the bridge and your own or explicitly named predecessor card. Run the helper's
    `discover --project <project> --root <checkout> --related <work-card>` command. It scans

@@ -28,7 +28,7 @@ def contained(root, value):
 def paths(root, config, harness, writer, native):
     if config.get("mode") != "external" or not config.get("stamp"):
         raise ValueError("session scope requires external mode and a contained stamp")
-    if harness not in ("codex", "opencode") or not writer or not native or native == "unknown":
+    if harness != "codex" or not writer or not native or native == "unknown":
         raise ValueError("unsupported runtime or missing launch/native identity")
     base = contained(root, config["stamp"])
     key = digest([harness, writer, native])
@@ -211,13 +211,15 @@ def discover(project, root, related=(), offset=0, page_size=10):
 
 def persist(binding_path, project, body_file, title="Session handoff", labels=(), related=(), predecessor=None):
     binding = read(binding_path)
+    if binding.get("harness") != "codex":
+        raise ValueError("session persistence is supported only by native Codex hooks")
     root = binding["root"]
     binding_path = contained(root, str(binding_path))
     cert = contained(root, binding["stamp"])
     latest = contained(root, str(cert) + ".binding")
     if str(binding_path) != str(latest) + "." + digest(binding["epoch"]):
         raise ValueError("unexpected handoff binding path")
-    native = os.environ.get("CODEX_THREAD_ID") if binding["harness"] == "codex" else os.environ.get("ATELIER_NATIVE_SESSION_ID")
+    native = os.environ.get("CODEX_THREAD_ID")
     if binding["writer"] != os.environ.get("ATELIER_WRITER_ID") or binding["native"] != native:
         raise ValueError("tool identity differs from authoritative hook binding")
     if binding["epoch"][1] != os.environ.get("ATELIER_TOOL_CALL_ID"):
@@ -225,12 +227,9 @@ def persist(binding_path, project, body_file, title="Session handoff", labels=()
     def current():
         if read(latest) != binding:
             raise ValueError("a later native tool invalidated this handoff transaction")
-        if binding.get("concurrent"):
-            raise ValueError("concurrent native tools cannot certify a handoff")
-        if binding["harness"] == "codex":
-            epoch, pending = transcript_state(binding["transcript"])
-            if epoch != binding["epoch"] or pending != {epoch[1]}:
-                raise ValueError("handoff requires the current sequential native tool")
+        epoch, pending = transcript_state(binding["transcript"])
+        if epoch != binding["epoch"] or pending != {epoch[1]}:
+            raise ValueError("handoff requires the current sequential native tool")
     current()
     cert.unlink(missing_ok=True)
     body = Path(body_file).read_text(encoding="utf-8").strip()

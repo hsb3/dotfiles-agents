@@ -156,10 +156,11 @@ class SessionHandoffTests(unittest.TestCase):
                 session.contained(self.root / ".state", value)
 
     def test_unsupported_runtime_allows_tools_but_refuses_manual_compact(self):
-        self.env["ATELIER_HARNESS"] = "claude-code"
-        self.assertNotEqual(self.hook("PreToolUse").get("hookSpecificOutput", {}).get("permissionDecision"), "deny")
-        self.assertEqual(self.hook().get("decision"), "block")
-        self.assertNotIn("decision", self.hook(trigger="auto"))
+        for harness in ("claude-code", "opencode"):
+            self.env["ATELIER_HARNESS"] = harness
+            self.assertNotEqual(self.hook("PreToolUse").get("hookSpecificOutput", {}).get("permissionDecision"), "deny")
+            self.assertEqual(self.hook().get("decision"), "block")
+            self.assertNotIn("decision", self.hook(trigger="auto"))
 
     def test_parallel_helper_cannot_borrow_newer_binding(self):
         self.event("function_call", "call-a")
