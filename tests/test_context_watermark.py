@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK_PATH = os.path.join(
@@ -79,11 +80,13 @@ class _ScrubbedEnv(unittest.TestCase):
 
 class ThresholdFormulaTests(_ScrubbedEnv):
 
-    def test_heavy_defaults_include_the_earlier_notice(self):
-        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "heavy"),
+    def test_frontier_defaults_include_the_earlier_notice(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "frontier"),
                          (60_000, 120_000, 160_000))
 
-    def test_mid_and_light_get_later_defaults(self):
+    def test_heavy_mid_and_light_get_later_defaults(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "heavy"),
+                         (96_000, 192_000, 256_000))
         self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "mid"),
                          (120_000, 240_000, 320_000))
         self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "light"),
@@ -94,8 +97,12 @@ class ThresholdFormulaTests(_ScrubbedEnv):
                          (19_200, 38_400, 51_200))
 
     def test_complexity_scales_all_stages_down(self):
-        self.assertEqual(hook.compute_thresholds(1_000_000, 0.85, "heavy"),
+        self.assertEqual(hook.compute_thresholds(1_000_000, 0.85, "frontier"),
                          (51_000, 102_000, 136_000))
+
+    def test_actual_window_caps_apply_after_complexity(self):
+        self.assertEqual(hook.compute_thresholds(64_000, 2.0, "light"),
+                         (19_200, 38_400, 51_200))
 
     def test_unknown_model_is_conservatively_heavy(self):
         self.assertEqual(hook.compute_thresholds(None, 1.0, "unknown"),
@@ -104,12 +111,12 @@ class ThresholdFormulaTests(_ScrubbedEnv):
     def test_a_non_positive_window_is_unknown_not_a_tiny_one(self):
         """Unreachable through the catalog, but this hook never trusts input:
         a window of 1 would otherwise make both tiers 0 and fire forever."""
-        self.assertEqual(hook.compute_thresholds(-200_000, 1.0, "heavy"),
+        self.assertEqual(hook.compute_thresholds(-200_000, 1.0, "frontier"),
                          (60_000, 120_000, 160_000))
-        self.assertEqual(hook.compute_thresholds(0, 1.0, "heavy"),
+        self.assertEqual(hook.compute_thresholds(0, 1.0, "frontier"),
                          (60_000, 120_000, 160_000))
 
-    def test_unknown_tier_uses_heavy_defaults(self):
+    def test_unknown_tier_uses_frontier_defaults(self):
         self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "unknown"),
                          (60_000, 120_000, 160_000))
 
@@ -239,7 +246,7 @@ class PrecedenceTests(_ScrubbedEnv):
 # Running the hook the way the harness runs it
 # ---------------------------------------------------------------------------
 
-def _assistant(ctx_tokens, model="claude-opus-4-8"):
+def _assistant(ctx_tokens, model="claude-opus-5"):
     return {
         "type": "assistant",
         "message": {
@@ -292,7 +299,7 @@ class HookRunTests(_ScrubbedEnv):
         with open(self.log_path, encoding="utf-8") as fh:
             return [json.loads(line) for line in fh if line.strip()]
 
-    def session_payload(self, ctx_tokens, model="claude-opus-4-8", session=None):
+    def session_payload(self, ctx_tokens, model="claude-opus-5", session=None):
         session = session or "session-{0}".format(next(_SEQ))
         transcript = os.path.join(self.tmp, "transcripts", session + ".jsonl")
         _write_jsonl(transcript, [_assistant(ctx_tokens, model)])
@@ -306,20 +313,20 @@ class HookRunTests(_ScrubbedEnv):
 
     # -- session branch ---------------------------------------------------
 
-    def test_a_known_1m_window_still_nudges_at_the_absolute_soft_line(self):
-        proc = self.run_hook(self.session_payload(125_000))
+    def test_a_known_heavy_model_uses_its_soft_line(self):
+        proc = self.run_hook(self.session_payload(200_000))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         out = json.loads(proc.stdout)
         self.assertIn("additionalContext", out)
         row = self.rows()[-1]
         self.assertEqual(row["tier"], "soft")
-        self.assertEqual(row["soft"], 120_000)
+        self.assertEqual(row["soft"], 192_000)
         self.assertEqual(row["window"], 1_000_000)
 
     def test_notice_soft_and_hard_transition_without_repeating(self):
         session = "session-{0}".format(next(_SEQ))
-        for tokens, expected in ((70_000, "notice"), (125_000, "soft"),
-                                 (170_000, "hard")):
+        for tokens, expected in ((100_000, "notice"), (200_000, "soft"),
+                                 (260_000, "hard")):
             proc = self.run_hook(self.session_payload(tokens, session=session))
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertEqual(self.rows()[-1]["tier"], expected)
@@ -327,15 +334,77 @@ class HookRunTests(_ScrubbedEnv):
 
     def test_notice_does_not_nag_until_its_refire_interval(self):
         session = "session-{0}".format(next(_SEQ))
-        first = self.run_hook(self.session_payload(70_000, session=session))
-        second = self.run_hook(self.session_payload(70_000, session=session))
+        first = self.run_hook(self.session_payload(100_000, session=session))
+        second = self.run_hook(self.session_payload(100_000, session=session))
         self.assertIn("additionalContext", first.stdout)
         self.assertEqual(second.stdout.strip(), "")
 
     def test_warning_does_not_write_into_the_project_tree(self):
-        proc = self.run_hook(self.session_payload(70_000))
+        proc = self.run_hook(self.session_payload(100_000))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(os.listdir(self.project), [])
+
+    def _dirty_project_snapshot(self):
+        tracked = os.path.join(self.project, "tracked.txt")
+        untracked = os.path.join(self.project, "untracked.txt")
+        with open(tracked, "w", encoding="utf-8") as fh:
+            fh.write("committed\n")
+        subprocess.run(["git", "init", "-q", self.project], check=True)
+        subprocess.run(["git", "-C", self.project, "add", "tracked.txt"], check=True)
+        subprocess.run([
+            "git", "-C", self.project, "-c", "user.name=test",
+            "-c", "user.email=test@example.invalid", "commit", "-qm", "base"], check=True)
+        with open(tracked, "w", encoding="utf-8") as fh:
+            fh.write("dirty tracked\n")
+        with open(untracked, "w", encoding="utf-8") as fh:
+            fh.write("dirty untracked\n")
+        index = subprocess.run(
+            ["git", "-C", self.project, "rev-parse", "--git-path", "index"],
+            capture_output=True, text=True, check=True).stdout.strip()
+        if not os.path.isabs(index):
+            index = os.path.join(self.project, index)
+
+        def read_bytes(path):
+            with open(path, "rb") as fh:
+                return fh.read()
+
+        def snapshot():
+            return {
+                "branch": subprocess.run(
+                    ["git", "-C", self.project, "branch", "--show-current"],
+                    capture_output=True, text=True, check=True).stdout,
+                "index": read_bytes(index),
+                "diff": subprocess.run(
+                    ["git", "-C", self.project, "diff", "--binary"],
+                    capture_output=True, check=True).stdout,
+                "tracked": read_bytes(tracked),
+                "untracked": read_bytes(untracked),
+            }
+        return snapshot
+
+    def test_all_stages_preserve_a_dirty_project_in_claude_and_codex(self):
+        snapshot = self._dirty_project_snapshot()
+        before = snapshot()
+        for tokens in (100_000, 200_000, 260_000):
+            self.run_hook(self.session_payload(tokens))
+            self.assertEqual(snapshot(), before)
+
+        rollout = os.path.join(self.tmp, "codex.jsonl")
+        rows = []
+        for tokens in (20_000, 40_000, 52_000):
+            _write_jsonl(rollout, [
+                {"type": "turn_context", "payload": {"model": "gpt-5.6-terra"}},
+                {"type": "event_msg", "payload": {"type": "token_count", "info": {
+                    "last_token_usage": {"total_tokens": tokens}, "model_context_window": 64_000}}},
+            ])
+            with mock.patch.dict(os.environ, {"ATELIER_HARNESS": "codex"}), \
+                    mock.patch.object(hook, "STATE_DIR", self.state_dir), \
+                    mock.patch("sys.stdout", io.StringIO()):
+                hook.handle_session({
+                    "session_id": "codex-{0}".format(tokens), "transcript_path": rollout,
+                    "cwd": self.project}, rows.append)
+            self.assertEqual(snapshot(), before)
+        self.assertEqual([row["tier"] for row in rows], ["notice", "soft", "hard"])
 
     def test_unknown_model_falls_back_to_the_absolute_pair_and_says_so(self):
         proc = self.run_hook(self.session_payload(130_000, model="gpt-9-turbo"))
