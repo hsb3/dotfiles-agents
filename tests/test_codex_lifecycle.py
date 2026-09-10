@@ -185,8 +185,7 @@ class SetupTests(unittest.TestCase):
         spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as directory, \
              patch.dict(sys.modules, codex_roles=SimpleNamespace(setup=lambda *args, **kwargs: []),
-                        codex_workers=SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith("GIT_")},
-                                                       codex_home=lambda: str(Path(directory) / "codex-home"))):
+                        codex_workers=SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith("GIT_")})):
             root = Path(directory)
             subprocess.run(['git', 'init', '-q', directory], check=True)
             (root / '.codex').mkdir()
@@ -224,8 +223,7 @@ class SetupTests(unittest.TestCase):
                 config.write_text(original)
                 calls = []
                 roles = SimpleNamespace(setup=lambda *args, **kwargs: calls.append(kwargs['check']) or [])
-                worker = SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith('GIT_')},
-                                         codex_home=lambda: str(root / 'codex-home'))
+                worker = SimpleNamespace(clean_git_env=lambda: {key: value for key, value in os.environ.items() if not key.startswith('GIT_')})
                 with patch.dict(sys.modules, codex_roles=roles, codex_workers=worker):
                     report = io.StringIO()
                     self.assertEqual(module.codex_setup(directory, report), 0 if valid else 1)

@@ -153,7 +153,18 @@ the native child id and parent_thread_id. Active, tool, and wait timing remain
 null when the runtime does not measure them; lifetime_ms is populated when
 both transcript timestamps exist.
 
-counter_state is observed, reset, missing, malformed, malformed-json, error,
-or inherited-baseline-unknown. Each non-observed state has null counters and
+counter_state is observed, reset, pending, missing, malformed-delta,
+malformed-json, unsupported-future-schema, error, or
+inherited-baseline-unknown. Each non-observed state has null counters and
 must remain visible to import/export consumers; no state means zero usage.
-Rows exclude prompts, transcripts, secrets, and message content.
+Rows exclude prompts, transcripts, secrets, and message content. Exporters
+should preserve complete rows and importers must retain unknown states and
+deduplicate only exact observation_id values.
+
+Example observed row:
+
+    {"v":2,"schema":"codex-usage","schema_version":2,"kind":"delta",
+     "counter_state":"observed","segment":0,"tokens":{"input":12,
+     "cached_input":8,"output":4,"reasoning":1,"total":16},
+     "cumulative_tokens":{"input":100,"cached_input":80,"output":20,
+     "reasoning":2,"total":120}}

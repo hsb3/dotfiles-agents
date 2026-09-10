@@ -21,7 +21,7 @@ class UsageTests(unittest.TestCase):
 
     def count(self, total, model=None):
         row = {"type": "event_msg", "timestamp": "2026-09-10T00:00:01Z", "payload": {"type": "token_count", "info": {"total_token_usage": {
-            "input_tokens": max(20, total - 40), "cached_input_tokens": max(0, total - 60),
+            "input_tokens": total - 40, "cached_input_tokens": max(0, total - 60),
             "output_tokens": 40, "reasoning_output_tokens": 10, "total_tokens": total}}}}
         return ([{"type": "turn_context", "payload": {"model": model, "effort": "high"}}] if model else []) + [row]
 
@@ -51,7 +51,14 @@ class UsageTests(unittest.TestCase):
     def test_missing_and_oserror_are_explicit(self):
         self.assertEqual(codex_usage.events(None, {"session_id": "root"})[0]["counter_state"], "error")
         self.write({"type": "session_meta", "payload": {"id": "root"}})
-        self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[0]["counter_state"], "missing")
+        self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[0]["counter_state"], "pending")
+
+    def test_future_and_inherited_histories_never_become_observed(self):
+        self.write({"type": "session_meta", "payload": {"id": "parent", "timestamp": "2026-09-10T00:00:00Z"}},
+                   *self.count(100), {"v": 3}, *self.count(200))
+        rows = codex_usage.events(self.path, {"session_id": "root", "agent_id": "child"})
+        self.assertIn("unsupported-future-schema", [row["counter_state"] for row in rows])
+        self.assertNotIn("observed", [row["counter_state"] for row in rows])
 
 
 if __name__ == "__main__":
