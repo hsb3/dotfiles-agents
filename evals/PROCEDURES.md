@@ -2,7 +2,8 @@
 
 _Operator runbook: which script to run when, and the step-by-step procedures for the
 recurring operations. Written 2026-07-20 from the W1 and M1 passes while the context was
-hot. Secret-free (credentials live in `.claude/operations/extender-db.env`)._
+hot. Secret-free (supply `PB_URL` / `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` through the
+environment; `.claude/operations/extender-db.env` is an untracked fallback)._
 Status: active
 
 ## The scripts, in dependency order
@@ -20,11 +21,12 @@ no shell, which makes the no-DB-access discipline structural, not just briefed).
 | 4a | `load_assessments.py` | judged-verdict JSON | `assessments` (per-row upsert) | W1-style judged/review passes (`judged-v1`, `review-v1`). |
 | 4b | `load_coverage.py` | mapping JSON (see its docstring) | `assessments`, assessor `coverage-v1` — full cross product, or ONLY the named extenders' rows with `--extenders slug1,slug2` (EDB-26 delta mode) | Coverage passes. `--dry-run` first, always. Bulk-diff upsert; re-run must report 0 create. **Delta passes MUST use `--extenders`** so carried extenders' rows and `eval_run` stamps are never touched. |
 | 5 | `report.py` | DB (or `--fixtures dir` for credential-free dev) | `coverage-matrix.md` + `analysis.md` (both generated — never hand-edit) | After anything changes coverage/relationship/assessment data. Deterministic; no-op on unchanged data. Supersedes `render_matrix.py` (removed 2026-07-21, W3). |
-| 6 | `load_harness_runs.py` | `harness/results.jsonl` + `harness/runs/*.log` | `runs`, `artifacts`, `run_events`, `tool_calls` (harness telemetry, #174) | After a harness campaign, **deliberately, in-session** — `--parse-only` first (no DB), then `--dry-run`, then real. Scoped delta loads use `--campaign LABEL`. NEVER invoked by the scheduled campaign runner (data.db commit discipline). |
+| 6 | `load_harness_runs.py` | `harness/results.jsonl` + `harness/runs/*.log` | `runs`, `artifacts`, `run_events`, `tool_calls` (harness telemetry, #174) | After a harness campaign, **deliberately, in-session** — `--parse-only` first (no DB), then `--dry-run`, then real. Scoped delta loads use `--campaign LABEL`. NEVER invoked by the scheduled campaign runner. |
 | — | `pb.py` | — | — | Shared REST client (auth, `upsert`, `list_all`, `esc`, `create_multipart` for file fields). Import target, not a CLI. |
 
-Cold rebuild from a fresh clone: 0 → 1 → 2, then re-load eval provenance if wanted
-(the DB is a projection; `data.db` is tracked, so normally you just serve what git has).
+Cold rebuild: start a private runtime, then 1 → 2, and re-load eval provenance if wanted.
+Create a disposable superuser before serving a fresh test instance to avoid the installer
+browser. Never copy real authentication state into a fixture.
 
 ### Retiring a dropped extender
 
@@ -41,7 +43,10 @@ Consequences:
 - The four consumers — `report.py`, `load_coverage.py`, `load_eval_run.py`,
   `load_assessments.py` — drop retired units in plain Python at their reference fetch.
   `report.py` additionally drops assessments and relationships pointing at one, because its
-  joins index `ext_by_id` unguarded.
+  joins index `ext_by_id` unguarded. Both generated documents report the exact retired-unit
+  count and suppressed assessment/relationship counts across all fetched rows, before
+  section-specific filtering. Missing extender references are also suppressed; a relationship
+  with two excluded endpoints counts once. Eval-run linked-row counts use the active projection.
 - A slug that comes back is un-retired automatically: both `extenders` upserts write
   `retired=False`.
 - Preview with `ingest.py --retire-dry-run`, which lists what would be flagged and writes
@@ -96,9 +101,8 @@ After `make harness-campaign` (or any `agent-harness` run) produces new ledger r
 3. `--dry-run` (add `--campaign LABEL` to scope a delta load — same EDB-26 discipline as
    coverage: nothing outside the scoped campaign is read, diffed, or restamped).
 4. Real run, then **re-run `--dry-run` to prove idempotence** (expect 0 create / 0 update).
-5. Commit `data.db` **+ `pb_data/storage/`** per the commit procedure below — artifact
-   blobs land on disk under `pb_data/storage/<collection>/<record>/` and are tracked
-   (the `.gitignore` negation), so a blob-bearing ingest changes both.
+5. Retain the database and its artifact storage together in the private runtime/archive.
+   Do not commit either; record the ingest commands and verification on the task card.
 
 Gotchas specific to this lane:
 - **File fields can't be written via JSON** — `artifacts.blob` goes through
@@ -111,8 +115,8 @@ Gotchas specific to this lane:
   on the live corpus. The loader mirrors this at body-build time (`_coerce_json`);
   without it, string-JSON tool outputs (todowrite, Bash JSON prints) diff as
   "changed" forever (bit the first #174 ingest — 91 rows).
-- The scheduled weekly campaign runner never auto-ingests: unattended writes would dirty
-  the tracked `data.db` outside the stop-server/checkpoint/commit-with-cause discipline.
+- The scheduled weekly campaign runner never auto-ingests: runtime writes require a
+  deliberate session with backup and verification.
 
 ## Procedure: the gates (before declaring any pass done)
 
@@ -127,13 +131,46 @@ Run all of these yourself; agent self-reports don't count (PLAN "Definition of d
 | 0 unlinked assessments | query: no row with empty `eval_run` |
 | repo gates | `make ci` |
 
-## Procedure: committing `data.db`
+## Procedure: runtime reports and count verification
 
-1. Stop the server (`kill` the pocketbase PID; check `pgrep -f 'pocketbase serve'`).
-2. `sqlite3 pb_data/data.db "PRAGMA wal_checkpoint(TRUNCATE);"` — expect `0|0|0`.
-3. One commit: `data.db` **together with its cause** (the scripts/docs that produced the
-   change). Never commit the db alone or mid-WAL with the server running.
-4. Restart: `serve.sh` (or `nohup pocketbase serve --dir pb_data --http 127.0.0.1:8090 &`).
+With `PB_URL` / `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` pointing at the intended private
+runtime (a disposable served instance for implementation proof):
+
+```sh
+python3 evals/schema.py
+python3 evals/ingest.py
+python3 evals/report.py --out /tmp/evals-report
+```
+
+For credential-free regression work, pass `--fixtures <temporary-fixture-dir>` as well.
+Reports and database/storage bytes are runtime artifacts, never new commits. Existing
+tracked-artifact removal and archive retention require a separately approved migration;
+this procedure does not authorize untracking or deleting them.
+
+Run these read-only queries against that same runtime's `data.db` (for example,
+`sqlite3 -readonly /path/to/private/pb_data/data.db`). Keep writes quiescent while querying
+and rendering so both observe the same data. The first result is retired units; the next
+two are total, visible and suppressed rows. Their suppressed columns must match both reports.
+
+```sql
+SELECT count(*) AS retired_units FROM extenders WHERE retired = 1;
+
+SELECT count(*) AS total, count(e.id) AS visible,
+       count(*) - count(e.id) AS suppressed
+FROM assessments a
+LEFT JOIN extenders e ON e.id = a.extender AND coalesce(e.retired, 0) = 0;
+
+SELECT count(*) AS total,
+       count(CASE WHEN a.id IS NOT NULL AND b.id IS NOT NULL THEN 1 END) AS visible,
+       count(*) - count(CASE WHEN a.id IS NOT NULL AND b.id IS NOT NULL THEN 1 END) AS suppressed
+FROM relationships r
+LEFT JOIN extenders a ON a.id = r.extender_a AND coalesce(a.retired, 0) = 0
+LEFT JOIN extenders b ON b.id = r.extender_b AND coalesce(b.retired, 0) = 0;
+```
+
+Record commands, query results, and output location on the task card; do not attach auth
+data. A disposable instance proves the implementation against its seeded corpus, not the
+counts or migration safety of a live database.
 
 Before a **live schema change**, additionally: take an API backup
 (`POST /api/backups`, lands in `pb_data/backups/`, gitignored) and checksum the rows that
