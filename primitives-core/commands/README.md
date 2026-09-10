@@ -8,6 +8,7 @@ Each is one `.md` with frontmatter, named by its filename, and reachable as
 
 | Command | Invocation | Does |
 |---|---|---|
+| `prepare-compact` | `/atelier:prepare-compact` | Invokes `compact-handoff`: verify the persisted handoff and prepare a KEEP/DROP prompt before manual compaction. Its distinct name keeps the skill reachable. |
 | `activate` | `/atelier:activate` | Arms atelier in a project: creates `.claude/atelier.local.md` if missing, then reports what each hook actually resolved, naming any key that is present but silently doing nothing. |
 | `pr-findings` | `/code-desk:pr-findings [<n>]` | Loads `pull-request` and drives it over one PR — the current branch's open PR when no number is given. Reports each review finding as actionable or as pre-existing rot it names rather than drops. |
 

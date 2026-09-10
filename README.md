@@ -87,7 +87,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage and status comms. | 6 skills · 1 agent · 2 hooks · 1 command |
 | [`board-desk`](plugins/board-desk/README.md) | bundle | Task authoring, board health, Kata and GitHub Projects triage, and GitHub mirror reconciliation. | 2 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
-| [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 14 hooks · 1 command |
+| [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 9 skills · 5 agents · 14 hooks · 2 commands |
 | [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout and memory standards, read-only audit, fill-only scaffold, item-body form. | 6 skills |
 | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) | bundle | Build Obsidian plugins against the real API (lifecycle, chat UIs, in-plugin MCP servers) and automate vaults from the terminal. | 4 skills |
 | [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents · 2 hooks |

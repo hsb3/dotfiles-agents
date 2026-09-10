@@ -22,6 +22,18 @@
 version: 1
 
 primitives:
+  - id: compact-handoff
+    type: skill
+    source: primitives-core/skills/compact-handoff
+    origin: authored
+    disposition: qualified
+    targets: [claude-code, codex]
+  - id: prepare-compact
+    type: command
+    source: primitives-core/commands/prepare-compact.md
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: handoff
     type: skill
     source: primitives-core/skills/handoff
