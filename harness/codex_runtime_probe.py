@@ -412,7 +412,7 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                     str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
                     '--project-dir', str(repo)])
                 (repo / 'protected.txt').write_text('PRESERVED\n')
-                command('fixture-add', ['git', 'add', '.claude/atelier.local.md', 'protected.txt'])
+                command('fixture-add', ['git', 'add', '.agents/atelier.local.md', 'protected.txt'])
                 command('fixture-commit', ['git', '-c', 'user.name=Runtime Probe', '-c',
                                            'user.email=probe@invalid', 'commit', '-m', 'Consumer fixture'])
                 command('activation-check', [sys.executable,
