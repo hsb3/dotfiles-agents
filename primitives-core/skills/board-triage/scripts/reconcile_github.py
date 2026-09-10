@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
-"""GitHub issues <-> kata board reconciler. Classes, rationale and hazards: AGENTS.md
-"Curation rhythm" step 4.
+"""Reconcile GitHub issues against a Kata project; dry-run unless --apply.
 
-`kata sync github` is import-only by design — it never creates an issue from a card and never
-closes one. And `Closes #N` is inert here: GitHub auto-closes only from the default branch,
-while PRs merge to `dev` and `main` is written solely by the publish workflow, which names no
-issue. So a mirror is closed by hand when its work lands (standing ruling 2026-08-24) and this
-is the sweep for the ones that got missed. Dry-run by default; `--apply` closes stale mirrors.
-Reads the live hosted board, so it is not a `make ci` gate.
-
-    python3 scripts/reconcile_github.py [--apply]     # or: [APPLY=1] make board-reconcile
+Run from the GitHub checkout linked to this board. --project overrides Kata's
+checkout selection; gh uses its normal repository selection. See the Kata adapter
+reference for the import-only sync and mirror ownership rules.
 """
 
+import argparse
 import json
 import subprocess
 import sys
-
-PROJECT = "dotfiles-agents"
 
 
 def run(cmd):
@@ -26,11 +19,14 @@ def run(cmd):
     return p.stdout
 
 
-def board():
+def board(project):
     """github_issue number -> (short_id, status, title) for every card that has a mirror."""
-    data = json.loads(run(["kata", "list", "--status", "all", "--project", PROJECT, "--json"]))
+    cmd = ["kata", "list", "--status", "all", "--limit", "0"]
+    if project:
+        cmd += ["--project", project]
+    data = json.loads(run([*cmd, "--json"]))
     out = {}
-    for i in data["issues"]:
+    for i in data["issues"] or []:
         num = (i.get("metadata") or {}).get("github_issue")
         if num:
             out[str(num).rsplit("/", 1)[-1]] = (i["short_id"], i["status"], i["title"])
@@ -43,13 +39,17 @@ def issues(state):
 
 
 def close(num, ref, title):
-    body = f"Closed on the kata board as `{ref}` — {title}\n\nReconciled by `scripts/reconcile_github.py`; the board is the system of record."
+    body = f"Closed on the kata board as `{ref}` — {title}\n\nReconciled by board-desk's `reconcile_github.py`; the board is the system of record."
     run(["gh", "issue", "close", num, "--comment", body])
 
 
 def main():
-    apply = "--apply" in sys.argv[1:]
-    cards, open_gh = board(), issues("open")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--project", help="Kata project (default: Kata's checkout selection)")
+    parser.add_argument("--apply", action="store_true", help="close stale GitHub mirrors")
+    args = parser.parse_args()
+    apply = args.apply
+    cards, open_gh = board(args.project), issues("open")
 
     stale, tracked, untracked = [], [], []
     for num, gh_title in sorted(open_gh.items(), key=lambda kv: int(kv[0])):

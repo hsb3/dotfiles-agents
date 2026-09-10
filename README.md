@@ -71,8 +71,9 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 |---|---|
 | Get a cited research answer, fix a setting that will not take effect, make an honest chart, check that a test can fail, or set up a repo — anything that works on its own and has no plugin of its own | [`solo-skills`](plugins/solo-skills/README.md) |
 | Delegate work across subagents and keep long sessions from running out of context | [`atelier`](plugins/atelier/README.md) |
-| Decide what a repo's quality gate must enforce, then run review triage, board triage, and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
+| Decide what a repo's quality gate must enforce, then run review triage and status comms through it | [`code-desk`](plugins/code-desk/README.md) |
 | Run a planning desk over a tracker (kata first), or lay out/audit/scaffold a repo's in-repo _meta/ structure | [`mise-en-place`](plugins/mise-en-place/README.md) |
+| Author executable tasks, check board health, rank priorities and reconcile GitHub mirrors | [`board-desk`](plugins/board-desk/README.md) |
 | Draw an architecture or flow diagram that renders on GitHub | [`diagrams`](plugins/diagrams/README.md) |
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
 | Build a PocketBase backend, drive a running one from the terminal, or delegate the build to agents that already carry the backend laws | [`pocketbase`](plugins/pocketbase/README.md) |
@@ -83,7 +84,8 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
 | [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone with no topical plugin: harness config, research, test quality, chart design, API and TUI craft, repo setup. | 14 skills |
-| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage, board triage, and status comms. | 7 skills · 1 agent · 2 hooks · 1 command |
+| [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage and status comms. | 6 skills · 1 agent · 2 hooks · 1 command |
+| [`board-desk`](plugins/board-desk/README.md) | bundle | Task authoring, board health, Kata and GitHub Projects triage, and GitHub mirror reconciliation. | 2 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 8 skills · 5 agents · 14 hooks · 1 command |
 | [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout and memory standards, read-only audit, fill-only scaffold, item-body form. | 6 skills |

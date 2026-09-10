@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Eleven plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, board triage, and status comms), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
-    "version": "0.12.0"
+    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
+    "version": "0.13.0"
   },
   "name": "dotfiles-agents",
   "owner": {
@@ -17,6 +17,15 @@
       "name": "atelier",
       "source": "./plugins/atelier",
       "version": "0.33.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Write executable work items, measure board health, rank backlog priorities through Kata or GitHub Projects adapters, and reconcile GitHub mirrors with explicit apply. Kata wiring and per-card audits come from the separately installed kata plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "board-desk",
+      "version": "0.1.0",
+      "source": "./plugins/board-desk"
     },
     {
       "author": {
@@ -40,10 +49,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kata), recurring status comms and authored presentations with portable PptxGenJS packages, existing-deck editing and rendered verification, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, recurring status comms and authored presentations with portable PptxGenJS packages, existing-deck editing and rendered verification, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.13.0"
+      "version": "0.14.0"
     },
     {
       "author": {
@@ -67,10 +76,10 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The supporting standards ship with it: the project-memory taxonomy whose checklist rows the audit and the scaffold both read, and the item-body form the desk writes tracker items to. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The supporting standards ship with it: the project-memory taxonomy whose checklist rows the audit and the scaffold both read, and the item-body form the desk writes tracker items to, carried as a dependency from its topical home in board-desk. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "mise-en-place",
       "source": "./plugins/mise-en-place",
-      "version": "0.5.0"
+      "version": "0.5.1"
     },
     {
       "author": {

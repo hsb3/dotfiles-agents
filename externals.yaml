@@ -30,6 +30,13 @@
 version: 1
 
 externals:
+  - id: kata
+    kind: plugin
+    upstream: https://github.com/hsb3/kata-oversight
+    path: plugins/kata
+    ref: fced756974bed7c7288276568d43e83759218e6b
+    provides: "Cross-marketplace companion for board-desk: Kata workflow, wiring checks and per-card definition/dependency audits. Reference only; no upstream bytes are copied into this marketplace."
+    targets: [claude-code, codex]
   - id: pocketbase-best-practices
     kind: skill
     upstream: https://github.com/greendesertsnow/pocketbase-skills

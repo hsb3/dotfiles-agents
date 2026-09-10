@@ -79,7 +79,7 @@ labels: ## GitHub label set vs the closed vocabulary, decision-016 (needs gh + n
 	@python3 scripts/check_labels.py
 
 board-reconcile: ## Open GitHub issues vs the kata board; APPLY=1 closes stale mirrors (needs gh + the daemon; NOT in ci)
-	@python3 scripts/reconcile_github.py $(if $(APPLY),--apply,)
+	@python3 primitives-core/skills/board-triage/scripts/reconcile_github.py $(if $(APPLY),--apply,)
 
 # Curation rhythm step 3. Same measurement the SessionStart hook prints, run on demand and
 # non-zero when a pass is due. The vocabulary is the core label set (decision-023) — without

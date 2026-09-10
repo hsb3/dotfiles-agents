@@ -4,7 +4,7 @@ Codex can use the project-memory taxonomy and maintain a Claude memory setup. Th
 
 Set the quality contract a repo is held to, build the one gate command that enforces it, and
 run next-release work through it — plus the executive-desk overhead around that work: the
-review findings a green check hides, weekly board triage, recurring status comms, the themed
+review findings a green check hides, recurring status comms, the themed
 decks those comms ship as, an honest value-and-proof README, and the memory taxonomy the repo
 keeps.
 
@@ -28,8 +28,7 @@ flowchart TD
     Rig --> Build[Next release work]
     Build --> PR[pull-request triages the review findings a green check hides]
     PR --> Build
-    Build --> Board[board-triage ranks the external board weekly]
-    Board --> Comms[comms assembles the recurring deck]
+    Build --> Comms[comms assembles the recurring deck]
     Comms --> PPT[presentations renders it to the house theme]
     PPT --> Build
     Repo --> RM[readme-value-and-proof writes the honest pitch]
@@ -43,7 +42,6 @@ flowchart TD
 | Skill | What it does |
 |---|---|
 | `starting-conditions` | Interview-first. Decides what is being built, in what language, and which rules a machine enforces, then writes a `RULES.md` contract, one gate command that proves it, and the baseline of what that gate says about the tree today. Measures; never remediates. |
-| `board-triage` | The weekly routine that ranks the un-ranked items on a task board so its prioritization and roadmap views stay useful instead of drifting into noise. The Impact×Effort judgment is backend-agnostic; a thin adapter does the board's I/O (GitHub Projects v2 and Kata ship). `board_health.py` decides whether a pass is due at all, and confirms afterwards that it took, by checking whether the board's fields still discriminate rather than merely being filled. The Kata adapter writes out the full maintenance rhythm the pass sits inside and how an import-only GitHub sync constrains it; every check that can fail judges open items only, so label history never holds it red. `core-labels.txt` is the declared vocabulary that check reads, and `relabel_board.py` migrates a board onto it — dry run unless `APPLY=1`, mirrors skipped, and a label with no mapping reported rather than renamed on a guess. The 2026-09-08 ruling closes decision-023's open question in the map: documentation is a domain, so `doc`/`docs`/`documentation` rename onto `area:docs` (additive — the card still needs a type) and a card that already has an area is vetoed as a conflict instead of given a second one; `gh-import` drops, since the card's `github_issue` metadata is the provenance record. |
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
 | `presentations` | Builds the decks `comms` ships as, with authored semantic palettes, typography, portable PptxGenJS sources, existing-deck editing and rendered visual verification. |
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app, not mockups. |
@@ -84,11 +82,6 @@ Later: "write me a real README for this"
 → readme-value-and-proof captures live screenshots of the app actually running and
   writes the value-proposition pitch around them — not a description of planned features.
 
-Later: "run board triage"
-→ board-triage exports the board snapshot, finds the un-ranked/blank/stale items, ranks
-  them by the standing Impact×Effort rubric, and applies only the diffs through the
-  adapter for whatever board you run.
-
 End of week: "produce the weekly planning briefing"
 → comms assembles the deck from the same sources the board already tracks, to the
   standard's format — no one-off slide deck from scratch.
@@ -104,14 +97,8 @@ gate catch it, and reverting the sabotage. Neither fixes what the baseline finds
 writing the contract and satisfying it are separate jobs, and a baseline taken after
 remediation is worthless.
 
-`board-triage` assumes a board already stood up with an adapter for it. Every adapter is
-self-contained in this bundle, and what each needs is the backend's own client: `gh`
-authenticated with `project` scope for GitHub Projects, the `kata` CLI on PATH already pointed
-at the right daemon for Kata. Every adapter
-also answers `apply` the same way: a row it cannot resolve prints as a `SKIP` on stderr and
-exits non-zero, while the rows that did resolve are still applied — so `apply || abort`
-means one thing on both backends. Rejections the backend itself raises print as a
-`FAIL`, on stderr too, which leaves stdout as nothing but the row log.
+Board triage and GitHub mirror reconciliation now ship in
+[`board-desk`](../board-desk/README.md). Install it for that maintenance loop.
 
 `comms` writes its dated briefing folders to `_meta/briefings/` when the repo already
 carries a `_meta/` tree, and falls back to `briefings/` at the repo root when it does not —

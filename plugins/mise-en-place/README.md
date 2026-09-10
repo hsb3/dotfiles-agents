@@ -51,7 +51,7 @@ flowchart TD
 | `repo-compliance-audit` | Read-only. Runs one bundled script from the repo root and presents its `ID \| Area \| Verdict \| Detail` table plus the `N pass / M gap` summary verbatim. Never writes to the audited repo, never fixes a gap, and defines no checks of its own — every row comes from a standard's checklist. |
 | `mise-en-place-scaffold` | Fill-only. `--plan` is the default and writes nothing: it shows the creations, conflicts, and manual items per checklist ID. `--apply` creates only those planned items. There is no overwrite mode — a file that differs from a template is reported as a conflict with a diff and left byte-identical. |
 | `planning-desk` | Stands up `_meta/plans/`: a `_config.md` for this repo's gates and tracker binding, a tracker adapter plus three dependency-free analysis scripts under `_utils/`, and a folder per unit of work holding `plan.md`. Tracker-adapter-backed, with a Kata adapter shipped — the tracked item is the contract, the plan is the build detail, and the scripts are generated views over a tracker snapshot plus disk. It also carries the MUST/DEFER/CUT scope hammer, the one move that needs neither desk nor tracker: a candidate list triaged into a table, biased toward deferring or cutting. |
-| `task-authoring` | The item-body standard the desk delegates to. The desk owns the plan; what a tracker item's own body must contain — a title that scans and carries no `word: ` prefix (area and type live in labels), acceptance criteria that can fail, thresholds given as a number or a command, a mechanism behind every gate, and stated scope ownership — is defined here, and the desk points at it rather than restating it. `_utils/conformance.py` is a coarser instrument over the same material: it looks for named headings, so an item can satisfy this standard and still be flagged for want of one. Write to the standard; read the script as triage. |
+| `task-authoring` | The item-body standard the desk delegates to, carried here as a dependency from its topical home in `board-desk`. The desk owns the plan; what a tracker item's own body must contain — a title that scans and carries no `word: ` prefix (area and type live in labels), acceptance criteria that can fail, thresholds given as a number or a command, a mechanism behind every gate, and stated scope ownership — is defined here, and the desk points at it rather than restating it. `_utils/conformance.py` is a coarser instrument over the same material: it looks for named headings, so an item can satisfy this standard and still be flagged for want of one. Write to the standard; read the script as triage. |
 
 One legacy carve-out survives in both the audit and the scaffold: the frontmatter checks over
 `_meta/plans/` skip `issue-body.md`. That exemption covered a staged body kept byte-identical
@@ -89,6 +89,8 @@ does not require this plugin.
 claude plugin install mise-en-place@dotfiles-agents
 ```
 
-Since the decision-020 sweep this bundle is the only home for `task-authoring`, and one
-of only two for `project-memory` (the other being `code-desk`, which owns it topically).
-Both used to ship from `solo-skills` as well, and no longer do.
+`task-authoring` is owned topically by [`board-desk`](../board-desk/README.md) and
+remains here because the planning desk requires its item-body standard. Both assemblies
+link to the same canonical skill. Enabling both plugins lists that skill twice.
+`project-memory` is similarly carried here from its topical home in `code-desk`.
+Neither skill ships from `solo-skills`.

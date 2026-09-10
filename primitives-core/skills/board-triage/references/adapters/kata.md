@@ -77,17 +77,18 @@ in and then dropped per SKILL.md §4 step 2 — for this backend that step is a 
 
 ## The maintenance rhythm
 
-Triage is one move in a longer loop, and the tools are split across two plugins — nothing
-else names them in order, which is why they get run piecemeal or not at all. Run at session
+Triage is one move in a longer loop, and the tools come from board-desk and the
+separately installed kata plugin from the kata-oversight marketplace. Run at session
 start, or whenever `board_health.py` says a pass is due:
 
 | # | Tool | Ships in | Answers |
 |---|---|---|---|
 | 1 | `kata_doctor.py` | kata plugin | Is this checkout even wired to the board? Every warn is wiring debt. |
 | 2 | `audit_issues.py` | kata plugin | Is each card *defined* — a title that fits, acceptance text, real edges instead of prose? |
-| 3 | `board_health.py --vocabulary` | this skill | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
-| 4 | this skill, §5 | this skill | The pass itself, when step 3 says one is due. |
-| 5 | `board_health.py --vocabulary` | this skill | Did the pass take? Exit 0 or it did not. |
+| 3 | `board_health.py --vocabulary` | board-desk | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
+| 4 | this skill, §5 | board-desk | The pass itself, when step 3 says one is due. |
+| 5 | `board_health.py --vocabulary` | board-desk | Did the pass take? Exit 0 or it did not. |
+| 6 | `reconcile_github.py` | board-desk | Do imported GitHub mirrors still match the board? Dry-run first. |
 
 Steps 2 and 3 look redundant and are not, and the difference is the whole reason step 3
 exists. `audit_issues.py` reads one card at a time and asks whether its fields are
@@ -141,6 +142,23 @@ open), stale (its card is closed — close the issue with a pointer to the card)
 (no card, so it is inbound intake awaiting decomposition). Left un-run this is worse than
 untidy: `kata sync github enable` resets the sync cursor and re-applies GitHub state onto the
 board, **reopening every closed card whose mirror is still open**.
+
+Run the bundled reconciler from the GitHub checkout imported by the selected project:
+
+```bash
+python3 "$S/reconcile_github.py" --project <name>           # read-only classification
+python3 "$S/reconcile_github.py" --project <name> --apply   # close stale mirrors
+```
+
+Without `--project`, Kata resolves the project from its normal checkout configuration;
+`gh` independently selects the repository from the current checkout or its own override.
+Choose matching sources before applying. The script never creates cards or issues and
+never changes reverse drift (open card, closed GitHub issue). A dry-run exits 1 when stale
+or untracked issues remain, 0 otherwise; apply exits 0 after successful closes even if
+untracked intake remains. Command failures exit nonzero. GitHub lists are limited to 500
+issues per state; larger repositories need pagination before treating this as a full sweep.
+In this source repo the caller path is
+`primitives-core/skills/board-triage/scripts/reconcile_github.py`.
 
 Two mirror rules the sync enforces whether or not you reconcile: the sync **owns** a mirror's
 title, body, labels and comments and re-applies GitHub's version whenever that issue next

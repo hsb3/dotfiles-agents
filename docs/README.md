@@ -9,6 +9,7 @@ and catalog page.
 - [Install and choose a plugin](../README.md#install)
 - [Codex support, setup and runtime limits](codex-compatibility.md)
 - [Atelier activation and isolated workers](../plugins/atelier/README.md)
+- [Board desk: task authoring, triage and reconciliation](../plugins/board-desk/README.md)
 - [Code desk: quality gates, review and communication](../plugins/code-desk/README.md)
 - [PocketBase setup and agents](../plugins/pocketbase/README.md)
 - [OpenCode installation](../README.md#install) and [Atelier port parity](atelier-parity.md)

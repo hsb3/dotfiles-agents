@@ -4,6 +4,15 @@ title: The topical plugin owns a skill and solo-skills drops it
 date: '2026-09-08'
 status: accepted
 ---
+**Amended 2026-09-08:** PR #509 placed task-authoring in mise-en-place; PR #515
+swept the remaining 18 dual-homed solo-skills memberships. The per-skill rollout and
+open-decision wording below describes the original ruling, not the later completed sweep.
+Decision-024 separately establishes board-desk as task-authoring's new topical home.
+
+**Implementation note 2026-09-10:** Decision-024 makes board-desk the topical home
+while retaining mise-en-place's task-authoring membership for its planning-desk dependency.
+The shared source is unchanged; enabling both plugins can list the skill twice.
+
 ## Context
 
 A consuming project reported (2026-08-29, GitHub issue #442) that enabling both `pocketbase`

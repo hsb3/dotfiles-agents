@@ -98,5 +98,6 @@ read the dated notes before treating a historical mechanism as current guidance.
 | [decision-021](decision-021%20-%20retired-primitives-are-sunset-by-decision-record-tag-and-deletion.md) | retired primitives are sunset by decision record, tag, and deletion (applied to kaneo) | Accepted; retirement history, not a current plugin inventory |
 | [decision-022](decision-022%20-%20dependency-assumption-and-default-metadata-are-inline-token-lists-in-the-roster.md) | dependency, assumption and default metadata are inline token lists in the roster | Accepted; migration incomplete, see record |
 | [decision-023](decision-023%20-%20kata-labels-are-the-triage-system-and-title-prefixes-are-not.md) | kata labels are the triage system and title prefixes are not | Accepted; board and GitHub vocabularies remain distinct |
+| [decision-024](decision-024%20-%20board-desk-owns-board-maintenance-and-references-kata.md) | Board-desk owns board maintenance and references kata | Accepted; mise-en-place retains its task-authoring dependency |
 
 Return to [current documentation](../README.md).
