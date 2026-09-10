@@ -54,7 +54,7 @@ def guarded_root():
         if os.path.exists(os.path.join(d, ".git")):
             return d
         d = os.path.dirname(d)
-    return os.path.abspath(os.path.join(here, "..", "..", ".."))  # <root>/.claude/hooks/<name>
+    return os.path.abspath(os.path.join(here, "..", "..", ".."))  # <root>/.agents/hooks/<name>
 
 
 def resolve(ctx, target):

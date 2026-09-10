@@ -53,6 +53,10 @@ harness/campaign-logs/
 # machine-local agent auto-memory (redirect target differs per machine; tracked store is .claude/memory/)
 .claude/agent-memory/
 
+# Codex setup writes machine-specific writable roots, permissions, and plugin choices here.
+# Shared lifecycle configuration lives in the tracked .codex/hooks.json instead.
+.codex/config.toml
+
 # per-project plugin activation — local by convention, except atelier.local.md: tracked
 # (owner ruling 2026-09-07) so worktree-isolated workers and the other Mac get the same
 # enforcement; a gitignored copy left every worktree worker with custody silently off (9r04).

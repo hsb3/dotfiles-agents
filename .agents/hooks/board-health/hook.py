@@ -41,7 +41,7 @@ empty right now, so this is reachable, not hypothetical.
 Environment. Per docs/override-convention.md a hook takes env-var overrides; every one
 here has a default, and a blank or unparseable value falls back to it.
 
-    CLAUDE_PROJECT_DIR       repo root; else this file's own repo root (walk up to .git)
+    CLAUDE_PROJECT_DIR       repo root in Claude Code; else this file's repo root
     BOARD_HEALTH_PROJECT     kata project to measure          (default: dotfiles-agents)
     BOARD_HEALTH_KATA_BIN    binary the adapter shells out to (default: kata)
     BOARD_HEALTH_ADAPTER     snapshot exporter                (default: <root>/SCRIPTS/kata_board.py)

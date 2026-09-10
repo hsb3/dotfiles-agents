@@ -17,8 +17,8 @@ Scaffold the source-of-truth body and roster row for a new skill or agent. Fill 
 ## Run it
 
 ```sh
-python3 .claude/skills/author-primitive/scripts/scaffold.py skill <id> --description TEXT
-python3 .claude/skills/author-primitive/scripts/scaffold.py agent <id> [--description TEXT]
+python3 .agents/skills/author-primitive/scripts/scaffold.py skill <id> --description TEXT
+python3 .agents/skills/author-primitive/scripts/scaffold.py agent <id> [--description TEXT]
 ```
 
 `--description` is required for `skill` (one line, no `|`) — it is used verbatim in

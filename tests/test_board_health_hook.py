@@ -1,4 +1,4 @@
-"""Tests for .claude/hooks/board-health/hook.py.
+"""Tests for the shared board-health hook through its Claude Code symlink.
 
 Two layers, because two different things need proving.
 
@@ -18,7 +18,7 @@ every failure scenario from one table rather than restating it per test, so the 
 way a new failure path escapes the invariant is by not being added to the table.
 
 Fixtures are tempdirs under tests/; nothing is written under primitives-core/ or
-.claude/.
+the agent configuration trees.
 """
 
 import importlib.util

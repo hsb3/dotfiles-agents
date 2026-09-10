@@ -42,7 +42,7 @@ succeeds, and only for a public repository. It checks out the exact source SHA c
 by that run, builds an artifact, and deploys through GitHub Pages Actions. It neither adds
 docs to `main` nor writes a branch. A docs-only publication may leave the plugin surface
 unchanged and still deploy the documentation. Do not start a competing dev merge during
-publication. See the [publish runbook](../.claude/skills/publish-to-main/SKILL.md).
+publication. See the [publish runbook](../.agents/skills/publish-to-main/SKILL.md).
 
 After public readiness, configure repository Pages with **GitHub Actions** as its source
 and permit the `dev` branch in the `github-pages` environment. Dispatch the sanctioned

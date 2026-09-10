@@ -8,11 +8,15 @@ schema cannot establish native role or hook parity. Work is tracked under kata *
 ## Distribution and setup
 
 The existing `main` marketplace serves both harnesses. Shared primitives and thin symlink
-assemblies remain the source; the publish workflow dereferences them. Native hook bundles
-add a small `.codex-plugin/plugin.json` selecting `hooks/codex-hooks.json`. Its version must
-match the Claude manifest and catalog. There is no generated source tree or separate release
-ledger. Omitting the native version was tested: Codex caches it as `local`, so the overlay
-must carry the same release version.
+assemblies remain the source; the publish workflow dereferences them. A bundle adds a small
+`.codex-plugin/plugin.json` only when it needs a Codex-specific selector such as
+`hooks/codex-hooks.json`; skills-only bundles do not duplicate their Claude manifest. OpenAI's
+portable format now prefers a root `plugin.json` and treats `.codex-plugin/plugin.json` as a
+compatibility overlay, so blank overlays would add drift without capability. Moving this
+marketplace to portable root manifests is a separate packaging migration, not a parity fix.
+Existing overlays must match the Claude manifest and catalog version. Omitting the native
+version was tested: Codex caches it as `local`, so an overlay must carry the same release
+version. There is no generated source tree or separate release ledger.
 
 ```sh
 codex plugin marketplace add hsb3/dotfiles-agents

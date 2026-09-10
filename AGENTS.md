@@ -129,7 +129,7 @@ start, in order:
 2. `audit_issues.py --project dotfiles-agents` — definition and dependency hygiene over open
    issues.
 3. `board_health.py` — does the board still *discriminate*? **This step now runs itself.** The
-   `.claude/hooks/board-health/` SessionStart hook prints the verdict into session context at
+   `.agents/hooks/board-health/` SessionStart hook (linked into each native config) prints the verdict into session context at
    every `startup`/`resume`/`clear`, warn-only and exit 0 always, so a finding never blocks a
    session. `make board-health` runs the same measurement on demand and goes non-zero when a
    pass is due (make reports the script's own exit as its own error, the way `make labels`

@@ -99,5 +99,5 @@ which was always the intent (`targets:` field, the dropped Phase-3 translation s
 
 `publish.yml` · `gen_marketplace.py` / new `gen_opencode.py` · `check_roster.py` (targets
 enum) · root layout (W3) · `flow.yaml` / `docs/FLOW.md` (node flips per wave) ·
-`.claude/skills/publish-to-main` (runbook rewrite at W2) · `README.md` layout table ·
+`.agents/skills/publish-to-main` (runbook rewrite at W2) · `README.md` layout table ·
 old-desk ADR 0014 (update-first rule).

@@ -78,7 +78,7 @@ The other two storage options are rejected:
 `assumes:` is the least new surface: **no new storage file**, one regex in `check_roster.py`, and
 the field reaches every existing reader for free, because each reads the roster through
 `parse_roster` rather than parsing it independently (`grep -rn "primitives-core.yaml\|parse_roster"
-scripts/ evals/ .claude/skills/`, 2026-09-08: `check_agent_refs.py`, `check_identity.py`,
+scripts/ evals/ .agents/skills/`, 2026-09-08: `check_agent_refs.py`, `check_identity.py`,
 `check_provenance.py`, `check_skill_refs.py`, `check_vendored_drift.py`, `gen_claude_skills.py`,
 `gen_opencode.py`, `evals/ingest.py:46`, plus five test modules). Only a reader that must **act**
 on the field needs code.
@@ -375,7 +375,7 @@ Effort is passes and what each must read, not hours. Four PRs:
 - **`primitives-core.yaml:9-14` header comment** gains the same lines, in the register it already
   uses for `requires[] (optional; absent = no needs)`.
 - **`author-primitive`'s scaffold** must carry `assumes:` in `ROSTER_SKILL_ENTRY` /
-  `ROSTER_AGENT_ENTRY` (`.claude/skills/author-primitive/scripts/scaffold.py:73-87`), commented if
+  `ROSTER_AGENT_ENTRY` (`.agents/skills/author-primitive/scripts/scaffold.py:73-87`), commented if
   empty — a scaffold that omits a field is how a field stops being filled.
 - **`docs/override-convention.md`** gains one line saying the roster records which channel each
   primitive uses, so the two pages point at each other rather than drifting into being the
