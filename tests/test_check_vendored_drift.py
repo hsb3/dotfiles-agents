@@ -63,8 +63,7 @@ class ExternalsIndexing(unittest.TestCase):
 
     def test_every_vendored_entry_resolves_to_an_externals_subtree(self):
         """The gate cannot verify an entry whose subtree it cannot locate. Indexed by
-        (upstream, ref) because the roster id and the externals id differ in general —
-        `pptx` is vendored under the `pptx-themes` entry."""
+        (upstream, ref) because external and roster names can differ."""
         idx = D._externals_paths()
         vendored = [e for e in parse_roster(os.path.join(D.REPO, "primitives-core.yaml"))
                     if (e.get("origin") or "").strip() == "vendored"]

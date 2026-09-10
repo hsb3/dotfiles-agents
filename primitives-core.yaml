@@ -321,12 +321,10 @@ primitives:
     disposition: qualified
     targets: [claude-code, opencode, codex]
     requires: [cli:pocketbase]
-  - id: pptx-themes
+  - id: presentations
     type: skill
-    source: primitives-core/skills/pptx-themes
-    origin: vendored
-    upstream: https://github.com/anthropics/skills
-    ref: fa0fa64bdc967915dc8399e803be67759e1e62b8
+    source: primitives-core/skills/presentations
+    origin: authored
     disposition: qualified
     targets: [claude-code, opencode, codex]
   - id: diagrams

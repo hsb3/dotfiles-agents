@@ -167,9 +167,9 @@ EXEMPTIONS = {
         "subject only since the 18 dual-homed memberships left solo-skills (kata 8tw0)",
         "Not this skill's job — that's the boundary",
     ),
-    ("dataviz", "pptx-themes"): (
+    ("dataviz", "presentations"): (
         "scope boundary, not a dependency — deck theming is declared owned elsewhere and "
-        "the rule the reader needs is stated inline, so a consumer without pptx-themes is "
+        "the rule the reader needs is stated inline, so a consumer without presentations is "
         "told what this skill will not do, not sent somewhere they cannot go; a live "
         "subject only since the 18 dual-homed memberships left solo-skills (kata 8tw0)",
         "don't bake a chart palette into a slide",
@@ -180,9 +180,9 @@ EXEMPTIONS = {
         "is told what this skill will not do, not sent somewhere they cannot go",
         "it is not this plugin's job",
     ),
-    ("diagrams", "pptx-themes"): (
+    ("diagrams", "presentations"): (
         "scope boundary, not a dependency — deck theming is declared owned elsewhere; the "
-        "skill renders diagram files and works fully without pptx-themes installed",
+        "skill renders diagram files and works fully without presentations installed",
         "This plugin renders diagram files",
     ),
     ("mermaid", "dataviz"): (

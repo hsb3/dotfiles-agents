@@ -1,6 +1,6 @@
 ---
 name: diagrams
-description: Create technical architecture diagrams using Python's diagrams library (mingrammer/diagrams) or raw Graphviz dot. Use when users need to create cloud architecture diagrams with provider icons (Azure, GCP, AWS, Kubernetes, on-prem), system design diagrams, infrastructure visualizations, data flow diagrams, dependency graphs, org or process trees, or any structural diagram showing relationships between components. Also the hub for choosing the right diagram tool (Python diagrams vs Mermaid vs draw.io vs Excalidraw) and for the SVG plus PNG output pipeline that feeds GitHub markdown, PowerPoint decks and exec briefings, and standalone architecture docs. Includes iterative review loop and custom Graphviz attributes for professional formatting. Self-improving - accumulates learnings in memory file to avoid repeating mistakes. Structural diagrams only - data charts and plots belong to the dataviz skill, deck theming to pptx-themes.
+description: Create technical architecture diagrams using Python's diagrams library (mingrammer/diagrams) or raw Graphviz dot. Use when users need to create cloud architecture diagrams with provider icons (Azure, GCP, AWS, Kubernetes, on-prem), system design diagrams, infrastructure visualizations, data flow diagrams, dependency graphs, org or process trees, or any structural diagram showing relationships between components. Also the hub for choosing the right diagram tool (Python diagrams vs Mermaid vs draw.io vs Excalidraw) and for the SVG plus PNG output pipeline that feeds GitHub markdown, PowerPoint decks and exec briefings, and standalone architecture docs. Includes iterative review loop and custom Graphviz attributes for professional formatting. Self-improving - accumulates learnings in memory file to avoid repeating mistakes. Structural diagrams only - data charts and plots belong to the dataviz skill, deck theming to presentations.
 ---
 
 # Technical Diagrams Skill
@@ -13,7 +13,7 @@ One owner per fact — these boundaries keep skills from fighting over triggers:
 
 - **This plugin owns structural diagrams only** — boxes, arrows, containment, flow. Architecture, sequence, dependency, org, process, ER structure.
 - **Data charts and plots** (bar/line/scatter, dashboards, KPI tiles) → the separate `dataviz` skill. If the visual encodes a dataset, it is not this plugin's job.
-- **Deck theming and palettes** → `pptx-themes`. This plugin renders diagram files; how a deck styles and lays out slides around them is owned there.
+- **Deck theming and palettes** → `presentations`. This plugin renders diagram files; how a deck styles and lays out slides around them is owned there.
 
 ## Choosing the tool
 
@@ -590,7 +590,7 @@ Every diagram ships as **SVG + PNG side by side** — SVG for crisp embedding an
 
 - Convention: **numbered PNG+SVG pairs in a dated briefing folder** — e.g. `2026-07-04-status-update/diagrams/01-data-storage-isolation.png` + `.svg`. Numbering fixes narrative order; the deck embeds the PNGs, the SVGs are the editable/scalable masters.
 - Render PNG at `dpi="150"` minimum (200 for full-slide diagrams) so projection doesn't blur.
-- Keep diagram backgrounds **white or transparent** and let the deck theme own slide styling (`pptx-themes` owns palettes — don't bake a deck palette into the diagram).
+- Keep diagram backgrounds **white or transparent** and let the deck theme own slide styling (`presentations` owns palettes — don't bake a deck palette into the diagram).
 
 ```python
 # Python diagrams: render both formats in one run

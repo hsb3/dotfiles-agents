@@ -58,7 +58,7 @@ function footer(s, text = SRC) {
 }
 
 function card(s, x, y, w, h, fill = C.surface, withShadow = true) {
-  s.addShape(pres.shapes.RECTANGLE, {
+  s.addShape(pres.ShapeType.rect, {
     x, y, w, h, fill: { color: fill },
     line: { color: C.border, width: 0.75 },
     shadow: withShadow ? makeShadow() : undefined,
@@ -66,7 +66,7 @@ function card(s, x, y, w, h, fill = C.surface, withShadow = true) {
 }
 
 function accentBar(s, x, y, h, color = C.accentPrimary, w = 0.07) {
-  s.addShape(pres.shapes.RECTANGLE, { x, y, w, h, fill: { color }, line: { type: "none" } });
+  s.addShape(pres.ShapeType.rect, { x, y, w, h, fill: { color }, line: { type: "none" } });
 }
 
 function bullets(s, items, x, y, w, h, opts = {}) {
@@ -335,7 +335,7 @@ function bullets(s, items, x, y, w, h, opts = {}) {
   const cx = gx + gw / 2, cy = gy + gh / 2;
 
   // quadrant field
-  s.addShape(pres.shapes.RECTANGLE, { x: gx, y: gy, w: gw, h: gh, fill: { color: "FFFFFF" }, line: { color: C.borderStrong, width: 1.5 } });
+  s.addShape(pres.ShapeType.rect, { x: gx, y: gy, w: gw, h: gh, fill: { color: "FFFFFF" }, line: { color: C.borderStrong, width: 1.5 } });
   // axes
   s.addShape(pres.shapes.LINE, { x: gx, y: cy, w: gw, h: 0, line: { color: C.borderStrong, width: 1.5 } });
   s.addShape(pres.shapes.LINE, { x: cx, y: gy, w: 0, h: gh, line: { color: C.borderStrong, width: 1.5 } });
@@ -345,7 +345,7 @@ function bullets(s, items, x, y, w, h, opts = {}) {
   s.addText("ONE-TIME  →  RECURRING", { x: gx - 2.27, y: cy - 0.15, w: 4.0, h: 0.3, fontFace: FONT, fontSize: 10.5, bold: true, charSpacing: 2, color: C.textSecondary, align: "center", rotate: 270, margin: 0 });
 
   function chip(label, x, y, w, fillColor, textColor) {
-    s.addShape(pres.shapes.RECTANGLE, { x, y, w, h: 0.44, fill: { color: fillColor }, line: { type: "none" }, shadow: makeShadow() });
+    s.addShape(pres.ShapeType.rect, { x, y, w, h: 0.44, fill: { color: fillColor }, line: { type: "none" }, shadow: makeShadow() });
     s.addText(label, { x, y, w, h: 0.44, fontFace: FONT, fontSize: 11.5, bold: true, color: textColor, align: "center", valign: "middle", margin: 0 });
   }
   const qh = gh / 2; // 2.15
@@ -442,9 +442,9 @@ function bullets(s, items, x, y, w, h, opts = {}) {
   rows.forEach((r, i) => {
     const y = 2.0 + i * 1.22;
     card(s, MX, y, CW, 0.92);
-    s.addShape(pres.shapes.RECTANGLE, { x: MX, y, w: 0.07, h: 0.92, fill: { color: r.c }, line: { type: "none" } });
+    s.addShape(pres.ShapeType.rect, { x: MX, y, w: 0.07, h: 0.92, fill: { color: r.c }, line: { type: "none" } });
     s.addText(r.t, { x: MX + 0.3, y: y + 0.085, w: 3.6, h: 0.75, fontFace: FONT, fontSize: 14.5, bold: true, color: C.textPrimary, margin: 0, valign: "middle" });
-    s.addShape(pres.shapes.RECTANGLE, { x: MX + 4.0, y: y + 0.26, w: 1.25, h: 0.4, fill: { color: r.c }, line: { type: "none" } });
+    s.addShape(pres.ShapeType.rect, { x: MX + 4.0, y: y + 0.26, w: 1.25, h: 0.4, fill: { color: r.c }, line: { type: "none" } });
     s.addText(r.st, { x: MX + 4.0, y: y + 0.26, w: 1.25, h: 0.4, fontFace: FONT, fontSize: 10, bold: true, charSpacing: 1, color: C.textInverse, align: "center", valign: "middle", margin: 0 });
     s.addText(r.d, { x: MX + 5.55, y: y + 0.085, w: CW - 5.85, h: 0.75, fontFace: FONT, fontSize: 12, color: C.textSecondary, margin: 0, valign: "middle" });
   });
@@ -480,5 +480,5 @@ function bullets(s, items, x, y, w, h, opts = {}) {
   footer(s, "Contact: Sample Presenter");
 }
 
-pres.writeFile({ fileName: "<dev-root>/acme-platform/_meta/briefings/2026-06-12-advisor-board-overview/acme-platform-advisor-overview.pptx" })
+pres.writeFile({ fileName: process.argv[2] || "advisor-overview.pptx" })
   .then(() => console.log("written"));

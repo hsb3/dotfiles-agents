@@ -31,9 +31,7 @@ What this proves, per `origin: vendored` roster entry:
                     green (decision-016 point 4).
 
 Which subtree to compare comes from `externals.yaml`, indexed by (upstream, ref) rather
-than by id — the roster id and the externals id are NOT the same string in general (the
-`pptx` external is vendored under the `pptx-themes` roster entry), and matching on the pin
-itself is exact where matching on a name is a guess.
+than by id — the roster id and the externals id are NOT the same string in general; matching on the pin itself is exact where matching on a name is a guess.
 
 Where it runs: a step in the `drift guards` CI job, NOT in `make ci`. Reaching the upstream
 needs NETWORK and `make ci` is offline-and-zero-install by design; a job of its own was

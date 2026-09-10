@@ -15,18 +15,29 @@ does not establish permission to distribute every file.
 |---|---|---|---|
 | Carbon builder skill, IBM / Carbon contributors | [carbon-mcp, `3cbe743`](https://github.com/carbon-design-system/carbon-mcp/tree/3cbe743d8bc36d6dd3bcfea98ac3ac09bca71f9c/public/skills/carbon-builder) | Skill frontmatter declares Apache-2.0; [full text](../primitives-core/skills/carbon-builder/LICENSE) and [attribution](../primitives-core/skills/carbon-builder/README.md) accompany the 15 unchanged base files. Upstream has no root LICENSE or NOTICE at this pin. | The separately copied `public/llms.txt` is outside the skill subtree; the skill's declaration alone does not establish a grant for that file. |
 | PocketBase best practices, Patrick | [pocketbase-skills, `c573263`](https://github.com/greendesertsnow/pocketbase-skills/tree/c573263e84a2066d0564f428dd8160e74fc54226/skills/pocketbase-best-practices) | [MIT text and copyright](../primitives-core/skills/pocketbase-best-practices/LICENSE) retained from upstream; base content unchanged, authored routing/field notes separate. | Historical copies and notices must also be checked; current notice preservation does not certify past packages. |
-| PPTX base, Anthropic, PBC | [skills/pptx, `fa0fa64`](https://github.com/anthropics/skills/tree/fa0fa64bdc967915dc8399e803be67759e1e62b8/skills/pptx) | [Proprietary terms](../primitives-core/skills/pptx-themes/base/LICENSE.txt), 56 unchanged base files. The theme wrapper also carries the same notice. | **Redistribution blocker:** terms prohibit copying, derivative works and third-party distribution. Attribution does not resolve this. Embedded OOXML schemas have further upstream origins; do not assume they can be salvaged under an Anthropic grant. |
+| Presentations authoring and package tools | [Authored replacement and provenance](presentations-replacement.md) | Existing authored palettes and workflow plus independently written ZIP/XML tools; no blanket original-work license is selected. PptxGenJS is a separately installed MIT runtime dependency. | Replacement retirement approval remains required; runtime dependency advisories and capability limits are recorded with the replacement proof. |
 
-The current Apache/MIT/proprietary license files were verified byte-identical in
-source, a dereferenced plugin assembly, published `main` and installed Codex caches
-on 2026-09-09. The OpenCode generator preserves them for the two skills it includes;
-Carbon is excluded by its target roster. These checks prove notice preservation,
-not permission or full runtime compatibility.
+The Apache/MIT/proprietary license files present before the PPTX replacement were
+verified byte-identical in source, a dereferenced plugin assembly, published `main`
+and installed Codex caches on 2026-09-09. The OpenCode generator preserved those
+notices for its two included skills; Carbon was excluded by its target roster.
+These historical checks prove notice preservation, not permission or full runtime
+compatibility. They do not establish the state of later releases or caches.
 
-The PPTX replacement direction and capability requirements are recorded in
-[decision-018](decisions/decision-018%20-%20comm-skills-unify-on-one-engine-and-the-vendored-pptx-base-retires.md).
-The current skill remains `pptx-themes` until a replacement ships. Current-file
-removal alone would leave earlier copies reachable in Git history.
+The current source replaces `pptx-themes` with `presentations`; see the
+[replacement proof and capability limits](presentations-replacement.md). The
+retirement approval gate in
+[decision-018](decisions/decision-018%20-%20comm-skills-unify-on-one-engine-and-the-vendored-pptx-base-retires.md)
+still applies. Current-file removal does not remove earlier copies from Git history,
+published packages or installed caches.
+
+The former Anthropic, PBC PPTX base came from
+[skills/pptx, `fa0fa64`](https://github.com/anthropics/skills/tree/fa0fa64bdc967915dc8399e803be67759e1e62b8/skills/pptx).
+Its [proprietary terms](https://github.com/anthropics/skills/blob/fa0fa64bdc967915dc8399e803be67759e1e62b8/skills/pptx/LICENSE.txt)
+prohibit copying, derivative works and third-party distribution; attribution does
+not resolve that blocker. The 56 base files and wrapper notice were removed from
+current source. Embedded OOXML schemas have further upstream origins and were not
+salvaged into the replacement. Historical redistribution remains unresolved.
 
 ## Development copies and site dependencies
 

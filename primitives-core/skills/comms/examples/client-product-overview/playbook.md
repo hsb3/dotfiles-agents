@@ -4,13 +4,13 @@ _Client product overview playbook. Shared machinery: `references/comm-package-st
 
 As-needed (sales / onboarding), audience a prospective or onboarding client - a plan's actuary,
 CFO, or IT lead. **The one job: what they get, and why it is trustworthy enough to hand us their
-CMS files.** Toolchain pptx-themes; theme `actuarial-signal` (or a client-safe token theme - decide
+CMS files.** Toolchain presentations; theme `actuarial-signal` (or a client-safe token theme - decide
 per client); `.pptx` + `.pdf` with a confidential + client-name footer. Folder slug
 `-client-overview`.
 
-> Assumptions to confirm with the owner: as-needed cadence; pptx-themes; theme + audio per engagement.
+> Assumptions to confirm with the owner: as-needed cadence; presentations; theme + audio per engagement.
 > No prior instance exists - ships without a `sample.*`; the advisor `sample.deck.js` next door is
-> the closest layout reference. Invoke the `pptx-themes` skill for palette/tokens/QA, and the
+> the closest layout reference. Invoke the `presentations` skill for palette/tokens/QA, and the
 > `readme-value-and-proof` skill to capture real app screenshots for the "what it looks like" slide.
 
 ## The one rule

@@ -42,7 +42,7 @@ claude plugin install diagrams@dotfiles-agents
 ## Honest scope
 
 Structural diagrams only: data charts belong to a dataviz skill, deck theming to
-`pptx-themes`. The cloud-architecture and Graphviz paths need `graphviz` installed
+`presentations`. The cloud-architecture and Graphviz paths need `graphviz` installed
 (`cli:graphviz`); headless draw.io export needs the draw.io desktop app (`cli:drawio`);
 Mermaid renders natively on GitHub without any local install.
 

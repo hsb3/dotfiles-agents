@@ -2,7 +2,7 @@
   "author": {
     "name": "Henry S. Burden III"
   },
-  "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kata), recurring status comms rendered as themed PowerPoint decks, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+  "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, weekly board triage through a backend adapter (GitHub Projects, Kata), recurring status comms and authored presentations with portable PptxGenJS packages, existing-deck editing and rendered verification, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "code-desk",
-  "version": "0.12.3"
+  "version": "0.13.0"
 }
