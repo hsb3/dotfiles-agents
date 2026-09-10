@@ -26,6 +26,8 @@ content and review every layout. Paragraph edits adopt the first run's formattin
 arbitrary object/chart edits use the source or a native application. Merge and template
 preservation have [explicit boundaries](references/editing.md). Structural validation
 is **not full ISO/ECMA schema conformance**, and rendering needs installed fonts and tools.
+Edits refuse conflicting XML namespace prefixes; merge compares numeric slide dimensions,
+allowing equal-size decks with different optional size labels.
 
 ## See it working
 

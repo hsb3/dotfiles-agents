@@ -62,6 +62,47 @@ class PresentationPackages(unittest.TestCase):
         self.assertNotIn('ppt/charts/chart1.xml', selected)
         self.assertNotIn('ppt/notesSlides/notes1.xml', selected)
 
+    def test_edit_refuses_rebound_namespace_prefix_without_output(self):
+        parts = fixture()
+        name = 'ppt/slides/slide1.xml'
+        parts[name] = parts[name].replace(
+            b'<p:cSld>', b'<p:cSld xmlns:q="urn:outer" mc:Ignorable="q">').replace(
+            b'<p:spTree>', b'<p:spTree xmlns:q="urn:inner" mc:Ignorable="q">')
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = Path(directory) / 'source.pptx', Path(directory) / 'output.pptx'
+            pptx.save(parts, source)
+            edits = Path(directory) / 'edits.json'
+            edits.write_text(json.dumps([{'slide': 1, 'old': 'Old title', 'new': 'New title'}]))
+            result = subprocess.run(['python3', str(SCRIPTS / 'pptx.py'), 'edit', str(source),
+                                     '--edits', str(edits), '--output', str(output)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn('namespace prefix', result.stderr)
+            self.assertFalse(output.exists())
+            self.assertEqual(pptx.load(source)[name], parts[name])
+
+    def test_merge_compares_dimensions_without_optional_size_label(self):
+        incoming = fixture()
+        incoming[pptx.PRES] = incoming[pptx.PRES].replace(
+            b'cx="12192000"', b'type="screen16x9" cx="012192000"')
+        combined = pptx.merge([fixture(), incoming])
+        self.assertEqual(len(pptx.slides(combined)), 4)
+        self.assertEqual(pptx.xml(combined[pptx.PRES]).find(f'{{{pptx.P}}}sldSz').attrib,
+                         {'cx': '12192000', 'cy': '6858000'})
+        incoming[pptx.PRES] = incoming[pptx.PRES].replace(b'012192000', b'12192001')
+        with self.assertRaisesRegex(ValueError, 'identical slide dimensions'):
+            pptx.merge([fixture(), incoming])
+
+    def test_edit_refuses_generated_namespace_prefix_collision(self):
+        parts = fixture()
+        name = 'ppt/slides/slide1.xml'
+        parts[name] = parts[name].replace(
+            b'mc:Ignorable="p14"', b'xmlns:ns1="urn:custom-feature" mc:Ignorable="ns1"')
+        before = parts[name]
+        with self.assertRaisesRegex(ValueError, 'namespace prefix'):
+            pptx.replace_text(parts, [{'slide': 1, 'old': 'Old title', 'new': 'New title'}])
+        self.assertEqual(parts[name], before)
+
     def test_merge_keeps_chart_notes_and_master_graph(self):
         combined = pptx.merge([fixture(), fixture()])
         self.assertEqual(len(pptx.slides(combined)), 4)

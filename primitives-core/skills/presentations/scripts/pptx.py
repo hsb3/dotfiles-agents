@@ -40,7 +40,11 @@ def encoded(root, original=None):
     data = ET.tostring(root, encoding='utf-8', xml_declaration=True)
     if original:
         # Keep declarations used by mc:Ignorable and other QName-valued attributes.
+        bindings = dict(binding for _, binding in ET.iterparse(io.BytesIO(data), events=['start-ns']))
         for _, (prefix, uri) in ET.iterparse(io.BytesIO(original), events=['start-ns']):
+            if prefix in bindings and bindings[prefix] != uri:
+                raise ValueError(f'Conflicting namespace prefix {prefix!r}; use a native application to edit')
+            bindings[prefix] = uri
             if prefix and f'xmlns:{prefix}='.encode() not in data:
                 root.set('xmlns:' + prefix, uri)
         data = ET.tostring(root, encoding='utf-8', xml_declaration=True)
@@ -303,11 +307,11 @@ def merge(packages):
     listing = root.find(f'{{{P}}}sldIdLst')
     rels = xml(out[relpath(PRES)])
     types = xml(out['[Content_Types].xml'])
-    size = root.find(f'{{{P}}}sldSz').attrib
+    size = tuple(int(root.find(f'{{{P}}}sldSz').get(k)) for k in ('cx', 'cy'))
     for index, incoming in enumerate(packages[1:], 1):
         editable(incoming)
         other = xml(incoming[PRES])
-        if other.find(f'{{{P}}}sldSz').attrib != size:
+        if tuple(int(other.find(f'{{{P}}}sldSz').get(k)) for k in ('cx', 'cy')) != size:
             raise ValueError('Merged decks must have identical slide dimensions')
         if any(n.startswith('ppt/comments/') or n == 'ppt/commentAuthors.xml' for n in incoming):
             raise ValueError('Merge with comments is unsupported')

@@ -2,9 +2,9 @@
 
 `pptx-themes` is renamed to `presentations` in code-desk. The replacement removes
 Anthropic's vendored `pptx` base, its wrapper license copy, evaluation artifact and
-nested schemas. This is a concrete proposal under rqen; the g3nq owner retirement
-gate applies before merge. It does not retire owner-signoff, consolidate comms,
-authorize publication or alter Git history. Historical licensing findings remain
+nested schemas. The owner approved this focused retirement and authorized lead-owned
+merge/publication coordination on 2026-09-10, subject to verified green checks.
+It does not retire owner-signoff, consolidate comms or alter Git history. Historical licensing findings remain
 with t80e/gek8 and [licenses.md](licenses.md).
 
 ## Source provenance
@@ -75,8 +75,9 @@ fork completes. It is unnecessary when the caller uses no parser. Switching to
 manifest-only removal PR remains unmerged, and this environment disables Git dependency
 installs. None of those alternatives is shipped or silently substituted for PptxGenJS.
 
-The dependency remedy remains reviewable on rqen/PR #530 before merge. Preserve the
-worker branch/worktree at that boundary; publication and historical rights remain separate.
+The owner reviewed the dependency remedy/examples and approved them on 2026-09-09.
+The lead owns the final PR #530 checks, merge and publication; historical rights and
+public visibility remain separate from this replacement's retirement clearance.
 
 ## Roadmap
 

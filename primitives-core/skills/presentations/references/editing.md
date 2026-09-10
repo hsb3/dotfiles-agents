@@ -18,7 +18,9 @@ python3 scripts/pptx.py validate revised.pptx
 Each edit matches exactly one complete paragraph on the numbered slide, including
 text split across formatting runs. Replacement adopts the first run's formatting;
 mixed formatting within that paragraph must be restored in the native application
-if needed. Missing or ambiguous matches fail without writing output. Other slide
+if needed. Rebound or serialization-conflicting XML namespace prefixes require native application editing;
+serialization refuses them to preserve compatibility attributes' meaning.
+Missing or ambiguous matches fail without writing output. Other slide
 parts, masters, layouts, embedded chart workbooks, media and notes remain byte-identical.
 This is suitable for filling text in an existing deck or `.potx` template. Saving
 as `.pptx` changes the main content type to a presentation; `.potx` selects template.
