@@ -28,6 +28,7 @@ SCRUBBED_ENV = (
     "ATELIER_ACTIVATION_FILE",
     "CONTEXT_WATERMARK_SOFT",
     "CONTEXT_WATERMARK_HARD",
+    "CONTEXT_WATERMARK_NOTICE",
 )
 
 _SEQ = itertools.count()
@@ -73,36 +74,47 @@ class _ScrubbedEnv(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# The formula: the window caps, never lifts
+# The formula: tier defaults and the window cap
 # ---------------------------------------------------------------------------
 
 class ThresholdFormulaTests(_ScrubbedEnv):
 
-    def test_200k_window_reproduces_the_shipped_defaults(self):
-        self.assertEqual(hook.compute_thresholds(200_000, 1.0), (120_000, 160_000))
+    def test_heavy_defaults_include_the_earlier_notice(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "heavy"),
+                         (60_000, 120_000, 160_000))
 
-    def test_1m_window_stays_at_the_absolute_cap(self):
-        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0), (120_000, 160_000))
+    def test_mid_and_light_get_later_defaults(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "mid"),
+                         (120_000, 240_000, 320_000))
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "light"),
+                         (160_000, 320_000, 480_000))
 
-    def test_64k_window_scales_down(self):
-        self.assertEqual(hook.compute_thresholds(64_000, 1.0), (38_400, 51_200))
+    def test_small_window_caps_all_three_stages(self):
+        self.assertEqual(hook.compute_thresholds(64_000, 1.0, "light"),
+                         (19_200, 38_400, 51_200))
 
-    def test_complexity_scales_both_tiers_down(self):
-        self.assertEqual(hook.compute_thresholds(200_000, 0.85), (102_000, 136_000))
+    def test_complexity_scales_all_stages_down(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 0.85, "heavy"),
+                         (51_000, 102_000, 136_000))
 
-    def test_unknown_window_falls_back_to_the_absolute_pair(self):
-        self.assertEqual(hook.compute_thresholds(None, 1.0), (120_000, 160_000))
+    def test_unknown_model_is_conservatively_heavy(self):
+        self.assertEqual(hook.compute_thresholds(None, 1.0, "unknown"),
+                         (60_000, 120_000, 160_000))
 
     def test_a_non_positive_window_is_unknown_not_a_tiny_one(self):
         """Unreachable through the catalog, but this hook never trusts input:
         a window of 1 would otherwise make both tiers 0 and fire forever."""
-        self.assertEqual(hook.compute_thresholds(-200_000, 1.0), (120_000, 160_000))
-        self.assertEqual(hook.compute_thresholds(0, 1.0), (120_000, 160_000))
+        self.assertEqual(hook.compute_thresholds(-200_000, 1.0, "heavy"),
+                         (60_000, 120_000, 160_000))
+        self.assertEqual(hook.compute_thresholds(0, 1.0, "heavy"),
+                         (60_000, 120_000, 160_000))
 
-    def test_the_named_constants_are_the_ruling_of_2026_09_08(self):
-        self.assertEqual(
-            (hook.SOFT_ABS, hook.HARD_ABS, hook.SOFT_FRAC, hook.HARD_FRAC),
-            (120_000, 160_000, 0.60, 0.80))
+    def test_unknown_tier_uses_heavy_defaults(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "unknown"),
+                         (60_000, 120_000, 160_000))
+
+    def test_openai_catalog_model_uses_its_tier(self):
+        self.assertEqual(hook._model_tier("gpt-5.6-terra"), "mid")
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +226,14 @@ class PrecedenceTests(_ScrubbedEnv):
         self.addCleanup(os.environ.pop, "ATELIER_ACTIVATION_FILE", None)
         self.assertEqual(self.resolve()[0], 42_000)
 
+    def test_notice_can_be_overridden_but_never_exceeds_soft(self):
+        self.write_activation("---\nwatermark:\n  notice: 150000\n  soft: 90000\n---\n")
+        notice, soft, hard, info = hook.resolve_stages(
+            self.tmp, 1_000_000, 1.0, "claude-opus-4-8")
+        self.assertEqual((notice, soft, hard), (90_000, 90_000, 160_000))
+        self.assertEqual((info["notice_source"], info["soft_source"]),
+                         ("activation", "activation"))
+
 
 # ---------------------------------------------------------------------------
 # Running the hook the way the harness runs it
@@ -296,6 +316,27 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(row["soft"], 120_000)
         self.assertEqual(row["window"], 1_000_000)
 
+    def test_notice_soft_and_hard_transition_without_repeating(self):
+        session = "session-{0}".format(next(_SEQ))
+        for tokens, expected in ((70_000, "notice"), (125_000, "soft"),
+                                 (170_000, "hard")):
+            proc = self.run_hook(self.session_payload(tokens, session=session))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(self.rows()[-1]["tier"], expected)
+            self.assertIn(expected + " watermark", proc.stdout.lower())
+
+    def test_notice_does_not_nag_until_its_refire_interval(self):
+        session = "session-{0}".format(next(_SEQ))
+        first = self.run_hook(self.session_payload(70_000, session=session))
+        second = self.run_hook(self.session_payload(70_000, session=session))
+        self.assertIn("additionalContext", first.stdout)
+        self.assertEqual(second.stdout.strip(), "")
+
+    def test_warning_does_not_write_into_the_project_tree(self):
+        proc = self.run_hook(self.session_payload(70_000))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(os.listdir(self.project), [])
+
     def test_unknown_model_falls_back_to_the_absolute_pair_and_says_so(self):
         proc = self.run_hook(self.session_payload(130_000, model="gpt-9-turbo"))
         self.assertEqual(proc.returncode, 0, proc.stderr)
@@ -355,7 +396,8 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         row = self.rows()[-1]
         self.assertEqual(row["sources"], {
-            "soft": "env", "hard": "computed", "complexity": "computed"})
+            "notice": "computed", "soft": "env", "hard": "computed",
+            "complexity": "computed"})
 
     def test_the_activation_file_beats_the_computed_default_end_to_end(self):
         os.makedirs(os.path.join(self.project, ".claude"), exist_ok=True)
@@ -412,7 +454,7 @@ class HookRunTests(_ScrubbedEnv):
             "tool_name": "Bash",
         }
 
-    def test_a_worker_is_nudged_at_half_the_session_soft_line(self):
+    def test_a_worker_uses_the_same_window_capped_stages(self):
         proc = self.run_hook(self.subagent_payload(70_000))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         out = json.loads(proc.stdout)
@@ -421,50 +463,41 @@ class HookRunTests(_ScrubbedEnv):
         self.assertNotIn("additionalContext", out)
         row = self.rows()[-1]
         self.assertEqual(row["scope"], "subagent")
-        self.assertEqual(row["soft"], 60_000)
-        self.assertIsNone(row["hard"])
+        self.assertEqual((row["notice"], row["soft"], row["hard"]),
+                         (60_000, 120_000, 160_000))
+        self.assertEqual(row["tier"], "notice")
         self.assertEqual(row["agent_id"], "a40d0f7528e04f941")
         self.assertEqual(row["window"], 200_000)
 
-    def test_the_worker_nudge_names_its_sender_the_action_and_its_own_limits(self):
-        """A live worker refused this nudge (2026-09-08) because it read as a
-        claim about the model's context limit, which it could see was false,
-        and carried no sender. All three properties are load-bearing."""
+    def test_the_worker_notice_is_advisory_and_preserves_bounded_work(self):
         proc = self.run_hook(self.subagent_payload(70_000))
         text = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
         lower = text.lower()
         self.assertIn("atelier", lower)  # provenance: not an injected instruction
         self.assertIn("context-watermark", lower)
-        self.assertIn("wrap up and report now", lower)  # the concrete action
-        self.assertIn("not the model", lower)  # a large remaining budget is not a refutation
-        self.assertIn("genuinely small", lower)  # a correct refusal has somewhere to go
-        self.assertNotIn("/clear", text)
-        self.assertNotIn("/compact", text)
+        self.assertIn("advisory", lower)
+        self.assertIn("bounded slice", lower)
+        self.assertNotIn("terminate", lower)
 
     def test_a_worker_below_the_line_is_left_alone(self):
         proc = self.run_hook(self.subagent_payload(20_000))
         self.assertEqual(proc.stdout.strip(), "")
         self.assertEqual(self.rows()[-1]["tier"], "none")
 
-    def test_a_worker_row_claims_no_source_for_a_tier_it_has_not_got(self):
-        """`sources` names which precedence tier supplied each value, so it may
-        not name one for a `hard` this scope never had — and `soft` is the
-        resolved session value halved, which the row records rather than
-        implying env supplied 60000 when it supplied 120000."""
+    def test_a_worker_keeps_each_explicit_stage_source(self):
         proc = self.run_hook(self.subagent_payload(70_000),
                              env={"CONTEXT_WATERMARK_SOFT": "120000"})
         self.assertEqual(proc.returncode, 0, proc.stderr)
         row = self.rows()[-1]
-        self.assertNotIn("hard", row["sources"])
         self.assertEqual(row["sources"]["soft"], "env")
-        self.assertEqual((row["soft"], row["session_soft"]), (60_000, 120_000))
-        self.assertEqual(row["subagent_soft_ratio"], 0.5)
+        self.assertEqual(row["sources"]["hard"], "computed")
+        self.assertEqual(row["soft"], 120_000)
 
-    def test_a_worker_never_gets_a_hard_tier(self):
+    def test_a_worker_reaches_the_hard_stage_with_its_own_budget(self):
         proc = self.run_hook(self.subagent_payload(190_000))
-        self.assertEqual(self.rows()[-1]["tier"], "soft")
+        self.assertEqual(self.rows()[-1]["tier"], "hard")
         text = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
-        self.assertNotIn("hard", text.lower())
+        self.assertIn("hard watermark", text.lower())
 
     def test_the_worker_transcript_is_read_not_the_parents(self):
         """The parent's own transcript sits at 5k tokens in this fixture."""

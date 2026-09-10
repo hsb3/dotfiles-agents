@@ -50,18 +50,14 @@ import pending  # noqa: E402
 # Config
 # ---------------------------------------------------------------------------
 
-# The window caps the threshold and never lifts it: `[cost]`'s measured
-# degradation band is an ABSOLUTE token count, so a pure fraction of a 1M
-# window would overturn a measurement. At 200k these reproduce 120k/160k
-# exactly; at 1M they stay there; at 64k they fall to 38.4k/51.2k.
-SOFT_ABS = 120_000
-HARD_ABS = 160_000
-SOFT_FRAC = 0.60
-HARD_FRAC = 0.80
-
-# A worker cannot hand off, compact, or start a fresh session — the only move
-# it has is to finish — so it gets one early soft line and no hard tier.
-SUBAGENT_SOFT_RATIO = 0.5
+# These are tunable advisory defaults, not performance facts. The context
+# window caps each stage so smaller models are protected at 30/60/80 percent.
+DEFAULT_STAGES = {
+    "heavy": (60_000, 120_000, 160_000),
+    "mid": (120_000, 240_000, 320_000),
+    "light": (160_000, 320_000, 480_000),
+}
+STAGE_FRACS = (0.30, 0.60, 0.80)
 
 # [untested] calibration, not measurement: a bigger repo makes each grounding
 # read cost more, so the nudge comes earlier.
@@ -104,14 +100,13 @@ STATE_DIR = _env_path("CONTEXT_WATERMARK_STATE_DIR", STATE_DIR_DEFAULT)
 # Thresholds
 # ---------------------------------------------------------------------------
 
-def compute_thresholds(window, complexity):
-    """(soft, hard) for a context window in tokens, or the absolute pair when
-    the window is unknown — never a fraction of an assumed one."""
-    soft, hard = SOFT_ABS, HARD_ABS
+def compute_thresholds(window, complexity, tier="heavy"):
+    """(notice, soft, hard), capped by a known window; unknown is heavy."""
+    defaults = DEFAULT_STAGES.get(tier, DEFAULT_STAGES["heavy"])
     if window and window > 0:
-        soft = min(SOFT_ABS, SOFT_FRAC * window)
-        hard = min(HARD_ABS, HARD_FRAC * window)
-    return int(soft * complexity), int(hard * complexity)
+        defaults = tuple(min(value, frac * window)
+                         for value, frac in zip(defaults, STAGE_FRACS))
+    return tuple(int(value * complexity) for value in defaults)
 
 
 def complexity_for_count(count):
@@ -146,13 +141,13 @@ def _positive(value, cast):
 
 
 def _load_watermark_config(project_dir):
-    """The `watermark:` key as {soft, hard, complexity}, keys omitted when the
+    """The `watermark:` key as {notice, soft, hard, complexity}, keys omitted when the
     value is absent or unusable. `activation.py check` calls this."""
     raw = atelier_local.read_key(project_dir, ACTIVATION_KEY)
     if not isinstance(raw, dict):
         return {}
     config = {}
-    for key, cast in (("soft", int), ("hard", int), ("complexity", float)):
+    for key, cast in (("notice", int), ("soft", int), ("hard", int), ("complexity", float)):
         value = _positive(raw.get(key), cast)
         if value is not None:
             config[key] = value
@@ -169,7 +164,7 @@ def resolve_watermarks(project_dir, window, complexity):
         complexity, info["complexity_source"] = config["complexity"], "activation"
     info["complexity"] = complexity
 
-    computed = compute_thresholds(window, complexity)
+    computed = compute_thresholds(window, complexity)[1:]
     resolved = []
     for tier, value in zip(("soft", "hard"), computed):
         source = "computed"
@@ -182,6 +177,44 @@ def resolve_watermarks(project_dir, window, complexity):
         info[tier + "_source"] = source
         resolved.append(int(value))
     return resolved[0], resolved[1], info
+
+
+def _model_tier(model):
+    """Catalog tier for a transcript model; an unmapped model is heavy."""
+    try:
+        catalog = model_tiers.load()
+        for provider in catalog["providers"]:
+            for tier in model_tiers.tiers(catalog):
+                selected = model_tiers.model_for(catalog, tier, provider)
+                if (isinstance(model, str) and isinstance(selected, str)
+                        and (model == selected or model.startswith(selected + "-")
+                             or model.startswith(selected + "["))):
+                    return tier
+    except Exception:
+        pass
+    return "heavy"
+
+
+def resolve_stages(project_dir, window, complexity, model=None):
+    """(notice, soft, hard, info), preserving existing soft/hard overrides."""
+    config = _load_watermark_config(project_dir)
+    info = {"window": window, "complexity_source": "computed",
+            "model_tier": _model_tier(model)}
+    if "complexity" in config:
+        complexity, info["complexity_source"] = config["complexity"], "activation"
+    info["complexity"] = complexity
+    values = list(compute_thresholds(window, complexity, info["model_tier"]))
+    for index, tier in enumerate(("notice", "soft", "hard")):
+        source = "computed"
+        value = config.get(tier)
+        if value is not None:
+            values[index], source = value, "activation"
+        env = _positive(os.environ.get("CONTEXT_WATERMARK_" + tier.upper()), int)
+        if env is not None:
+            values[index], source = env, "env"
+        info[tier + "_source"] = source
+    values[0] = min(values[0], values[1])
+    return values[0], values[1], values[2], info
 
 
 def _session_complexity(session_id, cwd):
@@ -332,11 +365,13 @@ def _save_state(session_id, state, agent_id=None):
         pass
 
 
-def _tier_for(ctx_tokens, soft, hard):
+def _tier_for(ctx_tokens, notice, soft, hard):
     if hard is not None and ctx_tokens >= hard:
         return "hard"
     if ctx_tokens >= soft:
         return "soft"
+    if ctx_tokens >= notice:
+        return "notice"
     return "none"
 
 
@@ -353,37 +388,29 @@ def _should_fire(state, tier):
 
 
 MESSAGES = {
+    "notice": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{notice}k "
+        "notice watermark. This is advisory: reduce further grounding reads and "
+        "continue the current bounded slice."
+    ),
     "soft": (
-        "Session context is ~{k}k tokens, past the ~{soft}k soft watermark, "
-        "where cost and performance measurably degrade. At the next natural task boundary, run /handoff to "
-        "externalize state, then recommend the user /clear (preferred) or "
-        "/compact."
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
+        "watermark. This is advisory: checkpoint at the next safe boundary; finish "
+        "small bounded work before arranging continuation."
     ),
     "hard": (
-        "Session context is ~{k}k tokens, well past the ~{hard}k hard watermark "
-        "and approaching heavy degradation territory. Recommend wrapping up the "
-        "current step now: run /handoff, then tell the user to /clear "
-        "(preferred) or /compact before continuing."
-    ),
-    # A worker has no /handoff, no /clear and no successor session, so the only
-    # move it can take is the one this names. It names its sender and disclaims
-    # the model's limit because a live worker refused an earlier wording as
-    # probable prompt injection: it could see millions of tokens still free.
-    "subagent": (
-        "atelier context-watermark: your context is ~{k}k tokens, past the ~{soft}k "
-        "budget for a delegated worker. That is a quality line from a measured "
-        "degradation band, NOT the model's context limit — a large remaining token "
-        "budget is not evidence against it. Wrap up and report now: stop taking on new "
-        "work, commit what is done, and return what is finished, what is not, and your "
-        "evidence. If the remaining work is genuinely small, finishing it first and then "
-        "reporting is an acceptable answer."
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
+        "watermark. This is advisory and grants no authority: preserve the branch, "
+        "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
+        "before continuation."
     ),
 }
 
 
-def _format_message(tier, ctx_tokens, soft, hard):
+def _format_message(tier, ctx_tokens, notice, soft, hard):
     return MESSAGES[tier].format(
         k=round(ctx_tokens / 1000),
+        notice=round(notice / 1000),
         soft=round(soft / 1000),
         hard=round(hard / 1000) if hard else "",
     )
@@ -394,7 +421,7 @@ def _format_message(tier, ctx_tokens, soft, hard):
 # ---------------------------------------------------------------------------
 
 def _measure(transcript_path, project_dir, session_id, cwd):
-    """(ctx_tokens, model, (soft, hard), error, info) for one transcript.
+    """(ctx_tokens, model, (notice, soft, hard), error, info) for one transcript.
 
     Raises nothing the caller has to know about: a transcript it cannot read
     or that carries no usage block yields ctx_tokens None.
@@ -409,21 +436,22 @@ def _measure(transcript_path, project_dir, session_id, cwd):
         except (OSError, ValueError) as exc:
             return None, None, None, str(exc), None
         complexity, tracked = _session_complexity(session_id, cwd)
-        soft, hard, info = resolve_watermarks(project_dir, measured["window"], complexity)
+        notice, soft, hard, info = resolve_stages(
+            project_dir, measured["window"], complexity, measured["model"])
         info["tracked_files"] = tracked
-        return measured["ctx_tokens"], measured["model"], (soft, hard), None, info
+        return measured["ctx_tokens"], measured["model"], (notice, soft, hard), None, info
     usage, model = _find_last_assistant_usage(_read_tail(transcript_path, TAIL_BYTES))
     if usage is None:
         return None, None, None, "no assistant usage found in tail window", None
     complexity, tracked = _session_complexity(session_id, cwd)
     window = _window_for(model)
-    soft, hard, info = resolve_watermarks(project_dir, window, complexity)
+    notice, soft, hard, info = resolve_stages(project_dir, window, complexity, model)
     info["tracked_files"] = tracked
-    return _context_tokens_from_usage(usage), model, (soft, hard), None, info
+    return _context_tokens_from_usage(usage), model, (notice, soft, hard), None, info
 
 
 def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
-         soft=None, hard=None, error=None, pending=False):
+         notice=None, soft=None, hard=None, error=None, pending=False):
     row = {
         "scope": scope,
         "session_id": session_id,
@@ -440,10 +468,12 @@ def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
         "hard": hard,
     }
     if info:
+        row["notice"] = notice
         # No key for a value this scope has not got: a worker has no hard tier,
         # and naming a precedence tier for it would describe a resolution that
         # never reached the row.
         row["sources"] = {
+            "notice": info.get("notice_source"),
             "soft": info.get("soft_source"),
             "complexity": info.get("complexity_source"),
         }
@@ -473,8 +503,8 @@ def handle_session(payload, log):
                  pending=pending_measurement))
         return
 
-    soft, hard = tiers
-    tier = _tier_for(ctx_tokens, soft, hard)
+    notice, soft, hard = tiers
+    tier = _tier_for(ctx_tokens, notice, soft, hard)
     fired = False
 
     if tier == "none":
@@ -495,14 +525,13 @@ def handle_session(payload, log):
             print(json.dumps({
                 **({"hookSpecificOutput": {
                     "hookEventName": "UserPromptSubmit",
-                    "additionalContext": _format_message(tier, ctx_tokens, soft, hard)}}
+                    "additionalContext": _format_message(tier, ctx_tokens, notice, soft, hard)}}
                    if codex_lifecycle.enabled() else {
-                    "additionalContext": _format_message(tier, ctx_tokens, soft, hard)}),
+                    "additionalContext": _format_message(tier, ctx_tokens, notice, soft, hard)}),
                 "systemMessage": (
-                    "atelier: context ~{0}k tokens — {1} watermark ({2}k/{3}k) crossed; "
-                    "nudging /handoff + /clear.".format(
-                        round(ctx_tokens / 1000), tier, round(soft / 1000),
-                        round(hard / 1000))),
+                    "atelier: context ~{0}k tokens — {1} watermark ({2}k/{3}k/{4}k) crossed.".format(
+                        round(ctx_tokens / 1000), tier, round(notice / 1000),
+                        round(soft / 1000), round(hard / 1000))),
             }))
             _save_state(session_id, {"last_tier": tier, "prompts_since_fire": 0})
         else:
@@ -510,11 +539,12 @@ def handle_session(payload, log):
                 "last_tier": tier,
                 "prompts_since_fire": check_state.get("prompts_since_fire", 0)})
 
-    log(_row("session", session_id, ctx_tokens, tier, fired, model, info, soft, hard))
+    log(_row("session", session_id, ctx_tokens, tier, fired, model, info,
+             notice, soft, hard))
 
 
 def handle_subagent(payload, log):
-    """PostToolUse inside a worker: soft only, at half the session's line."""
+    """PostToolUse inside a worker: the same advisory stages as its session."""
     session_id = payload.get("session_id", "unknown")
     agent_id = payload.get("agent_id")
     cwd = payload.get("cwd") or os.getcwd()
@@ -540,8 +570,8 @@ def handle_subagent(payload, log):
                  agent_id=agent_id))
         return
 
-    soft = int(tiers[0] * SUBAGENT_SOFT_RATIO)
-    tier = _tier_for(ctx_tokens, soft, None)
+    notice, soft, hard = tiers
+    tier = _tier_for(ctx_tokens, notice, soft, hard)
     fired = False
 
     if tier == "none":
@@ -559,8 +589,8 @@ def handle_subagent(payload, log):
             # (measured 2026-09-08: the worker acted on it).
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": _format_message(
-                    "subagent", ctx_tokens, soft, None),
+                    "additionalContext": _format_message(
+                    tier, ctx_tokens, notice, soft, hard),
             }}))
             _save_state(session_id, {"last_tier": tier, "prompts_since_fire": 0},
                         agent_id)
@@ -570,11 +600,8 @@ def handle_subagent(payload, log):
                 "prompts_since_fire": check_state.get("prompts_since_fire", 0)},
                 agent_id)
 
-    # `soft` here is the resolved SESSION line halved, so the row carries both
-    # terms: `sources.soft` names where the session value came from, not this one.
-    log(dict(_row("subagent", session_id, ctx_tokens, tier, fired, model, info, soft),
-             agent_id=agent_id, session_soft=tiers[0],
-             subagent_soft_ratio=SUBAGENT_SOFT_RATIO))
+    log(dict(_row("subagent", session_id, ctx_tokens, tier, fired, model, info,
+                  notice, soft, hard), agent_id=agent_id))
 
 
 # ---------------------------------------------------------------------------
