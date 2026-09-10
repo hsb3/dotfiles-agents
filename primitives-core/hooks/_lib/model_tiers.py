@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """model_tiers — resolve a provider-independent dispatch tier to a concrete model id.
 
-An agent declares a tier (`light` / `mid` / `heavy`), never a model. `model_catalog.json`
+An agent declares a tier (`light` / `mid` / `heavy` / `frontier`), never a model. `model_catalog.json`
 beside this module is the single map from (tier, provider) to a concrete id, plus the
 projected upstream catalog those ids are checked against and the context window each one
 carries. Switching provider is an edit to `active_provider` in that one file.

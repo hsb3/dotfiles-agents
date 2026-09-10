@@ -278,7 +278,7 @@ Root waits for manager completion and reports the manager's exact final reply; d
             and event.get('agent_type') == role and event.get('model') == expected
             for event in events) for role, expected in {
                 'atelier-scout': 'gpt-5.6-luna', 'atelier-builder': 'gpt-5.6-terra',
-                'atelier-manager': 'gpt-6-astra'}.items()),
+                'atelier-reviewer': 'gpt-5.6-sol', 'atelier-manager': 'gpt-5.6-sol'}.items()),
         'manager_stop_rejected': (root / 'manager-stop-stimulus.json').is_file()
             and any(row.get('decision') == 'nudge' for row in gates)
             and any((event.get('last_assistant_message') or '').strip() == 'PROBE_PROGRESS_ONLY'
