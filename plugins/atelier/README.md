@@ -9,7 +9,7 @@ lab.
 
 Delegation separates the required model tier from how each harness configures it.
 
-Opt-in external `handoff.scope: session` uses a native card and consumable certificate per
+Atelier 0.35.0's opt-in external `handoff.scope: session` uses a native card and consumable certificate per
 launch/native identity. Codex requires trusted before-tool and compaction hooks; the current
 shell receives an immutable transaction binding. Every tool invalidates certification, and
 parallel or delayed helpers cannot certify another call. The helper verifies body, repository,

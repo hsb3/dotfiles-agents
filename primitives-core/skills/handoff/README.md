@@ -4,6 +4,8 @@ Opt-in external `scope: session` gives each dedicated running writer a native ha
 a consumed certificate. The [skill](SKILL.md#opt-in-concurrent-sessions) documents launch identity,
 complete discovery, the persistence helper, and runtime limits. Every tool invalidates session
 freshness; use the helper last and stop compaction on any failure. Project scope is unchanged.
+The helper verifies native predecessor labels, repository/work metadata and body readback;
+its immutable call binding prevents a delayed helper from borrowing a newer transaction.
 
 Maintains the project's session-handoff file so a brand-new session can pick up work cold —
 externalizes current state, in-flight work, decisions made and pending, and gotchas into one
