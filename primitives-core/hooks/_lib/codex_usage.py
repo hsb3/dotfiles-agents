@@ -5,6 +5,7 @@ import os
 import socket
 import subprocess
 from datetime import datetime
+from pathlib import Path
 
 SCHEMA, VERSION = "codex-usage", 2
 FIELDS = {"input": "input_tokens", "cached_input": "cached_input_tokens",
@@ -46,6 +47,26 @@ def _duration(started, timestamp):
         return None
 
 
+def _provenance(payload):
+    package = Path(__file__).resolve().parents[2]
+    name = version = None
+    for manifest in (package / ".claude-plugin/plugin.json", package / ".codex-plugin/plugin.json"):
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            name, version = data.get("name"), data.get("version")
+            break
+        except (OSError, ValueError):
+            pass
+    profile = payload.get("profile_path")
+    try:
+        raw = Path(profile).read_bytes()
+        profile_hash = hashlib.sha256(raw).hexdigest()
+    except (OSError, TypeError):
+        profile, profile_hash = None, None
+    return {"package_path": str(package), "package_name": name, "package_version": version,
+            "profile_path": profile, "profile_hash": profile_hash}
+
+
 def _id(host, native, occurrence, state, segment, model, effort, delta, cumulative):
     text = json.dumps([host, native, occurrence, state, segment, model, effort, delta, cumulative],
                       sort_keys=True, separators=(",", ":")).encode()
@@ -67,9 +88,8 @@ def _event(state, occurrence, payload, meta, model, effort, delta=None, cumulati
         "model": model, "effort": effort,
         "requested_model": payload.get("requested_model"),
         "requested_tier": payload.get("requested_tier"),
-        "package_path": None, "package_name": None, "package_version": None,
-        "profile_path": None, "profile_hash": None,
-        "host": host, "source_repo": payload.get("repo") or _git_root(payload.get("cwd")),
+        **payload["_provenance"],
+        "host": host, "source_repo": payload.get("repo"),
         "effective_cwd": payload.get("cwd"), "started_at": meta.get("timestamp"),
         "timing": {"lifetime_ms": _duration(meta.get("timestamp"), timestamp),
                    "active_ms": None, "tool_ms": None, "wait_ms": None},
@@ -79,11 +99,14 @@ def _event(state, occurrence, payload, meta, model, effort, delta=None, cumulati
 
 def events(path, payload):
     """Return appendable observations. Any uncertain ownership is unknown."""
+    payload = dict(payload)
+    payload["repo"] = payload.get("repo") or _git_root(payload.get("cwd"))
+    payload["_provenance"] = _provenance(payload)
     if not path or not os.path.isfile(path):
         return [_event("error", 0, payload, {}, None, None)]
     expected = payload.get("agent_id") or payload.get("session_id")
     meta, model, effort, prior, segment = {}, None, None, None, 0
-    ownership_bad, saw_counter, result = False, False, []
+    ownership_bad, result = False, []
     try:
         with open(path, encoding="utf-8", errors="replace") as stream:
             lines = list(stream)
@@ -123,7 +146,6 @@ def events(path, payload):
                     model = body.get("model") if isinstance(body.get("model"), str) else model
                     effort = body.get("effort") if isinstance(body.get("effort"), str) else effort
                 elif item.get("type") == "event_msg" and isinstance(body, dict) and body.get("type") == "token_count":
-                    saw_counter = True
                     info = body.get("info")
                     current = _counters(info.get("total_token_usage") if isinstance(info, dict) else None)
                     timestamp = item.get("timestamp")

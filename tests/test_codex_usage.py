@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "primitives-core/hooks/_lib"))
@@ -85,6 +86,18 @@ class UsageTests(unittest.TestCase):
         row = codex_usage.events(self.path, {"session_id": "root"})[-1]
         self.assertEqual(row["counter_state"], "observed")
         self.assertIsNone(row["timing"]["lifetime_ms"])
+
+    def test_repo_is_resolved_once_and_fake_profile_is_not_claimed(self):
+        self.write({"type": "session_meta", "payload": {"id": "root"}},
+                   *self.count(100), *self.count(200))
+        with patch.object(codex_usage, "_git_root", return_value="/repo") as resolver:
+            rows = codex_usage.events(self.path, {"session_id": "root", "cwd": "/work",
+                                                  "profile_path": "/does-not-exist"})
+        self.assertEqual(resolver.call_count, 1)
+        self.assertEqual({row["source_repo"] for row in rows}, {"/repo"})
+        self.assertEqual(rows[-1]["profile_path"], None)
+        self.assertEqual(rows[-1]["profile_hash"], None)
+        self.assertTrue(rows[-1]["package_path"].endswith("primitives-core"))
 
 
 if __name__ == "__main__":

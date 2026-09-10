@@ -145,8 +145,13 @@ each segment instead of summing cumulative_tokens.
 
 Every row includes observation_id, segment, counter_state, lifecycle_id,
 native_id, parent_id, role, model, effort, requested_model, requested_tier,
-package, profile, host, source_repo, effective_cwd, started_at, timing, and
-tokens. The stable id hashes host, native identity, source occurrence, model,
+package_path, package_name, package_version, profile_path, profile_hash,
+host, source_repo, effective_cwd, started_at, timing, and tokens. package_path
+is the actual directory containing the helper; name/version are read only from
+an adjacent plugin manifest when present. profile_path/hash are emitted only
+for an explicit readable payload path. These values describe files, not proof
+that a package or profile was loaded at runtime. Requested model/tier remain
+null unless the native payload supplied them. The stable id hashes host, native identity, source occurrence, model,
 and counter data; a digest may deduplicate it but the hook deliberately keeps
 durable JSONL append-only. Root rows use the session_meta id; child rows use
 the native child id and parent_thread_id. Active, tool, and wait timing remain
@@ -164,7 +169,10 @@ deduplicate only exact observation_id values.
 Example observed row:
 
     {"v":2,"schema":"codex-usage","schema_version":2,"kind":"delta",
-     "counter_state":"observed","segment":0,"tokens":{"input":12,
+     "counter_state":"observed","segment":0,"native_id":"child",
+     "package_path":"/path/primitives-core","package_name":null,
+     "package_version":null,"profile_path":null,"profile_hash":null,
+     "tokens":{"input":12,
      "cached_input":8,"output":4,"reasoning":1,"total":16},
      "cumulative_tokens":{"input":100,"cached_input":80,"output":20,
      "reasoning":2,"total":120}}
