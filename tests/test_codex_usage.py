@@ -60,6 +60,32 @@ class UsageTests(unittest.TestCase):
         self.assertIn("unsupported-future-schema", [row["counter_state"] for row in rows])
         self.assertNotIn("observed", [row["counter_state"] for row in rows])
 
+    def test_counter_before_native_start_is_not_billed(self):
+        counter = self.count(100)[0]
+        counter["timestamp"] = "2026-09-09T23:59:59Z"
+        self.write({"type": "session_meta", "payload": {"id": "root", "timestamp": "2026-09-10T00:00:00Z"}}, counter)
+        self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[-1]["counter_state"],
+                         "inherited-baseline-unknown")
+
+    def test_late_conflicting_metadata_scrubs_earlier_counter(self):
+        self.write({"type": "session_meta", "payload": {"id": "root"}},
+                   *self.count(100), {"type": "session_meta", "payload": {"id": "other"}}, *self.count(200))
+        self.assertNotIn("observed", [row["counter_state"] for row in
+                                      codex_usage.events(self.path, {"session_id": "root"})])
+
+    def test_missing_metadata_marks_all_counters_unknown(self):
+        self.write(*self.count(100))
+        self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[-1]["counter_state"],
+                         "inherited-baseline-unknown")
+
+    def test_naive_timestamp_has_unknown_not_negative_timing(self):
+        counter = self.count(100)[0]
+        counter["timestamp"] = "2026-09-10T00:00:01"
+        self.write({"type": "session_meta", "payload": {"id": "root", "timestamp": "2026-09-10T00:00:00Z"}}, counter)
+        row = codex_usage.events(self.path, {"session_id": "root"})[-1]
+        self.assertEqual(row["counter_state"], "observed")
+        self.assertIsNone(row["timing"]["lifetime_ms"])
+
 
 if __name__ == "__main__":
     unittest.main()

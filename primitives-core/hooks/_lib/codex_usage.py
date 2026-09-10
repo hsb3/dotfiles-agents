@@ -42,7 +42,7 @@ def _duration(started, timestamp):
     try:
         return int((datetime.fromisoformat(timestamp.replace("Z", "+00:00")) -
                     datetime.fromisoformat(started.replace("Z", "+00:00"))).total_seconds() * 1000)
-    except (AttributeError, ValueError):
+    except (AttributeError, TypeError, ValueError):
         return None
 
 
@@ -86,7 +86,22 @@ def events(path, payload):
     ownership_bad, saw_counter, result = False, False, []
     try:
         with open(path, encoding="utf-8", errors="replace") as stream:
-            for occurrence, line in enumerate(stream):
+            lines = list(stream)
+        objects = []
+        for line in lines:
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(item, dict):
+                objects.append(item)
+        identities = [
+            item["payload"].get("id") for item in objects
+            if item.get("type") == "session_meta" and isinstance(item.get("payload"), dict)
+            and isinstance(item["payload"].get("id"), str) and item["payload"]["id"]
+        ]
+        ownership_bad = len(set(identities)) != 1 or identities[0] != expected
+        for occurrence, line in enumerate(lines):
                 try:
                     item = json.loads(line)
                 except ValueError:
@@ -101,11 +116,7 @@ def events(path, payload):
                     continue
                 body = item.get("payload")
                 if item.get("type") == "session_meta" and isinstance(body, dict):
-                    if meta and body.get("id") != meta.get("id"):
-                        ownership_bad = True
                     meta = body
-                    if body.get("id") and body["id"] != expected:
-                        ownership_bad = True
                     if body.get("forked_from_id"):
                         ownership_bad = True
                 elif item.get("type") == "turn_context" and isinstance(body, dict):
@@ -115,7 +126,9 @@ def events(path, payload):
                     saw_counter = True
                     info = body.get("info")
                     current = _counters(info.get("total_token_usage") if isinstance(info, dict) else None)
-                    if ownership_bad:
+                    timestamp = item.get("timestamp")
+                    before_start = _duration(meta.get("timestamp"), timestamp)
+                    if ownership_bad or (before_start is not None and before_start < 0):
                         result.append(_event("inherited-baseline-unknown", occurrence, payload, meta, model, effort))
                     elif current is None:
                         result.append(_event("malformed-delta", occurrence, payload, meta, model, effort))
@@ -132,7 +145,7 @@ def events(path, payload):
                             prior = current
                         else:
                             result.append(_event("observed", occurrence, payload, meta, model, effort, delta,
-                                                 current, segment, item.get("timestamp")))
+                                                 current, segment, timestamp))
                             prior = current
     except OSError:
         return [_event("error", 0, payload, meta, model, effort)]
