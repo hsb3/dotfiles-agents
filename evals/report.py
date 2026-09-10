@@ -34,7 +34,7 @@ Key Functions:
         function of `data` returning row dicts, rendered to a markdown table.
 
 Limitations:
-    - The coverage-matrix.md header's provenance/counts line is literal carried-over text
+    - The coverage-matrix.md header's provenance line is literal carried-over text
       from render_matrix.py (not data-derived, so it goes stale the same way the original
       did — e.g. it still only names the M1 eval_runs after the W2 delta). Left as-is for
       byte-compatibility; making it data-derived is a follow-up, not part of this brief.
@@ -89,12 +89,21 @@ def load(src):
     """Fetch every collection report.py needs, once, whole. Everything downstream is a
     plain function over this dict — no further data-source calls."""
     frameworks = src.list_all("frameworks")
-    extenders = [e for e in src.list_all("extenders") if not e.get("retired")]
+    all_extenders = src.list_all("extenders")
+    extenders = [e for e in all_extenders if not e.get("retired")]
     sources = src.list_all("sources")
     # Retiring keeps a dropped unit's assessments and edges, but every join below indexes
     # ext_by_id unguarded, so rows pointing at a filtered-out unit must go too.
     live = {e["id"] for e in extenders}
+    all_relationships = src.list_all("relationships")
+    relationships = [r for r in all_relationships
+                     if r["extender_a"] in live and r["extender_b"] in live]
+    all_assessments = src.list_all("assessments")
+    assessments = [a for a in all_assessments if a["extender"] in live]
     return {
+        "retired_units": len(all_extenders) - len(extenders),
+        "suppressed_assessments": len(all_assessments) - len(assessments),
+        "suppressed_relationships": len(all_relationships) - len(relationships),
         "frameworks": frameworks,
         "fw_by_id": {f["id"]: f for f in frameworks},
         "fw_by_slug": {f["slug"]: f for f in frameworks},
@@ -104,11 +113,22 @@ def load(src):
         "sources": sources,
         "src_by_id": {s["id"]: s for s in sources},
         "job_coverage": src.list_all("job_coverage"),
-        "relationships": [r for r in src.list_all("relationships")
-                          if r["extender_a"] in live and r["extender_b"] in live],
-        "assessments": [a for a in src.list_all("assessments") if a["extender"] in live],
+        "relationships": relationships,
+        "assessments": assessments,
         "eval_runs": src.list_all("eval_runs"),
     }
+
+
+def projection_scope(data):
+    return (
+        f"Retired units excluded: **{data['retired_units']}**. "
+        f"Suppressed rows: **{data['suppressed_assessments']} assessments**, "
+        f"**{data['suppressed_relationships']} relationships**. "
+        "Counts cover all fetched rows, before section-specific filtering. "
+        "Assessments and relationships referencing retired or missing extenders are "
+        "excluded; each relationship counts once even if both endpoints are excluded. "
+        "Stored history is retained; eval-run linked-row counts reflect this active projection."
+    )
 
 
 # --- coverage-matrix.md (render_matrix.py's algorithm, unchanged) --------------------
@@ -138,9 +158,12 @@ def render_coverage_matrix(data):
         f"(assessor `{ASSESSOR}` assessments + `job_coverage` + `relationships`);",
         "this file is a rendered snapshot for reading and diff review._",
         "",
-        f"Framework: `{FRAMEWORK_SLUG}` (24 jobs, 7 families) x 37 extenders.",
+        f"Framework: `{FRAMEWORK_SLUG}` ({len(jobs)} jobs, "
+        f"{len({j['category'] for j in jobs})} families) x {len(ext_by_id)} extenders.",
         "Provenance: eval_runs `m1-coverage-judged-2026-07-20`,",
         "`m1-coverage-review-2026-07-20`, `m1-coverage-adjudication-2026-07-20`.",
+        "",
+        projection_scope(data),
         "",
         "## Matrix",
         "",
@@ -291,6 +314,8 @@ def render_analysis(data):
         "covers the DB's other cross-cutting answers: per-extender profiles, "
         "duplicative/conflicting/directed relationships, an assessor comparison, and the",
         "eval-runs provenance index._",
+        "",
+        projection_scope(data),
         "",
         "## Extender profiles",
         "",
