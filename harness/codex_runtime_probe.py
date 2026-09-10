@@ -264,7 +264,7 @@ Root waits for manager completion and reports the manager's exact final reply; d
         *[arg for path in ('atelier-codex/checkouts', 'worktrees', 'objects',
                           'refs/heads/atelier', 'logs/refs/heads/atelier')
           for arg in ('--add-dir', str(root / 'repo/.git' / path))],
-        '--dangerously-bypass-hook-trust', prompt])
+        '--dangerously-bypass-hook-trust', prompt], timeout=480)
     rows = [json.loads(path.read_text()) for path in
             (root / 'repo/.git/atelier-codex/workers').glob('*/*.json')]
     managers = [row for row in rows if row['agent_type'] == 'atelier-manager']
@@ -340,14 +340,16 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
             env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='credential.https://github.com.helper',
                        GIT_CONFIG_VALUE_0='!gh auth git-credential')
 
-        def command(name, argv):
+        def command(name, argv, timeout=240):
             process = subprocess.Popen(argv, env=env, cwd=repo, text=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, start_new_session=True)
+            timed_out = False
             try:
-                stdout, stderr = process.communicate(timeout=240)
+                stdout, stderr = process.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 stdout, stderr = process.communicate()
+                timed_out = True
             except BaseException:
                 if process.poll() is None:
                     os.killpg(process.pid, signal.SIGKILL)
@@ -357,6 +359,9 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                 raise
             (root / f"{name}.stdout").write_text(stdout)
             (root / f"{name}.stderr").write_text(stderr)
+            if timed_out:
+                raise RuntimeError(
+                    f"{name} timed out after {timeout} seconds; process group killed; inspect saved output")
             if process.returncode:
                 raise RuntimeError(f"{name} exited {process.returncode}; inspect its saved stderr")
             return stdout
