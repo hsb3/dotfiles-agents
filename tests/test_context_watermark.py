@@ -104,7 +104,7 @@ class ThresholdFormulaTests(_ScrubbedEnv):
         self.assertEqual(hook.compute_thresholds(64_000, 2.0, "light"),
                          (19_200, 38_400, 51_200))
 
-    def test_unknown_model_is_conservatively_heavy(self):
+    def test_unknown_model_is_conservatively_frontier(self):
         self.assertEqual(hook.compute_thresholds(None, 1.0, "unknown"),
                          (60_000, 120_000, 160_000))
 
@@ -120,8 +120,25 @@ class ThresholdFormulaTests(_ScrubbedEnv):
         self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "unknown"),
                          (60_000, 120_000, 160_000))
 
-    def test_openai_catalog_model_uses_its_tier(self):
-        self.assertEqual(hook._model_tier("gpt-5.6-terra"), "mid")
+    def test_catalog_models_use_their_production_tiers_and_windows(self):
+        cases = (
+            ("gpt-6-astra", "frontier", (60_000, 120_000, 160_000)),
+            ("claude-fable-5", "frontier", (60_000, 120_000, 160_000)),
+            ("gpt-5.6-sol", "heavy", (96_000, 192_000, 256_000)),
+            ("claude-opus-5", "heavy", (96_000, 192_000, 256_000)),
+            ("gpt-5.6-terra", "mid", (120_000, 240_000, 320_000)),
+            ("claude-sonnet-5", "mid", (120_000, 240_000, 320_000)),
+            ("gpt-5.6-luna", "light", (160_000, 320_000, 480_000)),
+            ("claude-haiku-4-5", "light", (160_000, 320_000, 480_000)),
+        )
+        for model, tier, stages in cases:
+            with self.subTest(model=model):
+                self.assertEqual(hook._model_tier(model), tier)
+                self.assertEqual(hook.resolve_stages(
+                    self.tmp, 1_000_000, 1.0, model)[:3], stages)
+        self.assertEqual(hook._model_tier("unmapped-model"), "frontier")
+        self.assertEqual(hook.compute_thresholds(200_000, 1.0, "heavy"),
+                         (60_000, 120_000, 160_000))
 
 
 # ---------------------------------------------------------------------------
@@ -236,8 +253,8 @@ class PrecedenceTests(_ScrubbedEnv):
     def test_notice_can_be_overridden_but_never_exceeds_soft(self):
         self.write_activation("---\nwatermark:\n  notice: 150000\n  soft: 90000\n---\n")
         notice, soft, hard, info = hook.resolve_stages(
-            self.tmp, 1_000_000, 1.0, "claude-opus-4-8")
-        self.assertEqual((notice, soft, hard), (90_000, 90_000, 160_000))
+            self.tmp, 1_000_000, 1.0, "claude-opus-5")
+        self.assertEqual((notice, soft, hard), (90_000, 90_000, 256_000))
         self.assertEqual((info["notice_source"], info["soft_source"]),
                          ("activation", "activation"))
 
@@ -508,7 +525,7 @@ class HookRunTests(_ScrubbedEnv):
         """
         session = session or "session-{0}".format(next(_SEQ))
         parent = os.path.join(self.tmp, "transcripts", session + ".jsonl")
-        _write_jsonl(parent, [_assistant(5_000, "claude-opus-4-8")])
+        _write_jsonl(parent, [_assistant(5_000, "claude-opus-5")])
         if write_worker:
             worker = os.path.join(
                 self.tmp, "transcripts", session, "subagents",
