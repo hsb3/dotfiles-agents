@@ -137,6 +137,36 @@ class CodexRoles(unittest.TestCase):
                 self.assertEqual(roles.setup(project, check=True), [])
                 self.assertEqual(roles.setup(project), [])
 
+    def test_local_and_global_profiles_resolve_each_role_without_redundant_copies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project, home = Path(tmp) / "consumer", Path(tmp) / "codex-home"
+            project.mkdir()
+            home.mkdir()
+            with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                roles.setup(home, global_profiles=True)
+                local = project / ".codex/agents"
+                local.mkdir(parents=True)
+                (local / "atelier-builder.toml").write_text(roles.render("builder"))
+                self.assertEqual(roles.setup(project), [])
+                self.assertEqual(sorted(path.name for path in local.iterdir()), ["atelier-builder.toml"])
+
+    def test_partial_global_profiles_are_validated_before_local_bootstrap(self):
+        for name, content in [
+                ("custom.toml", "not toml"),
+                ("custom.toml", 'name = "atelier-builder"\n'),
+                ("atelier-builder.toml", "# atelier managed sha256=wrong\n")]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                project, home = Path(tmp) / "consumer", Path(tmp) / "codex-home"
+                project.mkdir()
+                home.mkdir()
+                with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                    global_paths = roles.setup(home, global_profiles=True)
+                    (home / "agents/atelier-scout.toml").unlink()
+                    (home / "agents" / name).write_text(content)
+                    with self.assertRaises(ValueError):
+                        roles.setup(project)
+                    self.assertFalse((project / ".codex").exists())
+
     def test_unknown_role_is_rejected(self):
         for role in ("../../builder", "atelier-unknown", "", None, 42):
             with self.subTest(role=role), self.assertRaises(ValueError):

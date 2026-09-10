@@ -119,3 +119,15 @@ class ActivationPathsTests(unittest.TestCase):
             activation.main(['codex-setup', '--harness', 'codex', '--project-dir', main], out=output),
             0, output.getvalue())
         self.assertFalse((Path(main) / '.codex/agents').exists())
+
+    def test_codex_setup_rejects_partial_global_collision_before_config_write(self):
+        main, _ = make_worktree(str(self.root))
+        home = Path(os.environ['CODEX_HOME'])
+        home.mkdir()
+        codex_roles.setup(home, global_profiles=True)
+        (home / 'agents/atelier-scout.toml').unlink()
+        (home / 'agents/custom.toml').write_text('name = "atelier-builder"\n')
+        output = io.StringIO()
+        self.assertNotEqual(
+            activation.main(['codex-setup', '--harness', 'codex', '--project-dir', main], out=output), 0)
+        self.assertFalse((Path(main) / '.codex/config.toml').exists())

@@ -119,16 +119,24 @@ def _directory(root, global_profiles=False):
     return Path(root).resolve() / ("agents" if global_profiles else ".codex/agents")
 
 
-def _changes(directory, plugin_root):
+def _changes(directory, plugin_root, selected=None, strict_declarations=False):
     names = set(role_names(plugin_root))
     managed = _managed(plugin_root)
+    selected = set(roles(plugin_root) if selected is None else selected)
     for path in directory.glob("*.toml"):
-        if path.stem in names:
-            continue
-        if path.is_file() and tomllib.loads(path.read_text()).get("name") in names:
-            raise ValueError(f"atelier role name already declared in user profile: {path}")
+        if not path.is_file():
+            raise ValueError(f"refusing non-regular profile: {path}")
+        try:
+            declared = tomllib.loads(path.read_text()).get("name")
+        except tomllib.TOMLDecodeError as exc:
+            raise ValueError(f"invalid profile: {path}") from exc
+        if declared in names and (strict_declarations or
+                                  declared.removeprefix(package_id(plugin_root) + "-") in selected):
+            canonical = directory / f"{declared}.toml"
+            if path != canonical:
+                raise ValueError(f"atelier role name already declared in user profile: {path}")
     changed = {}
-    for role in roles(plugin_root):
+    for role in selected:
         path = directory / f"{package_id(plugin_root)}-{role}.toml"
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise ValueError(f"refusing non-regular profile: {path}")
@@ -185,34 +193,31 @@ def setup(project_root, plugin_root=None, check=False, refresh_global=False, glo
             _write(directory, changed)
         return list(changed)
 
-    local = _changes(directory, plugin_root)
-    local_paths = [directory / f"{package_id(plugin_root)}-{role}.toml" for role in roles(plugin_root)]
-    if any(path.exists() for path in local_paths):
-        if local and not check:
-            _write(directory, local)
-        return list(local)
+    all_roles = set(roles(plugin_root))
+    local_paths = {role: directory / f"{package_id(plugin_root)}-{role}.toml" for role in all_roles}
+    local_roles = {role for role, path in local_paths.items() if path.exists()}
+    local_changed = _changes(directory, plugin_root, local_roles, strict_declarations=True)
 
     global_directory = _directory(codex_home(), True)
     for parent in (global_directory.parent, global_directory):
         if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
             raise ValueError(f"refusing symlink or non-directory: {parent}")
-    global_paths = [global_directory / path.name for path in local_paths]
-    if all(path.exists() for path in global_paths):
-        try:
-            global_changed = _changes(global_directory, plugin_root)
-        except ValueError as exc:
-            raise ValueError("stale global Codex profiles: " + str(exc)) from exc
-        if global_changed:
-            if check:
-                return list(global_changed)
-            if not refresh_global:
-                raise ValueError("stale global Codex profiles; rerun with --refresh-global")
-            _write(global_directory, global_changed)
-            return list(global_changed)
-        return []
-    if local and not check:
-        _write(directory, local)
-    return list(local)
+    global_roles = all_roles - local_roles
+    try:
+        global_changed = _changes(global_directory, plugin_root, global_roles)
+    except ValueError as exc:
+        raise ValueError("stale global Codex profiles: " + str(exc)) from exc
+    global_paths = {role: global_directory / path.name for role, path in local_paths.items()}
+    stale_global = {path: content for path, content in global_changed.items() if path.exists()}
+    missing = {role for role in global_roles if not global_paths[role].exists()}
+    local_changed.update(_changes(directory, plugin_root, missing, strict_declarations=True))
+    changed = list(local_changed) + list(stale_global)
+    if stale_global and not check and not refresh_global:
+        raise ValueError("stale global Codex profiles; rerun with --refresh-global")
+    if not check:
+        _write(global_directory, stale_global)
+        _write(directory, local_changed)
+    return changed
 
 
 def main(argv=None):

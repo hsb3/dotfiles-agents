@@ -707,8 +707,8 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                   + json.dumps(missing), file=out)
             return EXIT_PROBLEM
         planned_roles = codex_roles.setup(project_dir, check=True)
-        global_agents = codex_roles.codex_home() / "agents"
-        if (not check and not refresh_global and
+        global_agents = codex_roles.codex_home() / "agents" if planned_roles else None
+        if (not check and not refresh_global and global_agents and
                 any(path.parent == global_agents for path in planned_roles)):
             raise ValueError("stale global Codex profiles; rerun with --refresh-global")
         additions = []
