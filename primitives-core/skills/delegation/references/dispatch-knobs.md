@@ -136,9 +136,11 @@ absolute path: it is three directories above `references/dispatch-knobs.md`. Run
 `python3 "<atelier-package>/skills/activation/scripts/activation.py" codex-setup
 --project-dir "<project-root>"`, then run the same script with `check --harness codex
 --project-dir "<project-root>"`. Full setup reconciles policy placement after creating `.codex`. Start a fresh Codex session after initial setup so project agent discovery sees the
-profiles. Setup generates `.codex/agents/atelier-*.toml` from the installed package, and refreshes
-only files whose ownership checksum still matches. An existing user file or an edited generated
-file is a visible error; resolve it deliberately, never force an overwrite. Keep these generated
+profiles. Setup uses current managed global profiles when present; otherwise it generates
+`.codex/agents/atelier-*.toml` from the installed package, and refreshes only files whose ownership
+checksum still matches. An existing user file or an edited generated file is a visible error;
+resolve it deliberately, never force an overwrite. Refresh stale globals only with explicit
+`codex-setup --refresh-global`. Keep generated local profiles
 profiles out of commits using the project's local git exclusion mechanism. No global agent or
 config file is required. Repeat setup after a plugin update; `check --harness codex` reports stale profiles
 and needed policy migration without writing. Setup is the strategist's job, never a worker's.
@@ -151,6 +153,13 @@ available native spawn schema; preserve the requested role, and verify the actua
 model in the child's start evidence. Never replace a reviewer with a builder to buy a cheaper
 model. The model catalog records API windows; use measured Codex session context limits for
 context budgeting.
+
+Atelier's execution leaves (`scout`, `builder`, `reviewer`, and `code-reviewer`) set only
+`[features] apps = false` and `[skills] include_instructions = false`: their caller supplies the
+needed skill and reference paths, while the profile omits the automatic skill catalog and hosted
+`codex_apps` connectors. Codex's generic profile schema has no declarative per-role suppression
+for other capabilities; do not add inert `mcp_servers`, `plugins.<id>`, or `web_search` settings.
+Do not set `plugins = false`: Atelier's plugin hooks provide custody and worktree isolation.
 
 **Dispatch through the native tool the session exposes.** On `spawn_agent`, set `agent_type`
 to the native role, `fork_context: false`, and supply the curated brief as `message`. On

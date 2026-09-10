@@ -126,6 +126,7 @@ sys.path.insert(
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
 import codex_lifecycle
+import codex_usage
 from pending import (  # noqa: E402  (same — `_lib` must be on the path first)
     AGENT_FILE_PREFIX,
     SIBLING_PROBE_LIMIT,  # noqa: F401  (re-export: the probe knob is read here)
@@ -162,6 +163,7 @@ STALL_SECONDS_DEFAULT = 900
 # two are pinned equal by tests/test_live_worker_git_guard.py.
 LOG_STREAM = "delegation"
 LOG_PATH_ENV = "SUBAGENT_TELEMETRY_LOG_PATH"
+USAGE_STREAM = "codex-usage"
 
 STALL_SECONDS = _env_int("SUBAGENT_TELEMETRY_STALL_SECONDS", STALL_SECONDS_DEFAULT)
 
@@ -478,8 +480,20 @@ def _codex_stop(payload):
             row.update(ctx_tokens=None, model=None, error=str(exc))
             codex_lifecycle.diagnostic(exc)
         row["duration_ms"] = _elapsed_ms(row.get("started_at"), datetime.now(timezone.utc))
+        usage_payload = dict(payload, **record)
+        try:
+            for usage in codex_usage.events(record.get("transcript_path"), usage_payload):
+                agentlog.append(USAGE_STREAM, usage, agentlog.resolve_project(payload.get("cwd")), None, agentlog.PLUGIN, 2)
+        except Exception as exc:
+            codex_lifecycle.diagnostic("usage logging failed: " + str(exc))
         agentlog.append(LOG_STREAM, row, agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV)
         codex_workers.set_status(payload, "stopped")
+    elif payload.get("transcript_path"):
+        try:
+            for usage in codex_usage.events(payload["transcript_path"], payload):
+                agentlog.append(USAGE_STREAM, usage, agentlog.resolve_project(payload.get("cwd")), None, agentlog.PLUGIN, 2)
+        except Exception as exc:
+            codex_lifecycle.diagnostic("usage logging failed: " + str(exc))
     pending = []
     now = datetime.now(timezone.utc)
     for record in codex_workers.records(payload):

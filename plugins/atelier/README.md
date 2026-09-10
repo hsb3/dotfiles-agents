@@ -114,9 +114,10 @@ codex plugin add atelier@dotfiles-agents
 
 Use Python 3.11 or newer for Codex setup. Invoke the installed activation skill for the consumer project. It creates the local
 policy in the sole configured native directory or `.agents` for multiple agents.
-Its `codex-setup` command reconciles placement after creating `.codex` and renders five canonical
-`atelier-<role>` profiles under `.codex/agents/` and project sandbox writable roots. It preserves
-user-owned and edited configuration. Restart the session
+Its `codex-setup` command reconciles policy placement and project sandbox writable roots.
+It resolves each role from the project first, then current managed global profiles, generating
+only missing project roles. Use `codex-setup --refresh-global` to refresh owned global profiles
+after an update; user-owned or edited profiles are preserved by refusal. Start a fresh session
 and review/trust the installed hooks in native `/hooks`; setup cannot grant trust.
 The [activation instructions](skills/activation/SKILL.md#codex-setup) give the exact commands.
 
@@ -141,6 +142,23 @@ for role selection, waits and follow-ups. A Codex interface without native role 
 or trusted lifecycle hooks cannot provide this delegation contract; report that missing
 capability before dispatching writers.
 
+## Model tiers and usage
+
+Frontier Astra/Fable belongs to the root strategist. Managers and judgment-heavy reviewers use
+Sol/Opus; focused builders and code reviewers use Terra/Sonnet; scouts use Luna/Haiku. Codex leaf
+profiles omit the automatic skill catalog and hosted Apps connectors while retaining plugin
+safeguards. Supply the worker’s required skill and project-reference paths in its curated brief.
+Selective removal of individual plugin MCP schemas is not supported by the native role loader.
+
+Context warnings use tier-aware notice, soft, and hard stages, bounded by the runtime window.
+Explicit project overrides remain supported. Checkpoints preserve the worker’s branch, isolated
+checkout, uncommitted changes, and verification state before continuation or a supported handoff.
+
+The central `codex-usage.jsonl` stream has schema version 2 and records token deltas separately
+from the existing context-occupancy logs. Stable observation IDs support idempotent analysis;
+unknown attribution remains visible. See [telemetry](hooks/subagent-telemetry/README.md) for field
+semantics and the development checkout’s `evals/usage_digest.py` for report/export commands.
+
 ## A worked example
 
 ```
@@ -148,8 +166,8 @@ You: "build the export feature — plan it out"
 → delegation sizes the job, picks an architecture, and routes scoped slices through the
   management and execution layers at the right model tier, holding verification for itself.
 
-Context creeps past 120k tokens
-→ context-watermark nudges: run /handoff, then /clear or /compact.
+Context crosses its model tier’s notice, soft, or hard watermark
+→ context-watermark advises reducing reads or checkpointing at a safe boundary; it does not kill workers.
 
 You: "/handoff"
 → handoff externalizes everything load-bearing into the project's handoff — the HANDOFF.md

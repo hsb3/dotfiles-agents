@@ -2,10 +2,12 @@
 
 import shutil
 import re
+import hashlib
 import sys
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +16,13 @@ import codex_roles as roles
 
 
 class CodexRoles(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.addCleanup(self.home.cleanup)
+        self.env = patch.dict("os.environ", {"CODEX_HOME": self.home.name})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
     def test_every_role_renders_its_canonical_contract_and_valid_toml(self):
         for role in roles.ROLES:
             with self.subTest(role=role):
@@ -28,6 +37,28 @@ class CodexRoles(unittest.TestCase):
                 self.assertNotIn("model: opus", body)
                 self.assertIn("role", body)
 
+    def test_only_atelier_leaf_profiles_disable_apps_and_skill_instructions(self):
+        leaves = ("scout", "builder", "reviewer", "code-reviewer")
+        sentence = "Caller supplies needed skill and reference absolute paths; missing capability goes back to manager, don't guess."
+        for role in leaves:
+            with self.subTest(role=role):
+                profile = tomllib.loads(roles.render(role))
+                self.assertEqual(profile["features"], {"apps": False})
+                self.assertEqual(profile["skills"], {"include_instructions": False})
+                self.assertIn(sentence, profile["developer_instructions"])
+
+        manager = tomllib.loads(roles.render("manager"))
+        self.assertNotIn("features", manager)
+        self.assertNotIn("skills", manager)
+        self.assertNotIn(sentence, manager["developer_instructions"])
+        for package_name in ("code-desk", "pocketbase"):
+            package = ROOT / "plugins" / package_name
+            for role in roles.roles(package):
+                with self.subTest(package=package_name, role=role):
+                    profile = tomllib.loads(roles.render(role, package))
+                    self.assertNotIn("features", profile)
+                    self.assertNotIn("skills", profile)
+
     def test_setup_check_refresh_and_modified_collision_are_ownership_safe(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp).resolve() / "consumer"
@@ -36,6 +67,7 @@ class CodexRoles(unittest.TestCase):
             shutil.copytree(ROOT / "plugins/atelier", source)
             planned = roles.setup(project, source, check=True)
             self.assertEqual(len(planned), len(roles.ROLES))
+            self.assertEqual(planned, sorted(planned))
             self.assertFalse((project / ".codex").exists())
             self.assertEqual(roles.setup(project, source), planned)
             self.assertEqual(roles.setup(project, source, check=True), [])
@@ -93,6 +125,71 @@ class CodexRoles(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "role name"):
                 roles.setup(project)
             self.assertEqual(list(directory.iterdir()), [user_profile])
+
+    def test_current_global_profiles_avoid_local_copies_and_stale_ones_require_refresh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "consumer"
+            home = Path(tmp) / "codex-home"
+            project.mkdir()
+            home.mkdir()
+            with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                global_paths = roles.setup(home, global_profiles=True)
+                self.assertEqual(roles.setup(project, check=True), [])
+                self.assertFalse((project / ".codex").exists())
+                stale = global_paths[0]
+                _, _, body = stale.read_text().partition("\n")
+                body = body.replace("Atelier package:", "Old package:")
+                stale.write_text(roles._managed() + hashlib.sha256(body.encode()).hexdigest() + "\n" + body)
+                with self.assertRaisesRegex(ValueError, "stale global"):
+                    roles.setup(project)
+                self.assertEqual(roles.setup(project, check=True), [stale])
+                self.assertFalse((project / ".codex").exists())
+                self.assertEqual(roles.setup(project, refresh_global=True), [stale])
+                self.assertEqual(roles.setup(project, check=True), [])
+
+    def test_local_profiles_take_precedence_over_a_stale_global_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "consumer"
+            home = Path(tmp) / "codex-home"
+            project.mkdir()
+            home.mkdir()
+            with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                roles.setup(project)
+                global_paths = roles.setup(home, global_profiles=True)
+                global_paths[0].write_text(global_paths[0].read_text() + "# stale\n")
+                self.assertEqual(roles.setup(project, check=True), [])
+                self.assertEqual(roles.setup(project), [])
+
+    def test_local_and_global_profiles_resolve_each_role_without_redundant_copies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project, home = Path(tmp) / "consumer", Path(tmp) / "codex-home"
+            project.mkdir()
+            home.mkdir()
+            with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                roles.setup(home, global_profiles=True)
+                local = project / ".codex/agents"
+                local.mkdir(parents=True)
+                (local / "atelier-builder.toml").write_text(roles.render("builder"))
+                self.assertEqual(roles.setup(project), [])
+                self.assertEqual(sorted(path.name for path in local.iterdir()), ["atelier-builder.toml"])
+
+    def test_partial_global_profiles_are_validated_before_local_bootstrap(self):
+        for name, content in [
+                ("custom.toml", "not toml"),
+                ("custom.toml", "name = []\n"),
+                ("custom.toml", 'name = "atelier-builder"\n'),
+                ("atelier-builder.toml", "# atelier managed sha256=wrong\n")]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                project, home = Path(tmp) / "consumer", Path(tmp) / "codex-home"
+                project.mkdir()
+                home.mkdir()
+                with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                    global_paths = roles.setup(home, global_profiles=True)
+                    (home / "agents/atelier-scout.toml").unlink()
+                    (home / "agents" / name).write_text(content)
+                    with self.assertRaises(ValueError):
+                        roles.setup(project)
+                    self.assertFalse((project / ".codex").exists())
 
     def test_unknown_role_is_rejected(self):
         for role in ("../../builder", "atelier-unknown", "", None, 42):

@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK_PATH = os.path.join(
@@ -28,6 +29,7 @@ SCRUBBED_ENV = (
     "ATELIER_ACTIVATION_FILE",
     "CONTEXT_WATERMARK_SOFT",
     "CONTEXT_WATERMARK_HARD",
+    "CONTEXT_WATERMARK_NOTICE",
 )
 
 _SEQ = itertools.count()
@@ -73,36 +75,70 @@ class _ScrubbedEnv(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# The formula: the window caps, never lifts
+# The formula: tier defaults and the window cap
 # ---------------------------------------------------------------------------
 
 class ThresholdFormulaTests(_ScrubbedEnv):
 
-    def test_200k_window_reproduces_the_shipped_defaults(self):
-        self.assertEqual(hook.compute_thresholds(200_000, 1.0), (120_000, 160_000))
+    def test_frontier_defaults_include_the_earlier_notice(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "frontier"),
+                         (60_000, 120_000, 160_000))
 
-    def test_1m_window_stays_at_the_absolute_cap(self):
-        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0), (120_000, 160_000))
+    def test_heavy_mid_and_light_get_later_defaults(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "heavy"),
+                         (96_000, 192_000, 256_000))
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "mid"),
+                         (120_000, 240_000, 320_000))
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "light"),
+                         (160_000, 320_000, 480_000))
 
-    def test_64k_window_scales_down(self):
-        self.assertEqual(hook.compute_thresholds(64_000, 1.0), (38_400, 51_200))
+    def test_small_window_caps_all_three_stages(self):
+        self.assertEqual(hook.compute_thresholds(64_000, 1.0, "light"),
+                         (19_200, 38_400, 51_200))
 
-    def test_complexity_scales_both_tiers_down(self):
-        self.assertEqual(hook.compute_thresholds(200_000, 0.85), (102_000, 136_000))
+    def test_complexity_scales_all_stages_down(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 0.85, "frontier"),
+                         (51_000, 102_000, 136_000))
 
-    def test_unknown_window_falls_back_to_the_absolute_pair(self):
-        self.assertEqual(hook.compute_thresholds(None, 1.0), (120_000, 160_000))
+    def test_actual_window_caps_apply_after_complexity(self):
+        self.assertEqual(hook.compute_thresholds(64_000, 2.0, "light"),
+                         (19_200, 38_400, 51_200))
+
+    def test_unknown_model_is_conservatively_frontier(self):
+        self.assertEqual(hook.compute_thresholds(None, 1.0, "unknown"),
+                         (60_000, 120_000, 160_000))
 
     def test_a_non_positive_window_is_unknown_not_a_tiny_one(self):
         """Unreachable through the catalog, but this hook never trusts input:
         a window of 1 would otherwise make both tiers 0 and fire forever."""
-        self.assertEqual(hook.compute_thresholds(-200_000, 1.0), (120_000, 160_000))
-        self.assertEqual(hook.compute_thresholds(0, 1.0), (120_000, 160_000))
+        self.assertEqual(hook.compute_thresholds(-200_000, 1.0, "frontier"),
+                         (60_000, 120_000, 160_000))
+        self.assertEqual(hook.compute_thresholds(0, 1.0, "frontier"),
+                         (60_000, 120_000, 160_000))
 
-    def test_the_named_constants_are_the_ruling_of_2026_09_08(self):
-        self.assertEqual(
-            (hook.SOFT_ABS, hook.HARD_ABS, hook.SOFT_FRAC, hook.HARD_FRAC),
-            (120_000, 160_000, 0.60, 0.80))
+    def test_unknown_tier_uses_frontier_defaults(self):
+        self.assertEqual(hook.compute_thresholds(1_000_000, 1.0, "unknown"),
+                         (60_000, 120_000, 160_000))
+
+    def test_catalog_models_use_their_production_tiers_and_windows(self):
+        cases = (
+            ("gpt-6-astra", "frontier", (60_000, 120_000, 160_000)),
+            ("claude-fable-5", "frontier", (60_000, 120_000, 160_000)),
+            ("gpt-5.6-sol", "heavy", (96_000, 192_000, 256_000)),
+            ("claude-opus-5", "heavy", (96_000, 192_000, 256_000)),
+            ("gpt-5.6-terra", "mid", (120_000, 240_000, 320_000)),
+            ("claude-sonnet-5", "mid", (120_000, 240_000, 320_000)),
+            ("gpt-5.6-luna", "light", (160_000, 320_000, 480_000)),
+            ("claude-haiku-4-5", "light", (160_000, 320_000, 480_000)),
+        )
+        for model, tier, stages in cases:
+            with self.subTest(model=model):
+                self.assertEqual(hook._model_tier(model), tier)
+                self.assertEqual(hook.resolve_stages(
+                    self.tmp, 1_000_000, 1.0, model)[:3], stages)
+        self.assertEqual(hook._model_tier("unmapped-model"), "frontier")
+        self.assertEqual(hook.compute_thresholds(200_000, 1.0, "heavy"),
+                         (60_000, 120_000, 160_000))
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +184,7 @@ watermark:
 class PrecedenceTests(_ScrubbedEnv):
 
     def resolve(self, window=200_000, complexity=1.0):
-        return hook.resolve_watermarks(self.tmp, window, complexity)
+        return hook.resolve_stages(self.tmp, window, complexity)[1:]
 
     def test_computed_default_when_nothing_overrides(self):
         soft, hard, info = self.resolve()
@@ -214,12 +250,20 @@ class PrecedenceTests(_ScrubbedEnv):
         self.addCleanup(os.environ.pop, "ATELIER_ACTIVATION_FILE", None)
         self.assertEqual(self.resolve()[0], 42_000)
 
+    def test_notice_can_be_overridden_but_never_exceeds_soft(self):
+        self.write_activation("---\nwatermark:\n  notice: 150000\n  soft: 90000\n---\n")
+        notice, soft, hard, info = hook.resolve_stages(
+            self.tmp, 1_000_000, 1.0, "claude-opus-5")
+        self.assertEqual((notice, soft, hard), (90_000, 90_000, 256_000))
+        self.assertEqual((info["notice_source"], info["soft_source"]),
+                         ("activation", "activation"))
+
 
 # ---------------------------------------------------------------------------
 # Running the hook the way the harness runs it
 # ---------------------------------------------------------------------------
 
-def _assistant(ctx_tokens, model="claude-opus-4-8"):
+def _assistant(ctx_tokens, model="claude-opus-5"):
     return {
         "type": "assistant",
         "message": {
@@ -272,7 +316,7 @@ class HookRunTests(_ScrubbedEnv):
         with open(self.log_path, encoding="utf-8") as fh:
             return [json.loads(line) for line in fh if line.strip()]
 
-    def session_payload(self, ctx_tokens, model="claude-opus-4-8", session=None):
+    def session_payload(self, ctx_tokens, model="claude-opus-5", session=None):
         session = session or "session-{0}".format(next(_SEQ))
         transcript = os.path.join(self.tmp, "transcripts", session + ".jsonl")
         _write_jsonl(transcript, [_assistant(ctx_tokens, model)])
@@ -286,15 +330,98 @@ class HookRunTests(_ScrubbedEnv):
 
     # -- session branch ---------------------------------------------------
 
-    def test_a_known_1m_window_still_nudges_at_the_absolute_soft_line(self):
-        proc = self.run_hook(self.session_payload(125_000))
+    def test_a_known_heavy_model_uses_its_soft_line(self):
+        proc = self.run_hook(self.session_payload(200_000))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         out = json.loads(proc.stdout)
         self.assertIn("additionalContext", out)
         row = self.rows()[-1]
         self.assertEqual(row["tier"], "soft")
-        self.assertEqual(row["soft"], 120_000)
+        self.assertEqual(row["soft"], 192_000)
         self.assertEqual(row["window"], 1_000_000)
+
+    def test_notice_soft_and_hard_transition_without_repeating(self):
+        session = "session-{0}".format(next(_SEQ))
+        for tokens, expected in ((100_000, "notice"), (200_000, "soft"),
+                                 (260_000, "hard")):
+            proc = self.run_hook(self.session_payload(tokens, session=session))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(self.rows()[-1]["tier"], expected)
+            self.assertIn(expected + " watermark", proc.stdout.lower())
+
+    def test_notice_does_not_nag_until_its_refire_interval(self):
+        session = "session-{0}".format(next(_SEQ))
+        first = self.run_hook(self.session_payload(100_000, session=session))
+        second = self.run_hook(self.session_payload(100_000, session=session))
+        self.assertIn("additionalContext", first.stdout)
+        self.assertEqual(second.stdout.strip(), "")
+
+    def test_warning_does_not_write_into_the_project_tree(self):
+        proc = self.run_hook(self.session_payload(100_000))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(os.listdir(self.project), [])
+
+    def _dirty_project_snapshot(self):
+        tracked = os.path.join(self.project, "tracked.txt")
+        untracked = os.path.join(self.project, "untracked.txt")
+        with open(tracked, "w", encoding="utf-8") as fh:
+            fh.write("committed\n")
+        subprocess.run(["git", "init", "-q", self.project], check=True)
+        subprocess.run(["git", "-C", self.project, "add", "tracked.txt"], check=True)
+        subprocess.run([
+            "git", "-C", self.project, "-c", "user.name=test",
+            "-c", "user.email=test@example.invalid", "commit", "-qm", "base"], check=True)
+        with open(tracked, "w", encoding="utf-8") as fh:
+            fh.write("dirty tracked\n")
+        with open(untracked, "w", encoding="utf-8") as fh:
+            fh.write("dirty untracked\n")
+        index = subprocess.run(
+            ["git", "-C", self.project, "rev-parse", "--git-path", "index"],
+            capture_output=True, text=True, check=True).stdout.strip()
+        if not os.path.isabs(index):
+            index = os.path.join(self.project, index)
+
+        def read_bytes(path):
+            with open(path, "rb") as fh:
+                return fh.read()
+
+        def snapshot():
+            return {
+                "branch": subprocess.run(
+                    ["git", "-C", self.project, "branch", "--show-current"],
+                    capture_output=True, text=True, check=True).stdout,
+                "index": read_bytes(index),
+                "diff": subprocess.run(
+                    ["git", "-C", self.project, "diff", "--binary"],
+                    capture_output=True, check=True).stdout,
+                "tracked": read_bytes(tracked),
+                "untracked": read_bytes(untracked),
+            }
+        return snapshot
+
+    def test_all_stages_preserve_a_dirty_project_in_claude_and_codex(self):
+        snapshot = self._dirty_project_snapshot()
+        before = snapshot()
+        for tokens in (100_000, 200_000, 260_000):
+            self.run_hook(self.session_payload(tokens))
+            self.assertEqual(snapshot(), before)
+
+        rollout = os.path.join(self.tmp, "codex.jsonl")
+        rows = []
+        for tokens in (20_000, 40_000, 52_000):
+            _write_jsonl(rollout, [
+                {"type": "turn_context", "payload": {"model": "gpt-5.6-terra"}},
+                {"type": "event_msg", "payload": {"type": "token_count", "info": {
+                    "last_token_usage": {"total_tokens": tokens}, "model_context_window": 64_000}}},
+            ])
+            with mock.patch.dict(os.environ, {"ATELIER_HARNESS": "codex"}), \
+                    mock.patch.object(hook, "STATE_DIR", self.state_dir), \
+                    mock.patch("sys.stdout", io.StringIO()):
+                hook.handle_session({
+                    "session_id": "codex-{0}".format(tokens), "transcript_path": rollout,
+                    "cwd": self.project}, rows.append)
+            self.assertEqual(snapshot(), before)
+        self.assertEqual([row["tier"] for row in rows], ["notice", "soft", "hard"])
 
     def test_unknown_model_falls_back_to_the_absolute_pair_and_says_so(self):
         proc = self.run_hook(self.session_payload(130_000, model="gpt-9-turbo"))
@@ -355,7 +482,8 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         row = self.rows()[-1]
         self.assertEqual(row["sources"], {
-            "soft": "env", "hard": "computed", "complexity": "computed"})
+            "notice": "computed", "soft": "env", "hard": "computed",
+            "complexity": "computed"})
 
     def test_the_activation_file_beats_the_computed_default_end_to_end(self):
         os.makedirs(os.path.join(self.project, ".claude"), exist_ok=True)
@@ -397,7 +525,7 @@ class HookRunTests(_ScrubbedEnv):
         """
         session = session or "session-{0}".format(next(_SEQ))
         parent = os.path.join(self.tmp, "transcripts", session + ".jsonl")
-        _write_jsonl(parent, [_assistant(5_000, "claude-opus-4-8")])
+        _write_jsonl(parent, [_assistant(5_000, "claude-opus-5")])
         if write_worker:
             worker = os.path.join(
                 self.tmp, "transcripts", session, "subagents",
@@ -412,7 +540,7 @@ class HookRunTests(_ScrubbedEnv):
             "tool_name": "Bash",
         }
 
-    def test_a_worker_is_nudged_at_half_the_session_soft_line(self):
+    def test_a_worker_uses_the_same_window_capped_stages(self):
         proc = self.run_hook(self.subagent_payload(70_000))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         out = json.loads(proc.stdout)
@@ -421,50 +549,41 @@ class HookRunTests(_ScrubbedEnv):
         self.assertNotIn("additionalContext", out)
         row = self.rows()[-1]
         self.assertEqual(row["scope"], "subagent")
-        self.assertEqual(row["soft"], 60_000)
-        self.assertIsNone(row["hard"])
+        self.assertEqual((row["notice"], row["soft"], row["hard"]),
+                         (60_000, 120_000, 160_000))
+        self.assertEqual(row["tier"], "notice")
         self.assertEqual(row["agent_id"], "a40d0f7528e04f941")
         self.assertEqual(row["window"], 200_000)
 
-    def test_the_worker_nudge_names_its_sender_the_action_and_its_own_limits(self):
-        """A live worker refused this nudge (2026-09-08) because it read as a
-        claim about the model's context limit, which it could see was false,
-        and carried no sender. All three properties are load-bearing."""
+    def test_the_worker_notice_is_advisory_and_preserves_bounded_work(self):
         proc = self.run_hook(self.subagent_payload(70_000))
         text = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
         lower = text.lower()
         self.assertIn("atelier", lower)  # provenance: not an injected instruction
         self.assertIn("context-watermark", lower)
-        self.assertIn("wrap up and report now", lower)  # the concrete action
-        self.assertIn("not the model", lower)  # a large remaining budget is not a refutation
-        self.assertIn("genuinely small", lower)  # a correct refusal has somewhere to go
-        self.assertNotIn("/clear", text)
-        self.assertNotIn("/compact", text)
+        self.assertIn("advisory", lower)
+        self.assertIn("bounded slice", lower)
+        self.assertNotIn("terminate", lower)
 
     def test_a_worker_below_the_line_is_left_alone(self):
         proc = self.run_hook(self.subagent_payload(20_000))
         self.assertEqual(proc.stdout.strip(), "")
         self.assertEqual(self.rows()[-1]["tier"], "none")
 
-    def test_a_worker_row_claims_no_source_for_a_tier_it_has_not_got(self):
-        """`sources` names which precedence tier supplied each value, so it may
-        not name one for a `hard` this scope never had — and `soft` is the
-        resolved session value halved, which the row records rather than
-        implying env supplied 60000 when it supplied 120000."""
+    def test_a_worker_keeps_each_explicit_stage_source(self):
         proc = self.run_hook(self.subagent_payload(70_000),
                              env={"CONTEXT_WATERMARK_SOFT": "120000"})
         self.assertEqual(proc.returncode, 0, proc.stderr)
         row = self.rows()[-1]
-        self.assertNotIn("hard", row["sources"])
         self.assertEqual(row["sources"]["soft"], "env")
-        self.assertEqual((row["soft"], row["session_soft"]), (60_000, 120_000))
-        self.assertEqual(row["subagent_soft_ratio"], 0.5)
+        self.assertEqual(row["sources"]["hard"], "computed")
+        self.assertEqual(row["soft"], 120_000)
 
-    def test_a_worker_never_gets_a_hard_tier(self):
+    def test_a_worker_reaches_the_hard_stage_with_its_own_budget(self):
         proc = self.run_hook(self.subagent_payload(190_000))
-        self.assertEqual(self.rows()[-1]["tier"], "soft")
+        self.assertEqual(self.rows()[-1]["tier"], "hard")
         text = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
-        self.assertNotIn("hard", text.lower())
+        self.assertIn("hard watermark", text.lower())
 
     def test_the_worker_transcript_is_read_not_the_parents(self):
         """The parent's own transcript sits at 5k tokens in this fixture."""

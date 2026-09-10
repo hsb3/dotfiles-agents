@@ -13,6 +13,7 @@ import tomllib
 import model_tiers
 
 ROLES = ("builder", "code-reviewer", "manager", "reviewer", "scout")
+LEAF_ROLES = frozenset(("builder", "code-reviewer", "reviewer", "scout"))
 PACKAGE = Path(__file__).resolve().parents[2]
 HARNESS_BLOCK = re.compile(r"^[ \t]*<!-- harness:[^\n]+ -->\n.*?^[ \t]*<!-- /harness -->\n?",
                            re.MULTILINE | re.DOTALL)
@@ -62,6 +63,10 @@ def _managed(plugin_root=None):
     return "# " + package_id(plugin_root) + " managed sha256="
 
 
+def _is_atelier_leaf(role, plugin_root=None):
+    return package_id(plugin_root) == "atelier" and _role(role, plugin_root) in LEAF_ROLES
+
+
 def _source(role, plugin_root):
     text = (Path(plugin_root or PACKAGE) / "agents" / f"{_role(role, plugin_root)}.md").read_text()
     if not text.startswith("---\n"):
@@ -94,7 +99,10 @@ def role_instructions(role, plugin_root=None):
     location = (f"Atelier package: {package}. Resolve companion skills beneath its skills/ directory; "
                 "bare delegation reference filenames (including waiting.md) live in "
                 "skills/delegation/references/. Read them from this package, not the consumer tree.")
-    return HARNESS_BLOCK.sub("", body).strip() + "\n\n" + location + "\n\n" + procedures + "\n"
+    instructions = HARNESS_BLOCK.sub("", body).strip() + "\n\n" + location + "\n\n" + procedures
+    if _is_atelier_leaf(role, plugin_root):
+        instructions += "\n\nCaller supplies needed skill and reference absolute paths; missing capability goes back to manager, don't guess."
+    return instructions + "\n"
 
 
 def render(role, plugin_root=None):
@@ -112,29 +120,35 @@ def render(role, plugin_root=None):
               "developer_instructions": role_instructions(role, plugin_root)}
     body = "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n"
                    for key, value in values.items())
+    if _is_atelier_leaf(role, plugin_root):
+        body += "\n[features]\napps = false\n\n[skills]\ninclude_instructions = false\n"
     return _managed(plugin_root) + hashlib.sha256(body.encode()).hexdigest() + "\n" + body
 
 
-def setup(project_root, plugin_root=None, check=False):
-    """Return missing/stale paths; check is read-only, setup writes only proven-owned files.
+def _directory(root, global_profiles=False):
+    return Path(root).resolve() / ("agents" if global_profiles else ".codex/agents")
 
-    All collisions are checked before writes. An interrupted refresh can leave mixed versions;
-    each file remains complete and ownership-checkable, so repeating setup safely finishes it.
-    """
-    project = Path(project_root).resolve(strict=True)
-    directory = project / ".codex/agents"
-    for parent in (project / ".codex", directory):
-        if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
-            raise ValueError(f"refusing symlink or non-directory: {parent}")
+
+def _changes(directory, plugin_root, selected=None, strict_declarations=False):
     names = set(role_names(plugin_root))
     managed = _managed(plugin_root)
+    selected = set(roles(plugin_root) if selected is None else selected)
     for path in directory.glob("*.toml"):
-        if path.stem in names:
-            continue
-        if path.is_file() and tomllib.loads(path.read_text()).get("name") in names:
-            raise ValueError(f"atelier role name already declared in user profile: {path}")
+        if not path.is_file():
+            raise ValueError(f"refusing non-regular profile: {path}")
+        try:
+            declared = tomllib.loads(path.read_text()).get("name")
+        except tomllib.TOMLDecodeError as exc:
+            raise ValueError(f"invalid profile: {path}") from exc
+        if declared is not None and not isinstance(declared, str):
+            raise ValueError(f"invalid profile name: {path}")
+        if declared in names and (strict_declarations or
+                                  declared.removeprefix(package_id(plugin_root) + "-") in selected):
+            canonical = directory / f"{declared}.toml"
+            if path != canonical:
+                raise ValueError(f"atelier role name already declared in user profile: {path}")
     changed = {}
-    for role in roles(plugin_root):
+    for role in sorted(selected):
         path = directory / f"{package_id(plugin_root)}-{role}.toml"
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise ValueError(f"refusing non-regular profile: {path}")
@@ -149,26 +163,80 @@ def setup(project_root, plugin_root=None, check=False):
             if current == desired:
                 continue
         changed[path] = desired
-    if changed and not check:
-        directory.mkdir(parents=True, exist_ok=True)
-        for path, content in changed.items():
-            temporary = None
-            try:
-                with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
-                                                 prefix=".atelier-", delete=False) as handle:
-                    temporary = Path(handle.name)
-                    handle.write(content)
-                os.replace(temporary, path)
-            finally:
-                if temporary is not None:
-                    temporary.unlink(missing_ok=True)
-    return list(changed)
+    return changed
+
+
+def _write(directory, changed):
+    if not changed:
+        return
+    directory.mkdir(parents=True, exist_ok=True)
+    for path, content in changed.items():
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
+                                             prefix=".atelier-", delete=False) as handle:
+                temporary = Path(handle.name)
+                handle.write(content)
+            os.replace(temporary, path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+
+
+def codex_home():
+    return Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser().resolve()
+
+
+def setup(project_root, plugin_root=None, check=False, refresh_global=False, global_profiles=False):
+    """Return missing/stale paths; check is read-only, setup writes only proven-owned files.
+
+    All collisions are checked before writes. An interrupted refresh can leave mixed versions;
+    each file remains complete and ownership-checkable, so repeating setup safely finishes it.
+    """
+    project = Path(project_root).resolve(strict=True)
+    directory = _directory(project, global_profiles)
+    parents = (directory.parent, directory)
+    for parent in parents:
+        if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
+            raise ValueError(f"refusing symlink or non-directory: {parent}")
+    if global_profiles:
+        changed = _changes(directory, plugin_root)
+        if changed and not check:
+            _write(directory, changed)
+        return list(changed)
+
+    all_roles = set(roles(plugin_root))
+    local_paths = {role: directory / f"{package_id(plugin_root)}-{role}.toml" for role in all_roles}
+    local_roles = {role for role, path in local_paths.items() if path.exists()}
+    local_changed = _changes(directory, plugin_root, local_roles, strict_declarations=True)
+
+    global_directory = _directory(codex_home(), True)
+    for parent in (global_directory.parent, global_directory):
+        if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
+            raise ValueError(f"refusing symlink or non-directory: {parent}")
+    global_roles = all_roles - local_roles
+    try:
+        global_changed = _changes(global_directory, plugin_root, global_roles)
+    except ValueError as exc:
+        raise ValueError("stale global Codex profiles: " + str(exc)) from exc
+    global_paths = {role: global_directory / path.name for role, path in local_paths.items()}
+    stale_global = {path: content for path, content in global_changed.items() if path.exists()}
+    missing = {role for role in global_roles if not global_paths[role].exists()}
+    local_changed.update(_changes(directory, plugin_root, missing, strict_declarations=True))
+    changed = list(local_changed) + list(stale_global)
+    if stale_global and not check and not refresh_global:
+        raise ValueError("stale global Codex profiles; rerun with --refresh-global")
+    if not check:
+        _write(global_directory, stale_global)
+        _write(directory, local_changed)
+    return changed
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project", nargs="?", default=".")
     parser.add_argument("--check", action="store_true", help="report missing/stale profiles without writing")
+    parser.add_argument("--refresh-global", action="store_true", help="refresh stale managed global profiles")
     parser.add_argument("--plugin-root", type=Path)
     parser.add_argument("--instructions")
     args = parser.parse_args(argv)
@@ -176,7 +244,8 @@ def main(argv=None):
         if args.instructions:
             print(role_instructions(args.instructions, args.plugin_root), end="")
             return 0
-        changed = setup(args.project, args.plugin_root, check=args.check)
+        changed = setup(args.project, args.plugin_root, check=args.check,
+                        refresh_global=args.refresh_global)
         for path in changed:
             print(f"{'needs refresh' if args.check else 'wrote'}: {path}")
         if not changed:

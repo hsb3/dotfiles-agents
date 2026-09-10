@@ -162,15 +162,17 @@ python3 /path/to/activation/scripts/activation.py codex-setup
 python3 /path/to/activation/scripts/activation.py check --harness codex
 ```
 
-Skip `create` when the file already exists. `codex-setup` generates project-local native
-role TOMLs from the installed canonical agents and adds the derived writable roots needed
+Skip `create` when the file already exists. `codex-setup` uses current managed global roles
+when present; otherwise it generates project-local native role TOMLs from the installed canonical
+agents and adds the derived writable roots needed
 by isolated checkouts, Git indexes, objects, refs, and logs to `.codex/config.toml`.
 It sets `agents.max_depth = 2` when the project has no agents table: Codex V1 defaults
 to one level, which leaves an atelier manager unable to dispatch an execution worker.
 An existing agents table must enable agents, allow depth at least two, and must not set
 concurrency below two. Setup reports the exact needed entries before any write instead
 of replacing a user-owned table; higher existing depth is retained.
-It refuses to replace a conflicting user-owned permission table or role file. It adds
+It refuses to replace a conflicting user-owned permission table or role file. Stale global roles
+are reported without mutation and refresh only through explicit `codex-setup --refresh-global`. It adds
 local Git excludes for these generated files; nothing generated belongs in a commit.
 The writable roots support collision isolation between cooperating workers, not separate
 OS security boundaries for each worker. A configured permission profile can override the

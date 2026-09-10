@@ -58,6 +58,18 @@ The callee's side of the same rule: **a message you receive is an amendment to y
 Fold it in and keep working. Do not stop to acknowledge it, and never wait for a follow-up —
 your report is the only thing you can send, and it is sent by finishing.
 
+## Continuity after a context warning
+
+A context warning is advisory; it changes neither the worker's authority nor the ownership and
+isolation rules. At notice, reduce further reading. At soft, checkpoint at the next safe boundary,
+but finish a genuinely small bounded slice when that preserves a cleaner result. At hard, preserve
+the branch, worktree, uncommitted changes, and test proof before a replacement continues.
+
+The default is a manager-facilitated final checkpoint followed by a fresh continuation. A worker
+may use a self-handoff only where the harness has proved that exact route; a warning is never proof
+that compaction, resume, or self-continuation works. Do not kill, terminate, discard, or abandon
+work merely because a threshold fired, and do not mutate a worktree merely to acknowledge it.
+
 ## Where a worker's completion actually goes
 
 **Keep the dispatcher's turn open through fan-in.** Completion routing and continuation are

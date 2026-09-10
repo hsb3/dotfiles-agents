@@ -12,25 +12,28 @@ The **bundle-specific agents** (`rig-builder`, `pb-builder`, `pb-reviewer`,
 and its access model, and is dispatched by that bundle's skills rather than by the delegation
 router.
 
-Each role declares a **dispatch tier**, not a model. The tier below is that role's default;
-the dispatcher overrides it per call when a slice's difficulty warrants a different one.
+Each spawned role declares a **dispatch tier**, not a model. The tier below is that role's
+default; the dispatcher overrides it per call when a slice's difficulty warrants a different one.
+`frontier` is reserved for the topmost strategist in the catalog and is never a spawned role.
 
 | Role | Tier | Dispatch override | Use for |
 |---|---|---|---|
 | `scout` | light | mid, for cross-file synthesis | Read-only recon — locate a definition, confirm presence/absence, inventory a scope, or reconcile evidence across files. |
 | `builder` | mid | heavy, for coupled or expensive-to-unwind slices | Scoped implementation inside an owned file list against explicit acceptance criteria. |
-| `reviewer` | heavy | always premium; no override | Adversarial, report-only verification that re-derives each claim from its cited source and re-runs its commands. |
+| `reviewer` | heavy | fixed heavy; no override | Adversarial, report-only verification that re-derives each claim from its cited source and re-runs its commands. |
 | `code-reviewer` | mid | heavy, for a large or unfamiliar change | Report-only quality pass over code already written — names over-engineering, needless abstraction, and complexity, and shows the simpler form with a before/after. Distinct from `reviewer`, which verifies correctness rather than shape. |
-| `manager` | heavy | always premium; no override | Owns a wave or a coupled chain end to end: briefs, sequences, and verifies its own workers, then reports one proof package upward. |
+| `manager` | heavy | fixed heavy; no override | Owns a wave or a coupled chain end to end: briefs, sequences, and verifies its own workers, then reports one proof package upward. |
 | `rig-builder` | mid | heavy, when the artifact has no compiler and the checker must be designed | Turning a written contract into one gate command, proving it green *and* red, and reporting a measured baseline. |
 | `pb-builder` | mid | heavy, for a coupled schema-and-rules change | Scoped PocketBase backend implementation, carrying the migration, hook, and API-rule laws so a brief does not restate them. Boots its own clean-room server for every probe. |
-| `pb-reviewer` | heavy | always premium; no override | Adversarial verification of a PocketBase claim, re-derived from its cited source and re-run in the reviewer's own clean room. Never edits. |
-| `pocketbase-security-auditor` | heavy | always premium; no override | The PocketBase authorization surface — collection rules, custom routes, hooks, realtime subscriptions, relation scoping, role boundaries — audited with code evidence and live-server evidence kept apart. Never edits. |
+| `pb-reviewer` | heavy | fixed heavy; no override | Adversarial verification of a PocketBase claim, re-derived from its cited source and re-run in the reviewer's own clean room. Never edits. |
+| `pocketbase-security-auditor` | heavy | fixed heavy; no override | The PocketBase authorization surface — collection rules, custom routes, hooks, realtime subscriptions, relation scoping, role boundaries — audited with code evidence and live-server evidence kept apart. Never edits. |
 
 ## Tiers, and why no agent names a model
 
-`light` / `mid` / `heavy` are semantic labels for how much capability a role's work needs —
-deliberately not model-family names, so the same vocabulary survives a provider change.
+`light` / `mid` / `heavy` are semantic labels for how much capability a spawned role's work
+needs — deliberately not model-family names, so the same vocabulary survives a provider change.
+`heavy` currently resolves to Sol on OpenAI and Opus on Anthropic. `frontier` resolves to Astra
+and Fable respectively, but is reserved for the topmost strategist and never spawned.
 The one place a tier becomes a concrete model is
 [`../hooks/_lib/model_catalog.json`](../hooks/_lib/model_catalog.json):
 

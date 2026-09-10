@@ -250,7 +250,11 @@ write exactly WORKFLOW_OK plus newline, stage and commit in its own checkout usi
 fixture. Integrate that exact commit into your manager checkout, then close the completed
 builder to free a slot. Delegate read-only verification to atelier-reviewer, which must
 read workflow-proof.txt in its effective checkout and report exact bytes and pwd. Close it
-when done. No push, no root/parent checkout edits, no config changes, no manual worktrees.
+when done. Delegate a read-only quality review to atelier-code-reviewer, which must read
+workflow-proof.txt and report that it made no changes. Close it when done. Then delegate a
+read-only pwd check to atelier-scout and wait for its report.
+Use each named role without model overrides. No push, no root/parent checkout edits,
+no config changes, no manual worktrees.
 The observer supplies a single explicit developer-context stop-format diagnostic to the manager.
 Do not invent or forward a conflicting format instruction; report the actual gate outcome.
 Root waits for manager completion and reports the manager's exact final reply; do not repair.
@@ -260,18 +264,26 @@ Root waits for manager completion and reports the manager's exact final reply; d
         *[arg for path in ('atelier-codex/checkouts', 'worktrees', 'objects',
                           'refs/heads/atelier', 'logs/refs/heads/atelier')
           for arg in ('--add-dir', str(root / 'repo/.git' / path))],
-        '--dangerously-bypass-hook-trust', prompt])
+        '--dangerously-bypass-hook-trust', prompt], timeout=480)
     rows = [json.loads(path.read_text()) for path in
             (root / 'repo/.git/atelier-codex/workers').glob('*/*.json')]
     managers = [row for row in rows if row['agent_type'] == 'atelier-manager']
     builders = [row for row in rows if row['agent_type'] == 'atelier-builder']
     reviewers = [row for row in rows if row['agent_type'] == 'atelier-reviewer']
+    code_reviewers = [row for row in rows if row['agent_type'] == 'atelier-code-reviewer']
     events = [json.loads(line) for line in (root / 'hooks.jsonl').read_text().splitlines()]
     gates = telemetry(root, 'manager-package-gate')
     manager_stops = [event for event in events if event['hook_event_name'] == 'SubagentStop'
                      and event.get('agent_type') == 'atelier-manager']
     checks = {
-        'manager_builder_reviewer': len(managers) == len(builders) == len(reviewers) == 1,
+        'manager_builder_reviewer_code_reviewer': (
+            len(managers) == len(builders) == len(reviewers) == len(code_reviewers) == 1),
+        'native_role_models': all(any(event['hook_event_name'] == 'SubagentStart'
+            and event.get('agent_type') == role and event.get('model') == expected
+            for event in events) for role, expected in {
+                'atelier-scout': 'gpt-5.6-luna', 'atelier-builder': 'gpt-5.6-terra',
+                'atelier-code-reviewer': 'gpt-5.6-terra', 'atelier-reviewer': 'gpt-5.6-sol',
+                'atelier-manager': 'gpt-5.6-sol'}.items()),
         'manager_stop_rejected': (root / 'manager-stop-stimulus.json').is_file()
             and any(row.get('decision') == 'nudge' for row in gates)
             and any((event.get('last_assistant_message') or '').strip() == 'PROBE_PROGRESS_ONLY'
@@ -282,7 +294,7 @@ Root waits for manager completion and reports the manager's exact final reply; d
             and (manager_stops[-1].get('last_assistant_message') or '').lstrip().startswith('## Proof package'),
         'parent_file_absent': not (root / 'repo/workflow-proof.txt').exists(),
     }
-    if checks['manager_builder_reviewer']:
+    if checks['manager_builder_reviewer_code_reviewer']:
         manager, builder, reviewer = managers[0], builders[0], reviewers[0]
         checks['child_ancestry'] = builder['parent_agent_id'] == reviewer['parent_agent_id'] == manager['agent_id']
         checks['builder_isolated'] = builder['worktree'] != manager['worktree']
@@ -328,14 +340,16 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
             env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='credential.https://github.com.helper',
                        GIT_CONFIG_VALUE_0='!gh auth git-credential')
 
-        def command(name, argv):
+        def command(name, argv, timeout=240):
             process = subprocess.Popen(argv, env=env, cwd=repo, text=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, start_new_session=True)
+            timed_out = False
             try:
-                stdout, stderr = process.communicate(timeout=240)
+                stdout, stderr = process.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 stdout, stderr = process.communicate()
+                timed_out = True
             except BaseException:
                 if process.poll() is None:
                     os.killpg(process.pid, signal.SIGKILL)
@@ -345,6 +359,9 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                 raise
             (root / f"{name}.stdout").write_text(stdout)
             (root / f"{name}.stderr").write_text(stderr)
+            if timed_out:
+                raise RuntimeError(
+                    f"{name} timed out after {timeout} seconds; process group killed; inspect saved output")
             if process.returncode:
                 raise RuntimeError(f"{name} exited {process.returncode}; inspect its saved stderr")
             return stdout
@@ -396,8 +413,11 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                 (repo / '.claude/atelier.local.md').write_text(
                     '---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
                     'protected-branches: [probe-parent]\n---\n')
+                command('activation-refresh', [sys.executable,
+                    str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
+                    '--project-dir', str(repo)])
                 (repo / 'protected.txt').write_text('PRESERVED\n')
-                command('fixture-add', ['git', 'add', '.claude/atelier.local.md', 'protected.txt'])
+                command('fixture-add', ['git', 'add', '.agents/atelier.local.md', 'protected.txt'])
                 command('fixture-commit', ['git', '-c', 'user.name=Runtime Probe', '-c',
                                            'user.email=probe@invalid', 'commit', '-m', 'Consumer fixture'])
                 command('activation-check', [sys.executable,

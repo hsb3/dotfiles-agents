@@ -12,13 +12,17 @@ from test_activation import activation
 from test_atelier_local import FULL, HOOKS, atelier_local
 from worktree_fixture import make_worktree
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'primitives-core/hooks/_lib'))
+import codex_roles
+
 
 class ActivationPathsTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name).resolve()
-        self.env = patch.dict(os.environ, ATELIER_HARNESS='codex', ATELIER_ACTIVATION_FILE='')
+        self.env = patch.dict(os.environ, ATELIER_HARNESS='codex', ATELIER_ACTIVATION_FILE='',
+                              CODEX_HOME=str(self.root / 'codex-home'))
         self.env.start()
         self.addCleanup(self.env.stop)
 
@@ -104,3 +108,26 @@ class ActivationPathsTests(unittest.TestCase):
             code = activation.main([command, '--harness', 'codex', '--project-dir', main], out=output)
             self.assertEqual(code, 0, output.getvalue())
         self.assertFalse((Path(main) / '.claude').exists())
+
+    def test_codex_setup_uses_current_global_profiles_without_local_copies(self):
+        main, _ = make_worktree(str(self.root))
+        home = Path(os.environ['CODEX_HOME'])
+        home.mkdir()
+        codex_roles.setup(home, global_profiles=True)
+        output = io.StringIO()
+        self.assertEqual(
+            activation.main(['codex-setup', '--harness', 'codex', '--project-dir', main], out=output),
+            0, output.getvalue())
+        self.assertFalse((Path(main) / '.codex/agents').exists())
+
+    def test_codex_setup_rejects_partial_global_collision_before_config_write(self):
+        main, _ = make_worktree(str(self.root))
+        home = Path(os.environ['CODEX_HOME'])
+        home.mkdir()
+        codex_roles.setup(home, global_profiles=True)
+        (home / 'agents/atelier-scout.toml').unlink()
+        (home / 'agents/custom.toml').write_text('name = "atelier-builder"\n')
+        output = io.StringIO()
+        self.assertNotEqual(
+            activation.main(['codex-setup', '--harness', 'codex', '--project-dir', main], out=output), 0)
+        self.assertFalse((Path(main) / '.codex/config.toml').exists())

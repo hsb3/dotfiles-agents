@@ -133,3 +133,49 @@ Ships only in the atelier bundle, recording delegation telemetry for the crew.
 Codex rows use the shared native worker registry and each worker rollout for identity, model, context, start time, and duration. SubagentStop marks the registry stopped without deleting the checkout; validated resumed tool activity marks it running again in the worker router. Registry entries also supply pending workers for stall reports. Missing usage is recorded and surfaced, never silently reported as zero.
 
 Codex SubagentStop names the parent in `transcript_path`. Measurements use the child transcript validated and stored at SubagentStart, so parent tokens, model and start time cannot be attributed to the worker. Before an initialized child rollout emits usable usage, telemetry records null context with `pending: true`; malformed or unavailable child usage remains an explicit measurement error.
+# Codex usage stream
+
+Codex stop observations also append codex-usage.jsonl. Rows use envelope
+v 2, schema codex-usage, and schema_version 2. Each token_count contributes
+one deterministic delta row: tokens holds input, cached_input, output,
+reasoning, and total increments, while cumulative_tokens holds the observed
+runtime counter. Cached input is a subset of input; reasoning is a subset of
+output. A total-counter reset emits an unknown reset marker plus an observed
+initial delta for the new segment. A category decrease without a total decrease
+emits only the unknown marker and establishes a new baseline; unchanged lifetime
+counters are never billed again. Counters are segmented on a reset, so a digest must sum tokens within
+each segment instead of summing cumulative_tokens.
+
+Every row includes observation_id, segment, counter_state, lifecycle_id,
+native_id, parent_id, role, model, effort, requested_model, requested_tier,
+package_path, package_name, package_version, profile_path, profile_hash,
+host, source_repo, effective_cwd, started_at, timing, and tokens. package_path
+is the actual directory containing the helper; name/version are read only from
+an adjacent plugin manifest when present. profile_path/hash are emitted only
+for an explicit readable payload path. These values describe files, not proof
+that a package or profile was loaded at runtime. Requested model/tier remain
+null unless the native payload supplied them. The stable id hashes host, native identity, source occurrence, model,
+and counter data; a digest may deduplicate it but the hook deliberately keeps
+durable JSONL append-only. Root rows use the session_meta id; child rows use
+the native child id and parent_thread_id. Active, tool, and wait timing remain
+null when the runtime does not measure them; lifetime_ms is populated when
+both transcript timestamps exist.
+
+counter_state is observed, reset, pending, missing, malformed-delta,
+malformed-json, unsupported-future-schema, error, or
+inherited-baseline-unknown. Each non-observed state has null counters and
+must remain visible to import/export consumers; no state means zero usage.
+Rows exclude prompts, transcripts, secrets, and message content. Exporters
+should preserve complete rows and importers must retain unknown states and
+deduplicate only exact observation_id values.
+
+Example observed row:
+
+    {"v":2,"schema":"codex-usage","schema_version":2,"kind":"delta",
+     "counter_state":"observed","segment":0,"native_id":"child",
+     "package_path":"/path/primitives-core","package_name":null,
+     "package_version":null,"profile_path":null,"profile_hash":null,
+     "tokens":{"input":12,
+     "cached_input":8,"output":4,"reasoning":1,"total":16},
+     "cumulative_tokens":{"input":100,"cached_input":80,"output":20,
+     "reasoning":2,"total":120}}

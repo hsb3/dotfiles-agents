@@ -22,7 +22,12 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   a successor; it is never compacted mid-chain. Inside the chain, the expensive and least
   reversible proof runs before any further polish on a green link, and each link is
   committed as it lands.
-- **Execution — `scout`, `builder`, `reviewer`**, each working from a brief and nothing else.
+- **Execution — `scout`, `builder`, `reviewer`**, each working from a curated zero-history brief:
+  only the minimum relevant project facts, references, and tools. The brief is decomposed to a
+  simple leaf and uses the least costly capable tier; frontier belongs only to the root strategist
+  at either planning effort. Measure inherited startup context rather than inferring it from a
+  short prompt. Context warnings, where a harness emits them, remain advisory checkpoints with no
+  automatic worktree mutation.
 
 ## Sizing a brief
 
@@ -141,5 +146,10 @@ project integration remains with the strategist. Native role setup enables the r
 Atelier policy selection follows configured agent directories, using `.agents` for
 multiple agents; setup migrates identical policies safely and runtime reads stay read-only.
 
-Codex dispatch setup uses activation `codex-setup` followed by `check --harness codex`,
-so native profile generation and configured-agent policy placement stay consistent.
+Codex dispatch setup uses activation `codex-setup` followed by `check --harness codex`.
+Current managed global roles avoid redundant local profiles; explicitly refresh stale globals
+with `codex-setup --refresh-global`, so profile currency and policy placement stay consistent.
+Codex leaf profiles suppress the automatic skill catalog and hosted Apps connectors; the caller
+supplies required reference paths. Manager discovery and plugin safeguards remain enabled.
+
+The root strategist uses frontier in either planning effort mode; the model does not select effort.

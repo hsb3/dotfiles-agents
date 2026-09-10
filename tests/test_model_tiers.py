@@ -50,7 +50,7 @@ class TestResolver(unittest.TestCase):
         self.catalog = _shipped()
 
     def test_vocabulary_is_semantic_not_a_model_family(self):
-        self.assertEqual(MT.tiers(self.catalog), ["light", "mid", "heavy"])
+        self.assertEqual(MT.tiers(self.catalog), ["light", "mid", "heavy", "frontier"])
 
     def test_active_provider_is_anthropic(self):
         self.assertEqual(MT.active_provider(self.catalog), "anthropic")
@@ -59,6 +59,15 @@ class TestResolver(unittest.TestCase):
         self.assertEqual(MT.model_for(self.catalog, "light"), "claude-haiku-4-5")
         self.assertEqual(MT.model_for(self.catalog, "mid"), "claude-sonnet-5")
         self.assertEqual(MT.model_for(self.catalog, "heavy"), "claude-opus-5")
+        self.assertEqual(MT.model_for(self.catalog, "frontier"), "claude-fable-5")
+
+    def test_openai_frontier_is_opt_in_not_a_shipped_subagent_default(self):
+        self.assertEqual(MT.model_for(self.catalog, "heavy", "openai"), "gpt-5.6-sol")
+        self.assertEqual(MT.model_for(self.catalog, "frontier", "openai"), "gpt-6-astra")
+        for name in sorted(os.listdir(AGENTS)):
+            if name.endswith(".md") and name.lower() != "readme.md":
+                tier = GATE.agent_fields(os.path.join(AGENTS, name))["tier"]
+                self.assertNotEqual(tier, "frontier", name)
 
     def test_model_for_unmapped_tier_is_none_not_an_exception(self):
         self.assertIsNone(MT.model_for(self.catalog, "featherweight"))
@@ -69,7 +78,7 @@ class TestResolver(unittest.TestCase):
     def test_claude_code_keyword_per_tier(self):
         self.assertEqual(
             [MT.claude_code_keyword(self.catalog, t) for t in MT.tiers(self.catalog)],
-            ["haiku", "sonnet", "opus"],
+            ["haiku", "sonnet", "opus", "fable"],
         )
         self.assertIsNone(MT.claude_code_keyword(self.catalog, "featherweight"))
 
@@ -340,6 +349,7 @@ class TestProviderSwitchIsOneEdit(unittest.TestCase):
         "light": "acme-spark-1",
         "mid": "acme-forge-1",
         "heavy": "acme-anvil-1",
+        "frontier": "acme-summit-1",
     }
 
     def setUp(self):

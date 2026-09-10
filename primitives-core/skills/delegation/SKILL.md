@@ -54,8 +54,8 @@ The tools are `Agent` and `SendMessage`.
 
 ### Strategy — `strategist`
 
-The session itself, never a spawned agent. It pins no model — the model in the seat stays the
-effort signal (Step 0).
+The root session itself, never a spawned agent. It uses the frontier tier; planning effort is
+selected independently (Step 0).
 
 <!-- harness:claude-code -->
 The role noun exists because other harnesses let the primary agent be set as a named profile;
@@ -144,9 +144,12 @@ the edits, producing the evidence. Also **independence** — the differential an
 worth something only because these agents cannot see each other, and that property is destroyed
 the moment the work moves up into a context that already knows the answer.
 
-**Context it needs:** the brief, written for an agent with **zero chat context**. Repo path, exact
-objective, owned files, read-only config, evidence format, verification commands, stop conditions
-(`references/briefs.md`).
+**Context it needs:** a curated brief written for an agent with **zero chat history**: repo path,
+exact objective, owned files, read-only config, evidence format, verification commands, stop
+conditions, and only the minimum relevant references and tools (`references/briefs.md`). Decompose
+until a leaf coding scope is simple; do not give a worker a highway-system pre-read. A short prompt
+does not prove a short inherited startup footprint — measure that footprint before treating it as
+small.
 
 **Context it must never be given** — the negative list, which held across every round of the lab
 `[lab]`: cycle budgets, remaining passes, or the fact that a later pass exists; rubric scores or
@@ -236,34 +239,20 @@ without being asked.
 
 ## Step 0 — Determine the effort level
 
-The model in the session's strategist seat IS the effort signal.
+`standard` and `deep` describe the planning effort, independently of model rank. The user or an
+`effort:` key in `atelier.local.md` selects it; state the selected effort when proposing an
+architecture. Neither mode permits a dispatched frontier worker.
 
-| Session model | Level | Meaning |
-| --- | --- | --- |
-| The everyday strategist model, or anything below it | `standard` | The default — everyday delegation work |
-| A model deliberately above it | `deep` | A problem hard enough to justify the most expensive seat available |
+Historical `[cost]` evidence recorded a former deep strategist at ~80–100k tokens to ground and
+another ~50–100k to drive a wave. That observation records past context economics; it does not
+justify the current tier hierarchy or change the frontier reservation.
 
-<!-- harness:claude-code -->
-Concretely here: Opus or below is `standard`; Fable is `deep`.
-<!-- /harness -->
+### Assign the tier
 
-Overrides, highest wins: the user says so; or an `effort:` key in the frontmatter of
-`atelier.local.md` (check for it; absence is normal — `references/activation.md` has the path).
-State the level in effect when proposing an architecture.
-
-At **`deep`**, the session's tokens cost roughly 2× the standard seat's, and a deep-tier
-strategist measures at ~80–100k tokens just to get grounded plus ~50–100k to drive the work — past the context watermark before real work starts
-`[cost]`. So: **never self-ground** (dispatch it, read the report, not the tree); **never collapse
-management on a building wave** (collapse condition 3 binds hardest when the strategist's tokens
-are the most expensive in the system, which puts C out of reach, though a scout wave returning
-conclusions is still fine); **verify in layers by default**, one `reviewer` on every
-plan-changing claim; **run one `reviewer` over every judgment-heavy link**, not just plan-changing
-ones.
-
-<!-- harness:claude-code -->
-At `deep`, also **override builders to opus** more liberally — the per-dispatch `model` knob is
-the cheapest way to buy judgment on a link the strategist cannot afford to take itself.
-<!-- /harness -->
+Use four semantic bands. **Frontier is reserved for the root strategist**; never dispatch it to a
+manager, builder, scout, or reviewer. Heavy buys manager work and judgment-heavy review, mid buys
+bounded coding, and light buys read-only reconnaissance. Decompose a difficult coding link before
+trying to compensate with a frontier worker. The provider model catalog owns the concrete mapping.
 
 ## Step 1 — Size the job on four axes
 
@@ -467,21 +456,16 @@ the premium tier for every model-bearing call and never exercised the cheaper ti
 `references/tier-cutoff.md` is the protocol for measuring the cutoff and the record of how far it
 has been measured.
 
-The tier vocabulary is **`light` / `mid` / `heavy`** — semantic bands, deliberately not model
-names, so the same words survive a provider change. Role defaults: scout=light; builder and
-`code-reviewer`=mid; reviewer and manager=heavy. Which concrete model a band buys is a harness
-question, never an agent's.
+The tier vocabulary is **`frontier` / `heavy` / `mid` / `light`** — semantic bands, deliberately
+not model names, so the same words survive a provider change. Frontier is the root strategist
+only; manager and judgment-heavy reviewer=heavy; builder and `code-reviewer`=mid; scout=light.
+Which concrete model a band buys is a harness question, never an agent's. For each simple leaf,
+choose the least costly capable tier; decompose before escalating a worker to compensate for an
+oversized scope.
 
-<!-- harness:claude-code -->
-**Tier is a dispatch-time decision, not an agent choice.** Here a band renders to one of Claude
-Code's frontmatter keywords — light=`haiku` (with `effort: low`), mid=`sonnet`, heavy=`opus` — and
-that rendering lives in `hooks/_lib/model_catalog.json`, not in any agent file. The strategist is
-the session itself (Opus at `standard`, Fable at `deep`). Override at dispatch by naming the
-keyword the band you want renders to: `model: sonnet` on a scout for cross-file synthesis,
-`model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not downtiered —
-verification is where the premium pays. Pass `model:` on the Agent call only when the slice
-demonstrably needs the judgment.
-<!-- /harness -->
+The strategist is the frontier session; frontier is not a worker override. Use mid for bounded
+coding and heavy for a manager or judgment-heavy review. A reviewer or manager needing the premium
+remains heavy; a coding slice that seems to need frontier is oversized and must be decomposed.
 
 Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent
 shell capabilities, and the git policy are in **`references/dispatch-knobs.md`**.
@@ -556,46 +540,53 @@ termination:
 
 ## Context hygiene
 
-Operating defaults from measured findings `[cost]`. The `context-watermark` (UserPromptSubmit),
-`delegation-watermark` (PostToolUse), and `handoff-freshness-guard` (PreCompact) hooks plus the
-`handoff` skill are the enforcement layer; this skill decides when.
+The three-stage advisory policy for managing context is never a stop command:
 
-- **Trigger the `handoff` skill at a self-chosen boundary in the 60–80k band.** The economics
-  optimum is ~40–60k; the buffer buys boundary quality. `context-watermark` does the nudging.
-  **Scale its thresholds to the model's own context window rather than fixing them as a flat
-  count** — a fixed number means different things on a 200k-window model and a 1M-window one. How
-  far each harness has taken that is its own business; each states its concrete figures below and
-  in `references/activation.md`.
-- **Prefer handoff + a fresh session over `/compact`** — a fresh session reading the handoff
-  restarts at ~10–20k; a compaction summary is similar in size, less curated, and carries a
-  re-read tax.
-- **Treat any ≥10-minute idle as a handoff point** — the session-break tax makes long gaps both
-  expensive and a natural externalization boundary.
-- **Clear after messy debugging, even below threshold** — visible prior errors raise future error
-  rates independent of context length.
-- **Downtier on demonstrably simple work**, gated to clearly simple tasks and paired with a strict
-  DoD so an under-powered crew fails loudly and fast; see `references/tier-cutoff.md`.
+- **Notice:** reduce further reads and avoid taking on new broad work.
+- **Soft:** checkpoint at the next safe boundary; a genuinely small, bounded current slice may
+  finish first.
+- **Hard:** coordinate a checkpoint and continuation that preserves the branch, worktree,
+  uncommitted changes, and test proof before replacement.
+
+A warning never kills, terminates, discards, or abandons work, and it grants a worker no authority
+it did not already have. Warning alone must not mutate a worktree. A manager-facilitated final
+checkpoint plus a fresh continuation is the default. Use self-handoff only when that harness has
+proved the exact continuation route; do not pretend that compaction or a resume message works
+where it has not been verified. `references/waiting.md` carries the continuity rule.
+
+Prefer a handoff plus a fresh session over an unverified compaction route. Treat a ≥10-minute idle
+or messy debugging as a useful checkpoint opportunity, and downtier only demonstrably simple work
+with a strict DoD; see `references/tier-cutoff.md`.
 
 <!-- harness:claude-code -->
-Concretely here the window **caps** the threshold and never lifts it, because the `[cost]`
-degradation band is an absolute token count: `context-watermark` sets soft at
-`min(120k, 60% of the lead model's window)` and hard at `min(160k, 80%)`, each scaled by a
-repo-size factor that only ever points down (tracked files: under 5k → 1.00, 5k–20k → 0.85,
-over 20k → 0.75). At a 200k window that is 120k/160k; at 1M it is still 120k/160k,
-because percent-of-window thresholds are inert against the ~967k auto-compact default; at 64k it
-is 38.4k/51.2k. An unknown model falls back to the absolute pair and says so in its ledger row.
-Override with `CONTEXT_WATERMARK_SOFT`/`_HARD`, or a `watermark:` key (`soft`/`hard`/`complexity`)
-in the selected activation file — env beats file beats computed. A delegated worker is watched too,
-on `PostToolUse`, at half the session's soft line and with no hard tier: it cannot hand off or
-clear, so the nudge tells it to wrap up and report. The fresh session is `/clear`; downtiering is
-a `model:` value on the dispatch; and the handoff skill has no slash command — a command would
-shadow the skill of the same name.
+Here, `context-watermark` emits the three advisory stages. These tier-aware defaults are tunable,
+unmeasured policy defaults, not performance facts:
+
+| Tier | Notice | Soft | Hard |
+| --- | ---: | ---: | ---: |
+| frontier | 60k | 120k | 160k |
+| heavy | 96k | 192k | 256k |
+| mid | 120k | 240k | 320k |
+| light | 160k | 320k | 480k |
+
+Protect a model's actual context window with caps of roughly 30% for notice, 60% for soft, and 80%
+for hard. Unknown models use the conservative frontier defaults. Explicit soft and hard overrides keep
+their existing precedence. Notice is an optional override through that same convention; if absent,
+derive it at or below soft (half the resolved soft value is a reasonable default).
+
+Here, `CONTEXT_WATERMARK_NOTICE`, `_SOFT`, and `_HARD`, then `watermark.notice`, `.soft`, and
+`.hard` in the selected activation file, use the existing override precedence: explicit env beats
+activation policy beats computed tier default. A missing notice derives from resolved soft and
+never exceeds it. Each delegated worker uses the defaults and caps for its own model tier; it does
+not inherit a blanket half-soft budget from the session. The fresh session is `/clear`, and a
+`model:` value selects the dispatch tier. The handoff skill has no slash command because a command
+would shadow the skill of the same name.
 <!-- /harness -->
 
-These watermarks are the strategy layer's budget. A manager spends a context that gets thrown away
-at the end of its chain, so it hands off to a successor rather than to itself. If a chain outgrows
-one manager context, that is a slicing defect to escalate, not a compaction to ride out — and one
-the brief should have priced before dispatch (Step 2, "Width is not lifetime").
+These watermarks budget the current context; they do not make a manager disposable in the middle of
+an uncheckpointed chain. If a chain outgrows one manager context, preserve its proof and hand it to
+a successor through the verified route, or escalate the slicing defect (Step 2, "Width is not
+lifetime").
 
 ## Additional resources
 

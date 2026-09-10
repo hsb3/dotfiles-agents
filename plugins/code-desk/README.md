@@ -145,3 +145,6 @@ When Atelier is installed, run its project setup after generating these roles. I
 policy into the sole configured agent's native directory or `.agents/atelier.local.md` when
 multiple coding agents are configured; this bundle ships the same policy-selection helpers.
 Invoke the `pull-request` skill for the `/pr-findings` workflow; the Claude command itself is not a native Codex command.
+
+The shared catalog reserves Astra/Fable for the root strategist; heavy Codex subagents resolve
+to Sol, mid to Terra, and light to Luna. Refresh owned profiles after upgrading to apply the map.

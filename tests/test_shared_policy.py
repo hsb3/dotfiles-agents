@@ -98,7 +98,9 @@ class SharedPolicyTests(unittest.TestCase):
             self.assertEqual(activation.cmd_check(tmp, io.StringIO()), 1)
 
     def test_codex_setup_reconciles_after_creating_native_directory(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, ATELIER_HARNESS='codex', ATELIER_ACTIVATION_FILE=''):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+                os.environ, ATELIER_HARNESS='codex', ATELIER_ACTIVATION_FILE='',
+                CODEX_HOME=str(Path(tmp) / 'codex-home')):
             root = Path(tmp)
             subprocess.run(['git', 'init', '-q', tmp], check=True)
             (root / '.claude').mkdir()
