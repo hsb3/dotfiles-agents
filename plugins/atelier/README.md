@@ -82,7 +82,8 @@ its commitment, the other cuts comments that cannot.
 
 ## Install
 
-For compaction with active work, use `compact-handoff` or `/atelier:prepare-compact`.
+For compaction with active work, use `compact-handoff` or `/atelier:prepare-compact`
+in Atelier 0.34.0 or newer.
 Failed persistence stops before compaction. The verified Claude Code and Codex surfaces
 use explicit manual fallbacks; see [runtime support](skills/compact-handoff/references/runtime-support.md).
 A prepared prompt does not mean compaction ran or that native handles survived.

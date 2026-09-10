@@ -94,6 +94,8 @@ with ExitStack() as cleanup:
         if time.monotonic() >= approval_deadline:
             raise TimeoutError('Operator approval expired; no compaction requested')
         time.sleep(.25)
+    if time.monotonic() >= approval_deadline:
+        raise TimeoutError('Operator approval expired; no compaction requested')
     events = [json.loads(line) for line in (root/'events.jsonl').read_text().splitlines()]
     commands = {e['params']['item']['id']: e['params'] for e in events
                 if e.get('method') == 'item/started'
