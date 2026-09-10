@@ -17,15 +17,15 @@ SPEC.loader.exec_module(T)
 class UsageTests(unittest.TestCase):
     def test_turn_completed_usage_is_incremental_and_ignores_other_events(self):
         events = [
-            {"type": "turn.completed", "usage": {"input_tokens": 100, "cached_input_tokens": 30, "output_tokens": 5}},
+            {"type": "turn.completed", "usage": {"input_tokens": 100, "cached_input_tokens": 30, "cache_write_input_tokens": 4, "output_tokens": 5, "reasoning_output_tokens": 2}},
             {"type": "other", "usage": {"input_tokens": 900}},
             {"type": "turn.completed", "usage": {"input_tokens": 12, "output_tokens": 3}},
         ]
-        self.assertEqual(T.parse_usage(events), {"input_tokens": 112, "cached_input_tokens": 30, "output_tokens": 8})
+        self.assertEqual(T.parse_usage(events), {"input_tokens": 112, "cached_input_tokens": 30, "cache_write_input_tokens": 4, "output_tokens": 8, "reasoning_output_tokens": 2})
 
     def test_unknown_usage_is_not_silently_zero(self):
         self.assertEqual(T.parse_usage([{"type": "turn.completed", "usage": None}]),
-                         {"input_tokens": None, "cached_input_tokens": None, "output_tokens": None})
+                         {"input_tokens": None, "cached_input_tokens": None, "cache_write_input_tokens": None, "output_tokens": None, "reasoning_output_tokens": None})
 
 
 class FindingTests(unittest.TestCase):

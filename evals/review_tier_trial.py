@@ -9,7 +9,7 @@ import time
 
 MODELS = ("gpt-5.6-terra", "gpt-6-astra")
 CASES = ("usage", "roles")
-USAGE_KEYS = ("input_tokens", "cached_input_tokens", "output_tokens")
+USAGE_KEYS = ("input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens", "reasoning_output_tokens")
 
 
 def parse_usage(events):
