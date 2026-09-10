@@ -53,7 +53,8 @@ import pending  # noqa: E402
 # These are tunable advisory defaults, not performance facts. The context
 # window caps each stage so smaller models are protected at 30/60/80 percent.
 DEFAULT_STAGES = {
-    "heavy": (60_000, 120_000, 160_000),
+    "frontier": (60_000, 120_000, 160_000),
+    "heavy": (96_000, 192_000, 256_000),
     "mid": (120_000, 240_000, 320_000),
     "light": (160_000, 320_000, 480_000),
 }
@@ -100,13 +101,14 @@ STATE_DIR = _env_path("CONTEXT_WATERMARK_STATE_DIR", STATE_DIR_DEFAULT)
 # Thresholds
 # ---------------------------------------------------------------------------
 
-def compute_thresholds(window, complexity, tier="heavy"):
-    """(notice, soft, hard), capped by a known window; unknown is heavy."""
-    defaults = DEFAULT_STAGES.get(tier, DEFAULT_STAGES["heavy"])
+def compute_thresholds(window, complexity, tier="frontier"):
+    """(notice, soft, hard), capped by a known window; unknown is frontier."""
+    defaults = DEFAULT_STAGES.get(tier, DEFAULT_STAGES["frontier"])
+    defaults = tuple(value * complexity for value in defaults)
     if window and window > 0:
         defaults = tuple(min(value, frac * window)
                          for value, frac in zip(defaults, STAGE_FRACS))
-    return tuple(int(value * complexity) for value in defaults)
+    return tuple(int(value) for value in defaults)
 
 
 def complexity_for_count(count):
@@ -157,30 +159,14 @@ def _load_watermark_config(project_dir):
 def resolve_watermarks(project_dir, window, complexity):
     """(soft, hard, info) under the full precedence chain:
     env var > `watermark:` in the activation file > the computed default."""
-    config = _load_watermark_config(project_dir)
-
-    info = {"window": window, "complexity_source": "computed"}
-    if "complexity" in config:
-        complexity, info["complexity_source"] = config["complexity"], "activation"
-    info["complexity"] = complexity
-
-    computed = compute_thresholds(window, complexity)[1:]
-    resolved = []
-    for tier, value in zip(("soft", "hard"), computed):
-        source = "computed"
-        override = config.get(tier)
-        if override is not None:
-            value, source = override, "activation"
-        env = _positive(os.environ.get("CONTEXT_WATERMARK_" + tier.upper()), int)
-        if env is not None:
-            value, source = env, "env"
-        info[tier + "_source"] = source
-        resolved.append(int(value))
-    return resolved[0], resolved[1], info
+    _, soft, hard, stages = resolve_stages(project_dir, window, complexity)
+    info = {key: stages[key] for key in (
+        "window", "complexity_source", "complexity", "soft_source", "hard_source")}
+    return soft, hard, info
 
 
 def _model_tier(model):
-    """Catalog tier for a transcript model; an unmapped model is heavy."""
+    """Catalog tier for a transcript model; an unmapped model is frontier."""
     try:
         catalog = model_tiers.load()
         for provider in catalog["providers"]:
@@ -192,7 +178,7 @@ def _model_tier(model):
                     return tier
     except Exception:
         pass
-    return "heavy"
+    return "frontier"
 
 
 def resolve_stages(project_dir, window, complexity, model=None):
@@ -469,9 +455,6 @@ def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
     }
     if info:
         row["notice"] = notice
-        # No key for a value this scope has not got: a worker has no hard tier,
-        # and naming a precedence tier for it would describe a resolution that
-        # never reached the row.
         row["sources"] = {
             "notice": info.get("notice_source"),
             "soft": info.get("soft_source"),

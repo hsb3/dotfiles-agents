@@ -24,9 +24,9 @@ Either way: immediately on a fresh crossing, then at most every 5 events while s
 ## The stages
 
 ```
-notice = min(tier_notice, 0.30 × window) × complexity
-soft = min(tier_soft, 0.60 × window) × complexity
-hard = min(tier_hard, 0.80 × window) × complexity
+notice = min(tier_notice × complexity, 0.30 × window)
+soft = min(tier_soft × complexity, 0.60 × window)
+hard = min(tier_hard × complexity, 0.80 × window)
 ```
 
 `window` and the model tier come from `_lib/model_catalog.json` via the model id on the
@@ -35,12 +35,14 @@ unmeasured defaults are:
 
 | Tier | Notice | Soft | Hard |
 | --- | ---: | ---: | ---: |
-| heavy | 60k | 120k | 160k |
+| frontier | 60k | 120k | 160k |
+| heavy | 96k | 192k | 256k |
 | mid | 120k | 240k | 320k |
 | light | 160k | 320k | 480k |
 
-**The window caps every stage and never lifts it.** The 30/60/80 percent caps protect small
-windows. An unmapped model uses the conservative heavy defaults.
+**The window caps every stage after complexity and never lifts it.** The 30/60/80 percent caps
+protect small windows even when policy complexity is greater than one. An unmapped model uses the
+conservative frontier defaults.
 
 The ledger row for a model with no known window carries `window: null`
 and `window_fallback: true`, because a check that could not measure must not look identical
