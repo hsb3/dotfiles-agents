@@ -169,6 +169,7 @@ def events(path, payload):
                         if current is not None:
                             prior = current
                     elif current is None:
+                        model = effort = None
                         result.append(_event("malformed-delta", occurrence, payload, meta, model, effort))
                     else:
                         decreased = prior and any(current[key] < prior[key] for key in current)
@@ -181,6 +182,7 @@ def events(path, payload):
                             prior = None
                         delta = current if prior is None else {key: current[key] - prior[key] for key in current}
                         if _counters({FIELDS[key]: delta[key] for key in delta}) is None:
+                            model = effort = None
                             result.append(_event("malformed-delta", occurrence, payload, meta, model, effort,
                                                  segment=segment))
                             prior = current

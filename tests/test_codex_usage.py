@@ -94,7 +94,8 @@ class UsageTests(unittest.TestCase):
         self.assertTrue(all(row["tokens"] is None for row in rows))
 
     def test_unknown_record_invalidates_model_attribution(self):
-        for unknown in ({"v": 3, "type": "turn_context", "payload": {"model": "gpt-b"}}, []):
+        for unknown in ({"v": 3, "type": "turn_context", "payload": {"model": "gpt-b"}}, [],
+                        {"type": "event_msg", "payload": {"type": "token_count", "info": {}}}):
             self.write({"type": "session_meta", "payload": {"id": "root"}},
                        *self.count(100, "gpt-a"), unknown, *self.count(120))
             row = codex_usage.events(self.path, {"session_id": "root"})[-1]
