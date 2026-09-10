@@ -113,20 +113,30 @@ Clients attached to one runtime/session are the same writer. Independent attache
 identity is unsupported. Claude Code session mode is unsupported until native transport is
 proved; do not substitute a shared stamp or guessed native ID.
 
-1. Read the bridge, your own card or explicitly named predecessor, then all open same-project
-   `handoff` cards. Use `kata list --project <project> --label handoff --limit 0 --json`:
-   inspect every card's metadata and relationships for overlapping work/dependencies.
-   Read relevant bodies; flag unknown relevance and conflicts. Display at most ten unrelated
-   summaries with the exact remaining count and the complete continuation query.
+1. Read the bridge and your own or explicitly named predecessor card. Run the helper's
+   `discover --project <project> --root <checkout> --related <work-card>` command. It scans
+   every open handoff and its relationships before displaying a page, retaining unknown
+   relevance and flagging possible overlapping work. Repeat the same command with the
+   returned `--offset` and `--page-size` until `remaining` is zero. Read relevant and unknown
+   bodies; reconcile conflicts explicitly. Discovery is a scan, not a lock on other writers.
 2. Write the updated body to a temporary file. Include repository identity, branch/worktree,
    related work, predecessor, decisions and unresolved work. Wait for all independent tools
    and writers to finish before certification; never run the final tool in parallel.
-3. Use the native hook's explicit binding path, never a path guessed from tool environment.
-   Run `python3 <atelier-hooks>/_lib/session_handoff.py persist --binding <binding> --project
+3. Use the native hook's `ATELIER_HANDOFF_BINDING` and `ATELIER_TOOL_CALL_ID`, injected into
+   the current shell call. Never select a latest binding from disk or override these values.
+   Run `python3 <handoff-helper> persist --project
    <project> --body-file <body-file> --title <meaningful-title> --label <area-label> --label
    <type-label> --related <work-card>` as the final tool. Add `--predecessor <card>` for a new
    incarnation. The helper invalidates, checks hook/tool identity, finds or creates your native
    card, writes and reads back its body, then certifies only the current transaction.
+   The checkout must have an `origin` remote; metadata and work/predecessor relations are
+   verified alongside the body. Kata trims surrounding body whitespace; interior text must
+   match exactly. Per-tool transaction files are local disposable state, never board records.
+
+<!-- harness:claude-code -->
+The helper is `<atelier-hooks>/_lib/session_handoff.py`. Native Codex Bash hooks inject
+the current transaction through `updatedInput`; an unregistered hook cannot certify.
+<!-- /harness -->
 4. Any helper, invalidation, readback or publication failure means stop compaction. Every
    native tool, including a read-only one, invalidates certification. Manual compaction checks
    the latest completed native transaction and consumes its certificate once; automatic

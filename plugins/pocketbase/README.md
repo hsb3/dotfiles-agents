@@ -1,5 +1,8 @@
 # pocketbase
 
+The bundled shared hook library includes Atelier's session-handoff transaction helper.
+PocketBase's own hooks do not activate session certification.
+
 Two PocketBase skills that split the work by question — how to **build** a backend right, and
 how to **drive** a running one — plus three agents that carry the backend laws into a
 delegated brief so no brief has to restate them.

@@ -385,7 +385,7 @@ def main():
                 message = ("Session handoff mode: read the lead bridge " + str(config.get("location"))
                     + "; then your own/predecessor and all relevant open handoff cards. "
                     + "Do not rewrite the lead bridge. Writer key: " + key
-                    + ". Native hook binding: " + str(binding)
+                    + ". Use the current shell hook's ATELIER_HANDOFF_BINDING transaction, never the mutable latest binding."
                     + ". Run the handoff helper as the final sequential tool; every tool invalidates certification.")
             except (OSError, ValueError, TypeError) as error:
                 message = "Session handoff unsupported: " + str(error) + ". Manual compaction is blocked."

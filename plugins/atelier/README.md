@@ -9,6 +9,14 @@ lab.
 
 Delegation separates the required model tier from how each harness configures it.
 
+Opt-in external `handoff.scope: session` uses a native card and consumable certificate per
+launch/native identity. Codex requires trusted before-tool and compaction hooks; the current
+shell receives an immutable transaction binding. Every tool invalidates certification, and
+parallel or delayed helpers cannot certify another call. The helper verifies body, repository,
+work and predecessor links; `discover` scans all open handoffs before paginating its display.
+Claude session certification remains unsupported; ordinary tools remain usable and manual
+compaction refuses. Existing project/file handoffs keep their legacy behavior.
+
 ## How it fits together
 
 One loop. `delegation` routes the work, the agents do it, and each hook fires at a fixed

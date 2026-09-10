@@ -368,10 +368,12 @@ def evaluate(project_dir, modules):
             handoff_sources))
     elif raw.get("scope") == "session":
         try:
+            if os.environ.get("ATELIER_HARNESS") != "codex":
+                raise ValueError("unsupported harness: session certification requires native Codex hooks; manual compaction refuses, ordinary tools remain available")
             if mode != "external" or not raw.get("stamp"):
                 raise ValueError("requires external mode and a stamp")
             freshness.session_handoff.contained(project_dir, raw["stamp"])
-            result["rows"].append(_row("handoff", "armed",
+            result["rows"].append(_row("handoff", "configured",
                 "session scope - per-writer native card and consumed certificate; trusted native hooks and fresh launch identity required",
                 handoff_sources))
         except (OSError, ValueError) as error:
