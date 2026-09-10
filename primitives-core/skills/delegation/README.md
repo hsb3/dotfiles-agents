@@ -141,5 +141,6 @@ project integration remains with the strategist. Native role setup enables the r
 Atelier policy selection follows configured agent directories, using `.agents` for
 multiple agents; setup migrates identical policies safely and runtime reads stay read-only.
 
-Codex dispatch setup uses activation `codex-setup` followed by `check --harness codex`,
-so native profile generation and configured-agent policy placement stay consistent.
+Codex dispatch setup uses activation `codex-setup` followed by `check --harness codex`.
+Current managed global roles avoid redundant local profiles; explicitly refresh stale globals
+with `codex-setup --refresh-global`, so profile currency and policy placement stay consistent.

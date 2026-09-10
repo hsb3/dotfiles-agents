@@ -652,7 +652,7 @@ def cmd_create(project_dir, force, out):
 # CLI
 # ---------------------------------------------------------------------------
 
-def codex_setup(project_dir, out, check=False):
+def codex_setup(project_dir, out, check=False, refresh_global=False):
     """Generate local roles and the narrow writable-root addition; never approve hooks."""
     roots = _hook_roots()
     sys.path.insert(0, os.path.join(roots[0], "_lib"))
@@ -706,7 +706,11 @@ def codex_setup(project_dir, out, check=False):
             print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
                   + json.dumps(missing), file=out)
             return EXIT_PROBLEM
-        codex_roles.setup(project_dir, check=True)
+        planned_roles = codex_roles.setup(project_dir, check=True)
+        global_agents = codex_roles.codex_home() / "agents"
+        if (not check and not refresh_global and
+                any(path.parent == global_agents for path in planned_roles)):
+            raise ValueError("stale global Codex profiles; rerun with --refresh-global")
         additions = []
         if missing:
             additions.append(marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable))
@@ -715,7 +719,7 @@ def codex_setup(project_dir, out, check=False):
         if additions and not check:
             config.parent.mkdir(parents=True, exist_ok=True)
             config.write_text(text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n")
-        changed = codex_roles.setup(project_dir, check=check)
+        changed = codex_roles.setup(project_dir, check=check, refresh_global=refresh_global)
         moved = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=check)
         print(("needs " if check and changed else "ok    ") + " Codex roles: "
               + (", ".join(str(path) for path in changed) if changed else "current"), file=out)
@@ -764,7 +768,9 @@ def main(argv=None, out=None):
         "check", help="report what each key actually resolves to: armed, inert, or "
                       "not configured")
 
-    setup = sub.add_parser("codex-setup", help="generate project-local Codex roles and writable roots")
+    setup = sub.add_parser("codex-setup", help="generate Codex roles and writable roots")
+    setup.add_argument("--refresh-global", action="store_true",
+                       help="refresh stale managed global Codex profiles")
     for p in (create, check, setup):
         p.add_argument("--harness", choices=("claude-code", "codex"),
                        default=os.environ.get("ATELIER_HARNESS") or ("codex" if os.environ.get("CODEX_THREAD_ID") else "claude-code"))
@@ -775,7 +781,7 @@ def main(argv=None, out=None):
     os.environ["ATELIER_HARNESS"] = "codex" if args.command == "codex-setup" else args.harness
     project_dir = _project_dir(args.project_dir)
     if args.command == "codex-setup":
-        return codex_setup(project_dir, out)
+        return codex_setup(project_dir, out, refresh_global=args.refresh_global)
     if args.command == "create":
         return cmd_create(project_dir, args.force, out)
     if args.harness == "codex":

@@ -136,9 +136,11 @@ absolute path: it is three directories above `references/dispatch-knobs.md`. Run
 `python3 "<atelier-package>/skills/activation/scripts/activation.py" codex-setup
 --project-dir "<project-root>"`, then run the same script with `check --harness codex
 --project-dir "<project-root>"`. Full setup reconciles policy placement after creating `.codex`. Start a fresh Codex session after initial setup so project agent discovery sees the
-profiles. Setup generates `.codex/agents/atelier-*.toml` from the installed package, and refreshes
-only files whose ownership checksum still matches. An existing user file or an edited generated
-file is a visible error; resolve it deliberately, never force an overwrite. Keep these generated
+profiles. Setup uses current managed global profiles when present; otherwise it generates
+`.codex/agents/atelier-*.toml` from the installed package, and refreshes only files whose ownership
+checksum still matches. An existing user file or an edited generated file is a visible error;
+resolve it deliberately, never force an overwrite. Refresh stale globals only with explicit
+`codex-setup --refresh-global`. Keep generated local profiles
 profiles out of commits using the project's local git exclusion mechanism. No global agent or
 config file is required. Repeat setup after a plugin update; `check --harness codex` reports stale profiles
 and needed policy migration without writing. Setup is the strategist's job, never a worker's.

@@ -2,10 +2,12 @@
 
 import shutil
 import re
+import hashlib
 import sys
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +16,13 @@ import codex_roles as roles
 
 
 class CodexRoles(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.addCleanup(self.home.cleanup)
+        self.env = patch.dict("os.environ", {"CODEX_HOME": self.home.name})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
     def test_every_role_renders_its_canonical_contract_and_valid_toml(self):
         for role in roles.ROLES:
             with self.subTest(role=role):
@@ -93,6 +102,40 @@ class CodexRoles(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "role name"):
                 roles.setup(project)
             self.assertEqual(list(directory.iterdir()), [user_profile])
+
+    def test_current_global_profiles_avoid_local_copies_and_stale_ones_require_refresh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "consumer"
+            home = Path(tmp) / "codex-home"
+            project.mkdir()
+            home.mkdir()
+            with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                global_paths = roles.setup(home, global_profiles=True)
+                self.assertEqual(roles.setup(project, check=True), [])
+                self.assertFalse((project / ".codex").exists())
+                stale = global_paths[0]
+                _, _, body = stale.read_text().partition("\n")
+                body = body.replace("Atelier package:", "Old package:")
+                stale.write_text(roles._managed() + hashlib.sha256(body.encode()).hexdigest() + "\n" + body)
+                with self.assertRaisesRegex(ValueError, "stale global"):
+                    roles.setup(project)
+                self.assertEqual(roles.setup(project, check=True), [stale])
+                self.assertFalse((project / ".codex").exists())
+                self.assertEqual(roles.setup(project, refresh_global=True), [stale])
+                self.assertEqual(roles.setup(project, check=True), [])
+
+    def test_local_profiles_take_precedence_over_a_stale_global_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "consumer"
+            home = Path(tmp) / "codex-home"
+            project.mkdir()
+            home.mkdir()
+            with patch.dict("os.environ", {"CODEX_HOME": str(home)}):
+                roles.setup(project)
+                global_paths = roles.setup(home, global_profiles=True)
+                global_paths[0].write_text(global_paths[0].read_text() + "# stale\n")
+                self.assertEqual(roles.setup(project, check=True), [])
+                self.assertEqual(roles.setup(project), [])
 
     def test_unknown_role_is_rejected(self):
         for role in ("../../builder", "atelier-unknown", "", None, 42):

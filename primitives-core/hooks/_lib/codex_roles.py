@@ -115,17 +115,11 @@ def render(role, plugin_root=None):
     return _managed(plugin_root) + hashlib.sha256(body.encode()).hexdigest() + "\n" + body
 
 
-def setup(project_root, plugin_root=None, check=False):
-    """Return missing/stale paths; check is read-only, setup writes only proven-owned files.
+def _directory(root, global_profiles=False):
+    return Path(root).resolve() / ("agents" if global_profiles else ".codex/agents")
 
-    All collisions are checked before writes. An interrupted refresh can leave mixed versions;
-    each file remains complete and ownership-checkable, so repeating setup safely finishes it.
-    """
-    project = Path(project_root).resolve(strict=True)
-    directory = project / ".codex/agents"
-    for parent in (project / ".codex", directory):
-        if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
-            raise ValueError(f"refusing symlink or non-directory: {parent}")
+
+def _changes(directory, plugin_root):
     names = set(role_names(plugin_root))
     managed = _managed(plugin_root)
     for path in directory.glob("*.toml"):
@@ -149,26 +143,83 @@ def setup(project_root, plugin_root=None, check=False):
             if current == desired:
                 continue
         changed[path] = desired
-    if changed and not check:
-        directory.mkdir(parents=True, exist_ok=True)
-        for path, content in changed.items():
-            temporary = None
-            try:
-                with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
-                                                 prefix=".atelier-", delete=False) as handle:
-                    temporary = Path(handle.name)
-                    handle.write(content)
-                os.replace(temporary, path)
-            finally:
-                if temporary is not None:
-                    temporary.unlink(missing_ok=True)
-    return list(changed)
+    return changed
+
+
+def _write(directory, changed):
+    if not changed:
+        return
+    directory.mkdir(parents=True, exist_ok=True)
+    for path, content in changed.items():
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
+                                             prefix=".atelier-", delete=False) as handle:
+                temporary = Path(handle.name)
+                handle.write(content)
+            os.replace(temporary, path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+
+
+def codex_home():
+    return Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser().resolve()
+
+
+def setup(project_root, plugin_root=None, check=False, refresh_global=False, global_profiles=False):
+    """Return missing/stale paths; check is read-only, setup writes only proven-owned files.
+
+    All collisions are checked before writes. An interrupted refresh can leave mixed versions;
+    each file remains complete and ownership-checkable, so repeating setup safely finishes it.
+    """
+    project = Path(project_root).resolve(strict=True)
+    directory = _directory(project, global_profiles)
+    parents = (directory.parent, directory)
+    for parent in parents:
+        if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
+            raise ValueError(f"refusing symlink or non-directory: {parent}")
+    if global_profiles:
+        changed = _changes(directory, plugin_root)
+        if changed and not check:
+            _write(directory, changed)
+        return list(changed)
+
+    local = _changes(directory, plugin_root)
+    local_paths = [directory / f"{package_id(plugin_root)}-{role}.toml" for role in roles(plugin_root)]
+    if any(path.exists() for path in local_paths):
+        if local and not check:
+            _write(directory, local)
+        return list(local)
+
+    global_directory = _directory(codex_home(), True)
+    for parent in (global_directory.parent, global_directory):
+        if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
+            raise ValueError(f"refusing symlink or non-directory: {parent}")
+    global_paths = [global_directory / path.name for path in local_paths]
+    if all(path.exists() for path in global_paths):
+        try:
+            global_changed = _changes(global_directory, plugin_root)
+        except ValueError as exc:
+            raise ValueError("stale global Codex profiles: " + str(exc)) from exc
+        if global_changed:
+            if check:
+                return list(global_changed)
+            if not refresh_global:
+                raise ValueError("stale global Codex profiles; rerun with --refresh-global")
+            _write(global_directory, global_changed)
+            return list(global_changed)
+        return []
+    if local and not check:
+        _write(directory, local)
+    return list(local)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project", nargs="?", default=".")
     parser.add_argument("--check", action="store_true", help="report missing/stale profiles without writing")
+    parser.add_argument("--refresh-global", action="store_true", help="refresh stale managed global profiles")
     parser.add_argument("--plugin-root", type=Path)
     parser.add_argument("--instructions")
     args = parser.parse_args(argv)
@@ -176,7 +227,8 @@ def main(argv=None):
         if args.instructions:
             print(role_instructions(args.instructions, args.plugin_root), end="")
             return 0
-        changed = setup(args.project, args.plugin_root, check=args.check)
+        changed = setup(args.project, args.plugin_root, check=args.check,
+                        refresh_global=args.refresh_global)
         for path in changed:
             print(f"{'needs refresh' if args.check else 'wrote'}: {path}")
         if not changed:

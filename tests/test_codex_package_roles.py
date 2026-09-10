@@ -5,6 +5,7 @@ import sys
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,13 @@ import codex_roles as roles
 
 
 class CodexPackageRoles(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.addCleanup(self.home.cleanup)
+        self.env = patch.dict("os.environ", {"CODEX_HOME": self.home.name})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
     def package(self, temporary, name):
         package = Path(temporary) / name
         shutil.copytree(ROOT / "plugins" / name, package)

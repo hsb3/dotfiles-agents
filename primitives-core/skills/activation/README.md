@@ -59,7 +59,7 @@ wins when present; one configured agent uses its native directory and multiple a
 Malformed selected policies never fall back. Custody reads the selected policy from HEAD.
 
 
-`codex-setup` renders native roles and project writable roots without touching global config or hook trust. `check --harness codex` verifies generated role/config currency and reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
+`codex-setup` uses current managed global roles before rendering project-local roles and adds project writable roots without touching hook trust. `check --harness codex` is read-only; stale global profiles require explicit `codex-setup --refresh-global`. It reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
 
 Setup rejects symlink or non-regular config/exclude destinations before writing any project files and clears inherited Git routing variables during discovery. Existing user permission tables are preserved.
 
