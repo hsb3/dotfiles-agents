@@ -49,7 +49,15 @@ manifests: ## Manifest gate: `claude plugin validate --strict` over marketplace 
 	@python3 scripts/check_manifests.py
 
 parity: ## atelier doctrine parity vs the opencode port, per docs/atelier-parity.md — the gate lives in dotfiles-agents-oc; override its location with ATELIER_OC_REPO= (needs that checkout + bun; NOT in ci)
-	@ATELIER_CC_REPO=$(CURDIR) bun --cwd $(or $(ATELIER_OC_REPO),$(HOME)/Developer/dotfiles-agents-oc) gate/parity.ts
+	@peer="$(ATELIER_OC_REPO)"; \
+	nested="$(HOME)/Developer/_hsb3/dotfiles-agents-oc"; \
+	direct="$(HOME)/Developer/dotfiles-agents-oc"; \
+	if [ -z "$$peer" ]; then \
+	  if [ -d "$$nested" ]; then peer="$$nested"; \
+	  elif [ -d "$$direct" ]; then peer="$$direct"; \
+	  else printf 'No opencode checkout at %s or %s; set ATELIER_OC_REPO.\n' "$$nested" "$$direct" >&2; exit 1; fi; \
+	fi; \
+	ATELIER_CC_REPO="$(CURDIR)" bun --cwd "$$peer" gate/parity.ts
 
 members: ## Print each plugin's members, derived live from the symlink assemblies
 	@for p in plugins/*/; do id=$$(basename "$$p"); echo "$$id:"; \

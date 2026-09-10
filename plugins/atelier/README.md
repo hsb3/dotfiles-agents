@@ -7,6 +7,8 @@ the same handoff target and the same session-discipline loop — including the r
 (rubric-panel · deletion-pass · layer-cycle) distilled from a controlled agent-development
 lab.
 
+Delegation separates the required model tier from how each harness configures it.
+
 ## How it fits together
 
 One loop. `delegation` routes the work, the agents do it, and each hook fires at a fixed
