@@ -1,4 +1,4 @@
-"""Tests for .claude/hooks/no-main-checkout/hook.py.
+"""Tests for the shared no-main-checkout hook through its Claude Code symlink.
 
 Runs the hook as a subprocess (its real invocation shape: JSON on stdin, a JSON
 line on stdout only on deny) against tempdir fixtures. Stdlib-only; the
@@ -8,7 +8,7 @@ inherited, so the host's own CLAUDE_PROJECT_DIR never leaks in.
 The guarded repo is a fixture directory, not this tree: a bare `.git` entry is
 enough for the hook's walk-up fallback, and no git binary is invoked. The
 fallback case runs a COPY of the hook planted at its real relative depth inside
-the fixture (`<root>/.claude/hooks/no-main-checkout/hook.py`), which is what
+the fixture (`<root>/.claude/hooks/no-main-checkout/hook.py`, a native symlink), which is what
 makes the "resolve the root from the hook's own location" path testable without
 depending on where this checkout lives.
 

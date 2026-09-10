@@ -16,7 +16,7 @@ import os
 import re
 import sys
 
-# this file lives 4 levels under the repo root: .claude/skills/author-primitive/scripts/
+# this file lives 4 levels under the repo root: .agents/skills/author-primitive/scripts/
 _HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(_HERE, "..", "..", "..", ".."))
 ROSTER = os.path.join(REPO, "primitives-core.yaml")

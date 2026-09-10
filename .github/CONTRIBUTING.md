@@ -162,7 +162,7 @@ Architecture decisions are a separate thing from tracked work: they are ADRs und
 
 ## Publication and documentation
 
-Use the [sanctioned publish runbook](../.claude/skills/publish-to-main/SKILL.md) after
+Use the [sanctioned publish runbook](../.agents/skills/publish-to-main/SKILL.md) after
 consumer-facing changes land. It dispatches the guarded workflow; it never merges into
 `main`. The [documentation site guide](../docs/site.md) covers local preview and the
 Pages deployment tied to that publication.
