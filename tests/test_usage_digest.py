@@ -77,14 +77,19 @@ class UsageDigestTests(unittest.TestCase):
         self.assertEqual(report["legacy_unknown"], 1)
 
     def test_export_reimports_safely_and_excludes_prompts(self):
-        self.write(observed("one", 10, prompt="secret", host="mac"), observed("two", 5, host="linux"))
+        self.write(observed("one", 10, prompt="secret", host="mac", v=1, plugin="atelier",
+                            harness="codex", stream="codex-usage", ts="append-only", project="/project",
+                            package_path="/package", package_name="atelier", package_version="1.0",
+                            profile_path="/profile", profile_hash="hash"), observed("two", 5, host="linux"))
         exported = Path(self.temp.name) / "mac.jsonl"
         run = self.invoke("export", "--input", str(self.path), "--host", "mac", "--output", str(exported))
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertNotIn("secret", exported.read_text())
-        report = self.report(exported, exported)
-        self.assertEqual(report["tokens"]["total"], 10)
-        self.assertEqual(report["observed"], 1)
+        self.assertEqual(json.loads(exported.read_text().splitlines()[0])["package_path"], "/package")
+        report = self.report(self.path, exported, self.path)
+        self.assertEqual(report["tokens"]["total"], 15)
+        self.assertEqual(report["observed"], 2)
+        self.assertNotIn("conflicting-observation-id", report["coverage"]["errors"])
 
     def test_host_repo_and_missing_coverage_are_grouped_explicitly(self):
         self.write(observed("one", 10), observed("two", 6, host=None, source_repo=None,
@@ -94,6 +99,19 @@ class UsageDigestTests(unittest.TestCase):
         self.assertEqual(report["groups"]["source_repo"]["unknown"]["total"], 6)
         self.assertEqual(report["coverage"]["missing"],
                          {"host": 1, "lifetime_ms": 1, "model": 1, "source_repo": 1})
+
+    def test_legacy_is_explicit_and_future_envelopes_are_rejected(self):
+        legacy = {"v": 1, "event": "delegation", "ctx_tokens": 999}
+        self.write(legacy, {"v": 99, "event": "delegation"},
+                   observed("future", 10, v=99),
+                   observed("bad-export", 10, timing={"lifetime_ms": 3, "secret": "no"}))
+        report = self.report(self.path, self.path)
+        self.assertEqual(report["legacy_unknown"], 1)
+        self.assertEqual(report["tokens"]["total"], 0)
+        self.assertEqual(report["coverage"]["errors"]["unsupported-future-envelope"], 4)
+        exported = Path(self.temp.name) / "safe.jsonl"
+        self.assertNotEqual(self.invoke("export", "--input", str(self.path), "--host", "mac",
+                                        "--output", str(exported)).returncode, 0)
 
 
 if __name__ == "__main__":
