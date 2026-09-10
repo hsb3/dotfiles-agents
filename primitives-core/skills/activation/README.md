@@ -1,5 +1,9 @@
 # activation
 
+External handoffs may opt into `scope: session`; the check validates the contained stamp and
+reports the native-hook/launch-identity requirement. Leave scope absent for legacy project
+handoffs. See [handoff](../handoff/SKILL.md#opt-in-concurrent-sessions) before enabling it.
+
 Creates and verifies the harness-appropriate per-project activation file that arms atelier's
 enforcement hooks, then reports per key what each hook actually resolved — including a key
 that is present, looks configured, and is silently doing nothing.

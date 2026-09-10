@@ -1,5 +1,10 @@
 # handoff
 
+Opt-in external `scope: session` gives each dedicated running writer a native handoff card and
+a consumed certificate. The [skill](SKILL.md#opt-in-concurrent-sessions) documents launch identity,
+complete discovery, the persistence helper, and runtime limits. Every tool invalidates session
+freshness; use the helper last and stop compaction on any failure. Project scope is unchanged.
+
 Maintains the project's session-handoff file so a brand-new session can pick up work cold —
 externalizes current state, in-flight work, decisions made and pending, and gotchas into one
 file readable in under ~10k tokens.

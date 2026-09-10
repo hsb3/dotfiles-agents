@@ -73,6 +73,7 @@ sys.path.insert(
 import agentlog  # noqa: E402  (path must be primed before this import)
 import codex_lifecycle
 import atelier_local  # noqa: E402
+import session_handoff
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -174,6 +175,7 @@ def _normalize_handoff(children):
         "path": children.get("path") or None,
         "stamp": children.get("stamp") or None,
         "location": children.get("location") or None,
+        **({"scope": children["scope"]} if "scope" in children else {}),
     }
 
 
@@ -374,6 +376,22 @@ def main():
         log = agentlog.make_logger(
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(cwd),
         )
+
+        config = _load_handoff_config(_resolve_project_dir(cwd)) or {}
+        if config.get("scope") == "session":
+            try:
+                _, binding, key = session_handoff.paths(_resolve_project_dir(cwd), config,
+                    os.environ.get("ATELIER_HARNESS", "claude"), os.environ.get("ATELIER_WRITER_ID"), session_id)
+                message = ("Session handoff mode: read the lead bridge " + str(config.get("location"))
+                    + "; then your own/predecessor and all relevant open handoff cards. "
+                    + "Do not rewrite the lead bridge. Writer key: " + key
+                    + ". Native hook binding: " + str(binding)
+                    + ". Run the handoff helper as the final sequential tool; every tool invalidates certification.")
+            except (OSError, ValueError, TypeError) as error:
+                message = "Session handoff unsupported: " + str(error) + ". Manual compaction is blocked."
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": message},
+                              "systemMessage": message}))
+            return
 
         path, relpath, mode, location = _find_handoff(cwd)
 

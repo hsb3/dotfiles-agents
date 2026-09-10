@@ -366,6 +366,18 @@ def evaluate(project_dir, modules):
         result["rows"].append(_row(
             "handoff", "inert", "written, but blank - both hooks read no value",
             handoff_sources))
+    elif raw.get("scope") == "session":
+        try:
+            if mode != "external" or not raw.get("stamp"):
+                raise ValueError("requires external mode and a stamp")
+            freshness.session_handoff.contained(project_dir, raw["stamp"])
+            result["rows"].append(_row("handoff", "armed",
+                "session scope - per-writer native card and consumed certificate; trusted native hooks and fresh launch identity required",
+                handoff_sources))
+        except (OSError, ValueError) as error:
+            result["rows"].append(_row("handoff", "inert", "session scope: " + str(error), handoff_sources))
+    elif raw.get("scope") not in (None, "project"):
+        result["rows"].append(_row("handoff", "inert", "unknown handoff scope", handoff_sources))
     elif mode not in ("file", "external"):
         result["rows"].append(_row(
             "handoff", "inert",

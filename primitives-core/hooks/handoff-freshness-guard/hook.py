@@ -65,6 +65,7 @@ sys.path.insert(
 import agentlog  # noqa: E402  (path must be primed before this import)
 import codex_lifecycle
 import atelier_local  # noqa: E402
+import session_handoff
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable)
@@ -173,6 +174,7 @@ def _normalize_handoff(children):
         "path": children.get("path") or None,
         "stamp": children.get("stamp") or None,
         "location": children.get("location") or None,
+        **({"scope": children["scope"]} if "scope" in children else {}),
     }
 
 
@@ -365,6 +367,15 @@ def main():
         log = agentlog.make_logger(
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(cwd),
         )
+
+        config = _load_handoff_config(_resolve_project_dir(cwd)) or {}
+        if config.get("scope") == "session":
+            result = session_handoff.hook(_resolve_project_dir(cwd), config, payload, FRESHNESS_MINUTES)
+            if result:
+                print(json.dumps(result))
+            return
+        if payload.get("hook_event_name") == "PreToolUse":
+            return
 
         path, mtime, searched, mode, location = _find_handoff(cwd)
 
