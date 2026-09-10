@@ -87,6 +87,12 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[-1]["counter_state"],
                          "inherited-baseline-unknown")
 
+    def test_late_fork_marker_quarantines_earlier_counters(self):
+        self.write(*self.count(100), {"type": "session_meta", "payload": {
+            "id": "root", "forked_from_id": "parent"}})
+        rows = codex_usage.events(self.path, {"session_id": "root"})
+        self.assertTrue(all(row["tokens"] is None for row in rows))
+
     def test_naive_timestamp_has_unknown_not_negative_timing(self):
         counter = self.count(100)[0]
         counter["timestamp"] = "2026-09-10T00:00:01"

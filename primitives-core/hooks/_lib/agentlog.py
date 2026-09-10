@@ -142,7 +142,7 @@ def append(stream, record, project=None, override_env=None, plugin=PLUGIN, versi
     except Exception:
         # Logging must never break the hook it is logging for.
         try:
-            os.write(2, b"atelier: agentlog append failed\\n")
+            os.write(2, b"atelier: agentlog append failed\n")
         except Exception:
             pass
         return None

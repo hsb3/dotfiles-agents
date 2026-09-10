@@ -53,6 +53,8 @@ def _provenance(payload):
     for manifest in (package / ".claude-plugin/plugin.json", package / ".codex-plugin/plugin.json"):
         try:
             data = json.loads(manifest.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                continue
             name, version = data.get("name"), data.get("version")
             break
         except (OSError, ValueError):
@@ -130,6 +132,9 @@ def events(path, payload):
             and item["payload"].get("id") == expected
         ), {})
         meta = canonical
+        ownership_bad = ownership_bad or any(
+            item.get("payload", {}).get("forked_from_id") for item in objects
+            if item.get("type") == "session_meta" and isinstance(item.get("payload"), dict))
         for occurrence, line in enumerate(lines):
                 try:
                     item = json.loads(line)
