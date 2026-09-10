@@ -147,20 +147,27 @@ def digest(paths):
         for name, value in dimensions.items():
             if value == "unknown":
                 missing[name] += 1
-        root, native = _clean(row.get("parent_id") or row.get("native_id")), _clean(row.get("native_id"))
-        dimensions["root_child"] = root + "/" + native
+        native, lifecycle = _clean(row.get("native_id")), _clean(row.get("lifecycle_id"))
+        dimensions["root_child"] = ("child" if isinstance(row.get("parent_id"), str) and row["parent_id"]
+                                    else "root" if row.get("native_id") == row.get("lifecycle_id")
+                                    else "unknown")
+        if dimensions["root_child"] == "unknown":
+            missing["root_child"] += 1
         for key, value in tokens.items():
             totals[key] += value
             for name, group in dimensions.items():
                 groups[name][group][key] += value
-        lifecycle = _clean(row.get("lifecycle_id") or row.get("native_id"))
         timing = row.get("timing") if isinstance(row.get("timing"), dict) else {}
         lifetime = timing.get("lifetime_ms")
         if isinstance(lifetime, int) and not isinstance(lifetime, bool) and lifetime >= 0:
-            lifetimes[lifecycle] = max(lifetimes.get(lifecycle, 0), lifetime)
+            key = json.dumps([dimensions["host"], lifecycle, native], separators=(",", ":"))
+            lifetimes[key] = max(lifetimes.get(key, 0), lifetime)
         else:
             missing["lifetime_ms"] += 1
-    return {"observed": observed, "legacy_unknown": legacy, "tokens": totals,
+        for key in ("active_ms", "tool_ms", "wait_ms"):
+            if timing.get(key) is None:
+                missing[key] += 1
+    return {"observed": observed, "legacy_unknown": legacy, "tokens": totals if observed else None,
             "groups": {name: dict(sorted(values.items())) for name, values in groups.items()},
             "lifetime_ms_by_lifecycle": dict(sorted(lifetimes.items())),
             "coverage": {"states": dict(sorted(states.items())), "missing": dict(sorted(missing.items())),

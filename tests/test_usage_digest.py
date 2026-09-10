@@ -46,12 +46,13 @@ class UsageDigestTests(unittest.TestCase):
 
     def test_root_child_totals_and_replay_use_deltas_not_cumulative(self):
         self.write(observed("one", 10), observed("two", 7, native_id="root", parent_id=None,
-                                                    lifecycle_id="root-life", timing={"lifetime_ms": 30}))
+                                                    lifecycle_id="root", timing={"lifetime_ms": 30}))
         report = usage_digest.digest([self.path, self.path])
         self.assertEqual(report["tokens"]["total"], 17)
         self.assertEqual(report["observed"], 2)
-        self.assertEqual(report["groups"]["root_child"]["root/child"]["total"], 10)
-        self.assertEqual(report["lifetime_ms_by_lifecycle"], {"child-life": 20, "root-life": 30})
+        self.assertEqual(report["groups"]["root_child"], {"child": {"input": 6, "cached_input": 2,
+                         "output": 4, "reasoning": 1, "total": 10}, "root": {"input": 3,
+                         "cached_input": 2, "output": 4, "reasoning": 1, "total": 7}})
 
     def test_reset_resume_and_model_changes_count_each_observed_delta(self):
         self.write(observed("one", 10), {"schema": "codex-usage", "schema_version": 2, "kind": "delta",
@@ -98,7 +99,8 @@ class UsageDigestTests(unittest.TestCase):
         self.assertEqual(report["groups"]["host"]["mac"]["total"], 10)
         self.assertEqual(report["groups"]["source_repo"]["unknown"]["total"], 6)
         self.assertEqual(report["coverage"]["missing"],
-                         {"host": 1, "lifetime_ms": 1, "model": 1, "source_repo": 1})
+                         {"active_ms": 2, "host": 1, "lifetime_ms": 1, "model": 1,
+                          "source_repo": 1, "tool_ms": 2, "wait_ms": 2})
 
     def test_legacy_is_explicit_and_future_envelopes_are_rejected(self):
         legacy = {"v": 1, "event": "delegation", "ctx_tokens": 999}
@@ -107,11 +109,33 @@ class UsageDigestTests(unittest.TestCase):
                    observed("bad-export", 10, timing={"lifetime_ms": 3, "secret": "no"}))
         report = self.report(self.path, self.path)
         self.assertEqual(report["legacy_unknown"], 1)
-        self.assertEqual(report["tokens"]["total"], 0)
+        self.assertIsNone(report["tokens"])
         self.assertEqual(report["coverage"]["errors"]["unsupported-future-envelope"], 4)
         exported = Path(self.temp.name) / "safe.jsonl"
         self.assertNotEqual(self.invoke("export", "--input", str(self.path), "--host", "mac",
                                         "--output", str(exported)).returncode, 0)
+
+    def test_lifetimes_keep_hosts_and_children_separate_with_unknown_coverage(self):
+        self.write(observed("root", 10, native_id="root", parent_id=None, lifecycle_id="root"),
+                   observed("child-a", 10, native_id="a", parent_id="root", lifecycle_id="shared",
+                            timing={"lifetime_ms": 100, "active_ms": None, "tool_ms": None, "wait_ms": None}),
+                   observed("child-a-later", 6, native_id="a", parent_id="root", lifecycle_id="shared",
+                            timing={"lifetime_ms": 80, "active_ms": 1, "tool_ms": 2, "wait_ms": 3}),
+                   observed("child-b", 10, native_id="b", parent_id="root", lifecycle_id="shared",
+                            timing={"lifetime_ms": 200, "active_ms": None, "tool_ms": None, "wait_ms": None}),
+                   observed("other-host", 10, native_id="a", parent_id="root", lifecycle_id="shared", host="linux",
+                            timing={"lifetime_ms": 70, "active_ms": None, "tool_ms": None, "wait_ms": None}),
+                   observed("unknown", 10, native_id="odd", parent_id=None, lifecycle_id="different", timing={}))
+        report = self.report(self.path)
+        self.assertEqual(report["groups"]["root_child"]["root"]["total"], 10)
+        self.assertEqual(report["groups"]["root_child"]["child"]["total"], 36)
+        self.assertEqual(report["groups"]["root_child"]["unknown"]["total"], 10)
+        self.assertEqual(report["lifetime_ms_by_lifecycle"], {
+            '["linux","shared","a"]': 70, '["mac","root","root"]': 20,
+            '["mac","shared","a"]': 100, '["mac","shared","b"]': 200})
+        self.assertEqual(report["coverage"]["missing"],
+                         {"active_ms": 5, "lifetime_ms": 1, "tool_ms": 5, "wait_ms": 5,
+                          "root_child": 1})
 
 
 if __name__ == "__main__":

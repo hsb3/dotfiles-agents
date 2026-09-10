@@ -170,3 +170,10 @@ python3 -m unittest tests/test_usage_digest.py
 Exports retain only documented safe usage fields, partitioned by host; they contain no
 prompts or transcript content and can be imported like any other input. Retain source
 JSONL as the durable record and regenerate reports or exports when needed.
+
+`tokens` is `null` when no observed delta exists; legacy or error rows never imply zero
+usage. Mixed reports are a known observed subtotal with explicit coverage. `root_child`
+is `child` only with a nonempty `parent_id`, `root` only when `native_id` equals
+`lifecycle_id`, otherwise `unknown`. Lifetime entries use a JSON tuple of host, lifecycle,
+and native ID and take the maximum repeated snapshot; active, tool, and wait timing nulls
+remain in coverage.
