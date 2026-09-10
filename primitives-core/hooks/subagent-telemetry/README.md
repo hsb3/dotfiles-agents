@@ -136,8 +136,24 @@ Codex SubagentStop names the parent in `transcript_path`. Measurements use the c
 # Codex usage stream
 
 Codex stop observations also append codex-usage.jsonl. Rows use envelope
-v 2, schema codex-usage, and schema_version 2. Tokens are one cumulative
-snapshot with input, cached input, output, reasoning, and total categories.
-Repeated stops with the same observation_id are not written again. Missing,
-reset, future-schema, and inherited-history observations have explicit
-counter_state and null tokens; they are never silently read as zero.
+v 2, schema codex-usage, and schema_version 2. Each token_count contributes
+one deterministic delta row: tokens holds input, cached_input, output,
+reasoning, and total increments, while cumulative_tokens holds the observed
+runtime counter. Cached input is a subset of input; reasoning is a subset of
+output. Counters are segmented on a reset, so a digest must sum tokens within
+each segment instead of summing cumulative_tokens.
+
+Every row includes observation_id, segment, counter_state, lifecycle_id,
+native_id, parent_id, role, model, effort, requested_model, requested_tier,
+package, profile, host, source_repo, effective_cwd, started_at, timing, and
+tokens. The stable id hashes host, native identity, source occurrence, model,
+and counter data; a digest may deduplicate it but the hook deliberately keeps
+durable JSONL append-only. Root rows use the session_meta id; child rows use
+the native child id and parent_thread_id. Active, tool, and wait timing remain
+null when the runtime does not measure them; lifetime_ms is populated when
+both transcript timestamps exist.
+
+counter_state is observed, reset, missing, malformed, malformed-json, error,
+or inherited-baseline-unknown. Each non-observed state has null counters and
+must remain visible to import/export consumers; no state means zero usage.
+Rows exclude prompts, transcripts, secrets, and message content.

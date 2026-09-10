@@ -1,18 +1,16 @@
-"""Codex v2 usage observations are cumulative snapshots, never summed."""
+"""Real Codex token_count fields become replayable delta observations."""
 import json
 from pathlib import Path
 import sys
 import tempfile
 import unittest
-import os
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "primitives-core/hooks/_lib"))
 import codex_usage
-import agentlog
 
 
-class CodexUsageTests(unittest.TestCase):
+class UsageTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -21,57 +19,39 @@ class CodexUsageTests(unittest.TestCase):
     def write(self, *rows):
         self.path.write_text("\n".join(json.dumps(row) for row in rows))
 
-    def count(self, total=100, model="gpt-6-astra", **usage):
-        values = {"input_tokens": 60, "cached_input_tokens": 20,
-                  "output_tokens": 40, "reasoning_tokens": 10, "total_tokens": total}
-        values.update(usage)
-        return {"type": "event_msg", "payload": {"type": "token_count", "info": {
-            "total_token_usage": values, "model_context_window": 258400}}}
+    def count(self, total, model=None):
+        row = {"type": "event_msg", "timestamp": "2026-09-10T00:00:01Z", "payload": {"type": "token_count", "info": {"total_token_usage": {
+            "input_tokens": max(20, total - 40), "cached_input_tokens": max(0, total - 60),
+            "output_tokens": 40, "reasoning_output_tokens": 10, "total_tokens": total}}}}
+        return ([{"type": "turn_context", "payload": {"model": model, "effort": "high"}}] if model else []) + [row]
 
-    def test_cumulative_snapshot_and_replay_have_exact_totals(self):
-        self.write({"type": "session_meta", "payload": {"id": "root", "timestamp": "2026-09-10T00:00:00Z"}},
-                   {"type": "turn_context", "payload": {"model": "gpt-6-astra"}},
-                   self.count(), self.count())
-        row = codex_usage.observe(self.path, {"session_id": "root", "cwd": "/repo"}, "root")
-        self.assertEqual(row["tokens"], {"input": 60, "cached_input": 20, "output": 40,
-                                         "reasoning": 10, "total": 100})
-        self.assertEqual(row["observation_id"], codex_usage.observe(
-            self.path, {"session_id": "root", "cwd": "/repo"}, "root")["observation_id"])
-        self.assertEqual(row["model"], "gpt-6-astra")
-        self.assertEqual(row["kind"], "cumulative")
+    def test_real_fields_delta_reset_and_model_segments(self):
+        self.write({"type": "session_meta", "payload": {"id": "child", "session_id": "root",
+                    "parent_thread_id": "manager", "agent_role": "atelier-builder",
+                    "thread_source": "subagent", "timestamp": "2026-09-10T00:00:00Z"}},
+                   *self.count(100, "gpt-a"), *self.count(200, "gpt-b"), *self.count(50, "gpt-b"))
+        rows = codex_usage.events(self.path, {"session_id": "root", "agent_id": "child",
+                                               "repo": "/source", "cwd": "/tree"})
+        observed = [row for row in rows if row["counter_state"] == "observed"]
+        self.assertEqual([row["tokens"]["total"] for row in observed], [100, 100, 50])
+        self.assertEqual([row["model"] for row in observed], ["gpt-a", "gpt-b", "gpt-b"])
+        self.assertEqual(rows[-2]["counter_state"], "reset")
+        self.assertEqual((observed[0]["native_id"], observed[0]["parent_id"], observed[0]["role"],
+                          observed[0]["source_repo"], observed[0]["effort"]), ("child", "manager",
+                          "atelier-builder", "/source", "high"))
 
-    def test_missing_malformed_and_reset_are_explicit(self):
-        self.write(self.count(100), {"type": "event_msg", "payload": {"type": "token_count", "info": {
-            "total_token_usage": {"total_tokens": 50}}}})
-        row = codex_usage.observe(self.path, {"session_id": "root"}, "root")
-        self.assertEqual(row["counter_state"], "reset")
-        self.assertIsNone(row["tokens"])
+    def test_ids_do_not_collapse_siblings_or_errors(self):
+        self.write(*self.count(100, "gpt"))
+        left = codex_usage.events(self.path, {"session_id": "root", "agent_id": "left"})[-1]
+        right = codex_usage.events(self.path, {"session_id": "root", "agent_id": "right"})[-1]
+        self.assertNotEqual(left["observation_id"], right["observation_id"])
         self.path.write_text("not json")
-        self.assertEqual(codex_usage.observe(self.path, {"session_id": "root"}, "root")["counter_state"],
-                         "missing")
-        self.write({"type": "event_msg", "payload": {"type": "token_count", "info": {}}})
-        self.assertEqual(codex_usage.observe(self.path, {"session_id": "root"}, "root")["counter_state"],
-                         "malformed")
+        self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[0]["counter_state"], "malformed-json")
 
-    def test_child_dimensions_and_future_schema_rejected(self):
-        self.write({"v": 99, "type": "event_msg", "payload": {"type": "token_count", "info": {}}})
-        row = codex_usage.observe(self.path, {"session_id": "parent", "agent_id": "child",
-                                               "agent_type": "atelier-builder", "cwd": "/tree",
-                                               "original_cwd": "/source"}, "child")
-        self.assertEqual((row["counter_state"], row["parent_id"], row["role"],
-                          row["source_repo"], row["effective_cwd"]),
-                         ("unsupported-future-schema", "parent", "atelier-builder", "/source", "/tree"))
-
-    def test_second_ingest_does_not_append_duplicate(self):
-        self.write(self.count())
-        old = os.environ.get("XDG_DATA_HOME")
-        os.environ["XDG_DATA_HOME"] = self.tmp.name
-        self.addCleanup(lambda: os.environ.__setitem__("XDG_DATA_HOME", old) if old else os.environ.pop("XDG_DATA_HOME", None))
-        row = codex_usage.observe(self.path, {"session_id": "root"}, "root")
-        agentlog.append_once("codex-usage", row, row["observation_id"], version=2)
-        agentlog.append_once("codex-usage", row, row["observation_id"], version=2)
-        path = Path(agentlog.stream_path("codex-usage"))
-        self.assertEqual(len(path.read_text().splitlines()), 1)
+    def test_missing_and_oserror_are_explicit(self):
+        self.assertEqual(codex_usage.events(None, {"session_id": "root"})[0]["counter_state"], "error")
+        self.write({"type": "session_meta", "payload": {"id": "root"}})
+        self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[0]["counter_state"], "missing")
 
 
 if __name__ == "__main__":

@@ -481,15 +481,19 @@ def _codex_stop(payload):
             codex_lifecycle.diagnostic(exc)
         row["duration_ms"] = _elapsed_ms(row.get("started_at"), datetime.now(timezone.utc))
         usage_payload = dict(payload, **record)
-        usage = codex_usage.observe(record.get("transcript_path"), usage_payload, "child")
-        agentlog.append_once(USAGE_STREAM, usage, usage["observation_id"],
-                             agentlog.resolve_project(payload.get("cwd")), version=2)
+        try:
+            for usage in codex_usage.events(record.get("transcript_path"), usage_payload):
+                agentlog.append(USAGE_STREAM, usage, agentlog.resolve_project(payload.get("cwd")), None, agentlog.PLUGIN, 2)
+        except Exception as exc:
+            codex_lifecycle.diagnostic("usage logging failed: " + str(exc))
         agentlog.append(LOG_STREAM, row, agentlog.resolve_project(payload.get("cwd")), LOG_PATH_ENV)
         codex_workers.set_status(payload, "stopped")
     elif payload.get("transcript_path"):
-        usage = codex_usage.observe(payload["transcript_path"], payload, "root")
-        agentlog.append_once(USAGE_STREAM, usage, usage["observation_id"],
-                             agentlog.resolve_project(payload.get("cwd")), version=2)
+        try:
+            for usage in codex_usage.events(payload["transcript_path"], payload):
+                agentlog.append(USAGE_STREAM, usage, agentlog.resolve_project(payload.get("cwd")), None, agentlog.PLUGIN, 2)
+        except Exception as exc:
+            codex_lifecycle.diagnostic("usage logging failed: " + str(exc))
     pending = []
     now = datetime.now(timezone.utc)
     for record in codex_workers.records(payload):

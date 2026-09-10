@@ -141,26 +141,12 @@ def append(stream, record, project=None, override_env=None, plugin=PLUGIN, versi
             handle.write(json.dumps(row, default=str) + "\n")
     except Exception:
         # Logging must never break the hook it is logging for.
+        try:
+            os.write(2, b"atelier: agentlog append failed\\n")
+        except Exception:
+            pass
         return None
     return row
-
-
-def append_once(stream, record, identity, project=None, override_env=None, plugin=PLUGIN,
-                version=SCHEMA_VERSION):
-    """Append only if this stream has not already recorded identity."""
-    path = stream_path(stream, override_env, plugin)
-    try:
-        if os.path.isfile(path):
-            with open(path, encoding="utf-8", errors="replace") as source:
-                for line in source:
-                    try:
-                        if json.loads(line).get("observation_id") == identity:
-                            return None
-                    except (ValueError, AttributeError):
-                        continue
-    except Exception:
-        return None
-    return append(stream, record, project, override_env, plugin, version)
 
 
 def make_logger(stream, override_env=None, project=None, plugin=PLUGIN):
