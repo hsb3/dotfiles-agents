@@ -133,3 +133,11 @@ Ships only in the atelier bundle, recording delegation telemetry for the crew.
 Codex rows use the shared native worker registry and each worker rollout for identity, model, context, start time, and duration. SubagentStop marks the registry stopped without deleting the checkout; validated resumed tool activity marks it running again in the worker router. Registry entries also supply pending workers for stall reports. Missing usage is recorded and surfaced, never silently reported as zero.
 
 Codex SubagentStop names the parent in `transcript_path`. Measurements use the child transcript validated and stored at SubagentStart, so parent tokens, model and start time cannot be attributed to the worker. Before an initialized child rollout emits usable usage, telemetry records null context with `pending: true`; malformed or unavailable child usage remains an explicit measurement error.
+# Codex usage stream
+
+Codex stop observations also append codex-usage.jsonl. Rows use envelope
+v 2, schema codex-usage, and schema_version 2. Tokens are one cumulative
+snapshot with input, cached input, output, reasoning, and total categories.
+Repeated stops with the same observation_id are not written again. Missing,
+reset, future-schema, and inherited-history observations have explicit
+counter_state and null tokens; they are never silently read as zero.

@@ -104,7 +104,7 @@ def _now_iso():
     )
 
 
-def _envelope(stream, project, record, plugin=PLUGIN):
+def _envelope(stream, project, record, plugin=PLUGIN, version=SCHEMA_VERSION):
     """Envelope keys first, then any caller key that is not an envelope key.
 
     The envelope wins on collision rather than the payload. That inverts the
@@ -115,7 +115,7 @@ def _envelope(stream, project, record, plugin=PLUGIN):
     structurally true instead of a convention every future hook has to know.
     """
     row = {
-        "v": SCHEMA_VERSION,
+        "v": version,
         "plugin": plugin,
         "harness": HARNESS,
         "stream": stream,
@@ -129,10 +129,10 @@ def _envelope(stream, project, record, plugin=PLUGIN):
     return row
 
 
-def append(stream, record, project=None, override_env=None, plugin=PLUGIN):
+def append(stream, record, project=None, override_env=None, plugin=PLUGIN, version=SCHEMA_VERSION):
     """Stamp the envelope on `record` and append it to `stream` as one line."""
     path = stream_path(stream, override_env, plugin)
-    row = _envelope(stream, project, record, plugin)
+    row = _envelope(stream, project, record, plugin, version)
     try:
         directory = os.path.dirname(path)
         if directory:
@@ -141,8 +141,26 @@ def append(stream, record, project=None, override_env=None, plugin=PLUGIN):
             handle.write(json.dumps(row, default=str) + "\n")
     except Exception:
         # Logging must never break the hook it is logging for.
-        pass
+        return None
     return row
+
+
+def append_once(stream, record, identity, project=None, override_env=None, plugin=PLUGIN,
+                version=SCHEMA_VERSION):
+    """Append only if this stream has not already recorded identity."""
+    path = stream_path(stream, override_env, plugin)
+    try:
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8", errors="replace") as source:
+                for line in source:
+                    try:
+                        if json.loads(line).get("observation_id") == identity:
+                            return None
+                    except (ValueError, AttributeError):
+                        continue
+    except Exception:
+        return None
+    return append(stream, record, project, override_env, plugin, version)
 
 
 def make_logger(stream, override_env=None, project=None, plugin=PLUGIN):
