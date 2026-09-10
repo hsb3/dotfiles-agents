@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """model_tiers — resolve a provider-independent dispatch tier to a concrete model id.
 
-An agent declares a tier (`light` / `mid` / `heavy` / `frontier`), never a model. `model_catalog.json`
+Spawned agents declare `light`, `mid`, or `heavy`, never a model. `frontier` is reserved in
+the catalog for the topmost strategist and is never a spawned-agent tier. `model_catalog.json`
 beside this module is the single map from (tier, provider) to a concrete id, plus the
 projected upstream catalog those ids are checked against and the context window each one
 carries. Switching provider is an edit to `active_provider` in that one file.
