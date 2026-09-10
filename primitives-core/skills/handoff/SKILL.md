@@ -116,6 +116,12 @@ mode is unsupported there. Do not substitute a shared stamp or guessed identity.
 keeps its legacy project handoff behavior; its native compaction hook is advisory, not a session
 certificate gate.
 
+Persistence helpers serialize per launch/native writer with POSIX advisory locks, from current
+transaction validation through backend readback and certificate publication. Hooks never take
+that lock: ordinary parallel tools proceed after safe invalidation, without certification.
+Platforms without POSIX locking fail clearly instead of running the helper unlocked.
+Process exit releases the lock; leave its file in place while helpers may still be running.
+
 1. Read the bridge and your own or explicitly named predecessor card. Run the helper's
    `discover --project <project> --root <checkout> --related <work-card>` command. It scans
    every open handoff and its relationships before displaying a page, retaining unknown

@@ -93,8 +93,12 @@ def begin(root, config, payload):
     writer, native = os.environ.get("ATELIER_WRITER_ID"), payload.get("session_id")
     cert, binding, key = paths(root, config, harness, writer, native)
     epoch, pending = transcript_state(payload.get("transcript_path"))
-    if epoch[1] != payload.get("tool_use_id") or pending != {epoch[1]}:
-        raise ValueError("session handoff requires one sequential native tool transaction")
+    call = payload.get("tool_use_id")
+    if call not in pending:
+        raise ValueError("native tool is not pending in the runtime transcript")
+    if epoch[1] != call or pending != {call}:
+        cert.unlink(missing_ok=True)
+        return None
     value = {"root": str(Path(root).resolve()), "harness": harness, "writer": writer,
              "native": native, "key": key, "stamp": str(cert), "epoch": epoch,
              "transcript": payload["transcript_path"]}
@@ -132,6 +136,8 @@ def hook(root, config, payload, minutes=30):
     try:
         if event == "PreToolUse":
             binding = begin(root, config, payload)
+            if binding is None:
+                return {"systemMessage": "Session handoff uncertified: parallel tools may proceed. Run the final persistence helper in a new sequential tool call."}
             output = {"hookEventName": event, "additionalContext": "Session handoff binding: " + str(binding)}
             tool_input = payload.get("tool_input", {})
             if payload.get("tool_name") == "Bash" and isinstance(tool_input, dict) and isinstance(tool_input.get("command"), str):
@@ -230,58 +236,64 @@ def persist(binding_path, project, body_file, title="Session handoff", labels=()
         epoch, pending = transcript_state(binding["transcript"])
         if epoch != binding["epoch"] or pending != {epoch[1]}:
             raise ValueError("handoff requires the current sequential native tool")
-    current()
-    cert.unlink(missing_ok=True)
-    body = Path(body_file).read_text(encoding="utf-8").strip()
-    if not body:
-        raise ValueError("refusing an empty handoff body")
-    items = kata(project, "list", "--status", "all", "--limit", "0", "--meta", "handoff.writer=" + binding["key"])["issues"]
-    if len(items) > 1:
-        raise ValueError("multiple cards claim this writer; reconcile before writing")
-    repo, branch = repository(root)
-    metadata = {"handoff.writer": binding["key"], "handoff.native": native,
-                "handoff.harness": binding["harness"], "handoff.host": socket.gethostname(),
-                "handoff.worktree": root, "handoff.repository": repo, "work.branch": branch,
-                "handoff.lifecycle": "active"}
-    refs = set(related)
-    if predecessor:
-        prior_record = kata(project, "show", predecessor)
-        prior = prior_record["issue"]
-        if (any(key.startswith("github") for key in prior.get("metadata", {})) or
-            not any(label.get("label") == "handoff" for label in prior_record.get("labels", []))):
-            raise ValueError("predecessor must be a native handoff card")
-        metadata["handoff.predecessor"] = prior["short_id"]
-        refs.add(prior["short_id"])
-    refs = {kata(project, "show", ref)["issue"]["short_id"] for ref in refs}
-    if items:
-        issue = kata(project, "show", items[0]["short_id"])["issue"]
-        native_card(issue)
-        args = ["edit", issue["short_id"], "--body", body]
-        for ref in sorted(refs):
-            args += ["--related", ref]
-        kata(project, *args)
-        for key, value in metadata.items():
-            kata(project, "meta", "set", issue["short_id"], key, value)
-    else:
-        args = ["create", title, "--body", body, "--idempotency-key", "handoff-" + binding["key"], "--label", "handoff"]
-        for key, value in metadata.items():
-            args += ["--meta", key + "=" + value]
-        for label in labels:
-            args += ["--label", label]
-        for ref in sorted(refs):
-            args += ["--related", ref]
-        issue = kata(project, *args)["issue"]
-    record = kata(project, "show", issue["short_id"])
-    verified = record["issue"]
-    native_card(verified)
-    if (verified.get("body") != body or
-        any(verified.get("metadata", {}).get(key) != value for key, value in metadata.items()) or
-        not refs.issubset(related_refs(record))):
-        raise ValueError("native card readback differs from persisted handoff")
-    current()
-    proof = {"binding": binding, "card": verified["short_id"], "body_sha256": hashlib.sha256(body.encode()).hexdigest()}
-    write(cert, proof)
-    return {"card": verified["short_id"], "certificate": str(cert)}
+    try:
+        import fcntl
+    except ImportError as error:
+        raise ValueError("session persistence requires POSIX advisory locks") from error
+    with contained(root, str(cert) + ".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        current()
+        cert.unlink(missing_ok=True)
+        body = Path(body_file).read_text(encoding="utf-8").strip()
+        if not body:
+            raise ValueError("refusing an empty handoff body")
+        items = kata(project, "list", "--status", "all", "--limit", "0", "--meta", "handoff.writer=" + binding["key"])["issues"]
+        if len(items) > 1:
+            raise ValueError("multiple cards claim this writer; reconcile before writing")
+        repo, branch = repository(root)
+        metadata = {"handoff.writer": binding["key"], "handoff.native": native,
+                    "handoff.harness": binding["harness"], "handoff.host": socket.gethostname(),
+                    "handoff.worktree": root, "handoff.repository": repo, "work.branch": branch,
+                    "handoff.lifecycle": "active"}
+        refs = set(related)
+        if predecessor:
+            prior_record = kata(project, "show", predecessor)
+            prior = prior_record["issue"]
+            if (any(key.startswith("github") for key in prior.get("metadata", {})) or
+                not any(label.get("label") == "handoff" for label in prior_record.get("labels", []))):
+                raise ValueError("predecessor must be a native handoff card")
+            metadata["handoff.predecessor"] = prior["short_id"]
+            refs.add(prior["short_id"])
+        refs = {kata(project, "show", ref)["issue"]["short_id"] for ref in refs}
+        if items:
+            issue = kata(project, "show", items[0]["short_id"])["issue"]
+            native_card(issue)
+            args = ["edit", issue["short_id"], "--body", body]
+            for ref in sorted(refs):
+                args += ["--related", ref]
+            kata(project, *args)
+            for key, value in metadata.items():
+                kata(project, "meta", "set", issue["short_id"], key, value)
+        else:
+            args = ["create", title, "--body", body, "--idempotency-key", "handoff-" + binding["key"], "--label", "handoff"]
+            for key, value in metadata.items():
+                args += ["--meta", key + "=" + value]
+            for label in labels:
+                args += ["--label", label]
+            for ref in sorted(refs):
+                args += ["--related", ref]
+            issue = kata(project, *args)["issue"]
+        record = kata(project, "show", issue["short_id"])
+        verified = record["issue"]
+        native_card(verified)
+        if (verified.get("body") != body or
+            any(verified.get("metadata", {}).get(key) != value for key, value in metadata.items()) or
+            not refs.issubset(related_refs(record))):
+            raise ValueError("native card readback differs from persisted handoff")
+        current()
+        proof = {"binding": binding, "card": verified["short_id"], "body_sha256": hashlib.sha256(body.encode()).hexdigest()}
+        write(cert, proof)
+        return {"card": verified["short_id"], "certificate": str(cert)}
 
 
 def main():

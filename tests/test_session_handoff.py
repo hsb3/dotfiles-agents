@@ -1,6 +1,7 @@
 """Session certificates: native hook replay and local persistent tracker fixture."""
 import hashlib
 import json
+import multiprocessing
 import os
 from pathlib import Path
 import subprocess
@@ -43,10 +44,11 @@ class SessionHandoffTests(unittest.TestCase):
         with self.transcript.open("a") as f:
             f.write(json.dumps({"type": "response_item", "payload": {"type": kind, "call_id": call}}) + "\n")
 
-    def hook(self, event="PreCompact", call="call-a", trigger="manual"):
+    def hook(self, event="PreCompact", call="call-a", trigger="manual", command=None):
         result = subprocess.run([sys.executable, str(HOOK)], cwd=self.root, env=self.env,
             input=json.dumps({"hook_event_name": event, "session_id": "native-a", "cwd": str(self.root),
-                "tool_use_id": call, "trigger": trigger, "transcript_path": str(self.transcript)}),
+                "tool_use_id": call, "trigger": trigger, "transcript_path": str(self.transcript),
+                "tool_name": "Bash", "tool_input": {"command": command}}),
             text=True, capture_output=True)
         return json.loads(result.stdout) if result.stdout.strip() else {}
 
@@ -166,12 +168,38 @@ class SessionHandoffTests(unittest.TestCase):
         self.event("function_call", "call-a")
         self.hook("PreToolUse")
         self.event("function_call", "call-b")
-        self.assertEqual(self.hook("PreToolUse", "call-b")["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertNotEqual(self.hook("PreToolUse", "call-b").get("hookSpecificOutput", {}).get("permissionDecision"), "deny")
         with patch.dict(os.environ, self.env, clear=True), patch.object(session, "kata") as backend:
             with self.assertRaisesRegex(ValueError, "current sequential"):
                 session.persist(self.transaction(), "fixture", self.root / "body")
             backend.assert_not_called()
         self.assertFalse(self.cert.exists())
+
+    def test_parallel_ordinary_calls_proceed_uncertified(self):
+        self.seed()
+        original = self.transaction()
+        self.event("function_call", "call-a2")
+        self.event("function_call", "call-b")
+        payload = {"hook_event_name": "PreToolUse", "session_id": "native-a",
+                   "tool_use_id": "call-a2", "transcript_path": str(self.transcript)}
+        with patch.dict(os.environ, self.env, clear=True), patch.object(Path, "unlink", side_effect=PermissionError("denied")):
+            denied = session.hook(self.root, {"mode": "external", "stamp": ".state/handoff.stamp"}, payload)
+        self.assertEqual(denied["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertTrue(self.cert.exists())
+        for call in ("call-a2", "call-b"):
+            command = "printf ok"
+            result = self.hook("PreToolUse", call, command=command)
+            self.assertNotEqual(result.get("hookSpecificOutput", {}).get("permissionDecision"), "deny")
+            self.assertFalse(self.cert.exists())
+            command = result.get("hookSpecificOutput", {}).get("updatedInput", {}).get("command", command)
+            self.assertEqual(subprocess.check_output(["sh", "-c", command], text=True), "ok")
+        with patch.dict(os.environ, self.env, clear=True), patch.object(session, "kata") as backend:
+            with self.assertRaises(ValueError):
+                session.persist(original, "fixture", self.root / "body")
+            backend.assert_not_called()
+        self.event("function_call_output", "call-a2")
+        self.event("function_call_output", "call-b")
+        self.assertFalse(self.hook().get("continue", True))
 
     def test_delayed_helper_cannot_borrow_binding_after_its_parent_completed(self):
         self.event("function_call", "call-a")
@@ -257,3 +285,98 @@ class SessionHandoffTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.persist_fixture(predecessor="work")
         self.assertFalse(hasattr(self, "persisted_card"), "ordinary work card was accepted as predecessor")
+
+    @unittest.skipUnless(os.name == "posix", "POSIX helper protocol")
+    def test_delayed_backend_edit_cannot_outlive_newer_certification(self):
+        import fcntl
+        ctx = multiprocessing.get_context("fork")
+        events, release = ctx.Queue(), ctx.Event()
+        self.event("function_call", "call-a")
+        self.hook("PreToolUse")
+        original = self.transaction()
+        store = self.root / "backend.json"
+        store.write_text(json.dumps({"short_id": "own", "status": "open", "body": "seed",
+            "metadata": {"handoff.writer": session.read(self.binding)["key"]}}))
+        for name in ("A", "B"):
+            (self.root / name).write_text("body " + name)
+
+        def worker(name, transaction, call):
+            real_flock = fcntl.flock
+            def acquire(file, operation):
+                if name == "B": events.put("B_lock")
+                return real_flock(file, operation)
+            def backend(project, *args):
+                if args[0] == "edit" and name == "A":
+                    events.put("A_wait")
+                    if not release.wait(10): raise RuntimeError("A barrier timed out")
+                issue = json.loads(store.read_text())
+                if args[0] == "list": return {"issues": [issue]}
+                if args[0] == "edit":
+                    issue["body"] = args[args.index("--body") + 1]
+                if args[0] == "meta": issue["metadata"][args[3]] = args[4]
+                if args[0] in ("edit", "meta"): store.write_text(json.dumps(issue))
+                return {"issue": issue, "links": []}
+            try:
+                with patch.dict(os.environ, dict(self.env, ATELIER_TOOL_CALL_ID=call), clear=True), patch.object(session, "repository", return_value=("repo", "branch")), patch.object(session, "kata", side_effect=backend), patch.object(fcntl, "flock", side_effect=acquire):
+                    session.persist(transaction, "fixture", self.root / name)
+                events.put(name + "_done")
+            except Exception as error:
+                events.put(name + "_error:" + str(error))
+
+        a = ctx.Process(target=worker, args=("A", original, "call-a"))
+        b = None
+        try:
+            a.start()
+            self.assertEqual(events.get(timeout=10), "A_wait")
+            self.event("function_call_output", "call-a")
+            self.event("function_call", "call-b")
+            self.hook("PreToolUse", "call-b")
+            b = ctx.Process(target=worker, args=("B", self.transaction(), "call-b"))
+            b.start()
+            seen = [events.get(timeout=10)]
+            # With the lock B is waiting; without it B has already certified its body.
+            self.assertIn(seen[0], ("B_lock", "B_done"))
+            release.set()
+            while not any(s.startswith("A_error:") for s in seen) or "B_done" not in seen:
+                seen.append(events.get(timeout=10))
+            a.join(10); b.join(10)
+            self.assertFalse(a.is_alive() or b.is_alive())
+            self.event("function_call_output", "call-b")
+            with patch.dict(os.environ, self.env, clear=True):
+                session.check(self.root, {"mode": "external", "stamp": ".state/handoff.stamp"},
+                              {"session_id": "native-a", "transcript_path": str(self.transcript)}, 30)
+            actual = json.loads(store.read_text())["body"]
+            self.assertEqual(actual, "body B", "accepted B certificate survived a stale A backend overwrite")
+            self.assertEqual(session.read(self.cert)["body_sha256"], hashlib.sha256(actual.encode()).hexdigest())
+        finally:
+            release.set()
+            for process in (a, b):
+                if process is not None and process.pid is not None:
+                    if process.is_alive(): process.terminate()
+                    process.join(10)
+            events.close()
+
+    @unittest.skipUnless(os.name == "posix", "POSIX helper protocol")
+    def test_distinct_writers_use_distinct_helper_locks(self):
+        import fcntl
+        acquired = []
+        real_flock = fcntl.flock
+        def observe(file, operation):
+            acquired.append(Path(file.name))
+            return real_flock(file, operation)
+        with patch.object(fcntl, "flock", side_effect=observe):
+            self.persist_fixture()
+            self.transcript.write_text("")
+            self.env["ATELIER_WRITER_ID"] = "writer-b"
+            self.cert, self.binding, _ = session.paths(self.root,
+                {"mode": "external", "stamp": ".state/handoff.stamp"}, "codex", "writer-b", "native-a")
+            self.persist_fixture()
+        self.assertEqual(len(acquired), 2)
+        self.assertEqual(acquired[0].parent, acquired[1].parent)
+        self.assertNotEqual(acquired[0], acquired[1])
+
+    def test_unavailable_os_lock_never_runs_unlocked(self):
+        with patch.dict(sys.modules, {"fcntl": None}):
+            with self.assertRaisesRegex(ValueError, "POSIX advisory locks"):
+                self.persist_fixture()
+        self.assertFalse(hasattr(self, "persisted_card"))
