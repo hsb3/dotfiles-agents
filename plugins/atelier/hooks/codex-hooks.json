@@ -41,6 +41,17 @@
       {
         "hooks": [
           {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff-freshness-guard/hook.py\"",
+            "statusMessage": "Checking handoff freshness...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
             "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/comment-hygiene-gate/hook.py\"",
             "statusMessage": "Checking comment hygiene...",
             "timeout": 15,

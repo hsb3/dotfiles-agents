@@ -95,13 +95,20 @@ open task was carried over; a migrated issue carries the old number in `kaneo_ta
 metadata (`kata list --meta kaneo_task_number=<N>`), and the `kaneo-status:up-next` label marks
 what sat in the owner's queue at cutover.
 
-**The session handoff is a board issue too**: `4w08` (title "Session Handoff", label
+**The project bridge is a board issue too**: `4w08` (title "Session Handoff", label
 `handoff`). It is a **native** card with no GitHub mirror, deliberately — it replaced mirror
 card `8xyk` on 2026-09-08 because the sync owns a mirror's body and reverted the handoff
 whenever GitHub #329 changed (demonstrated live: closing that issue wiped the card's body and
 priority, and closed the card). `8xyk` and #329 are both closed; do not resurrect either.
-Read it at session start; at session end rewrite its
-**body** in place under the `handoff` skill's content rules. **No handoff file is tracked in this
+Read it at session start. The lead owns its **body** under the `handoff` skill's content rules.
+Concurrent independent Codex sessions use opt-in external `scope: session`, one native handoff card
+and derived certificate per launch/native identity; they never overwrite the bridge. Each
+replacement process gets a fresh `ATELIER_WRITER_ID` and links its predecessor. Read the bridge,
+own/predecessor card and all relevant open `handoff` cards; flag unknown relevance and conflicts.
+Use the hook-bound persistence helper last: it invalidates before writing, verifies readback,
+then certifies. Every tool invalidates; manual compaction consumes certification once. Never
+automatically delete or close cards. Legacy project scope remains supported until explicitly
+enabled; this change does not modify live configuration or stamps. **No handoff file is tracked in this
 tree, and there is no handoff branch — never create either.**
 
 `handoff-freshness-guard` knows this via the `handoff: {mode: external, …}` block in

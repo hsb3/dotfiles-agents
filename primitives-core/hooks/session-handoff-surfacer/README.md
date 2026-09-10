@@ -1,5 +1,10 @@
 # session-handoff-surfacer
 
+In opt-in external `scope: session`, startup and resume surface the lead bridge, writer key
+and native binding path. The handoff skill reads own/predecessor and relevant peer cards;
+the surfacer never rewrites or merges their bodies. Missing identity reports unsupported mode.
+Legacy project-scope source filtering remains unchanged.
+
 Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
 fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
 use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.

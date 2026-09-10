@@ -1,5 +1,12 @@
 # handoff-freshness-guard
 
+Opt-in external `handoff.scope: session` also runs on every `PreToolUse`: the native hook
+binds launch and session identity to the current transaction and invalidates only its certificate.
+Codex manual compaction requires the latest completed native tool in the runtime transcript,
+then consumes certification. Failed invalidation cannot reuse an older transcript epoch.
+Errors refuse manual compaction in session mode; auto remains advisory. See the
+[handoff workflow](../../skills/handoff/SKILL.md#opt-in-concurrent-sessions) for supported identities.
+
 Activation location follows the [shared selection rules](../../skills/activation/SKILL.md):
 fresh Codex projects use `.codex/atelier.local.md`; Claude Code and Codex legacy fallback
 use `.claude/atelier.local.md`. Explicit overrides win; policies are never merged.

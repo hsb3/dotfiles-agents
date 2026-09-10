@@ -9,6 +9,20 @@ lab.
 
 Delegation separates the required model tier from how each harness configures it.
 
+Atelier 0.35.0's opt-in external `handoff.scope: session` uses a native card and consumable certificate per
+launch/native identity. Codex requires trusted before-tool and compaction hooks; the current
+shell receives an immutable transaction binding. Every tool invalidates certification, and
+parallel or delayed helpers cannot certify another call.
+Ordinary parallel tools proceed uncertified when their certificate is safely invalidated;
+only the final persistence helper requires a sequential transaction.
+Per-writer POSIX advisory locking serializes helpers through backend readback and publication;
+hooks do not acquire it. Platforms without this locking support cannot certify.
+The helper verifies body, repository, work and predecessor links; `discover` scans all open
+handoffs before paginating its display.
+Claude session certification remains unsupported; ordinary tools remain usable and manual
+compaction refuses. OpenCode session certification is deferred; its native compaction hook
+remains advisory. Existing project/file handoffs keep their legacy behavior.
+
 ## How it fits together
 
 One loop. `delegation` routes the work, the agents do it, and each hook fires at a fixed

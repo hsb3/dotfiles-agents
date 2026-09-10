@@ -98,6 +98,68 @@ worktrees must read/write the handoff via the MAIN checkout's absolute path.
 
 ## Default invocation - the update pass
 
+### Opt-in concurrent sessions
+
+For supported Codex sessions, when the external `handoff:` mapping declares `scope: session`, use separate native
+cards and certificates. The configured `location` remains the lead-owned project bridge;
+never rewrite it from a concurrent session. Legacy configurations without this scope keep
+the update pass below.
+
+Launch each dedicated runtime with a fresh `ATELIER_WRITER_ID`, including every independent
+resume. Generate it once for that launch with `python3 -c 'import uuid; print(uuid.uuid4())'`.
+For Codex, pass the same value in the process environment and
+`-c 'shell_environment_policy.set.ATELIER_WRITER_ID="<fresh value>"'`.
+Clients attached to one runtime/session are the same writer. Independent attached-client
+identity is unsupported. Session certification currently supports Codex only. Claude Code
+transport and OpenCode's current-compaction attribution are unproven or insufficient; session
+mode is unsupported there. Do not substitute a shared stamp or guessed identity. OpenCode
+keeps its legacy project handoff behavior; its native compaction hook is advisory, not a session
+certificate gate.
+
+Persistence helpers serialize per launch/native writer with POSIX advisory locks, from current
+transaction validation through backend readback and certificate publication. Hooks never take
+that lock: ordinary parallel tools proceed after safe invalidation, without certification.
+Platforms without POSIX locking fail clearly instead of running the helper unlocked.
+Process exit releases the lock; leave its file in place while helpers may still be running.
+
+1. Read the bridge and your own or explicitly named predecessor card. Run the helper's
+   `discover --project <project> --root <checkout> --related <work-card>` command. It scans
+   every open handoff and its relationships before displaying a page, retaining unknown
+   relevance and flagging possible overlapping work. Repeat the same command with the
+   returned `--offset` and `--page-size` until `remaining` is zero. Read relevant and unknown
+   bodies; reconcile conflicts explicitly. Discovery is a scan, not a lock on other writers.
+2. Write the updated body to a temporary file. Include repository identity, branch/worktree,
+   related work, predecessor, decisions and unresolved work. Wait for all independent tools
+   and writers to finish before certification; never run the final tool in parallel.
+3. Use the native hook's `ATELIER_HANDOFF_BINDING` and `ATELIER_TOOL_CALL_ID`, injected into
+   the current shell call. Never select a latest binding from disk or override these values.
+   Run `python3 <handoff-helper> persist --project
+   <project> --body-file <body-file> --title <meaningful-title> --label <area-label> --label
+   <type-label> --related <work-card>` as the final tool. Add `--predecessor <card>` for a new
+   incarnation. The helper invalidates, checks hook/tool identity, finds or creates your native
+   card, writes and reads back its body, then certifies only the current transaction.
+   The checkout must have an `origin` remote; metadata and work/predecessor relations are
+   verified alongside the body. Kata trims surrounding body whitespace; interior text must
+   match exactly. Per-tool transaction files are local disposable state, never board records.
+
+<!-- harness:claude-code -->
+The helper is `<atelier-hooks>/_lib/session_handoff.py`. Native Codex Bash hooks inject
+the current transaction through `updatedInput`; an unregistered hook cannot certify.
+<!-- /harness -->
+4. Any helper, invalidation, readback or publication failure means stop compaction. Every
+   native tool, including a read-only one, invalidates certification. Manual compaction checks
+   the latest completed native transaction and consumes its certificate once; automatic
+   compaction remains nonblocking. Missing identity or runtime evidence never falls back.
+5. Never delete, purge, or close handoff cards automatically. Close only after successor
+   acknowledgement or verified completion reconciled into the lead bridge. Keep unknown or
+   abandoned sessions visible for lead review. A sibling's stale certificate does not block yours.
+
+Session certificates and binding files are local ignored runtime state derived from the
+configured stamp under the current worktree. They are never inherited from the main checkout
+or another machine. A replacement process owns a new card; its predecessor preserves continuity.
+
+### Legacy project scope
+
 1. Read the existing handoff in full.
 2. Diff it against THIS session's reality:
    - what shipped / changed (with PR & issue refs, absolute dates)
