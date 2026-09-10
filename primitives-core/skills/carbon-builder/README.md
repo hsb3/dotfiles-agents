@@ -42,7 +42,7 @@ the same for every consumer, and carries no credential.
 ## Attribution
 
 The `base/` directory is the **`carbon-builder` skill** from IBM's Carbon MCP project,
-vendored verbatim; `references/carbon-llms.txt` is the same repo's `public/llms.txt`:
+vendored verbatim:
 
 - Source: <https://github.com/carbon-design-system/carbon-mcp>, path
   `public/skills/carbon-builder`
@@ -50,6 +50,18 @@ vendored verbatim; `references/carbon-llms.txt` is the same repo's `public/llms.
 - License: Apache-2.0, declared by the author in the skill's own frontmatter (the
   upstream repo ships no LICENSE file) — the canonical Apache-2.0 text is included here
   as `LICENSE` to satisfy that declaration's redistribution terms.
+
+The public-docs references have a separate licensed source:
+
+- Source: [carbon-website at `996791935ba9edc7977fc12d7b16548181402c14`](https://github.com/carbon-design-system/carbon-website/tree/996791935ba9edc7977fc12d7b16548181402c14).
+- `references/carbon-llms.txt` is byte-identical to that revision's `static/llms.txt`
+  (also copied as `public/llms.txt` in carbon-mcp at the pin above).
+- `references/prompting.md` condenses `src/pages/developing/carbon-mcp/prompts.mdx`;
+  examples and explanatory sections are omitted and guidance is reorganized.
+- Copyright 2018 IBM Corp. Apache-2.0, under the website's
+  [LICENSE](https://github.com/carbon-design-system/carbon-website/blob/996791935ba9edc7977fc12d7b16548181402c14/LICENSE).
+  The full terms accompany this skill in its `LICENSE` file. No upstream NOTICE
+  file exists at this website revision. These terms do not imply IBM endorsement.
 
 Do not edit `base/` — update the pin instead (a new ref, re-vendored verbatim). A
 hand-edit there registers as `diverged` against the pinned ref and fails the
