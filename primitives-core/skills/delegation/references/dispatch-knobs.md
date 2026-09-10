@@ -154,6 +154,13 @@ model in the child's start evidence. Never replace a reviewer with a builder to 
 model. The model catalog records API windows; use measured Codex session context limits for
 context budgeting.
 
+Atelier's execution leaves (`scout`, `builder`, `reviewer`, and `code-reviewer`) set only
+`[features] apps = false` and `[skills] include_instructions = false`: their caller supplies the
+needed skill and reference paths, while the profile omits the automatic skill catalog and hosted
+`codex_apps` connectors. Codex's generic profile schema has no declarative per-role suppression
+for other capabilities; do not add inert `mcp_servers`, `plugins.<id>`, or `web_search` settings.
+Do not set `plugins = false`: Atelier's plugin hooks provide custody and worktree isolation.
+
 **Dispatch through the native tool the session exposes.** On `spawn_agent`, set `agent_type`
 to the native role, `fork_context: false`, and supply the curated brief as `message`. On
 `collaboration.spawn_agent`, set `agent_type` to the same role, a unique `task_name`,

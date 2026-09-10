@@ -37,6 +37,28 @@ class CodexRoles(unittest.TestCase):
                 self.assertNotIn("model: opus", body)
                 self.assertIn("role", body)
 
+    def test_only_atelier_leaf_profiles_disable_apps_and_skill_instructions(self):
+        leaves = ("scout", "builder", "reviewer", "code-reviewer")
+        sentence = "Caller supplies needed skill and reference absolute paths; missing capability goes back to manager, don't guess."
+        for role in leaves:
+            with self.subTest(role=role):
+                profile = tomllib.loads(roles.render(role))
+                self.assertEqual(profile["features"], {"apps": False})
+                self.assertEqual(profile["skills"], {"include_instructions": False})
+                self.assertIn(sentence, profile["developer_instructions"])
+
+        manager = tomllib.loads(roles.render("manager"))
+        self.assertNotIn("features", manager)
+        self.assertNotIn("skills", manager)
+        self.assertNotIn(sentence, manager["developer_instructions"])
+        for package_name in ("code-desk", "pocketbase"):
+            package = ROOT / "plugins" / package_name
+            for role in roles.roles(package):
+                with self.subTest(package=package_name, role=role):
+                    profile = tomllib.loads(roles.render(role, package))
+                    self.assertNotIn("features", profile)
+                    self.assertNotIn("skills", profile)
+
     def test_setup_check_refresh_and_modified_collision_are_ownership_safe(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp).resolve() / "consumer"

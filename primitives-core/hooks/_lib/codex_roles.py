@@ -13,6 +13,7 @@ import tomllib
 import model_tiers
 
 ROLES = ("builder", "code-reviewer", "manager", "reviewer", "scout")
+LEAF_ROLES = frozenset(("builder", "code-reviewer", "reviewer", "scout"))
 PACKAGE = Path(__file__).resolve().parents[2]
 HARNESS_BLOCK = re.compile(r"^[ \t]*<!-- harness:[^\n]+ -->\n.*?^[ \t]*<!-- /harness -->\n?",
                            re.MULTILINE | re.DOTALL)
@@ -62,6 +63,10 @@ def _managed(plugin_root=None):
     return "# " + package_id(plugin_root) + " managed sha256="
 
 
+def _is_atelier_leaf(role, plugin_root=None):
+    return package_id(plugin_root) == "atelier" and _role(role, plugin_root) in LEAF_ROLES
+
+
 def _source(role, plugin_root):
     text = (Path(plugin_root or PACKAGE) / "agents" / f"{_role(role, plugin_root)}.md").read_text()
     if not text.startswith("---\n"):
@@ -94,7 +99,10 @@ def role_instructions(role, plugin_root=None):
     location = (f"Atelier package: {package}. Resolve companion skills beneath its skills/ directory; "
                 "bare delegation reference filenames (including waiting.md) live in "
                 "skills/delegation/references/. Read them from this package, not the consumer tree.")
-    return HARNESS_BLOCK.sub("", body).strip() + "\n\n" + location + "\n\n" + procedures + "\n"
+    instructions = HARNESS_BLOCK.sub("", body).strip() + "\n\n" + location + "\n\n" + procedures
+    if _is_atelier_leaf(role, plugin_root):
+        instructions += "\n\nCaller supplies needed skill and reference absolute paths; missing capability goes back to manager, don't guess."
+    return instructions + "\n"
 
 
 def render(role, plugin_root=None):
@@ -112,6 +120,8 @@ def render(role, plugin_root=None):
               "developer_instructions": role_instructions(role, plugin_root)}
     body = "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n"
                    for key, value in values.items())
+    if _is_atelier_leaf(role, plugin_root):
+        body += "\n[features]\napps = false\n\n[skills]\ninclude_instructions = false\n"
     return _managed(plugin_root) + hashlib.sha256(body.encode()).hexdigest() + "\n" + body
 
 
