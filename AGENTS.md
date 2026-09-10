@@ -135,11 +135,13 @@ start, in order:
    **could not measure** is not a clean board: it names which failure it hit (no `kata` binary,
    unreachable daemon, missing declaration) and nothing was checked. Read the hook's line; run
    step 4 only when it reports findings.
-4. The board-triage kata adapter, **only if step 3 exited non-zero**. Re-run step 3 after to
-   confirm the pass took.
+4. The board-desk plugin's board-triage kata adapter, **only if step 3 exited non-zero**.
+   Re-run step 3 after to confirm the pass took.
 5. `make board-reconcile` — GitHub issues against the board (see below).
 
-Steps 1–2 ship in the kata plugin
+Board-desk owns board-triage (health, adapters and reconciliation) and task-authoring.
+Planning-desk stays in mise-en-place; waves stays in atelier.
+Steps 1–2 ship in the separately installed kata plugin from `hsb3/kata-oversight`
 (`~/.claude/plugins/cache/kata-oversight/kata/<version>/skills/kata-audit/scripts/`).
 Findings to fix: `title-long`, `no-acceptance`, `prose-dep` (add the edge, or reword if it is
 not a real prerequisite), `no-priority` (the frozen kaneo children under `my1a` may stay blank).
@@ -162,8 +164,9 @@ instead of it — add one only when a genuine new domain appears, never for a si
 labels do NOT propagate to GitHub, and GitHub's own closed set (decision-016) is a *subset* of
 the core: the board-only names never reach the repo. `make labels` proves it.
 
-**Step 5 — the GitHub reconcile** (owner ruling 2026-09-08). `scripts/reconcile_github.py`
-classifies every open GitHub issue against the board and is dry-run by default; `APPLY=1 make
+**Step 5 — the GitHub reconcile** (owner ruling 2026-09-08). Board-desk ships
+`primitives-core/skills/board-triage/scripts/reconcile_github.py`, which
+classifies open GitHub issues against the board and is dry-run by default; `APPLY=1 make
 board-reconcile` executes.
 
 | class | meaning | action |

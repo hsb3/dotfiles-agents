@@ -87,6 +87,17 @@ and says so in the report** rather than quietly omitted, and a skip never affect
 `scripts/check_labels.py`'s `VOCABULARY` constant in this repo is exactly the kind of declaration
 it consumes — a closed set someone chose, not a set the board accumulated.
 
+## Reconcile GitHub mirrors
+
+`scripts/reconcile_github.py [--project <name>] [--apply]` compares the selected Kata
+project with the GitHub repository selected by `gh` in the consuming checkout. Omit
+`--project` to use Kata's normal checkout selection. Run against the repository that
+project imports. Dry-run reports tracked, stale and untracked issues; only `--apply`
+closes stale mirrors. It never creates cards or issues. Reverse drift is informational.
+GitHub reads are capped at 500 issues per state; larger repositories need a pagination
+change before this can serve as a complete sweep. The Kata adapter reference documents
+the separate kata plugin required for wiring and per-card definition audits.
+
 ## When it triggers
 
 Use it to "run board triage", "triage the backlog", "prioritize the issues", "rank the
@@ -96,10 +107,10 @@ prioritization and roadmap views become useful instead of drifting into noise.
 ## Install
 
 ```
-claude plugin install code-desk@dotfiles-agents
+claude plugin install board-desk@dotfiles-agents
 ```
 
-Ships in the `code-desk` bundle. Every adapter is self-contained — no second plugin to
+Ships in the `board-desk` bundle. Every adapter is self-contained — no second plugin to
 install. What each one needs is the backend's own client: the GitHub Projects adapter wants
 `gh` authenticated with `project` scope (`gh auth refresh -s project`), the Kata adapter
 wants the `kata` binary pointed at the right daemon. Each adapter says so at the

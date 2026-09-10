@@ -16,8 +16,10 @@ an agent.
 ## Install
 
 ```
+claude plugin install board-desk@dotfiles-agents
+# Or, for the planning desk and its required authoring standard:
 claude plugin install mise-en-place@dotfiles-agents
 ```
 
-Ships inside `mise-en-place`, whose planning desk delegates the item-body form to it rather
-than restating it. The doctrine itself is tracker-agnostic and needs no configuration.
+Ships primarily in `board-desk`, and also in `mise-en-place` because its planning desk
+requires this item-body standard. Enabling both plugins lists the same skill twice. The doctrine itself is tracker-agnostic and needs no configuration.

@@ -4,6 +4,15 @@ title: retired primitives are sunset by decision record, tag, and deletion (appl
 date: '2026-09-08'
 status: accepted
 ---
+**Amended 2026-09-08:** After the Kaneo retirement, PR #509 placed task-authoring
+in mise-en-place and PR #515 removed its remaining solo-skills membership. The statement
+below that solo-skills is its only home describes the retirement baseline. Decision-024
+separately establishes board-desk as its new topical home; it is not the #509/#515 move.
+
+**Implementation note 2026-09-10:** Decision-024 makes board-desk the topical home
+while retaining mise-en-place's task-authoring membership for its planning-desk dependency.
+The shared source is unchanged; enabling both plugins can list the skill twice.
+
 ## Context
 
 This repo has retired shipped units before — the vendored pptx base (decision-018) and
