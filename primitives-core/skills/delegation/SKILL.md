@@ -54,8 +54,8 @@ The tools are `Agent` and `SendMessage`.
 
 ### Strategy — `strategist`
 
-The session itself, never a spawned agent. It pins no model — the model in the seat stays the
-effort signal (Step 0).
+The root session itself, never a spawned agent. It uses the frontier tier; planning effort is
+selected independently (Step 0).
 
 <!-- harness:claude-code -->
 The role noun exists because other harnesses let the primary agent be set as a named profile;

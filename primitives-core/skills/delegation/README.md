@@ -149,3 +149,7 @@ multiple agents; setup migrates identical policies safely and runtime reads stay
 Codex dispatch setup uses activation `codex-setup` followed by `check --harness codex`.
 Current managed global roles avoid redundant local profiles; explicitly refresh stale globals
 with `codex-setup --refresh-global`, so profile currency and policy placement stay consistent.
+Codex leaf profiles suppress the automatic skill catalog and hosted Apps connectors; the caller
+supplies required reference paths. Manager discovery and plugin safeguards remain enabled.
+
+The root strategist uses frontier in either planning effort mode; the model does not select effort.
