@@ -144,9 +144,12 @@ the edits, producing the evidence. Also **independence** — the differential an
 worth something only because these agents cannot see each other, and that property is destroyed
 the moment the work moves up into a context that already knows the answer.
 
-**Context it needs:** the brief, written for an agent with **zero chat context**. Repo path, exact
-objective, owned files, read-only config, evidence format, verification commands, stop conditions
-(`references/briefs.md`).
+**Context it needs:** a curated brief written for an agent with **zero chat history**: repo path,
+exact objective, owned files, read-only config, evidence format, verification commands, stop
+conditions, and only the minimum relevant references and tools (`references/briefs.md`). Decompose
+until a leaf coding scope is simple; do not give a worker a highway-system pre-read. A short prompt
+does not prove a short inherited startup footprint — measure that footprint before treating it as
+small.
 
 **Context it must never be given** — the negative list, which held across every round of the lab
 `[lab]`: cycle budgets, remaining passes, or the fact that a later pass exists; rubric scores or
@@ -470,7 +473,8 @@ has been measured.
 The tier vocabulary is **`light` / `mid` / `heavy`** — semantic bands, deliberately not model
 names, so the same words survive a provider change. Role defaults: scout=light; builder and
 `code-reviewer`=mid; reviewer and manager=heavy. Which concrete model a band buys is a harness
-question, never an agent's.
+question, never an agent's. For each simple leaf, choose the least costly capable tier; decompose
+before escalating a worker to compensate for an oversized scope.
 
 <!-- harness:claude-code -->
 **Tier is a dispatch-time decision, not an agent choice.** Here a band renders to one of Claude
@@ -556,7 +560,7 @@ termination:
 
 ## Context hygiene
 
-`context-watermark` is an advisory trajectory signal, never a stop command. Its three stages are:
+The three-stage advisory policy for managing context is never a stop command:
 
 - **Notice:** reduce further reads and avoid taking on new broad work.
 - **Soft:** checkpoint at the next safe boundary; a genuinely small, bounded current slice may
@@ -570,7 +574,13 @@ checkpoint plus a fresh continuation is the default. Use self-handoff only when 
 proved the exact continuation route; do not pretend that compaction or a resume message works
 where it has not been verified. `references/waiting.md` carries the continuity rule.
 
-These tier-aware defaults are tunable, unmeasured policy defaults, not performance facts:
+Prefer a handoff plus a fresh session over an unverified compaction route. Treat a ≥10-minute idle
+or messy debugging as a useful checkpoint opportunity, and downtier only demonstrably simple work
+with a strict DoD; see `references/tier-cutoff.md`.
+
+<!-- harness:claude-code -->
+Here, `context-watermark` emits the three advisory stages. These tier-aware defaults are tunable,
+unmeasured policy defaults, not performance facts:
 
 | Tier | Notice | Soft | Hard |
 | --- | ---: | ---: | ---: |
@@ -583,11 +593,6 @@ for hard. Unknown models use the conservative heavy defaults. Explicit soft and 
 their existing precedence. Notice is an optional override through that same convention; if absent,
 derive it at or below soft (half the resolved soft value is a reasonable default).
 
-Prefer a handoff plus a fresh session over an unverified compaction route. Treat a ≥10-minute idle
-or messy debugging as a useful checkpoint opportunity, and downtier only demonstrably simple work
-with a strict DoD; see `references/tier-cutoff.md`.
-
-<!-- harness:claude-code -->
 Here, `CONTEXT_WATERMARK_NOTICE`, `_SOFT`, and `_HARD`, then `watermark.notice`, `.soft`, and
 `.hard` in the selected activation file, use the existing override precedence: explicit env beats
 activation policy beats computed tier default. A missing notice derives from resolved soft and
