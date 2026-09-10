@@ -434,14 +434,14 @@ def evaluate(project_dir, modules):
     elif not thresholds:
         result["rows"].append(_row(
             "watermark", "inert",
-            "written, but no usable soft/hard/complexity value - the sub-keys are "
+            "written, but no usable notice/soft/hard/complexity value - the sub-keys are "
             "missing, blank, or not positive numbers, so every tier stays computed",
             ["context-watermark"]))
     else:
         result["rows"].append(_row(
             "watermark", "armed",
             ", ".join("{0}={1}".format(k, thresholds[k])
-                      for k in ("soft", "hard", "complexity") if k in thresholds),
+                      for k in ("notice", "soft", "hard", "complexity") if k in thresholds),
             ["context-watermark"]))
 
     # -- effort (no hook) ---------------------------------------------------

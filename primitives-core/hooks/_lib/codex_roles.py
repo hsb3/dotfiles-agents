@@ -130,6 +130,8 @@ def _changes(directory, plugin_root, selected=None, strict_declarations=False):
             declared = tomllib.loads(path.read_text()).get("name")
         except tomllib.TOMLDecodeError as exc:
             raise ValueError(f"invalid profile: {path}") from exc
+        if declared is not None and not isinstance(declared, str):
+            raise ValueError(f"invalid profile name: {path}")
         if declared in names and (strict_declarations or
                                   declared.removeprefix(package_id(plugin_root) + "-") in selected):
             canonical = directory / f"{declared}.toml"

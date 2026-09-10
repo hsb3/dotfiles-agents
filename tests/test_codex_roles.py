@@ -153,6 +153,7 @@ class CodexRoles(unittest.TestCase):
     def test_partial_global_profiles_are_validated_before_local_bootstrap(self):
         for name, content in [
                 ("custom.toml", "not toml"),
+                ("custom.toml", "name = []\n"),
                 ("custom.toml", 'name = "atelier-builder"\n'),
                 ("atelier-builder.toml", "# atelier managed sha256=wrong\n")]:
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
