@@ -237,35 +237,16 @@ calls with no delegation is the line** — calibrated between the clusters, not 
 which floor item this stretch is. The `delegation-watermark` hook counts the run and says so
 without being asked.
 
-## Step 0 — Determine the effort level
+## Step 0 — Assign the tier
 
-The model in the session's strategist seat IS the effort signal.
-
-| Session model | Level | Meaning |
-| --- | --- | --- |
-| The everyday strategist model, or anything below it | `standard` | The default — everyday delegation work |
-| A model deliberately above it | `deep` | A problem hard enough to justify the most expensive seat available |
-
-<!-- harness:claude-code -->
-Concretely here: Opus or below is `standard`; Fable is `deep`.
-<!-- /harness -->
-
-Overrides, highest wins: the user says so; or an `effort:` key in the frontmatter of
-`atelier.local.md` (check for it; absence is normal — `references/activation.md` has the path).
-State the level in effect when proposing an architecture.
-
-At **`deep`**, the session's tokens cost roughly 2× the standard seat's, and a deep-tier
-strategist measures at ~80–100k tokens just to get grounded plus ~50–100k to drive the work — past the context watermark before real work starts
-`[cost]`. So: **never self-ground** (dispatch it, read the report, not the tree); **never collapse
-management on a building wave** (collapse condition 3 binds hardest when the strategist's tokens
-are the most expensive in the system, which puts C out of reach, though a scout wave returning
-conclusions is still fine); **verify in layers by default**, one `reviewer` on every
-plan-changing claim; **run one `reviewer` over every judgment-heavy link**, not just plan-changing
-ones.
+Use four semantic bands. **Frontier is reserved for the root strategist**; never dispatch it to a
+manager, builder, scout, or reviewer. Heavy buys manager work and judgment-heavy review, mid buys
+bounded coding, and light buys read-only reconnaissance. Decompose a difficult coding link before
+trying to compensate with a frontier worker. The current mappings are frontier=Astra/Fable,
+heavy=Sol/Opus, mid=Terra/Sonnet, and light=Luna/Haiku.
 
 <!-- harness:claude-code -->
-At `deep`, also **override builders to opus** more liberally — the per-dispatch `model` knob is
-the cheapest way to buy judgment on a link the strategist cannot afford to take itself.
+Here the concrete mapping is frontier=`Fable`, heavy=`Opus`, mid=`Sonnet`, and light=`Haiku`.
 <!-- /harness -->
 
 ## Step 1 — Size the job on four axes
@@ -470,21 +451,21 @@ the premium tier for every model-bearing call and never exercised the cheaper ti
 `references/tier-cutoff.md` is the protocol for measuring the cutoff and the record of how far it
 has been measured.
 
-The tier vocabulary is **`light` / `mid` / `heavy`** — semantic bands, deliberately not model
-names, so the same words survive a provider change. Role defaults: scout=light; builder and
-`code-reviewer`=mid; reviewer and manager=heavy. Which concrete model a band buys is a harness
-question, never an agent's. For each simple leaf, choose the least costly capable tier; decompose
-before escalating a worker to compensate for an oversized scope.
+The tier vocabulary is **`frontier` / `heavy` / `mid` / `light`** — semantic bands, deliberately
+not model names, so the same words survive a provider change. Frontier is the root strategist
+only; manager and judgment-heavy reviewer=heavy; builder and `code-reviewer`=mid; scout=light.
+Which concrete model a band buys is a harness question, never an agent's. For each simple leaf,
+choose the least costly capable tier; decompose before escalating a worker to compensate for an
+oversized scope.
 
 <!-- harness:claude-code -->
-**Tier is a dispatch-time decision, not an agent choice.** Here a band renders to one of Claude
-Code's frontmatter keywords — light=`haiku` (with `effort: low`), mid=`sonnet`, heavy=`opus` — and
-that rendering lives in `hooks/_lib/model_catalog.json`, not in any agent file. The strategist is
-the session itself (Opus at `standard`, Fable at `deep`). Override at dispatch by naming the
-keyword the band you want renders to: `model: sonnet` on a scout for cross-file synthesis,
-`model: opus` on a builder for a judgment-heavy slice. Reviewer and manager are not downtiered —
-verification is where the premium pays. Pass `model:` on the Agent call only when the slice
-demonstrably needs the judgment.
+**Tier is a dispatch-time decision, not an agent choice.** Here a band renders to Claude Code's
+frontmatter keywords — frontier=`fable`, heavy=`opus`, mid=`sonnet`, light=`haiku` (with
+`effort: low`) — and that rendering lives in `hooks/_lib/model_catalog.json`, not in any agent
+file. The strategist is the frontier session; frontier is not a worker override. Use mid for
+bounded coding and heavy for a manager or judgment-heavy review. A reviewer or manager needing the
+premium remains heavy; a coding slice that seems to need frontier is oversized and must be
+decomposed.
 <!-- /harness -->
 
 Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent
@@ -584,12 +565,13 @@ unmeasured policy defaults, not performance facts:
 
 | Tier | Notice | Soft | Hard |
 | --- | ---: | ---: | ---: |
-| heavy | 60k | 120k | 160k |
+| frontier | 60k | 120k | 160k |
+| heavy | 96k | 192k | 256k |
 | mid | 120k | 240k | 320k |
 | light | 160k | 320k | 480k |
 
 Protect a model's actual context window with caps of roughly 30% for notice, 60% for soft, and 80%
-for hard. Unknown models use the conservative heavy defaults. Explicit soft and hard overrides keep
+for hard. Unknown models use the conservative frontier defaults. Explicit soft and hard overrides keep
 their existing precedence. Notice is an optional override through that same convention; if absent,
 derive it at or below soft (half the resolved soft value is a reasonable default).
 

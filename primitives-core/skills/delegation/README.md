@@ -24,9 +24,9 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   committed as it lands.
 - **Execution — `scout`, `builder`, `reviewer`**, each working from a curated zero-history brief:
   only the minimum relevant project facts, references, and tools. The brief is decomposed to a
-  simple leaf and uses the least costly capable tier; measure inherited startup context rather than
-  inferring it from a short prompt. Context warnings, where a harness emits them, remain advisory
-  checkpoints with no automatic worktree mutation.
+  simple leaf and uses the least costly capable tier; frontier belongs only to the root strategist.
+  Measure inherited startup context rather than inferring it from a short prompt. Context warnings,
+  where a harness emits them, remain advisory checkpoints with no automatic worktree mutation.
 
 ## Sizing a brief
 
