@@ -139,13 +139,16 @@ def events(path, payload):
                 try:
                     item = json.loads(line)
                 except ValueError:
+                    model = effort = None
                     result.append(_event("malformed-json", occurrence, payload, meta, model, effort))
                     continue
                 if not isinstance(item, dict):
+                    model = effort = None
                     result.append(_event("malformed-json", occurrence, payload, meta, model, effort))
                     continue
                 if (isinstance(item.get("v"), int) and item["v"] > VERSION) or (
                         isinstance(item.get("schema_version"), int) and item["schema_version"] > VERSION):
+                    model = effort = None
                     result.append(_event("unsupported-future-schema", occurrence, payload, meta, model, effort))
                     continue
                 body = item.get("payload")

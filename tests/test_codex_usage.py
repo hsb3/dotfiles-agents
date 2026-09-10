@@ -93,6 +93,15 @@ class UsageTests(unittest.TestCase):
         rows = codex_usage.events(self.path, {"session_id": "root"})
         self.assertTrue(all(row["tokens"] is None for row in rows))
 
+    def test_unknown_record_invalidates_model_attribution(self):
+        for unknown in ({"v": 3, "type": "turn_context", "payload": {"model": "gpt-b"}}, []):
+            self.write({"type": "session_meta", "payload": {"id": "root"}},
+                       *self.count(100, "gpt-a"), unknown, *self.count(120))
+            row = codex_usage.events(self.path, {"session_id": "root"})[-1]
+            self.assertEqual(row["tokens"]["total"], 20)
+            self.assertIsNone(row["model"])
+            self.assertIsNone(row["effort"])
+
     def test_naive_timestamp_has_unknown_not_negative_timing(self):
         counter = self.count(100)[0]
         counter["timestamp"] = "2026-09-10T00:00:01"
