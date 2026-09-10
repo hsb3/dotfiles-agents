@@ -68,6 +68,14 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(codex_usage.events(self.path, {"session_id": "root"})[-1]["counter_state"],
                          "inherited-baseline-unknown")
 
+    def test_pre_start_baseline_is_quarantined_but_next_delta_is_exact(self):
+        first, second = self.count(100)[0], self.count(120)[0]
+        first["timestamp"], second["timestamp"] = "2026-09-10T00:00:01Z", "2026-09-10T00:00:11Z"
+        self.write(first, {"type": "session_meta", "payload": {"id": "root", "timestamp": "2026-09-10T00:00:10Z"}}, second)
+        rows = codex_usage.events(self.path, {"session_id": "root"})
+        self.assertEqual(rows[0]["counter_state"], "inherited-baseline-unknown")
+        self.assertEqual(rows[-1]["tokens"]["total"], 20)
+
     def test_late_conflicting_metadata_scrubs_earlier_counter(self):
         self.write({"type": "session_meta", "payload": {"id": "root"}},
                    *self.count(100), {"type": "session_meta", "payload": {"id": "other"}}, *self.count(200))

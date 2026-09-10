@@ -124,6 +124,12 @@ def events(path, payload):
             and isinstance(item["payload"].get("id"), str) and item["payload"]["id"]
         ]
         ownership_bad = len(set(identities)) != 1 or identities[0] != expected
+        canonical = next((
+            item["payload"] for item in objects
+            if item.get("type") == "session_meta" and isinstance(item.get("payload"), dict)
+            and item["payload"].get("id") == expected
+        ), {})
+        meta = canonical
         for occurrence, line in enumerate(lines):
                 try:
                     item = json.loads(line)
@@ -152,6 +158,8 @@ def events(path, payload):
                     before_start = _duration(meta.get("timestamp"), timestamp)
                     if ownership_bad or (before_start is not None and before_start < 0):
                         result.append(_event("inherited-baseline-unknown", occurrence, payload, meta, model, effort))
+                        if current is not None:
+                            prior = current
                     elif current is None:
                         result.append(_event("malformed-delta", occurrence, payload, meta, model, effort))
                     else:
