@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook start --source kata-agent-hook-start",
+            "commandWindows": "kata attention-hook start --source kata-agent-hook-start",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear"
+      },
+      {
+        "hooks": [
+          {
+            "command": "kata agent-contract-hook --source kata-agent-contract-hook",
+            "commandWindows": "kata agent-contract-hook --source kata-agent-contract-hook",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear|compact"
+      }
+    ]
+  }
+}
