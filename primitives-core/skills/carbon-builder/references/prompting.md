@@ -1,5 +1,9 @@
 # Prompting for Carbon codegen
 
+Modified from IBM's Carbon website guidance: condensed and reorganized, with examples
+and explanatory sections omitted. Copyright 2018 IBM Corp. Licensed under
+[Apache-2.0](../LICENSE). Source: [prompts.mdx at `996791935ba9edc7977fc12d7b16548181402c14`](https://github.com/carbon-design-system/carbon-website/blob/996791935ba9edc7977fc12d7b16548181402c14/src/pages/developing/carbon-mcp/prompts.mdx).
+
 IBM's prompt guidance for the Carbon MCP + carbon-builder pairing, distilled from
 <https://carbondesignsystem.com/developing/carbon-mcp/prompts/> (full sample prompts live
 there). Use it when writing a codegen brief — for a subagent, or shaping the user's ask.
