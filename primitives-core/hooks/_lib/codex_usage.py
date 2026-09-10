@@ -175,6 +175,9 @@ def events(path, payload):
                         if decreased:
                             segment += 1
                             result.append(_event("reset", occurrence, payload, meta, model, effort, segment=segment))
+                            if current["total"] >= prior["total"]:
+                                prior = current
+                                continue
                             prior = None
                         delta = current if prior is None else {key: current[key] - prior[key] for key in current}
                         if _counters({FIELDS[key]: delta[key] for key in delta}) is None:

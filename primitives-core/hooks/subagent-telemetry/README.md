@@ -140,8 +140,10 @@ v 2, schema codex-usage, and schema_version 2. Each token_count contributes
 one deterministic delta row: tokens holds input, cached_input, output,
 reasoning, and total increments, while cumulative_tokens holds the observed
 runtime counter. Cached input is a subset of input; reasoning is a subset of
-output. A reset emits an unknown reset marker plus an observed initial delta
-for the new segment. Counters are segmented on a reset, so a digest must sum tokens within
+output. A total-counter reset emits an unknown reset marker plus an observed
+initial delta for the new segment. A category decrease without a total decrease
+emits only the unknown marker and establishes a new baseline; unchanged lifetime
+counters are never billed again. Counters are segmented on a reset, so a digest must sum tokens within
 each segment instead of summing cumulative_tokens.
 
 Every row includes observation_id, segment, counter_state, lifecycle_id,

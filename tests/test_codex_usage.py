@@ -102,6 +102,15 @@ class UsageTests(unittest.TestCase):
             self.assertIsNone(row["model"])
             self.assertIsNone(row["effort"])
 
+    def test_partial_counter_reset_does_not_rebill_lifetime_total(self):
+        counters = [self.count(total)[0] for total in (100, 120, 140)]
+        for row, cached in zip(counters, (40, 20, 30)):
+            row["payload"]["info"]["total_token_usage"]["cached_input_tokens"] = cached
+        self.write({"type": "session_meta", "payload": {"id": "root"}}, *counters)
+        rows = codex_usage.events(self.path, {"session_id": "root"})
+        self.assertEqual([r["tokens"]["total"] for r in rows if r["tokens"]], [100, 20])
+        self.assertIn("reset", [r["counter_state"] for r in rows])
+
     def test_naive_timestamp_has_unknown_not_negative_timing(self):
         counter = self.count(100)[0]
         counter["timestamp"] = "2026-09-10T00:00:01"
