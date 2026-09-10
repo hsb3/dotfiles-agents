@@ -51,6 +51,8 @@ its commitment, the other cuts comments that cannot.
 |---|---|---|
 | `delegation` | skill | Size a substantial task and route it across the three delegation layers — strategy (the session itself), management, execution: pick a delegation architecture (five options), bind slices to model-tiered agents, hold the never-delegated floor, and apply the findings-backed context-hygiene defaults. Two-level effort calibration keyed to the model in the session's strategist seat: standard by default, deep when a top-tier model leads. Sizes a chain twice — how wide it may be, and whether one manager context can pay for it to the end — and orders a manager's own loop so the expensive, least-reversible proof runs before any optional refinement pass. Sizes a brief too: `scripts/scope.py` measures an owned-file list before dispatch, against a stated split threshold. Its dispatch preconditions require the brief's premise re-derived against the tree at dispatch time, and the named gate shown to have the worker's diff in its subject set. A finding outside a brief's file scope folds before it is filed. |
 | `handoff` | skill | Maintain the project's session-handoff file so a brand-new session can pick up work cold — the externalization pass that makes a session clearable. |
+| `compact-handoff` | skill | Invoke handoff, verify persistence, and preserve active agents, dependent commands, rulings and exact next waits in a KEEP/DROP compaction prompt. |
+| `prepare-compact` | command | Thin Claude Code entrypoint for `compact-handoff`; its different name avoids shadowing the skill. Codex invokes the skill directly. |
 | `waves` | skill | Drive a project's backlog to closed with near-zero owner input: refresh the triage view (the living, ranked plan), group buildable items into branch-sized waves, launch isolated crews via `delegation`, verify and land each wave in declared order, reconcile, and externalize. Owner-gated decisions are queued and batched, never delegated. Tracker-agnostic — bindings ship for GitHub issues and kata; the kata binding states that its GitHub sync is import-only and names the core label vocabulary a wave plans against, since a grouping that lives in a title prefix is not queryable. Each landing records what the wave closed against what it filed, and the run names the ratio: above 1.0, the wave grew the backlog it was run to shrink. |
 | `rubric-panel` | skill | Score one or more code artifacts against an anchored rubric with a persona-diverse judge panel (whole-field calibration, contested-spread flagging); outputs dimension scores plus findings classified as defect / noise / spec-hole / undeclared-commitment. |
 | `deletion-pass` | skill | Simplify a module to irreducible against its contract: probe every line that cannot name the commitment it keeps (gate + golden-output diff per probe), keep true-noise deletions, and surface unwritten commitments as proposed contract amendments. Edit or dry-run mode. |
@@ -79,6 +81,12 @@ its commitment, the other cuts comments that cannot.
 | `worktree-isolation` | hook (`PreToolUse`) | Rewrites a dispatch so a **writing** worker gets its own git worktree instead of sharing the session's checkout. Read-only roles are left alone on purpose — a worktree cannot see uncommitted work. Never denies; inert until a project sets `isolate:`. |
 
 ## Install
+
+For compaction with active work, use `compact-handoff` or `/atelier:prepare-compact`
+in Atelier 0.34.0 or newer.
+Failed persistence stops before compaction. The verified Claude Code and Codex surfaces
+use explicit manual fallbacks; see [runtime support](skills/compact-handoff/references/runtime-support.md).
+A prepared prompt does not mean compaction ran or that native handles survived.
 
 ```
 claude plugin install atelier@dotfiles-agents
