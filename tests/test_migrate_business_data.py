@@ -1,11 +1,14 @@
 import contextlib
 import hashlib
 import io
+import os
 import sqlite3
+import stat
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "evals"))
 import migrate_business_data as migration
@@ -21,6 +24,27 @@ class FakePB:
 
     def create(self, collection, body):
         self.created.append((collection, body))
+        return {"id": body["id"]}
+
+
+class BatchPB(FakePB):
+    def __init__(self, response):
+        super().__init__()
+        self.response = response
+
+    def _req(self, *_args):
+        if isinstance(self.response, Exception):
+            raise self.response
+        return self.response
+
+
+class MultipartPB(FakePB):
+    def __init__(self):
+        super().__init__()
+        self.upload = None
+
+    def create_multipart(self, collection, body, files):
+        self.upload = (collection, body, files)
         return {"id": body["id"]}
 
 
@@ -65,6 +89,21 @@ class MigrationTests(unittest.TestCase):
         self.assertNotIn("runs", migration.scope_tables("core"))
         self.assertNotIn("runs", migration.scope_tables(None))
 
+    def test_scope_tuples_are_exact(self):
+        self.assertEqual(("frameworks", "sources", "extenders", "framework_elements", "files", "distributions", "frontmatter_dimensions", "eval_runs", "eval_responses", "assessments", "job_coverage", "relationships"), migration.CORE)
+        self.assertEqual(("runs", "artifacts", "run_events", "tool_calls"), migration.TELEMETRY)
+        self.assertEqual(migration.CORE + migration.TELEMETRY, migration.ALL)
+
+    def test_missing_multi_relation_is_rejected(self):
+        con = sqlite3.connect(self.db)
+        con.execute("create table distributions (id text, members text)")
+        con.execute("insert into distributions values ('di0000000000001', '[\"missing\"]')")
+        con.execute("create table extenders2 (id text)")
+        con.commit()
+        con.close()
+        with self.assertRaises(ValueError):
+            migration._validate_relations({"distributions": [{"id": "di0000000000001", "members": ["missing"]}], "extenders": []}, ("distributions", "extenders"))
+
     def test_artifact_hash_mismatch_is_rejected(self):
         with self.assertRaises(ValueError):
             migration.read_export(self.db, self.storage, ("artifacts",))
@@ -75,6 +114,64 @@ class MigrationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             migration.apply_export(pb, export, ("frameworks",))
         self.assertEqual([], pb.created)
+
+    def test_private_receipt_is_exclusive_and_owner_only(self):
+        destination = Path(self.tmp.name) / "receipt.json"
+        export = migration.Export({"frameworks": [{"id": "fw0000000000001", "created": "old", "updated": "old"}]}, {})
+        migration.write_private_receipt(destination, export, migration.receipt(export))
+        self.assertEqual(0o600, stat.S_IMODE(destination.stat().st_mode))
+        with self.assertRaises(ValueError):
+            migration.write_private_receipt(destination, export, migration.receipt(export))
+
+    def test_batch_requires_top_level_successful_matching_ids(self):
+        rows = [{"id": "fw0000000000001"}]
+        migration._batch_create(BatchPB([{"status": 200, "body": {"id": rows[0]["id"]}}]), "frameworks", rows)
+        for response in ({"responses": []}, [{"status": 500, "body": {"id": rows[0]["id"]}}], [{"status": 200, "body": {"id": "wrong"}}]):
+            with self.assertRaises(migration.MigrationError):
+                migration._batch_create(BatchPB(response), "frameworks", rows)
+
+    def test_apply_error_hides_raw_exception_content(self):
+        with self.assertRaises(migration.MigrationError) as caught:
+            migration._batch_create(BatchPB(RuntimeError("RAW-SENTINEL")), "frameworks", [{"id": "fw0000000000001"}])
+        self.assertNotIn("RAW-SENTINEL", str(caught.exception))
+
+    def test_post_validation_rejects_wrong_destination_content(self):
+        export = migration.Export({"frameworks": [{"id": "fw0000000000001", "body": "expected", "created": "old", "updated": "old"}]}, {})
+        pb = FakePB()
+        pb.list_all = lambda _collection: [{"id": "fw0000000000001", "body": "wrong"}]
+        with self.assertRaises(migration.MigrationError):
+            migration.verify_destination(pb, export, ("frameworks",))
+
+    def test_post_validation_rejects_wrong_id_count_and_relation(self):
+        export = migration.Export({"files": [{"id": "fi0000000000001", "extender": "ex0000000000001", "content": "x"}]}, {})
+        cases = (
+            [{"id": "wrong", "extender": "ex0000000000001", "content": "x"}],
+            [],
+            [{"id": "fi0000000000001", "extender": "wrong", "content": "x"}],
+        )
+        for destination in cases:
+            pb = FakePB()
+            pb.list_all = lambda _collection, value=destination: value
+            with self.assertRaises(migration.MigrationError):
+                migration.verify_destination(pb, export, ("files",))
+
+    def test_artifact_upload_uses_verified_original_bytes(self):
+        blob = b"exact verified bytes"
+        row = {"id": "ar0000000000001", "blob": "blob.bin", "sha256": hashlib.sha256(blob).hexdigest(), "created": "old", "updated": "old"}
+        pb = MultipartPB()
+        with patch.object(migration, "verify_destination", return_value={}):
+            migration.apply_export(pb, migration.Export({"artifacts": [row]}, {row["id"]: blob}), ("artifacts",))
+        self.assertEqual(blob, pb.upload[2]["blob"][1])
+
+    def test_artifact_readback_hash_mismatch_is_rejected(self):
+        blob = b"expected"
+        row = {"id": "ar0000000000001", "blob": "blob.bin", "sha256": hashlib.sha256(blob).hexdigest()}
+        pb = FakePB()
+        pb.list_all = lambda _collection: [{"id": row["id"]}]
+        pb._req = lambda *_args: {"token": "safe-token"}
+        with patch.object(migration, "_download_artifact", return_value=b"wrong"):
+            with self.assertRaises(migration.MigrationError):
+                migration.verify_destination(pb, migration.Export({"artifacts": [row]}, {row["id"]: blob}), ("artifacts",))
 
 
 if __name__ == "__main__":

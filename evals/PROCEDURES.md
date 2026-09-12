@@ -98,7 +98,11 @@ Only after the root confirms this content decision and has the private receipt m
 `--apply`. It first requires every selected destination collection to be empty, sends JSON record
 creates in fixed batches of 10 through PocketBase `/api/batch` (and fails if batching is unavailable
 or a subresponse fails), uploads the 26 verified blobs separately with multipart, and never cleans
-up a destination or remaps IDs. Explicit 15-character IDs survive PocketBase 0.40.3 creation;
+up a destination or remaps IDs. Before success it rereads every collection, requires the exact ID
+sets and counts, compares each source field/relation/content value (excluding only audit timestamps
+and file transport), verifies fresh protected-file downloads byte-for-byte, and emits a
+counts/digest/hash validation receipt. Preserve that validation receipt before untracking the local
+data. Explicit 15-character IDs survive PocketBase 0.40.3 creation;
 its `created`/`updated` values are ignored and replaced by new-copy audit timestamps. Domain
 chronology in `runs.ts`, `run_events.ts`, and `tool_calls.started_ts` is preserved. The private
 backup and receipt retain the original PocketBase audit timestamps; no duplicate legacy timestamp

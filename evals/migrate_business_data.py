@@ -8,8 +8,11 @@ guarded for the root operator; it copies no source credentials or auth state.
 import argparse
 import hashlib
 import json
+import os
 import sqlite3
 import sys
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -60,6 +63,14 @@ class Export:
     artifact_sidecars: int = 0
 
 
+class MigrationError(RuntimeError):
+    """A destination-operation failure whose text cannot expose remote content."""
+
+
+def _destination_error(operation, collection):
+    return MigrationError(f"destination {operation} failed for {collection}")
+
+
 def scope_tables(scope):
     return {None: CORE, "core": CORE, "telemetry": TELEMETRY, "all": ALL}[scope]
 
@@ -95,7 +106,8 @@ def _rows(connection, table):
         data = connection.execute(f'SELECT * FROM "{table}"').fetchall()
     except sqlite3.DatabaseError as exc:
         raise ValueError(f"cannot read selected business table: {table}") from exc
-    return [{key: _decode(value, key, table) for key, value in zip(columns, row)} for row in data]
+    return sorted(({key: _decode(value, key, table) for key, value in zip(columns, row)}
+                   for row in data), key=lambda row: row["id"])
 
 
 def _ids(value):
@@ -173,13 +185,17 @@ def print_receipt(value):
 
 def write_private_receipt(path, export, value):
     path = Path(path)
-    if path.exists():
-        raise ValueError("refusing to overwrite receipt")
     audit = {table: [{"id": row["id"], "created": row.get("created"), "updated": row.get("updated")}
                     for row in rows] for table, rows in export.rows.items()}
     hashes = {record_id: hashlib.sha256(blob).hexdigest() for record_id, blob in export.artifacts.items()}
-    path.write_text(json.dumps({"receipt": value, "audit": audit, "artifact_hashes": hashes},
-                               sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+    payload = json.dumps({"receipt": value, "audit": audit, "artifact_hashes": hashes},
+                         sort_keys=True, separators=(",", ":")) + "\n"
+    try:
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        raise ValueError("refusing to overwrite receipt") from None
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        handle.write(payload)
 
 
 def _body(row):
@@ -190,30 +206,87 @@ def _batch_create(pb, collection, rows):
     for start in range(0, len(rows), 10):
         requests = [{"method": "POST", "url": f"/api/collections/{collection}/records", "body": _body(row)}
                     for row in rows[start:start + 10]]
-        response = pb._req("POST", "/api/batch", {"requests": requests})
-        results = response.get("responses") if isinstance(response, dict) else None
+        try:
+            results = pb._req("POST", "/api/batch", {"requests": requests})
+        except Exception:
+            raise _destination_error("batch create", collection) from None
         if not isinstance(results, list) or len(results) != len(requests):
-            raise RuntimeError("PocketBase batch unavailable or malformed")
+            raise _destination_error("batch create", collection)
         if any(not isinstance(item, dict) or not 200 <= item.get("status", 0) < 300
                or not isinstance(item.get("body"), dict)
                or item["body"].get("id") != row["id"]
                for item, row in zip(results, rows[start:start + 10])):
-            raise RuntimeError("PocketBase batch create failed")
+            raise _destination_error("batch create", collection)
+
+
+def _download_artifact(pb, collection, record_id, filename, token):
+    url = f"{pb.base}/api/files/{collection}/{record_id}/{urllib.parse.quote(filename)}?token={urllib.parse.quote(token)}"
+    with urllib.request.urlopen(urllib.request.Request(url)) as response:
+        return response.read()
+
+
+def verify_destination(pb, export, tables):
+    copied = {}
+    artifact_rows = {}
+    for collection in tables:
+        try:
+            destination = pb.list_all(collection)
+        except Exception:
+            raise _destination_error("readback", collection) from None
+        source = export.rows[collection]
+        if len(destination) != len(source) or {row.get("id") for row in destination} != {row["id"] for row in source}:
+            raise _destination_error("readback validation", collection)
+        by_id = {row["id"]: row for row in destination}
+        if collection == "artifacts":
+            artifact_rows = by_id
+        normalized = []
+        for source_row in source:
+            expected = _body(source_row)
+            actual = {key: by_id[source_row["id"]].get(key) for key in expected}
+            if actual != expected:
+                raise _destination_error("readback validation", collection)
+            normalized.append(actual)
+        copied[collection] = normalized
+    if "artifacts" in tables:
+        try:
+            token_response = pb._req("POST", "/api/files/token", {})
+            token = token_response.get("token") if isinstance(token_response, dict) else None
+            if not token:
+                raise ValueError()
+        except Exception:
+            raise _destination_error("file token", "artifacts") from None
+        for row in export.rows["artifacts"]:
+            try:
+                blob = _download_artifact(pb, "artifacts", row["id"],
+                                          _artifact_name(artifact_rows[row["id"]].get("blob")), token)
+            except Exception:
+                raise _destination_error("artifact download", "artifacts") from None
+            if blob != export.artifacts[row["id"]] or hashlib.sha256(blob).hexdigest() != row["sha256"]:
+                raise _destination_error("artifact validation", "artifacts")
+    return receipt(Export(copied, export.artifacts, export.artifact_sidecars))
 
 
 def apply_export(pb, export, tables):
     for collection in tables:
-        if pb.list_all(collection):
+        try:
+            nonempty = pb.list_all(collection)
+        except Exception:
+            raise _destination_error("emptiness check", collection) from None
+        if nonempty:
             raise ValueError("destination business collection is not empty")
     for collection in tables:
         if collection == "artifacts":
             for row in export.rows[collection]:
                 blob = export.artifacts[row["id"]]
-                result = pb.create_multipart(collection, _body(row), {"blob": (_artifact_name(row["blob"]), blob, row.get("mime") or "application/octet-stream")})
+                try:
+                    result = pb.create_multipart(collection, _body(row), {"blob": (_artifact_name(row["blob"]), blob, row.get("mime") or "application/octet-stream")})
+                except Exception:
+                    raise _destination_error("artifact create", collection) from None
                 if not isinstance(result, dict) or result.get("id") != row["id"]:
-                    raise RuntimeError("artifact create did not preserve id")
+                    raise _destination_error("artifact create", collection)
         else:
             _batch_create(pb, collection, export.rows[collection])
+    return verify_destination(pb, export, tables)
 
 
 def main(argv=None):
@@ -232,7 +305,7 @@ def main(argv=None):
         write_private_receipt(args.receipt, export, value)
     if args.apply:
         from pb import PB
-        apply_export(PB(), export, scope_tables(args.scope))
+        print_receipt(apply_export(PB(), export, scope_tables(args.scope)))
     return 0
 
 
