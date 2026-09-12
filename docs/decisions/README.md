@@ -13,14 +13,14 @@ Each record explains a decision that shapes the repository.
 | ID | Decision | Status | Legacy alias |
 | --- | --- | --- | --- |
 | [002](decisions-002-one-repo-serves-both-claude-code-and-opencode-via-pointer-based-distribution.md) | One repo serves both Claude Code and opencode via pointer-based distribution | Accepted | former decision-2 |
-| [003](decisions-003-functionform-asmbl-stays-parked-do-not-merge-do-not-archive.md) | functionform-asmbl stays parked | Accepted |
-| [004](decisions-004-publish-model-main-as-fast-forward-release-gate.md) | Publish model | Accepted |
-| [005](decisions-005-evals-and-harness-extraction-both-but-deferred-dev-is-the-workbench.md) | evals and harness extraction | Accepted |
-| [006](decisions-006-externals-materialization-pinned-vendored-copy-not-clone-at-install.md) | Externals materialization | Accepted |
-| [007](decisions-007-distribution-restructure-dev-integrates-main-publishes.md) | Distribution restructure | Accepted |
-| [008](decisions-008-repo-structure-future-state-backlog-absorbs-docs-hooks-removed.md) | Repo structure future state | Accepted; partly superseded by decision-014 |
+| [003](decisions-003-functionform-asmbl-stays-parked-do-not-merge-do-not-archive.md) | functionform-asmbl stays parked | Accepted | former decision-3 |
+| [004](decisions-004-publish-model-main-as-fast-forward-release-gate.md) | Publish model | Accepted | former decision-4 |
+| [005](decisions-005-evals-and-harness-extraction-both-but-deferred-dev-is-the-workbench.md) | evals and harness extraction | Accepted | former decision-5 |
+| [006](decisions-006-externals-materialization-pinned-vendored-copy-not-clone-at-install.md) | Externals materialization | Accepted | former decision-6 |
+| [007](decisions-007-distribution-restructure-dev-integrates-main-publishes.md) | Distribution restructure | Accepted | former ADR 0007 |
+| [008](decisions-008-repo-structure-future-state-backlog-absorbs-docs-hooks-removed.md) | Repo structure future state | Accepted; partly superseded by decision-014 | former decision-8 |
 | [009](decisions-009-agent-profile-stays-claude-code-native-harness-neutrality-lives-in-a-declared-capability-matrix.md) | Agent profile | Accepted |
-| [010](decisions-010-commands-become-a-fourth-primitive-type.md) | Commands become a fourth primitive type | Accepted |
+| [010](decisions-010-commands-become-a-fourth-primitive-type.md) | Commands become a fourth primitive type | Accepted | former ADR 0001 |
 | [012](decisions-012-starting-conditions-ships-in-code-desk-and-rig-builder-stays-a-distinct-agent.md) | starting-conditions | Accepted |
 | [013](decisions-013-release-history-cuts-at-publish-time-with-no-tracked-changelog.md) | Release history | Accepted |
 | [014](decisions-014-kata-board-is-the-task-system-kaneo-retired.md) | kata board | Accepted | former decision-1 and decision-011 |
