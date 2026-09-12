@@ -28,15 +28,37 @@ python3 evals/ingest.py    # scan repo + seed frameworks (idempotent upserts)
 Configuration resolves from env vars first, then `.claude/operations/extender-db.env`
 (untracked), then defaults: `PB_DATA_DIR` (data directory; default
 `evals/pb_data`), `PB_URL` (default `http://127.0.0.1:8090`),
-`PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` (superuser, no default). PocketBase itself only
-takes the data dir as a `--dir` flag — `serve.sh` is the env-var surface, and forwards any
-other subcommand with `--dir` appended (e.g. `serve.sh superuser upsert EMAIL PASS`). The
-live database is tracked in git as `pb_data/data.db` (private repo, ~6 MB), as is
-`pb_data/storage/` (file-field blobs — harness artifacts, #174); the rest of
-`pb_data/` — request logs (`auxiliary.db`), WAL/SHM journals, generated typings — is
-transient and stays ignored. Stop the server before committing so the WAL is checkpointed
-into `data.db`.
-Admin UI: <http://127.0.0.1:8090/_/>. All collections are superuser-only (no public API rules).
+`PB_BIND` (local server bind; default `127.0.0.1:8090`), and `PB_ADMIN_EMAIL` /
+`PB_ADMIN_PASSWORD` (superuser, no default). The private Railway-hosted PocketBase is the
+operational source: set `PB_URL` to its REST endpoint for CLI clients. `PB_URL` is never a
+server bind. `PB_DATA_DIR` and `PB_BIND` are only for an intentional local PocketBase;
+`serve.sh` forwards other subcommands with `--dir` appended (for example,
+`serve.sh superuser create EMAIL PASS`).
+
+`evals/pb_data/` is untracked and ignored. Private local backup or fixture bytes may remain;
+CLI clients use the hosted service. The migration and hosted backup/restore checks completed
+before runtime data was removed from Git tracking. Request logs, WAL/SHM journals, and generated
+typings remain transient. The hosted collections are superuser-only; GUI access awaits design
+and access-policy review. Historical Git copies and authentication remediation remain separate.
+
+## Responsibilities and deployment boundary
+
+The harness is the offline producer of `harness/results.jsonl` and run logs.
+`load_harness_runs.py` is the only projection boundary from those offline files into the
+`runs`, `artifacts`, `run_events`, and `tool_calls` collections. `pb.py` is the shared
+REST client for session-run schema/load/report commands; it does not own server startup.
+`serve.sh` owns local PocketBase startup and its data directory only.
+
+[`deploy/`](deploy/) is a fresh, empty PocketBase Railway bundle, pinned to PocketBase
+0.40.3. It excludes `evals/pb_data`, historical auth state, and runtime artifacts; deployment
+and recovery procedures are in [PROCEDURES.md](PROCEDURES.md#procedure-fresh-railway-deployment).
+
+The root-owned consolidation tool, `migrate_business_data.py`, reads a verified private backup
+offline and defaults to a receipt-only dry-run. Its reviewed `all` scope is the 12 business
+collections plus four harness telemetry collections; it excludes auth, system/settings tables,
+and the derived view. The root procedure, including the fixed scope, receipt, timestamp behavior,
+batch prerequisite, and explicit confirmation before `--apply`, is in
+[PROCEDURES.md](PROCEDURES.md#procedure-private-business-data-consolidation).
 
 ## Data model
 
@@ -92,7 +114,7 @@ of the model informally (a run's `candidate` slug matches `extenders.slug`).
 | `runs` | harness trial (ledger row ⋈ log) | the 7-field resume key (`campaign`,`harness`,`model`,`candidate`,`case`,`config`,`trial` — unique), `era` (legacy / post / na), `session_id` (unique when present; the log↔run join), verdict + token/cost/turn counts, `checks`/`grades`/`model_usage`/`provenance` (json), `log_path` |
 | `run_events` | raw log line (minus `system/thinking_tokens` noise) | `run` (cascade), `seq` (unique per run), `role` (assistant / tool_call / tool_result / system / result), `event_type`, per-step tokens/cost, `payload` (json, mirror-deduped), `artifact` |
 | `tool_calls` | tool call (claude call+result pair or opencode fused event) | `run` (cascade), `tool_call_id` (unique per run), `tool_name`, `input`/`output` (json), `status`, `wallclock_ms`, `artifact` |
-| `artifacts` | distinct blob (content-addressed) | `sha256` (unique — global dedup), `kind` (write_content / edit_diff / screenshot / tool_output), `blob` (**file** field — written via `pb.create_multipart`, blobs live in tracked `pb_data/storage/`), `byte_size`, `text_ref` |
+| `artifacts` | distinct blob (content-addressed) | `sha256` (unique — global dedup), `kind` (write_content / edit_diff / screenshot / tool_output), `blob` (**file** field — written via `pb.create_multipart`, blobs live in the private hosted PocketBase; local backup/fixture copies may include them), `byte_size`, `text_ref` |
 
 ### Seeded frameworks
 
@@ -141,16 +163,18 @@ against the same catalog is the point of the model.
 - `load_harness_runs.py` — harness telemetry ingester (#174): ledger + raw run logs →
   `runs`/`run_events`/`tool_calls`/`artifacts`; `--parse-only` (offline), `--dry-run`,
   `--campaign` scoping. See PROCEDURES "ingesting a harness campaign".
+- `migrate_business_data.py` — root-only offline receipt and fixed-scope initial import from a
+  verified private backup; never reads historical authentication.
 - `report.py` — regenerates the analysis surface from the DB: `coverage-matrix.md` +
   `analysis.md` (both generated — never hand-edit); `--fixtures dir` swaps in JSON dumps
   for credential-free development. Supersedes the former `render_matrix.py`.
 - `coverage_gaps` (view collection) — read-only saved view over `job_coverage` ⋈ its job
   element, non-covered rows only (gaps + partials); browsable in the admin UI and API.
-- `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`)
+- `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`, `PB_BIND`)
 - `PROCEDURES.md` — the runbook: run order, evaluated-pass pattern, gates, commit discipline
 - `DECISIONS-NEEDED.md` — open owner-decision batch (tracked as issue #153)
 - `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS, INSIGHTS
-- `pb_data/` — the live database; only `data.db` is tracked (logs/journals/typings ignored)
+- `pb_data/` — ignored private local backup or fixture; live state is hosted
 
 ## Codex usage digest
 

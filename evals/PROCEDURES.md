@@ -28,6 +28,86 @@ Cold rebuild: start a private runtime, then 1 → 2, and re-load eval provenance
 Create a disposable superuser before serving a fresh test instance to avoid the installer
 browser. Never copy real authentication state into a fixture.
 
+## Procedure: fresh Railway deployment
+
+The root owner provisions the project and service from `evals/deploy/`; this worker package
+does not create cloud resources. In the Railway UI, set **Source Root Directory** to
+`/evals/deploy`; the verified CLI equivalent is `railway up evals/deploy --path-as-root`.
+Before provisioning, choose a Railway persistent volume mounted at **`/pb/pb_data`**, set
+server-only `PB_SUPERUSER_EMAIL` and
+`PB_SUPERUSER_PASSWORD` to fresh values, and keep `PB_CORS_ORIGINS` unset until a specific
+browser origin is approved. The bundle binds `0.0.0.0:$PORT`, has Railway and image health at
+`/api/health`, uses a 0.40.3 binary whose per-architecture release ZIP checksum is verified at
+build time, and runs `superuser create` only. A duplicate existing user is accepted without
+changing its credentials; other bootstrap failures stop the container.
+
+The deployed service starts empty. Its default collection rules remain restricted, and
+`artifacts.blob` is a protected file field. After the fresh client credentials are stored as
+`PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` outside the service, run `schema.py` from an authorized
+session to apply the 17 domain collections; do not bake credentials, schema state, `pb_data`, or
+auth state into the image. `schema.py` does not manage the default zero-user `users` auth
+collection or global settings: immediately lock its five rules (list, view, create, update, and
+delete), enable built-in `rateLimits` without replacing the default rule entries, and read both
+the `users` rules and settings back. Before the import, also verify PocketBase batch is enabled
+with `maxRequests >= 10`. The Railway password is an ordinary service secret supplied through
+stdin and retained in the root-only local credential file; Railway does not seal it. A GUI or
+read-only browser account remains deferred.
+
+Before declaring the deployment ready, the root owner records:
+
+1. HTTPS `GET /api/health`; authenticate, create an authenticated disposable sentinel with unique
+   content, and record its ID and content. Restart or redeploy, authenticate again, read that same
+   ID and exact content back, then delete the sentinel. Health checks alone do not prove persistence.
+2. Fresh client authentication; schema application; one representative disposable authenticated
+   create/read/update/delete; anonymous denial for a domain record and for a protected artifact
+   file URL.
+3. API backup creation, then an isolated restore into a disposable PocketBase instance and a
+   count/hash comparison against the backed-up source.
+4. A rollback target (the prior Railway deployment plus its corresponding private backup) and a
+   tested rollback command/path.
+
+The root owner has recorded the private whole-directory backup and isolated disposable restore
+receipt externally. Historical data upload, source removal, and authentication migration remain
+root-owned integration steps; do not upload the repository's existing runtime data as part of
+first deployment.
+
+### Procedure: private business-data consolidation
+
+The reviewed migration scope is `all`: exactly `frameworks`, `sources`, `extenders`,
+`framework_elements`, `files`, `distributions`, `frontmatter_dimensions`, `eval_runs`,
+`eval_responses`, `assessments`, `job_coverage`, `relationships`, `runs`, `artifacts`,
+`run_events`, and `tool_calls`, in that dependency order. It excludes `coverage_gaps`, every
+other table, all system/settings/auth tables, and all historical authentication.
+
+```sh
+python3 evals/migrate_business_data.py --source-db /private/pb_data/data.db --scope all
+python3 evals/migrate_business_data.py --source-db /private/pb_data/data.db --scope all \
+  --receipt /private/reviewed-business-receipt.json
+```
+
+The default is an offline immutable SQLite dry-run. Its stdout is counts and SHA256 receipts only;
+the optional private receipt is refused if it already exists and contains only record IDs, original
+`created`/`updated` values, table digests, and artifact hashes. It never contains business bodies,
+prompts, responses, evidence, payloads, tool content, local paths, or credentials. The verified
+snapshot receipt is 2,146 core rows plus 6,846 telemetry rows, 8,992 total; 26 verified artifact
+blobs total 780,427 bytes. `files` remains database content: 226 rows, 2,230,426 `size_bytes`,
+226 distinct stored hashes, and 215 nonempty content rows. The 26 `.attrs` storage sidecars are
+not uploads.
+
+Only after the root confirms this content decision and has the private receipt may it add
+`--apply`. It first requires every selected destination collection to be empty, sends JSON record
+creates in fixed batches of 10 through PocketBase `/api/batch` (and fails if batching is unavailable
+or a subresponse fails), uploads the 26 verified blobs separately with multipart, and never cleans
+up a destination or remaps IDs. Before success it rereads every collection, requires the exact ID
+sets and counts, compares each source field/relation/content value (excluding only audit timestamps
+and file transport), verifies fresh protected-file downloads byte-for-byte, and emits a
+counts/digest/hash validation receipt. Preserve that validation receipt before untracking the local
+data. Explicit 15-character IDs survive PocketBase 0.40.3 creation;
+its `created`/`updated` values are ignored and replaced by new-copy audit timestamps. Domain
+chronology in `runs.ts`, `run_events.ts`, and `tool_calls.started_ts` is preserved. The private
+backup and receipt retain the original PocketBase audit timestamps; no duplicate legacy timestamp
+fields are added.
+
 ### Retiring a dropped extender
 
 When the tree stops defining a slug, `ingest.py` ends its run by setting `extenders.retired`
