@@ -49,10 +49,8 @@ REST client for session-run schema/load/report commands; it does not own server 
 `serve.sh` owns local PocketBase startup and its data directory only.
 
 [`deploy/`](deploy/) is a fresh, empty PocketBase Railway bundle, pinned to PocketBase
-0.40.3. It intentionally excludes `evals/pb_data`, historical auth state, and every runtime
-artifact. The root owner has recorded a private whole-directory backup and disposable restore
-receipt externally; historical-data upload and source removal remain root-owned integration
-steps and are not part of this bundle.
+0.40.3. It excludes `evals/pb_data`, historical auth state, and runtime artifacts; deployment
+and recovery procedures are in [PROCEDURES.md](PROCEDURES.md#procedure-fresh-railway-deployment).
 
 ## Data model
 

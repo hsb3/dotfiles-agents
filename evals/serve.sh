@@ -7,7 +7,6 @@
 # then .claude/operations/extender-db.env, then defaults.
 #
 #   PB_DATA_DIR  data directory            (default: <this dir>/pb_data)
-#   PB_URL       REST endpoint for eval clients           (default: http://127.0.0.1:8090)
 #   PB_BIND      server bind address                      (default: 127.0.0.1:8090)
 #
 # Usage:
@@ -29,7 +28,6 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 PB_DATA_DIR="${PB_DATA_DIR:-$HERE/pb_data}"
-PB_URL="${PB_URL:-http://127.0.0.1:8090}"
 PB_BIND="${PB_BIND:-127.0.0.1:8090}"
 
 if [ $# -eq 0 ]; then

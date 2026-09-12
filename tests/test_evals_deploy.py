@@ -64,15 +64,13 @@ class DeployStartTests(unittest.TestCase):
         base |= {"POCKETBASE_BIN": str(self.fake), "FAKE_LOG": str(self.log)}
         return subprocess.run(["/bin/sh", str(START)], text=True, capture_output=True, env=base | env)
 
-    def test_bootstrap_credentials_are_required_even_when_both_are_absent(self):
-        proc = self.run_start()
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("PB_SUPERUSER_EMAIL", proc.stderr)
-
-    def test_bootstrap_credentials_are_required_when_only_one_is_set(self):
-        proc = self.run_start(PB_SUPERUSER_EMAIL="admin@example.test")
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("PB_SUPERUSER_PASSWORD", proc.stderr)
+    def test_bootstrap_credentials_are_required(self):
+        for env, missing in (({}, "PB_SUPERUSER_EMAIL"),
+                             ({"PB_SUPERUSER_EMAIL": "admin@example.test"}, "PB_SUPERUSER_PASSWORD")):
+            with self.subTest(env=env):
+                proc = self.run_start(**env)
+                self.assertNotEqual(proc.returncode, 0)
+                self.assertIn(missing, proc.stderr)
 
     def test_valid_creation_and_existing_account_both_serve(self):
         for result in ("valid", "duplicate"):
