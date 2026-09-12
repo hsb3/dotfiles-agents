@@ -150,6 +150,20 @@ Deliberately three commands rather than one loop: `git cherry-pick` can stop on 
 loop fanning out over branches would keep going past it and leave a half-integrated tree with no
 one having read the failure. The dispatcher should see each worker's result.
 
+## Lifecycle and retirement
+
+Worktrees are temporary execution state. Native Claude Code keeps its task checkouts in
+`.claude/worktrees/`; Codex/Atelier keeps them in `.git/atelier-codex/checkouts/`. For a manual
+checkout, use the repository-local `.worktrees/` directory. Never create task checkouts as
+siblings of the repository in `~/Developer`.
+
+`git worktree list` is authoritative inventory. A live checkout, or one deliberately retained for
+integration, review, recovery, or evidence, is not stale. Before ordinary removal, confirm the
+worker is complete and no longer live; integrate or explicitly discard every commit; and preserve
+uncommitted/untracked work plus other durable evidence. Only then remove the checkout normally.
+Call metadata stale only when `git worktree list` names a checkout whose directory no longer
+exists, and prune it only after that validation.
+
 ## Inert paths
 
 Beyond an unarmed activation file, the hook stands down when:
@@ -270,8 +284,8 @@ resolves the same effective payload, retaining `original_cwd`; none relies on an
 PreToolUse hook having already rewritten the input.
 
 State lives under the repository's common Git directory:
-`atelier-codex/workers/<session>/<agent>.json` and
-`atelier-codex/checkouts/<session>/<agent>`. There is no automatic branch or worktree
+`.git/atelier-codex/workers/<session>/<agent>.json` and
+`.git/atelier-codex/checkouts/<session>/<agent>`. There is no automatic branch or worktree
 deletion. With `workspace-write`, the caller must authorize the checkout directory,
 `.git/worktrees` and `.git/objects` as writable roots. Registration failure never
 silently leaves an armed worker operating in its inherited checkout. Unarmed projects

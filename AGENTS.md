@@ -86,6 +86,14 @@ deleting any branch, `git rev-list --count origin/dev..<branch>`; nonzero means 
 changed file against `dev` before calling the work superseded. `dev-legacy` is a deliberate
 pre-restructure archive — never delete it.
 
+**Worktrees are temporary execution state.** Native Claude Code stays in `.claude/worktrees/`
+and Codex/Atelier stays in `.git/atelier-codex/checkouts/`; manual task checkouts go under
+`.worktrees/`. Never create task checkouts as siblings of this repository in `~/Developer`.
+`git worktree list` is authoritative: a retained checkout is not stale. Before ordinary removal,
+confirm completion and worker liveness, integrate or explicitly discard every commit, and preserve
+uncommitted/untracked work and durable evidence. Prune stale metadata only after validating that
+the listed checkout no longer exists.
+
 ## Task tracking
 
 The tracker is the **kata board** (project `dotfiles-agents`, bound by `.kata.toml`, served by
