@@ -4,7 +4,7 @@ ARG PB_VERSION=0.40.3
 ARG TARGETARCH
 
 RUN apk add --no-cache ca-certificates curl unzip
-RUN case "$TARGETARCH" in \
+RUN set -e; case "$TARGETARCH" in \
       amd64) PB_SHA256=8d81b6b79add0e219373e922ebe1dddbee7f57fcff602e3585e0d2c654b983ce ;; \
       arm64) PB_SHA256=d5092815259f5bc2dffabf6a71da2168851c8d75c04d6e56f6e7a38c48941c70 ;; \
       *) echo "unsupported PocketBase architecture: $TARGETARCH" >&2; exit 1 ;; \
