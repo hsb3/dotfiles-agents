@@ -172,6 +172,13 @@ class MigrationTests(unittest.TestCase):
             with self.assertRaises(migration.MigrationError):
                 migration.verify_destination(pb, migration.Export({"artifacts": [row]}, {row["id"]: blob}), ("artifacts",))
 
+    def test_receipt_digest_ignores_audit_and_artifact_transport(self):
+        source = migration.Export({"artifacts": [{"id": "ar0000000000001", "sha256": "hash", "blob": "source.bin", "created": "old", "updated": "old", "kind": "tool_output"}]}, {})
+        destination = migration.Export({"artifacts": [{"id": "ar0000000000001", "sha256": "hash", "blob": "renamed.bin", "created": "fresh", "updated": "fresh", "kind": "tool_output"}]}, {})
+        self.assertEqual(migration.receipt(source)["tables"], migration.receipt(destination)["tables"])
+        destination.rows["artifacts"][0]["kind"] = "screenshot"
+        self.assertNotEqual(migration.receipt(source)["tables"], migration.receipt(destination)["tables"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -164,7 +164,8 @@ def read_export(source_db, storage, tables):
 
 
 def receipt(export):
-    tables = {name: {"count": len(rows), "sha256": _digest(rows)} for name, rows in export.rows.items()}
+    tables = {name: {"count": len(rows), "sha256": _digest([_body(row) for row in rows])}
+              for name, rows in export.rows.items()}
     blob_bytes = sum(len(value) for value in export.artifacts.values())
     files = export.rows.get("files", [])
     file_stats = {"file_size_bytes": sum(row.get("size_bytes") or 0 for row in files),
