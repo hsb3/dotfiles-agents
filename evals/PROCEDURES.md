@@ -43,21 +43,23 @@ railway up --path-as-root
 In the Railway UI, deploy that package directory, mount the existing persistent volume at
 **`/pb/pb_data`**, and set server-only `PB_SUPERUSER_EMAIL` and
 `PB_SUPERUSER_PASSWORD`. The package has no `.env`, `pb_data`, raw repository data, or client
-credentials. Read back the deployment's `/api/health` response and the deployed
-`/pb_public/toolbox-catalog.json` source snapshot before treating the package as live.
+credentials. Read back the deployment's `/api/health` response and, with an authenticated
+browser token, `GET /api/toolbox/catalog` before treating the package as live. The catalog is
+outside `pb_public` and the route uses PocketBase authentication middleware.
 
-For a disposable local loopback check, use fresh synthetic credentials and an empty temporary
-data directory; do not copy a production database or token into it:
+For a disposable local loopback Browser check, use the actual packaged PocketBase service with
+fresh synthetic credentials and an empty temporary data directory; do not copy a production
+database or token into it:
 
 ```sh
-fixture_dir=$(mktemp -d)
-PB_DATA_DIR="$fixture_dir/pb_data" PB_BIND=127.0.0.1:18090 \
-  evals/serve.sh superuser create fixture@example.test FixturePassword123
-PB_DATA_DIR="$fixture_dir/pb_data" PB_BIND=127.0.0.1:18090 evals/serve.sh
+python3 evals/toolbox_fixture.py --pocketbase /opt/homebrew/bin/pocketbase
 ```
 
-The stdlib package test also starts a loopback HTTP fixture that supplies a synthetic auth token,
-two paginated run pages, an artifact record, and a short-lived file token without PocketBase.
+It prints the loopback URL and fixture-only browser email/password, applies the schema and
+authenticated read-only rules, seeds two runs plus one protected artifact, and removes its
+process and temporary data on Ctrl-C. It reads no environment or credential file. The focused
+test runs this actual fixture when PocketBase and `evals/ui/index.html` are present; otherwise it
+is explicitly skipped.
 
 The root creates the browser `users` account manually after its email is supplied. Public signup
 is disabled (`createRule = null`); users list and view are authenticated as appropriate, while

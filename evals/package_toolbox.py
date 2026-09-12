@@ -11,7 +11,7 @@ from pathlib import Path
 
 WORKFLOW_HEADING = re.compile(r"^(#{2,})\s+Choose a workflow\s*$")
 PLUGIN_LINK = re.compile(r"\[([^]]+)\]\(\.\./plugins/([^/]+)/README\.md\)")
-UI_SUFFIXES = {".css", ".gif", ".html", ".ico", ".jpeg", ".jpg", ".js", ".json", ".map", ".png", ".svg", ".webp", ".woff", ".woff2"}
+UI_FILES = ("index.html", "styles.css", "app.js")
 
 
 def _workflow_rows(workflows):
@@ -46,6 +46,13 @@ def _workflow_rows(workflows):
     return rows
 
 
+def _workflow_id(stage):
+    workflow_id = re.sub(r"[^a-z0-9]+", "-", stage.lower()).strip("-")
+    if not workflow_id:
+        raise ValueError(f"workflow stage has no stable id: {stage}")
+    return workflow_id
+
+
 def build_catalog(source_root):
     """Return catalog bytes derived solely from the two canonical source files."""
     source_root = Path(source_root)
@@ -69,14 +76,22 @@ def build_catalog(source_root):
             raise ValueError(f"marketplace manifest duplicates plugin: {plugin_id}")
         by_id[plugin_id] = plugin
 
-    workflows = {plugin_id: [] for plugin_id in by_id}
+    plugin_workflows = {plugin_id: set() for plugin_id in by_id}
+    workflows = {}
     for stage, guidance, links in _workflow_rows(workflows_path):
+        workflow_id = _workflow_id(stage)
+        workflow = workflows.setdefault(workflow_id, {
+            "id": workflow_id, "name": stage, "guidance": guidance, "plugins": set(),
+        })
+        if workflow["name"] != stage or workflow["guidance"] != guidance:
+            raise ValueError(f"workflow stage has conflicting rows: {stage}")
         for label, plugin_id in links:
             if label != plugin_id:
                 raise ValueError(f"workflow plugin label/path mismatch: {label} != {plugin_id}")
             if plugin_id not in by_id:
                 raise ValueError(f"workflow references unknown marketplace plugin: {plugin_id}")
-            workflows[plugin_id].append({"stage": stage, "guidance": guidance})
+            workflow["plugins"].add(plugin_id)
+            plugin_workflows[plugin_id].add(workflow_id)
 
     snapshot = hashlib.sha256(manifest_path.read_bytes() + b"\0" + workflows_path.read_bytes()).hexdigest()
     catalog = {
@@ -86,24 +101,27 @@ def build_catalog(source_root):
                 "id": plugin_id,
                 "version": by_id[plugin_id].get("version", ""),
                 "description": by_id[plugin_id].get("description", ""),
-                "workflows": sorted(workflows[plugin_id], key=lambda row: (row["stage"], row["guidance"])),
+                "workflows": sorted(plugin_workflows[plugin_id]),
             }
             for plugin_id in sorted(by_id)
+        ],
+        "workflows": [
+            {**workflow, "plugins": sorted(workflow["plugins"])}
+            for _, workflow in sorted(workflows.items())
         ],
     }
     return json.dumps(catalog, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
 
 
-def _ui_files(source_ui):
-    if not source_ui.is_dir() or not (source_ui / "index.html").is_file():
+def _ui_files(source_root, source_ui):
+    if any(path.is_symlink() for path in (source_root, source_root / "evals", source_ui)):
+        raise ValueError(f"UI source ancestor must not be a symlink: {source_ui}")
+    if not source_ui.is_dir():
         raise FileNotFoundError(f"required UI sources are missing: {source_ui}")
-    files = []
-    for item in sorted(source_ui.rglob("*")):
-        if item.is_dir():
-            continue
-        if not item.is_file() or item.is_symlink() or item.suffix.lower() not in UI_SUFFIXES:
-            raise ValueError(f"UI source must be a regular static asset: {item}")
-        files.append(item)
+    files = [source_ui / name for name in UI_FILES]
+    for item in files:
+        if not item.is_file() or item.is_symlink():
+            raise FileNotFoundError(f"required UI source is missing or unsafe: {item}")
     return files
 
 
@@ -120,19 +138,25 @@ def build_package(source_root, output):
     if output.exists():
         raise FileExistsError(f"output already exists: {output}")
     deploy = source_root / "evals" / "deploy"
-    required = [deploy / name for name in ("Dockerfile", "start.sh", "railway.toml")]
+    hook = deploy / "pb_hooks" / "toolbox_catalog.pb.js"
+    required = [deploy / name for name in ("Dockerfile", "start.sh", "railway.toml")] + [hook]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise FileNotFoundError("missing deployment source: " + ", ".join(missing))
     catalog = build_catalog(source_root)
     source_ui = source_root / "evals" / "ui"
-    ui_files = _ui_files(source_ui)
+    ui_files = _ui_files(source_root, source_ui)
     output.mkdir(parents=True)
-    for source in required:
+    for source in required[:3]:
         shutil.copyfile(source, output / source.name)
+    hook_target = output / "pb_hooks" / hook.name
+    hook_target.parent.mkdir()
+    shutil.copyfile(hook, hook_target)
+    catalog_target = output / "pb_catalog" / "toolbox-catalog.json"
+    catalog_target.parent.mkdir()
+    catalog_target.write_bytes(catalog)
     public = output / "pb_public"
     _copy_ui(ui_files, source_ui, public)
-    (public / "toolbox-catalog.json").write_bytes(catalog)
     return output
 
 

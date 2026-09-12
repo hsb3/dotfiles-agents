@@ -52,8 +52,9 @@ REST client for session-run schema/load/report commands; it does not own server 
 
 `package_toolbox.py` builds a new, isolated deployment directory from the current marketplace
 manifest, workflow guide, deploy wrapper, and `evals/ui/` assets. It writes only the wrapper,
-`pb_public/` assets, and a deterministic `toolbox-catalog.json`; that catalog is a source
-snapshot, not an installed-state or runtime-proof claim.
+`pb_public/` assets, a private deterministic `toolbox-catalog.json`, and its PocketBase hook;
+that catalog is a source snapshot, not an installed-state or runtime-proof claim. Authenticated
+clients read it through `GET /api/toolbox/catalog`; it is never a public asset.
 
 ```sh
 python3 evals/package_toolbox.py /tmp/evals-toolbox-deploy
