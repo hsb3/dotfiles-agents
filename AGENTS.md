@@ -162,7 +162,7 @@ board where 34 of 55 open items sat in one priority band, 16 carried no label, a
 grouping lived only in title prefixes. A per-card check cannot see a distribution. Run both.
 
 **Board conventions.** The vocabulary is not restated here — it is
-[`decision-023`](docs/decisions/decision-023%20-%20kata-labels-are-the-triage-system-and-title-prefixes-are-not.md),
+[`decision-023`](docs/decisions/decisions-023-kata-labels-are-the-triage-system-and-title-prefixes-are-not.md),
 declared machine-readably in `primitives-core/skills/board-triage/scripts/core-labels.txt`, and
 that record is the copy to change. What it means day to day: every open card carries exactly one
 `area:*` and exactly one `type:*`, titles carry **no prefix of any kind** (the grouping lives in

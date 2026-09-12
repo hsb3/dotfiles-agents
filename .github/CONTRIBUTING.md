@@ -43,9 +43,9 @@ Plugin **membership** is not a roster field — membership is the symlink assemb
 - **`origin: authored | sourced | vendored`** is provenance and is immutable per entry.
   `primitives-core/` holds **self-authored** bodies only — every entry sourced from under
   `primitives-core/` must be `origin: authored`
-  ([ADR 0015](../docs/decisions/0015-self-authored-primitives-only.md)). Third-party material is
+  ([ADR 0015](../docs/decisions/decisions-028-primitives-core-is-self-authored-only-externals-by-reference.md)). Third-party material is
   recorded **by reference** in [`../externals.yaml`](../externals.yaml) (non-null `upstream` +
-  `ref`), never copied into the source tree ([ADR 0003](../docs/decisions/0003-externals-tracked-not-vendored.md)).
+  `ref`), never copied into the source tree ([ADR 0003](../docs/decisions/decisions-026-externals-are-tracked-and-cloned-never-vendored.md)).
 - Primitive layout: `skills/<id>/SKILL.md` (+ optional `references/`, `scripts/`, `assets/`),
   `agents/<id>.md` (frontmatter), `commands/<id>.md` (frontmatter; the command loads a skill
   and drives it rather than restating one — decision-010), `hooks/<id>/hook.py`
