@@ -76,12 +76,12 @@ def rel(name, collection_id, required=False, cascade=False, max_select=1):
     }
 
 
-def file_field(name, max_size=10_000_000, max_select=1, mime_types=None):
+def file_field(name, max_size=10_000_000, max_select=1, mime_types=None, protected=False):
     # PocketBase file field: blob lands in pb_data/storage/<coll>/<rec>/; JSON
     # record writes can't carry it — use pb.create_multipart().
     return {"name": name, "type": "file", "required": False,
             "maxSelect": max_select, "maxSize": max_size,
-            "mimeTypes": mime_types or [], "thumbs": [], "protected": False}
+            "mimeTypes": mime_types or [], "thumbs": [], "protected": protected}
 
 
 def stamps():
@@ -468,7 +468,7 @@ def collection_specs(ids):
                 rel("run", ids["runs"], required=True),
                 select("kind", ["write_content", "edit_diff", "screenshot", "tool_output"]),
                 text("mime"),
-                file_field("blob"),
+                file_field("blob", protected=True),
                 text("sha256", required=True),
                 num("byte_size"),
                 text("text_ref", max_len=5000),

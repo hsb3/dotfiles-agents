@@ -28,15 +28,31 @@ python3 evals/ingest.py    # scan repo + seed frameworks (idempotent upserts)
 Configuration resolves from env vars first, then `.claude/operations/extender-db.env`
 (untracked), then defaults: `PB_DATA_DIR` (data directory; default
 `evals/pb_data`), `PB_URL` (default `http://127.0.0.1:8090`),
-`PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` (superuser, no default). PocketBase itself only
-takes the data dir as a `--dir` flag — `serve.sh` is the env-var surface, and forwards any
-other subcommand with `--dir` appended (e.g. `serve.sh superuser upsert EMAIL PASS`). The
+`PB_BIND` (local server bind; default `127.0.0.1:8090`), and `PB_ADMIN_EMAIL` /
+`PB_ADMIN_PASSWORD` (superuser, no default). `PB_URL` is only the REST endpoint used by
+`pb.py`; it is never a server bind. PocketBase itself only takes the data dir as a `--dir`
+flag — `serve.sh` is the env-var surface, and forwards any other subcommand with `--dir`
+appended (e.g. `serve.sh superuser create EMAIL PASS`). The
 live database is tracked in git as `pb_data/data.db` (private repo, ~6 MB), as is
 `pb_data/storage/` (file-field blobs — harness artifacts, #174); the rest of
 `pb_data/` — request logs (`auxiliary.db`), WAL/SHM journals, generated typings — is
 transient and stays ignored. Stop the server before committing so the WAL is checkpointed
 into `data.db`.
 Admin UI: <http://127.0.0.1:8090/_/>. All collections are superuser-only (no public API rules).
+
+## Responsibilities and deployment boundary
+
+The harness is the offline producer of `harness/results.jsonl` and run logs.
+`load_harness_runs.py` is the only projection boundary from those offline files into the
+`runs`, `artifacts`, `run_events`, and `tool_calls` collections. `pb.py` is the shared
+REST client for session-run schema/load/report commands; it does not own server startup.
+`serve.sh` owns local PocketBase startup and its data directory only.
+
+[`deploy/`](deploy/) is a fresh, empty PocketBase Railway bundle, pinned to PocketBase
+0.40.3. It intentionally excludes `evals/pb_data`, historical auth state, and every runtime
+artifact. The root owner has recorded a private whole-directory backup and disposable restore
+receipt externally; historical-data upload and source removal remain root-owned integration
+steps and are not part of this bundle.
 
 ## Data model
 

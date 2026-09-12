@@ -28,6 +28,40 @@ Cold rebuild: start a private runtime, then 1 → 2, and re-load eval provenance
 Create a disposable superuser before serving a fresh test instance to avoid the installer
 browser. Never copy real authentication state into a fixture.
 
+## Procedure: fresh Railway deployment
+
+The root owner provisions the project and service from `evals/deploy/`; this worker package
+does not create cloud resources. Before provisioning, choose a Railway persistent volume mounted
+at **`/pb/pb_data`**, set server-only `PB_SUPERUSER_EMAIL` and
+`PB_SUPERUSER_PASSWORD` to fresh values, and keep `PB_CORS_ORIGINS` unset until a specific
+browser origin is approved. The bundle binds `0.0.0.0:$PORT`, has Railway and image health at
+`/api/health`, uses a 0.40.3 binary whose per-architecture release ZIP checksum is verified at
+build time, and runs `superuser create` only. A duplicate existing user is accepted without
+changing its credentials; other bootstrap failures stop the container.
+
+The deployed service starts empty. Its default collection rules remain restricted, and
+`artifacts.blob` is a protected file field. After the fresh client credentials are stored as
+`PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` outside the service, run `schema.py` from an authorized
+session to apply the schema; do not bake credentials, schema state, `pb_data`, or auth state
+into the image.
+
+Before declaring the deployment ready, the root owner records:
+
+1. HTTPS `GET /api/health`, then a service restart and a second health check proving volume-backed
+   state persists.
+2. Fresh client authentication; schema application; one representative disposable authenticated
+   create/read/update/delete; anonymous denial for a domain record and for a protected artifact
+   file URL.
+3. API backup creation, then an isolated restore into a disposable PocketBase instance and a
+   count/hash comparison against the backed-up source.
+4. A rollback target (the prior Railway deployment plus its corresponding private backup) and a
+   tested rollback command/path.
+
+The root owner has recorded the private whole-directory backup and isolated disposable restore
+receipt externally. Historical data upload, source removal, and authentication migration remain
+root-owned integration steps; do not upload the repository's existing runtime data as part of
+first deployment.
+
 ### Retiring a dropped extender
 
 When the tree stops defining a slug, `ingest.py` ends its run by setting `extenders.retired`
