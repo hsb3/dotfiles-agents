@@ -35,10 +35,12 @@ are both queries.
   assessment row linked to its run). Doctrine has since grown to **9 frameworks** (incl. the
   `hsb3-jobs-to-be-done` taxonomy and the adopted `skillopt` / `closedloop-judges` eval
   methodologies) and a **`sources`** trusted-publisher registry (2026-07-20).
-- **Store:** PocketBase, local, single-machine, superuser-only. The database file
-  (`pb_data/data.db`) is tracked in git (decision 4, revised 2026-07-20); transient siblings
-  (request logs, WAL/SHM, typings) are ignored, and everything needed to rebuild from
-  scratch (schema, ingest, seeds) is tracked regardless.
+- **Store:** One private Railway-hosted PocketBase is the operational source for CLI clients.
+  Its collections are superuser-only, artifacts are protected, users are restricted, and it
+  uses fresh authentication, rate limits, and backups. `PB_URL` selects that hosted service.
+  `pb_data/` is a private local backup or fixture, not live state; the root-owned
+  backup-and-restore proof must complete before it is untracked. Schema, ingest, and seeds
+  remain tracked so the projection can be rebuilt.
 
 ## Non-goals
 
@@ -47,8 +49,8 @@ are both queries.
   lands in `primitives-core/` (or the roster) and gets re-ingested.
 - **Not part of the distribution.** No marketplace artifact, no `make ci` lane, no runtime
   dependency of any shipped primitive — until promotion explicitly decides otherwise.
-- **Not multi-user / not networked.** No public API rules, no auth story beyond the local
-  superuser. Revisit only at promotion.
+- **No browser surface yet.** GUI and read-only browser access are deferred. The hosted service
+  is private and used by CLI clients only.
 
 ## Operating model
 
@@ -63,10 +65,9 @@ are both queries.
 - **Doctrine is append-and-supersede.** A framework proven wrong or replaced gets
   `status: superseded` and a successor row with its own citation — never overwritten.
 - **Secrets discipline.** Credentials live in `_meta/operations/extender-db.env`
-  (untracked). Nothing under `evals/` may contain a plaintext secret. Known
-  exception, accepted: the tracked `data.db` contains the bcrypt hash of the superuser
-  password (random 32-hex, localhost-only service, private repo). If the repo ever goes
-  public, rotate the superuser and strip `data.db` from history first.
+  (untracked). Nothing under `evals/` may contain a plaintext secret. Historical tracked
+  authentication and repository history remain under separate rotation, history-removal, and
+  public-readiness holds; this charter does not claim that any of them is cleared.
 
 ## Decisions
 
@@ -75,7 +76,7 @@ are both queries.
 | 1 | PocketBase as the store | Single binary, zero-infra, admin UI for browsing, REST API scriptable from stdlib Python — matches the repo's zero-install posture. |
 | 2 | Projection, not source of truth | The repo already has manifest + drift-guard machinery; duplicating authority would create a second truth to reconcile. |
 | 3 | Doctrine modeled as data (frameworks/elements), not code | The point is analyzing the catalog BY competing mental models; models must be comparable, citable, and supersedable. |
-| 4 | Lives at root `evals/`; `pb_data/data.db` tracked, transient siblings ignored | _Revised 2026-07-21 (owner decision): re-housed from `_meta/extender-db/` to root `evals/` — promoted from desk tooling to a first-class home for the eval infrastructure._ _Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo make committing the live DB worth it so state travels with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stay ignored._ Originally desk tooling (ADR-0006 track-by-default), not a shipped artifact. |
+| 4 | Lives at root `evals/`; local `pb_data/` was tracked, transient siblings ignored | **Superseded 2026-09-12 by the hosted-source ruling:** one private Railway PocketBase is now the operational source, and local `pb_data/` is a private backup or fixture pending the root-owned backup-and-restore proof and untracking gate. _Historical rationale (superseded): Revised 2026-07-21 (owner decision): re-housed from `_meta/extender-db/` to root `evals/` — promoted from desk tooling to a first-class home for the eval infrastructure. Revised 2026-07-20: originally the whole `pb_data/` was gitignored as machine-local; small size (~6 MB) and a private repo made committing the live DB seem worthwhile so state travelled with the repo. `auxiliary.db` (request logs), WAL/SHM, and typings stayed ignored._ Historical auth exposure and git history remain subject to separate removal, rotation, and public-readiness holds; none is claimed cleared here. Originally desk tooling (ADR-0006 track-by-default), not a shipped artifact. |
 | 5 | Mechanical vs judged assessments split by `assessor` | Regeneration must never destroy judgment; judgment must never block re-ingest. |
 | 6 | **Adopt external eval methodology, don't build a bespoke harness** (2026-07-20) | Mature, permissively-licensed frameworks now exist (SkillOpt MIT, ClosedLoop Apache-2.0). Extends "don't author each extender from scratch" up to the eval harness itself; reserves our build for the IP only we have (job taxonomy, coverage, curation decisions). Defers EDB-14 bespoke agents further. |
 | 7 | **Two complementary adopted methodologies, by eval question** (2026-07-20) | Qualitative "does extender X meet the bar" → the ClosedLoop judges+CaseScore rubric pattern (maps onto our `assessments`; W1 is a lighter version). Quantitative "how good is skill X / can we improve it" → SkillOpt (authored task set + checkable reward + validation-gated edit). Recorded as frameworks `closedloop-judges` / `skillopt`. |

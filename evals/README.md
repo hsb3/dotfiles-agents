@@ -29,16 +29,18 @@ Configuration resolves from env vars first, then `.claude/operations/extender-db
 (untracked), then defaults: `PB_DATA_DIR` (data directory; default
 `evals/pb_data`), `PB_URL` (default `http://127.0.0.1:8090`),
 `PB_BIND` (local server bind; default `127.0.0.1:8090`), and `PB_ADMIN_EMAIL` /
-`PB_ADMIN_PASSWORD` (superuser, no default). `PB_URL` is only the REST endpoint used by
-`pb.py`; it is never a server bind. PocketBase itself only takes the data dir as a `--dir`
-flag — `serve.sh` is the env-var surface, and forwards any other subcommand with `--dir`
-appended (e.g. `serve.sh superuser create EMAIL PASS`). The
-live database is tracked in git as `pb_data/data.db` (private repo, ~6 MB), as is
-`pb_data/storage/` (file-field blobs — harness artifacts, #174); the rest of
-`pb_data/` — request logs (`auxiliary.db`), WAL/SHM journals, generated typings — is
-transient and stays ignored. Stop the server before committing so the WAL is checkpointed
-into `data.db`.
-Admin UI: <http://127.0.0.1:8090/_/>. All collections are superuser-only (no public API rules).
+`PB_ADMIN_PASSWORD` (superuser, no default). The private Railway-hosted PocketBase is the
+operational source: set `PB_URL` to its REST endpoint for CLI clients. `PB_URL` is never a
+server bind. `PB_DATA_DIR` and `PB_BIND` are only for an intentional local PocketBase;
+`serve.sh` forwards other subcommands with `--dir` appended (for example,
+`serve.sh superuser create EMAIL PASS`).
+
+`evals/pb_data` is a private local backup or fixture, never operational live state. The
+root-owned untracking gate removes `data.db` and `storage/` from git only after hosted
+backup-and-restore proof; until that gate completes, their tracked status is historical
+repository state, not an endorsement of it. Its request logs, WAL/SHM journals, and generated
+typings remain transient and ignored. The hosted service has superuser-only collections; GUI
+and read-only browser access are deferred.
 
 ## Responsibilities and deployment boundary
 
@@ -113,7 +115,7 @@ of the model informally (a run's `candidate` slug matches `extenders.slug`).
 | `runs` | harness trial (ledger row ⋈ log) | the 7-field resume key (`campaign`,`harness`,`model`,`candidate`,`case`,`config`,`trial` — unique), `era` (legacy / post / na), `session_id` (unique when present; the log↔run join), verdict + token/cost/turn counts, `checks`/`grades`/`model_usage`/`provenance` (json), `log_path` |
 | `run_events` | raw log line (minus `system/thinking_tokens` noise) | `run` (cascade), `seq` (unique per run), `role` (assistant / tool_call / tool_result / system / result), `event_type`, per-step tokens/cost, `payload` (json, mirror-deduped), `artifact` |
 | `tool_calls` | tool call (claude call+result pair or opencode fused event) | `run` (cascade), `tool_call_id` (unique per run), `tool_name`, `input`/`output` (json), `status`, `wallclock_ms`, `artifact` |
-| `artifacts` | distinct blob (content-addressed) | `sha256` (unique — global dedup), `kind` (write_content / edit_diff / screenshot / tool_output), `blob` (**file** field — written via `pb.create_multipart`, blobs live in tracked `pb_data/storage/`), `byte_size`, `text_ref` |
+| `artifacts` | distinct blob (content-addressed) | `sha256` (unique — global dedup), `kind` (write_content / edit_diff / screenshot / tool_output), `blob` (**file** field — written via `pb.create_multipart`, blobs live in the private hosted PocketBase; local backup/fixture copies may include them), `byte_size`, `text_ref` |
 
 ### Seeded frameworks
 
@@ -173,7 +175,7 @@ against the same catalog is the point of the model.
 - `PROCEDURES.md` — the runbook: run order, evaluated-pass pattern, gates, commit discipline
 - `DECISIONS-NEEDED.md` — open owner-decision batch (tracked as issue #153)
 - `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS, INSIGHTS
-- `pb_data/` — the live database; `data.db` and `storage/` are tracked (logs/journals/typings ignored)
+- `pb_data/` — private local backup or fixture, pending the root-owned hosted backup-and-restore proof and untracking gate; it is not operational live state
 
 ## Codex usage digest
 
