@@ -56,14 +56,14 @@ python3 evals/toolbox_fixture.py --pocketbase /opt/homebrew/bin/pocketbase
 ```
 
 It prints the loopback URL and fixture-only browser email/password, applies the schema and
-authenticated read-only rules, seeds two runs plus one protected artifact, and removes its
-process and temporary data on Ctrl-C. It reads no environment or credential file. The focused
+authenticated read-only rules, seeds 27 synthetic runs plus one protected artifact, and removes its
+process and temporary data on Ctrl-C. It reads no credential or configuration environment file. The focused
 test runs this actual fixture when PocketBase is present; otherwise it is explicitly skipped.
 
 The root creates the browser `users` account manually after its email is supplied. Public signup
 is disabled (`createRule = null`); users list and view are authenticated as appropriate, while
-users update and delete are `null`. Every business collection has authenticated read-only list
-and view rules; create, update, and delete stay `null`. Keep `artifacts.blob` protected and use
+users update and delete are `null`. Only `runs` and `artifacts` have authenticated read-only list
+and view rules; their create, update, and delete rules stay `null`. Keep `artifacts.blob` protected and use
 PocketBase's authenticated short-lived file token route for it. The browser stores its token only
 in memory, clears it on logout, and never receives a superuser credential.
 
@@ -78,9 +78,7 @@ business_rule='@request.auth.id != ""'
 curl --fail-with-body -X PATCH "$PB_URL/api/collections/users" \
   -H "$auth_header" -H 'Content-Type: application/json' \
   --data "{\"listRule\":\"$users_rule\",\"viewRule\":\"$users_rule\",\"createRule\":null,\"updateRule\":null,\"deleteRule\":null}"
-for collection in frameworks sources extenders framework_elements files distributions \
-  frontmatter_dimensions eval_runs eval_responses assessments job_coverage relationships \
-  runs artifacts run_events tool_calls; do
+for collection in runs artifacts; do
   curl --fail-with-body -X PATCH "$PB_URL/api/collections/$collection" \
     -H "$auth_header" -H 'Content-Type: application/json' \
     --data "{\"listRule\":\"$business_rule\",\"viewRule\":\"$business_rule\",\"createRule\":null,\"updateRule\":null,\"deleteRule\":null}"

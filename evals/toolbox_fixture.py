@@ -145,12 +145,17 @@ class ToolboxFixture:
             "email": self.user_email, "password": self.user_password,
             "passwordConfirm": self.user_password, "verified": True,
         }, self.admin_token)
-        first = _json_request(self.url + "/api/collections/runs/records", "POST", {
-            "harness": "claude", "candidate": "fixture", "case": "one", "campaign": "fixture", "trial": 1,
-        }, self.admin_token)
-        _json_request(self.url + "/api/collections/runs/records", "POST", {
-            "harness": "claude", "candidate": "fixture", "case": "two", "campaign": "fixture", "trial": 2,
-        }, self.admin_token)
+        first = None
+        for index in range(27):
+            run = _json_request(self.url + "/api/collections/runs/records", "POST", {
+                "harness": "claude" if index % 2 else "opencode",
+                "candidate": "fixture-<img src=x onerror=alert(1)>" if index == 0 else f"fixture-{index:02d}",
+                "case": f"fixture-case-{index:02d}", "campaign": "toolbox-fixture", "trial": index + 1,
+                "model": f"fixture-model-{index % 3}", "passed": bool(index % 2),
+                "cost_usd": round((index + 1) / 1000, 3), "duration_ms": 1000 + index * 137,
+            }, self.admin_token)
+            if first is None:
+                first = run
         self.artifact_bytes = b"fixture protected evidence\n"
         self.artifact = _multipart_request(self.url + "/api/collections/artifacts/records", {
             "run": first["id"], "kind": "tool_output", "mime": "text/plain",

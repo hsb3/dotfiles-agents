@@ -104,7 +104,7 @@ class ToolboxPackageTests(unittest.TestCase):
     def test_rejects_missing_ui_sources(self):
         (self.source / "evals" / "ui" / "index.html").unlink()
         output = Path(self.tmp.name) / "missing-ui"
-        with self.assertRaisesRegex(FileNotFoundError, "UI"):
+        with self.assertRaisesRegex(FileNotFoundError, "package input"):
             package_toolbox.build_package(self.source, output)
         self.assertFalse(output.exists())
 
@@ -114,10 +114,19 @@ class ToolboxPackageTests(unittest.TestCase):
         clean_output = Path(self.tmp.name) / "clean-output"
         package_toolbox.build_package(self.source, clean_output)
         self.assertNotIn(b"secret", b"".join(p.read_bytes() for p in clean_output.rglob("*") if p.is_file()))
+        start = self.source / "evals" / "deploy" / "start.sh"
+        start.unlink()
+        start.symlink_to(self.source / ".env")
+        deploy_output = Path(self.tmp.name) / "deploy-symlink-output"
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            package_toolbox.build_package(self.source, deploy_output)
+        self.assertFalse(deploy_output.exists())
+        start.unlink()
+        start.write_text("start.sh\n", encoding="utf-8")
         (self.source / "evals" / "ui" / "app.js").unlink()
         (self.source / "evals" / "ui" / "app.js").symlink_to(self.source / ".env")
         symlink_output = Path(self.tmp.name) / "symlink-output"
-        with self.assertRaisesRegex(FileNotFoundError, "unsafe"):
+        with self.assertRaisesRegex(ValueError, "symlink"):
             package_toolbox.build_package(self.source, symlink_output)
         self.assertFalse(symlink_output.exists())
         source_link = Path(self.tmp.name) / "source-link"
@@ -160,7 +169,11 @@ class ToolboxPackageTests(unittest.TestCase):
             self.assertIn("source_snapshot", catalog)
             runs_request = Request(fixture.url + "/api/collections/runs/records?page=1&perPage=1")
             runs_request.add_header("Authorization", fixture.user_token)
-            self.assertEqual(len(json.load(urlopen(runs_request))["items"]), 1)
+            page = json.load(urlopen(runs_request))
+            self.assertEqual(len(page["items"]), 1)
+            self.assertEqual(page["totalItems"], 27)
+            self.assertEqual(page["totalPages"], 27)
+            self.assertTrue({"model", "cost_usd", "duration_ms", "passed"} <= set(page["items"][0]))
             anonymous_runs = json.load(urlopen(fixture.url + "/api/collections/runs/records?page=1&perPage=1"))
             self.assertEqual(anonymous_runs["totalItems"], 0)
             token_request = Request(fixture.url + "/api/files/token", data=b"{}", method="POST")

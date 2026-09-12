@@ -14,6 +14,24 @@ PLUGIN_LINK = re.compile(r"\[([^]]+)\]\(\.\./plugins/([^/]+)/README\.md\)")
 UI_FILES = ("index.html", "styles.css", "app.js")
 
 
+def _input_file(source_root, path):
+    source_root, path = Path(source_root), Path(path)
+    try:
+        relative = path.relative_to(source_root)
+    except ValueError:
+        raise ValueError(f"package input escapes source root: {path}") from None
+    current = source_root
+    if current.is_symlink():
+        raise ValueError(f"package input ancestor is a symlink: {current}")
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError(f"package input is a symlink: {current}")
+    if not path.is_file():
+        raise FileNotFoundError(f"required package input is missing: {path}")
+    return path
+
+
 def _workflow_rows(workflows):
     lines = workflows.read_text(encoding="utf-8").splitlines()
     start = next((index for index, line in enumerate(lines) if WORKFLOW_HEADING.match(line)), None)
@@ -58,6 +76,8 @@ def build_catalog(source_root):
     source_root = Path(source_root)
     manifest_path = source_root / ".claude-plugin" / "marketplace.json"
     workflows_path = source_root / "docs" / "workflows.md"
+    _input_file(source_root, manifest_path)
+    _input_file(source_root, workflows_path)
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -115,15 +135,9 @@ def build_catalog(source_root):
 
 
 def _ui_files(source_root, source_ui):
-    if any(path.is_symlink() for path in (source_root, source_root / "evals", source_ui)):
-        raise ValueError(f"UI source ancestor must not be a symlink: {source_ui}")
     if not source_ui.is_dir():
         raise FileNotFoundError(f"required UI sources are missing: {source_ui}")
-    files = [source_ui / name for name in UI_FILES]
-    for item in files:
-        if not item.is_file() or item.is_symlink():
-            raise FileNotFoundError(f"required UI source is missing or unsafe: {item}")
-    return files
+    return [_input_file(source_root, source_ui / name) for name in UI_FILES]
 
 
 def build_package(source_root, output):
@@ -134,9 +148,7 @@ def build_package(source_root, output):
     deploy = source_root / "evals" / "deploy"
     hook = deploy / "pb_hooks" / "toolbox_catalog.pb.js"
     required = [deploy / name for name in ("Dockerfile", "start.sh", "railway.toml")] + [hook]
-    missing = [str(path) for path in required if not path.is_file()]
-    if missing:
-        raise FileNotFoundError("missing deployment source: " + ", ".join(missing))
+    required = [_input_file(source_root, path) for path in required]
     catalog = build_catalog(source_root)
     source_ui = source_root / "evals" / "ui"
     ui_files = _ui_files(source_root, source_ui)
