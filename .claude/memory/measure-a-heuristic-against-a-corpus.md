@@ -35,4 +35,4 @@ fixtures, no framework.
 
 Report precision as a number, not as "looks clean." Then mark the residue with a `ponytail:`
 comment naming the measured rate, so the next session inherits the size of the ceiling rather
-than a vague warning. Related: [[signals-that-lie]], [[no-unguarded-counts-in-prose]].
+than a vague warning.
