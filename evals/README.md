@@ -52,6 +52,13 @@ REST client for session-run schema/load/report commands; it does not own server 
 0.40.3. It excludes `evals/pb_data`, historical auth state, and runtime artifacts; deployment
 and recovery procedures are in [PROCEDURES.md](PROCEDURES.md#procedure-fresh-railway-deployment).
 
+The root-owned consolidation tool, `migrate_business_data.py`, reads a verified private backup
+offline and defaults to a receipt-only dry-run. Its reviewed `all` scope is the 12 business
+collections plus four harness telemetry collections; it excludes auth, system/settings tables,
+and the derived view. The root procedure, including the fixed scope, receipt, timestamp behavior,
+batch prerequisite, and explicit confirmation before `--apply`, is in
+[PROCEDURES.md](PROCEDURES.md#procedure-private-business-data-consolidation).
+
 ## Data model
 
 Two halves, joined by `assessments`: the **inventory** (what the extenders ARE) and the
@@ -155,6 +162,8 @@ against the same catalog is the point of the model.
 - `load_harness_runs.py` — harness telemetry ingester (#174): ledger + raw run logs →
   `runs`/`run_events`/`tool_calls`/`artifacts`; `--parse-only` (offline), `--dry-run`,
   `--campaign` scoping. See PROCEDURES "ingesting a harness campaign".
+- `migrate_business_data.py` — root-only offline receipt and fixed-scope initial import from a
+  verified private backup; never reads historical authentication.
 - `report.py` — regenerates the analysis surface from the DB: `coverage-matrix.md` +
   `analysis.md` (both generated — never hand-edit); `--fixtures dir` swaps in JSON dumps
   for credential-free development. Supersedes the former `render_matrix.py`.
