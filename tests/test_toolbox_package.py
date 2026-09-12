@@ -134,10 +134,13 @@ class ToolboxPackageTests(unittest.TestCase):
 
     def test_catalog_hook_requires_auth_and_reads_the_private_snapshot(self):
         hook = (ROOT / "evals" / "deploy" / "pb_hooks" / "toolbox_catalog.pb.js").read_text(encoding="utf-8")
+        start = (ROOT / "evals" / "deploy" / "start.sh").read_text(encoding="utf-8")
         self.assertIn('"/api/toolbox/catalog"', hook)
         self.assertIn("$apis.requireAuth()", hook)
         self.assertIn("/pb/pb_catalog/toolbox-catalog.json", hook)
         self.assertNotIn("pb_public", hook)
+        self.assertIn('--hooksDir="$package_dir/pb_hooks"', start)
+        self.assertIn('--publicDir="$package_dir/pb_public"', start)
 
     def test_refuses_existing_output_and_bad_workflow_references(self):
         output = Path(self.tmp.name) / "output"
@@ -184,10 +187,16 @@ class ToolboxPackageTests(unittest.TestCase):
         catalog = json.loads(package_toolbox.build_catalog(ROOT))
         ids = {item["id"] for item in catalog["plugins"]}
         self.assertTrue({"board-desk", "plugin-feedback", "solo-skills"} <= ids)
+        self.assertTrue(all({"id", "name", "guidance", "plugins"} <= set(workflow)
+                            for workflow in catalog["workflows"]))
         workflow_ids = {item["id"] for item in catalog["workflows"]}
         self.assertTrue(workflow_ids)
-        self.assertTrue(all(workflow_id in workflow_ids for plugin in catalog["plugins"]
-                            for workflow_id in plugin["workflows"]))
+        self.assertTrue(all({"id", "workflows"} <= set(plugin) for plugin in catalog["plugins"]))
+        self.assertTrue(all(isinstance(workflow_id, str) and workflow_id in workflow_ids
+                            for plugin in catalog["plugins"] for workflow_id in plugin["workflows"]))
+        self.assertTrue(all(plugin["id"] in workflow["plugins"]
+                            for plugin in catalog["plugins"] for workflow_id in plugin["workflows"]
+                            for workflow in catalog["workflows"] if workflow["id"] == workflow_id))
 
     @unittest.skipUnless(shutil.which("pocketbase") and (ROOT / "evals" / "ui" / "index.html").is_file(),
                          "requires PocketBase and the integrated UI sources")
