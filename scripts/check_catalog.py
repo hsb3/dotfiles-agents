@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Consumer-facing catalog drift guard — the README's plugin lineup, machine-checked.
 
-README.md is hand-authored (nothing generated is tracked, ADR 0017), so this guard
+README.md is hand-authored (nothing generated is tracked, decision-030), so this guard
 verifies it against the manifests and against the plugin assemblies on disk instead of
 generating it. README.md and `.claude-plugin/marketplace.json` are lifted verbatim onto
 the published `main` branch (`.github/workflows/publish.yml`), so a relative link that

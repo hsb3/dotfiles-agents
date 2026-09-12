@@ -7,6 +7,7 @@ and catalog page.
 ## Use the plugins
 
 - [Install and choose a plugin](../README.md#install)
+- [Development workflows: choose a plugin and start](workflows.md)
 - [Codex support, setup and runtime limits](codex-compatibility.md)
 - [Atelier activation and isolated workers](../plugins/atelier/README.md)
 - [Board desk: task authoring, triage and reconciliation](../plugins/board-desk/README.md)

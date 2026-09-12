@@ -1,13 +1,13 @@
 name: publish
 
 # Assembles the DISTRIBUTABLE surface from `dev` and commits it to `main` with the previous
-# `main` as parent — filtered and append-only (ADR 0008, restoring old-desk 0014 §3's
+# `main` as parent — filtered and append-only (decision-027, restoring old-desk 0014 §3's
 # "rebuilt clean" main; supersedes the whole-tree force push). `main` stays the branch
 # consumers resolve (ADR 0007): the Claude Code marketplace shape at the repo root. The
 # workbench (harness/, evals/, _meta/, .claude/, .agents/) never publishes.
 #
 # Manual + typed-confirmation guarded. The one-time input `reset: orphan` starts a fresh
-# parentless main history (used at the 0008 cutover to drop the pre-0008 whole-tree
+# parentless main history (used at the decision-027 cutover to drop the pre-0008 whole-tree
 # snapshots from consumer clones); every other run is a fast-forward parented commit.
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ on:
         required: true
         default: ''
       reset:
-        description: 'Type "orphan" to restart main parentless (0008 cutover only)'
+        description: 'Type "orphan" to restart main parentless (decision-027 cutover only)'
         required: false
         default: ''
 
@@ -63,8 +63,8 @@ jobs:
       - name: Manifest gate (claude plugin validate --strict)
         run: make manifests
       - name: Assemble the publish tree
-        # Lift map (ADR 0008, updated after #229 retired the dist lanes): the live
-        # symlink assemblies (ADR 0017) ARE the marketplace — dereference them to the
+        # Lift map (decision-027, updated after #229 retired the dist lanes): the live
+        # symlink assemblies (decision-030) ARE the marketplace — dereference them to the
         # ROOT of main (the shape consumers resolve, ADR 0007). opencode is an
         # install-time laydown since #230 and no longer publishes a lane.
         run: |

@@ -16,7 +16,7 @@ property of a link check. A missing skill README was invisible to every gate unt
 Five checks per unit:
 
   1. `README.md` exists (symlinks are followed — standalone plugin READMEs are symlinks to
-     the member skill's README under ADR 0017, and a dangling one is a missing README).
+     the member skill's README under decision-030, and a dangling one is a missing README).
   2. It is non-empty once whitespace is stripped. An empty file passes an existence check
      and documents nothing.
   3. Its first non-blank line is an ATX H1 (`# `). Every README in the tree already opens

@@ -7,11 +7,11 @@
 ## Source-of-truth rules
 
 - **`primitives-core/` is the only place a primitive is edited**, and it is self-authored only
-  (ADR 0015) — third-party items are recorded by reference in `externals.yaml`, never copied in.
-- **Root `plugins/<id>/` are hand-authored thin symlink assemblies** over it (ADR 0017):
+  (decision-028) — third-party items are recorded by reference in `externals.yaml`, never copied in.
+- **Root `plugins/<id>/` are hand-authored thin symlink assemblies** over it (decision-030):
   `plugin.json`/`hooks.json`/bundle READMEs are regular files, everything else symlinked;
   `.claude-plugin/marketplace.json` lists them; `make symlinks` lints.
-- **Nothing generated is tracked** (ADR 0017) — generate at install/run time instead. A tracked
+- **Nothing generated is tracked** (decision-030) — generate at install/run time instead. A tracked
   artifact needing a regen step is a design smell. Generators that remain (`gen_opencode.py`)
   stay deterministic: stable ordering, no clocks, no random.
 - **`primitives-core.yaml` (the roster) is the provenance manifest** — the drift guard reads it,
@@ -162,7 +162,7 @@ board where 34 of 55 open items sat in one priority band, 16 carried no label, a
 grouping lived only in title prefixes. A per-card check cannot see a distribution. Run both.
 
 **Board conventions.** The vocabulary is not restated here — it is
-[`decision-023`](docs/decisions/decision-023%20-%20kata-labels-are-the-triage-system-and-title-prefixes-are-not.md),
+[`decision-023`](docs/decisions/decisions-023-kata-labels-are-the-triage-system-and-title-prefixes-are-not.md),
 declared machine-readably in `primitives-core/skills/board-triage/scripts/core-labels.txt`, and
 that record is the copy to change. What it means day to day: every open card carries exactly one
 `area:*` and exactly one `type:*`, titles carry **no prefix of any kind** (the grouping lives in

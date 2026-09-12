@@ -4,7 +4,7 @@
 Consumers install plugins by version and cache them, so publishing changed content under
 an unchanged version reaches nobody: the release is a silent no-op. The expensive shape is
 the DUAL-HOMED one. `plugins/<id>/` are thin symlink assemblies over `primitives-core/`
-(ADR 0017), so editing one skill body changes the published bytes of EVERY plugin that
+(decision-030), so editing one skill body changes the published bytes of EVERY plugin that
 ships it — bump none of them and every gate stays green while no installed machine ever
 receives the fix.
 

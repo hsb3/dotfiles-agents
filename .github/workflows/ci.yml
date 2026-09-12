@@ -28,10 +28,10 @@ jobs:
       - run: make floor
 
   # Distribution-surface guards — roster<->disk (provenance manifest), symlink-assembly
-  # lint (ADR 0017), repo-flow DAG (flow.yaml <-> tree). The job name is PINNED by dev's
+  # lint (decision-030), repo-flow DAG (flow.yaml <-> tree). The job name is PINNED by dev's
   # branch-protection required checks — renaming it strands PRs on a check that never
   # reports; update the protection setting first if it must change (which is why it still
-  # reads "marketplace · catalog" after ADR 0017 retired those artifacts).
+  # reads "marketplace · catalog" after decision-030 retired those artifacts).
   drift-guards:
     name: drift guards (roster · marketplace · catalog)
     runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}

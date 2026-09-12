@@ -2,7 +2,7 @@
 """Roster <-> disk drift guard (issue #5) + the translation-matrix completeness gate.
 
 Verifies that primitives-core.yaml (the roster, slimmed to a provenance manifest per
-ADR 0017) and primitives-core/ on disk agree:
+decision-030) and primitives-core/ on disk agree:
   - every roster entry's `source` exists on disk
   - every primitive on disk (skill dir, agent .md, command .md, hook handler .sh, mcp .json)
     has a roster entry
@@ -36,7 +36,7 @@ TRANSLATION = os.path.join(REPO, "translation.yaml")
 AGENTS = os.path.join(PC, "agents")
 
 TYPES = {"skill", "agent", "command", "mcp", "hook"}
-# The runtime enum (ADR 0017): claude-code installs the symlink assemblies natively;
+# The runtime enum (decision-030): claude-code installs the symlink assemblies natively;
 # opencode is generated at install time by gen_opencode.py (task-4).
 TARGETS = {"claude-code", "opencode", "codex"}
 ORIGINS = {"authored", "sourced", "vendored"}

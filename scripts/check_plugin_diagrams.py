@@ -2,7 +2,7 @@
 """Plugin-README diagram guard — every plugin ships a visual, and it cannot go stale silently.
 
 Standard: docs/readme-diagram-standard.md. Each `plugins/<id>/README.md` is
-hand-authored (bundle READMEs are regular files under ADR 0017, not symlinks) and carries at
+hand-authored (bundle READMEs are regular files under decision-030, not symlinks) and carries at
 least one Mermaid diagram drawing what the "What you get" table cannot — what makes each
 piece fire, in what order, and what comes out.
 
