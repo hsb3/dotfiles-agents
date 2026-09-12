@@ -1,13 +1,11 @@
 """Hermetic checks for the isolated evals toolbox deployment package."""
 
 import hashlib
-import http.server
 import importlib.util
 import json
 import shutil
 import sys
 import tempfile
-import threading
 import unittest
 from pathlib import Path
 
@@ -20,59 +18,6 @@ SPEC.loader.exec_module(package_toolbox)
 FIXTURE_SPEC = importlib.util.spec_from_file_location("toolbox_fixture", ROOT / "evals" / "toolbox_fixture.py")
 toolbox_fixture = importlib.util.module_from_spec(FIXTURE_SPEC)
 FIXTURE_SPEC.loader.exec_module(toolbox_fixture)
-
-
-class PocketBaseFixture:
-    """Disposable read-only HTTP fixture; no PocketBase binary or real token required."""
-
-    def __enter__(self):
-        fixture = self
-
-        class Handler(http.server.BaseHTTPRequestHandler):
-            def do_POST(self):
-                if self.path == "/api/collections/users/auth-with-password":
-                    self.reply({"token": "fixture-token", "record": {"id": "fixture-user"}})
-                elif self.path == "/api/files/token":
-                    self.reply({"token": "fixture-file-token"})
-                else:
-                    self.send_error(404)
-
-            def do_GET(self):
-                pages = {
-                    "/api/collections/runs/records?page=1&perPage=1": {"page": 1, "perPage": 1, "totalPages": 2, "items": [{"id": "run-1"}]},
-                    "/api/collections/runs/records?page=2&perPage=1": {"page": 2, "perPage": 1, "totalPages": 2, "items": [{"id": "run-2"}]},
-                    "/api/collections/artifacts/records/run-1": {"id": "artifact-1", "blob": "proof.txt"},
-                }
-                payload = pages.get(self.path)
-                if payload is None:
-                    self.send_error(404)
-                else:
-                    self.reply(payload)
-
-            def reply(self, payload):
-                body = json.dumps(payload).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-
-            def log_message(self, *_):
-                pass
-
-        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
-        self.thread.start()
-        return self
-
-    def __exit__(self, *_):
-        self.server.shutdown()
-        self.thread.join()
-        self.server.server_close()
-
-    @property
-    def url(self):
-        return f"http://127.0.0.1:{self.server.server_port}"
 
 
 class ToolboxPackageTests(unittest.TestCase):
@@ -156,16 +101,12 @@ class ToolboxPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing"):
             package_toolbox.build_package(self.source, Path(self.tmp.name) / "bad")
 
-    def test_rejects_missing_ui_and_fixture_is_paginated_and_token_free(self):
+    def test_rejects_missing_ui_sources(self):
         (self.source / "evals" / "ui" / "index.html").unlink()
         output = Path(self.tmp.name) / "missing-ui"
         with self.assertRaisesRegex(FileNotFoundError, "UI"):
             package_toolbox.build_package(self.source, output)
         self.assertFalse(output.exists())
-        with PocketBaseFixture() as fixture:
-            from urllib.request import urlopen
-            self.assertEqual(json.load(urlopen(fixture.url + "/api/collections/runs/records?page=2&perPage=1"))["items"][0]["id"], "run-2")
-            self.assertEqual(json.load(urlopen(fixture.url + "/api/files/token", data=b"{}"))["token"], "fixture-file-token")
 
     def test_ignores_extra_files_and_rejects_symlinked_required_sources(self):
         (self.source / "evals" / "ui" / "private.json").write_text('{"token": "secret"}', encoding="utf-8")

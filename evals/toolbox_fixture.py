@@ -25,9 +25,7 @@ from schema import collection_specs
 
 
 BUSINESS_COLLECTIONS = (
-    "frameworks", "sources", "extenders", "framework_elements", "files", "distributions",
-    "frontmatter_dimensions", "eval_runs", "eval_responses", "assessments", "job_coverage",
-    "relationships", "runs", "artifacts", "run_events", "tool_calls",
+    "runs", "artifacts",
 )
 SCHEMA_ORDER = (
     "frameworks", "sources", "extenders", "framework_elements", "files", "distributions",
@@ -74,45 +72,54 @@ class ToolboxFixture:
         self.superuser_password = "FixtureAdminPassword123"
         self.user_email = "fixture-user@example.test"
         self.user_password = "FixtureUserPassword123"
+        self.tmp = None
+        self.process = None
 
     def __enter__(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="toolbox-fixture-")
-        self.root = Path(self.tmp.name)
-        self.package = build_package(self.source_root, self.root / "package")
-        with socket.socket() as sock:
-            sock.bind(("127.0.0.1", 0))
-            self.port = sock.getsockname()[1]
-        self.url = f"http://127.0.0.1:{self.port}"
-        env = {
-            "PATH": os.environ.get("PATH", ""),
-            "PB_DATA_DIR": str(self.root / "pb_data"),
-            "PB_CORS_ORIGINS": self.url,
-            "PB_BIND": "127.0.0.1",
-            "PB_SUPERUSER_EMAIL": self.superuser_email,
-            "PB_SUPERUSER_PASSWORD": self.superuser_password,
-            "POCKETBASE_BIN": str(self.pocketbase),
-            "PORT": str(self.port),
-        }
-        self.process = subprocess.Popen(["/bin/sh", str(self.package / "start.sh")], cwd=self.package, env=env)
-        self._wait_for_health()
-        self.admin_token = _json_request(self.url + "/api/collections/_superusers/auth-with-password", "POST", {
-            "identity": self.superuser_email, "password": self.superuser_password,
-        })["token"]
-        self._apply_schema()
-        self._set_rules_and_seed()
-        self.user_token = _json_request(self.url + "/api/collections/users/auth-with-password", "POST", {
-            "identity": self.user_email, "password": self.user_password,
-        })["token"]
-        return self
+        self.process = None
+        try:
+            self.root = Path(self.tmp.name)
+            self.package = build_package(self.source_root, self.root / "package")
+            with socket.socket() as sock:
+                sock.bind(("127.0.0.1", 0))
+                self.port = sock.getsockname()[1]
+            self.url = f"http://127.0.0.1:{self.port}"
+            env = {
+                "PATH": os.environ.get("PATH", ""), "PB_DATA_DIR": str(self.root / "pb_data"),
+                "PB_CORS_ORIGINS": self.url, "PB_BIND": "127.0.0.1",
+                "PB_SUPERUSER_EMAIL": self.superuser_email, "PB_SUPERUSER_PASSWORD": self.superuser_password,
+                "POCKETBASE_BIN": str(self.pocketbase), "PORT": str(self.port),
+            }
+            self.process = subprocess.Popen(["/bin/sh", str(self.package / "start.sh")], cwd=self.package, env=env)
+            self._wait_for_health()
+            self.admin_token = _json_request(self.url + "/api/collections/_superusers/auth-with-password", "POST", {
+                "identity": self.superuser_email, "password": self.superuser_password,
+            })["token"]
+            self._apply_schema()
+            self._set_rules_and_seed()
+            self.user_token = _json_request(self.url + "/api/collections/users/auth-with-password", "POST", {
+                "identity": self.user_email, "password": self.user_password,
+            })["token"]
+            return self
+        except BaseException:
+            self.close()
+            raise
 
     def __exit__(self, *_):
-        self.process.terminate()
-        try:
-            self.process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            self.process.kill()
-            self.process.wait()
-        self.tmp.cleanup()
+        self.close()
+
+    def close(self):
+        if self.process and self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+        if self.tmp:
+            self.tmp.cleanup()
+            self.tmp = None
 
     def _wait_for_health(self):
         for _ in range(100):

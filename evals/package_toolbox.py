@@ -126,13 +126,6 @@ def _ui_files(source_root, source_ui):
     return files
 
 
-def _copy_ui(files, source_ui, destination):
-    for item in files:
-        target = destination / item.relative_to(source_ui)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(item, target)
-
-
 def build_package(source_root, output):
     """Build an empty, isolated deployment directory at caller-selected *output*."""
     source_root, output = Path(source_root), Path(output)
@@ -156,7 +149,10 @@ def build_package(source_root, output):
     catalog_target = hook_target.parent / "toolbox-catalog.json"
     catalog_target.write_bytes(catalog)
     public = output / "pb_public"
-    _copy_ui(ui_files, source_ui, public)
+    for source in ui_files:
+        target = public / source.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
     return output
 
 
