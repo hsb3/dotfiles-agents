@@ -208,6 +208,10 @@ class MigrationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 migration._decode(value, "is_binary", "files")
 
+    def test_current_retirement_field_normalizes_as_boolean(self):
+        self.assertIs(False, migration._decode(0, "retired", "extenders"))
+        self.assertIs(True, migration._decode(1, "retired", "extenders"))
+
     def test_destination_integer_bool_does_not_match_canonical_body(self):
         export = migration.Export({"sources": [{"id": "so0000000000001", "publishes_evals": False}]}, {})
         pb = FakePB()

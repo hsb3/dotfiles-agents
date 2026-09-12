@@ -53,7 +53,7 @@ JSON_FIELDS = {
 MULTI_FIELDS = {"frameworks": {"applies_to"}, "sources": {"publishes"},
                 "distributions": {"members"}, "eval_runs": {"frameworks"},
                 "eval_responses": {"extenders"}}
-BOOL_FIELDS = {"sources": {"publishes_evals"}, "files": {"is_binary"},
+BOOL_FIELDS = {"extenders": {"retired"}, "sources": {"publishes_evals"}, "files": {"is_binary"},
                "runs": {"passed", "skill_used"}, "run_events": {"is_error"},
                "tool_calls": {"is_error"}}
 

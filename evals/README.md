@@ -35,12 +35,11 @@ server bind. `PB_DATA_DIR` and `PB_BIND` are only for an intentional local Pocke
 `serve.sh` forwards other subcommands with `--dir` appended (for example,
 `serve.sh superuser create EMAIL PASS`).
 
-`evals/pb_data` is a private local backup or fixture, never operational live state. The
-root-owned untracking gate removes `data.db` and `storage/` from git only after hosted
-backup-and-restore proof; until that gate completes, their tracked status is historical
-repository state, not an endorsement of it. Its request logs, WAL/SHM journals, and generated
-typings remain transient and ignored. The hosted service has superuser-only collections; GUI
-and read-only browser access are deferred.
+`evals/pb_data/` is untracked and ignored. Private local backup or fixture bytes may remain;
+CLI clients use the hosted service. The migration and hosted backup/restore checks completed
+before runtime data was removed from Git tracking. Request logs, WAL/SHM journals, and generated
+typings remain transient. The hosted collections are superuser-only; GUI access awaits design
+and access-policy review. Historical Git copies and authentication remediation remain separate.
 
 ## Responsibilities and deployment boundary
 
@@ -175,7 +174,7 @@ against the same catalog is the point of the model.
 - `PROCEDURES.md` — the runbook: run order, evaluated-pass pattern, gates, commit discipline
 - `DECISIONS-NEEDED.md` — open owner-decision batch (tracked as issue #153)
 - `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS, INSIGHTS
-- `pb_data/` — private local backup or fixture, pending the root-owned hosted backup-and-restore proof and untracking gate; it is not operational live state
+- `pb_data/` — ignored private local backup or fixture; live state is hosted
 
 ## Codex usage digest
 
