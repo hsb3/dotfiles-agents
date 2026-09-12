@@ -3,6 +3,8 @@
 routerAdd(
   "GET",
   "/api/toolbox/catalog",
-  (e) => e.json(200, JSON.parse($os.readFile($os.getenv("PB_CATALOG_PATH") || "/pb/pb_catalog/toolbox-catalog.json"))),
+  (e) => e.json(200, JSON.parse(String.fromCharCode.apply(
+    null, $os.readFile(`${__hooks}/toolbox-catalog.json`),
+  ))),
   $apis.requireAuth(),
 )

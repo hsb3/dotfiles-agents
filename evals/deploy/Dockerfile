@@ -16,7 +16,6 @@ RUN set -e; case "$TARGETARCH" in \
 WORKDIR /pb
 COPY start.sh ./start.sh
 COPY pb_public ./pb_public
-COPY pb_catalog ./pb_catalog
 COPY pb_hooks ./pb_hooks
 RUN chmod +x /pb/start.sh
 

@@ -86,7 +86,6 @@ class ToolboxFixture:
         env = {
             "PATH": os.environ.get("PATH", ""),
             "PB_DATA_DIR": str(self.root / "pb_data"),
-            "PB_CATALOG_PATH": str(self.package / "pb_catalog" / "toolbox-catalog.json"),
             "PB_CORS_ORIGINS": self.url,
             "PB_BIND": "127.0.0.1",
             "PB_SUPERUSER_EMAIL": self.superuser_email,

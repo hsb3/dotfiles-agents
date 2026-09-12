@@ -58,8 +58,7 @@ python3 evals/toolbox_fixture.py --pocketbase /opt/homebrew/bin/pocketbase
 It prints the loopback URL and fixture-only browser email/password, applies the schema and
 authenticated read-only rules, seeds two runs plus one protected artifact, and removes its
 process and temporary data on Ctrl-C. It reads no environment or credential file. The focused
-test runs this actual fixture when PocketBase and `evals/ui/index.html` are present; otherwise it
-is explicitly skipped.
+test runs this actual fixture when PocketBase is present; otherwise it is explicitly skipped.
 
 The root creates the browser `users` account manually after its email is supplied. Public signup
 is disabled (`createRule = null`); users list and view are authenticated as appropriate, while

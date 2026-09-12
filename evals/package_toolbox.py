@@ -111,7 +111,7 @@ def build_catalog(source_root):
             for _, workflow in sorted(workflows.items())
         ],
     }
-    return json.dumps(catalog, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
+    return json.dumps(catalog, indent=2, sort_keys=True).encode("utf-8") + b"\n"
 
 
 def _ui_files(source_root, source_ui):
@@ -153,8 +153,7 @@ def build_package(source_root, output):
     hook_target = output / "pb_hooks" / hook.name
     hook_target.parent.mkdir()
     shutil.copyfile(hook, hook_target)
-    catalog_target = output / "pb_catalog" / "toolbox-catalog.json"
-    catalog_target.parent.mkdir()
+    catalog_target = hook_target.parent / "toolbox-catalog.json"
     catalog_target.write_bytes(catalog)
     public = output / "pb_public"
     _copy_ui(ui_files, source_ui, public)

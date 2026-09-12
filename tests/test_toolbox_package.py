@@ -113,14 +113,14 @@ class ToolboxPackageTests(unittest.TestCase):
         package_toolbox.build_package(self.source, second)
         self.assertEqual(
             sorted(path.relative_to(first).as_posix() for path in first.rglob("*") if path.is_file()),
-            sorted(["Dockerfile", "railway.toml", "start.sh", "pb_catalog/toolbox-catalog.json", "pb_hooks/toolbox_catalog.pb.js", "pb_public/app.js", "pb_public/index.html", "pb_public/styles.css"]),
+            sorted(["Dockerfile", "railway.toml", "start.sh", "pb_hooks/toolbox-catalog.json", "pb_hooks/toolbox_catalog.pb.js", "pb_public/app.js", "pb_public/index.html", "pb_public/styles.css"]),
         )
         self.assertEqual(
             {p.relative_to(first).as_posix(): p.read_bytes() for p in first.rglob("*") if p.is_file()},
             {p.relative_to(second).as_posix(): p.read_bytes() for p in second.rglob("*") if p.is_file()},
         )
         self.assertFalse((first / "pb_public" / "toolbox-catalog.json").exists())
-        catalog = json.loads((first / "pb_catalog" / "toolbox-catalog.json").read_text(encoding="utf-8"))
+        catalog = json.loads((first / "pb_hooks" / "toolbox-catalog.json").read_text(encoding="utf-8"))
         self.assertEqual([item["id"] for item in catalog["plugins"]], ["alpha-tool", "beta"])
         self.assertEqual(catalog["workflows"], [{
             "guidance": "Make things", "id": "build", "name": "Build", "plugins": ["alpha-tool", "beta"],
@@ -137,7 +137,8 @@ class ToolboxPackageTests(unittest.TestCase):
         start = (ROOT / "evals" / "deploy" / "start.sh").read_text(encoding="utf-8")
         self.assertIn('"/api/toolbox/catalog"', hook)
         self.assertIn("$apis.requireAuth()", hook)
-        self.assertIn("/pb/pb_catalog/toolbox-catalog.json", hook)
+        self.assertIn("${__hooks}/toolbox-catalog.json", hook)
+        self.assertIn("String.fromCharCode.apply", hook)
         self.assertNotIn("pb_public", hook)
         self.assertIn('--hooksDir="$package_dir/pb_hooks"', start)
         self.assertIn('--publicDir="$package_dir/pb_public"', start)
@@ -199,24 +200,28 @@ class ToolboxPackageTests(unittest.TestCase):
                             for plugin in catalog["plugins"] for workflow_id in plugin["workflows"]
                             for workflow in catalog["workflows"] if workflow["id"] == workflow_id))
 
-    @unittest.skipUnless(shutil.which("pocketbase") and (ROOT / "evals" / "ui" / "index.html").is_file(),
-                         "requires PocketBase and the integrated UI sources")
+    @unittest.skipUnless(shutil.which("pocketbase"), "requires PocketBase")
     def test_actual_loopback_fixture_serves_authenticated_private_data(self):
         from urllib.error import HTTPError
         from urllib.request import Request, urlopen
-        with toolbox_fixture.ToolboxFixture(ROOT, shutil.which("pocketbase")) as fixture:
+        shutil.copytree(ROOT / "evals" / "deploy", self.source / "evals" / "deploy", dirs_exist_ok=True)
+        with toolbox_fixture.ToolboxFixture(self.source, shutil.which("pocketbase")) as fixture:
             with self.assertRaises(HTTPError) as denied:
                 urlopen(fixture.url + "/api/toolbox/catalog")
             self.assertEqual(denied.exception.code, 401)
+            denied.exception.close()
             catalog_request = Request(fixture.url + "/api/toolbox/catalog")
             catalog_request.add_header("Authorization", fixture.user_token)
-            self.assertIn("source_snapshot", json.load(urlopen(catalog_request)))
+            try:
+                catalog = json.load(urlopen(catalog_request))
+            except HTTPError as error:
+                self.fail(f"authenticated catalog failed: {error.code} {error.read().decode()}")
+            self.assertIn("source_snapshot", catalog)
             runs_request = Request(fixture.url + "/api/collections/runs/records?page=1&perPage=1")
             runs_request.add_header("Authorization", fixture.user_token)
             self.assertEqual(len(json.load(urlopen(runs_request))["items"]), 1)
-            with self.assertRaises(HTTPError) as anonymous:
-                urlopen(fixture.url + "/api/collections/runs/records?page=1&perPage=1")
-            self.assertEqual(anonymous.exception.code, 403)
+            anonymous_runs = json.load(urlopen(fixture.url + "/api/collections/runs/records?page=1&perPage=1"))
+            self.assertEqual(anonymous_runs["totalItems"], 0)
             token_request = Request(fixture.url + "/api/files/token", data=b"{}", method="POST")
             token_request.add_header("Content-Type", "application/json")
             token_request.add_header("Authorization", fixture.user_token)
@@ -224,7 +229,7 @@ class ToolboxPackageTests(unittest.TestCase):
             blob = fixture.artifact["blob"]
             self.assertEqual(urlopen(fixture.url + f"/api/files/artifacts/{fixture.artifact['id']}/{blob}?token={file_token}").read(), fixture.artifact_bytes)
             self.assertEqual(sorted(p.relative_to(fixture.package).as_posix() for p in fixture.package.rglob("*") if p.is_file()), sorted([
-                "Dockerfile", "railway.toml", "start.sh", "pb_catalog/toolbox-catalog.json",
+                "Dockerfile", "railway.toml", "start.sh", "pb_hooks/toolbox-catalog.json",
                 "pb_hooks/toolbox_catalog.pb.js", "pb_public/app.js", "pb_public/index.html", "pb_public/styles.css",
             ]))
 
