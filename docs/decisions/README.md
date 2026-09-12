@@ -23,7 +23,7 @@ Each record explains a decision that shapes the repository.
 | [010](decisions-010-commands-become-a-fourth-primitive-type.md) | Commands become a fourth primitive type | Accepted | former ADR 0001 |
 | [012](decisions-012-starting-conditions-ships-in-code-desk-and-rig-builder-stays-a-distinct-agent.md) | starting-conditions | Accepted |
 | [013](decisions-013-release-history-cuts-at-publish-time-with-no-tracked-changelog.md) | Release history | Accepted |
-| [014](decisions-014-kata-board-is-the-task-system-kaneo-retired.md) | kata board | Accepted | former decision-1 and decision-011 |
+| [014](decisions-014-kata-board-is-the-task-system-kaneo-retired.md) | kata board | Accepted | former decision-1 and former decision-011 |
 | [015](decisions-015-readme-currency-is-derived-from-git-and-acknowledged-by-touching-the-readme.md) | README currency | Accepted |
 | [016](decisions-016-github-label-set-is-a-closed-vocabulary-enforced-by-a-ci-gate.md) | GitHub labels | Accepted |
 | [017](decisions-017-dual-homed-primitives-bump-the-owning-bundle-minor-the-carrying-bundle-patch.md) | Dual-homed versioning | Accepted |
