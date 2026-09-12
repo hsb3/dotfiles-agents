@@ -4,7 +4,8 @@
 # principle). This tracker records each one's upstream source repo + pinned ref, by reference
 # only. The clone-at-build step that renders these into targets/ under a byte-diff drift guard
 # is separate work (DEV-34 / GitHub #36); this file is the recorded intent that step consumes.
-# Claude-Code-only distribution (R4): every entry's `targets` carries `claude-code` alone.
+# `targets` identifies the clients for which an external is recorded; reference-only entries
+# are not installed or projected merely because they name a client.
 #
 # Entry schema:
 #   - id:       <kebab>                                the roster/catalog id this projects
@@ -16,7 +17,7 @@
 #     ref:      <immutable commit SHA>                   pin for reproducible clones; never a
 #                                                         branch name (a branch pins nothing)
 #     provides: <one line>                               what it gives us
-#     targets:  [claude-code]
+#     targets:  [claude-code, codex]
 #
 # Enforcement: scripts/check_provenance.py's ENFORCE_EXTERNALS_INTENT requires every entry here
 # to carry non-null upstream + ref — activated once this file is genuinely researched (D5).
@@ -52,6 +53,19 @@ externals:
     provides: "IBM's own Carbon Design System skill (v1.2.0), vendored verbatim in primitives-core/skills/carbon-builder/base/ under an authored routing + fallback layer. Query planning, capability matrix, and mandatory context-gathering/code-audit protocol for the five hosted Carbon MCP tools (code_search, docs_search, get_charts, labs_search, code_audit), plus 13 reference files covering frameworks, grid, accessibility, charts, AI Chat, Carbon Labs, pitfalls, and error recovery. The no-MCP index also byte-matches carbon-design-system/carbon-website static/llms.txt at 996791935ba9edc7977fc12d7b16548181402c14; that tree's Apache-2.0 LICENSE (Copyright 2018 IBM Corp.) covers the index and src/pages/developing/carbon-mcp/prompts.mdx condensed in references/prompting.md. The skill README records this separate source and its notices."
     targets: [claude-code]
 
+  - id: langchain-skills
+    kind: plugin
+    upstream: https://github.com/langchain-ai/langchain-skills
+    ref: b7a2a8fc363d1711456f83d24230535c9fff93eb
+    provides: "Personal reference to LangChain's current skill collection only: no upstream bytes are copied, no install is executed, and no roster, plugin, or marketplace projection is created. Historical LangChain and LangSmith copies remain separately documented."
+    targets: [claude-code, codex]
+  - id: langsmith-skills
+    kind: plugin
+    upstream: https://github.com/langchain-ai/langsmith-skills
+    ref: e8f4120a876b80ced98bce1bb21d6b9f4d62cdb8
+    provides: "Personal reference to LangSmith's current skill collection only: no upstream bytes are copied, no install is executed, and no roster, plugin, or marketplace projection is created. Historical LangSmith copies remain separately documented."
+    targets: [claude-code, codex]
+
 # `cmux` below is REFERENCE ONLY, and the license is one reason it stays that way. Upstream is
 # GPL-3.0-or-later — the repo-root LICENSE reads "material contributed under the cmux project
 # license is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later)",
@@ -80,8 +94,8 @@ externals:
 # This is the specific reason required by the vendored-skill provenance-coverage work, not a
 # bare "skipped".
 #
-# `kenn-forge` (primitives-core/skills/kenn-forge) has NO entry above either, and its reason is
-# the opposite shape: an upstream exists, but these are not its bytes. The forge project
+# The retired `kenn-forge` skill had no entry above because an upstream existed but its local
+# bytes were not upstream bytes. The forge project
 # documents the same tool surface in docs/kenn-forge-mcp.md and
 # internal/mcpserver/guidance.md. The re-authorship rationale is retained as a claim,
 # not license clearance. A reproducible comparison uses kenn-io/forge revision
@@ -95,4 +109,5 @@ externals:
 # 4b28941cbbc27b30747e39269ba86c0cb2a3e92c; later contributions use ELv2. The earlier
 # grant did not disappear. The removed MIT frontmatter was not substantiated for
 # this particular condensation. Resolve independent authorship or applicable terms
-# before treating the current or historical kenn-forge skill as cleared.
+# before treating retained historical kenn-forge copies as cleared. Retirement removes the
+# current roster/plugin/install surface; it does not resolve the historical rights question.

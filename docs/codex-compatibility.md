@@ -173,7 +173,6 @@ repository in the same wave; harness-specific execution details stay outside its
 | Bun | Installed skill and actual Bun test. |
 | Carbon | Installed wrapper plus all five authenticated MCP read/audit tools; new-account OAuth onboarding not exercised. |
 | Diagrams | Graphviz SVG/PNG, Excalidraw helper/render and persistent consumer-local memory. Python provider-icon library, draw.io export and Mermaid CLI rendering remain separate prerequisites/unverified paths. |
-| kenn-forge | Native MCP registration command shape and portable guidance; daemon absent, actual daemon workflow pending. |
 | mise-en-place | Installed audit, scaffold plan/apply/replan, synthetic tracker reconcile. No live tracker mutation needed for the proof. |
 | Obsidian toolkit | Portable API/MCP/vault guidance; executable found, disposable-vault integration not exercised. |
 | solo-skills | Portable subject/procedure documents; installed signoff builder plus actual local HTTP save. opencode-sandbox executable absent. Product-specific skills still configure their named product, including Claude Code memory/configuration. |
