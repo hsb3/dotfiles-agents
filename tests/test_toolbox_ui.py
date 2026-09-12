@@ -15,7 +15,7 @@ APP = ROOT / "evals" / "ui" / "app.js"
 class ToolboxAdapterTests(unittest.TestCase):
     def run_module(self, body):
         script = """import assert from 'node:assert/strict';
-import { active, api, comparisonFields, comparisonRuns, fileUrl, pageRecords, text } from %s;
+import { active, api, comparisonFields, comparisonRuns, fileUrl, Latest, pageRecords, text } from %s;
 %s
 """ % (json.dumps(APP.as_uri()), body)
         result = subprocess.run(["node", "--input-type=module", "-e", script], text=True,
@@ -59,6 +59,10 @@ assert.equal(active(4, 4, ''), false);
 assert.deepEqual(comparisonFields.map((entry) => entry[1]), ['campaign', 'candidate', 'case', 'harness', 'config', 'model', 'passed', 'num_turns', 'cost_usd', 'duration_ms', 'error', 'ts']);
 const selected = new Map([['first', {id: 'first'}], ['second', {id: 'second'}]]);
 assert.deepEqual(comparisonRuns(selected).map((run) => run.id), ['first', 'second']);
+const latest = new Latest(), first = latest.begin(), second = latest.begin();
+const delayed = await Promise.all([Promise.resolve(first), Promise.resolve(second)]);
+assert.equal(latest.applies(delayed[0]), false);
+assert.equal(latest.applies(delayed[1]), true);
 """)
 
     def test_file_urls_are_encoded_and_unsafe_values_are_text_only(self):
