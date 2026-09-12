@@ -15,7 +15,7 @@ APP = ROOT / "evals" / "ui" / "app.js"
 class ToolboxAdapterTests(unittest.TestCase):
     def run_module(self, body):
         script = """import assert from 'node:assert/strict';
-import { active, api, collectPages, comparisonFields, comparisonRuns, fileUrl, pageRecords, text } from %s;
+import { active, api, comparisonFields, comparisonRuns, fileUrl, pageRecords, text } from %s;
 %s
 """ % (json.dumps(APP.as_uri()), body)
         result = subprocess.run(["node", "--input-type=module", "-e", script], text=True,
@@ -31,8 +31,8 @@ const fetcher = async (url, options = {}) => {
   return new Response(JSON.stringify({items: page === 1 ? [{id: 'one'}] : [{id: 'two'}], page, totalPages: 2}), {status: 200});
 };
 const fields = 'id,harness,campaign,candidate,case,config,model,passed,num_turns,cost_usd,duration_ms,error,ts,created';
-const items = await collectPages('/api/collections/runs/records', fields, fetcher, 'plain-token');
-assert.deepEqual(items.map((item) => item.id), ['one', 'two']);
+const items = await pageRecords('/api/collections/runs/records', fields, 1, fetcher, 'plain-token');
+assert.deepEqual(items.items.map((item) => item.id), ['one']);
 assert.match(requests[0][0], new RegExp('fields=' + encodeURIComponent(fields)));
 assert.equal(requests[0][1].headers.get('Authorization'), 'plain-token');
 let tokenRequest;
@@ -78,8 +78,14 @@ assert.equal(node.innerHTML, 'unchanged');
         self.assertNotIn('"/toolbox-catalog.json"', source)
         self.assertIn("password.value = \"\"", source)
         self.assertIn("AbortController", source)
-        self.assertNotIn('make("a", "Open protected file")', source)
-        self.assertIn('make("button", "Open protected file")', source)
+        self.assertIn('make("button", "Get file access")', source)
+        self.assertIn('make("a", "Open file")', source)
+        self.assertIn('open.rel = "noreferrer"', source)
+        self.assertIn("setAuthenticated", source)
+        self.assertIn("aria-pressed", source)
+        page = (ROOT / "evals" / "ui" / "index.html").read_text()
+        self.assertIn('id="session"', page)
+        self.assertIn('id="workflow-cards"', page)
         self.assertNotIn("Concept A", (ROOT / "evals" / "ui" / "index.html").read_text())
 
 
