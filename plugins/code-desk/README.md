@@ -1,7 +1,8 @@
 # code-desk
 
-Version 0.14.1's shared hook library carries the Codex session-handoff transaction helper; session certification
-is activated through Atelier, not through code-desk's hooks.
+The shared hook library carries the Codex session-handoff transaction helper and guarded
+nested-worktree retirement notice; both policies are activated through Atelier, not through
+code-desk's hooks.
 Parallel activity may proceed after invalidation; the helper alone requires sequential certification.
 
 Codex can use the project-memory taxonomy and maintain a Claude memory setup. The project-memory scripts configure Claude Code, not native Codex memory.

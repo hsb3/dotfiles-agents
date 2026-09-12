@@ -1,7 +1,7 @@
 # pocketbase
 
-Version 0.3.4's bundled shared hook library includes Atelier's Codex session-handoff transaction helper.
-PocketBase's own hooks do not activate session certification.
+The bundled shared hook library includes Atelier's Codex session-handoff transaction helper and
+guarded nested-worktree retirement notice. PocketBase's own hooks activate neither policy.
 The helper's sequential-certification requirement does not restrict ordinary parallel tools.
 
 Two PocketBase skills that split the work by question — how to **build** a backend right, and
