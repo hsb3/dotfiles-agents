@@ -1,5 +1,5 @@
 ---
-id: decision-3
+id: decision-003
 title: 'functionform-asmbl stays parked: do not merge, do not archive'
 date: '2026-08-04 00:44'
 status: accepted
@@ -19,4 +19,3 @@ It stays parked as-is.
 - Borrowable ideas (github-sync, schema, vars) are tracked as task-17; github-sync routes
   through the externals mechanism (task-10).
 - GH #191 is closed; this record replaces it as the durable form of the ruling.
-

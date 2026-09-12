@@ -1,5 +1,5 @@
 ---
-id: decision-014
+id: "decision-014"
 title: kata board is the task system; Kaneo board retired
 date: '2026-09-02'
 status: accepted

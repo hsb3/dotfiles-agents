@@ -1,5 +1,5 @@
 ---
-id: decision-8
+id: decision-008
 title: Repo structure future-state — backlog absorbs docs/, _meta removed
 date: '2026-08-06'
 status: accepted (partly superseded by decision-011 and decision-014)

@@ -1,5 +1,5 @@
 ---
-id: decision-015
+id: "decision-015"
 title: README currency is derived from git and acknowledged by touching the README
 date: '2026-09-07'
 status: accepted

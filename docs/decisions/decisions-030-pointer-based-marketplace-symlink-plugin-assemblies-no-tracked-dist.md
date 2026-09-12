@@ -1,12 +1,13 @@
 ---
 title: "Pointer-based marketplace — symlink plugin assemblies, no tracked dist"
+id: decision-030
 type: decision
 status: Accepted
 created: 2026-08-03
 summary: one repo serves both runtimes with zero tracked generated artifacts — plugins/<id>/ become thin symlink assemblies over primitives-core/ with the marketplace manifest at the repo root, Claude Code installs natively by dereferencing, opencode generates its laydown at install time, and READMEs travel with their skill.
 ---
 
-# 0017 · Pointer-based marketplace — symlink plugin assemblies, no tracked dist
+# Decision 030 · Pointer-based marketplace — symlink plugin assemblies, no tracked dist
 
 _Replaces the generate-and-track distribution model with pointers: the source tree IS the
 installable surface for Claude Code, and the only real transformation (opencode) runs at

@@ -1,5 +1,5 @@
 ---
-id: decision-021
+id: "decision-021"
 title: retired primitives are sunset by decision record, tag, and deletion (applied to kaneo)
 date: '2026-09-08'
 status: accepted

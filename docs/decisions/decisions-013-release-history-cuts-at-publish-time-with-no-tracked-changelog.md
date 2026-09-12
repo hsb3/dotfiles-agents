@@ -1,5 +1,5 @@
 ---
-id: decision-013
+id: "decision-013"
 title: Release history cuts at publish time with no tracked CHANGELOG
 date: '2026-08-22'
 status: accepted

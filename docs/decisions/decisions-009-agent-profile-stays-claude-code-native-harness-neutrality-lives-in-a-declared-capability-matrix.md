@@ -1,5 +1,5 @@
 ---
-id: decision-009
+id: "decision-009"
 title: >-
   Agent profile stays Claude-Code-native; harness-neutrality lives in a declared
   capability matrix
@@ -124,4 +124,3 @@ deferred); `scripts/check_identity.py` or a new gate (matrix-completeness check 
 `primitives-core/agents/manager.md` (unaffected in content, gains a `translation.yaml`
 `exclusions:` entry). TASK-034: this decision, once accepted, closes AC #1-3; AC #4-9 stay
 open as deferred build work.
-

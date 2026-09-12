@@ -1,12 +1,13 @@
 ---
 title: "Distribution restructure: dev integrates, main publishes"
+id: decision-007
 type: decision
 status: Accepted
 created: 2026-07-14
 summary: dotfiles-agents uses a dev integration branch — humans and agents branch off dev and PR into dev; main is the CI-published marketplace surface and is off-limits to direct commits.
 ---
 
-# 0007 · Distribution restructure: `dev` integrates, `main` publishes
+# Decision 007 · Distribution restructure: `dev` integrates, `main` publishes
 
 _The in-repo mirror of the branch-governance rule: build on `dev`, never `main` — so the
 rule is visible where the crew works, not only on the strategy desk._

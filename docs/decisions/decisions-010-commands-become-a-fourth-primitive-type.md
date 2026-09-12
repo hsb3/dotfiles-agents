@@ -1,5 +1,5 @@
 ---
-id: decision-010
+id: "decision-010"
 title: Commands become a fourth primitive type
 date: '2026-08-10 05:35'
 status: accepted

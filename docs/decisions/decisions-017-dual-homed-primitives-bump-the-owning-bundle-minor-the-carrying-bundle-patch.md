@@ -1,5 +1,5 @@
 ---
-id: decision-017
+id: "decision-017"
 title: Dual-homed primitives bump the owning bundle minor and the carrying bundle patch
 date: '2026-08-22'
 status: accepted

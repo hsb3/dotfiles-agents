@@ -1,5 +1,5 @@
 ---
-id: decision-2
+id: decision-002
 title: One repo serves both Claude Code and opencode via pointer-based distribution
 date: '2026-08-04 00:44'
 status: accepted
@@ -31,4 +31,3 @@ independent release cadence, or the translation layer outgrows declarative confi
 - dist/, gen_marketplace.py, gen_standalone.py, plugins.yaml, skill-catalog.yaml, and their
   drift guards are deleted (task-3). A symlink lint replaces the drift-guard class.
 - The eval loop keeps one unambiguous source tree to benchmark against.
-

@@ -1,5 +1,5 @@
 ---
-id: decision-020
+id: "decision-020"
 title: The topical plugin owns a skill and solo-skills drops it
 date: '2026-09-08'
 status: accepted

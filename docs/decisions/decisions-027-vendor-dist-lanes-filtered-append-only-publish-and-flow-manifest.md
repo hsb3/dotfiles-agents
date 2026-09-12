@@ -1,14 +1,15 @@
 ---
 title: "Vendor dist lanes, filtered append-only publish, and the flow manifest"
+id: decision-027
 type: decision
 status: Superseded-by-0017
 created: 2026-07-22
 summary: distribution grows a second vendor (opencode) — generated dist trees move under dist/<target>/, main becomes a filtered parented assembly of the dist lanes instead of a whole-tree force push, and flow.yaml + check_flow.py become the standing structural guard.
 ---
 
-# 0008 · Vendor dist lanes, filtered append-only publish, and the flow manifest
+# Decision 027 · Vendor dist lanes, filtered append-only publish, and the flow manifest
 
-> **Superseded by [0017](0017-pointer-based-marketplace.md) (2026-08-03):** the dist-lane
+> **Superseded by [decision-030](decisions-030-pointer-based-marketplace-symlink-plugin-assemblies-no-tracked-dist.md) (2026-08-03):** the dist-lane
 > design (Decisions 1–3 — tracked `dist/<target>/` trees, the filtered lift-and-assemble
 > publish payload, the roster-enum residency) is replaced by pointer-based distribution.
 > Decision 4 (`flow.yaml` + `check_flow.py` as the standing structural guard) **remains in

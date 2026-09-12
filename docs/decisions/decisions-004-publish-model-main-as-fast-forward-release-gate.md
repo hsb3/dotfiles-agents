@@ -1,5 +1,5 @@
 ---
-id: decision-4
+id: decision-004
 title: 'Publish model: main as fast-forward release gate'
 date: '2026-08-04 02:54'
 status: accepted

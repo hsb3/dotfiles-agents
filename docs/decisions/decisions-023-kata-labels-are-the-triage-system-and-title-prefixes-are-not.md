@@ -1,5 +1,5 @@
 ---
-id: decision-023
+id: "decision-023"
 title: kata labels are the triage system and title prefixes are not
 date: '2026-09-08'
 status: accepted

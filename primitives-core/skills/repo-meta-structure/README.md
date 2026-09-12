@@ -4,6 +4,8 @@ The canonical repo meta-structure standard, as consultable reference content. Th
 **single source** for the layout — nothing here is duplicated elsewhere, so when the standard
 changes, it changes in these files.
 
+Version 0.5.2 updates its shipped decision-link examples after this repository normalized its decision records.
+
 ## When it triggers
 
 Use it whenever the question is "what is the standard for X" in a repo's layout: setting up a

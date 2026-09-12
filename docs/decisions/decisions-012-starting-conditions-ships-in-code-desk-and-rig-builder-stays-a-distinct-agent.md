@@ -1,5 +1,5 @@
 ---
-id: decision-012
+id: "decision-012"
 title: starting-conditions ships in code-desk and rig-builder stays a distinct agent
 date: '2026-08-22'
 status: accepted

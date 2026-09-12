@@ -1,5 +1,6 @@
 ---
 title: "primitives-core is self-authored only; externals by reference"
+id: decision-028
 type: decision
 status: Accepted (amended by decision-6)
 created: 2026-07-22
@@ -9,7 +10,7 @@ summary: Every body under primitives-core/ is origin authored; third-party mater
 > **Amendment note (2026-09-09):** Decision-6 and [the vendoring rule](../vendoring-rule.md) add the qualified `origin: vendored` exception enforced by `check_provenance.py`. The original self-authored-only rationale is preserved below.
 
 
-# 0015 · primitives-core is self-authored only; externals by reference
+# Decision 028 · primitives-core is self-authored only; externals by reference
 
 _The source tree holds homegrown primitives only — third-party material is a reference
 (`externals.yaml`), never a copy._
@@ -32,7 +33,7 @@ its upstream and becomes indistinguishable from authored work. This is the "whol
 passthrough" the composition principle forbids: this marketplace composes its own primitives,
 it does not re-host other people's.
 
-[ADR 0003](0003-externals-tracked-not-vendored.md) settles *how* externals are recorded
+[decision-026](decisions-026-externals-are-tracked-and-cloned-never-vendored.md) settles *how* externals are recorded
 (upstream + pinned ref, cloned at build). This decision settles the complementary
 *placement* invariant: what is allowed to live under `primitives-core/` at all.
 
@@ -67,7 +68,7 @@ vendored` entry carries `LICENSE`, non-null upstream + immutable ref). The `orig
   `vendored` body missing its license/upstream/ref/attribution, fails `make ci`.
 - Grandfathered in-roster `sourced` copies (pre-dating the rule) are an exception and
   carry explicit `origin: sourced` + `upstream`/`ref` — see
-  [ADR 0003](0003-externals-tracked-not-vendored.md).
+  [decision-026](decisions-026-externals-are-tracked-and-cloned-never-vendored.md).
 
 ## Affects
 
