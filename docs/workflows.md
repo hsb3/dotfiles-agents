@@ -14,6 +14,7 @@ presence alone does not establish installation, authentication, or runtime avail
 | Review and test | [code-desk](../plugins/code-desk/README.md), [atelier](../plugins/atelier/README.md), [pocketbase](../plugins/pocketbase/README.md), [solo-skills](../plugins/solo-skills/README.md) | Use code-desk for the quality contract and pull-request findings, atelier for a reviewed multi-agent cycle, pocketbase for backend design review, and solo-skills to assess whether tests actually prove behavior. |
 | Documentation and visuals | [diagrams](../plugins/diagrams/README.md), [code-desk](../plugins/code-desk/README.md), [solo-skills](../plugins/solo-skills/README.md) | Use diagrams for structural diagrams, code-desk for README proof and presentations, and solo-skills for chart design. |
 | Release | [code-desk](../plugins/code-desk/README.md) | Use its contract and pull-request-finding workflow before release. A project's own release runbook performs publication; no current marketplace plugin publishes arbitrary projects. |
+| Report a plugin issue | [plugin-feedback](../plugins/plugin-feedback/README.md) | Draft a bug or feature report for this marketplace, review its destination and contents, and file only with explicit authorization. |
 | Session continuity | [atelier](../plugins/atelier/README.md) | Use its activation and handoff guidance when a project needs durable continuation across sessions or delegated work. |
 
 ## Practical starts
@@ -66,6 +67,12 @@ presence alone does not establish installation, authentication, or runtime avail
 1. Read [code-desk](../plugins/code-desk/README.md) and resolve contract or pull-request
    findings that affect the release.
 2. Follow the consuming project's release runbook for publication and its required proof.
+
+### Report a plugin issue
+
+1. Read [plugin-feedback](../plugins/plugin-feedback/README.md) and use its reporter's
+   <code>--draft</code> mode to prepare the report.
+2. Check the destination and report contents, then obtain explicit authorization before filing.
 
 ### Session continuity
 
