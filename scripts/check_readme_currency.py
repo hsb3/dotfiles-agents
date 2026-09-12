@@ -23,7 +23,7 @@ Two scope decisions, both taking the narrowest honest reading:
 
   * **A plugin's body is its own tracked files** — `plugin.json`, `hooks.json`, and the
     symlink ENTRIES (retargeting or adding a link is a change to `plugins/<id>/`). Links
-    are NOT followed into `primitives-core/`: under ADR 0017 an assembly is a membership
+    are NOT followed into `primitives-core/`: under decision-030 an assembly is a membership
     statement, which is what its README documents, and a member skill's body change is
     already answerable on that skill's own unit. Following them would make every bundle
     stale whenever any member moved.

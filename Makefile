@@ -4,7 +4,7 @@
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-check: ## Roster <-> disk drift guard (provenance-manifest schema, ADR 0017) + catalog <-> README/marketplace guard + plugin-README diagram guard + per-unit README gate + README-currency gate + cross-bundle skill-citation gate
+check: ## Roster <-> disk drift guard (provenance-manifest schema, decision-030) + catalog <-> README/marketplace guard + plugin-README diagram guard + per-unit README gate + README-currency gate + cross-bundle skill-citation gate
 	@python3 scripts/check_roster.py
 	@python3 scripts/check_catalog.py
 	@python3 scripts/check_plugin_diagrams.py
@@ -35,7 +35,7 @@ harness-coupling: ## No-repo-coupling gate for harness/ (stdlib-only; extraction
 flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclicity, doc DAG)
 	@python3 scripts/check_flow.py
 
-symlinks: ## Symlink-assembly lint (ADR 0017): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1; solo-skills membership
+symlinks: ## Symlink-assembly lint (decision-030): plugins/ links resolve in-repo; marketplace.json <-> assemblies 1:1; solo-skills membership
 	@python3 scripts/check_symlinks.py
 	@python3 scripts/check_solo_skills.py
 
@@ -68,7 +68,7 @@ test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check 
 	@python3 -m unittest discover -s tests -t . -q
 
 # All gates. The Tier-1 entry-gate machine floor (identity · tests · provenance · hook-layout)
-# is required CI on every PR into dev; check (roster drift) + symlinks (assembly lint, ADR 0017)
+# is required CI on every PR into dev; check (roster drift) + symlinks (assembly lint, decision-030)
 # guard the distribution surface; agent-refs keeps shipped bodies from routing through an
 # agent nobody ships; harness-coupling keeps harness/ extraction-clean
 # (stdlib-only — it must not need uv, so it lives in ci not harness-test).
