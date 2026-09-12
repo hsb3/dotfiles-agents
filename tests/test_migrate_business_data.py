@@ -87,7 +87,6 @@ class MigrationTests(unittest.TestCase):
 
     def test_default_scope_excludes_telemetry(self):
         self.assertNotIn("runs", migration.scope_tables("core"))
-        self.assertNotIn("runs", migration.scope_tables(None))
 
     def test_scope_tuples_are_exact(self):
         self.assertEqual(("frameworks", "sources", "extenders", "framework_elements", "files", "distributions", "frontmatter_dimensions", "eval_runs", "eval_responses", "assessments", "job_coverage", "relationships"), migration.CORE)

@@ -24,7 +24,6 @@ CORE = (
 )
 TELEMETRY = ("runs", "artifacts", "run_events", "tool_calls")
 ALL = CORE + TELEMETRY
-FORBIDDEN = {"_superusers", "users", "_collections", "_params", "coverage_gaps"}
 
 # Fixed schema relations.  Each target must be in the selected import and each
 # nonempty reference must name a selected source record.
@@ -72,13 +71,12 @@ def _destination_error(operation, collection):
 
 
 def scope_tables(scope):
-    return {None: CORE, "core": CORE, "telemetry": TELEMETRY, "all": ALL}[scope]
+    return {"core": CORE, "telemetry": TELEMETRY, "all": ALL}[scope]
 
 
 def validate_scope_tables(tables):
     unknown = set(tables) - set(ALL)
-    forbidden = set(tables) & FORBIDDEN
-    if unknown or forbidden:
+    if unknown:
         raise ValueError("scope contains a non-business table")
 
 
