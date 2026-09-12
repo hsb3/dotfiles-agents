@@ -15,3 +15,7 @@ Judge by the observed end state when it is cheap to inspect. Retained cases:
 Each case produced a confident wrong report that later work had to unwind. The diagram-specific render rule is maintained in [the diagram standard](../../docs/readme-diagram-standard.md).
 
 Keep existing plugin caches intact while runtime evidence is incomplete. Fixture investigations did not establish an actual-use plugin failure; verify the installed context before proposing any cache or configuration change.
+
+For a fixture-scoped plugin-state diagnosis, compare installed-plugin records read-only by exact
+project path, scope, and version. Distinguish a project pin from a user installation; after a
+catalog update, inspect the installed cache payload instead of assuming the new version loaded.
