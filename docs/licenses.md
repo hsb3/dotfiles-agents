@@ -103,8 +103,7 @@ These verdicts address the identified third-party distribution findings, not gen
 runtime compatibility, first-party licensing or a categorical legal clearance. A
 historical public-visibility hold does not automatically block every private
 remediation release; evaluate the bytes actually redistributed. A full marketplace
-publication evaluates the bytes actually redistributed; retirement from the current source
-does not settle retained historical copies.
+publication also redistributes unchanged plugins; removing a plugin from current source does not settle retained historical copies.
 
 | Current plugin / surface | Verdict and concrete remedy |
 |---|---|

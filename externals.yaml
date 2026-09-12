@@ -57,13 +57,13 @@ externals:
     kind: plugin
     upstream: https://github.com/langchain-ai/langchain-skills
     ref: b7a2a8fc363d1711456f83d24230535c9fff93eb
-    provides: "Personal reference to LangChain's current skill collection only: no upstream bytes are copied, no install is executed, and no roster, plugin, or marketplace projection is created. Historical LangChain and LangSmith copies remain separately documented."
+    provides: "Personal toolbox reference for LangChain, LangGraph and Deep Agents skills, installed directly from upstream. Reference only; this marketplace does not redistribute the skill contents."
     targets: [claude-code, codex]
   - id: langsmith-skills
     kind: plugin
     upstream: https://github.com/langchain-ai/langsmith-skills
     ref: e8f4120a876b80ced98bce1bb21d6b9f4d62cdb8
-    provides: "Personal reference to LangSmith's current skill collection only: no upstream bytes are copied, no install is executed, and no roster, plugin, or marketplace projection is created. Historical LangSmith copies remain separately documented."
+    provides: "Personal toolbox reference for LangSmith trace, dataset and evaluator skills, installed directly from upstream. Reference only; this marketplace does not redistribute the skill contents."
     targets: [claude-code, codex]
 
 # `cmux` below is REFERENCE ONLY, and the license is one reason it stays that way. Upstream is
