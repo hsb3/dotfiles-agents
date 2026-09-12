@@ -53,6 +53,9 @@ JSON_FIELDS = {
 MULTI_FIELDS = {"frameworks": {"applies_to"}, "sources": {"publishes"},
                 "distributions": {"members"}, "eval_runs": {"frameworks"},
                 "eval_responses": {"extenders"}}
+BOOL_FIELDS = {"sources": {"publishes_evals"}, "files": {"is_binary"},
+               "runs": {"passed", "skill_used"}, "run_events": {"is_error"},
+               "tool_calls": {"is_error"}}
 
 
 @dataclass
@@ -86,6 +89,12 @@ def _connect(source_db):
 
 
 def _decode(value, field, collection):
+    if field in BOOL_FIELDS.get(collection, set()):
+        if isinstance(value, bool):
+            return value
+        if type(value) is int and value in (0, 1):
+            return bool(value)
+        raise ValueError(f"invalid boolean field in {collection}")
     if value is None or field not in JSON_FIELDS.get(collection, set()) | MULTI_FIELDS.get(collection, set()):
         return value
     if isinstance(value, str):
@@ -157,8 +166,11 @@ def _artifact_bytes(storage, name):
 
 
 def _digest(rows):
-    encoded = json.dumps(rows, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
-    return hashlib.sha256(encoded).hexdigest()
+    return hashlib.sha256(_canonical(rows)).hexdigest()
+
+
+def _canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
 
 
 def read_export(source_db, storage, tables):
@@ -257,7 +269,7 @@ def verify_destination(pb, export, tables):
             for source_row in source:
                 expected = _body(source_row)
                 actual = {key: by_id[source_row["id"]].get(key) for key in expected}
-                if actual != expected:
+                if _canonical(actual) != _canonical(expected):
                     raise _destination_error("readback validation", collection)
                 normalized.append(actual)
         except Exception:

@@ -199,6 +199,22 @@ class MigrationTests(unittest.TestCase):
         destination.rows["artifacts"][0]["kind"] = "screenshot"
         self.assertNotEqual(migration.receipt(source)["tables"], migration.receipt(destination)["tables"])
 
+    def test_source_boolean_fields_normalize_only_zero_one_and_bools(self):
+        self.assertIs(False, migration._decode(0, "is_binary", "files"))
+        self.assertIs(True, migration._decode(1, "is_binary", "files"))
+        self.assertIs(False, migration._decode(False, "is_binary", "files"))
+        self.assertIs(True, migration._decode(True, "is_binary", "files"))
+        for value in (2, "0", None):
+            with self.assertRaises(ValueError):
+                migration._decode(value, "is_binary", "files")
+
+    def test_destination_integer_bool_does_not_match_canonical_body(self):
+        export = migration.Export({"sources": [{"id": "so0000000000001", "publishes_evals": False}]}, {})
+        pb = FakePB()
+        pb.list_all = lambda _collection: [{"id": "so0000000000001", "publishes_evals": 0}]
+        with self.assertRaises(migration.MigrationError):
+            migration.verify_destination(pb, export, ("sources",))
+
 
 if __name__ == "__main__":
     unittest.main()
