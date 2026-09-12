@@ -7,6 +7,7 @@ the PPTX base include upstream material under component-specific licenses. See t
 not do.
 
 [Documentation](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/README.md) ·
+[Development workflows](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/workflows.md) ·
 [Site preview and publication](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/site.md)
 
 ## Install
