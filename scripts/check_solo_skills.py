@@ -156,10 +156,6 @@ SYSTEM_EXEMPTIONS = {
         "makes bun the default JS/TS runtime, package manager, test runner and bundler — "
         "a toolchain policy a consumer adopts per repo, shipped only by the bun plugin"
     ),
-    "kenn-forge": (
-        "drives a kenn-forge daemon the consumer must have running on their own machine — "
-        "an opt-in external system, shipped only by the kenn-forge plugin"
-    ),
     "planning-desk": (
         "stands up a _meta/plans/ desk in the consuming repo, read through a tracker "
         "adapter — an opt-in planning system, shipped only by the mise-en-place plugin"

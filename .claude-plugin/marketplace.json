@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
+    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), and plugin-feedback (report a plugin defect without leaving the session).",
     "version": "0.13.1"
   },
   "name": "dotfiles-agents",
@@ -67,15 +67,6 @@
       "author": {
         "name": "Henry S. Burden III"
       },
-      "description": "Maintainer-workflow triage over a running kenn-forge daemon — PR/issue review, diffs and CI checks, local review state, and coding-agent handoff. Two surfaces over the same daemon API: the kenn_forge_* MCP tools for an agent driving its own loop, and the kenn-forge CLI for shell, scripts, and humans. The daemon must be running locally; the MCP surface additionally needs it enabled in the daemon config. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
-      "name": "kenn-forge",
-      "source": "./plugins/kenn-forge",
-      "version": "0.2.0"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
       "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The supporting standards ship with it: the project-memory taxonomy whose checklist rows the audit and the scaffold both read, and the item-body form the desk writes tracker items to, carried as a dependency from its topical home in board-desk. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "mise-en-place",
       "source": "./plugins/mise-en-place",
@@ -115,7 +106,7 @@
       "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, test quality, research and decision tooling, chart design, API and TUI craft, repo and project setup, and sandboxed opencode instances. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.16.1"
+      "version": "0.16.2"
     }
   ]
 }

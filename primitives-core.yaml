@@ -119,15 +119,6 @@ primitives:
     disposition: qualified
     requires: [cli:bun]
     targets: [claude-code, opencode, codex]
-  - id: kenn-forge
-    type: skill
-    source: primitives-core/skills/kenn-forge
-    origin: authored
-    disposition: qualified
-    requires: [cli:kenn-forge]
-    # claude-code only: the skill's primary surface is the kenn_forge_* MCP tools of a
-    # locally running daemon, which the opencode lane has no equivalent registration for.
-    targets: [claude-code, codex]
   - id: context-watermark
     type: hook
     source: primitives-core/hooks/context-watermark

@@ -93,7 +93,6 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | [`pocketbase`](plugins/pocketbase/README.md) | bundle | Build and operate PocketBase backends: drive a running instance, and design the schema, API rules, and queries against 63 prioritized rules. | 2 skills · 3 agents · 2 hooks |
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill · 1 MCP server |
 | [`bun`](plugins/bun/README.md) | standalone | The bun toolchain as the default JS and TS runtime: command mapping off npm habits, built-ins that replace dependencies, measured traps. | 1 skill |
-| [`kenn-forge`](plugins/kenn-forge/README.md) | standalone | Maintainer triage over a running kenn-forge daemon: review candidates, diffs and CI, local review state, coding-agent handoff. | 1 skill |
 | [`plugin-feedback`](plugins/plugin-feedback/README.md) | bundle | Tell every session and worker that plugin defects are reportable, then file one to a fixed template instead of a free-handed gh call. | 2 hooks |
 
 ## How the plugins are split

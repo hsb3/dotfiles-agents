@@ -16,6 +16,7 @@ does not establish permission to distribute every file.
 | Carbon builder skill, IBM / Carbon contributors | [carbon-mcp, `3cbe743`](https://github.com/carbon-design-system/carbon-mcp/tree/3cbe743d8bc36d6dd3bcfea98ac3ac09bca71f9c/public/skills/carbon-builder) | Skill frontmatter declares Apache-2.0; [full text](../primitives-core/skills/carbon-builder/LICENSE) and [attribution](../primitives-core/skills/carbon-builder/README.md) accompany the 15 unchanged base files. Upstream has no root LICENSE or NOTICE at this pin. | The sibling index has a separate licensed source, documented below; the skill declaration is not its grant. |
 | PocketBase best practices, Patrick | [pocketbase-skills, `c573263`](https://github.com/greendesertsnow/pocketbase-skills/tree/c573263e84a2066d0564f428dd8160e74fc54226/skills/pocketbase-best-practices) | [MIT text and copyright](../primitives-core/skills/pocketbase-best-practices/LICENSE) retained from upstream; base content unchanged, authored routing/field notes separate. | Historical copies and notices must also be checked; current notice preservation does not certify past packages. |
 | Presentations authoring and package tools | [Authored replacement and provenance](presentations-replacement.md) | Existing authored palettes and workflow plus independently written ZIP/XML tools; no blanket original-work license is selected. PptxGenJS is a separately installed MIT runtime dependency. | Replacement retirement was approved; historical distribution treatment remains separate. Runtime dependency advisories and capability limits are recorded with the replacement proof. |
+| LangChain and LangSmith skills references | [langchain-skills, `b7a2a8f`](https://github.com/langchain-ai/langchain-skills/tree/b7a2a8fc363d1711456f83d24230535c9fff93eb); [langsmith-skills, `e8f4120`](https://github.com/langchain-ai/langsmith-skills/tree/e8f4120a876b80ced98bce1bb21d6b9f4d62cdb8) | Current reference-only tracker entries: no upstream bytes are copied, installed, or projected into this marketplace. | These current bookmarks make no license conclusion. Historical LangChain and LangSmith copies remain unresolved as recorded below. |
 
 The public-docs index is byte-identical to [carbon-website `static/llms.txt`](https://github.com/carbon-design-system/carbon-website/blob/996791935ba9edc7977fc12d7b16548181402c14/static/llms.txt)
 at `996791935ba9edc7977fc12d7b16548181402c14`, a revision predating our import.
@@ -102,15 +103,14 @@ These verdicts address the identified third-party distribution findings, not gen
 runtime compatibility, first-party licensing or a categorical legal clearance. A
 historical public-visibility hold does not automatically block every private
 remediation release; evaluate the bytes actually redistributed. A full marketplace
-publication also redistributes unchanged plugins, including the unresolved kenn-forge
-surface below.
+publication also redistributes unchanged plugins; removing a plugin from current source does not settle retained historical copies.
 
 | Current plugin / surface | Verdict and concrete remedy |
 |---|---|
 | Carbon 0.2.1 | Current base/index grants are evidenced and website attribution is repaired. Verify the new README, prompting notice and full license in the final published/installed version; old caches do not acquire them automatically. Historical modified Carbon copies still need their notices delivered with the retained distributions. |
 | PocketBase | No current third-party notice defect found: all 77 base files match the pin and the full MIT notice is retained. Historical `.agents/` and generated copies need separate notice coverage; current proof is not retroactive. |
 | code-desk 0.14.0, diagrams 0.3.1, solo-skills 0.16.1 | No identified blocker from the restricted PPTX base/schemas or the listed historical copied skills in the reviewed assemblies: code-desk now has 77 files after the board-triage move (87 at PR530), diagrams 18 and solo-skills 92. All 56 old base files, including 39 schemas, have no exact-byte match; presentations has no shared 20-token passage with the old base. PptxGenJS is installed separately, not bundled. Retained authored provenance and synthetic proof-image origins are documented by the replacement work, with the independent-verification limits below. Historical copies remain separate. |
-| kenn-forge | Rights conclusion remains unverified. Reproduced overlap measurements support a condensation claim but cannot establish independent authorship. Resolve the specific source treatment before treating this plugin as cleared. |
+| kenn-forge (retired) | The current skill, plugin assembly, install claims, and marketplace projection are retired. The reproduced overlap measurements remain historical audit evidence and do not establish independent authorship; retained historical copies remain unresolved below. |
 | Other current plugins | No additional current copied component identified by this targeted follow-up; this is not a new exhaustive authorship audit or a first-party license grant. Development-only Anthropic copies and external runtime dependencies retain the scope described above. |
 
 The three replacement assemblies were built from PR530 head `2308e8b`, merged as
@@ -126,7 +126,7 @@ fragments/paraphrased derivatives. The spike has no committed provenance chain; 
 two PNG proof-image origins rely on the replacement's recorded synthetic capture
 procedure rather than a new independent capture in this audit.
 
-For kenn-forge, the reproducible comparison source is [kenn-io/forge
+For the retired kenn-forge skill, the reproducible comparison source is [kenn-io/forge
 `306610c81a2e67ab16c42b683dfd29e91d4dd2c5`](https://github.com/kenn-io/forge/tree/306610c81a2e67ab16c42b683dfd29e91d4dd2c5):
 `docs/kenn-forge-mcp.md` plus `internal/mcpserver/guidance.md`, compared with local
 import `ee391d14bdbe3a82213af1b309015a575ae6867c`. Lowercasing and tokenizing with
@@ -154,7 +154,7 @@ The remaining historical/public-visibility decisions are:
 | PocketBase historical source, `.agents/`, prior plugin/generated paths | Compare every retained distribution with the pinned MIT text and include it wherever missing. |
 | Anthropic skill-creator before the verified archive snapshot, actual hosted uploads and caches | Preserve Apache terms and any change notices. The verified 18-file source/three-target snapshot needs no repair; it does not prove all earlier uploads. |
 | PPTX base, wrapper and 39 nested schema files; historical source/plugin/generated paths, tags and PR refs | Current replacement does not clear retained copies. Approve exact history/distribution treatment separately. The schema groups are 27 under `ISO-IEC29500-4_2016` (including W3C `xml.xsd`), 4 under `ecma/fouth-edition`, 7 Microsoft extensions and `mce/mc.xsd`. The last explicitly derives from an unpinned docx4j schema. Identify original revisions and independently applicable terms for each group before any salvage; namespace names and the Anthropic pin are not grants. |
-| kenn-forge current and prior skill copies | Resolve the authorship/terms decision above, then carry required notices through every retained distribution. Moving its marketplace entry elsewhere would not resolve that decision. |
+| kenn-forge prior skill copies | Resolve the authorship/terms decision above, then carry required notices through every retained distribution. Its current marketplace entry is retired; that does not resolve historical copies. |
 | First-party source and unknown provenance | Owner chooses any original-work license separately. Unmatched text is not proof of authorship. Investigate identified provenance gaps before claiming public release readiness. |
 | All affected refs, tags, releases, GitHub source archives and PR/cache copies | Refresh the scope map after final merges and before any approved history action. The earlier 139-ref rehearsal predates this wave, preserves archive refs and does not clear these findings. No shared rewrite, archive deletion, visibility change or credential action is authorized by this document. |
 
