@@ -49,8 +49,8 @@ class DeployStartTests(unittest.TestCase):
             "printf '%s\\n' \"$@\" >> \"$FAKE_LOG\"\n"
             "if [ \"$1\" = superuser ]; then\n"
             "  case \"${FAKE_CREATE:-valid}\" in\n"
-            "    valid) exit 0 ;;\n"
-            "    duplicate) echo 'must be unique' >&2; exit 1 ;;\n"
+            "    valid) echo 'Successfully created new superuser \"probe@example.test\"!'; exit 0 ;;\n"
+            "    duplicate) echo 'failed to create new superuser account: email: Value must be unique.' >&2; exit 1 ;;\n"
             "    invalid) echo 'password rejected' >&2; exit 1 ;;\n"
             "  esac\n"
             "fi\n",
