@@ -212,10 +212,14 @@ def _batch_create(pb, collection, rows):
             raise _destination_error("batch create", collection) from None
         if not isinstance(results, list) or len(results) != len(requests):
             raise _destination_error("batch create", collection)
-        if any(not isinstance(item, dict) or not 200 <= item.get("status", 0) < 300
-               or not isinstance(item.get("body"), dict)
-               or item["body"].get("id") != row["id"]
-               for item, row in zip(results, rows[start:start + 10])):
+        try:
+            valid = all(isinstance(item, dict) and 200 <= item.get("status", 0) < 300
+                        and isinstance(item.get("body"), dict)
+                        and item["body"].get("id") == row["id"]
+                        for item, row in zip(results, rows[start:start + 10]))
+        except Exception:
+            raise _destination_error("batch create", collection) from None
+        if not valid:
             raise _destination_error("batch create", collection)
 
 
@@ -231,21 +235,21 @@ def verify_destination(pb, export, tables):
     for collection in tables:
         try:
             destination = pb.list_all(collection)
+            source = export.rows[collection]
+            if len(destination) != len(source) or {row.get("id") for row in destination} != {row["id"] for row in source}:
+                raise _destination_error("readback validation", collection)
+            by_id = {row["id"]: row for row in destination}
+            if collection == "artifacts":
+                artifact_rows = by_id
+            normalized = []
+            for source_row in source:
+                expected = _body(source_row)
+                actual = {key: by_id[source_row["id"]].get(key) for key in expected}
+                if actual != expected:
+                    raise _destination_error("readback validation", collection)
+                normalized.append(actual)
         except Exception:
             raise _destination_error("readback", collection) from None
-        source = export.rows[collection]
-        if len(destination) != len(source) or {row.get("id") for row in destination} != {row["id"] for row in source}:
-            raise _destination_error("readback validation", collection)
-        by_id = {row["id"]: row for row in destination}
-        if collection == "artifacts":
-            artifact_rows = by_id
-        normalized = []
-        for source_row in source:
-            expected = _body(source_row)
-            actual = {key: by_id[source_row["id"]].get(key) for key in expected}
-            if actual != expected:
-                raise _destination_error("readback validation", collection)
-            normalized.append(actual)
         copied[collection] = normalized
     if "artifacts" in tables:
         try:
