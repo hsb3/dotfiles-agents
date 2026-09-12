@@ -15,7 +15,7 @@ never reached GitHub (the pre-mirror TASK-/DRAFT-/Milestone cards).
 ## Decision
 
 The kata board is the sole task-management system for this repo. GitHub issues remain bug
-intake only (decision-1) and flow onto the board through kata's GitHub sync.
+intake only (the surviving rule from decision-1, now decision-014) and flow onto the board through kata's GitHub sync.
 
 Cutover, executed 2026-09-02:
 
@@ -32,7 +32,7 @@ Cutover, executed 2026-09-02:
 
 ## Consequences
 
-- Supersedes decision-011's Kaneo half; its Backlog.md retirement and bug-intake rule stand.
+- Supersedes former decision-011's Kaneo half; its Backlog.md retirement and bug-intake rule stand.
 - Old `DFA-N` references resolve via `kata list --meta kaneo_task_number=N`.
 - The shipped `kaneo` plugin and its primitives are unaffected — they are a product this
   marketplace distributes, not this repo's tracker.

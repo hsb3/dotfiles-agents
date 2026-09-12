@@ -50,9 +50,10 @@ else. Adding or changing a check *row* means editing this file, not the audit; a
 | CLAUDE-04 | `.claude/` | `path-exists: .claude/rules/` | Directory exists |
 | CLAUDE-05 | `.claude/` | `path-exists: .claude/skills/` | Directory exists |
 | CLAUDE-06 | `.claude/` | `path-exists: .claude/settings.json` | File exists (tracked project policy; must carry anything a headless run depends on) |
-| CLAUDE-07 | `.claude/commands/` | `path-exists: .claude/commands/` | When commands are present, they are thin wrappers that load their skill and do not duplicate its procedure ([decision-010](../../../../../docs/decisions/decisions-010-commands-become-a-fourth-primitive-type.md)) |
 
 ## `.github/` template set
+
+Command bodies are not a checklist concern: the audit cannot validate whether a command duplicates a skill procedure. When a repository ships commands, [decision-010](../../../../../docs/decisions/decisions-010-commands-become-a-fourth-primitive-type.md) requires each to remain a thin wrapper that loads its skill.
 
 | ID | Area | Check | Pass condition |
 |---|---|---|---|
