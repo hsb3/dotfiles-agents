@@ -88,7 +88,7 @@ pre-restructure archive — never delete it.
 
 **Worktrees are temporary execution state.** Native Claude Code stays in `.claude/worktrees/`
 and Codex/Atelier stays in `.git/atelier-codex/checkouts/`; manual task checkouts go under
-`.worktrees/`. Never create task checkouts as siblings of this repository in `~/Developer`.
+`.worktrees/`. Never create task checkouts as siblings of this repository.
 `git worktree list` is authoritative: a retained checkout is not stale. Before ordinary removal,
 confirm completion and worker liveness, integrate or explicitly discard every commit, and preserve
 uncommitted/untracked work and durable evidence. Prune stale metadata only after validating that

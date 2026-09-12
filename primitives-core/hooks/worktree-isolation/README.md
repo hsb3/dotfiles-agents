@@ -155,7 +155,7 @@ one having read the failure. The dispatcher should see each worker's result.
 Worktrees are temporary execution state. Native Claude Code keeps its task checkouts in
 `.claude/worktrees/`; Codex/Atelier keeps them in `.git/atelier-codex/checkouts/`. For a manual
 checkout, use the repository-local `.worktrees/` directory. Never create task checkouts as
-siblings of the repository in `~/Developer`.
+siblings of the repository.
 
 `git worktree list` is authoritative inventory. A live checkout, or one deliberately retained for
 integration, review, recovery, or evidence, is not stale. Before ordinary removal, confirm the
