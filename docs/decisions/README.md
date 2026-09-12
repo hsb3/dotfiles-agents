@@ -10,9 +10,9 @@ Each record explains a decision that shapes the repository.
 
 ## Log
 
-| ID | Decision |
-| --- | --- |
-| [002](decisions-002-one-repo-serves-both-claude-code-and-opencode-via-pointer-based-distribution.md) | One repo serves both Claude Code and opencode via pointer-based distribution |
+| ID | Decision | Status |
+| --- | --- | --- |
+| [002](decisions-002-one-repo-serves-both-claude-code-and-opencode-via-pointer-based-distribution.md) | One repo serves both Claude Code and opencode via pointer-based distribution | Accepted |
 | [003](decisions-003-functionform-asmbl-stays-parked-do-not-merge-do-not-archive.md) | functionform-asmbl stays parked |
 | [004](decisions-004-publish-model-main-as-fast-forward-release-gate.md) | Publish model |
 | [005](decisions-005-evals-and-harness-extraction-both-but-deferred-dev-is-the-workbench.md) | evals and harness extraction |
@@ -39,4 +39,5 @@ Each record explains a decision that shapes the repository.
 | [027](decisions-027-vendor-dist-lanes-filtered-append-only-publish-and-flow-manifest.md) | Vendor dist lanes |
 | [028](decisions-028-primitives-core-is-self-authored-only-externals-by-reference.md) | primitives-core provenance |
 | [029](decisions-029-marketplace-lineup-recomposition-exec-desk-folded-into-code-desk.md) | Marketplace lineup |
-| [030](decisions-030-pointer-based-marketplace-symlink-plugin-assemblies-no-tracked-dist.md) | Pointer marketplace |
+| [030](decisions-030-pointer-based-marketplace-symlink-plugin-assemblies-no-tracked-dist.md) | Pointer marketplace | Accepted |
+| [031](decisions-031-meta-is-tracked-by-default-targeted-ignores-only.md) | `_meta/` tracked by default | Accepted; this repo opts out via decision-008 |

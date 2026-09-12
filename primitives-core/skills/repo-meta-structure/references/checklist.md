@@ -50,7 +50,7 @@ else. Adding or changing a check *row* means editing this file, not the audit; a
 | CLAUDE-04 | `.claude/` | `path-exists: .claude/rules/` | Directory exists |
 | CLAUDE-05 | `.claude/` | `path-exists: .claude/skills/` | Directory exists |
 | CLAUDE-06 | `.claude/` | `path-exists: .claude/settings.json` | File exists (tracked project policy; must carry anything a headless run depends on) |
-| CLAUDE-07 | `.claude/` | `flag-if-present: .claude/commands/` | Absent — commands are migration debt per [decision-010](../../../../../docs/decisions/decisions-010-commands-become-a-fourth-primitive-type.md) *(migration debt)* |
+| CLAUDE-07 | `.claude/commands/` | `path-exists: .claude/commands/` | When commands are present, they are thin wrappers that load their skill and do not duplicate its procedure ([decision-010](../../../../../docs/decisions/decisions-010-commands-become-a-fourth-primitive-type.md)) |
 
 ## `.github/` template set
 

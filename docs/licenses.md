@@ -38,7 +38,7 @@ compatibility. They do not establish the state of later releases or caches.
 The current source replaces `pptx-themes` with `presentations`; see the
 [replacement proof and capability limits](presentations-replacement.md). The
 retirement approval gate in
-[decision-018](decisions/decision-018%20-%20comm-skills-unify-on-one-engine-and-the-vendored-pptx-base-retires.md)
+[decision-018](decisions/decisions-018-comm-skills-unify-on-one-engine-and-the-vendored-pptx-base-retires.md)
 still applies. Current-file removal does not remove earlier copies from Git history,
 published packages or installed caches.
 

@@ -2,7 +2,7 @@
 title: "primitives-core is self-authored only; externals by reference"
 id: decision-028
 type: decision
-status: Accepted (amended by decision-6)
+status: accepted (amended by decision-006)
 created: 2026-07-22
 summary: Every body under primitives-core/ is origin authored; third-party material is recorded by reference in externals.yaml, never vendored into the source tree.
 ---

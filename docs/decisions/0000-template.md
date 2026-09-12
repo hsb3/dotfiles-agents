@@ -2,7 +2,7 @@
 id: decision-NNN
 title: "<decision title>"
 type: decision
-status: proposed
+status: Proposed # Proposed | Accepted | Rejected | Superseded-by-decision-NNN
 created: YYYY-MM-DD
 summary: <one line — what this decision settles>
 ---

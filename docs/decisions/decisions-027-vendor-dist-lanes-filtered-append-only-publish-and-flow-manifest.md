@@ -2,7 +2,7 @@
 title: "Vendor dist lanes, filtered append-only publish, and the flow manifest"
 id: decision-027
 type: decision
-status: Superseded-by-0017
+status: superseded-by-decision-030
 created: 2026-07-22
 summary: distribution grows a second vendor (opencode) — generated dist trees move under dist/<target>/, main becomes a filtered parented assembly of the dist lanes instead of a whole-tree force push, and flow.yaml + check_flow.py become the standing structural guard.
 ---
