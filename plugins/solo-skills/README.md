@@ -105,7 +105,7 @@ dependencies a grab-bag cannot satisfy. A second, narrower exclusion is delibera
 than derived: a skill that prescribes a system the consumer opts into deliberately ships
 only in that system's own plugin, so installing this bundle never pushes those conventions
 on a repo that has not chosen them. The system can be in-repo (the `_meta/` planning desk
-and its layout standard, in `mise-en-place`) or external (the `bun` toolchain).
+and its layout standard, in `mise-en-place`) or external, such as the `bun` toolchain.
 
 **A skill with a topical plugin is not here at all.** The topical plugin owns a skill; this
 bundle is the home for the ones with nowhere topical to live (decision-020, 2026-09-08). That
