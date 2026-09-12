@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), kenn-forge (maintainer triage over a running kenn-forge daemon), and plugin-feedback (report a plugin defect without leaving the session).",
+    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), and plugin-feedback (report a plugin defect without leaving the session).",
     "version": "0.13.1"
   },
   "name": "dotfiles-agents",
@@ -62,15 +62,6 @@
       "name": "diagrams",
       "source": "./plugins/diagrams",
       "version": "0.3.1"
-    },
-    {
-      "author": {
-        "name": "Henry S. Burden III"
-      },
-      "description": "Maintainer-workflow triage over a running kenn-forge daemon — PR/issue review, diffs and CI checks, local review state, and coding-agent handoff. Two surfaces over the same daemon API: the kenn_forge_* MCP tools for an agent driving its own loop, and the kenn-forge CLI for shell, scripts, and humans. The daemon must be running locally; the MCP surface additionally needs it enabled in the daemon config. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
-      "name": "kenn-forge",
-      "source": "./plugins/kenn-forge",
-      "version": "0.2.0"
     },
     {
       "author": {

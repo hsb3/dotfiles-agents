@@ -1,1 +1,0 @@
-../../primitives-core/skills/kenn-forge/README.md
