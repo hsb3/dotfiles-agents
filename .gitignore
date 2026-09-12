@@ -11,15 +11,10 @@
 !*.env.example
 
 
-# --- extender-db, at evals/ (evals/_structure/CHARTER.md decisions 2+4):
-# data.db is tracked (small, private repo — state travels with the repo); transient
-# siblings are not: auxiliary.db is request logs, WAL/SHM are live journals, types.d.ts is
-# generated. pb_migrations/ is PocketBase's auto-generated schema journal — schema.py is
-# the one rebuild path; tracking both would create a second schema source.
-evals/pb_data/*
-!evals/pb_data/data.db
-# file-field blobs (harness artifacts) must travel with the repo like data.db does (#174)
-!evals/pb_data/storage/
+# --- PocketBase runtime ---
+# The hosted instance owns live state. Keep local database/files private for
+# backups or disposable fixtures; schema.py remains the schema source.
+evals/pb_data/
 evals/pb_migrations/
 
 # --- Python ---
