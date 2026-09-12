@@ -151,7 +151,8 @@ NESTED_CLAUSE = (
     "Repeat that pair each round; it never re-applies. Before cleanup, confirm the worker "
     "is complete and no longer live; inspect tracked, untracked, and ignored files; prove every "
     "commit merged, patch-equivalent, superseded, or preserved on a reviewed remote branch; and "
-    "preserve durable evidence. Only then `git worktree remove <path> && git branch -D <branch>` "
+    "preserve uncommitted, untracked, and ignored work plus durable evidence. Only then "
+    "`git worktree remove <path> && git branch -D <branch>` "
     "to clean up."
 )
 

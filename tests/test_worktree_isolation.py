@@ -416,7 +416,7 @@ class WorktreeIsolationTests(unittest.TestCase):
             "worker is complete and no longer live",
             "tracked, untracked, and ignored files",
             "merged, patch-equivalent, superseded, or preserved on a reviewed remote branch",
-            "preserve durable evidence",
+            "preserve uncommitted, untracked, and ignored work plus durable evidence",
         ):
             self.assertLess(message.index(requirement), remove_at)
 
