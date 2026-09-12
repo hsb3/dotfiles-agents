@@ -7,7 +7,7 @@ into a primitive body. This is the vendored, in-repo successor to the archived w
 `scripts/promote_check.py` H2/H5 checks — no cross-repo import at runtime.
 
 Scope = the shipped primitive bodies under `primitives-core/{skills,agents,commands,hooks}/`,
-plus the symlink-assembly tree `plugins/` (ADR 0017): bundle READMEs are regular files there,
+plus the symlink-assembly tree `plugins/` (decision-030): bundle READMEs are regular files there,
 and each standalone wrapper's README travels with its skill
 (`primitives-core/skills/<id>/README.md`,
 symlinked to the plugin root) — all of it ships to a user the same as a skill body and is in

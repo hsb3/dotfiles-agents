@@ -1,5 +1,5 @@
 ---
-id: decision-016
+id: "decision-016"
 title: GitHub label set is a closed vocabulary enforced by a CI gate
 date: '2026-09-07'
 status: accepted

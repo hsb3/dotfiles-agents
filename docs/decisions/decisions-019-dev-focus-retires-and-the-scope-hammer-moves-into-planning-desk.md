@@ -1,5 +1,5 @@
 ---
-id: decision-019
+id: "decision-019"
 title: dev-focus retires and the scope hammer moves into planning-desk
 date: '2026-09-08'
 status: accepted

@@ -1,8 +1,8 @@
 ---
-id: decision-8
+id: decision-008
 title: Repo structure future-state — backlog absorbs docs/, _meta removed
 date: '2026-08-06'
-status: accepted (partly superseded by decision-011 and decision-014)
+status: accepted (partly superseded by decision-014)
 ---
 
 > **Amendment note (2026-09-09):** Decision-011 returned documentation to `docs/` when Backlog.md retired; decision-014 later moved task tracking to kata. The `_meta/` removal remains repo policy. Historical `backlog/` paths below are provenance, not current navigation.
@@ -12,7 +12,7 @@ status: accepted (partly superseded by decision-011 and decision-014)
 The 2026-08-06 cleanup removed the empty top-level `hooks/` placeholder and dissolved
 `docs/` into the backlog: the ADR mirrors moved to `backlog/decisions/` (beside the
 `decision-N` series), and the extender-dev SOP, `FLOW.md`, and `vendoring-rule.md` to
-`backlog/docs/`. Backlog.md was already THE task system (decision-1); this makes
+`backlog/docs/`. Backlog.md was already the task system (historical decision-1); this makes
 `backlog/` the decision and working-docs home too. `backlog/config.yml` carries
 `harness` / `evals` area labels so those workbenches' work is tracked in the same backlog.
 
@@ -28,7 +28,7 @@ Top level converges to five groups, every path homed in `flow.yaml`:
 - **workbenches** — `backlog/`, `harness/`, `evals/`, `.claude/`
 - **entry docs** — `README.md`, `AGENTS.md`, `CLAUDE.md`
 
-`_meta/` is **removed entirely** (supersedes ADR 0006's tracked-desk policy for this
+`_meta/` is **removed entirely** (a this-repository exception to [decision-031](decisions-031-meta-is-tracked-by-default-targeted-ignores-only.md) for this
 repo): secrets/live-ops live in untracked `.claude/operations/`; future briefings will go
 to a separate meta-planning directory where project design considerations are handled
 (created when needed); the harness design docs travel with their component

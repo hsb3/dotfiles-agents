@@ -1,12 +1,13 @@
 ---
 title: "Marketplace lineup recomposition — exec-desk folded into code-desk"
+id: decision-029
 type: decision
 status: Accepted
 created: 2026-07-22
 summary: exec-desk retires as a bundle (its skills fold into code-desk); opencode-expertise and private-fork become standalone-only; memory-taxonomy merges into project-memory; update-config renames to claude-code-config; tech-eval-research is added — 15 named plugins total.
 ---
 
-# 0016 · Marketplace lineup recomposition — exec-desk folded into code-desk
+# Decision 029 · Marketplace lineup recomposition — exec-desk folded into code-desk
 
 _Retires the exec-desk bundle into code-desk and reshapes the standalone catalog, landing the
 marketplace at one desk bundle, three kits, and eleven standalone skills._

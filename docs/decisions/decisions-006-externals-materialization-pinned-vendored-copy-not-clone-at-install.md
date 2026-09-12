@@ -1,5 +1,5 @@
 ---
-id: decision-6
+id: decision-006
 title: 'Externals materialization: pinned-vendored-copy, not clone-at-install'
 date: '2026-08-04 03:28'
 status: accepted

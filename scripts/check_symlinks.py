@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Symlink-assembly lint — the drift-guard successor for the pointer-based marketplace (ADR 0017).
+"""Symlink-assembly lint — the drift-guard successor for the pointer-based marketplace (decision-030).
 
 `plugins/<id>/` are thin symlink assemblies over `primitives-core/`; the root
 `.claude-plugin/marketplace.json` lists each plugin by relative source path. Claude Code
@@ -11,7 +11,7 @@ incomplete plugin. This lint makes that failure mode loud:
   2. every plugin entry in the root marketplace.json points (via a relative ./ source)
      at an existing plugin dir that carries .claude-plugin/plugin.json;
   3. every plugins/<id>/ dir is listed in the root marketplace.json (no orphan assemblies);
-  4. every STANDALONE plugin symlinks README.md to its own skill's README (ADR 0017 /
+  4. every STANDALONE plugin symlinks README.md to its own skill's README (decision-030 /
      flow.yaml's plugin-assemblies node). The standalone/bundle line is drawn mechanically:
      a plugin whose assembly contains exactly one skill and no agents, hooks, or commands
      is a STANDALONE — its README.md must be a symlink to

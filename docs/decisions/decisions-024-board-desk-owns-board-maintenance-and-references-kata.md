@@ -1,5 +1,5 @@
 ---
-id: decision-024
+id: "decision-024"
 title: Board-desk owns board maintenance and references kata
 date: '2026-09-08'
 status: accepted

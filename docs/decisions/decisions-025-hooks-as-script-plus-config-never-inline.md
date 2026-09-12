@@ -1,5 +1,6 @@
 ---
 title: "Hooks as script + config, never inline"
+id: decision-025
 type: decision
 status: Accepted
 created: 2026-06-28
@@ -7,7 +8,7 @@ updated: 2026-07-03
 summary: A hook is a directory (config + event-named script), never inline bash in settings.json.
 ---
 
-# 0002 · Hooks as script + config, never inline
+# Decision 025 · Hooks as script + config, never inline
 
 _A hook is a directory (config + event-named script), never a raw command string in
 `settings.json`._

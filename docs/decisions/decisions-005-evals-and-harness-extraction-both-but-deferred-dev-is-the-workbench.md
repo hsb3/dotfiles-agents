@@ -1,5 +1,5 @@
 ---
-id: decision-5
+id: decision-005
 title: 'evals/ and harness/ extraction: both, but deferred (dev is the workbench)'
 date: '2026-08-04 02:54'
 status: accepted

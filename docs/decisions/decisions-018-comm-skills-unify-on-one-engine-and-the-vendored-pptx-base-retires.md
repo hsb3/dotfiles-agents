@@ -1,5 +1,5 @@
 ---
-id: decision-018
+id: "decision-018"
 title: comm skills unify on one engine and the vendored pptx base retires
 date: '2026-08-26'
 status: accepted

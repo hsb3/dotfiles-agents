@@ -1,5 +1,5 @@
 ---
-id: decision-021
+id: "decision-021"
 title: retired primitives are sunset by decision record, tag, and deletion (applied to kaneo)
 date: '2026-09-08'
 status: accepted
@@ -60,7 +60,7 @@ Owner ruling, 2026-09-08. A retired primitive or plugin is sunset in four moves,
   that tested only those bytes.
 - **Kept:** `task-authoring` — tracker-agnostic doctrine, dual-homed in kaneo and solo-skills;
   solo-skills is now its only home. Historical mentions of Kaneo in AGENTS.md, `flow.yaml`,
-  decision-011 and decision-014, and the opaque `Kaneo board task DFA-233` fixture string in
+  former decision-011 (now decision-014), and the opaque `Kaneo board task DFA-233` fixture string in
   atelier's handoff tests stay as written: they describe what happened, not what ships.
 
 ## Patterns to carry forward

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Provenance / externals conformance — D6 machine-floor check 3 (entry-gate spec).
 
-Enforces the composition + provenance invariants of the rebuild (ADR 0015 / desk 0005·0007):
+Enforces the composition + provenance invariants of the rebuild (decision-028 / desk 0005·0007):
 
   1. `primitives-core` is self-authored (origin: authored) or vendored (origin: vendored) ONLY.
      An `origin: sourced` body under `primitives-core/` is a third-party copy — the exact
@@ -46,7 +46,7 @@ ENFORCE_EXTERNALS_INTENT = True
 
 
 def authored_placement_violations(roster):
-    """(1) No `origin: sourced` body under primitives-core/ — self-authored only (ADR 0015)."""
+    """(1) No `origin: sourced` body under primitives-core/ — self-authored only (decision-028)."""
     problems = []
     for e in roster:
         src = (e.get("source") or "").strip()

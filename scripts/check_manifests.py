@@ -21,7 +21,7 @@ same rule as every other guard here. A plugin dir with no `.claude-plugin/plugin
 reported rather than skipped, since that is a broken assembly, not a non-subject.
 
 VALIDATION RUNS ON A DEREFERENCED COPY, NOT ON THE TREE IN PLACE. `plugins/<id>/` are
-symlink assemblies (ADR 0017), and the validator reads components WITHOUT following
+symlink assemblies (decision-030), and the validator reads components WITHOUT following
 symlinks — from CLI 2.1.240 it says so out loud: "N entries here are symlinks and were not
 read ... A session loading this plugin does follow them, so validate the real paths
 separately." Under --strict that warning is fatal, so validating the assemblies in place

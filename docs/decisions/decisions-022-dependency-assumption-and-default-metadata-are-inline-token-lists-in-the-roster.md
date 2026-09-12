@@ -1,5 +1,5 @@
 ---
-id: decision-022
+id: "decision-022"
 title: dependency, assumption and default metadata are inline token lists in the roster
 date: '2026-09-08'
 status: accepted

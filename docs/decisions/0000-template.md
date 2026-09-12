@@ -1,12 +1,13 @@
 ---
+id: decision-NNN
 title: "<decision title>"
 type: decision
-status: Proposed # Proposed | Accepted | Rejected | Superseded-by-NNNN
+status: Proposed # Proposed | Accepted | Rejected | Superseded-by-decision-NNN
 created: YYYY-MM-DD
 summary: <one line — what this decision settles>
 ---
 
-# NNNN · <decision title>
+# Decision NNN · <decision title>
 
 _One-line italic purpose: what this decision settles._
 
