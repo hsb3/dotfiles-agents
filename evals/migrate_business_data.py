@@ -137,7 +137,20 @@ def _artifact_name(blob):
 
 
 def _artifact_bytes(storage, name):
-    matches = [p for p in Path(storage).rglob(name) if p.is_file() and not p.name.endswith(".attrs")]
+    if (name in {".", ".."} or "/" in name or "\\" in name
+            or any(character in name for character in "*?[]")):
+        raise ValueError("invalid artifact blob reference")
+    root = Path(storage).resolve()
+    if not root.is_dir():
+        raise ValueError("artifact storage is unavailable")
+    matches = []
+    for path in root.rglob("*"):
+        if path.name != name or path.name.endswith(".attrs"):
+            continue
+        if path.is_symlink():
+            raise ValueError("artifact blob is a symlink")
+        if path.is_file() and path.resolve().is_relative_to(root):
+            matches.append(path)
     if len(matches) != 1:
         raise ValueError("artifact blob could not be resolved")
     return matches[0].read_bytes()

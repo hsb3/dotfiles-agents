@@ -107,6 +107,26 @@ class MigrationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             migration.read_export(self.db, self.storage, ("artifacts",))
 
+    def test_artifact_resolution_is_literal_and_rejects_unsafe_names(self):
+        nested = self.storage / "nested"
+        nested.mkdir()
+        (nested / "blob.txt").write_bytes(b"literal")
+        self.assertEqual(b"literal", migration._artifact_bytes(self.storage, "blob.txt"))
+        for name in ("../blob.txt", "nested/blob.txt", "nested\\blob.txt", ".", "..", "*.txt", "?.txt", "[a].txt"):
+            with self.assertRaises(ValueError):
+                migration._artifact_bytes(self.storage, name)
+
+    def test_artifact_resolution_rejects_symlink_matches(self):
+        outside = Path(self.tmp.name) / "outside.txt"
+        outside.write_bytes(b"outside")
+        (self.storage / "outside-link.txt").symlink_to(outside)
+        inside = self.storage / "inside.txt"
+        inside.write_bytes(b"inside")
+        (self.storage / "inside-link.txt").symlink_to(inside)
+        for name in ("outside-link.txt", "inside-link.txt"):
+            with self.assertRaises(ValueError):
+                migration._artifact_bytes(self.storage, name)
+
     def test_apply_refuses_nonempty_destination_before_writes(self):
         export = migration.Export({"frameworks": [{"id": "fw0000000000001", "body": "x"}]}, {})
         pb = FakePB(nonempty=True)
