@@ -2,6 +2,9 @@
 .DS_Store
 *.swp
 
+# --- manual task worktrees ---
+.worktrees/
+
 # --- secrets ---
 .env*
 !.env*.example

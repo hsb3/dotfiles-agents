@@ -411,6 +411,14 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.assertIn("git cherry-pick", message)
         self.assertIn("git worktree remove", message)
         self.assertIn("git branch -D", message)
+        remove_at = message.index("git worktree remove")
+        for requirement in (
+            "worker is complete and no longer live",
+            "tracked, untracked, and ignored files",
+            "merged, patch-equivalent, superseded, or preserved on a reviewed remote branch",
+            "preserve uncommitted, untracked, and ignored work plus durable evidence",
+        ):
+            self.assertLess(message.index(requirement), remove_at)
 
         rows = self._rows()
         self.assertEqual(len(rows), 1)

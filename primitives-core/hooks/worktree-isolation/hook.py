@@ -148,8 +148,12 @@ NESTED_CLAUSE = (
     "reports: `git worktree list` for its path and branch, then `git cherry HEAD "
     "<branch>` and READ it — `+` lines are commits you have not picked yet, `-` "
     "lines are already in — then `git cherry-pick <the + SHAs>` if there are any. "
-    "Repeat that pair each round; it never re-applies. Finally "
-    "`git worktree remove <path> && git branch -D <branch>` to clean up."
+    "Repeat that pair each round; it never re-applies. Before cleanup, confirm the worker "
+    "is complete and no longer live; inspect tracked, untracked, and ignored files; prove every "
+    "commit merged, patch-equivalent, superseded, or preserved on a reviewed remote branch; and "
+    "preserve uncommitted, untracked, and ignored work plus durable evidence. Only then "
+    "`git worktree remove <path> && git branch -D <branch>` "
+    "to clean up."
 )
 
 
