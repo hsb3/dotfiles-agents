@@ -30,10 +30,66 @@ browser. Never copy real authentication state into a fixture.
 
 ## Procedure: fresh Railway deployment
 
-The root owner provisions the project and service from `evals/deploy/`; this worker package
-does not create cloud resources. In the Railway UI, set **Source Root Directory** to
-`/evals/deploy`; the verified CLI equivalent is `railway up evals/deploy --path-as-root`.
-Before provisioning, choose a Railway persistent volume mounted at **`/pb/pb_data`**, set
+The root owner alone provisions accounts, rules, cloud state, and deployment after the browser
+login email arrives. First create a throwaway package; never deploy the repository directory.
+
+```sh
+package_dir=/tmp/evals-toolbox-deploy
+python3 evals/package_toolbox.py "$package_dir"
+cd "$package_dir"
+railway up --path-as-root
+```
+
+In the Railway UI, deploy that package directory, mount the existing persistent volume at
+**`/pb/pb_data`**, and set server-only `PB_SUPERUSER_EMAIL` and
+`PB_SUPERUSER_PASSWORD`. The package has no `.env`, `pb_data`, raw repository data, or client
+credentials. Read back the deployment's `/api/health` response and, with an authenticated
+browser token, `GET /api/toolbox/catalog` before treating the package as live. The catalog is
+outside `pb_public` and the route uses PocketBase authentication middleware.
+
+For a disposable local loopback Browser check, use the actual packaged PocketBase service with
+fresh synthetic credentials and an empty temporary data directory; do not copy a production
+database or token into it:
+
+```sh
+python3 evals/toolbox_fixture.py --pocketbase /opt/homebrew/bin/pocketbase
+```
+
+It prints the loopback URL and fixture-only browser email/password, applies the schema and
+authenticated read-only rules, seeds 27 synthetic runs plus one protected artifact, and removes its
+process and temporary data on Ctrl-C. It reads no credential or configuration environment file. The focused
+test runs this actual fixture when PocketBase is present; otherwise it is explicitly skipped.
+
+The root creates the browser `users` account manually after its email is supplied. Public signup
+is disabled (`createRule = null`); users list and view are authenticated as appropriate, while
+users update and delete are `null`. Only `runs` and `artifacts` have authenticated read-only list
+and view rules; their create, update, and delete rules stay `null`. Keep `artifacts.blob` protected and use
+PocketBase's authenticated short-lived file token route for it. The browser stores its token only
+in memory, clears it on logout, and never receives a superuser credential.
+
+After the root has authenticated as a superuser and set `PB_ADMIN_TOKEN` in that root-only shell,
+apply and read back the rules with the following commands. The `users` rules limit a browser user
+to its own record; the business rule allows any authenticated browser account to read only.
+
+```sh
+auth_header="Authorization: $PB_ADMIN_TOKEN"
+users_rule='id = @request.auth.id'
+business_rule='@request.auth.id != ""'
+curl --fail-with-body -X PATCH "$PB_URL/api/collections/users" \
+  -H "$auth_header" -H 'Content-Type: application/json' \
+  --data "{\"listRule\":\"$users_rule\",\"viewRule\":\"$users_rule\",\"createRule\":null,\"updateRule\":null,\"deleteRule\":null}"
+for collection in runs artifacts; do
+  curl --fail-with-body -X PATCH "$PB_URL/api/collections/$collection" \
+    -H "$auth_header" -H 'Content-Type: application/json' \
+    --data "{\"listRule\":\"$business_rule\",\"viewRule\":\"$business_rule\",\"createRule\":null,\"updateRule\":null,\"deleteRule\":null}"
+  curl --fail-with-body "$PB_URL/api/collections/$collection" -H "$auth_header"
+done
+curl --fail-with-body "$PB_URL/api/collections/users" -H "$auth_header"
+```
+
+The earlier empty-service procedure remains applicable to the resulting package. The root owner
+does not create cloud resources from this worker package. Before provisioning, choose a Railway
+persistent volume mounted at **`/pb/pb_data`**, set
 server-only `PB_SUPERUSER_EMAIL` and
 `PB_SUPERUSER_PASSWORD` to fresh values, and keep `PB_CORS_ORIGINS` unset until a specific
 browser origin is approved. The bundle binds `0.0.0.0:$PORT`, has Railway and image health at
@@ -46,12 +102,11 @@ The deployed service starts empty. Its default collection rules remain restricte
 `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` outside the service, run `schema.py` from an authorized
 session to apply the 17 domain collections; do not bake credentials, schema state, `pb_data`, or
 auth state into the image. `schema.py` does not manage the default zero-user `users` auth
-collection or global settings: immediately lock its five rules (list, view, create, update, and
-delete), enable built-in `rateLimits` without replacing the default rule entries, and read both
-the `users` rules and settings back. Before the import, also verify PocketBase batch is enabled
+collection or global settings: apply the read-only rules above, enable built-in `rateLimits`
+without replacing those rules, and read both the `users` rules and settings back. Before the
+import, also verify PocketBase batch is enabled
 with `maxRequests >= 10`. The Railway password is an ordinary service secret supplied through
-stdin and retained in the root-only local credential file; Railway does not seal it. A GUI or
-read-only browser account remains deferred.
+stdin and retained in the root-only local credential file; Railway does not seal it.
 
 Before declaring the deployment ready, the root owner records:
 

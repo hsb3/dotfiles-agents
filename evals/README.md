@@ -38,8 +38,9 @@ server bind. `PB_DATA_DIR` and `PB_BIND` are only for an intentional local Pocke
 `evals/pb_data/` is untracked and ignored. Private local backup or fixture bytes may remain;
 CLI clients use the hosted service. The migration and hosted backup/restore checks completed
 before runtime data was removed from Git tracking. Request logs, WAL/SHM journals, and generated
-typings remain transient. The hosted collections are superuser-only; GUI access awaits design
-and access-policy review. Historical Git copies and authentication remediation remain separate.
+typings remain transient. Browser access follows the read-only authenticated rule procedure in
+[`PROCEDURES.md`](PROCEDURES.md#procedure-fresh-railway-deployment); historical Git copies and
+authentication remediation remain separate.
 
 ## Responsibilities and deployment boundary
 
@@ -49,9 +50,19 @@ The harness is the offline producer of `harness/results.jsonl` and run logs.
 REST client for session-run schema/load/report commands; it does not own server startup.
 `serve.sh` owns local PocketBase startup and its data directory only.
 
-[`deploy/`](deploy/) is a fresh, empty PocketBase Railway bundle, pinned to PocketBase
-0.40.3. It excludes `evals/pb_data`, historical auth state, and runtime artifacts; deployment
-and recovery procedures are in [PROCEDURES.md](PROCEDURES.md#procedure-fresh-railway-deployment).
+`package_toolbox.py` builds a new, isolated deployment directory from the current marketplace
+manifest, workflow guide, deploy wrapper, and `evals/ui/` assets. It writes only the wrapper,
+`pb_public/` assets, a private deterministic `toolbox-catalog.json`, and its PocketBase hook;
+that catalog is a source snapshot, not an installed-state or runtime-proof claim. Authenticated
+clients read it through `GET /api/toolbox/catalog`; it is never a public asset.
+
+```sh
+python3 evals/package_toolbox.py /tmp/evals-toolbox-deploy
+```
+
+The output is refused when it already exists. It excludes `evals/pb_data`, historical auth
+state, environment files, credentials, and runtime artifacts. Deploy and recovery procedures
+are in [PROCEDURES.md](PROCEDURES.md#procedure-fresh-railway-deployment).
 
 The root-owned consolidation tool, `migrate_business_data.py`, reads a verified private backup
 offline and defaults to a receipt-only dry-run. Its reviewed `all` scope is the 12 business

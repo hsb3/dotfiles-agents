@@ -13,7 +13,10 @@ RUN set -e; case "$TARGETARCH" in \
     echo "$PB_SHA256  /tmp/pb.zip" | sha256sum -c -; \
     unzip /tmp/pb.zip -d /pb; rm /tmp/pb.zip; /pb/pocketbase --version
 
-COPY start.sh /pb/start.sh
+WORKDIR /pb
+COPY start.sh ./start.sh
+COPY pb_public ./pb_public
+COPY pb_hooks ./pb_hooks
 RUN chmod +x /pb/start.sh
 
 EXPOSE 8090
