@@ -60,7 +60,8 @@ class DeployStartTests(unittest.TestCase):
 
     def run_start(self, **env):
         base = {key: value for key, value in os.environ.items()
-                if key not in {"PB_SUPERUSER_EMAIL", "PB_SUPERUSER_PASSWORD"}}
+                if key not in {"PB_SUPERUSER_EMAIL", "PB_SUPERUSER_PASSWORD", "PB_DATA_DIR",
+                               "PB_BIND", "PORT", "PB_CORS_ORIGINS"}}
         base |= {"POCKETBASE_BIN": str(self.fake), "FAKE_LOG": str(self.log)}
         return subprocess.run(["/bin/sh", str(START)], text=True, capture_output=True, env=base | env)
 
@@ -82,9 +83,13 @@ class DeployStartTests(unittest.TestCase):
                 self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(self.log.read_text(encoding="utf-8").splitlines(), [
             "superuser", "create", "admin@example.test", "LongEnoughSecret123", "--dir", "/pb/pb_data",
-            "serve", "--http=0.0.0.0:8090", "--dir", "/pb/pb_data", "--origins=https://invalid.local",
+            "serve", "--http=0.0.0.0:8090", "--dir", "/pb/pb_data",
+            f"--hooksDir={START.parent}/pb_hooks", f"--publicDir={START.parent}/pb_public",
+            "--origins=https://invalid.local",
             "superuser", "create", "admin@example.test", "LongEnoughSecret123", "--dir", "/pb/pb_data",
-            "serve", "--http=0.0.0.0:8090", "--dir", "/pb/pb_data", "--origins=https://invalid.local",
+            "serve", "--http=0.0.0.0:8090", "--dir", "/pb/pb_data",
+            f"--hooksDir={START.parent}/pb_hooks", f"--publicDir={START.parent}/pb_public",
+            "--origins=https://invalid.local",
         ])
 
     def test_invalid_creation_prevents_server_start(self):
