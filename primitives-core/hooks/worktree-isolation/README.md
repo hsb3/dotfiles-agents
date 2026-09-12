@@ -99,7 +99,7 @@ branch — intended, not a misconfiguration. To integrate when it reports: `git 
 for its path and branch, then `git cherry HEAD <branch>` and READ it — `+` lines are commits
 you have not picked yet, `-` lines are already in — then `git cherry-pick <the + SHAs>` if
 there are any. Repeat that pair each round; it never re-applies. Finally
-`git worktree remove <path> && git branch -D <branch>` to clean up.
+follow the [Lifecycle and retirement](#lifecycle-and-retirement) checklist before any removal.
 ```
 
 **Why not the obvious `git cherry-pick HEAD..<branch>`, which the notice used to carry.** A worker
@@ -154,15 +154,17 @@ one having read the failure. The dispatcher should see each worker's result.
 
 Worktrees are temporary execution state. Native Claude Code keeps its task checkouts in
 `.claude/worktrees/`; Codex/Atelier keeps them in `.git/atelier-codex/checkouts/`. For a manual
-checkout, use the repository-local `.worktrees/` directory. Never create task checkouts as
-siblings of the repository.
+checkout, use the repository-local `.worktrees/` directory. Never create task checkouts or clones
+as siblings of the repository.
 
-`git worktree list` is authoritative inventory. A live checkout, or one deliberately retained for
-integration, review, recovery, or evidence, is not stale. Before ordinary removal, confirm the
-worker is complete and no longer live; integrate or explicitly discard every commit; and preserve
-uncommitted/untracked work plus other durable evidence. Only then remove the checkout normally.
-Call metadata stale only when `git worktree list` names a checkout whose directory no longer
-exists, and prune it only after that validation.
+`git worktree list` is authoritative: run `git -C <project> worktree list --porcelain` for the
+inventory. A live checkout, or one deliberately retained for integration, review, recovery, or
+evidence, is not stale. Before ordinary removal, confirm the worker is complete and no longer
+live; inspect tracked, untracked, and ignored state; prove every commit merged, patch-equivalent,
+superseded, or preserved on a reviewed remote branch; and preserve uncommitted, untracked, ignored
+work plus other durable evidence. Only then remove the checkout normally. Call metadata stale only
+when the authoritative inventory names a checkout whose directory no longer exists, and prune it
+only after that validation.
 
 ## Inert paths
 
