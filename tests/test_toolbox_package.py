@@ -133,8 +133,10 @@ class ToolboxPackageTests(unittest.TestCase):
 
     def test_rejects_missing_ui_and_fixture_is_paginated_and_token_free(self):
         (self.source / "evals" / "ui" / "index.html").unlink()
+        output = Path(self.tmp.name) / "missing-ui"
         with self.assertRaisesRegex(FileNotFoundError, "UI"):
-            package_toolbox.build_package(self.source, Path(self.tmp.name) / "missing-ui")
+            package_toolbox.build_package(self.source, output)
+        self.assertFalse(output.exists())
         with PocketBaseFixture() as fixture:
             from urllib.request import urlopen
             self.assertEqual(json.load(urlopen(fixture.url + "/api/collections/runs/records?page=2&perPage=1"))["items"][0]["id"], "run-2")
@@ -142,13 +144,17 @@ class ToolboxPackageTests(unittest.TestCase):
 
     def test_rejects_ui_secret_files_and_symlink_escapes(self):
         (self.source / "evals" / "ui" / ".env").write_text("token=secret", encoding="utf-8")
+        env_output = Path(self.tmp.name) / "env-output"
         with self.assertRaisesRegex(ValueError, "static asset"):
-            package_toolbox.build_package(self.source, Path(self.tmp.name) / "env-output")
+            package_toolbox.build_package(self.source, env_output)
+        self.assertFalse(env_output.exists())
         (self.source / "evals" / "ui" / ".env").unlink()
         escaped = self.source / "evals" / "ui" / "assets" / "escaped.js"
         escaped.symlink_to(self.source / ".env")
+        symlink_output = Path(self.tmp.name) / "symlink-output"
         with self.assertRaisesRegex(ValueError, "static asset"):
-            package_toolbox.build_package(self.source, Path(self.tmp.name) / "symlink-output")
+            package_toolbox.build_package(self.source, symlink_output)
+        self.assertFalse(symlink_output.exists())
 
     def test_current_catalog_keeps_hyphenated_marketplace_ids(self):
         catalog = json.loads(package_toolbox.build_catalog(ROOT))

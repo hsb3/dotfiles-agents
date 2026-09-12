@@ -94,14 +94,21 @@ def build_catalog(source_root):
     return json.dumps(catalog, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
 
 
-def _copy_ui(source_ui, destination):
+def _ui_files(source_ui):
     if not source_ui.is_dir() or not (source_ui / "index.html").is_file():
         raise FileNotFoundError(f"required UI sources are missing: {source_ui}")
+    files = []
     for item in sorted(source_ui.rglob("*")):
         if item.is_dir():
             continue
         if not item.is_file() or item.is_symlink() or item.suffix.lower() not in UI_SUFFIXES:
             raise ValueError(f"UI source must be a regular static asset: {item}")
+        files.append(item)
+    return files
+
+
+def _copy_ui(files, source_ui, destination):
+    for item in files:
         target = destination / item.relative_to(source_ui)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(item, target)
@@ -118,11 +125,13 @@ def build_package(source_root, output):
     if missing:
         raise FileNotFoundError("missing deployment source: " + ", ".join(missing))
     catalog = build_catalog(source_root)
+    source_ui = source_root / "evals" / "ui"
+    ui_files = _ui_files(source_ui)
     output.mkdir(parents=True)
     for source in required:
         shutil.copyfile(source, output / source.name)
     public = output / "pb_public"
-    _copy_ui(source_root / "evals" / "ui", public)
+    _copy_ui(ui_files, source_ui, public)
     (public / "toolbox-catalog.json").write_bytes(catalog)
     return output
 
