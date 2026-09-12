@@ -191,7 +191,8 @@ class ToolboxPackageTests(unittest.TestCase):
                             for workflow in catalog["workflows"]))
         workflow_ids = {item["id"] for item in catalog["workflows"]}
         self.assertTrue(workflow_ids)
-        self.assertTrue(all({"id", "workflows"} <= set(plugin) for plugin in catalog["plugins"]))
+        self.assertTrue(all({"id", "name", "workflows"} <= set(plugin) for plugin in catalog["plugins"]))
+        self.assertTrue(all(plugin["id"] == plugin["name"] for plugin in catalog["plugins"]))
         self.assertTrue(all(isinstance(workflow_id, str) and workflow_id in workflow_ids
                             for plugin in catalog["plugins"] for workflow_id in plugin["workflows"]))
         self.assertTrue(all(plugin["id"] in workflow["plugins"]

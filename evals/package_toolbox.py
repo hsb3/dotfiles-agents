@@ -99,6 +99,7 @@ def build_catalog(source_root):
         "plugins": [
             {
                 "id": plugin_id,
+                "name": plugin_id,
                 "version": by_id[plugin_id].get("version", ""),
                 "description": by_id[plugin_id].get("description", ""),
                 "workflows": sorted(plugin_workflows[plugin_id]),
