@@ -150,6 +150,11 @@ class ToolboxPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "static asset"):
             package_toolbox.build_package(self.source, Path(self.tmp.name) / "symlink-output")
 
+    def test_current_catalog_keeps_hyphenated_marketplace_ids(self):
+        catalog = json.loads(package_toolbox.build_catalog(ROOT))
+        ids = {item["id"] for item in catalog["plugins"]}
+        self.assertTrue({"board-desk", "plugin-feedback", "solo-skills"} <= ids)
+
 
 if __name__ == "__main__":
     unittest.main()
