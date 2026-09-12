@@ -31,8 +31,10 @@ browser. Never copy real authentication state into a fixture.
 ## Procedure: fresh Railway deployment
 
 The root owner provisions the project and service from `evals/deploy/`; this worker package
-does not create cloud resources. Before provisioning, choose a Railway persistent volume mounted
-at **`/pb/pb_data`**, set server-only `PB_SUPERUSER_EMAIL` and
+does not create cloud resources. In the Railway UI, set **Source Root Directory** to
+`/evals/deploy`; the verified CLI equivalent is `railway up evals/deploy --path-as-root`.
+Before provisioning, choose a Railway persistent volume mounted at **`/pb/pb_data`**, set
+server-only `PB_SUPERUSER_EMAIL` and
 `PB_SUPERUSER_PASSWORD` to fresh values, and keep `PB_CORS_ORIGINS` unset until a specific
 browser origin is approved. The bundle binds `0.0.0.0:$PORT`, has Railway and image health at
 `/api/health`, uses a 0.40.3 binary whose per-architecture release ZIP checksum is verified at
@@ -47,8 +49,9 @@ into the image.
 
 Before declaring the deployment ready, the root owner records:
 
-1. HTTPS `GET /api/health`, then a service restart and a second health check proving volume-backed
-   state persists.
+1. HTTPS `GET /api/health`; authenticate, create an authenticated disposable sentinel with unique
+   content, and record its ID and content. Restart or redeploy, authenticate again, read that same
+   ID and exact content back, then delete the sentinel. Health checks alone do not prove persistence.
 2. Fresh client authentication; schema application; one representative disposable authenticated
    create/read/update/delete; anonymous denial for a domain record and for a protected artifact
    file URL.

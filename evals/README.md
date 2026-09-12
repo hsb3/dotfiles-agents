@@ -162,11 +162,11 @@ against the same catalog is the point of the model.
   for credential-free development. Supersedes the former `render_matrix.py`.
 - `coverage_gaps` (view collection) — read-only saved view over `job_coverage` ⋈ its job
   element, non-covered rows only (gaps + partials); browsable in the admin UI and API.
-- `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`)
+- `serve.sh` — env-configured server wrapper (`PB_DATA_DIR`, `PB_URL`, `PB_BIND`)
 - `PROCEDURES.md` — the runbook: run order, evaluated-pass pattern, gates, commit discipline
 - `DECISIONS-NEEDED.md` — open owner-decision batch (tracked as issue #153)
 - `_structure/` — project docs: CHARTER, PLAN, OPEN-ITEMS, INSIGHTS
-- `pb_data/` — the live database; only `data.db` is tracked (logs/journals/typings ignored)
+- `pb_data/` — the live database; `data.db` and `storage/` are tracked (logs/journals/typings ignored)
 
 ## Codex usage digest
 
