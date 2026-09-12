@@ -15,7 +15,7 @@ APP = ROOT / "evals" / "ui" / "app.js"
 class ToolboxAdapterTests(unittest.TestCase):
     def run_module(self, body):
         script = """import assert from 'node:assert/strict';
-import { active, api, collectPages, comparisonFields, fileUrl, pageRecords, text } from %s;
+import { active, api, collectPages, comparisonFields, comparisonRuns, fileUrl, pageRecords, text } from %s;
 %s
 """ % (json.dumps(APP.as_uri()), body)
         result = subprocess.run(["node", "--input-type=module", "-e", script], text=True,
@@ -57,6 +57,8 @@ assert.equal(active(4, 4, 'token'), true);
 assert.equal(active(4, 5, 'token'), false);
 assert.equal(active(4, 4, ''), false);
 assert.deepEqual(comparisonFields.map((entry) => entry[1]), ['campaign', 'candidate', 'case', 'harness', 'config', 'model', 'passed', 'num_turns', 'cost_usd', 'duration_ms', 'error', 'ts']);
+const selected = new Map([['first', {id: 'first'}], ['second', {id: 'second'}]]);
+assert.deepEqual(comparisonRuns(selected).map((run) => run.id), ['first', 'second']);
 """)
 
     def test_file_urls_are_encoded_and_unsafe_values_are_text_only(self):
@@ -76,6 +78,8 @@ assert.equal(node.innerHTML, 'unchanged');
         self.assertNotIn('"/toolbox-catalog.json"', source)
         self.assertIn("password.value = \"\"", source)
         self.assertIn("AbortController", source)
+        self.assertNotIn('make("a", "Open protected file")', source)
+        self.assertIn('make("button", "Open protected file")', source)
         self.assertNotIn("Concept A", (ROOT / "evals" / "ui" / "index.html").read_text())
 
 
