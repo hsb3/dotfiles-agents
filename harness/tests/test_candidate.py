@@ -5,11 +5,9 @@ import shutil
 import sys
 import tempfile
 import unittest
-from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from agent_harness import cli  # noqa: E402
 from agent_harness.candidate import agent_identities, detect_kind, resolved_candidate_dir  # noqa: E402
 
 
@@ -143,18 +141,6 @@ class TestAgentIdentities(unittest.TestCase):
         _write(os.path.join(self.tmp, "other.md"), "---\nname: same\n---\nother body")
         with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'.*other.md.*same.md"):
             agent_identities(self.tmp)
-
-    def test_cli_rejects_duplicates_at_shared_classification_boundary(self):
-        # If CLI bypasses shared classification validation, its run stage would
-        # receive an ambiguous directory and an adapter could partially inject it.
-        _write(os.path.join(self.tmp, "first.md"), "---\nname: same\n---\none")
-        _write(os.path.join(self.tmp, "second.md"), "---\nname: same\n---\ntwo")
-        adapter = mock.Mock()
-        with mock.patch.object(cli, "get_adapter", return_value=adapter):
-            with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'"):
-                cli.main(["duplicate", "--candidate-dir", self.tmp])
-        adapter.preflight.assert_not_called()
-
 
 if __name__ == "__main__":
     unittest.main()

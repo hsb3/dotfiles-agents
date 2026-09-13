@@ -6,11 +6,13 @@ flat agent ``.md`` file, and that the exit-2 contract holds for the paths
 that must never resolve — following the stub style of test_core.py.
 """
 
+import io
 import os
 import shutil
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -106,9 +108,9 @@ class TestFlatMdResolutionReachesRunStage(CliResolutionTestBase):
 class TestResolverErrorNarrowScope(CliResolutionTestBase):
     def test_value_error_from_run_candidate_propagates_not_exit_2(self):
         """A ValueError raised *inside* the run (not by the resolver) must
-        propagate to the caller — the resolver's try/except is narrowed to
-        just the ``resolved_candidate_dir`` call, so this must NOT be
-        misreported as a candidate-arg error with exit 2."""
+        propagate to the caller — candidate-validation catches are narrowed
+        to resolution/classification, so this must NOT be misreported as a
+        candidate-arg error with exit 2."""
         md = os.path.join(self.tmp, "solo-agent.md")
         _write(md, "---\nname: solo-agent\n---\nprompt body")
 
@@ -131,6 +133,22 @@ class TestResolverErrorNarrowScope(CliResolutionTestBase):
 
 
 class TestExitTwoContract(CliResolutionTestBase):
+    def test_duplicate_agent_names_are_exit_2_before_preflight(self):
+        # If duplicate validation escapes the classification boundary, CLI
+        # callers get a traceback instead of the bad-candidate contract.
+        _write(os.path.join(self.tmp, "one.md"), "---\nname: same\n---\none")
+        _write(os.path.join(self.tmp, "two.md"), "---\nname: same\n---\ntwo")
+        adapter = mock.Mock()
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(cli, "get_adapter", return_value=adapter),
+            redirect_stderr(stderr),
+        ):
+            rc = cli.main(["duplicate", "--candidate-dir", self.tmp])
+        self.assertEqual(rc, 2)
+        self.assertIn("duplicate agent name 'same'", stderr.getvalue())
+        adapter.preflight.assert_not_called()
+
     def test_missing_candidate_dir_flag_is_exit_2(self):
         with mock.patch.object(cli, "get_adapter", return_value=_StubAdapter()):
             rc = cli.main(["solo-agent"])

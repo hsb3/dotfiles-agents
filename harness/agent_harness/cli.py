@@ -128,10 +128,8 @@ def main(argv=None):
     if not args.candidate_dir:
         print("--candidate-dir is required (path to the extender to inject)", file=sys.stderr)
         return 2
-    # Only the resolver call itself is guarded — cleanup of the staged dir
-    # must still cover the whole run, but FileNotFoundError/ValueError raised
-    # *inside* the run (e.g. from grading, case loading) must propagate rather
-    # than be misreported as a candidate-arg error.
+    # Candidate resolution and classification are guarded, while ValueError
+    # raised *inside* the run (e.g. from grading, case loading) propagates.
     stack = contextlib.ExitStack()
     try:
         candidate_dir = stack.enter_context(resolved_candidate_dir(args.candidate_dir))
@@ -143,7 +141,11 @@ def main(argv=None):
         return 2
 
     with stack:
-        kind = detect_kind(candidate_dir)
+        try:
+            kind = detect_kind(candidate_dir)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         if kind is None:
             print(
                 f"{args.candidate_dir}: not recognizable as skill / agent / plugin",
