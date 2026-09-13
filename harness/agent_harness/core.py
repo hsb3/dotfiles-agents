@@ -1,7 +1,7 @@
 """Run core — vendor-agnostic.
 
 Owns the per-trial lifecycle: mktemp workspace ← fixture copy ← list-form
-``subprocess.run`` (never shell, stdin closed) with a **timeout** (new vs the
+``subprocess.Popen`` (never shell, stdin closed) with a **timeout** (new vs the
 prior art) ← raw stdout captured to a per-run log under ``runs/`` ← the adapter's
 ``parse_log`` ← grading ← one ledger row ← cleanup unless the trial failed or
 ``--keep-workspaces``.
