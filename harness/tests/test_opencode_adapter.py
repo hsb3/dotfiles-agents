@@ -122,6 +122,16 @@ class TestInjection(unittest.TestCase):
         self.assertNotIn("model:", text)  # omitted -> inherits the run model
         self.assertIn("mode: subagent", text)
 
+    def test_agent_duplicate_names_fail_before_config_injection(self):
+        # Removing the adapter's shared preflight would overwrite one rendered
+        # agent file and leave an oc-config directory behind.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "same.md"), "fallback body")
+        _write(os.path.join(agent, "other.md"), "---\nname: same\n---\nother body")
+        with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'"):
+            self.a.inject("agent", agent, self.tmp)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "oc-config")))
+
 
 class TestInvocation(unittest.TestCase):
     def setUp(self):

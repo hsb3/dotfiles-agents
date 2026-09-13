@@ -23,6 +23,7 @@ import subprocess
 import tempfile
 
 from .base import Adapter, Injection, NormalizedRecord
+from ..candidate import agent_identities
 
 
 class ClaudeAdapter(Adapter):
@@ -67,6 +68,7 @@ class ClaudeAdapter(Adapter):
             plug = self._synth_plugin(candidate_dir, name, tmpdir)
             return Injection(["--plugin-dir", plug], [plug], True)
         if kind == "agent":
+            agent_identities(candidate_dir)
             payload = json.dumps(self._agent_definitions(candidate_dir))
             return Injection(["--agents", payload], [], True)
         # Kinds claude cannot host -> explicit skip (never a silent no-op).

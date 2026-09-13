@@ -33,6 +33,7 @@ import shutil
 import subprocess
 
 from .base import Adapter, Injection, NormalizedRecord
+from ..candidate import agent_identities
 
 # opencode skill names are stricter than Claude Code's: a name failing this regex
 # is silently invisible to opencode, so we skip (supported=False) rather than
@@ -108,6 +109,7 @@ class OpencodeAdapter(Adapter):
         if kind == "skill":
             return self._inject_skill(candidate_dir, tmpdir)
         if kind == "agent":
+            agent_identities(candidate_dir)
             return self._inject_agent(candidate_dir, tmpdir)
         if kind == "plugin":
             # A Claude Code plugin bundle (.claude-plugin/plugin.json + hooks/

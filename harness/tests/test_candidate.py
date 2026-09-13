@@ -5,10 +5,12 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from agent_harness.candidate import detect_kind, resolved_candidate_dir  # noqa: E402
+from agent_harness import cli  # noqa: E402
+from agent_harness.candidate import agent_identities, detect_kind, resolved_candidate_dir  # noqa: E402
 
 
 def _write(path, content):
@@ -106,6 +108,52 @@ class TestResolvedCandidateDir(unittest.TestCase):
         with self.assertRaises(ValueError):
             with resolved_candidate_dir(f):
                 pass  # pragma: no cover
+
+
+class TestAgentIdentities(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def test_unique_frontmatter_and_fallback_names_are_retained(self):
+        # Removing the shared identity loader or changing fallback resolution
+        # would make this mapping wrong.
+        _write(os.path.join(self.tmp, "fallback.md"), "fallback body")
+        _write(
+            os.path.join(self.tmp, "renamed.md"),
+            "---\nname: explicit\ndescription: d\n---\nexplicit body",
+        )
+        self.assertEqual(
+            agent_identities(self.tmp),
+            {"fallback": "fallback.md", "explicit": "renamed.md"},
+        )
+
+    def test_duplicate_explicit_names_fail_before_classification(self):
+        # Removing duplicate validation would let the later file overwrite the
+        # first agent definition in both adapters.
+        _write(os.path.join(self.tmp, "first.md"), "---\nname: same\n---\none")
+        _write(os.path.join(self.tmp, "second.md"), "---\nname: same\n---\ntwo")
+        with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'.*first.md.*second.md"):
+            detect_kind(self.tmp)
+
+    def test_explicit_name_and_filename_fallback_collision_fail(self):
+        # A missing explicit-name/fallback collision guard would silently
+        # overwrite the fallback agent with this frontmatter-defined one.
+        _write(os.path.join(self.tmp, "same.md"), "fallback body")
+        _write(os.path.join(self.tmp, "other.md"), "---\nname: same\n---\nother body")
+        with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'.*other.md.*same.md"):
+            agent_identities(self.tmp)
+
+    def test_cli_rejects_duplicates_at_shared_classification_boundary(self):
+        # If CLI bypasses shared classification validation, its run stage would
+        # receive an ambiguous directory and an adapter could partially inject it.
+        _write(os.path.join(self.tmp, "first.md"), "---\nname: same\n---\none")
+        _write(os.path.join(self.tmp, "second.md"), "---\nname: same\n---\ntwo")
+        adapter = mock.Mock()
+        with mock.patch.object(cli, "get_adapter", return_value=adapter):
+            with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'"):
+                cli.main(["duplicate", "--candidate-dir", self.tmp])
+        adapter.preflight.assert_not_called()
 
 
 if __name__ == "__main__":

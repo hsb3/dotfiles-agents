@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import shutil
 import tempfile
 
@@ -30,7 +31,29 @@ def detect_kind(path):
     mds = [
         f for f in os.listdir(path) if f.endswith(".md") and f.lower() != "readme.md"
     ]
-    return "agent" if mds else None
+    if mds:
+        agent_identities(path)
+        return "agent"
+    return None
+
+
+def agent_identities(path):
+    """Return resolved agent names, rejecting duplicates before injection."""
+    identities = {}
+    for filename in sorted(os.listdir(path)):
+        if not filename.endswith(".md") or filename.lower() == "readme.md":
+            continue
+        with open(os.path.join(path, filename), encoding="utf-8", errors="ignore") as fh:
+            text = fh.read()
+        match = re.match(r"^---\s*\n(.*?)\n---\s*\n?", text, re.S)
+        name_match = re.search(r"^name:\s*(.+)$", match.group(1), re.M) if match else None
+        name = name_match.group(1).strip().strip("\"'") if name_match else os.path.splitext(filename)[0]
+        if name in identities:
+            raise ValueError(
+                f"duplicate agent name {name!r}: {identities[name]} and {filename}"
+            )
+        identities[name] = filename
+    return identities
 
 
 @contextlib.contextmanager
