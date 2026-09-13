@@ -122,6 +122,25 @@ class TestInjection(unittest.TestCase):
         self.assertNotIn("model:", text)  # omitted -> inherits the run model
         self.assertIn("mode: subagent", text)
 
+    def test_agent_duplicate_names_fail_before_config_injection(self):
+        # Removing the adapter's shared preflight would overwrite one rendered
+        # agent file and leave an oc-config directory behind.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "same.md"), "fallback body")
+        _write(os.path.join(agent, "other.md"), "---\nname: same\n---\nother body")
+        with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'"):
+            self.a.inject("agent", agent, self.tmp)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "oc-config")))
+
+    def test_agent_quoted_empty_names_use_filename_fallback(self):
+        # Keeping a quoted-empty frontmatter name would make both definitions
+        # collide instead of preserving their distinct filename identities.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "one.md"), "---\nname: \"\"\n---\none")
+        _write(os.path.join(agent, "two.md"), "---\nname: \"\"\n---\ntwo")
+        cfg = self._config_dir(self.a.inject("agent", agent, self.tmp))
+        self.assertEqual(set(os.listdir(os.path.join(cfg, "agents"))), {"one.md", "two.md"})
+
 
 class TestInvocation(unittest.TestCase):
     def setUp(self):

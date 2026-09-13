@@ -9,12 +9,14 @@ injection is unsupported proves the explicit skip row (no subprocess runs).
 import glob
 import json
 import os
+import signal
 import shutil
 import sys
 import tempfile
 import time
 import types
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -146,6 +148,46 @@ class TestTimeout(CoreTestBase):
         self.assertEqual(ok.returncode, 0)
         self.assertIsNone(ok.error)
 
+    def test_timeout_kills_owned_descendant_and_keeps_partial_output(self):
+        pid_path = os.path.join(self.tmp, "descendant.pid")
+        survivor_path = os.path.join(self.tmp, "descendant-survived")
+        child_pid = []
+
+        def cleanup_child():
+            if not child_pid:
+                return
+            try:
+                os.kill(child_pid[0], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+        self.addCleanup(cleanup_child)
+        child_code = (
+            f"import time; time.sleep(2); open({survivor_path!r}, 'w').close(); "
+            "time.sleep(30)"
+        )
+        code = (
+            "import subprocess, sys, time; "
+            f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+            "stdout=subprocess.DEVNULL, "
+            "stderr=subprocess.DEVNULL); "
+            f"open({pid_path!r}, 'w').write(str(child.pid)); "
+            "print('partial transcript', flush=True); time.sleep(30)"
+        )
+        t0 = time.monotonic()
+        result = _run_subprocess(
+            [sys.executable, "-c", code], self.tmp, dict(os.environ), 1,
+            os.path.join(self.tmp, "timeout.log"),
+        )
+        elapsed = time.monotonic() - t0
+        with open(pid_path, encoding="utf-8") as fh:
+            child_pid.append(int(fh.read()))
+        self.assertTrue(result.timed_out)
+        self.assertIn("partial transcript", result.raw)
+        self.assertLess(elapsed, 5, "timeout waited for a descendant")
+        time.sleep(2)
+        self.assertFalse(os.path.exists(survivor_path), "descendant survived timeout")
+
 
 class TestUnsupportedSkip(CoreTestBase):
     def test_unsupported_injection_yields_skip_row_without_running(self):
@@ -170,6 +212,23 @@ class TestUnsupportedSkip(CoreTestBase):
 
 
 class TestWorkspaceLifecycle(CoreTestBase):
+    def test_repeated_same_tick_trials_keep_distinct_transcripts(self):
+        args = self._args(keep_workspaces=True)
+        adapter = _CmdAdapter(["/bin/echo", "one"])
+        with mock.patch("agent_harness.core.time.strftime", return_value="fixed"):
+            first = run_trial(
+                adapter, "cand", "skill", "/x", self._case(), "with", 0, args
+            )
+            adapter._argv[-1] = "two"
+            second = run_trial(
+                adapter, "cand", "skill", "/x", self._case(), "with", 0, args
+            )
+        self.assertNotEqual(first["log_path"], second["log_path"])
+        with open(first["log_path"], encoding="utf-8") as fh:
+            self.assertIn("one", fh.read())
+        with open(second["log_path"], encoding="utf-8") as fh:
+            self.assertIn("two", fh.read())
+
     def test_fixture_copied_and_kept_when_requested(self):
         adapter = _CmdAdapter(["true"])  # passes -> would clean up, but keep is on
         case = self._case(with_fixture=True)

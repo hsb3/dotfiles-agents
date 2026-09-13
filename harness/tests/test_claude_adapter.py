@@ -77,6 +77,25 @@ class TestInjection(unittest.TestCase):
         self.assertEqual(defs["my-agent"]["description"], "does things")
         self.assertIn("System prompt here.", defs["my-agent"]["prompt"])
 
+    def test_agent_duplicate_names_fail_before_injection(self):
+        # Removing the adapter's shared preflight would collapse these two
+        # definitions into one --agents entry.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "one.md"), "---\nname: same\n---\none")
+        _write(os.path.join(agent, "two.md"), "---\nname: same\n---\ntwo")
+        with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'"):
+            self.a.inject("agent", agent, self.tmp)
+        self.assertEqual(os.listdir(self.tmp), ["agents"])
+
+    def test_agent_quoted_empty_names_use_filename_fallback(self):
+        # Keeping a quoted-empty frontmatter name would make both definitions
+        # collide instead of preserving their distinct filename identities.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "one.md"), "---\nname: \"\"\n---\none")
+        _write(os.path.join(agent, "two.md"), "---\nname: \"\"\n---\ntwo")
+        defs = json.loads(self.a.inject("agent", agent, self.tmp).flags[1])
+        self.assertEqual(set(defs), {"one", "two"})
+
     def test_unknown_kind_is_unsupported_skip(self):
         # Design change from the workbench (which raised): an unhostable kind is
         # an explicit supported=False skip, never a crash (DESIGN §3).

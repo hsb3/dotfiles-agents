@@ -94,7 +94,7 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `docs/` | repo-law | docs | H | standing law in prose: `docs/decisions/` (ADRs), the extender-dev SOP, the vendoring rule, the diagram standard, this page |
 | `harness/` | harness | workbench | H | eval harness; own test lane; see its README |
 | `evals/` | evals | workbench | H | extender-db projection — never a source of truth |
-| `.claude/`, `.vscode/`, `.kata.toml` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
+| `.agents/`, `.claude/`, `.codex/`, `.vscode/`, `.kata.toml` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
 | `logs/` | runtime-logs | runtime | **R** | hook telemetry; must stay untracked |
 | _(branch)_ `main` | publish-main | publish | — | advanced only by the publish workflow |
 | _(virtual)_ | consumers | consumer | — | machines installing via `claude plugin marketplace add` or the laydown installers; nothing tracked here |
