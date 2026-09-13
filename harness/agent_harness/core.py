@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import os
 import pathlib
+import signal
 import shutil
 import subprocess
 import tempfile
 import time
+import uuid
 from dataclasses import dataclass
 from typing import Optional
 
@@ -57,14 +59,6 @@ class ProcResult:
     preconditions: Optional[dict] = None
 
 
-def _coerce_text(value):
-    if value is None:
-        return ""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", "replace")
-    return value
-
-
 def _run_subprocess(argv, cwd, env, timeout, log_path, precondition_env=None) -> ProcResult:
     """Run `argv` list-form (never shell), stdin closed, with a hard timeout.
 
@@ -83,29 +77,33 @@ def _run_subprocess(argv, cwd, env, timeout, log_path, precondition_env=None) ->
     stderr = ""
     error = None
     try:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             argv,
             cwd=cwd,
             env=env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
             stdin=subprocess.DEVNULL,
+            start_new_session=os.name == "posix",
         )
-        stdout, stderr, returncode, timed_out = (
-            proc.stdout or "",
-            proc.stderr or "",
-            proc.returncode,
-            False,
-        )
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+            returncode, timed_out = proc.returncode, False
+        except subprocess.TimeoutExpired:
+            if os.name == "posix":
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                proc.kill()
+            stdout, stderr = proc.communicate()
+            returncode, timed_out = -1, True
+            error = f"timeout after {timeout}s"
     except FileNotFoundError:
         stdout, returncode, timed_out = "", -1, False
         error = f"executable not found: {argv[0]}"
-    except subprocess.TimeoutExpired as exc:
-        stdout = _coerce_text(exc.stdout)
-        stderr = _coerce_text(exc.stderr)
-        returncode, timed_out = -1, True
-        error = f"timeout after {timeout}s"
     full_preconditions = None
     if precondition_env is not None:
         full_preconditions = dict(precondition_env)
@@ -127,7 +125,7 @@ def _run_subprocess(argv, cwd, env, timeout, log_path, precondition_env=None) ->
 def _log_path(runs_dir, *parts):
     stamp = time.strftime("%Y%m%d-%H%M%S")
     safe = "-".join(str(p) for p in parts)
-    return os.path.join(runs_dir, f"{safe}-{stamp}.log")
+    return os.path.join(runs_dir, f"{safe}-{stamp}-{uuid.uuid4().hex}.log")
 
 
 def _portable_log_path(log_path):
