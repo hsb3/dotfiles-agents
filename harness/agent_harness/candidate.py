@@ -47,13 +47,21 @@ def agent_identities(path):
             text = fh.read()
         match = re.match(r"^---\s*\n(.*?)\n---\s*\n?", text, re.S)
         name_match = re.search(r"^name:\s*(.+)$", match.group(1), re.M) if match else None
-        name = name_match.group(1).strip().strip("\"'") if name_match else os.path.splitext(filename)[0]
+        name = resolved_agent_name(
+            name_match.group(1) if name_match else None, filename
+        )
         if name in identities:
             raise ValueError(
                 f"duplicate agent name {name!r}: {identities[name]} and {filename}"
             )
         identities[name] = filename
     return identities
+
+
+def resolved_agent_name(value, filename):
+    """Resolve a frontmatter name, falling back after quote stripping."""
+    name = value.strip().strip("\"'") if value else ""
+    return name or os.path.splitext(filename)[0]
 
 
 @contextlib.contextmanager

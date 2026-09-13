@@ -142,5 +142,14 @@ class TestAgentIdentities(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate agent name 'same'.*other.md.*same.md"):
             agent_identities(self.tmp)
 
+    def test_quoted_empty_names_fall_back_to_distinct_filenames(self):
+        # Retaining the post-quote empty string would falsely reject these as
+        # duplicate '' identities instead of using the adapters' filename fallback.
+        _write(os.path.join(self.tmp, "one.md"), "---\nname: \"\"\n---\none")
+        _write(os.path.join(self.tmp, "two.md"), "---\nname: \"\"\n---\ntwo")
+        self.assertEqual(
+            agent_identities(self.tmp), {"one": "one.md", "two": "two.md"}
+        )
+
 if __name__ == "__main__":
     unittest.main()

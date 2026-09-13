@@ -87,6 +87,15 @@ class TestInjection(unittest.TestCase):
             self.a.inject("agent", agent, self.tmp)
         self.assertEqual(os.listdir(self.tmp), ["agents"])
 
+    def test_agent_quoted_empty_names_use_filename_fallback(self):
+        # Keeping a quoted-empty frontmatter name would make both definitions
+        # collide instead of preserving their distinct filename identities.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "one.md"), "---\nname: \"\"\n---\none")
+        _write(os.path.join(agent, "two.md"), "---\nname: \"\"\n---\ntwo")
+        defs = json.loads(self.a.inject("agent", agent, self.tmp).flags[1])
+        self.assertEqual(set(defs), {"one", "two"})
+
     def test_unknown_kind_is_unsupported_skip(self):
         # Design change from the workbench (which raised): an unhostable kind is
         # an explicit supported=False skip, never a crash (DESIGN §3).

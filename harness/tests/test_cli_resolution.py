@@ -149,6 +149,19 @@ class TestExitTwoContract(CliResolutionTestBase):
         self.assertIn("duplicate agent name 'same'", stderr.getvalue())
         adapter.preflight.assert_not_called()
 
+    def test_quoted_empty_names_reach_cli_smoke(self):
+        # If classification keeps quoted-empty names, it exits 2 before the
+        # CLI can load the two uniquely filename-resolved agents.
+        _write(os.path.join(self.tmp, "one.md"), "---\nname: \"\"\n---\none")
+        _write(os.path.join(self.tmp, "two.md"), "---\nname: \"\"\n---\ntwo")
+        with (
+            mock.patch.object(cli, "get_adapter", return_value=_StubAdapter()),
+            mock.patch.object(cli, "smoke", return_value=True) as smoke,
+        ):
+            rc = cli.main(["unique", "--candidate-dir", self.tmp, "--smoke"])
+        self.assertEqual(rc, 0)
+        smoke.assert_called_once()
+
     def test_missing_candidate_dir_flag_is_exit_2(self):
         with mock.patch.object(cli, "get_adapter", return_value=_StubAdapter()):
             rc = cli.main(["solo-agent"])

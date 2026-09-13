@@ -132,6 +132,15 @@ class TestInjection(unittest.TestCase):
             self.a.inject("agent", agent, self.tmp)
         self.assertFalse(os.path.exists(os.path.join(self.tmp, "oc-config")))
 
+    def test_agent_quoted_empty_names_use_filename_fallback(self):
+        # Keeping a quoted-empty frontmatter name would make both definitions
+        # collide instead of preserving their distinct filename identities.
+        agent = os.path.join(self.tmp, "agents")
+        _write(os.path.join(agent, "one.md"), "---\nname: \"\"\n---\none")
+        _write(os.path.join(agent, "two.md"), "---\nname: \"\"\n---\ntwo")
+        cfg = self._config_dir(self.a.inject("agent", agent, self.tmp))
+        self.assertEqual(set(os.listdir(os.path.join(cfg, "agents"))), {"one.md", "two.md"})
+
 
 class TestInvocation(unittest.TestCase):
     def setUp(self):
