@@ -63,7 +63,14 @@ def _metric(response, name, path):
     return value, True
 
 
-def _measurement(tokens_available, duration_available, manifest_file_sha256):
+def _resolved_response_sha256(response):
+    payload = json.dumps(response, sort_keys=True, ensure_ascii=False,
+                         separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _measurement(tokens_available, duration_available, manifest_file_sha256,
+                 resolved_response_sha256):
     return {
         "version": 1,
         "source": "eval-run-manifest",
@@ -79,6 +86,8 @@ def _measurement(tokens_available, duration_available, manifest_file_sha256):
         },
         "source_identity": {
             "manifest_file_sha256": manifest_file_sha256,
+            "resolved_response_sha256": resolved_response_sha256,
+            "resolved_response_canonicalization": "json-sorted-keys-utf8",
             "revision": {"value": None, "available": False},
         },
     }
@@ -118,19 +127,34 @@ def load_manifest(pb, path):
         if rj is None and "response_json_file" in resp:
             with open(os.path.join(base, resp["response_json_file"]), encoding="utf-8") as fh:
                 rj = json.load(fh)
+        prompt = _read(base, resp, "prompt", "prompt_file")
+        response_text = _read(base, resp, "response_text", "response_text_file")
+        resolved_response_sha256 = _resolved_response_sha256({
+            "role": resp["role"],
+            "agent_type": resp.get("agent_type", ""),
+            "model": resp.get("model", ""),
+            "prompt": prompt,
+            "response_text": response_text,
+            "response_json": rj if rj is not None else {},
+            "extender_slugs": resp.get("extenders", []),
+            "tokens": {"value": tokens if tokens_available else None,
+                       "available": tokens_available},
+            "duration_ms": {"value": duration_ms if duration_available else None,
+                            "available": duration_available},
+        })
         responses.append({
             "run": None,
             "role": resp["role"],
             "agent_type": resp.get("agent_type", ""),
             "model": resp.get("model", ""),
-            "prompt": _read(base, resp, "prompt", "prompt_file"),
-            "response_text": _read(base, resp, "response_text", "response_text_file"),
+            "prompt": prompt,
+            "response_text": response_text,
             "response_json": rj if rj is not None else {},
             "extenders": extender_ids,
             "tokens": tokens,
             "duration_ms": duration_ms,
             "measurement": _measurement(tokens_available, duration_available,
-                                        manifest_file_sha256),
+                                        manifest_file_sha256, resolved_response_sha256),
         })
 
     r = m["run"]
