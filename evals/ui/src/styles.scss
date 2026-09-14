@@ -2,7 +2,7 @@
 @use "@carbon/react/scss/type" as type;
 
 body { margin: 0; background: var(--cds-background); color: var(--cds-text-primary); }
-.shell { display: flex; min-height: 100vh; padding-top: 3rem; }
+.shell { display: flex; min-height: 100vh; }
 .sidebar { flex: 0 0 12.5rem; background: var(--cds-layer-01); border-right: 1px solid var(--cds-border-subtle-01); }
 .sidebar p { margin: 2rem 1.5rem; color: var(--cds-text-secondary); font-size: .875rem; }
 .content { min-width: 0; width: 100%; padding: 1.5rem 1rem; }
