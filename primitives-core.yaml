@@ -58,14 +58,12 @@ primitives:
     source: primitives-core/skills/mise-en-place-scaffold
     origin: authored
     disposition: qualified
-    requires: [cli:cc-project-memory]
     targets: [claude-code, opencode, codex]
   - id: project-memory
     type: skill
     source: primitives-core/skills/project-memory
     origin: authored
     disposition: qualified
-    requires: [cli:cc-project-memory, cli:migrate-claude-memory, env:dotfiles]
     targets: [claude-code, codex]
   - id: planning-desk
     type: skill

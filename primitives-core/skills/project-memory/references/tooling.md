@@ -29,16 +29,9 @@ with `--include-transcripts`, its `*.jsonl` transcripts) from the old path-deriv
 the new one. **Dry-run by default** — supports `--list`, previews unless `--apply`, and
 never deletes the source unless `--remove-old` (and only after the copy is verified).
 
-## Machine-CLI equivalents (fully-provisioned dotfiles machine)
-
-On a machine provisioned from the dotfiles repo, the same two tools are also exposed on
-`PATH` as `cc-project-memory` (== `project_memory.py`) and `migrate-claude-memory`
-(== `migrate_memory.py`). Prefer them by command name when they are installed; otherwise
-run the bundled scripts. They implement the identical behavior.
-
 ## Not yet built
 
-- **`cc-project-memory audit`** — the curation report named by the memory-standard
+- **`project_memory.py audit`** — the curation report named by the memory-standard
   technical design (oversized / stale / off-taxonomy / duplicate-of-global findings) is
   **not yet built**. Until it exists, curation passes are manual, run at the boundaries the
   v1 cadence default names (wrap-up / handoff).

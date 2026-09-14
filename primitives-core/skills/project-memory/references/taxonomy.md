@@ -23,7 +23,7 @@ this standard eliminates (see the error path in `SKILL.md`).
 
 | Layer | Lives at | Travels via |
 |---|---|---|
-| **Global** | `~/dotfiles`-managed memory, stow-symlinked to `~/.claude/` | the dotfiles repo |
+| **Global** | dotfiles-managed memory, symlinked into `~/.claude/` | the dotfiles repo |
 | **Project** | `<repo>/.claude/memory/`, **git-tracked** | the project repo |
 
 The layout requirement itself (a tracked `.claude/memory/` in the repo tree) is part of the

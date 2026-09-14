@@ -42,7 +42,7 @@ desks that predate `planning-desk`'s tracker adapter, which no longer stages one
 claude plugin install mise-en-place@dotfiles-agents
 ```
 
-Ships in the `mise-en-place` bundle. Needs only `python3` (stdlib).
+Ships in the `mise-en-place` bundle. Needs only `python3` (stdlib) and `git`.
 
 ## Installed clients
 

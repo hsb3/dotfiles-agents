@@ -110,10 +110,12 @@ HARD_MACHINE = [
 # ── Machine-local tools: legal ONLY with a covering roster `requires:` (cli:<tool>). ──
 DOTFILES_PATH = re.compile(r"(?:~|\$HOME)/(?:dotfiles|Developer)\b")
 LOCAL_TOOLS = (
-    "agy", "capture-console-errors", "cc-hooks", "cc-project-memory",
-    "check-tool-updates", "da-prune-sessions", "dcode", "fetch-docs",
-    "mcp-secrets-sync", "migrate-claude-memory", "models-dev", "project-activity",
-    "speak_gemini", "speak_kokoro",
+    "agy", "brewup", "camera-log", "capture-console-errors", "cc-hooks",
+    "cc-migrate-memory", "cc-project-memory", "check-config-drift", "check-reminders",
+    "check-tool-updates", "check-tools", "da-prune-sessions", "dcode",
+    "dev-cleanup-report", "disk-cleanup", "fetch-docs", "find-mcp-servers",
+    "gh-runner-fallback", "json-to-csv", "mcp-secrets-sync", "models-dev",
+    "project-activity", "speak_gemini", "speak_kokoro", "upgrade-globals",
 )
 LOCAL_TOOL_RX = {t: re.compile(rf"(?<![\w./-]){re.escape(t)}(?![\w-])") for t in LOCAL_TOOLS}
 
