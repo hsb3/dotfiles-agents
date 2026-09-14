@@ -920,7 +920,7 @@ def _preserve_unobserved_log_fields(body: dict, rec: dict) -> None:
     for field in MEASUREMENT_FIELDS:
         if available.get(field) is False and rec.get(field) is not None:
             body[field] = rec[field]
-            if (previous_available.get(field) is True
+            if (field in ROLLUP_FIELDS and previous_available.get(field) is True
                     and previous_provenance.get(field) == "log-rollup"):
                 available[field] = True
                 provenance[field] = "log-rollup"

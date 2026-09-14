@@ -347,10 +347,10 @@ class MeasurementContract(unittest.TestCase):
         self.assertIsNone(measurement["provenance"]["num_turns"])
 
     def test_logless_replay_retains_prior_v1_log_rollup_availability(self):
-        body = L.build_run_row(_measurement_row(num_turns=None), None, None)
+        body = L.build_run_row(_measurement_row(duration_ms=None), None, None)
         prior_measurement = json.loads(json.dumps(body["measurement"]))
-        prior_measurement["available"]["num_turns"] = True
-        prior_measurement["provenance"]["num_turns"] = "log-rollup"
+        prior_measurement["available"]["duration_ms"] = True
+        prior_measurement["provenance"]["duration_ms"] = "log-rollup"
         prior_measurement["source_identity"].update(
             log_sha256="a" * 64, log_available=True, log_observation="observed"
         )
@@ -361,11 +361,11 @@ class MeasurementContract(unittest.TestCase):
                 updates.append(update)
 
         L._apply_runs(PB(), {L.run_key(body): body}, {L.run_key(body): {
-            "id": "run-1", "num_turns": 7, "measurement": prior_measurement,
+            "id": "run-1", "duration_ms": 7, "measurement": prior_measurement,
         }}, False)
-        self.assertEqual(updates[0]["num_turns"], 7)
-        self.assertTrue(updates[0]["measurement"]["available"]["num_turns"])
-        self.assertEqual(updates[0]["measurement"]["provenance"]["num_turns"], "log-rollup")
+        self.assertEqual(updates[0]["duration_ms"], 7)
+        self.assertTrue(updates[0]["measurement"]["available"]["duration_ms"])
+        self.assertEqual(updates[0]["measurement"]["provenance"]["duration_ms"], "log-rollup")
 
     def test_empty_child_replay_does_not_write_existing_relations(self):
         class PB:
