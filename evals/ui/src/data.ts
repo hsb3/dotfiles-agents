@@ -31,9 +31,19 @@ export type DocumentationFile = { id: string; extender: string; role: string; co
 export const documentationFor = (session: Session, extender: string, signal?: AbortSignal) =>
   pageRecords<DocumentationFile>(session, "/api/collections/files/records", { fields: "id,extender,role,content,relpath", filter: `extender = ${pocketBaseLiteral(extender)}`, sort: "+relpath", signal });
 
-export type Extender = { id: string; body: string; entry_file: string; source: string };
+export type Extender = { id: string; slug: string; name: string; kind: string; description: string; body: string; entry_file: string; source: string };
 export const extenderById = (session: Session, id: string, signal?: AbortSignal) =>
   session.request<Extender>(`/api/collections/extenders/records/${encodeURIComponent(id)}?fields=id,body,entry_file,source`, { signal });
+
+export type Distribution = { id: string; slug: string; kind: string; version: string; members: string[] };
+export const distributions = (session: Session, signal?: AbortSignal) =>
+  pageRecords<Distribution>(session, "/api/collections/distributions/records", { fields: "id,slug,kind,version,members", sort: "+slug", signal });
+
+export const extenders = (session: Session, query = "", page = 1, signal?: AbortSignal) =>
+  pageRecords<Extender>(session, "/api/collections/extenders/records", { fields: "id,slug,name,kind,description,body,entry_file,source", filter: query ? `slug ~ ${pocketBaseLiteral(query)}` : undefined, sort: "+slug", page, signal });
+
+export const documentation = (session: Session, query = "", page = 1, signal?: AbortSignal) =>
+  pageRecords<DocumentationFile>(session, "/api/collections/files/records", { fields: "id,extender,role,content,relpath", filter: query ? `relpath ~ ${pocketBaseLiteral(query)}` : undefined, sort: "+relpath", page, signal });
 
 export type Assessment = { id: string; extender: string; framework: string; element: string; eval_run?: string };
 export const assessmentsFor = (session: Session, extender: string, signal?: AbortSignal) =>
@@ -42,6 +52,13 @@ export const assessmentsFor = (session: Session, extender: string, signal?: Abor
 export type JobCoverage = { id: string; job: string; eval_run?: string };
 export const coverageFor = (session: Session, job: string, signal?: AbortSignal) =>
   pageRecords<JobCoverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run", filter: `job = ${pocketBaseLiteral(job)}`, sort: "+created", signal });
+
+export type Evaluation = Assessment & { verdict: string; evidence: string; assessor: string };
+export const evaluations = (session: Session, signal?: AbortSignal) =>
+  pageRecords<Evaluation>(session, "/api/collections/assessments/records", { fields: "id,framework,element,extender,eval_run,verdict,evidence,assessor", sort: "+created", signal });
+export type Coverage = JobCoverage & { status: string; disposition: string; rationale: string };
+export const jobCoverage = (session: Session, signal?: AbortSignal) =>
+  pageRecords<Coverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run,status,disposition,rationale", sort: "+created", signal });
 
 export function safeHref(value: string): string | undefined {
   if (value.trim() !== value || value.includes("\\")) return undefined;
