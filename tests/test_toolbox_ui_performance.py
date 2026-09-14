@@ -21,18 +21,29 @@ class PerformanceUiContracts(unittest.TestCase):
         self.assertIn("includeZero: true", SOURCE)
 
     def test_selection_and_route_state_are_explicit(self):
-        self.assertIn("setSelection", SOURCE)
+        self.assertIn("nextSelection", SOURCE)
         self.assertIn("slice(0, 2)", SOURCE)
+        self.assertIn("assessmentsForCampaign", SOURCE)
+        self.assertIn("responsePage", SOURCE)
+        self.assertIn("eventPage", SOURCE)
         self.assertIn("recordScope(location.hash, \"run\")", SOURCE)
         self.assertIn("recordScope(location.hash, \"campaign\")", SOURCE)
         self.assertIn("#performance?${key}=", SOURCE)
 
     def test_shell_preserves_query_routes_and_skip_target(self):
-        self.assertIn('location.hash.slice(1).split("?")[0]', VIEWS)
+        self.assertIn("export function parseRoute", VIEWS)
+        self.assertIn("parseRoute(location.hash, current)", VIEWS)
         self.assertIn("<Performance session={session} onExpired={clearUi} />", VIEWS)
         self.assertIn("Your Toolbox", VIEWS)
         self.assertIn("Find tools for your workflow, read their documentation, and explore recorded performance and evaluations.", VIEWS)
         self.assertIn('import "@carbon/charts/styles.css"', MAIN)
+
+    def test_route_parser_preserves_area_for_skip_link_and_selection_stays_capped(self):
+        self.assertIn('if (hash === "#main-content") return fallback', VIEWS)
+        self.assertIn("rows.some((row) => row.id === run.id)", SOURCE)
+        self.assertNotIn('href={href("campaign", run.campaign)}', SOURCE)
+        self.assertIn("measurementNumber(baseline, field)", SOURCE)
+        self.assertIn("measurementNumber(withValue, field)", SOURCE)
 
 
 if __name__ == "__main__":
