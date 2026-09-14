@@ -11,6 +11,11 @@ entire marketplace.
 from unresolved rights. A provenance pin, attribution line or passing drift check
 does not establish permission to distribute every file.
 
+## The root MIT grant covers original work only; vendored third-party material keeps its own terms
+
+Files and directories that carry their own license notice (see docs/licenses.md)
+are not covered by this license and remain under their own terms.
+
 ## Current marketplace components
 
 | Material and holder | Source revision | License and evidence | Remaining scope |

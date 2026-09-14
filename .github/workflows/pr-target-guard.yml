@@ -3,8 +3,9 @@
 # `main` is the published product and is rebuilt exclusively by the publish
 # workflow (force-push from `dev` — see ADR 0014 and publish.yml). All changes
 # move up through `dev`: open PRs against `dev`, where the entry-gate machine
-# floor runs. The job name below must match the required status check
-# configured on the `main` branch protection.
+# floor runs. This job is deliberately NOT a required check on `main`:
+# publish.yml pushes to `main` with GITHUB_TOKEN, which cannot bypass a
+# required check, so requiring it would reject every publish.
 name: pr-target-guard
 on:
   pull_request:
