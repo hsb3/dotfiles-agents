@@ -27,10 +27,10 @@ import { submitLogin } from %s;
                                 capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_home_has_four_oriented_actions_in_owner_navigation_order(self):
+    def test_home_has_approved_title_lede_and_action_oriented_cards(self):
         self.run_module("""
 const html = renderToStaticMarkup(React.createElement(Home));
-for (const phrase of ['Catalog discovers packaged workflows/plugins and database primitives.', 'Documentation reads stored instructions, references, and source context.', 'Performance explains when measurement provenance and comparability become available.', 'Evaluations inspects current assessments and per-job coverage.']) assert.ok(html.includes(phrase));
+for (const phrase of ['Your Toolbox', 'Find tools for your workflow, read their documentation, and explore recorded performance and evaluations.', 'Find packaged tools and primitives for a workflow.', 'Read stored instructions and references.', 'Explore recorded runs, comparisons, and evidence.', 'Review current assessments and coverage.']) assert.ok(html.includes(phrase));
 const order = ['Home', 'Catalog', 'Documentation', 'Performance', 'Evaluations'].map((name) => html.indexOf('>' + name + '<'));
 assert.deepEqual([...order].sort((a, b) => a - b), order);
 for (const route of ['catalog', 'documentation', 'performance', 'evaluations']) assert.match(html, new RegExp('href=\\"#' + route + '\\"'));
