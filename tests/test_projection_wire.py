@@ -26,13 +26,11 @@ EMAIL = "wire@example.test"
 PASSWORD = "WirePassword12345"
 
 
-def request(url, method="GET", body=None, token=None):
+def request(url, method="GET", body=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     if body is not None:
         req.add_header("Content-Type", "application/json")
-    if token:
-        req.add_header("Authorization", token)
     with urllib.request.urlopen(req, timeout=5) as response:
         return json.loads(response.read() or b"{}")
 
