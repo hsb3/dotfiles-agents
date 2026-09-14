@@ -52,6 +52,12 @@ assert.equal(performance.fileRequestIsCurrent(requests, 'artifact-a', 1), true);
 assert.equal(performance.fileRequestIsCurrent(requests, 'artifact-b', 1), false);
 """)
 
+    def test_tool_timing_is_unavailable_without_a_measurement_envelope(self):
+        self.run_module("""
+const toolCall = {id: 'tool-1', run: 'run-1', tool_call_id: 'call-1', tool_name: 'Read', wallclock_ms: 0};
+assert.equal(performance.toolTiming(toolCall), 'Unavailable');
+""")
+
 
 class PerformanceUiContracts(unittest.TestCase):
     def test_performance_uses_the_authoritative_adapters_and_carbon_chart(self):
