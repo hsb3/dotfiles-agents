@@ -47,9 +47,14 @@ class ToolboxPackageTests(unittest.TestCase):
         (self.source / "evals" / "ui" / "index.html").write_text("<main>safe</main>\n", encoding="utf-8")
         (self.source / "evals" / "ui" / "styles.css").write_text("main {}\n", encoding="utf-8")
         (self.source / "evals" / "ui" / "app.js").write_text("console.log('safe')\n", encoding="utf-8")
+        (self.source / "evals" / "ui" / "build").mkdir()
+        (self.source / "evals" / "ui" / "build" / "stale.js").write_text("stale\n", encoding="utf-8")
         self.ui_build = self.source / "evals" / "ui" / "dist"
         (self.ui_build / "assets" / "nested").mkdir(parents=True)
-        (self.ui_build / "index.html").write_text('<script src="/assets/toolbox.js"></script>\n', encoding="utf-8")
+        (self.ui_build / "index.html").write_text(
+            '<link rel="stylesheet" href="/assets/nested/toolbox.css">\n'
+            '<script type="module" src="/assets/toolbox.js"></script>\n', encoding="utf-8"
+        )
         (self.ui_build / "assets" / "toolbox.js").write_text("console.log('built')\n", encoding="utf-8")
         (self.ui_build / "assets" / "nested" / "toolbox.css").write_text("main {}\n", encoding="utf-8")
         (self.source / "evals" / "pb_data").mkdir()
@@ -89,7 +94,7 @@ class ToolboxPackageTests(unittest.TestCase):
             b"app.js\0console.log('safe')\n\0index.html\0<main>safe</main>\n\0styles.css\0main {}\n\0"
         ).hexdigest())
         self.assertEqual(receipt["ui_snapshot"], hashlib.sha256(
-            b"assets/nested/toolbox.css\0main {}\n\0assets/toolbox.js\0console.log('built')\n\0index.html\0<script src=\"/assets/toolbox.js\"></script>\n\0"
+            b"assets/nested/toolbox.css\0main {}\n\0assets/toolbox.js\0console.log('built')\n\0index.html\0<link rel=\"stylesheet\" href=\"/assets/nested/toolbox.css\">\n<script type=\"module\" src=\"/assets/toolbox.js\"></script>\n\0"
         ).hexdigest())
 
     def test_catalog_hook_requires_auth_and_reads_the_private_snapshot(self):
@@ -156,7 +161,7 @@ class ToolboxPackageTests(unittest.TestCase):
         self.assertFalse(symlink_output.exists())
         source_link = Path(self.tmp.name) / "source-link"
         source_link.symlink_to(self.source, target_is_directory=True)
-        with self.assertRaisesRegex(ValueError, "ancestor"):
+        with self.assertRaisesRegex(ValueError, "symlink"):
             package_toolbox.build_package(source_link, Path(self.tmp.name) / "ancestor-output", self.ui_build)
 
     def test_rejects_unsafe_vite_output_and_outside_build_tree(self):
@@ -171,8 +176,36 @@ class ToolboxPackageTests(unittest.TestCase):
             path.unlink()
         external = Path(self.tmp.name) / "external-dist"
         shutil.copytree(self.ui_build, external)
-        with self.assertRaisesRegex(ValueError, "source root"):
+        with self.assertRaisesRegex(ValueError, "canonical"):
             package_toolbox.build_package(self.source, output, external)
+
+    def test_rejects_traversal_and_accepts_source_relative_build_path(self):
+        output = Path(self.tmp.name) / "path-output"
+        outside = Path(self.tmp.name) / "outside"
+        shutil.copytree(self.ui_build, outside)
+        traversal = self.source / "evals" / "ui" / "dist" / ".." / ".." / ".." / ".." / "outside"
+        with self.assertRaisesRegex(ValueError, "traversal"):
+            package_toolbox.build_package(self.source, output, traversal)
+        with self.assertRaisesRegex(ValueError, "traversal"):
+            package_toolbox.build_package(self.source / ".." / self.source.name, output, self.ui_build)
+        package_toolbox.main([
+            str(output), "--source-root", str(self.source), "--ui-build", "evals/ui/dist",
+        ])
+        self.assertTrue((output / "pb_public" / "assets" / "toolbox.js").is_file())
+
+    def test_requires_referenced_local_module_and_stylesheet_assets(self):
+        output = Path(self.tmp.name) / "refs-output"
+        index = self.ui_build / "index.html"
+        for html in (
+            "<!-- /assets/unreferenced.bin -->\n",
+            '<script type="module" src="/assets/missing.js"></script>\n',
+            '<script type="module" src="../outside.js"></script>\n',
+            '<script type="module" src="/assets/toolbox.js"></script><link rel="stylesheet" href="/assets/missing.css">\n',
+        ):
+            index.write_text(html, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "(module|reference)"):
+                package_toolbox.build_package(self.source, output, self.ui_build)
+            self.assertFalse(output.exists())
 
     def test_current_catalog_keeps_hyphenated_marketplace_ids(self):
         catalog = json.loads(package_toolbox.build_catalog(ROOT))
