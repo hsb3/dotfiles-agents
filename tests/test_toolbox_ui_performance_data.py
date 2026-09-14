@@ -152,6 +152,23 @@ assert.equal(lookupResult.data.completeness, 'unknown');
 assert.deepEqual(lookupResult.data.artifacts.map((item) => item.id), ['owned', 'good']);
 """)
 
+    def test_evidence_keeps_page_one_references_when_a_later_event_page_fails(self):
+        self.run_module("""
+const page = (items, page, totalPages) => ({kind: 'ok', data: {items, page, totalPages, totalItems: items.length}});
+const session = {request: async (url) => {
+  if (url.includes('/artifacts/records/event-ref')) return {kind: 'ok', data: {id: 'event-ref', sha256: 'event', run: 'other', blob: 'event.txt'}};
+  if (url.includes('/artifacts/records?')) return page([{id: 'owned', sha256: 'owned', run: 'run-1', blob: 'owned.txt'}], 1, 1);
+  if (url.includes('/run_events/') && url.includes('page=2')) return {kind: 'error', status: 500, message: 'second page failed'};
+  if (url.includes('/run_events/')) return page([{id: 'event', run: 'run-1', artifact: 'event-ref'}], 1, 2);
+  if (url.includes('/tool_calls/')) return page([], 1, 1);
+  throw new Error(url);
+}};
+const result = await performance.evidenceForRun(session, 'run-1');
+assert.equal(result.kind, 'ok');
+assert.equal(result.data.completeness, 'unknown');
+assert.deepEqual(result.data.artifacts.map((item) => item.id), ['owned', 'event-ref']);
+""")
+
     def test_campaign_detail_uses_exact_escaped_relation_filters(self):
         self.run_module("""
 let urls = [];
@@ -164,6 +181,9 @@ const parsed = urls.map((url) => new URL('https://toolbox.test' + url));
 assert.equal(parsed[1].searchParams.get('filter'), 'run = \\'campaign\\\\\\\\id\\\\\\'\\\\\"\\'');
 assert.equal(parsed[2].searchParams.get('filter'), 'eval_run = \\'campaign\\\\\\\\id\\\\\\'\\\\\"\\'');
 assert.ok(parsed[1].searchParams.get('fields').includes('prompt,response_text,response_json'));
+assert.ok(parsed[1].searchParams.get('fields').includes('tokens,duration_ms,measurement'));
+assert.equal(parsed[2].searchParams.get('expand'), 'extender,framework,element');
+assert.equal(parsed[2].searchParams.get('fields'), 'id,extender,framework,element,eval_run,verdict,score,evidence,assessor,expand.extender.id,expand.extender.name,expand.framework.id,expand.framework.name,expand.element.id,expand.element.name,created,updated');
 """)
 
 

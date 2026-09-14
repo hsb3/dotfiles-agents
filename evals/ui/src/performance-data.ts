@@ -15,8 +15,9 @@ export type Artifact = { id: string; run: string; kind?: string; mime?: string; 
 export type RunEvent = { id: string; run: string; seq?: number; artifact?: string; [key: string]: unknown };
 export type ToolCall = { id: string; run: string; tool_call_id: string; tool_name: string; artifact?: string; [key: string]: unknown };
 export type Campaign = { id: string; slug: string; kind: string; method?: string; criteria_text?: string; status?: string; notes?: string };
-export type Response = { id: string; run: string; role: string; prompt?: string; response_text?: string; response_json?: unknown; measurement?: unknown };
-export type Assessment = { id: string; extender: string; framework: string; element?: string; eval_run?: string; verdict: string; score?: number; evidence?: string; assessor?: string };
+export type Response = { id: string; run: string; role: string; prompt?: string; response_text?: string; response_json?: unknown; tokens?: number; duration_ms?: number; measurement?: unknown };
+export type RelatedRecord = { id: string; name?: string };
+export type Assessment = { id: string; extender: string; framework: string; element?: string; eval_run?: string; verdict: string; score?: number; evidence?: string; assessor?: string; expand?: { extender?: RelatedRecord; framework?: RelatedRecord; element?: RelatedRecord } };
 
 type RequestSession = Session;
 type RunFilter = "all" | "baseline" | "with";
@@ -72,7 +73,7 @@ export const campaigns = (session: RequestSession, query = "", page = 1, signal?
 };
 export const campaignById = (session: RequestSession, id: string, signal?: AbortSignal) => session.request<Campaign>("/api/collections/eval_runs/records/" + encodeURIComponent(id) + "?fields=id,slug,kind,method,criteria_text,status,notes,created,updated", { signal });
 export const responsesForCampaign = (session: RequestSession, id: string, page = 1, signal?: AbortSignal) => pageRecords<Response>(session, "/api/collections/eval_responses/records", { fields: "id,run,role,agent_type,model,prompt,response_text,response_json,extenders,tokens,duration_ms,measurement,created,updated", filter: "run = " + pocketBaseLiteral(id), sort: "+created", page, signal });
-export const assessmentsForCampaign = (session: RequestSession, id: string, page = 1, signal?: AbortSignal) => pageRecords<Assessment>(session, "/api/collections/assessments/records", { fields: "id,extender,framework,element,eval_run,verdict,score,evidence,assessor,created,updated", filter: "eval_run = " + pocketBaseLiteral(id), sort: "+created", page, signal });
+export const assessmentsForCampaign = (session: RequestSession, id: string, page = 1, signal?: AbortSignal) => pageRecords<Assessment>(session, "/api/collections/assessments/records", { fields: "id,extender,framework,element,eval_run,verdict,score,evidence,assessor,expand.extender.id,expand.extender.name,expand.framework.id,expand.framework.name,expand.element.id,expand.element.name,created,updated", expand: "extender,framework,element", filter: "eval_run = " + pocketBaseLiteral(id), sort: "+created", page, signal });
 export const artifactsForRun = (session: RequestSession, run: string, page = 1, signal?: AbortSignal) =>
   pageRecords<Artifact>(session, "/api/collections/artifacts/records", {
     fields: ARTIFACT_FIELDS, filter: "run = " + pocketBaseLiteral(run), sort: "+id", page, signal,
@@ -93,14 +94,28 @@ async function allPages<T>(load: (page: number) => Promise<ApiResult<Page<T>>>):
   for (let page = 2; page <= first.data.totalPages; page += 1) { const result = await load(page); if (result.kind !== "ok") return result; items.push(...result.data.items); }
   return { kind: "ok", data: items };
 }
+async function partialPages<T>(load: (page: number) => Promise<ApiResult<Page<T>>>) {
+  const first = await load(1);
+  if (first.kind !== "ok") return { items: [] as T[], complete: false };
+  const items = [...first.data.items];
+  for (let page = 2; page <= first.data.totalPages; page += 1) {
+    const result = await load(page);
+    if (result.kind !== "ok") return { items, complete: false };
+    items.push(...result.data.items);
+  }
+  return { items, complete: true };
+}
 export type Evidence = { artifacts: Artifact[]; completeness: "complete" | "unknown" };
 export async function evidenceForRun(session: RequestSession, run: string, signal?: AbortSignal): Promise<ApiResult<Evidence>> {
-  const owned = await allPages((page) => artifactsForRun(session, run, page, signal)); if (owned.kind !== "ok") return owned;
-  const [events, tools] = await Promise.all([allPages((page) => eventsForRun(session, run, page, signal)), allPages((page) => toolCallsForRun(session, run, page, signal))]);
-  let complete = events.kind === "ok" && tools.kind === "ok";
+  const [owned, events, tools] = await Promise.all([
+    partialPages((page) => artifactsForRun(session, run, page, signal)),
+    partialPages((page) => eventsForRun(session, run, page, signal)),
+    partialPages((page) => toolCallsForRun(session, run, page, signal)),
+  ]);
+  let complete = owned.complete && events.complete && tools.complete;
   const records = [
-    ...(events.kind === "ok" ? events.data : []),
-    ...(tools.kind === "ok" ? tools.data : []),
+    ...events.items,
+    ...tools.items,
   ];
   const ids = new Set(records.map((record) => record.artifact).filter((id): id is string => Boolean(id)));
   const referenced: Artifact[] = [];
@@ -109,7 +124,7 @@ export async function evidenceForRun(session: RequestSession, run: string, signa
     if (result.kind !== "ok") complete = false;
     else referenced.push(result.data);
   }
-  return { kind: "ok", data: { artifacts: deduplicateArtifacts([...owned.data, ...referenced]), completeness: complete ? "complete" : "unknown" } };
+  return { kind: "ok", data: { artifacts: deduplicateArtifacts([...owned.items, ...referenced]), completeness: complete ? "complete" : "unknown" } };
 }
 function deduplicateArtifacts(artifacts: Artifact[]): Artifact[] { const seen = new Set<string>(); return artifacts.filter((artifact) => !seen.has(artifact.sha256) && (seen.add(artifact.sha256), true)); }
 export function protectedArtifactUrl(artifact: Pick<Artifact, "id" | "blob">, fileToken: string): string | undefined { return artifact.id && artifact.blob && fileToken.trim() ? "/api/files/artifacts/" + encodeURIComponent(artifact.id) + "/" + encodeURIComponent(artifact.blob) + "?token=" + encodeURIComponent(fileToken) : undefined; }
