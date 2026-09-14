@@ -60,7 +60,7 @@ assert.equal(paths[0].searchParams.get('page'), '2');
 assert.equal(paths[1].searchParams.get('filter'), "extender = 'ext-1'");
 for (const field of ['extender', 'content', 'role']) assert.match(paths[1].searchParams.get('fields'), new RegExp(field));
 assert.equal(paths[2].searchParams.get('expand'), 'job');
-for (const field of ['eval_run', 'disposition', 'expand.job.name']) assert.match(paths[2].searchParams.get('fields'), new RegExp(field.replace('.', '\\.')));
+for (const field of ['eval_run', 'disposition', 'expand.job.id', 'expand.job.name']) assert.match(paths[2].searchParams.get('fields'), new RegExp(field.replace('.', '\\.')));
 assert.equal(paths[3].searchParams.get('page'), '3');
 for (const field of ['entry_file', 'source']) assert.match(paths[4].searchParams.get('fields'), new RegExp(field));
 assert.match(paths[5].searchParams.get('fields'), /eval_run/);
@@ -81,8 +81,10 @@ assert.ok(documentation.includes('https://example.test/source'));
 const assessments = renderToStaticMarkup(React.createElement(AssessmentRows, {rows: [{id: 'a-1', framework: 'framework', element: 'element', extender: 'ext-1', verdict: 'pass', evidence: 'evidence', assessor: 'reviewer', eval_run: 'run-7'}]}));
 assert.match(assessments, /run-7/);
 const coverage = renderToStaticMarkup(React.createElement(CoverageRows, {rows: [{id: 'c-1', job: 'job-id', eval_run: 'run-8', status: 'covered', disposition: 'accepted', rationale: 'current association', expand: {job: {id: 'job-id', name: 'Named job'}}}]}));
-for (const value of ['Named job', 'run-8', 'covered', 'accepted', 'current association']) assert.match(coverage, new RegExp(value));
+for (const value of ['job-id', 'Named job', 'run-8', 'covered', 'accepted', 'current association']) assert.match(coverage, new RegExp(value));
 assert.doesNotMatch(coverage, /Job job-id/);
+const fallback = renderToStaticMarkup(React.createElement(CoverageRows, {rows: [{id: 'c-2', job: 'fallback-id', status: '', disposition: '', rationale: ''}]}));
+assert.match(fallback, /fallback-id/);
 """ % (json.dumps((ROOT / "evals" / "ui" / "src" / "documentation.tsx").as_uri()), json.dumps((ROOT / "evals" / "ui" / "src" / "evaluations.tsx").as_uri()))
         result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
                                 capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
