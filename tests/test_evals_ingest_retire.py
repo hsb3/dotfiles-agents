@@ -409,6 +409,15 @@ class CampaignMeasurementProjectionTest(unittest.TestCase):
                 self.assertIn(field, str(caught.exception))
                 self.assertEqual(pb.upserted, [])
 
+    def test_too_many_valid_extenders_leave_no_partial_writes(self):
+        extenders = [row(f"id-{n}", f"ext-{n}") for n in range(101)]
+        pb = CampaignPB(frameworks=[], extenders=extenders)
+        manifest = self._manifest({"role": "judge", "extenders": [e["slug"] for e in extenders]})
+        with self.assertRaises(SystemExit) as caught:
+            self._load(pb, manifest)
+        self.assertIn("at most 100", str(caught.exception))
+        self.assertEqual(pb.upserted, [])
+
 
 class ReferenceSource:
     """report.py's data-source shape: `list_all(coll)`, no filter argument (FixtureSource)."""

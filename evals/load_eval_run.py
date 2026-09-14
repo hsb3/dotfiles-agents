@@ -110,6 +110,10 @@ def load_manifest(pb, path):
     for resp in m.get("responses", []):
         tokens, tokens_available = _metric(resp, "tokens", path)
         duration_ms, duration_available = _metric(resp, "duration_ms", path)
+        extender_ids = [ext_ids[s] for s in resp.get("extenders", [])]
+        if len(extender_ids) > 100:
+            raise SystemExit(f"{path}: response {resp.get('role', '<unknown>')}: "
+                             "extenders allows at most 100 entries")
         rj = resp.get("response_json")
         if rj is None and "response_json_file" in resp:
             with open(os.path.join(base, resp["response_json_file"]), encoding="utf-8") as fh:
@@ -122,7 +126,7 @@ def load_manifest(pb, path):
             "prompt": _read(base, resp, "prompt", "prompt_file"),
             "response_text": _read(base, resp, "response_text", "response_text_file"),
             "response_json": rj if rj is not None else {},
-            "extenders": [ext_ids[s] for s in resp.get("extenders", [])],
+            "extenders": extender_ids,
             "tokens": tokens,
             "duration_ms": duration_ms,
             "measurement": _measurement(tokens_available, duration_available,
