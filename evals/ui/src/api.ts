@@ -68,8 +68,21 @@ export class Session {
   }
 
   async request<T>(path: string, options: Omit<AdapterOptions, "token" | "fetcher"> = {}) {
-    const result = await request<T>(path, { ...options, token: this.#token, fetcher: this.fetcher });
-    if (result.kind === "access") this.#clear();
+    const generation = this.#generation;
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    options.signal?.addEventListener("abort", cancel, { once: true });
+    if (options.signal?.aborted) cancel();
+    this.#controllers.add(controller);
+    const result = await request<T>(path, { ...options, signal: controller.signal, token: this.#token, fetcher: this.fetcher });
+    options.signal?.removeEventListener("abort", cancel);
+    this.#controllers.delete(controller);
+    if (result.kind === "access") {
+      this.#clear();
+      return result;
+    }
+    if (generation !== this.#generation || controller.signal.aborted)
+      return { kind: "error", status: 0, message: "Request cancelled" } as const;
     return result;
   }
 

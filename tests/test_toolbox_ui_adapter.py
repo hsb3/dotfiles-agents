@@ -17,7 +17,7 @@ class ToolboxUiAdapterTests(unittest.TestCase):
     def run_module(self, body):
         script = """import assert from 'node:assert/strict';
 import { Session, login, protectedFileToken, request } from %s;
-import { pageRecords, pocketBaseLiteral } from %s;
+import { documentationFor, extenderById, pageRecords, pocketBaseLiteral, safeHref } from %s;
 %s
 """ % (json.dumps(API.as_uri()), json.dumps(DATA.as_uri()), body)
         result = subprocess.run(
@@ -32,7 +32,7 @@ let calls = [];
 const fetcher = async (url, options = {}) => {
   calls.push([url, options]);
   if (url.endsWith('auth-with-password')) return new Response(JSON.stringify({token: 'memory-token'}));
-  return new Response('expired', {status: 401});
+  return new Response('expired', {status: 403});
 };
 const session = new Session(fetcher);
 assert.equal((await login('a@example.test', 'secret', fetcher)).kind, 'ok');
@@ -48,6 +48,25 @@ assert.equal(JSON.parse(calls[0][1].body).password, 'secret');
 assert.equal(calls[2][1].headers.get('Authorization'), 'memory-token');
 """)
 
+    def test_session_request_aborts_and_rejects_late_success(self):
+        self.run_module("""
+let resolve, signal;
+const session = new Session(async (url, options = {}) => {
+  if (url.endsWith('auth-with-password')) return new Response(JSON.stringify({token: 'memory-token'}));
+  signal = options.signal;
+  return new Promise((done) => { resolve = done; });
+});
+await session.login('a@example.test', 'secret');
+const pending = session.request('/api/collections/files/records');
+await Promise.resolve();
+session.logout();
+assert.equal(signal.aborted, true);
+resolve(new Response(JSON.stringify({items: [{id: 'late'}]})));
+const late = await pending;
+assert.equal(late.kind, 'error');
+assert.equal(session.token, '');
+""")
+
     def test_filters_escape_before_pagination_and_file_tokens_stay_out_of_urls(self):
         self.run_module("""
 let seen = [];
@@ -57,16 +76,25 @@ const fetcher = async (url, options = {}) => {
 };
 const session = new Session(fetcher);
 await session.login('a@example.test', 'secret');
-const result = await pageRecords('/api/collections/files/records', {fields: 'id,extender,role,content,relpath', page: 2, filter: `extender = ${pocketBaseLiteral(`a\\\\b'\"c`)}`, sort: '+relpath', token: session.token, fetcher});
+const input = `a\\\\b'\"c`;
+const result = await pageRecords(session, '/api/collections/files/records', {fields: 'id,extender,role,content,relpath', page: 2, filter: `extender = ${pocketBaseLiteral(input)}`, sort: '+relpath'});
 assert.equal(result.kind, 'ok');
 assert.match(seen[1][0], /filter=.*&sort=.*&fields=.*&page=2/);
-assert.match(seen[1][0], /%5C%5C/);
-assert.match(seen[1][0], /%27/);
-assert.match(seen[1][0], /%22/);
+assert.equal(new URL('https://toolbox.test' + seen[1][0]).searchParams.get('filter'), `extender = 'a\\\\\\\\b\\\\'\\\\"c'`);
+assert.equal(new URL('https://toolbox.test' + seen[1][0]).searchParams.get('sort'), '+relpath,+id');
+const docs = await documentationFor(session, 'ext-1');
+assert.equal(docs.kind, 'ok');
+assert.match(seen[2][0], /sort=%2Brelpath%2C%2Bid/);
+const extender = await extenderById(session, 'ext-1');
+assert.equal(extender.kind, 'ok');
+assert.equal(new URL('https://toolbox.test' + seen[3][0]).searchParams.get('fields'), 'id,body,entry_file,source');
 const file = await protectedFileToken(session);
 assert.deepEqual(file, {kind: 'ok', token: 'short-lived'});
-assert.equal(seen[2][0], '/api/files/token');
-assert.equal(seen[2][1].headers.get('Authorization'), 'memory-token');
+assert.equal(seen[4][0], '/api/files/token');
+assert.equal(seen[4][1].headers.get('Authorization'), 'memory-token');
+assert.equal(safeHref('https://example.test/source'), 'https://example.test/source');
+assert.equal(safeHref('/documentation/ext-1'), '/documentation/ext-1');
+for (const unsafe of ['javascript:alert(1)', 'data:text/html,x', '//example.test/x', 'https://user@example.test/x', 'not a url']) assert.equal(safeHref(unsafe), undefined);
 """)
 
     def test_late_response_cannot_restore_cleared_state(self):
