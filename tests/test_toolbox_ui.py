@@ -1,4 +1,4 @@
-"""Focused behavioral checks for the no-dependency Toolbox adapter."""
+"""Production UI behavior checks rendered through React's server renderer."""
 
 import json
 import shutil
@@ -8,89 +8,87 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = ROOT / "evals" / "ui" / "app.js"
+UI = ROOT / "evals" / "ui" / "src" / "ui.tsx"
+VIEWS = ROOT / "evals" / "ui" / "src" / "views.tsx"
+DATA = ROOT / "evals" / "ui" / "src" / "data.ts"
 
 
-@unittest.skipUnless(shutil.which("node"), "Node is required for the browser-module adapter checks")
-class ToolboxAdapterTests(unittest.TestCase):
+@unittest.skipUnless(shutil.which("bun"), "Bun is required for React UI checks")
+class ToolboxUiTests(unittest.TestCase):
     def run_module(self, body):
         script = """import assert from 'node:assert/strict';
-import { active, api, comparisonFields, comparisonRuns, fileUrl, Latest, pageRecords, text } from %s;
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { Home } from %s;
+import { submitLogin } from %s;
 %s
-""" % (json.dumps(APP.as_uri()), body)
-        result = subprocess.run(["node", "--input-type=module", "-e", script], text=True,
-                                capture_output=True, check=False)
+""" % (json.dumps(VIEWS.as_uri()), json.dumps(UI.as_uri()), body)
+        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
+                                capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_adapter_paginates_uses_exact_fields_and_handles_errors(self):
+    def test_home_has_four_oriented_actions_in_owner_navigation_order(self):
         self.run_module("""
-let requests = [];
-let page = 0;
-const fetcher = async (url, options = {}) => {
-  requests.push([url, options]); page += 1;
-  return new Response(JSON.stringify({items: page === 1 ? [{id: 'one'}] : [{id: 'two'}], page, totalPages: 2}), {status: 200});
-};
-const fields = 'id,harness,campaign,candidate,case,config,model,passed,num_turns,cost_usd,duration_ms,error,ts,created';
-const items = await pageRecords('/api/collections/runs/records', fields, 1, fetcher, 'plain-token');
-assert.deepEqual(items.items.map((item) => item.id), ['one']);
-assert.match(requests[0][0], new RegExp('fields=' + encodeURIComponent(fields)));
-assert.equal(requests[0][1].headers.get('Authorization'), 'plain-token');
-let tokenRequest;
-await api('/api/files/token', {method: 'POST'}, async (url, options) => { tokenRequest = [url, options]; return new Response('{}'); }, 'plain-token');
-assert.equal(tokenRequest[1].method, 'POST');
-assert.equal(tokenRequest[1].headers.get('Authorization'), 'plain-token');
-await assert.rejects(() => api('/bad', {}, async () => new Response('nope', {status: 403})), /403/);
+const html = renderToStaticMarkup(React.createElement(Home));
+for (const phrase of ['Catalog discovers packaged workflows/plugins and database primitives.', 'Documentation reads stored instructions, references, and source context.', 'Performance explains when measurement provenance and comparability become available.', 'Evaluations inspects current assessments and per-job coverage.']) assert.ok(html.includes(phrase));
+const order = ['Home', 'Catalog', 'Documentation', 'Performance', 'Evaluations'].map((name) => html.indexOf('>' + name + '<'));
+assert.deepEqual([...order].sort((a, b) => a - b), order);
+for (const route of ['catalog', 'documentation', 'performance', 'evaluations']) assert.match(html, new RegExp('href=\\"#' + route + '\\"'));
 """)
 
-    def test_live_page_request_is_one_page_and_generation_guard_blocks_stale_results(self):
+
+    def test_password_is_cleared_for_success_and_failure(self):
         self.run_module("""
-let requests = [];
-const fields = 'id,harness,campaign,candidate,case,config,model,passed,num_turns,cost_usd,duration_ms,error,ts,created';
-const result = await pageRecords('/api/collections/runs/records', fields, 3, async (url, options) => {
-  requests.push([url, options]); return new Response(JSON.stringify({items: [{id: 'three'}], page: 3, totalPages: 9}));
-}, 'plain-token');
-assert.equal(requests.length, 1);
-assert.match(requests[0][0], /page=3/);
-assert.match(requests[0][0], new RegExp('fields=' + encodeURIComponent(fields)));
-assert.equal(result.totalPages, 9);
-assert.equal(active(4, 4, 'token'), true);
-assert.equal(active(4, 5, 'token'), false);
-assert.equal(active(4, 4, ''), false);
-assert.deepEqual(comparisonFields.map((entry) => entry[1]), ['campaign', 'candidate', 'case', 'harness', 'config', 'model', 'passed', 'num_turns', 'cost_usd', 'duration_ms', 'error', 'ts']);
-const selected = new Map([['first', {id: 'first'}], ['second', {id: 'second'}]]);
-assert.deepEqual(comparisonRuns(selected).map((run) => run.id), ['first', 'second']);
-const latest = new Latest(), first = latest.begin(), second = latest.begin();
-const delayed = await Promise.all([Promise.resolve(first), Promise.resolve(second)]);
-assert.equal(latest.applies(delayed[0]), false);
-assert.equal(latest.applies(delayed[1]), true);
+let password = 'secret';
+await submitLogin({ login: async () => ({ kind: 'ok', data: { token: 'memory' } }) }, 'user@example.test', password, (value) => { password = value; });
+assert.equal(password, '');
+password = 'secret';
+await submitLogin({ login: async () => ({ kind: 'error', status: 0, message: 'No connection' }) }, 'user@example.test', password, (value) => { password = value; });
+assert.equal(password, '');
 """)
 
-    def test_file_urls_are_encoded_and_unsafe_values_are_text_only(self):
-        self.run_module("""
-assert.equal(fileUrl({id: 'run /?', blob: 'evil name?.txt'}, 'short token'), '/api/files/artifacts/run%20%2F%3F/evil%20name%3F.txt?token=short%20token');
-const node = {textContent: '', innerHTML: 'unchanged'};
-text(node, '<img src=x onerror=alert(1)>');
-assert.equal(node.textContent, '<img src=x onerror=alert(1)>');
-assert.equal(node.innerHTML, 'unchanged');
-""")
-        source = APP.read_text()
-        self.assertNotIn("innerHTML", source)
-        self.assertIn("textContent", source)
-        self.assertNotIn("localStorage", source)
-        self.assertNotIn("URLSearchParams(location", source)
-        self.assertIn('"/api/toolbox/catalog"', source)
-        self.assertNotIn('"/toolbox-catalog.json"', source)
-        self.assertIn("password.value = \"\"", source)
-        self.assertIn("AbortController", source)
-        self.assertIn('make("button", "Get file access")', source)
-        self.assertIn('make("a", "Open file")', source)
-        self.assertIn('open.rel = "noreferrer"', source)
-        self.assertIn("setAuthenticated", source)
-        self.assertIn("aria-pressed", source)
-        page = (ROOT / "evals" / "ui" / "index.html").read_text()
-        self.assertIn('id="session"', page)
-        self.assertIn('id="workflow-cards"', page)
-        self.assertNotIn("Concept A", (ROOT / "evals" / "ui" / "index.html").read_text())
+    def test_catalog_filter_and_real_relation_queries(self):
+        script = """import assert from 'node:assert/strict';
+import { Session } from %s;
+import { distributions, documentationFor, evaluations, extenderById, extenders, filterCatalog, jobCoverage } from %s;
+let urls = []; const session = new Session(async (url) => { urls.push(url); return new Response(JSON.stringify({items: [], page: 2, totalPages: 3})); });
+assert.deepEqual(filterCatalog([{name: 'Handoff'}, {description: 'Review changes'}], 'review').length, 1);
+await extenders(session, `a'b`, 2); await documentationFor(session, 'ext-1'); await jobCoverage(session); await distributions(session, 3); await extenderById(session, 'ext-1'); await evaluations(session);
+const paths = urls.map((url) => new URL('https://toolbox.test' + url));
+assert.match(paths[0].searchParams.get('filter'), /slug ~ 'a\\\\'b'|name ~ 'a\\\\'b'|description ~ 'a\\\\'b'/);
+assert.equal(paths[0].searchParams.get('page'), '2');
+assert.equal(paths[1].searchParams.get('filter'), "extender = 'ext-1'");
+for (const field of ['extender', 'content', 'role']) assert.match(paths[1].searchParams.get('fields'), new RegExp(field));
+assert.equal(paths[2].searchParams.get('expand'), 'job');
+for (const field of ['eval_run', 'disposition', 'expand.job.id', 'expand.job.name']) assert.match(paths[2].searchParams.get('fields'), new RegExp(field.replace('.', '\\.')));
+assert.equal(paths[3].searchParams.get('page'), '3');
+for (const field of ['entry_file', 'source']) assert.match(paths[4].searchParams.get('fields'), new RegExp(field));
+assert.match(paths[5].searchParams.get('fields'), /eval_run/);
+""" % (json.dumps((ROOT / "evals" / "ui" / "src" / "api.ts").as_uri()), json.dumps(DATA.as_uri()))
+        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True, capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_documentation_and_evaluation_rows_render_actual_relations(self):
+        script = """import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { DocumentationReader } from %s;
+import { AssessmentRows, CoverageRows } from %s;
+const documentation = renderToStaticMarkup(React.createElement(DocumentationReader, {parent: {id: 'ext-1', slug: 'ext', name: 'Ext', kind: 'skill', description: '', body: 'Stored body', entry_file: 'README.md', source: 'https://example.test/source'}}));
+assert.match(documentation, /Stored body/);
+assert.match(documentation, /README.md/);
+assert.ok(documentation.includes('https://example.test/source'));
+const assessments = renderToStaticMarkup(React.createElement(AssessmentRows, {rows: [{id: 'a-1', framework: 'framework', element: 'element', extender: 'ext-1', verdict: 'pass', evidence: 'evidence', assessor: 'reviewer', eval_run: 'run-7'}]}));
+assert.match(assessments, /run-7/);
+const coverage = renderToStaticMarkup(React.createElement(CoverageRows, {rows: [{id: 'c-1', job: 'job-id', eval_run: 'run-8', status: 'covered', disposition: 'accepted', rationale: 'current association', expand: {job: {id: 'job-id', name: 'Named job'}}}]}));
+for (const value of ['job-id', 'Named job', 'run-8', 'covered', 'accepted', 'current association']) assert.match(coverage, new RegExp(value));
+assert.doesNotMatch(coverage, /Job job-id/);
+const fallback = renderToStaticMarkup(React.createElement(CoverageRows, {rows: [{id: 'c-2', job: 'fallback-id', status: '', disposition: '', rationale: ''}]}));
+assert.match(fallback, /fallback-id/);
+""" % (json.dumps((ROOT / "evals" / "ui" / "src" / "documentation.tsx").as_uri()), json.dumps((ROOT / "evals" / "ui" / "src" / "evaluations.tsx").as_uri()))
+        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
+                                capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":
