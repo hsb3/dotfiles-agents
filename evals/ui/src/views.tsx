@@ -45,17 +45,19 @@ export function Home() {
 export function BrowserApp() {
   const [session] = useState(() => new Session());
   const [signedIn, setSignedIn] = useState(false);
+  const [hash, setHash] = useState(location.hash);
   const [route, setRoute] = useState<Route>(() => parseRoute(location.hash));
   const clearUi = () => { setSignedIn(false); setRoute("home"); };
   const logout = () => { session.logout(); clearUi(); };
   useEffect(() => { const unsubscribe = session.subscribe(clearUi); return () => { unsubscribe(); }; }, [session]);
   useEffect(() => {
-    const change = () => setRoute((current) => parseRoute(location.hash, current));
+    const change = () => setHash((current) => location.hash === "#main-content" ? current : location.hash);
     addEventListener("hashchange", change);
     return () => removeEventListener("hashchange", change);
   }, []);
+  useEffect(() => { setRoute((current) => parseRoute(hash, current)); }, [hash]);
   useEffect(() => { document.getElementById("main-content")?.focus(); }, [route]);
   if (!signedIn) return <Login session={session} onAuthenticated={() => setSignedIn(true)} />;
-  const content = route === "home" ? <Home /> : route === "catalog" ? <Catalog session={session} onExpired={clearUi} /> : route === "documentation" ? <Documentation session={session} onExpired={clearUi} /> : route === "evaluations" ? <Evaluations session={session} onExpired={clearUi} /> : <Performance session={session} onExpired={clearUi} />;
+  const content = route === "home" ? <Home /> : route === "catalog" ? <Catalog session={session} onExpired={clearUi} /> : route === "documentation" ? <Documentation session={session} onExpired={clearUi} /> : route === "evaluations" ? <Evaluations session={session} onExpired={clearUi} /> : <Performance session={session} onExpired={clearUi} hash={hash} />;
   return <Shell route={route} logout={logout}>{content}</Shell>;
 }
