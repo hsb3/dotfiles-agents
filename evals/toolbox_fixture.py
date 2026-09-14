@@ -80,7 +80,9 @@ class ToolboxFixture:
         self.process = None
         try:
             self.root = Path(self.tmp.name)
-            self.package = build_package(self.source_root, self.root / "package")
+            self.package = build_package(
+                self.source_root, self.root / "package", self.source_root / "evals" / "ui" / "dist"
+            )
             with socket.socket() as sock:
                 sock.bind(("127.0.0.1", 0))
                 self.port = sock.getsockname()[1]

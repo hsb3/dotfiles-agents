@@ -47,6 +47,11 @@ class ToolboxPackageTests(unittest.TestCase):
         (self.source / "evals" / "ui" / "index.html").write_text("<main>safe</main>\n", encoding="utf-8")
         (self.source / "evals" / "ui" / "styles.css").write_text("main {}\n", encoding="utf-8")
         (self.source / "evals" / "ui" / "app.js").write_text("console.log('safe')\n", encoding="utf-8")
+        self.ui_build = self.source / "evals" / "ui" / "dist"
+        (self.ui_build / "assets" / "nested").mkdir(parents=True)
+        (self.ui_build / "index.html").write_text('<script src="/assets/toolbox.js"></script>\n', encoding="utf-8")
+        (self.ui_build / "assets" / "toolbox.js").write_text("console.log('built')\n", encoding="utf-8")
+        (self.ui_build / "assets" / "nested" / "toolbox.css").write_text("main {}\n", encoding="utf-8")
         (self.source / "evals" / "pb_data").mkdir()
         (self.source / "evals" / "pb_data" / "secret.db").write_text("secret", encoding="utf-8")
         (self.source / ".env").write_text("PB_SUPERUSER_PASSWORD=secret", encoding="utf-8")
@@ -54,11 +59,11 @@ class ToolboxPackageTests(unittest.TestCase):
 
     def test_build_is_allowlisted_deterministic_and_snapshot_labeled(self):
         first, second = Path(self.tmp.name) / "first", Path(self.tmp.name) / "second"
-        package_toolbox.build_package(self.source, first)
-        package_toolbox.build_package(self.source, second)
+        package_toolbox.build_package(self.source, first, self.ui_build)
+        package_toolbox.build_package(self.source, second, self.ui_build)
         self.assertEqual(
             sorted(path.relative_to(first).as_posix() for path in first.rglob("*") if path.is_file()),
-            sorted(["Dockerfile", "railway.toml", "start.sh", "pb_hooks/toolbox-catalog.json", "pb_hooks/toolbox_catalog.pb.js", "pb_public/app.js", "pb_public/index.html", "pb_public/styles.css"]),
+            sorted(["Dockerfile", "railway.toml", "start.sh", "pb_hooks/toolbox-catalog.json", "pb_hooks/toolbox-package.json", "pb_hooks/toolbox_catalog.pb.js", "pb_public/assets/nested/toolbox.css", "pb_public/assets/toolbox.js", "pb_public/index.html"]),
         )
         self.assertEqual(
             {p.relative_to(first).as_posix(): p.read_bytes() for p in first.rglob("*") if p.is_file()},
@@ -76,6 +81,16 @@ class ToolboxPackageTests(unittest.TestCase):
             (self.source / "docs" / "workflows.md").read_bytes()).hexdigest())
         self.assertNotIn("secret", "".join(p.name for p in first.rglob("*")))
         self.assertNotIn(b"secret", b"".join(p.read_bytes() for p in first.rglob("*") if p.is_file()))
+        receipt = json.loads((first / "pb_hooks" / "toolbox-package.json").read_text(encoding="utf-8"))
+        self.assertEqual(receipt["ui_build"], "evals/ui/dist")
+        self.assertEqual(receipt["ui_files"], ["assets/nested/toolbox.css", "assets/toolbox.js", "index.html"])
+        self.assertEqual(receipt["ui_source_files"], ["app.js", "index.html", "styles.css"])
+        self.assertEqual(receipt["ui_source_snapshot"], hashlib.sha256(
+            b"app.js\0console.log('safe')\n\0index.html\0<main>safe</main>\n\0styles.css\0main {}\n\0"
+        ).hexdigest())
+        self.assertEqual(receipt["ui_snapshot"], hashlib.sha256(
+            b"assets/nested/toolbox.css\0main {}\n\0assets/toolbox.js\0console.log('built')\n\0index.html\0<script src=\"/assets/toolbox.js\"></script>\n\0"
+        ).hexdigest())
 
     def test_catalog_hook_requires_auth_and_reads_the_private_snapshot(self):
         hook = (ROOT / "evals" / "deploy" / "pb_hooks" / "toolbox_catalog.pb.js").read_text(encoding="utf-8")
@@ -93,46 +108,71 @@ class ToolboxPackageTests(unittest.TestCase):
         output.mkdir()
         (output / "present").write_text("x", encoding="utf-8")
         with self.assertRaisesRegex(FileExistsError, "output"):
-            package_toolbox.build_package(self.source, output)
+            package_toolbox.build_package(self.source, output, self.ui_build)
         (self.source / "docs" / "workflows.md").write_text(
             "## Choose a workflow\n| Stage | Current marketplace plugin(s) | Choose them when |\n| --- | --- | --- |\n| Build | [missing](../plugins/missing/README.md) | x |\n",
             encoding="utf-8",
         )
         with self.assertRaisesRegex(ValueError, "missing"):
-            package_toolbox.build_package(self.source, Path(self.tmp.name) / "bad")
+            package_toolbox.build_package(self.source, Path(self.tmp.name) / "bad", self.ui_build)
 
-    def test_rejects_missing_ui_sources(self):
-        (self.source / "evals" / "ui" / "index.html").unlink()
+    def test_refuses_output_inside_the_source_tree(self):
+        output = self.source / "generated-package"
+        with self.assertRaisesRegex(ValueError, "output"):
+            package_toolbox.build_package(self.source, output, self.ui_build)
+        self.assertFalse(output.exists())
+
+    def test_requires_explicit_usable_ui_build(self):
         output = Path(self.tmp.name) / "missing-ui"
-        with self.assertRaisesRegex(FileNotFoundError, "package input"):
+        with self.assertRaisesRegex(ValueError, "ui build"):
             package_toolbox.build_package(self.source, output)
+        self.assertFalse(output.exists())
+        (self.ui_build / "assets" / "toolbox.js").unlink()
+        (self.ui_build / "assets" / "nested" / "toolbox.css").unlink()
+        with self.assertRaisesRegex(ValueError, "assets"):
+            package_toolbox.build_package(self.source, output, self.ui_build)
         self.assertFalse(output.exists())
 
     def test_ignores_extra_files_and_rejects_symlinked_required_sources(self):
         (self.source / "evals" / "ui" / "private.json").write_text('{"token": "secret"}', encoding="utf-8")
         (self.source / "evals" / "ui" / "debug.map").write_text("secret", encoding="utf-8")
         clean_output = Path(self.tmp.name) / "clean-output"
-        package_toolbox.build_package(self.source, clean_output)
+        package_toolbox.build_package(self.source, clean_output, self.ui_build)
         self.assertNotIn(b"secret", b"".join(p.read_bytes() for p in clean_output.rglob("*") if p.is_file()))
         start = self.source / "evals" / "deploy" / "start.sh"
         start.unlink()
         start.symlink_to(self.source / ".env")
         deploy_output = Path(self.tmp.name) / "deploy-symlink-output"
         with self.assertRaisesRegex(ValueError, "symlink"):
-            package_toolbox.build_package(self.source, deploy_output)
+            package_toolbox.build_package(self.source, deploy_output, self.ui_build)
         self.assertFalse(deploy_output.exists())
         start.unlink()
         start.write_text("start.sh\n", encoding="utf-8")
-        (self.source / "evals" / "ui" / "app.js").unlink()
-        (self.source / "evals" / "ui" / "app.js").symlink_to(self.source / ".env")
+        (self.ui_build / "assets" / "toolbox.js").unlink()
+        (self.ui_build / "assets" / "toolbox.js").symlink_to(self.source / ".env")
         symlink_output = Path(self.tmp.name) / "symlink-output"
         with self.assertRaisesRegex(ValueError, "symlink"):
-            package_toolbox.build_package(self.source, symlink_output)
+            package_toolbox.build_package(self.source, symlink_output, self.ui_build)
         self.assertFalse(symlink_output.exists())
         source_link = Path(self.tmp.name) / "source-link"
         source_link.symlink_to(self.source, target_is_directory=True)
         with self.assertRaisesRegex(ValueError, "ancestor"):
-            package_toolbox.build_package(source_link, Path(self.tmp.name) / "ancestor-output")
+            package_toolbox.build_package(source_link, Path(self.tmp.name) / "ancestor-output", self.ui_build)
+
+    def test_rejects_unsafe_vite_output_and_outside_build_tree(self):
+        output = Path(self.tmp.name) / "unsafe-output"
+        for unsafe in ("assets/toolbox.js.map", "assets/.env", "assets/private.json", "src/private.js", "node_modules/package.js"):
+            path = self.ui_build / unsafe
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("secret", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "unsafe"):
+                package_toolbox.build_package(self.source, output, self.ui_build)
+            self.assertFalse(output.exists())
+            path.unlink()
+        external = Path(self.tmp.name) / "external-dist"
+        shutil.copytree(self.ui_build, external)
+        with self.assertRaisesRegex(ValueError, "source root"):
+            package_toolbox.build_package(self.source, output, external)
 
     def test_current_catalog_keeps_hyphenated_marketplace_ids(self):
         catalog = json.loads(package_toolbox.build_catalog(ROOT))
@@ -184,7 +224,7 @@ class ToolboxPackageTests(unittest.TestCase):
             self.assertEqual(urlopen(fixture.url + f"/api/files/artifacts/{fixture.artifact['id']}/{blob}?token={file_token}").read(), fixture.artifact_bytes)
             self.assertEqual(sorted(p.relative_to(fixture.package).as_posix() for p in fixture.package.rglob("*") if p.is_file()), sorted([
                 "Dockerfile", "railway.toml", "start.sh", "pb_hooks/toolbox-catalog.json",
-                "pb_hooks/toolbox_catalog.pb.js", "pb_public/app.js", "pb_public/index.html", "pb_public/styles.css",
+                "pb_hooks/toolbox-package.json", "pb_hooks/toolbox_catalog.pb.js", "pb_public/assets/nested/toolbox.css", "pb_public/assets/toolbox.js", "pb_public/index.html",
             ]))
 
 

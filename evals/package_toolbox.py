@@ -11,7 +11,7 @@ from pathlib import Path
 
 WORKFLOW_HEADING = re.compile(r"^(#{2,})\s+Choose a workflow\s*$")
 PLUGIN_LINK = re.compile(r"\[([^]]+)\]\(\.\./plugins/([^/]+)/README\.md\)")
-UI_FILES = ("index.html", "styles.css", "app.js")
+UNSAFE_UI_PARTS = {"node_modules", "private", "src"}
 
 
 def _input_file(source_root, path):
@@ -30,6 +30,11 @@ def _input_file(source_root, path):
     if not path.is_file():
         raise FileNotFoundError(f"required package input is missing: {path}")
     return path
+
+
+def _unsafe_ui_path(relative):
+    return (set(relative.parts) & UNSAFE_UI_PARTS or any(part.startswith("private") for part in relative.parts)
+            or relative.name.startswith(".env") or relative.suffix == ".map")
 
 
 def _workflow_rows(workflows):
@@ -134,24 +139,111 @@ def build_catalog(source_root):
     return json.dumps(catalog, indent=2, sort_keys=True).encode("utf-8") + b"\n"
 
 
-def _ui_files(source_root, source_ui):
-    if not source_ui.is_dir():
-        raise FileNotFoundError(f"required UI sources are missing: {source_ui}")
-    return [_input_file(source_root, source_ui / name) for name in UI_FILES]
+def _ui_files(source_root, ui_build):
+    if ui_build is None:
+        raise ValueError("a ui build directory is required")
+    source_root, ui_build = Path(source_root), Path(ui_build)
+    try:
+        ui_relative = ui_build.relative_to(source_root)
+    except ValueError:
+        raise ValueError(f"ui build must be inside the source root: {ui_build}") from None
+    index = _input_file(source_root, ui_build / "index.html")
+    if not ui_build.is_dir() or ui_build.is_symlink():
+        raise ValueError(f"ui build is not a regular directory: {ui_build}")
+    files = []
+    for path in sorted(ui_build.rglob("*")):
+        if path.is_dir():
+            if path.is_symlink():
+                raise ValueError(f"ui build input is a symlink: {path}")
+            continue
+        relative = path.relative_to(ui_build)
+        if path.is_symlink():
+            raise ValueError(f"ui build input is a symlink: {path}")
+        if not path.is_file():
+            raise ValueError(f"ui build input is not a regular file: {path}")
+        if _unsafe_ui_path(relative):
+            raise ValueError(f"unsafe ui build input: {relative}")
+        _input_file(source_root, path)
+        files.append(path)
+    if not any(path.relative_to(ui_build).parts[0] == "assets" for path in files):
+        raise ValueError("ui build has no assets")
+    if b"assets/" not in index.read_bytes():
+        raise ValueError("ui build index does not reference assets")
+    return ui_relative, files
 
 
-def build_package(source_root, output):
+def _snapshot_files(files, root):
+    digest = hashlib.sha256()
+    names = []
+    for path in files:
+        relative = path.relative_to(root).as_posix()
+        names.append(relative)
+        digest.update(relative.encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return names, digest.hexdigest()
+
+
+def _ui_source_files(source_root):
+    source_ui = Path(source_root) / "evals" / "ui"
+    if not source_ui.is_dir() or source_ui.is_symlink():
+        raise ValueError(f"ui source is not a regular directory: {source_ui}")
+    files = []
+    for path in sorted(source_ui.rglob("*")):
+        relative = path.relative_to(source_ui)
+        if (relative.parts[0] in {"dist", "node_modules"}
+                or any(part.startswith("private") for part in relative.parts)
+                or relative.name.startswith(".env") or relative.suffix == ".map"):
+            continue
+        if path.is_dir():
+            if path.is_symlink():
+                raise ValueError(f"ui source input is a symlink: {path}")
+            continue
+        if path.is_symlink():
+            raise ValueError(f"ui source input is a symlink: {path}")
+        if not path.is_file():
+            raise ValueError(f"ui source input is not a regular file: {path}")
+        _input_file(source_root, path)
+        files.append(path)
+    return files
+
+
+def _ui_receipt(source_snapshot, ui_relative, ui_files, ui_build, ui_source_files, ui_source):
+    ui_names, ui_snapshot = _snapshot_files(ui_files, ui_build)
+    source_names, source_ui_snapshot = _snapshot_files(ui_source_files, ui_source)
+    return json.dumps({
+        "source_snapshot": source_snapshot,
+        "ui_build": ui_relative.as_posix(),
+        "ui_files": ui_names,
+        "ui_snapshot": ui_snapshot,
+        "ui_source_files": source_names,
+        "ui_source_snapshot": source_ui_snapshot,
+    }, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+
+
+def build_package(source_root, output, ui_build=None):
     """Build an empty, isolated deployment directory at caller-selected *output*."""
     source_root, output = Path(source_root), Path(output)
     if output.exists():
         raise FileExistsError(f"output already exists: {output}")
+    try:
+        output.resolve().relative_to(source_root.resolve())
+    except ValueError:
+        pass
+    else:
+        raise ValueError(f"output must be outside the source root: {output}")
     deploy = source_root / "evals" / "deploy"
     hook = deploy / "pb_hooks" / "toolbox_catalog.pb.js"
     required = [deploy / name for name in ("Dockerfile", "start.sh", "railway.toml")] + [hook]
     required = [_input_file(source_root, path) for path in required]
     catalog = build_catalog(source_root)
-    source_ui = source_root / "evals" / "ui"
-    ui_files = _ui_files(source_root, source_ui)
+    ui_relative, ui_files = _ui_files(source_root, ui_build)
+    ui_source = source_root / "evals" / "ui"
+    receipt = _ui_receipt(
+        json.loads(catalog)["source_snapshot"], ui_relative, ui_files, Path(ui_build),
+        _ui_source_files(source_root), ui_source,
+    )
     output.mkdir(parents=True)
     for source in required[:3]:
         shutil.copyfile(source, output / source.name)
@@ -160,9 +252,10 @@ def build_package(source_root, output):
     shutil.copyfile(hook, hook_target)
     catalog_target = hook_target.parent / "toolbox-catalog.json"
     catalog_target.write_bytes(catalog)
+    (hook_target.parent / "toolbox-package.json").write_bytes(receipt)
     public = output / "pb_public"
     for source in ui_files:
-        target = public / source.name
+        target = public / source.relative_to(ui_build)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
     return output
@@ -172,8 +265,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="new deployment directory to create")
     parser.add_argument("--source-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--ui-build", type=Path, required=True, help="Vite build directory inside source root")
     args = parser.parse_args(argv)
-    build_package(args.source_root, args.output)
+    build_package(args.source_root, args.output, args.ui_build)
 
 
 if __name__ == "__main__":
