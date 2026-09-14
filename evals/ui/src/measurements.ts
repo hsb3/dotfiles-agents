@@ -59,14 +59,15 @@ function invalid(baseline: RunRecord | null, withValue: RunRecord | null,
 }
 
 function validExecution(run: RunRecord): boolean {
-  return record(record(run.measurement)?.execution)?.validity === "valid";
+  return record(measurement(run)?.execution)?.validity === "valid";
 }
 
 export function comparisonEligibility(selected: readonly unknown[]): ComparisonEligibility {
   if (selected.length !== 2) return invalid(null, null, "select-exactly-two");
   const first = record(selected[0]);
   const second = record(selected[1]);
-  if (!first || !second || typeof first.id !== "string" || typeof second.id !== "string"
+  if (!first || !second || typeof first.id !== "string" || !first.id.trim()
+      || typeof second.id !== "string" || !second.id.trim()
       || first.id === second.id) return invalid(null, null, "duplicate-record");
 
   for (const field of identityFields) {
@@ -92,5 +93,7 @@ export function descriptiveDelta(baseline: unknown, withValue: unknown): Descrip
     return { delta: null, percent: null };
   }
   const delta = withValue - baseline;
-  return { delta, percent: baseline > 0 ? delta / baseline * 100 : null };
+  if (!Number.isFinite(delta)) return { delta: null, percent: null };
+  const percent = baseline > 0 ? delta / baseline * 100 : null;
+  return { delta, percent: percent !== null && !Number.isFinite(percent) ? null : percent };
 }

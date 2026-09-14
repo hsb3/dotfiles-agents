@@ -70,7 +70,10 @@ for (const key of ['campaign', 'candidate', 'case', 'harness', 'model']) {
 }
 assert.equal(measurements.comparisonEligibility([pair()[0]]).reason, 'select-exactly-two');
 assert.equal(measurements.comparisonEligibility(pair([{id: 'with'}])).reason, 'duplicate-record');
+assert.equal(measurements.comparisonEligibility(pair([{id: ' '}])).reason, 'duplicate-record');
 assert.equal(measurements.comparisonEligibility(pair([{config: 'with'}])).reason, 'configuration-mismatch');
+assert.equal(measurements.comparisonEligibility(pair([{measurement: {version: 2, available: {}, execution: {validity: 'valid'}}}])).reason, 'execution-invalid');
+assert.equal(measurements.comparisonEligibility(pair([{measurement: {version: 1, execution: {validity: 'valid'}}}])).reason, 'execution-invalid');
 assert.equal(measurements.comparisonEligibility(pair([{measurement: {version: 1, available: {}, execution: {validity: 'unknown'}}}])).reason, 'execution-invalid');
 assert.equal(measurements.comparisonEligibility(pair([{measurement: {version: 1, available: {}, execution: {validity: 'invalid'}}}])).reason, 'execution-invalid');
 assert.equal(measurements.comparisonEligibility(pair([{measurement: {version: 1, available: {}, execution: {validity: 'skipped'}}}])).reason, 'execution-invalid');
@@ -85,6 +88,8 @@ assert.deepEqual(measurements.descriptiveDelta(null, 7), {delta: null, percent: 
 assert.deepEqual(measurements.descriptiveDelta(4, null), {delta: null, percent: null});
 assert.deepEqual(measurements.descriptiveDelta(Infinity, 7), {delta: null, percent: null});
 assert.deepEqual(measurements.descriptiveDelta(4, NaN), {delta: null, percent: null});
+assert.deepEqual(measurements.descriptiveDelta(Number.MIN_VALUE, Number.MAX_VALUE), {delta: Number.MAX_VALUE, percent: null});
+assert.deepEqual(measurements.descriptiveDelta(-Number.MAX_VALUE, Number.MAX_VALUE), {delta: null, percent: null});
 """)
 
 
