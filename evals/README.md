@@ -64,6 +64,11 @@ bun run --cwd evals/ui build
 python3 evals/package_toolbox.py /tmp/evals-toolbox-deploy --ui-build "$PWD/evals/ui/dist"
 ```
 
+React runtime checks use installed UI dependencies and disable Bun's automatic installs.
+They explicitly skip when those dependencies are absent, preserving the zero-install repository
+suite. The required CI UI step installs the lockfile, runs typecheck/build, and executes the UI
+checks with `python3 -m unittest discover -s tests -t . -p 'test_toolbox_ui*.py'`.
+
 The output is refused when it already exists. It excludes `evals/pb_data`, historical auth
 state, environment files, credentials, and runtime artifacts. Build output and dependencies remain
 untracked. Release from an exact merged `dev` archive, rather than a dirty checkout; the package's
