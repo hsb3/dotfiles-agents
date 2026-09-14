@@ -56,7 +56,10 @@ export function Shell({ route, children, logout }: { route: Route; children: Rea
 
   return <>
     <Header aria-label="Toolbox">
-      <SkipToContent href="#main-content" />
+      <SkipToContent href="#main-content" onClick={(event) => {
+        event.preventDefault();
+        document.getElementById("main-content")?.focus();
+      }} />
       <HeaderMenuButton
         aria-label={sideNavExpanded ? "Close navigation" : "Open navigation"}
         aria-expanded={sideNavExpanded}
