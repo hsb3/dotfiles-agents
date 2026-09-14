@@ -4,6 +4,21 @@ export type ApiResult<T> =
   | { kind: "access"; status: 401 | 403 }
   | { kind: "error"; status: number; message: string };
 export type AdapterOptions = RequestInit & { token?: string; fetcher?: Fetcher };
+type Timer = ReturnType<typeof setTimeout>;
+type Clock = { now(): number; setTimeout(callback: () => void, delay: number): Timer; clearTimeout(timer: Timer): void };
+const systemClock: Clock = { now: Date.now, setTimeout, clearTimeout };
+
+function jwtExpiry(token: string): number | undefined {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return undefined;
+    const json = atob(payload.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(payload.length / 4) * 4, "="));
+    const exp = JSON.parse(json).exp;
+    return typeof exp === "number" && Number.isFinite(exp) ? exp * 1_000 : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function request<T>(path: string, options: AdapterOptions = {}): Promise<ApiResult<T>> {
   const { token, fetcher = fetch, headers: supplied, ...init } = options;
@@ -39,8 +54,9 @@ export class Session {
   #controllers = new Set<AbortController>();
   #selections: Record<string, string[]> = {};
   #loaded: Record<string, unknown> = {};
+  #expiryTimer?: Timer;
 
-  constructor(readonly fetcher: Fetcher = fetch) {}
+  constructor(readonly fetcher: Fetcher = fetch, readonly clock: Clock = systemClock) {}
   get token() { return this.#token; }
   get generation() { return this.#generation; }
   snapshot(): PrivateState { return { selections: { ...this.#selections }, loaded: { ...this.#loaded } }; }
@@ -48,12 +64,24 @@ export class Session {
   setLoaded(key: string, value: unknown) { this.#loaded[key] = value; }
 
   #clear() {
+    if (this.#expiryTimer !== undefined) this.clock.clearTimeout(this.#expiryTimer);
+    this.#expiryTimer = undefined;
     this.#generation += 1;
     this.#controllers.forEach((controller) => controller.abort());
     this.#controllers.clear();
     this.#token = "";
     this.#selections = {};
     this.#loaded = {};
+  }
+
+  #armExpiry(token: string, generation: number) {
+    const expiry = jwtExpiry(token);
+    if (expiry === undefined) return;
+    const delay = expiry - this.clock.now();
+    if (delay <= 0) return this.#clear();
+    this.#expiryTimer = this.clock.setTimeout(() => {
+      if (generation === this.#generation) this.#clear();
+    }, delay);
   }
 
   logout() { this.#clear(); }
@@ -63,7 +91,10 @@ export class Session {
     const generation = this.#generation;
     const result = await login(email, password, this.fetcher);
     if (generation !== this.#generation) return { kind: "error", status: 0, message: "Session changed" } as const;
-    if (result.kind === "ok" && result.data.token) this.#token = result.data.token;
+    if (result.kind === "ok" && result.data.token) {
+      this.#token = result.data.token;
+      this.#armExpiry(result.data.token, generation);
+    }
     return result;
   }
 
@@ -79,7 +110,7 @@ export class Session {
     this.#controllers.delete(controller);
     if (generation !== this.#generation || controller.signal.aborted)
       return { kind: "error", status: 0, message: "Request cancelled" } as const;
-    if (result.kind === "access") {
+    if (result.kind === "access" && result.status === 401) {
       this.#clear();
       return result;
     }

@@ -32,7 +32,7 @@ let calls = [];
 const fetcher = async (url, options = {}) => {
   calls.push([url, options]);
   if (url.endsWith('auth-with-password')) return new Response(JSON.stringify({token: 'memory-token'}));
-  return new Response('expired', {status: 403});
+  return new Response('expired', {status: 401});
 };
 const session = new Session(fetcher);
 assert.equal((await login('a@example.test', 'secret', fetcher)).kind, 'ok');
@@ -46,6 +46,46 @@ assert.deepEqual(session.snapshot(), {selections: {}, loaded: {}});
 assert.equal(calls[0][0], '/api/collections/users/auth-with-password');
 assert.equal(JSON.parse(calls[0][1].body).password, 'secret');
 assert.equal(calls[2][1].headers.get('Authorization'), 'memory-token');
+""")
+
+    def test_active_403_preserves_the_session(self):
+        self.run_module("""
+const session = new Session(async (url) =>
+  new Response(JSON.stringify(url.endsWith('auth-with-password') ? {token: 'memory-token'} : {message: 'forbidden'}), {
+    status: url.endsWith('auth-with-password') ? 200 : 403,
+  }),
+);
+await session.login('a@example.test', 'secret');
+session.setSelection('runs', ['run-1']);
+session.setLoaded('catalog', {id: 'catalog'});
+const denied = await session.request('/api/collections/files/records');
+assert.deepEqual(denied, {kind: 'access', status: 403});
+assert.equal(session.token, 'memory-token');
+assert.deepEqual(session.snapshot(), {selections: {runs: ['run-1']}, loaded: {catalog: {id: 'catalog'}}});
+""")
+
+    def test_jwt_expiry_clears_only_its_generation(self):
+        self.run_module("""
+const timers = [];
+const clock = {
+  now: () => 1_000,
+  setTimeout: (callback, delay) => { const timer = {callback, delay, cancelled: false}; timers.push(timer); return timer; },
+  clearTimeout: (timer) => { timer.cancelled = true; },
+};
+const token = (exp) => 'header.' + btoa(JSON.stringify({exp})).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '') + '.signature';
+let login = 0;
+const session = new Session(async () => new Response(JSON.stringify({token: token(login++ ? 20 : 2)})), clock);
+await session.login('a@example.test', 'secret');
+assert.equal(timers[0].delay, 1_000);
+await session.login('a@example.test', 'secret');
+session.setSelection('fresh', ['record-2']);
+assert.equal(timers[0].cancelled, true);
+timers[0].callback();
+assert.equal(session.token, token(20));
+assert.deepEqual(session.snapshot().selections, {fresh: ['record-2']});
+timers[1].callback();
+assert.equal(session.token, '');
+assert.deepEqual(session.snapshot(), {selections: {}, loaded: {}});
 """)
 
     def test_session_request_aborts_and_rejects_late_success(self):
