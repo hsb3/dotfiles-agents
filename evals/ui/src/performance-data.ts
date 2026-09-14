@@ -107,8 +107,10 @@ async function partialPages<T>(load: (page: number) => Promise<ApiResult<Page<T>
 }
 export type Evidence = { artifacts: Artifact[]; completeness: "complete" | "unknown" };
 export async function evidenceForRun(session: RequestSession, run: string, signal?: AbortSignal): Promise<ApiResult<Evidence>> {
+  const firstOwned = await artifactsForRun(session, run, 1, signal);
+  if (firstOwned.kind !== "ok") return firstOwned;
   const [owned, events, tools] = await Promise.all([
-    partialPages((page) => artifactsForRun(session, run, page, signal)),
+    partialPages(async (page) => page === 1 ? firstOwned : artifactsForRun(session, run, page, signal)),
     partialPages((page) => eventsForRun(session, run, page, signal)),
     partialPages((page) => toolCallsForRun(session, run, page, signal)),
   ]);

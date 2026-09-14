@@ -113,6 +113,37 @@ assert.equal(incomplete.data.completeness, 'unknown');
 assert.deepEqual(incomplete.data.artifacts.map((item) => item.id), ['direct', 'from-tool']);
 """)
 
+    def test_evidence_propagates_the_first_owned_artifact_page_failure(self):
+        self.run_module("""
+for (const failure of [
+  {kind: 'access', status: 403},
+  {kind: 'error', status: 500, message: 'artifacts failed'},
+]) {
+  const session = {request: async (url) => {
+    if (url.includes('/artifacts/records?')) return failure;
+    throw new Error('unexpected request: ' + url);
+  }};
+  assert.equal(await performance.evidenceForRun(session, 'run-1'), failure);
+}
+""")
+
+    def test_evidence_keeps_first_owned_artifacts_when_a_later_owned_page_fails(self):
+        self.run_module("""
+const session = {request: async (url) => {
+  if (url.includes('/artifacts/records?') && url.includes('page=2'))
+    return {kind: 'error', status: 500, message: 'second page failed'};
+  if (url.includes('/artifacts/records?'))
+    return {kind: 'ok', data: {items: [{id: 'owned', sha256: 'owned', run: 'run-1'}], page: 1, totalPages: 2, totalItems: 2}};
+  if (url.includes('/run_events/') || url.includes('/tool_calls/'))
+    return {kind: 'ok', data: {items: [], page: 1, totalPages: 1, totalItems: 0}};
+  throw new Error('unexpected request: ' + url);
+}};
+const result = await performance.evidenceForRun(session, 'run-1');
+assert.equal(result.kind, 'ok');
+assert.equal(result.data.completeness, 'unknown');
+assert.deepEqual(result.data.artifacts.map((item) => item.id), ['owned']);
+""")
+
     def test_file_urls_use_only_a_short_lived_file_token_and_unknown_size_stays_unavailable(self):
         self.run_module("""
 const href = performance.protectedArtifactUrl({id: 'artifact/1', blob: 'proof name.txt'}, 'file-token');
