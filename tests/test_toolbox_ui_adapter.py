@@ -88,6 +88,60 @@ assert.equal(session.token, '');
 assert.deepEqual(session.snapshot(), {selections: {}, loaded: {}});
 """)
 
+    def test_clear_subscribers_observe_only_effective_clears(self):
+        self.run_module("""
+const timers = [];
+const clock = {
+  now: () => 1_000,
+  setTimeout: (callback, delay) => { const timer = {callback, delay, cancelled: false}; timers.push(timer); return timer; },
+  clearTimeout: (timer) => { timer.cancelled = true; },
+};
+const token = 'header.' + btoa(JSON.stringify({exp: 2})).replaceAll('=', '') + '.signature';
+const session = new Session(async () => new Response(JSON.stringify({token})), clock);
+const observed = [];
+session.subscribe(() => observed.push([session.token, session.snapshot()]));
+await session.login('a@example.test', 'secret');
+session.setLoaded('catalog', {id: 'catalog'});
+timers[0].callback();
+assert.deepEqual(observed, [['', {selections: {}, loaded: {}}]]);
+const denied = new Session(async (url) => new Response(JSON.stringify(url.endsWith('auth-with-password') ? {token: 'memory-token'} : {}), {status: url.endsWith('auth-with-password') ? 200 : 403}));
+let forbiddenCalls = 0;
+denied.subscribe(() => forbiddenCalls++);
+await denied.login('a@example.test', 'secret');
+await denied.request('/api/collections/files/records');
+assert.equal(forbiddenCalls, 0);
+const unsubscribed = new Session(async () => new Response(JSON.stringify({token: 'memory-token'})));
+let calls = 0;
+const unsubscribe = unsubscribed.subscribe(() => calls++);
+unsubscribe();
+await unsubscribed.login('a@example.test', 'secret');
+unsubscribed.logout();
+assert.equal(calls, 0);
+const staleTimers = [];
+const staleClock = {now: () => 1_000, setTimeout: (callback, delay) => { const timer = {callback, delay}; staleTimers.push(timer); return timer; }, clearTimeout: () => {}};
+let staleLogin = 0;
+const expiring = new Session(async () => new Response(JSON.stringify({token: 'header.' + btoa(JSON.stringify({exp: staleLogin++ ? 20 : 2})).replaceAll('=', '') + '.signature'})), staleClock);
+await expiring.login('a@example.test', 'secret');
+await expiring.login('a@example.test', 'secret');
+let staleTimerCalls = 0;
+expiring.subscribe(() => staleTimerCalls++);
+staleTimers[0].callback();
+assert.equal(staleTimerCalls, 0);
+let resolve, attempts = 0;
+const staleResponse = new Session(async (url) => url.endsWith('auth-with-password')
+  ? new Response(JSON.stringify({token: 'token-' + ++attempts}))
+  : new Promise((done) => { resolve = done; }));
+await staleResponse.login('a@example.test', 'secret');
+const pending = staleResponse.request('/api/collections/files/records');
+await Promise.resolve();
+await staleResponse.login('a@example.test', 'secret');
+let staleResponseCalls = 0;
+staleResponse.subscribe(() => staleResponseCalls++);
+resolve(new Response('expired', {status: 401}));
+await pending;
+assert.equal(staleResponseCalls, 0);
+""")
+
     def test_session_request_aborts_and_rejects_late_success(self):
         self.run_module("""
 let resolve, signal;

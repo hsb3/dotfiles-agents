@@ -55,15 +55,21 @@ export class Session {
   #selections: Record<string, string[]> = {};
   #loaded: Record<string, unknown> = {};
   #expiryTimer?: Timer;
+  #listeners = new Set<() => void>();
 
   constructor(readonly fetcher: Fetcher = fetch, readonly clock: Clock = systemClock) {}
   get token() { return this.#token; }
   get generation() { return this.#generation; }
   snapshot(): PrivateState { return { selections: { ...this.#selections }, loaded: { ...this.#loaded } }; }
+  subscribe(listener: () => void) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
   setSelection(key: string, value: string[]) { this.#selections[key] = [...value]; }
   setLoaded(key: string, value: unknown) { this.#loaded[key] = value; }
 
   #clear() {
+    const changed = Boolean(this.#token || this.#expiryTimer || this.#controllers.size || Object.keys(this.#selections).length || Object.keys(this.#loaded).length);
     if (this.#expiryTimer !== undefined) this.clock.clearTimeout(this.#expiryTimer);
     this.#expiryTimer = undefined;
     this.#generation += 1;
@@ -72,6 +78,7 @@ export class Session {
     this.#token = "";
     this.#selections = {};
     this.#loaded = {};
+    if (changed) this.#listeners.forEach((listener) => listener());
   }
 
   #armExpiry(token: string, generation: number) {
