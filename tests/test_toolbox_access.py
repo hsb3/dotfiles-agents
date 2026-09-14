@@ -2,6 +2,7 @@ import os
 import json
 import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
@@ -131,57 +132,64 @@ class ToolboxAccessTests(unittest.TestCase):
         })
         return records
 
+    def fixture_source(self, source):
+        for relative in (".claude-plugin/marketplace.json", "docs/workflows.md"):
+            target = source / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, target)
+        shutil.copytree(ROOT / "evals" / "deploy", source / "evals" / "deploy")
+        for directory in (source / "evals" / "ui", source / "evals" / "ui" / "dist"):
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / "index.html").write_text("<!doctype html>", encoding="utf-8")
+            (directory / "styles.css").write_text("", encoding="utf-8")
+            (directory / "app.js").write_text("", encoding="utf-8")
+
     @unittest.skipUnless(shutil.which("pocketbase"), "requires PocketBase")
     def test_real_fixture_keeps_writes_and_users_private(self):
         """Fails if access becomes anonymous, writable, or broadens the users collection."""
-        with toolbox_fixture.ToolboxFixture(ROOT, shutil.which("pocketbase")) as fixture:
-            second_email = "fixture-second@example.test"
-            second_password = "FixtureSecondPassword123"
-            api(fixture.url, "/api/collections/users/records", fixture.admin_token, "POST", {
-                "email": second_email, "password": second_password,
-                "passwordConfirm": second_password, "verified": True,
-            })
-            second_token = api(fixture.url, "/api/collections/users/auth-with-password", None, "POST", {
-                "identity": second_email, "password": second_password,
-            })["token"]
-            records = self.seed_readable_records(fixture)
-            changed, noop = toolbox_access.set_authenticated_read(FixturePB(fixture), apply=True)
-            self.assertEqual(set(changed) | set(noop), set(toolbox_access.COLLECTIONS))
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp)
+            self.fixture_source(source)
+            with toolbox_fixture.ToolboxFixture(source, shutil.which("pocketbase")) as fixture:
+                second_email = "fixture-second@example.test"
+                second_password = "FixtureSecondPassword123"
+                api(fixture.url, "/api/collections/users/records", fixture.admin_token, "POST", {
+                    "email": second_email, "password": second_password,
+                    "passwordConfirm": second_password, "verified": True,
+                })
+                second_token = api(fixture.url, "/api/collections/users/auth-with-password", None, "POST", {
+                    "identity": second_email, "password": second_password,
+                })["token"]
+                records = self.seed_readable_records(fixture)
+                changed, noop = toolbox_access.set_authenticated_read(FixturePB(fixture), apply=True)
+                self.assertEqual(set(changed) | set(noop), set(toolbox_access.COLLECTIONS))
 
-            for name in toolbox_access.COLLECTIONS:
-                self.assertGreaterEqual(api(fixture.url, f"/api/collections/{name}/records", fixture.user_token)["totalItems"], 1)
-                self.assertGreaterEqual(api(fixture.url, f"/api/collections/{name}/records", second_token)["totalItems"], 1)
-                self.assertEqual(api(fixture.url, f"/api/collections/{name}/records")["totalItems"], 0)
-                self.assertEqual(api(fixture.url, f"/api/collections/{name}/records/{records[name]['id']}", fixture.user_token)["id"], records[name]["id"])
-                with self.assertRaises(HTTPError) as denied_collection_view:
-                    api(fixture.url, f"/api/collections/{name}/records/{records[name]['id']}")
-                self.assertEqual(denied_collection_view.exception.code, 404)
-                denied_collection_view.exception.close()
+                for name in toolbox_access.COLLECTIONS:
+                    record_path = f"/api/collections/{name}/records/{records[name]['id']}"
+                    self.assertGreaterEqual(api(fixture.url, f"/api/collections/{name}/records", fixture.user_token)["totalItems"], 1)
+                    self.assertGreaterEqual(api(fixture.url, f"/api/collections/{name}/records", second_token)["totalItems"], 1)
+                    self.assertEqual(api(fixture.url, f"/api/collections/{name}/records")["totalItems"], 0)
+                    self.assertEqual(api(fixture.url, record_path, fixture.user_token)["id"], records[name]["id"])
+                    for token, method, path, body, status in (
+                        (None, "GET", record_path, None, 404),
+                        (fixture.user_token, "POST", f"/api/collections/{name}/records", {}, 403),
+                        (fixture.user_token, "PATCH", record_path, {}, 403),
+                        (fixture.user_token, "DELETE", record_path, None, 403),
+                    ):
+                        with self.assertRaises(HTTPError) as denied:
+                            api(fixture.url, path, token, method, body)
+                        self.assertEqual(denied.exception.code, status)
+                        denied.exception.close()
 
-            run_id = fixture.artifact["run"]
-            with self.assertRaises(HTTPError) as denied_view:
-                api(fixture.url, f"/api/collections/runs/records/{run_id}")
-            self.assertEqual(denied_view.exception.code, 404)
-            denied_view.exception.close()
-            for method, path, body in (
-                ("POST", "/api/collections/runs/records", {"harness": "claude", "candidate": "x", "case": "x"}),
-                ("PATCH", f"/api/collections/runs/records/{run_id}", {"candidate": "x"}),
-                ("DELETE", f"/api/collections/runs/records/{run_id}", None),
-            ):
-                with self.assertRaises(HTTPError) as denied_write:
-                    api(fixture.url, path, fixture.user_token, method, body)
-                self.assertEqual(denied_write.exception.code, 403)
-                denied_write.exception.close()
-
-            users = api(fixture.url, "/api/collections/users/records", fixture.user_token)
-            self.assertEqual(users["totalItems"], 1)
-            with self.assertRaises(HTTPError) as denied_other_user:
-                api(fixture.url, f"/api/collections/users/records/{users['items'][0]['id']}", second_token)
-            self.assertEqual(denied_other_user.exception.code, 404)
-            denied_other_user.exception.close()
-            file_token = api(fixture.url, "/api/files/token", fixture.user_token, "POST")["token"]
-            blob = fixture.artifact["blob"]
-            self.assertEqual(urlopen(fixture.url + f"/api/files/artifacts/{fixture.artifact['id']}/{blob}?token={file_token}").read(), fixture.artifact_bytes)
+                users = api(fixture.url, "/api/collections/users/records", fixture.user_token)
+                self.assertEqual(users["totalItems"], 1)
+                with self.assertRaises(HTTPError) as denied_other_user:
+                    api(fixture.url, f"/api/collections/users/records/{users['items'][0]['id']}", second_token)
+                self.assertEqual(denied_other_user.exception.code, 404)
+                denied_other_user.exception.close()
+                file_token = api(fixture.url, "/api/files/token", fixture.user_token, "POST")["token"]
+                blob = fixture.artifact["blob"]
+                self.assertEqual(urlopen(fixture.url + f"/api/files/artifacts/{fixture.artifact['id']}/{blob}?token={file_token}").read(), fixture.artifact_bytes)
 
 
 if __name__ == "__main__":
