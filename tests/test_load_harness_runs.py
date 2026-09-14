@@ -253,6 +253,13 @@ class MeasurementContract(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     L.build_run_row(_measurement_row(duration_ms=value), None, None)
 
+    def test_boolean_metrics_reject_coercible_non_booleans_before_writes(self):
+        for field, value in (("passed", "false"), ("passed", 0), ("skill_used", "true"),
+                             ("skill_used", 1)):
+            with self.subTest(field=field, value=value):
+                with self.assertRaises(ValueError):
+                    L.build_run_row(_measurement_row(**{field: value}), None, None)
+
     def test_negative_integer_exit_code_is_an_invalid_execution_not_bad_measurement(self):
         execution = L.build_run_row(_measurement_row(exit_code=-1), None, None)["measurement"]["execution"]
         self.assertEqual(execution["validity"], "invalid")

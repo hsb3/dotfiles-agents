@@ -670,6 +670,10 @@ def _fill_from_rollup(body: dict, rollup: dict) -> None:
 
 
 def _validate_metrics(body: dict) -> None:
+    for field in ("passed", "skill_used"):
+        value = body.get(field)
+        if value is not None and type(value) is not bool:
+            raise ValueError(f"{field} must be a boolean")
     exit_code = body.get("exit_code")
     if exit_code is not None and type(exit_code) is not int:
         raise ValueError("exit_code must be an integer")
