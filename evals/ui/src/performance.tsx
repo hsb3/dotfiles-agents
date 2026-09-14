@@ -57,6 +57,10 @@ export function executionValidity(run: { measurement?: unknown }) {
   };
 }
 
+export function executionPreconditions(run: { measurement?: unknown }): unknown | null {
+  return object(v1Measurement(run)?.execution)?.preconditions ?? null;
+}
+
 export function responseMetric(response: { measurement?: unknown; [key: string]: unknown }, field: "tokens" | "duration_ms"): number | null {
   const available = object(v1Measurement(response)?.available);
   const value = response[field];
@@ -70,6 +74,10 @@ export function fileTokenResult(fresh: boolean, reply: { kind: string; token?: s
     return { state: "ready" as const, token: reply.token };
   }
   return { state: reply.kind === "access" ? "access" as const : "error" as const };
+}
+
+export function fileRequestIsCurrent(requests: ReadonlyMap<string, number>, id: string, request: number) {
+  return requests.get(id) === request;
 }
 
 export function performanceListState(state: PerformanceListState, action: PerformanceListAction): PerformanceListState {
@@ -216,8 +224,7 @@ function Comparison({ selected }: { selected: Run[] }) {
 
 function DetailRecord({ run }: { run: Run }) {
   const execution = executionValidity(run);
-  const measurement = object(run.measurement);
-  const preconditions = object(measurement?.execution)?.preconditions;
+  const preconditions = executionPreconditions(run);
   return <section className="surface performance-panel">
     <h2>Run record</h2>
     <dl>
@@ -243,20 +250,21 @@ function RunDetail({ session, id, back }: { session: Session; id: string; back: 
   const [eventPage, setEventPage] = useState(1);
   const [toolPage, setToolPage] = useState(1);
   const [files, setFiles] = useState<Record<string, "loading" | "access" | "error">>({});
-  const fileRequest = useRef(0);
+  const fileRequests = useRef(new Map<string, number>());
   const run = useLoad(`run:${id}`, (signal) => runById(session, id, signal));
   const evidence = useLoad(`evidence:${id}`, (signal) => evidenceForRun(session, id, signal));
   const events = useLoad(`events:${id}:${eventPage}`, (signal) => eventsForRun(session, id, eventPage, signal));
   const tools = useLoad(`tools:${id}:${toolPage}`, (signal) => toolCallsForRun(session, id, toolPage, signal));
   useEffect(() => () => {
-    fileRequest.current += 1;
+    fileRequests.current.clear();
   }, []);
   const open = async (artifact: { id: string; blob?: string }) => {
-    const request = ++fileRequest.current;
+    const request = (fileRequests.current.get(artifact.id) ?? 0) + 1;
+    fileRequests.current.set(artifact.id, request);
     setFiles((old) => ({ ...old, [artifact.id]: "loading" }));
     const token = await protectedFileToken(session);
-    if (request !== fileRequest.current) return;
-    const result = fileTokenResult(request === fileRequest.current, token);
+    if (!fileRequestIsCurrent(fileRequests.current, artifact.id, request)) return;
+    const result = fileTokenResult(fileRequestIsCurrent(fileRequests.current, artifact.id, request), token);
     if (result.state === "stale") return;
     if (result.state !== "ready") {
       setFiles((old) => ({ ...old, [artifact.id]: result.state }));

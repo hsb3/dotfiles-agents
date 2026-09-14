@@ -32,6 +32,8 @@ assert.equal(performance.sourceRevision(v1), 'abc123');
 assert.equal(performance.sourceRevision({measurement: {version: 1, source_identity: {revision: {available: false, value: 'secret'}}}}), null);
 assert.deepEqual(performance.executionValidity(v1), {validity: 'valid', reason: 'grade failed'});
 assert.deepEqual(performance.executionValidity({measurement: {version: 2, execution: {validity: 'valid'}}}), {validity: null, reason: null});
+assert.deepEqual(performance.executionPreconditions({measurement: {version: 1, available: {}, execution: {preconditions: {fixture: 'local'}}}}), {fixture: 'local'});
+assert.equal(performance.executionPreconditions({measurement: {version: 2, available: {}, execution: {preconditions: {fixture: 'unknown'}}}}), null);
 assert.equal(performance.responseMetric({...v1, tokens: 0}, 'tokens'), 0);
 assert.equal(performance.responseMetric({...v1, duration_ms: 0}, 'duration_ms'), 0);
 assert.equal(performance.responseMetric({tokens: 0, measurement: {version: 1, available: {tokens: false}}}, 'tokens'), null);
@@ -43,6 +45,11 @@ assert.deepEqual(performance.fileTokenResult(false, {kind: 'ok', token: 'fresh'}
 assert.deepEqual(performance.fileTokenResult(true, {kind: 'ok', token: 'fresh'}), {state: 'ready', token: 'fresh'});
 assert.deepEqual(performance.fileTokenResult(true, {kind: 'access'}), {state: 'access'});
 assert.deepEqual(performance.fileTokenResult(true, {kind: 'error'}), {state: 'error'});
+const requests = new Map([['artifact-a', 1], ['artifact-b', 1]]);
+assert.equal(performance.fileRequestIsCurrent(requests, 'artifact-a', 1), true);
+requests.set('artifact-b', 2);
+assert.equal(performance.fileRequestIsCurrent(requests, 'artifact-a', 1), true);
+assert.equal(performance.fileRequestIsCurrent(requests, 'artifact-b', 1), false);
 """)
 
 
@@ -88,8 +95,8 @@ class PerformanceUiContracts(unittest.TestCase):
 
     def test_reconciliation_keeps_detail_context_and_ignores_stale_file_tokens(self):
         self.assertNotIn("as never", SOURCE)
-        self.assertIn("const request = ++fileRequest.current;", SOURCE)
-        self.assertIn("if (request !== fileRequest.current) return;", SOURCE)
+        self.assertIn("fileRequests.current.set(artifact.id, request);", SOURCE)
+        self.assertIn("fileRequestIsCurrent(fileRequests.current, artifact.id, request)", SOURCE)
         self.assertIn("export function performanceListState", SOURCE)
         self.assertIn("campaignQuery", SOURCE)
         self.assertIn("campaignPage", SOURCE)
