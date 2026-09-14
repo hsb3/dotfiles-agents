@@ -6,7 +6,11 @@ export type ApiResult<T> =
 export type AdapterOptions = RequestInit & { token?: string; fetcher?: Fetcher };
 type Timer = ReturnType<typeof setTimeout>;
 type Clock = { now(): number; setTimeout(callback: () => void, delay: number): Timer; clearTimeout(timer: Timer): void };
-const systemClock: Clock = { now: Date.now, setTimeout, clearTimeout };
+const systemClock: Clock = {
+  now: () => Date.now(),
+  setTimeout: (callback, delay) => globalThis.setTimeout(callback, delay),
+  clearTimeout: (timer) => globalThis.clearTimeout(timer),
+};
 
 function jwtExpiry(token: string): number | undefined {
   try {

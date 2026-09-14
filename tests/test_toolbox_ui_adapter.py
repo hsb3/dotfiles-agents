@@ -99,6 +99,40 @@ assert.equal(session.token, '');
 assert.deepEqual(session.snapshot(), {selections: {}, loaded: {}});
 """)
 
+    def test_default_clock_keeps_native_timer_receiver_for_login_and_logout(self):
+        script = """import assert from 'node:assert/strict';
+const nativeSetTimeout = globalThis.setTimeout;
+const nativeClearTimeout = globalThis.clearTimeout;
+let setCalls = 0; let clearCalls = 0;
+globalThis.setTimeout = function(callback, delay) {
+  assert.equal(this, globalThis);
+  setCalls += 1;
+  return nativeSetTimeout(callback, delay);
+};
+globalThis.clearTimeout = function(timer) {
+  assert.equal(this, globalThis);
+  clearCalls += 1;
+  return nativeClearTimeout(timer);
+};
+try {
+  const { Session } = await import(%s + '?native-timer-receiver');
+  const token = 'header.' + btoa(JSON.stringify({exp: Math.floor(Date.now() / 1_000) + 60})).replaceAll('=', '') + '.signature';
+  const session = new Session(async () => new Response(JSON.stringify({token})));
+  assert.equal((await session.login('a@example.test', 'secret')).kind, 'ok');
+  session.logout();
+  assert.equal(setCalls, 1);
+  assert.equal(clearCalls, 1);
+} finally {
+  globalThis.setTimeout = nativeSetTimeout;
+  globalThis.clearTimeout = nativeClearTimeout;
+}
+""" % json.dumps(API.as_uri())
+        result = subprocess.run(
+            ["bun", "--no-install", "--input-type=module", "-e", script], text=True,
+            capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_clear_subscribers_observe_only_effective_clears(self):
         self.run_module("""
 const timers = [];
