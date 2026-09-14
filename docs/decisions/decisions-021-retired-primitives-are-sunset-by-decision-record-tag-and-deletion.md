@@ -39,7 +39,7 @@ Owner ruling, 2026-09-08. A retired primitive or plugin is sunset in four moves,
    destination: a card on another board, a generic primitive here, or "dropped, because ...".
    Extraction happens here, before anything is deleted.
 2. **Tag the last shipping commit** `retired/<id>@<version>` and push the tag, so the code is
-   one `git show` away with no archaeology. `dev-legacy` is the same idea as a branch. The tag
+   one `git show` away with no archaeology. The tag
    goes on `dev`'s last commit that carries the unit, not on a PR branch that squash-merge will
    orphan.
 3. **Delete in one commit with a removal verb**, which `scripts/check_removals.py` already
@@ -50,7 +50,8 @@ Owner ruling, 2026-09-08. A retired primitive or plugin is sunset in four moves,
 
 ## Applied to kaneo
 
-- **Tag:** `retired/kaneo@0.13.3` on `315035c`, the last `dev` commit that ships the plugin.
+- **Tag:** `retired/kaneo@0.13.3` on `315035c`, the last `dev` commit that ships the plugin
+  (since the 2026-09-14 fresh root, both resolve only in `hsb3/dotfiles-agents-archive`).
 - **Removed:** roster rows `kaneo`, `kaneo-manager`, `kaneo-mcp-policy`, `kaneo-bash-tripwire`,
   `kaneo-preflight`, `kaneo-server`; `primitives-core/skills/kaneo/`,
   `primitives-core/agents/kaneo-manager.md`, the three hook directories,
@@ -78,7 +79,8 @@ Owner ruling, 2026-09-08. A retired primitive or plugin is sunset in four moves,
 ## Consequences
 
 - The marketplace loses a plugin. Anyone with `kaneo@dotfiles-agents` installed keeps their
-  cached copy and stops receiving updates; the code is at `retired/kaneo@0.13.3`.
+  cached copy and stops receiving updates; the code is at `retired/kaneo@0.13.3` in the
+  private archive repo.
 - `solo-skills`, `code-desk`, and `atelier` each ship changed bytes (a lost dual home, a lost
   adapter, a lost tracker reference) and bump per `check_version_bump.py`. The removal is
   declared in the commit message per `check_removals.py`; there is no removals inventory.

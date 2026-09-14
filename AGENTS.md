@@ -83,8 +83,10 @@ Merge or abandon a branch **within the session that opened it** — parked work 
 later sessions and dies with the branch. Delete after merge (`--delete-branch`, or a separate
 `git push origin --delete` if the tree is dirty, since the flag switches branches). Before
 deleting any branch, `git rev-list --count origin/dev..<branch>`; nonzero means diff each
-changed file against `dev` before calling the work superseded. `dev-legacy` is a deliberate
-pre-restructure archive — never delete it.
+changed file against `dev` before calling the work superseded. History before 2026-09-14
+(including `dev-legacy`, `main-pre-cutover` and every earlier tag) lives in the private repo
+`hsb3/dotfiles-agents-archive`; the public repo starts at a fresh root (yk25), so a SHA or tag
+from before that date resolves only there.
 
 **Worktrees are temporary execution state.** Native Claude Code stays in `.claude/worktrees/`
 and Codex/Atelier stays in `.git/atelier-codex/checkouts/`; manual task checkouts go under

@@ -26,7 +26,7 @@ this ADR **restores** 0014 §3's intent and extends it with parentage and vendor
 
 The repo is about to serve a second vendor: the same primitives shaped for **opencode**,
 which was always the intent (`targets:` field, the dropped Phase-3 translation surface at
-`4e8a05b`, restorable precedent on `dev-legacy`). Three structural facts force a decision:
+`4e8a05b`, restorable precedent on `dev-legacy`, both now in `hsb3/dotfiles-agents-archive`). Three structural facts force a decision:
 
 1. **The Claude Code dist squats at the repo root** (`plugins/`, `.claude-plugin/`,
    `PLUGINS.md`) because consumers resolve the default branch's root
