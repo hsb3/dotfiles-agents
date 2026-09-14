@@ -230,6 +230,8 @@ class MeasurementContract(unittest.TestCase):
         self.assertEqual(measurement["execution"]["validity"], "valid")
         self.assertEqual(measurement["execution"]["preconditions"], row["preconditions"])
         self.assertIsInstance(measurement["source_identity"]["record_sha256"], str)
+        self.assertEqual(measurement["source_identity"]["record_canonicalization"],
+                         "json-sorted-keys-utf8")
         self.assertFalse(measurement["source_identity"]["log_available"])
         self.assertIsNone(measurement["source_identity"]["log_sha256"])
         self.assertEqual(measurement["source_identity"]["log_observation"], "unobserved-local")
@@ -278,6 +280,14 @@ class MeasurementContract(unittest.TestCase):
         ), None, None)["measurement"]["source_identity"]
         self.assertEqual(identity["log_observation"], "absent")
 
+    def test_unsupported_row_with_process_or_plugin_failure_is_invalid(self):
+        for overrides in ({"exit_code": -1}, {"plugin_errors": ["broken"]}):
+            with self.subTest(overrides=overrides):
+                execution = L.build_run_row(_measurement_row(
+                    passed=None, error="unsupported: opencode cannot host kind=hook", **overrides
+                ), None, None)["measurement"]["execution"]
+                self.assertEqual(execution["validity"], "invalid")
+
     def test_log_digest_is_of_the_actual_log_bytes(self):
         raw = _log(_oc("text", {"text": "hi"}, 1)).encode()
         with tempfile.TemporaryDirectory() as d:
@@ -307,6 +317,19 @@ class MeasurementContract(unittest.TestCase):
         self.assertEqual(counts, (0, 0, 1))
         self.assertEqual(prior["model_usage"], {"hosted": 1})
         self.assertEqual(prior["provenance"], {"tools": ["Read"]})
+
+    def test_logless_replay_preserves_hosted_session_and_era_even_without_envelope(self):
+        body = L.build_run_row(_measurement_row(), None, None)
+        prior = {"id": "run-1", "session_id": "hosted-session", "era": "legacy"}
+        updates = []
+
+        class PB:
+            def update(self, _coll, _id, update):
+                updates.append(update)
+
+        L._apply_runs(PB(), {L.run_key(body): body}, {L.run_key(body): prior}, False)
+        self.assertEqual(updates[0]["session_id"], "hosted-session")
+        self.assertEqual(updates[0]["era"], "legacy")
 
     def test_empty_child_replay_does_not_write_existing_relations(self):
         class PB:

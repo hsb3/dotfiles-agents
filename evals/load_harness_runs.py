@@ -712,15 +712,15 @@ def _execution(row: dict) -> dict:
     exit_code = row.get("exit_code")
     execution = {"preconditions": preconditions if isinstance(preconditions, dict) else None,
                  "plugin_errors": plugin_errors}
+    if exit_code is not None and exit_code != 0:
+        return dict(execution, validity="invalid", reason="producer exit_code was nonzero")
+    if isinstance(plugin_errors, list) and plugin_errors:
+        return dict(execution, validity="invalid", reason="producer recorded plugin_errors")
     if (row.get("passed") is None and isinstance(error, str)
             and error.startswith("unsupported:")):
         return dict(execution, validity="skipped", reason="explicit unsupported producer row")
     if isinstance(error, str) and error:
         return dict(execution, validity="invalid", reason="producer recorded error")
-    if isinstance(plugin_errors, list) and plugin_errors:
-        return dict(execution, validity="invalid", reason="producer recorded plugin_errors")
-    if exit_code is not None and exit_code != 0:
-        return dict(execution, validity="invalid", reason="producer exit_code was nonzero")
     if type(row.get("passed")) is not bool:
         return dict(execution, validity="unknown", reason="passed was not an explicit boolean")
     if exit_code != 0:
@@ -757,6 +757,7 @@ def _measurement(row: dict, body: dict, parsed: ParsedLog | None) -> dict:
         "execution": _execution(row),
         "source_identity": {
             "record_sha256": _record_sha256(row),
+            "record_canonicalization": "json-sorted-keys-utf8",
             "log_sha256": log_sha256,
             "log_available": log_sha256 is not None,
             "log_observation": log_observation,
@@ -886,6 +887,7 @@ def _apply_runs(pb: PB, runs: dict[str, dict], existing: dict[str, dict],
                 db_body[field] = None
         rec = existing.get(key)
         if rec is not None:
+            _preserve_unobserved_log_fields(db_body, rec)
             _preserve_observed_log_identity(db_body, rec)
         if rec is None:
             created += 1
@@ -899,6 +901,16 @@ def _apply_runs(pb: PB, runs: dict[str, dict], existing: dict[str, dict],
             else:
                 unchanged += 1
     return run_id_map, (created, updated, unchanged)
+
+
+def _preserve_unobserved_log_fields(body: dict, rec: dict) -> None:
+    current = body.get("measurement", {}).get("source_identity", {})
+    if current.get("log_observation") != "unobserved-local":
+        return
+    if rec.get("session_id"):
+        body["session_id"] = rec["session_id"]
+    if rec.get("era"):
+        body["era"] = rec["era"]
 
 
 def _preserve_observed_log_identity(body: dict, rec: dict) -> None:
