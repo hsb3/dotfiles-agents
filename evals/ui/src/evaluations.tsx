@@ -1,7 +1,7 @@
 import { Column, Grid, Pagination } from "@carbon/react";
 import { useEffect, useState } from "react";
 import { Session } from "./api";
-import { evaluations, jobCoverage, type Coverage, type Evaluation } from "./data";
+import { evaluations, jobCoverage, recordScope, type Coverage, type Evaluation } from "./data";
 import { Block, PageCrumbs, StateNotice } from "./ui";
 
 type State = "loading" | "access" | "error" | "empty" | "populated";
@@ -15,9 +15,11 @@ export function AssessmentRows({ rows }: { rows: Evaluation[] }) {
     <ul>
       {rows.map((r) => (
         <li key={r.id}>
-          {r.framework} · {r.element} · extender {r.extender} · {r.verdict};{" "}
+          {r.expand?.framework?.name || r.framework} · {r.expand?.element?.name || r.element} · extender {r.expand?.extender?.name || r.extender} · {r.verdict};{" "}
           {r.assessor || "assessor unavailable"}; {r.evidence || "evidence unavailable"}
-          {r.eval_run && `; eval run ${r.eval_run}`}
+          {r.eval_run && <>
+            ; <a href={`#performance?campaign=${encodeURIComponent(r.eval_run)}`}>eval run {r.eval_run}</a>
+          </>}
         </li>
       ))}
     </ul>
@@ -31,7 +33,9 @@ export function CoverageRows({ rows }: { rows: Coverage[] }) {
         <li key={r.id}>
           Current job association: {r.expand?.job?.id ?? r.job} ·{" "}
           {r.expand?.job?.name || "job name unavailable"}
-          {r.eval_run && ` · eval run ${r.eval_run}`}
+          {r.eval_run && <>
+            {' · '}<a href={`#performance?campaign=${encodeURIComponent(r.eval_run)}`}>eval run {r.eval_run}</a>
+          </>}
           {r.status && ` · ${r.status}`}
           {r.disposition && ` · ${r.disposition}`}
           {r.rationale && `; ${r.rationale}`}
@@ -50,10 +54,11 @@ export function Evaluations({ session, onExpired }: { session: Session; onExpire
   const [cp, setCp] = useState(1);
   const [at, setAt] = useState(0);
   const [ct, setCt] = useState(0);
+  const extender = typeof location === "undefined" ? undefined : recordScope(location.hash, "extender");
 
   useEffect(() => {
     const x = new AbortController();
-    evaluations(session, ap, x.signal).then((r) => {
+    evaluations(session, extender, ap, x.signal).then((r) => {
       if (x.signal.aborted) return;
       if (r.kind === "ok") {
         setA(r.data.items);
@@ -65,7 +70,7 @@ export function Evaluations({ session, onExpired }: { session: Session; onExpire
       }
     });
     return () => x.abort();
-  }, [ap, onExpired, session]);
+  }, [ap, extender, onExpired, session]);
 
   useEffect(() => {
     const x = new AbortController();

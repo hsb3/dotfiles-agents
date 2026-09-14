@@ -5,7 +5,9 @@ import {
   documentationFor,
   extenderById,
   extenders,
+  recordScope,
   safeHref,
+  sourceById,
   type DocumentationFile,
   type Extender,
 } from "./data";
@@ -18,12 +20,20 @@ const expire = (r: { kind: string; status?: number }, done: () => void) => {
 };
 
 export function DocumentationReader({ parent }: { parent: Extender }) {
-  const href = parent.source && safeHref(parent.source);
+  const source = parent.expand?.source;
+  const href = source?.url && safeHref(source.url);
 
   return (
     <>
       <p>Entry file: {parent.entry_file || "Entry file unavailable"}</p>
-      <p>{href ? <a href={href}>Source</a> : parent.source || "Source unavailable"}</p>
+      <p>Source: {source?.name || "Source unavailable"}</p>
+      {source && (
+        <p>{[source.publisher_kind, source.maintenance].filter(Boolean).join(" · ") || "Source metadata unavailable"}</p>
+      )}
+      <p>{href ? <a href={href}>Visit source</a> : "Source URL unavailable"}</p>
+      <Button kind="tertiary" href={`#evaluations?extender=${encodeURIComponent(parent.id)}`}>
+        View assessments
+      </Button>
       <pre>{parent.body || "No stored extender body."}</pre>
     </>
   );
@@ -35,7 +45,9 @@ export function Documentation({ session, onExpired }: { session: Session; onExpi
   const [total, setTotal] = useState(0);
   const [state, setState] = useState<State>("loading");
   const [rows, setRows] = useState<Extender[]>([]);
-  const [id, setId] = useState<string>();
+  const [id, setId] = useState<string | undefined>(() =>
+    typeof location === "undefined" ? undefined : recordScope(location.hash, "extender"),
+  );
   const [parent, setParent] = useState<Extender>();
   const [parentState, setParentState] = useState<State>("empty");
   const [files, setFiles] = useState<DocumentationFile[]>([]);
@@ -71,8 +83,17 @@ export function Documentation({ session, onExpired }: { session: Session; onExpi
     extenderById(session, id, c.signal).then((r) => {
       if (c.signal.aborted) return;
       if (r.kind === "ok") {
-        setParent(r.data);
-        setParentState("populated");
+        if (!r.data.source) {
+          setParent(r.data);
+          setParentState("populated");
+          return;
+        }
+        sourceById(session, r.data.source, c.signal).then((source) => {
+          if (c.signal.aborted) return;
+          if (source.kind === "ok") setParent({ ...r.data, expand: { source: source.data } });
+          else expire(source, onExpired);
+          setParentState("populated");
+        });
       } else {
         setParentState(r.kind);
         expire(r, onExpired);

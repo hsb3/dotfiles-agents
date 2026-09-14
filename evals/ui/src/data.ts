@@ -38,9 +38,28 @@ export type DocumentationFile = { id: string; extender: string; role: string; co
 export const documentationFor = (session: Session, extender: string, page = 1, signal?: AbortSignal) =>
   pageRecords<DocumentationFile>(session, "/api/collections/files/records", { fields: "id,extender,role,content,relpath", filter: `extender = ${pocketBaseLiteral(extender)}`, sort: "+relpath", page, signal });
 
-export type Extender = { id: string; slug: string; name: string; kind: string; description: string; body: string; entry_file: string; source: string };
+export type Source = {
+  id: string;
+  name?: string;
+  url?: string;
+  publisher_kind?: string;
+  maintenance?: string;
+};
+export type Extender = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  description: string;
+  body: string;
+  entry_file: string;
+  source: string;
+  expand?: { source?: Source };
+};
 export const extenderById = (session: Session, id: string, signal?: AbortSignal) =>
   session.request<Extender>(`/api/collections/extenders/records/${encodeURIComponent(id)}?fields=id,body,entry_file,source`, { signal });
+export const sourceById = (session: Session, id: string, signal?: AbortSignal) =>
+  session.request<Source>(`/api/collections/sources/records/${encodeURIComponent(id)}?fields=id,name,url,publisher_kind,maintenance`, { signal });
 
 export type Distribution = { id: string; slug: string; kind: string; version: string; members: string[] };
 export const distributions = (session: Session, page = 1, signal?: AbortSignal) =>
@@ -57,9 +76,28 @@ export type JobCoverage = { id: string; job: string; eval_run?: string };
 export const coverageFor = (session: Session, job: string, signal?: AbortSignal) =>
   pageRecords<JobCoverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run", filter: `job = ${pocketBaseLiteral(job)}`, sort: "+created", signal });
 
-export type Evaluation = Assessment & { verdict: string; evidence: string; assessor: string };
-export const evaluations = (session: Session, page = 1, signal?: AbortSignal) =>
-  pageRecords<Evaluation>(session, "/api/collections/assessments/records", { fields: "id,framework,element,extender,eval_run,verdict,evidence,assessor", sort: "+created", page, signal });
+export type RelatedRecord = { id?: string; name?: string };
+export type Evaluation = Assessment & {
+  verdict: string;
+  evidence: string;
+  assessor: string;
+  expand?: { extender?: RelatedRecord; framework?: RelatedRecord; element?: RelatedRecord };
+};
+export function evaluations(session: Session, page?: number, signal?: AbortSignal): Promise<ApiResult<Page<Evaluation>>>;
+export function evaluations(session: Session, extender?: string, page?: number, signal?: AbortSignal): Promise<ApiResult<Page<Evaluation>>>;
+export function evaluations(session: Session, extenderOrPage: string | number = "", pageOrSignal: number | AbortSignal = 1, signal?: AbortSignal) {
+  const extender = typeof extenderOrPage === "string" ? extenderOrPage : "";
+  const page = typeof extenderOrPage === "number" ? extenderOrPage : typeof pageOrSignal === "number" ? pageOrSignal : 1;
+  const requestSignal = typeof extenderOrPage === "number" ? pageOrSignal as AbortSignal : signal;
+  return pageRecords<Evaluation>(session, "/api/collections/assessments/records", {
+    fields: "id,framework,element,extender,eval_run,verdict,evidence,assessor,expand.extender.id,expand.extender.name,expand.framework.id,expand.framework.name,expand.element.id,expand.element.name",
+    filter: extender ? `extender = ${pocketBaseLiteral(extender)}` : undefined,
+    expand: "extender,framework,element",
+    sort: "+created",
+    page,
+    signal: requestSignal,
+  });
+}
 export type Coverage = JobCoverage & { status: string; disposition: string; rationale: string; expand?: { job?: { id?: string; name?: string } } };
 export const jobCoverage = (session: Session, page = 1, signal?: AbortSignal) =>
   pageRecords<Coverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run,status,disposition,rationale,expand.job.id,expand.job.name", expand: "job", sort: "+created", page, signal });
@@ -77,4 +115,10 @@ export function safeHref(value: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+export function recordScope(hash: string, key: string): string | undefined {
+  const query = hash.indexOf("?");
+  const value = new URLSearchParams(query === -1 ? "" : hash.slice(query + 1)).get(key)?.trim();
+  return value || undefined;
 }
