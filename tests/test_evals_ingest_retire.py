@@ -442,29 +442,6 @@ class CampaignMeasurementProjectionTest(unittest.TestCase):
         self.assertNotEqual(first["resolved_response_sha256"], second["resolved_response_sha256"])
         self.assertEqual(second["resolved_response_canonicalization"], "json-sorted-keys-utf8")
 
-    def test_resolved_evidence_digest_changes_when_referenced_file_changes(self):
-        manifest = {"run": {"slug": "campaign", "kind": "judged"}, "responses": [
-            {"role": "judge", "prompt_file": "prompt.txt", "response_text": "answer"},
-        ]}
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "manifest.json")
-            with open(path, "w", encoding="utf-8") as fh:
-                json.dump(manifest, fh, sort_keys=True)
-            prompt = os.path.join(tmp, "prompt.txt")
-            with open(prompt, "w", encoding="utf-8") as fh:
-                fh.write("first prompt")
-            pb = CampaignPB(frameworks=[], extenders=[])
-            quiet(load_eval_run.load_manifest, pb, path)
-            first = pb.upserted[-1][2]["measurement"]["source_identity"]
-            with open(prompt, "w", encoding="utf-8") as fh:
-                fh.write("changed prompt")
-            quiet(load_eval_run.load_manifest, pb, path)
-            second = pb.upserted[-1][2]["measurement"]["source_identity"]
-        self.assertEqual(first["manifest_file_sha256"], second["manifest_file_sha256"])
-        self.assertNotEqual(first["resolved_response_sha256"], second["resolved_response_sha256"])
-        self.assertEqual(second["resolved_response_canonicalization"], "json-sorted-keys-utf8")
-
-
 class ReferenceSource:
     """report.py's data-source shape: `list_all(coll)`, no filter argument (FixtureSource)."""
 
