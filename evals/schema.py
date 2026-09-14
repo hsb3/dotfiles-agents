@@ -308,6 +308,7 @@ def collection_specs(ids):
                 rel("extenders", ids["extenders"], max_select=100),
                 num("tokens"),
                 num("duration_ms"),
+                js("measurement"),
                 *stamps(),
             ],
             "indexes": [
@@ -442,6 +443,7 @@ def collection_specs(ids):
                 js("tool_names"),
                 js("model_usage"),
                 js("provenance"),
+                js("measurement"),
                 text("log_path"),
                 text("ts"),
                 *stamps(),

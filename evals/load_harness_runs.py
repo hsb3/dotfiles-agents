@@ -44,6 +44,7 @@ import binascii
 import copy
 import hashlib
 import json
+import math
 import os
 import sys
 from dataclasses import dataclass, field
@@ -67,12 +68,17 @@ LEDGER_FIELDS = (
     "grader_model", "passed", "skill_used", "exit_code", "num_turns", "cost_usd",
     "duration_ms", "input_tokens", "output_tokens", "cache_creation_tokens",
     "cache_read_tokens", "error", "workspace", "checks", "grades", "tool_names", "ts",
-    "cli_version",
+    "cli_version", "preconditions", "plugin_errors",
 )
 ROLLUP_FIELDS = (
     "cost_usd", "duration_ms", "input_tokens", "output_tokens", "cache_read_tokens",
     "cache_creation_tokens",
 )
+MEASUREMENT_FIELDS = (
+    "passed", "skill_used", "exit_code", "num_turns", "cost_usd", "duration_ms",
+    "input_tokens", "output_tokens", "cache_creation_tokens", "cache_read_tokens",
+)
+RESOURCE_METRICS = MEASUREMENT_FIELDS[3:]
 PROVENANCE_KEYS = (
     "tools", "plugins", "slash_commands", "apiKeySource", "permissionMode",
     "capabilities", "memory_paths",
@@ -88,7 +94,7 @@ OC_WRITE_KEYS = (("content", "write_content"), ("newString", "edit_diff"))
 CONTENT_DEDUP = {"$deduped": "content"}
 DIFF_DEDUP = {"$deduped": "diff"}
 
-RUN_JSON = {"checks", "grades", "tool_names", "model_usage", "provenance"}
+RUN_JSON = {"checks", "grades", "tool_names", "model_usage", "provenance", "measurement"}
 RUN_EVENT_FIELDS = (
     "seq", "ts", "vendor", "role", "event_type", "tool_name", "tool_call_id", "status",
     "is_error", "input_tokens", "output_tokens", "cache_read_tokens",
@@ -127,6 +133,7 @@ class ParsedLog:
     rollup: dict
     model_usage: object = None
     provenance: object = None
+    log_sha256: str | None = None
 
 
 @dataclass
@@ -623,11 +630,15 @@ def _opencode_rollup(costs: list[float], token_steps: list[dict],
 def _parse_log_file(row: dict, fspath: str | None) -> ParsedLog | None:
     if not fspath or not os.path.isfile(fspath):
         return None
-    with open(fspath, encoding="utf-8") as fh:
-        text = fh.read()
+    with open(fspath, "rb") as fh:
+        raw = fh.read()
+    text = raw.decode("utf-8")
     if row.get("harness") == "opencode":
-        return parse_opencode_log(text)
-    return parse_claude_log(text)
+        parsed = parse_opencode_log(text)
+    else:
+        parsed = parse_claude_log(text)
+    parsed.log_sha256 = hashlib.sha256(raw).hexdigest()
+    return parsed
 
 
 def build_run_row(row: dict, parsed: ParsedLog | None, log_rel: str | None) -> dict:
@@ -640,13 +651,15 @@ def build_run_row(row: dict, parsed: ParsedLog | None, log_rel: str | None) -> d
     if parsed is None:
         body["era"] = "na" if row.get("harness") == "opencode" else None
         body["session_id"] = ""
-        return body
-    body["era"] = parsed.era
-    body["session_id"] = parsed.session_id or ""
-    body["model_usage"] = parsed.model_usage
-    body["provenance"] = parsed.provenance
-    if parsed.era == "na":
-        _fill_from_rollup(body, parsed.rollup)
+    else:
+        body["era"] = parsed.era
+        body["session_id"] = parsed.session_id or ""
+        body["model_usage"] = parsed.model_usage
+        body["provenance"] = parsed.provenance
+        if parsed.era == "na":
+            _fill_from_rollup(body, parsed.rollup)
+    _validate_metrics(body)
+    body["measurement"] = _measurement(row, body, parsed)
     return body
 
 
@@ -654,6 +667,102 @@ def _fill_from_rollup(body: dict, rollup: dict) -> None:
     for f in ROLLUP_FIELDS:
         if body.get(f) is None and rollup.get(f) is not None:
             body[f] = rollup[f]
+
+
+def _validate_metrics(body: dict) -> None:
+    exit_code = body.get("exit_code")
+    if exit_code is not None and type(exit_code) is not int:
+        raise ValueError("exit_code must be an integer")
+    for field in RESOURCE_METRICS:
+        value = body.get(field)
+        if value is None:
+            continue
+        if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"{field} must be a finite nonnegative int or float")
+
+
+def _record_sha256(row: dict) -> str:
+    source = json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+
+def _preconditions_valid(value: object) -> bool:
+    if not isinstance(value, dict) or not value:
+        return False
+    strings = ("harness", "cli_version", "model", "campaign", "network_assumption")
+    if any(type(value.get(key)) is not str for key in strings):
+        return False
+    if "grader_model" not in value:
+        return False
+    if value["grader_model"] is not None and type(value["grader_model"]) is not str:
+        return False
+    timeout = value.get("timeout")
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout < 0:
+        return False
+    for key in ("auth_env_present", "self_installs"):
+        if not isinstance(value.get(key), list) or any(type(item) is not str for item in value[key]):
+            return False
+    return True
+
+
+def _execution(row: dict) -> dict:
+    preconditions = row.get("preconditions")
+    plugin_errors = row.get("plugin_errors")
+    error = row.get("error")
+    exit_code = row.get("exit_code")
+    execution = {"preconditions": preconditions if isinstance(preconditions, dict) else None,
+                 "plugin_errors": plugin_errors}
+    if (row.get("passed") is None and isinstance(error, str)
+            and error.startswith("unsupported:")):
+        return dict(execution, validity="skipped", reason="explicit unsupported producer row")
+    if isinstance(error, str) and error:
+        return dict(execution, validity="invalid", reason="producer recorded error")
+    if isinstance(plugin_errors, list) and plugin_errors:
+        return dict(execution, validity="invalid", reason="producer recorded plugin_errors")
+    if exit_code is not None and exit_code != 0:
+        return dict(execution, validity="invalid", reason="producer exit_code was nonzero")
+    if type(row.get("passed")) is not bool:
+        return dict(execution, validity="unknown", reason="passed was not an explicit boolean")
+    if exit_code != 0:
+        return dict(execution, validity="unknown", reason="exit_code was not explicitly zero")
+    if not isinstance(plugin_errors, list):
+        return dict(execution, validity="unknown", reason="plugin_errors were not recorded")
+    if not _preconditions_valid(preconditions):
+        return dict(execution, validity="unknown", reason="preconditions were missing or malformed")
+    return dict(execution, validity="valid", reason="producer recorded completed run evidence")
+
+
+def _measurement(row: dict, body: dict, parsed: ParsedLog | None) -> dict:
+    available = {field: body.get(field) is not None for field in MEASUREMENT_FIELDS}
+    provenance = {}
+    for field in MEASUREMENT_FIELDS:
+        if row.get(field) is not None:
+            provenance[field] = "ledger"
+        elif field in ROLLUP_FIELDS and body.get(field) is not None:
+            provenance[field] = "log-rollup"
+        else:
+            provenance[field] = None
+    log_sha256 = parsed.log_sha256 if parsed is not None else None
+    if log_sha256 is not None:
+        log_observation = "observed"
+    elif row.get("passed") is None and isinstance(row.get("error"), str) and row["error"].startswith("unsupported:"):
+        log_observation = "absent"
+    else:
+        log_observation = "unobserved-local"
+    return {
+        "version": 1,
+        "source": "harness-ledger",
+        "available": available,
+        "provenance": provenance,
+        "execution": _execution(row),
+        "source_identity": {
+            "record_sha256": _record_sha256(row),
+            "log_sha256": log_sha256,
+            "log_available": log_sha256 is not None,
+            "log_observation": log_observation,
+            "revision": {"value": None, "available": False},
+        },
+    }
 
 
 def build_aggregate(rows: dict[str, dict], links: dict[str, str | None]) -> Aggregate:
@@ -738,6 +847,10 @@ def _scalar_norm(value: object) -> object:
 
 def _changed(rec: dict, body: dict, json_fields: set[str]) -> bool:
     for k, v in body.items():
+        measurement = body.get("measurement")
+        if (k in MEASUREMENT_FIELDS and isinstance(measurement, dict)
+                and measurement.get("available", {}).get(k) is False):
+            continue
         if k in ("run", "artifact"):
             if str(rec.get(k) or "") != str(v or ""):
                 return True
@@ -766,7 +879,14 @@ def _apply_runs(pb: PB, runs: dict[str, dict], existing: dict[str, dict],
     created = updated = unchanged = 0
     for key, body in runs.items():
         db_body = _nonnull(_coerce_body(body, RUN_JSON))
+        db_body.pop("preconditions", None)
+        db_body.pop("plugin_errors", None)
+        for field in MEASUREMENT_FIELDS:
+            if body.get(field) is None:
+                db_body[field] = None
         rec = existing.get(key)
+        if rec is not None:
+            _preserve_observed_log_identity(db_body, rec)
         if rec is None:
             created += 1
             run_id_map[key] = pb.create("runs", db_body)["id"] if not dry_run else None
@@ -779,6 +899,24 @@ def _apply_runs(pb: PB, runs: dict[str, dict], existing: dict[str, dict],
             else:
                 unchanged += 1
     return run_id_map, (created, updated, unchanged)
+
+
+def _preserve_observed_log_identity(body: dict, rec: dict) -> None:
+    """A logless local checkout cannot disprove already-ingested log evidence."""
+    current = body.get("measurement")
+    previous = rec.get("measurement")
+    if not isinstance(current, dict) or not isinstance(previous, dict):
+        return
+    current_id = current.get("source_identity")
+    previous_id = previous.get("source_identity")
+    if (not isinstance(current_id, dict) or not isinstance(previous_id, dict)
+            or current_id.get("log_observation") != "unobserved-local"
+            or previous_id.get("log_observation") != "observed"
+            or not previous_id.get("log_sha256")):
+        return
+    current_id["log_sha256"] = previous_id["log_sha256"]
+    current_id["log_available"] = True
+    current_id["log_observation"] = "observed"
 
 
 def _apply_artifacts(pb: PB, artifacts: dict[str, tuple[Artifact, str]],
