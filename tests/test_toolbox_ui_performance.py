@@ -1,5 +1,8 @@
 """Focused source contracts for the mounted performance area."""
 
+import json
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -8,6 +11,39 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "evals/ui/src/performance.tsx").read_text() if (ROOT / "evals/ui/src/performance.tsx").exists() else ""
 VIEWS = (ROOT / "evals/ui/src/views.tsx").read_text()
 MAIN = (ROOT / "evals/ui/src/main.tsx").read_text()
+MODULE = ROOT / "evals/ui/src/performance.tsx"
+
+
+@unittest.skipUnless(shutil.which("bun"), "Bun is required for TypeScript module checks")
+class PerformanceRuntimeHelpers(unittest.TestCase):
+    def run_module(self, body):
+        script = """import assert from 'node:assert/strict';
+import * as performance from %s;
+%s
+""" % (json.dumps(MODULE.as_uri()), body)
+        result = subprocess.run(["bun", "--eval", script], text=True, capture_output=True,
+                                check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_v1_revision_validity_and_response_metrics_preserve_observed_zeroes(self):
+        self.run_module("""
+const v1 = {measurement: {version: 1, available: {tokens: true, duration_ms: true}, source_identity: {revision: {available: true, value: 'abc123'}}, execution: {validity: 'valid', reason: 'grade failed'}}};
+assert.equal(performance.sourceRevision(v1), 'abc123');
+assert.equal(performance.sourceRevision({measurement: {version: 1, source_identity: {revision: {available: false, value: 'secret'}}}}), null);
+assert.deepEqual(performance.executionValidity(v1), {validity: 'valid', reason: 'grade failed'});
+assert.deepEqual(performance.executionValidity({measurement: {version: 2, execution: {validity: 'valid'}}}), {validity: null, reason: null});
+assert.equal(performance.responseMetric({...v1, tokens: 0}, 'tokens'), 0);
+assert.equal(performance.responseMetric({...v1, duration_ms: 0}, 'duration_ms'), 0);
+assert.equal(performance.responseMetric({tokens: 0, measurement: {version: 1, available: {tokens: false}}}, 'tokens'), null);
+""")
+
+    def test_file_token_result_keeps_stale_and_error_states_distinct(self):
+        self.run_module("""
+assert.deepEqual(performance.fileTokenResult(false, {kind: 'ok', token: 'fresh'}), {state: 'stale'});
+assert.deepEqual(performance.fileTokenResult(true, {kind: 'ok', token: 'fresh'}), {state: 'ready', token: 'fresh'});
+assert.deepEqual(performance.fileTokenResult(true, {kind: 'access'}), {state: 'access'});
+assert.deepEqual(performance.fileTokenResult(true, {kind: 'error'}), {state: 'error'});
+""")
 
 
 class PerformanceUiContracts(unittest.TestCase):

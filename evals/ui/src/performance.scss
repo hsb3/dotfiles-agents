@@ -6,3 +6,12 @@
 .performance-metrics dd { margin: .25rem 0 0; }
 .performance-charts { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); margin-top: 1.5rem; }
 .performance-chart { min-width: 0; }
+.table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+.table-scroll table { min-width: 48rem; }
+.table-scroll:focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: 2px;
+}

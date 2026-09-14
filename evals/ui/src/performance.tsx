@@ -1,7 +1,7 @@
 import { Button, Checkbox, Pagination, Select, SelectItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TextInput } from "@carbon/react";
 import { ScaleTypes } from "@carbon/charts";
 import { GroupedBarChart } from "@carbon/charts-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { protectedFileToken, Session } from "./api";
 import { recordScope } from "./data";
 import { comparisonEligibility, descriptiveDelta, measurementBoolean, measurementNumber } from "./measurements";
@@ -31,6 +31,47 @@ const asText = (value: unknown) => {
   return typeof value === "string" ? value : JSON.stringify(value);
 };
 
+const object = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+
+const v1Measurement = (record: { measurement?: unknown }) => {
+  const measurement = object(record.measurement);
+  return measurement?.version === 1 && object(measurement.available) ? measurement : null;
+};
+
+export function sourceRevision(run: { measurement?: unknown }): string | null {
+  const sourceIdentity = object(v1Measurement(run)?.source_identity);
+  const revision = object(sourceIdentity?.revision);
+  return revision?.available === true && typeof revision.value === "string"
+    ? revision.value
+    : null;
+}
+
+export function executionValidity(run: { measurement?: unknown }) {
+  const execution = object(v1Measurement(run)?.execution);
+  return {
+    validity: typeof execution?.validity === "string" ? execution.validity : null,
+    reason: typeof execution?.reason === "string" ? execution.reason : null,
+  };
+}
+
+export function responseMetric(response: { measurement?: unknown; [key: string]: unknown }, field: "tokens" | "duration_ms"): number | null {
+  const available = object(v1Measurement(response)?.available);
+  const value = response[field];
+  return available?.[field] === true && typeof value === "number"
+    && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function fileTokenResult(fresh: boolean, reply: { kind: string; token?: string }) {
+  if (!fresh) return { state: "stale" as const };
+  if (reply.kind === "ok" && typeof reply.token === "string" && reply.token.trim()) {
+    return { state: "ready" as const, token: reply.token };
+  }
+  return { state: reply.kind === "access" ? "access" as const : "error" as const };
+}
+
 export function performanceListState(state: PerformanceListState, action: PerformanceListAction): PerformanceListState {
   if (action === "runs-changed") return { ...state, page: 1 };
   if (action === "campaigns-changed") return { ...state, campaignPage: 1 };
@@ -47,15 +88,6 @@ export function exitStatus(run: Run): number | null {
     && Number.isFinite(run.exit_code) && Number.isInteger(run.exit_code)
     ? run.exit_code
     : null;
-}
-
-function executionValidity(run: Run): string {
-  const measurement = run.measurement;
-  if (!measurement || typeof measurement !== "object" || Array.isArray(measurement)) return unavailable;
-  const execution = (measurement as { execution?: unknown }).execution;
-  if (!execution || typeof execution !== "object" || Array.isArray(execution)) return unavailable;
-  const validity = (execution as { validity?: unknown }).validity;
-  return typeof validity === "string" ? validity : unavailable;
 }
 
 export function nextSelection(selected: Run[], run: Run): Run[] {
@@ -87,6 +119,16 @@ function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<{ kind: 
 
 function Pager({ page, total, onChange }: { page: number; total: number; onChange: (page: number) => void }) {
   return <Pagination page={page} pageSize={25} pageSizes={[25]} totalItems={total} onChange={(next) => onChange(next.page)} />;
+}
+
+function TableRegion({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="table-scroll" role="region" aria-label={label} tabIndex={0}>{children}</div>;
+}
+
+function valueSummary(value: unknown) {
+  const record = object(value);
+  if (record) return Object.keys(record).length ? Object.keys(record).join(", ") : "Empty object";
+  return Array.isArray(value) ? `${value.length} entries` : asText(value);
 }
 
 function RunMetrics({ run }: { run: Run }) {
@@ -137,27 +179,62 @@ function Comparison({ selected }: { selected: Run[] }) {
   return <section className="surface performance-panel">
     <h2>Comparison</h2>
     <p>n=1 each. Differences mean with minus baseline; no causality, savings, significance, or installed-state claim.</p>
-    <Table>
-      <caption>Comparable recorded measurements</caption>
-      <TableHead><TableRow><TableHeader>Metric</TableHeader><TableHeader>Baseline</TableHeader><TableHeader>With configuration</TableHeader><TableHeader>With minus baseline</TableHeader></TableRow></TableHead>
-      <TableBody>{metrics.map((item) => <TableRow key={item.field}><TableCell>{item.label}</TableCell><TableCell>{shown(item.baselineValue, ` ${item.unit}`)}</TableCell><TableCell>{shown(item.withValueMetric, ` ${item.unit}`)}</TableCell><TableCell>{item.delta.delta === null ? unavailable : `${shown(item.delta.delta, ` ${item.unit}`)}${item.delta.percent === null ? " · % unavailable" : ` (${shown(item.delta.percent, "%")})`}`}</TableCell></TableRow>)}</TableBody>
-    </Table>
+    <TableRegion label="Comparable recorded measurements">
+      <Table>
+        <caption>Comparable recorded measurements</caption>
+        <TableHead>
+          <TableRow>
+            <TableHeader>Metric</TableHeader>
+            <TableHeader>Baseline</TableHeader>
+            <TableHeader>With configuration</TableHeader>
+            <TableHeader>With minus baseline</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>{metrics.map((item) => <TableRow key={item.field}>
+          <TableCell>{item.label}</TableCell>
+          <TableCell>{shown(item.baselineValue, ` ${item.unit}`)}</TableCell>
+          <TableCell>{shown(item.withValueMetric, ` ${item.unit}`)}</TableCell>
+          <TableCell>{item.delta.delta === null ? unavailable : `${shown(item.delta.delta, ` ${item.unit}`)}${item.delta.percent === null ? " · % unavailable" : ` (${shown(item.delta.percent, "%")})`}`}</TableCell>
+        </TableRow>)}</TableBody>
+      </Table>
+    </TableRegion>
+    <TableRegion label="Comparable measurement sources">
+      <Table>
+        <caption>Recorded observation sources</caption>
+        <TableHead><TableRow><TableHeader>Source</TableHeader><TableHeader>Baseline</TableHeader><TableHeader>With configuration</TableHeader></TableRow></TableHead>
+        <TableBody>
+          <TableRow><TableCell>Source time</TableCell><TableCell>{baseline.ts ?? unavailable}</TableCell><TableCell>{withValue.ts ?? unavailable}</TableCell></TableRow>
+          <TableRow><TableCell>Ingestion time</TableCell><TableCell>{baseline.created ?? unavailable}</TableCell><TableCell>{withValue.created ?? unavailable}</TableCell></TableRow>
+          <TableRow><TableCell>Source revision</TableCell><TableCell>{sourceRevision(baseline) ?? unavailable}</TableCell><TableCell>{sourceRevision(withValue) ?? unavailable}</TableCell></TableRow>
+          <TableRow><TableCell>CLI version</TableCell><TableCell>{baseline.cli_version ?? unavailable}</TableCell><TableCell>{withValue.cli_version ?? unavailable}</TableCell></TableRow>
+        </TableBody>
+      </Table>
+    </TableRegion>
     <div className="performance-charts">{metrics.map((item) => item.baselineValue === null || item.withValueMetric === null ? null : <div className="performance-chart" key={item.field}><GroupedBarChart data={[{ group: "Baseline", key: item.label, value: item.baselineValue }, { group: "With configuration", key: item.label, value: item.withValueMetric }]} options={{ title: item.label, height: "260px", axes: { left: { mapsTo: "value", title: item.unit, includeZero: true }, bottom: { mapsTo: "key", scaleType: ScaleTypes.LABELS } }, toolbar: { enabled: false }, animations: false }} /></div>)}</div>
   </section>;
 }
 
 function DetailRecord({ run }: { run: Run }) {
+  const execution = executionValidity(run);
+  const measurement = object(run.measurement);
+  const preconditions = object(measurement?.execution)?.preconditions;
   return <section className="surface performance-panel">
     <h2>Run record</h2>
     <dl>
-      <div><dt>Checks</dt><dd>{asText(run.checks)}</dd></div>
-      <div><dt>Grades</dt><dd>{asText(run.grades)}</dd></div>
-      <div><dt>Provenance</dt><dd>{asText(run.provenance)}</dd></div>
-      <div><dt>Preconditions</dt><dd>{asText(run.measurement)}</dd></div>
+      <div><dt>Checks</dt><dd>{valueSummary(run.checks)}</dd></div>
+      <div><dt>Grades</dt><dd>{valueSummary(run.grades)}</dd></div>
+      <div><dt>Provenance</dt><dd>{valueSummary(run.provenance)}</dd></div>
+      <div><dt>Execution validity</dt><dd>{execution.validity ?? unavailable}</dd></div>
+      <div><dt>Execution reason</dt><dd>{execution.reason ?? unavailable}</dd></div>
+      <div><dt>Preconditions</dt><dd>{valueSummary(preconditions)}</dd></div>
       <div><dt>Source time</dt><dd>{run.ts ?? unavailable}</dd></div>
       <div><dt>Ingestion time</dt><dd>{run.created ?? unavailable}</dd></div>
-      <div><dt>Revision</dt><dd>{run.cli_version ?? unavailable}</dd></div>
+      <div><dt>Source revision</dt><dd>{sourceRevision(run) ?? unavailable}</dd></div>
+      <div><dt>CLI version</dt><dd>{run.cli_version ?? unavailable}</dd></div>
     </dl>
+    <details><summary>Raw measurement envelope</summary><pre>{asText(run.measurement)}</pre></details>
+    <details><summary>Raw provenance</summary><pre>{asText(run.provenance)}</pre></details>
+    <details><summary>Raw grades</summary><pre>{asText(run.grades)}</pre></details>
     <p>Source time is not interpreted when timezone is unknown; ingestion time is separate.</p>
   </section>;
 }
@@ -165,7 +242,7 @@ function DetailRecord({ run }: { run: Run }) {
 function RunDetail({ session, id, back }: { session: Session; id: string; back: () => void }) {
   const [eventPage, setEventPage] = useState(1);
   const [toolPage, setToolPage] = useState(1);
-  const [files, setFiles] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, "loading" | "access" | "error">>({});
   const fileRequest = useRef(0);
   const run = useLoad(`run:${id}`, (signal) => runById(session, id, signal));
   const evidence = useLoad(`evidence:${id}`, (signal) => evidenceForRun(session, id, signal));
@@ -176,11 +253,21 @@ function RunDetail({ session, id, back }: { session: Session; id: string; back: 
   }, []);
   const open = async (artifact: { id: string; blob?: string }) => {
     const request = ++fileRequest.current;
+    setFiles((old) => ({ ...old, [artifact.id]: "loading" }));
     const token = await protectedFileToken(session);
     if (request !== fileRequest.current) return;
-    if (token.kind !== "ok") return;
-    const link = protectedArtifactUrl(artifact, token.token);
-    if (link) setFiles((old) => ({ ...old, [artifact.id]: link }));
+    const result = fileTokenResult(request === fileRequest.current, token);
+    if (result.state === "stale") return;
+    if (result.state !== "ready") {
+      setFiles((old) => ({ ...old, [artifact.id]: result.state }));
+      return;
+    }
+    const link = protectedArtifactUrl(artifact, result.token);
+    if (!link) {
+      setFiles((old) => ({ ...old, [artifact.id]: "error" }));
+      return;
+    }
+    location.assign(link);
   };
   return <Block>
     <PageCrumbs current="Performance / run" />
@@ -196,17 +283,17 @@ function RunDetail({ session, id, back }: { session: Session; id: string; back: 
   </Block>;
 }
 
-function Evidence({ result, files, open }: { result: ReturnType<typeof useLoad<{ artifacts: { id: string; blob?: string; sha256: string; byte_size?: number }[]; completeness: string }>>; files: Record<string, string>; open: (artifact: { id: string; blob?: string }) => void }) {
+function Evidence({ result, files, open }: { result: ReturnType<typeof useLoad<{ artifacts: { id: string; blob?: string; sha256: string; byte_size?: number }[]; completeness: string }>>; files: Record<string, "loading" | "access" | "error">; open: (artifact: { id: string; blob?: string }) => void }) {
   return <section className="surface performance-panel">
     <h2>Evidence</h2>
-    {result.state === "populated" && result.data ? <><p>Completeness: {result.data.completeness}.</p>{result.data.artifacts.map((artifact) => <p key={artifact.id}>{artifact.id} · {artifact.sha256} · {artifactByteSize(artifact) === null ? "size unavailable" : `${artifactByteSize(artifact)} bytes`} {files[artifact.id] ? <a href={files[artifact.id]}>Open evidence</a> : <Button kind="ghost" size="sm" onClick={() => open(artifact)}>Open evidence</Button>}</p>)}</> : <StateNotice state={result.state === "populated" ? "empty" : result.state} subject="evidence" />}
+    {result.state === "populated" && result.data ? <><p>Completeness: {result.data.completeness}.</p>{result.data.artifacts.map((artifact) => <p key={artifact.id}>{artifact.id} · {artifact.sha256} · {artifactByteSize(artifact) === null ? "size unavailable" : `${artifactByteSize(artifact)} bytes`} <Button kind="ghost" size="sm" onClick={() => open(artifact)} disabled={files[artifact.id] === "loading"}>Open evidence</Button>{files[artifact.id] === "loading" ? " Opening…" : files[artifact.id] === "access" ? " Access denied." : files[artifact.id] === "error" ? " Could not access evidence." : null}</p>)}</> : <StateNotice state={result.state === "populated" ? "empty" : result.state} subject="evidence" />}
   </section>;
 }
 
 function EventRecords({ result, page, setPage }: { result: ReturnType<typeof useLoad<Paged<RunEvent>>>; page: number; setPage: (page: number) => void }) {
   return <section className="surface performance-panel">
     <h2>Current events</h2>
-    {result.state === "populated" ? <Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Sequence</TableHeader><TableHeader>Role</TableHeader><TableHeader>Type</TableHeader><TableHeader>Status</TableHeader><TableHeader>Text and payload</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{asText(item.seq)}</TableCell><TableCell>{asText(item.role)}</TableCell><TableCell>{asText(item.event_type)}</TableCell><TableCell>{asText(item.status)}</TableCell><TableCell>{asText(item.text)}{item.payload === undefined ? null : <details><summary>Payload</summary><pre>{asText(item.payload)}</pre></details>}</TableCell></TableRow>)}</TableBody></Table> : <StateNotice state={result.state} subject="current events" />}
+    {result.state === "populated" ? <TableRegion label="Current run events"><Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Sequence</TableHeader><TableHeader>Role</TableHeader><TableHeader>Type</TableHeader><TableHeader>Status</TableHeader><TableHeader>Text and payload</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{asText(item.seq)}</TableCell><TableCell>{asText(item.role)}</TableCell><TableCell>{asText(item.event_type)}</TableCell><TableCell>{asText(item.status)}</TableCell><TableCell>{asText(item.text)}{item.payload === undefined ? null : <details><summary>Payload</summary><pre>{asText(item.payload)}</pre></details>}</TableCell></TableRow>)}</TableBody></Table></TableRegion> : <StateNotice state={result.state} subject="current events" />}
     {result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}
   </section>;
 }
@@ -214,7 +301,7 @@ function EventRecords({ result, page, setPage }: { result: ReturnType<typeof use
 function ToolRecords({ result, page, setPage }: { result: ReturnType<typeof useLoad<Paged<ToolCall>>>; page: number; setPage: (page: number) => void }) {
   return <section className="surface performance-panel">
     <h2>Current tools</h2>
-    {result.state === "populated" ? <Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Call</TableHeader><TableHeader>Tool</TableHeader><TableHeader>Status</TableHeader><TableHeader>Timing</TableHeader><TableHeader>Payload</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.tool_call_id}</TableCell><TableCell>{item.tool_name}</TableCell><TableCell>{asText(item.status)}</TableCell><TableCell>{asText(item.wallclock_ms)}</TableCell><TableCell><details><summary>Input and output</summary><pre>{asText({ input: item.input, output: item.output })}</pre></details></TableCell></TableRow>)}</TableBody></Table> : <StateNotice state={result.state} subject="current tools" />}
+    {result.state === "populated" ? <TableRegion label="Current run tools"><Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Call</TableHeader><TableHeader>Tool</TableHeader><TableHeader>Status</TableHeader><TableHeader>Timing</TableHeader><TableHeader>Payload</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.tool_call_id}</TableCell><TableCell>{item.tool_name}</TableCell><TableCell>{asText(item.status)}</TableCell><TableCell>{asText(item.wallclock_ms)}</TableCell><TableCell><details><summary>Input and output</summary><pre>{asText({ input: item.input, output: item.output })}</pre></details></TableCell></TableRow>)}</TableBody></Table></TableRegion> : <StateNotice state={result.state} subject="current tools" />}
     {result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}
   </section>;
 }
@@ -224,11 +311,11 @@ function CampaignFacts({ campaign }: { campaign: Campaign }) {
 }
 
 function ResponseRecords({ result, page, setPage }: { result: ReturnType<typeof useLoad<Paged<Response>>>; page: number; setPage: (page: number) => void }) {
-  return <section className="surface performance-panel"><h2>Responses</h2>{result.state === "populated" ? <Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Role</TableHeader><TableHeader>Prompt</TableHeader><TableHeader>Response</TableHeader><TableHeader>Legacy metrics</TableHeader><TableHeader>Raw response evidence</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.role}</TableCell><TableCell>{item.prompt ?? unavailable}</TableCell><TableCell>{item.response_text ?? unavailable}</TableCell><TableCell>{asText(item.measurement)}</TableCell><TableCell>{item.response_json === undefined ? unavailable : <details><summary>Response JSON</summary><pre>{asText(item.response_json)}</pre></details>}</TableCell></TableRow>)}</TableBody></Table> : <StateNotice state={result.state} subject="responses" />}{result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}</section>;
+  return <section className="surface performance-panel"><h2>Responses</h2>{result.state === "populated" ? <TableRegion label="Campaign responses"><Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Role</TableHeader><TableHeader>Prompt</TableHeader><TableHeader>Response</TableHeader><TableHeader>Tokens</TableHeader><TableHeader>Duration</TableHeader><TableHeader>Raw response evidence</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.role}</TableCell><TableCell>{item.prompt ?? unavailable}</TableCell><TableCell>{item.response_text ?? unavailable}</TableCell><TableCell>{shown(responseMetric(item, "tokens"), " tokens")}</TableCell><TableCell>{shown(responseMetric(item, "duration_ms"), " ms")}</TableCell><TableCell>{item.response_json === undefined ? unavailable : <details><summary>Response JSON</summary><pre>{asText(item.response_json)}</pre></details>}</TableCell></TableRow>)}</TableBody></Table></TableRegion> : <StateNotice state={result.state} subject="responses" />}{result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}</section>;
 }
 
 function AssessmentRecords({ result, page, setPage }: { result: ReturnType<typeof useLoad<Paged<Assessment>>>; page: number; setPage: (page: number) => void }) {
-  return <section className="surface performance-panel"><h2>Current assessments</h2>{result.state === "populated" ? <Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Extender</TableHeader><TableHeader>Framework</TableHeader><TableHeader>Element</TableHeader><TableHeader>Verdict</TableHeader><TableHeader>Evidence</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.extender}</TableCell><TableCell>{item.framework}</TableCell><TableCell>{item.element ?? unavailable}</TableCell><TableCell>{item.verdict}</TableCell><TableCell>{item.evidence ?? unavailable}</TableCell></TableRow>)}</TableBody></Table> : <StateNotice state={result.state} subject="current assessments" />}{result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}</section>;
+  return <section className="surface performance-panel"><h2>Current assessments</h2>{result.state === "populated" ? <TableRegion label="Campaign assessments"><Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Extender</TableHeader><TableHeader>Framework</TableHeader><TableHeader>Element</TableHeader><TableHeader>Verdict</TableHeader><TableHeader>Evidence</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell><a href={`#documentation?extender=${encodeURIComponent(item.extender)}`}>{item.expand?.extender?.name ?? item.extender}</a><br /><a href={`#evaluations?extender=${encodeURIComponent(item.extender)}`}>Assessments</a></TableCell><TableCell>{item.expand?.framework?.name ?? item.framework}</TableCell><TableCell>{item.expand?.element?.name ?? item.element ?? unavailable}</TableCell><TableCell>{item.verdict}</TableCell><TableCell>{item.evidence ?? unavailable}</TableCell></TableRow>)}</TableBody></Table></TableRegion> : <StateNotice state={result.state} subject="current assessments" />}{result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}</section>;
 }
 
 function CampaignDetail({ session, id, back }: { session: Session; id: string; back: () => void }) {
@@ -266,7 +353,7 @@ export function Performance({ session, onExpired, hash = location.hash }: { sess
     document.getElementById(listState.focus === "runs" ? "performance-runs" : "campaign-list")?.focus();
     setListState((state) => ({ ...state, focus: null }));
   }, [campaignId, listState.focus, runId]);
-  const rows = useMemo(() => result.data?.items ?? [], [result.data]);
+  const rows: Run[] = result.data?.items ?? [];
   const resetRuns = () => setListState((state) => performanceListState(state, "runs-changed"));
   const resetCampaigns = () => setListState((state) => performanceListState(state, "campaigns-changed"));
   const returnTo = (action: "return-runs" | "return-campaigns") => {
@@ -332,7 +419,7 @@ export function Performance({ session, onExpired, hash = location.hash }: { sess
               <TableCell>{run.id}<br />Campaign: {run.campaign ?? unavailable}</TableCell>
               <TableCell>{run.config ?? unavailable}</TableCell>
               <TableCell>Harness: {run.harness}<br />Model: {run.model ?? unavailable}<br />Candidate: {run.candidate}<br />Case: {run.case}</TableCell>
-              <TableCell>{executionValidity(run)}</TableCell>
+              <TableCell>{executionValidity(run).validity ?? unavailable}</TableCell>
               <TableCell>{asText(run.grades)}</TableCell>
               <TableCell>{outcome === null ? unavailable : String(outcome)}</TableCell>
               <TableCell>{shown(measurementNumber(run, "duration_ms"), " ms")}</TableCell>
