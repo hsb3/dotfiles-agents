@@ -55,8 +55,8 @@ nodes:
     layer: docs
     class: authored
     status: current
-    paths: [README.md, AGENTS.md, CLAUDE.md]
-    note: "Entry docs at the repo root. The ADR mirrors, dev SOP, vendoring rule, and this flow's rendered form live under docs/ (repo-law node); the contributor SOP stays at .github/CONTRIBUTING.md (gates node)."
+    paths: [README.md, LICENSE, AGENTS.md, CLAUDE.md]
+    note: "Entry docs and the first-party MIT license at the repo root. The ADR mirrors, dev SOP, vendoring rule, and this flow's rendered form live under docs/ (repo-law node); the contributor SOP stays at .github/CONTRIBUTING.md (gates node)."
   - id: repo-law
     layer: docs
     class: authored
