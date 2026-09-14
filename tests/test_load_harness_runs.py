@@ -13,7 +13,9 @@ claimed-log exclusion and the ambiguity warning.
 """
 
 import base64
+import contextlib
 import hashlib
+import io
 import json
 import os
 import sys
@@ -321,6 +323,15 @@ class MeasurementContract(unittest.TestCase):
                                    {"a": {"id": "run-a"}}, L._event_key,
                                    L.RUN_EVENT_FIELDS, L.EVENT_JSON, False)
         self.assertEqual(counts, (0, 0, 0))
+
+    def test_parse_summary_separates_unreadable_reference_from_observed_log(self):
+        row = L.build_run_row(_measurement_row(), None, "harness/runs/missing.log")
+        aggregate = L.Aggregate({"run": row}, [], [], {}, {"legacy": 0, "post": 0, "na": 0})
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            L._print_parse_summary(aggregate, [])
+        self.assertIn("runs with log reference: 1/1", output.getvalue())
+        self.assertIn("runs with observed log bytes: 0/1", output.getvalue())
 
     def test_missing_metric_uses_null_once_and_ignores_pb_default_afterward(self):
         body = L.build_run_row(_measurement_row(num_turns=None), None, None)

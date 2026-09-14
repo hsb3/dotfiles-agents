@@ -1034,14 +1034,19 @@ def plan(pb: PB, agg: Aggregate, scope: Scope, dry_run: bool) -> dict[str, tuple
 def _print_parse_summary(agg: Aggregate, warnings: list[str]) -> None:
     screenshots = sum(1 for a, _ in agg.artifacts.values() if a.kind == "screenshot")
     text_arts = len(agg.artifacts) - screenshots
-    linked = sum(1 for b in agg.runs.values() if b.get("log_path"))
+    referenced = sum(1 for b in agg.runs.values() if b.get("log_path"))
+    observed = sum(
+        1 for b in agg.runs.values()
+        if b.get("measurement", {}).get("source_identity", {}).get("log_observation") == "observed"
+    )
     print("[parse-only] planned records (no DB connection):")
     print(f"  runs:        {len(agg.runs)}")
     print(f"  run_events:  {len(agg.events)}")
     print(f"  tool_calls:  {len(agg.tool_calls)}")
     print(f"  artifacts:   {len(agg.artifacts)} post-dedup "
           f"({screenshots} screenshot, {text_arts} text)")
-    print(f"  runs linked to a log: {linked}/{len(agg.runs)}")
+    print(f"  runs with log reference: {referenced}/{len(agg.runs)}")
+    print(f"  runs with observed log bytes: {observed}/{len(agg.runs)}")
     print("  era split:   " + ", ".join(f"{k}={v}" for k, v in agg.era_counts.items()))
     if warnings:
         print(f"  warnings ({len(warnings)}):")
