@@ -26,7 +26,7 @@ export function Login({ session, onAuthenticated }: { session: Session; onAuthen
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const result = await submitLogin(session, email, password, setPassword);
-    if (result.kind === "ok") onAuthenticated(); else setMessage(result.kind === "access" ? "Sign-in details were not accepted." : result.message || "Could not sign in.");
+    if (result.kind === "ok") onAuthenticated(); else setMessage(result.kind === "access" || result.status === 400 ? "Sign-in details were not accepted." : "Could not sign in. Try again.");
   }
   return <main className="login-main" aria-labelledby="login-title"><Grid fullWidth><Column sm={4} md={6} lg={6}><section className="login-card"><p className="eyebrow">Toolbox</p><h1 id="login-title">Sign in to your workspace</h1><p>Use your ordinary Toolbox account to read the records available to you.</p>{message && <InlineNotification kind="error" lowContrast hideCloseButton title="Sign-in failed" subtitle={message} />}
     <form onSubmit={onSubmit}><TextInput id="email" labelText="Email" type="email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} required /><PasswordInput id="password" labelText="Password" value={password} onChange={(event) => setPassword(event.currentTarget.value)} required /><Button type="submit">Sign in</Button></form>

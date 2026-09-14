@@ -357,7 +357,11 @@ export function Performance({ session, onExpired, hash = location.hash }: { sess
   }, [session, onExpired]);
   useEffect(() => { session.setSelection("performance", selected.map((run) => run.id)); }, [session, selected]);
   useEffect(() => {
-    if (runId || campaignId || !listState.focus) return;
+    if (runId || campaignId) {
+      document.getElementById("main-content")?.focus();
+      return;
+    }
+    if (!listState.focus) return;
     document.getElementById(listState.focus === "runs" ? "performance-runs" : "campaign-list")?.focus();
     setListState((state) => ({ ...state, focus: null }));
   }, [campaignId, listState.focus, runId]);
