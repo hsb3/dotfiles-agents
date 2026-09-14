@@ -1,0 +1,217 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex DELEGATION_WATERMARK_SOFT=\"${DELEGATION_WATERMARK_SOFT:-25}\" DELEGATION_WATERMARK_REFIRE_EVERY=\"${DELEGATION_WATERMARK_REFIRE_EVERY:-15}\" DELEGATION_WATERMARK_FLOOR_COMMANDS=\"${DELEGATION_WATERMARK_FLOOR_COMMANDS:-kata,gh,make,git}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/delegation-watermark/hook.py\"",
+            "statusMessage": "Checking delegation watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
+            "statusMessage": "Checking worker context watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "apply_patch|Bash"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff-freshness-guard/hook.py\"",
+            "statusMessage": "Checking handoff freshness...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff-freshness-guard/hook.py\"",
+            "statusMessage": "Checking handoff freshness...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/comment-hygiene-gate/hook.py\"",
+            "statusMessage": "Checking comment hygiene...",
+            "timeout": 15,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/live-worker-git-guard/hook.py\"",
+            "statusMessage": "Checking for live workers...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-git-scope-guard/hook.py\"",
+            "statusMessage": "Checking worker git scope...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/config-custody/hook.py\"",
+            "statusMessage": "Checking config custody...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "apply_patch"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-isolation/hook.py\"",
+            "statusMessage": "Checking worker isolation...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/session-handoff-surfacer/hook.py\"",
+            "statusMessage": "Checking for a project handoff...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex LANE_SNAPSHOT_INTERVAL=\"${LANE_SNAPSHOT_INTERVAL:-180}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lane-snapshot/hook.py\"",
+            "statusMessage": "Starting the lane-snapshot daemon...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex BRANCH_ACTIVITY_PEER_TTL_SECONDS=\"${BRANCH_ACTIVITY_PEER_TTL_SECONDS:-3600}\" BRANCH_ACTIVITY_MAX_BYTES=\"${BRANCH_ACTIVITY_MAX_BYTES:-1048576}\" BRANCH_ACTIVITY_LOG_COMMITS=\"${BRANCH_ACTIVITY_LOG_COMMITS:-5}\" BRANCH_ACTIVITY_GH=\"${BRANCH_ACTIVITY_GH:-1}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/branch-activity-surfacer/hook.py\"",
+            "statusMessage": "Checking for other sessions on this branch...",
+            "timeout": 20,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-telemetry/hook.py\"",
+            "statusMessage": "Checking for stalled delegations...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-isolation/hook.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-context/hook.py\"",
+            "statusMessage": "Briefing worker on the delegation covenant...",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-telemetry/hook.py\"",
+            "statusMessage": "Recording delegation telemetry...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/manager-package-gate/hook.py\"",
+            "statusMessage": "Checking the manager's proof package...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "ATELIER_HARNESS=codex python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
+            "statusMessage": "Checking context watermark...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}

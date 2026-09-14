@@ -1,0 +1,10 @@
+{
+  "event": "SessionStart",
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Starting the lane-snapshot daemon...",
+  "env": {
+    "LANE_SNAPSHOT_INTERVAL": "180",
+    "LANE_SNAPSHOT_WORKTREES": ".claude/worktrees/agent-*"
+  }
+}

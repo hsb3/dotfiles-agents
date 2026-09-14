@@ -1,0 +1,6 @@
+{
+  "event": ["PreCompact", "PreToolUse"],
+  "matcher": "*",
+  "timeout": 10,
+  "statusMessage": "Checking handoff freshness..."
+}

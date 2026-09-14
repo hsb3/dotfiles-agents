@@ -1,0 +1,24 @@
+# Core label vocabulary (decision-023) — pass as `board_health.py --vocabulary`.
+# Exactly one type label per item; the rest are containers and behaviour.
+# `area:<x>` is deliberately absent: the family is project-defined, and a name no open item
+# carries is reported as a vocabulary fossil forever.
+# A project adds labels on top of these names, never instead of them.
+#
+# ONE EXCEPTION, in prose rather than as a checked line: `area:docs` is recognised as core
+# (owner ruling 2026-09-08, closing decision-023's open question — documentation is a
+# domain, and label-map.yaml renames doc/docs/documentation onto it). A board may therefore
+# use `area:docs` without adding it to its own area list. It is NOT listed below on purpose:
+# a checked line is checked against open items, so every board with no documentation work
+# open would report a fossil it can never clear by triaging its board. Recognition and
+# declaration are different jobs; this file's checked lines do the second.
+
+type:feat
+type:fix
+type:chore
+
+epic
+decision
+handoff
+meta
+needs-review
+up-next

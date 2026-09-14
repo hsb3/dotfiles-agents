@@ -1,0 +1,6 @@
+{
+  "event": "PreToolUse",
+  "matcher": "Bash",
+  "timeout": 15,
+  "statusMessage": "Checking comment hygiene..."
+}
