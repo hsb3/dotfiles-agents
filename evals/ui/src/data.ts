@@ -8,6 +8,7 @@ type PageOptions = {
   perPage?: number;
   filter?: string;
   sort?: string;
+  expand?: string;
   signal?: AbortSignal;
 };
 export type Page<T> = { items: T[]; page: number; totalPages: number };
@@ -17,6 +18,7 @@ const stableSort = (sort: string) => sort.split(",").some((field) => field.repla
 export function pageRecords<T>(session: Session, collectionPath: string, options: PageOptions): Promise<ApiResult<Page<T>>> {
   const params = new URLSearchParams();
   if (options.filter) params.set("filter", options.filter);
+  if (options.expand) params.set("expand", options.expand);
   params.set("sort", stableSort(options.sort ?? "+created"));
   params.set("fields", options.fields);
   params.set("page", String(options.page ?? 1));
@@ -24,8 +26,13 @@ export function pageRecords<T>(session: Session, collectionPath: string, options
   return session.request<Page<T>>(`${collectionPath}?${params}`, { signal: options.signal });
 }
 
-export type Catalog = { source_snapshot: string; workflows: unknown[]; plugins: unknown[] };
+export type CatalogItem = { id?: string; name?: string; slug?: string; description?: string; guidance?: string; version?: string };
+export type Catalog = { source_snapshot: string; workflows: CatalogItem[]; plugins: CatalogItem[] };
 export const catalog = (session: Session, signal?: AbortSignal) => session.request<Catalog>("/api/toolbox/catalog", { signal });
+export function filterCatalog(items: CatalogItem[], query: string) {
+  const term = query.trim().toLowerCase();
+  return term ? items.filter((item) => [item.id, item.name, item.slug, item.description, item.guidance].some((value) => value?.toLowerCase().includes(term))) : items;
+}
 
 export type DocumentationFile = { id: string; extender: string; role: string; content: string; relpath: string };
 export const documentationFor = (session: Session, extender: string, signal?: AbortSignal) =>
@@ -40,10 +47,7 @@ export const distributions = (session: Session, signal?: AbortSignal) =>
   pageRecords<Distribution>(session, "/api/collections/distributions/records", { fields: "id,slug,kind,version,members", sort: "+slug", signal });
 
 export const extenders = (session: Session, query = "", page = 1, signal?: AbortSignal) =>
-  pageRecords<Extender>(session, "/api/collections/extenders/records", { fields: "id,slug,name,kind,description,body,entry_file,source", filter: query ? `slug ~ ${pocketBaseLiteral(query)}` : undefined, sort: "+slug", page, signal });
-
-export const documentation = (session: Session, query = "", page = 1, signal?: AbortSignal) =>
-  pageRecords<DocumentationFile>(session, "/api/collections/files/records", { fields: "id,extender,role,content,relpath", filter: query ? `relpath ~ ${pocketBaseLiteral(query)}` : undefined, sort: "+relpath", page, signal });
+  pageRecords<Extender>(session, "/api/collections/extenders/records", { fields: "id,slug,name,kind,description,body,entry_file,source", filter: query ? `(slug ~ ${pocketBaseLiteral(query)} || name ~ ${pocketBaseLiteral(query)} || description ~ ${pocketBaseLiteral(query)})` : undefined, sort: "+slug", page, signal });
 
 export type Assessment = { id: string; extender: string; framework: string; element: string; eval_run?: string };
 export const assessmentsFor = (session: Session, extender: string, signal?: AbortSignal) =>
@@ -58,7 +62,7 @@ export const evaluations = (session: Session, signal?: AbortSignal) =>
   pageRecords<Evaluation>(session, "/api/collections/assessments/records", { fields: "id,framework,element,extender,eval_run,verdict,evidence,assessor", sort: "+created", signal });
 export type Coverage = JobCoverage & { status: string; disposition: string; rationale: string };
 export const jobCoverage = (session: Session, signal?: AbortSignal) =>
-  pageRecords<Coverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run,status,disposition,rationale", sort: "+created", signal });
+  pageRecords<Coverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run,status,disposition,rationale,expand.job.id,expand.job.name", expand: "job", sort: "+created", signal });
 
 export function safeHref(value: string): string | undefined {
   if (value.trim() !== value || value.includes("\\")) return undefined;
