@@ -39,7 +39,7 @@ for (const route of ['catalog', 'documentation', 'performance', 'evaluations']) 
         self.run_module("""
 for (const state of ['loading', 'access', 'error', 'empty']) {
   const html = renderToStaticMarkup(React.createElement(App, { route: 'catalog', catalogState: state }));
-  assert.match(html, /Loading catalog|Catalog access expired|Could not load catalog|No catalog records/);
+  assert.match(html, /Loading catalog|Access to catalog is unavailable|Could not load catalog|No catalog records/);
 }
 const html = renderToStaticMarkup(React.createElement(App, { route: 'documentation', documentText: '<img src=x onerror=alert(1)>' }));
 assert.match(html, /&lt;img src=x onerror=alert\\(1\\)&gt;/);

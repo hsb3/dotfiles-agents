@@ -13,7 +13,7 @@ export function Block({ children }: { children: ReactNode }) {
 export function StateNotice({ state, subject }: { state: "loading" | "access" | "error" | "empty"; subject: string }) {
   const copy = {
     loading: [`Loading ${subject}`, "Please wait while Toolbox reads the current records."],
-    access: [`${subject[0].toUpperCase() + subject.slice(1)} access expired`, "Sign in again to read private records."],
+    access: [`Access to ${subject} is unavailable`, "Your session may have expired or this area may not be available to your account."],
     error: [`Could not load ${subject}`, "The service did not return a usable response. Try again."],
     empty: [`No ${subject} records`, "This accessible source currently has no records."],
   }[state];
