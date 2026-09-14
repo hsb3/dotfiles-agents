@@ -43,8 +43,8 @@ export const extenderById = (session: Session, id: string, signal?: AbortSignal)
   session.request<Extender>(`/api/collections/extenders/records/${encodeURIComponent(id)}?fields=id,body,entry_file,source`, { signal });
 
 export type Distribution = { id: string; slug: string; kind: string; version: string; members: string[] };
-export const distributions = (session: Session, signal?: AbortSignal) =>
-  pageRecords<Distribution>(session, "/api/collections/distributions/records", { fields: "id,slug,kind,version,members", sort: "+slug", signal });
+export const distributions = (session: Session, page = 1, signal?: AbortSignal) =>
+  pageRecords<Distribution>(session, "/api/collections/distributions/records", { fields: "id,slug,kind,version,members", sort: "+slug", page, signal });
 
 export const extenders = (session: Session, query = "", page = 1, signal?: AbortSignal) =>
   pageRecords<Extender>(session, "/api/collections/extenders/records", { fields: "id,slug,name,kind,description,body,entry_file,source", filter: query ? `(slug ~ ${pocketBaseLiteral(query)} || name ~ ${pocketBaseLiteral(query)} || description ~ ${pocketBaseLiteral(query)})` : undefined, sort: "+slug", page, signal });
