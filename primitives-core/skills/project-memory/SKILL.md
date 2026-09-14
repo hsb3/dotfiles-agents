@@ -46,7 +46,7 @@ owner at curation time.
 Answer from the reference content directly — do not reconstruct the taxonomy from memory or
 from how some repo happens to look. The essentials:
 
-- **Two layers.** *Global* memory lives in `~/dotfiles`-managed files stow-symlinked into
+- **Two layers.** *Global* memory lives in dotfiles-managed files symlinked into
   `~/.claude/` and travels via the dotfiles repo; *project* memory lives in each repo's
   **git-tracked** `.claude/memory/` and travels via the project repo. Both are plain
   markdown under version control — never hidden machine-local state.
@@ -92,9 +92,8 @@ Two bundled, stdlib-only Python scripts realize the taxonomy's structural side. 
 Claude Code auto-memory lands in a hidden machine-local dir (`~/.claude/projects/<slug>/
 memory/`) keyed to the folder's absolute path — it does not travel with a clone and it
 breaks when the folder moves. These scripts point auto-memory at the repo's own tracked
-`.claude/memory/` instead, and relocate it if the folder later moves. (On a machine
-provisioned from dotfiles the same tools are on `PATH` as `cc-project-memory` and
-`migrate-claude-memory` — see `references/tooling.md`.)
+`.claude/memory/` instead, and relocate it if the folder later moves. They are the only
+supported path — see `references/tooling.md`.
 
 ### Wiring a repo (`project_memory.py`)
 
