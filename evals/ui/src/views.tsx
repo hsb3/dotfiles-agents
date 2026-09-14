@@ -1,5 +1,4 @@
-import { Breadcrumb, BreadcrumbItem, Button, Column, Grid, Header, HeaderName, SideNav, SideNavItems, SideNavLink, SkipToContent } from "@carbon/react";
-import Content from "@carbon/react/es/components/UIShell/Content";
+import { Breadcrumb, BreadcrumbItem, Button, Column, Content, Grid, Header, HeaderMenuButton, HeaderName, SideNav, SideNavItems, SideNavLink, SkipToContent } from "@carbon/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Session } from "./api";
 import { Catalog } from "./catalog";
@@ -33,27 +32,60 @@ function Crumbs({ route }: { route: Route }) {
   </Breadcrumb>;
 }
 
-function Shell({ route, children, logout }: { route: Route; children: ReactNode; logout: () => void }) {
+const desktopNavQuery = "(min-width: 66rem)";
+
+export function Shell({ route, children, logout }: { route: Route; children: ReactNode; logout: () => void }) {
+  const isDesktop = () => typeof window !== "undefined" && window.matchMedia(desktopNavQuery).matches;
+  const [desktopNav, setDesktopNav] = useState(isDesktop);
+  const [sideNavExpanded, setSideNavExpanded] = useState(isDesktop);
+
+  useEffect(() => {
+    const media = window.matchMedia(desktopNavQuery);
+    const update = () => {
+      setDesktopNav(media.matches);
+      setSideNavExpanded(media.matches);
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const closeMobileSideNav = () => {
+    if (!desktopNav) setSideNavExpanded(false);
+  };
+
   return <>
     <Header aria-label="Toolbox">
       <SkipToContent href="#main-content" />
+      <HeaderMenuButton
+        aria-label={sideNavExpanded ? "Close navigation" : "Open navigation"}
+        aria-expanded={sideNavExpanded}
+        isActive={sideNavExpanded}
+        isCollapsible
+        onClick={() => setSideNavExpanded((expanded) => !expanded)}
+      />
       <HeaderName href="#home" prefix="">Toolbox</HeaderName>
       <span className="header-caption">Source and evidence workspace</span>
       <Button kind="ghost" size="sm" className="logout" onClick={logout}>Log out</Button>
     </Header>
-    <div className="shell">
-      <SideNav isFixedNav expanded aria-label="Toolbox navigation" className="sidebar">
-        <SideNavItems>{routes.map((item) => <SideNavLink
-          key={item.id}
-          href={`#${item.id}`}
-          isActive={route === item.id}
-          aria-current={route === item.id ? "page" : undefined}
-        >
-          {item.label}
-        </SideNavLink>)}</SideNavItems>
-      </SideNav>
-      <Content id="main-content" tabIndex={-1} className="content">{children}</Content>
-    </div>
+    <SideNav
+      expanded={sideNavExpanded}
+      isFixedNav={desktopNav}
+      aria-label="Toolbox navigation"
+      className="sidebar"
+      onOverlayClick={closeMobileSideNav}
+    >
+      <SideNavItems>{routes.map((item) => <SideNavLink
+        key={item.id}
+        href={`#${item.id}`}
+        isActive={route === item.id}
+        aria-current={route === item.id ? "page" : undefined}
+        onClick={closeMobileSideNav}
+      >
+        {item.label}
+      </SideNavLink>)}</SideNavItems>
+    </SideNav>
+    <Content id="main-content" tabIndex={-1} className="content">{children}</Content>
   </>;
 }
 

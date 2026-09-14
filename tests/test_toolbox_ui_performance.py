@@ -23,7 +23,7 @@ class PerformanceRuntimeHelpers(unittest.TestCase):
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as performance from %s;
-import { parseRoute } from %s;
+import { parseRoute, Shell } from %s;
 %s
 """ % (json.dumps(MODULE.as_uri()), json.dumps(VIEWS.as_uri()), body)
         result = subprocess.run(["bun", "--no-install", "--input-type=module", "-e", script], text=True,
@@ -71,6 +71,13 @@ assert.deepEqual(performance.performanceListState(state, 'campaigns-changed'), {
 assert.deepEqual(performance.performanceListState(state, 'return-runs'), {page: 3, campaignPage: 4, focus: 'runs'});
 assert.equal(performance.exitStatus({exit_code: -9, measurement: {version: 1, available: {exit_code: true}}}), -9);
 assert.equal(performance.exitStatus({exit_code: -9, measurement: {version: 1, available: {exit_code: false}}}), null);
+""")
+
+    def test_shell_exposes_a_navigation_control_and_all_route_links(self):
+        self.run_module("""
+const html = renderToStaticMarkup(React.createElement(Shell, {route: 'home', logout: () => {}}, React.createElement('p', null, 'Content')));
+assert.match(html, /aria-label="Open navigation"/);
+for (const route of ['home', 'catalog', 'documentation', 'performance', 'evaluations']) assert.match(html, new RegExp(`href="\\#${route}"`));
 """)
 
     def test_tool_records_hide_raw_wallclock_without_a_measurement_envelope(self):
