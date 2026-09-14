@@ -904,13 +904,26 @@ def _apply_runs(pb: PB, runs: dict[str, dict], existing: dict[str, dict],
 
 
 def _preserve_unobserved_log_fields(body: dict, rec: dict) -> None:
-    current = body.get("measurement", {}).get("source_identity", {})
+    measurement = body.get("measurement", {})
+    current = measurement.get("source_identity", {})
     if current.get("log_observation") != "unobserved-local":
         return
     if rec.get("session_id"):
         body["session_id"] = rec["session_id"]
     if rec.get("era"):
         body["era"] = rec["era"]
+    available = measurement.get("available", {})
+    provenance = measurement.get("provenance", {})
+    previous = rec.get("measurement", {})
+    previous_available = previous.get("available", {}) if isinstance(previous, dict) else {}
+    previous_provenance = previous.get("provenance", {}) if isinstance(previous, dict) else {}
+    for field in MEASUREMENT_FIELDS:
+        if available.get(field) is False and rec.get(field) is not None:
+            body[field] = rec[field]
+            if (previous_available.get(field) is True
+                    and previous_provenance.get(field) == "log-rollup"):
+                available[field] = True
+                provenance[field] = "log-rollup"
 
 
 def _preserve_observed_log_identity(body: dict, rec: dict) -> None:
