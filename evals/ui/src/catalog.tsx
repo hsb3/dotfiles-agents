@@ -81,7 +81,9 @@ function Database({
           <ul>
             {rows.map((row) => (
               <li key={row.id}>
-                {row.name || row.slug} · {row.kind}
+                <a href={`#documentation?extender=${encodeURIComponent(row.id)}`}>
+                  {row.name || row.slug}
+                </a> · {row.kind}
               </li>
             ))}
           </ul>

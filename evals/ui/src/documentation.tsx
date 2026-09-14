@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Session } from "./api";
 import {
   documentationFor,
-  extenderById,
   extenders,
+  extenderWithSource,
+  recordScope,
   safeHref,
   type DocumentationFile,
   type Extender,
@@ -18,12 +19,20 @@ const expire = (r: { kind: string; status?: number }, done: () => void) => {
 };
 
 export function DocumentationReader({ parent }: { parent: Extender }) {
-  const href = parent.source && safeHref(parent.source);
+  const source = parent.expand?.source;
+  const href = source?.url && safeHref(source.url);
 
   return (
     <>
       <p>Entry file: {parent.entry_file || "Entry file unavailable"}</p>
-      <p>{href ? <a href={href}>Source</a> : parent.source || "Source unavailable"}</p>
+      <p>Source: {source?.name || "Source unavailable"}</p>
+      {source && (
+        <p>{[source.publisher_kind, source.maintenance].filter(Boolean).join(" · ") || "Source metadata unavailable"}</p>
+      )}
+      <p>{href ? <a href={href}>Visit source</a> : "Source URL unavailable"}</p>
+      <Button kind="tertiary" href={`#evaluations?extender=${encodeURIComponent(parent.id)}`}>
+        View assessments
+      </Button>
       <pre>{parent.body || "No stored extender body."}</pre>
     </>
   );
@@ -35,7 +44,9 @@ export function Documentation({ session, onExpired }: { session: Session; onExpi
   const [total, setTotal] = useState(0);
   const [state, setState] = useState<State>("loading");
   const [rows, setRows] = useState<Extender[]>([]);
-  const [id, setId] = useState<string>();
+  const [id, setId] = useState<string | undefined>(() =>
+    typeof location === "undefined" ? undefined : recordScope(location.hash, "extender"),
+  );
   const [parent, setParent] = useState<Extender>();
   const [parentState, setParentState] = useState<State>("empty");
   const [files, setFiles] = useState<DocumentationFile[]>([]);
@@ -68,7 +79,7 @@ export function Documentation({ session, onExpired }: { session: Session; onExpi
     setFiles([]);
     setFile(undefined);
     setFileState("loading");
-    extenderById(session, id, c.signal).then((r) => {
+    extenderWithSource(session, id, c.signal).then((r) => {
       if (c.signal.aborted) return;
       if (r.kind === "ok") {
         setParent(r.data);
