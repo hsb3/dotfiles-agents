@@ -15,7 +15,7 @@ outside the restrictive base. Their content is retained, with route/name correct
 The misleading wrapper-level Anthropic license is removed with the base rather than
 applied to new first-party work. No new blanket first-party license is selected.
 
-The owner directed promotion from `/Users/henry/Developer/LEARNING/spike-make-decks`.
+The owner directed promotion from a local `spike-make-decks` experiment.
 That local private experiment has no commits or remote. Its README/HANDOFF and source
 identify it as the owner's portable-deck laboratory, derived from existing authored
 consumers. The promoted `src/deck-kit.js` SHA-256 before changes is
