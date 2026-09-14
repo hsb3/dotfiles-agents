@@ -47,6 +47,10 @@ write the real body (editorial — the scaffold can't choose it), and bump
 `plugins/solo-skills`'s version in `plugin.json` + `marketplace.json` at ship time
 (`scripts/check_version_bump.py`, CI-only — a human call, not something to script).
 
+**A helper script the skill needs ships as an asset**: a stdlib-only script goes under
+`skills/<id>/scripts/` and the body runs it as `python3 "<plugin-root>/skills/<id>/scripts/<name>.py"`.
+Never a machine-local CLI — not in the body, not as `requires: cli:<name>` (`make identity` flags both).
+
 If the skill should NOT ship solo, earn that with a real dependency (a sibling skill
 path, an agent dispatch, a hook) or a `SYSTEM_EXEMPTIONS` entry in
 `scripts/check_solo_skills.py`, and undo the symlink/README row/count fix by hand.
