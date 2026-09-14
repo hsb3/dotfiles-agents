@@ -6,7 +6,8 @@ include upstream material under their own licenses. See the
 [license inventory](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/licenses.md). Every bundle closes with an "Honest scope" section stating what it does
 not do.
 
-[Documentation](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/README.md) ·
+[Documentation site](https://hsb3.github.io/dotfiles-agents/) ·
+[Documentation source](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/README.md) ·
 [Development workflows](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/workflows.md) ·
 [Site preview and publication](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/site.md)
 

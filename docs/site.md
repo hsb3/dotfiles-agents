@@ -31,11 +31,9 @@ the full Pandoc build runs in the existing required `drift guards` CI job.
 
 ## Release policy
 
-The intended free project URL is <https://hsb3.github.io/dotfiles-agents/>. It remains
-undeployed until public readiness is verified. No custom domain or paid hosting is needed.
+The site is live at the free project URL <https://hsb3.github.io/dotfiles-agents/>.
+No custom domain or paid hosting is needed:
 [GitHub permits Pages on public repositories on its Free plan](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
-The account API did not return a plan name; enabling Pages after the visibility change
-and verifying deployment will establish this repository's actual eligibility.
 
 The Pages job runs only after the [sanctioned publish workflow](../.github/workflows/publish.yml)
 succeeds, and only for a public repository. It checks out the exact source SHA captured
@@ -44,8 +42,8 @@ docs to `main` nor writes a branch. A docs-only publication may leave the plugin
 unchanged and still deploy the documentation. Do not start a competing dev merge during
 publication. See the [publish runbook](../.agents/skills/publish-to-main/SKILL.md).
 
-After public readiness, configure repository Pages with **GitHub Actions** as its source
-and permit the `dev` branch in the `github-pages` environment. Dispatch the sanctioned
+Repository Pages uses **GitHub Actions** as its source, and the `github-pages` environment
+permits the `dev` branch (both set 2026-09-14). To redeploy, dispatch the sanctioned
 workflow from `dev`, watch all jobs pass, and verify the actual project URL anonymously.
 A successful local build is not a successful deployment.
 
