@@ -98,6 +98,18 @@ class ReferencePB:
         return body
 
 
+class CampaignPB(ReferencePB):
+    """Records campaign writes while returning stable run ids for response filters."""
+
+    def __init__(self, **collections):
+        super().__init__(**collections)
+        self.upserted = []
+
+    def upsert(self, coll, flt, body):
+        self.upserted.append((coll, flt, body))
+        return {"id": "run-1" if coll == "eval_runs" else "response-1"}, False
+
+
 def row(rec_id, slug, kind="skill", origin="authored", **extra):
     return {"id": rec_id, "slug": slug, "kind": kind, "origin": origin, **extra}
 
@@ -336,6 +348,66 @@ class ConsumerFilterTest(unittest.TestCase):
             self._load_manifest(pb, self._eval_run_manifest("github-project-board"))
         self.assertEqual(pb.collections.get("eval_runs", []), [])
         self.assertEqual(pb.collections.get("eval_responses", []), [])
+
+
+class CampaignMeasurementProjectionTest(unittest.TestCase):
+    def _load(self, pb, manifest, raw=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "manifest.json")
+            with open(path, "wb") as fh:
+                fh.write(raw if raw is not None else json.dumps(manifest).encode())
+            quiet(load_eval_run.load_manifest, pb, path)
+
+    def _manifest(self, response):
+        return {"run": {"slug": "campaign", "kind": "judged"}, "responses": [response]}
+
+    def test_projects_observed_zero_metrics_and_exact_manifest_sha(self):
+        raw = b'{"run":{"slug":"campaign","kind":"judged"},"responses":[{"role":"judge","tokens":0,"duration_ms":0}]}'
+        pb = CampaignPB(frameworks=[], extenders=[])
+        self._load(pb, None, raw)
+        body = pb.upserted[-1][2]
+        self.assertEqual(body["tokens"], 0)
+        self.assertEqual(body["duration_ms"], 0)
+        self.assertEqual(body["measurement"], {
+            "version": 1,
+            "source": "eval-run-manifest",
+            "available": {"tokens": True, "duration_ms": True},
+            "provenance": {"tokens": "manifest", "duration_ms": "manifest"},
+            "execution": {
+                "validity": "unknown",
+                "reason": "manifest does not attest execution validity",
+                "preconditions": None,
+            },
+            "source_identity": {
+                "manifest_file_sha256": "f9adff88286e0986fbde2ae0059d3a39dfd82726ec2579d018830dc30685c121",
+                "revision": {"value": None, "available": False},
+            },
+        })
+
+    def test_reingestion_missing_metric_clears_number_and_marks_it_unavailable(self):
+        pb = CampaignPB(frameworks=[], extenders=[])
+        self._load(pb, self._manifest({"role": "judge", "tokens": 7, "duration_ms": 11}))
+        self._load(pb, self._manifest({"role": "judge", "tokens": 7}))
+        body = pb.upserted[-1][2]
+        self.assertEqual(body["tokens"], 7)
+        self.assertEqual(body["duration_ms"], 0)
+        self.assertEqual(body["measurement"]["available"],
+                         {"tokens": True, "duration_ms": False})
+        self.assertEqual(body["measurement"]["provenance"],
+                         {"tokens": "manifest", "duration_ms": None})
+
+    def test_invalid_metric_in_any_response_leaves_no_partial_writes(self):
+        for field, value in (("tokens", True), ("tokens", float("inf")),
+                             ("duration_ms", -1), ("duration_ms", "1")):
+            with self.subTest(field=field, value=value):
+                pb = CampaignPB(frameworks=[], extenders=[])
+                manifest = {"run": {"slug": "campaign", "kind": "judged"}, "responses": [
+                    {"role": "valid", "tokens": 1}, {"role": "invalid", field: value},
+                ]}
+                with self.assertRaises(SystemExit) as caught:
+                    self._load(pb, manifest)
+                self.assertIn(field, str(caught.exception))
+                self.assertEqual(pb.upserted, [])
 
 
 class ReferenceSource:
