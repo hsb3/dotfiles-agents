@@ -88,6 +88,17 @@ assert.equal(session.token, '');
 assert.deepEqual(session.snapshot(), {selections: {}, loaded: {}});
 """)
 
+    def test_immediately_expired_jwt_login_is_not_successful(self):
+        self.run_module("""
+const token = 'header.' + btoa(JSON.stringify({exp: 1})).replaceAll('=', '') + '.signature';
+const clock = {now: () => 1_000, setTimeout: () => { throw new Error('expired token must not schedule'); }, clearTimeout: () => {}};
+const session = new Session(async () => new Response(JSON.stringify({token})), clock);
+const result = await session.login('a@example.test', 'secret');
+assert.equal(result.kind, 'error');
+assert.equal(session.token, '');
+assert.deepEqual(session.snapshot(), {selections: {}, loaded: {}});
+""")
+
     def test_clear_subscribers_observe_only_effective_clears(self):
         self.run_module("""
 const timers = [];

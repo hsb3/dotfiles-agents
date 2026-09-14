@@ -101,6 +101,8 @@ export class Session {
     if (result.kind === "ok" && result.data.token) {
       this.#token = result.data.token;
       this.#armExpiry(result.data.token, generation);
+      if (generation !== this.#generation || !this.#token)
+        return { kind: "error", status: 0, message: "Session expired" } as const;
     }
     return result;
   }
