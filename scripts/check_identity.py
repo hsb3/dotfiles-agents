@@ -33,7 +33,8 @@ not lost:
   - secret hygiene — no literal credential (token/key) baked into a body.
   - portability — machine-tied content is banned outright (absolute /Users paths, personal
     home-folder locations, personal vault name, non-portable install flags); a machine-local
-    tool reference is legal only when the roster entry declares it in `requires:`.
+    tool name is a defect wherever it appears — in a shipped body OR as a roster
+    `requires: cli:<tool>` entry. A `requires:` declaration never excuses the mention.
   - issue reference — no bare `#NNN` (or MUL-/DEV-/da#/wb#) issue key baked into a shipped
     body: an issue number is repo-specific personalization, and a shipped primitive must stay
     portable across repos (entered a3d1014, 2026-07-17, entry-gate D6, decision 0013 item 9).
@@ -107,7 +108,12 @@ HARD_MACHINE = [
     (re.compile(r"(?:~|\$HOME)/(?:Documents|Desktop)/"), "personal home-folder path (~/Documents, ~/Desktop)"),
 ]
 
-# ── Machine-local tools: legal ONLY with a covering roster `requires:` (cli:<tool>). ──
+# ── Machine-local tools: a finding wherever they appear. ──
+# These exist only on the owner's machines (hsb3/dev-journey `packages/`; keep the list
+# current with that directory). A body mention is a defect regardless of `requires:`, and a
+# roster `requires: cli:<tool>` naming one is itself a defect: `cli:` must name a tool with a
+# public install path (brew, uv, bun, GitHub release). A stdlib-only script a skill needs
+# ships as an asset under its `scripts/`, invoked by <plugin-root> path.
 DOTFILES_PATH = re.compile(r"(?:~|\$HOME)/(?:dotfiles|Developer)\b")
 LOCAL_TOOLS = (
     "agy", "brewup", "camera-log", "capture-console-errors", "cc-hooks",
@@ -258,8 +264,18 @@ def scan_file(fp, rel, requires, problems, skip_identity=False, skip_issue_ref=F
     if DOTFILES_PATH.search(body) and "env:dotfiles" not in requires:
         problems.append(f"{rel}: ~/dotfiles or ~/Developer path without `requires: [env:dotfiles]`")
     for tool, rx in LOCAL_TOOL_RX.items():
-        if rx.search(body) and f"cli:{tool}" not in requires and "env:dotfiles" not in requires:
-            problems.append(f"{rel}: machine-local tool '{tool}' without `requires: [cli:{tool}]`")
+        if rx.search(body):
+            problems.append(f"{rel}: machine-local tool '{tool}' (ship the script as a skill asset)")
+
+
+def check_roster_requires(entries, problems):
+    """A roster `requires: cli:<tool>` naming a machine-local tool is a finding."""
+    for e in entries:
+        for word in _list(e.get("requires", "")):
+            if word.startswith("cli:") and word[4:] in LOCAL_TOOLS:
+                problems.append(
+                    f"primitives-core.yaml: {e.get('id', '?')} requires `{word}`, a machine-local "
+                    f"tool (cli: must name a publicly installable tool)")
 
 
 def check_frontmatter(fp, rel, is_skill, problems):
@@ -293,6 +309,7 @@ def check_frontmatter(fp, rel, is_skill, problems):
 
 def main():
     problems = []
+    check_roster_requires(parse_roster(os.path.join(REPO, "primitives-core.yaml")), problems)
     req_by_src = _requires_by_source()
     vendored = _vendored_bases()
     for root in SCAN_ROOTS:

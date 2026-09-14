@@ -53,12 +53,24 @@ class RedAble(unittest.TestCase):
     def test_undeclared_local_tool_flagged(self):
         self.assertTrue(any("cc-project-memory" in p for p in _scan("run cc-project-memory init")))
 
+    def test_declared_local_tool_still_flagged(self):
+        # A covering `requires: cli:<tool>` used to silence this; it is now a finding either way.
+        probs = _scan("run cc-project-memory init", requires={"cli:cc-project-memory"})
+        self.assertTrue(any("cc-project-memory" in p for p in probs))
+
+    def test_roster_requires_of_local_tool_flagged(self):
+        probs = []
+        I.check_roster_requires(
+            [{"id": "some-skill", "requires": "[cli:cc-project-memory, env:dotfiles]"}], probs)
+        self.assertEqual(len(probs), 1)
+        self.assertIn("primitives-core.yaml: some-skill requires `cli:cc-project-memory`", probs[0])
+
 
 class Precision(unittest.TestCase):
-    def test_declared_local_tool_exempt(self):
-        # Same tool reference, but the roster entry declares it in requires -> not flagged.
-        probs = _scan("run cc-project-memory init", requires={"cli:cc-project-memory"})
-        self.assertFalse(any("cc-project-memory" in p for p in probs))
+    def test_roster_requires_of_public_tool_not_flagged(self):
+        probs = []
+        I.check_roster_requires([{"id": "x", "requires": "[cli:gh, cli:bun, hosted-mcp]"}], probs)
+        self.assertEqual(probs, [])
 
     def test_skill_id_with_embedded_name_not_flagged(self):
         # A name embedded in a hyphenated skill id (e.g. foo-henry) is a structural reference,

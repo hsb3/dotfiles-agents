@@ -90,7 +90,7 @@ primitives:
     source: primitives-core/skills/readme-value-and-proof
     origin: authored
     disposition: qualified
-    requires: [cli:capture-console-errors]
+    requires: []
     targets: [claude-code, opencode, codex]
   - id: repo-compliance-audit
     type: skill

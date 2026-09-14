@@ -85,8 +85,6 @@ real proof. Both must be true.
    - Shadow-DOM apps (e.g. web components): Playwright's `getByText` /
      `getByRole` / `getByPlaceholder` pierce shadow roots; raw CSS selectors often
      don't. Body `innerText` won't include shadow content — judge from the image.
-   - `capture-console-errors` (in `~/.local/bin`) is a ready console-capture
-     helper if you only need error logging.
 4. **Look at every screenshot** before using it. Confirm it shows the feature
    working and nothing is broken/misleading (placeholder labels, error states,
    empty panels). Drop or recapture bad ones; file/fix real bugs you find.

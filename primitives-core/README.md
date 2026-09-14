@@ -31,7 +31,7 @@ guarded by [`../scripts/check_symlinks.py`](../scripts/check_symlinks.py):
 | `origin` | `authored` \| `sourced` \| `vendored` | provenance; immutable per entry. `sourced` and `vendored` require non-null `upstream` + `ref`. |
 | `disposition` | `qualified` \| `grandfathered-pending-use` \| `demoted` \| `untriaged` \| `orphaned` | owner-curated verdict. |
 | `targets` | `[claude-code, opencode, codex]` subset | Claude Code and Codex install the assemblies; Codex roles are rendered at project setup. opencode is generated at install time (task-4). |
-| `requires` | optional capability/dependency words | `{hooks,local-mcp,hosted-mcp}` + `cli:<kebab>` / `env:<kebab>`. |
+| `requires` | optional capability/dependency words | `{hooks,local-mcp,hosted-mcp}` + `cli:<kebab>` / `env:<kebab>`. `cli:<kebab>` must name a tool with a public install path (brew, uv, bun, GitHub release); a tool that exists only on the owner's machines is never a valid dependency (`make identity` flags it). A simple stdlib script ships under the skill's `scripts/` and is invoked by `<plugin-root>` path, not declared here. |
 
 `primitives-core` holds **self-authored** primitives only
 ([decision-028](../docs/decisions/decisions-028-primitives-core-is-self-authored-only-externals-by-reference.md)); third-party items are
