@@ -199,10 +199,6 @@ class ToolboxFixture:
             "description": "A synthetic selectable primitive.", "body": "# UI fixture primitive\n",
             "entry_file": "SKILL.md", "file_count": 3,
         })
-        companion = create("extenders", {
-            "slug": "ui-fixture-companion", "name": "UI Fixture Companion", "kind": "hook",
-            "origin": "authored", "source": source["id"], "shelf": "toggle", "disposition": "qualified",
-        })
         for relpath, role, content in (
             ("README.md", "doc", "# Fixture\n"), ("SKILL.md", "entrypoint", "# Skill\n"),
             ("hooks/check.py", "script", "print('fixture')\n"),
@@ -226,9 +222,6 @@ class ToolboxFixture:
                                "evidence": "Fixture evidence for current campaign.", "assessor": "ui-fixture-assessor"})
         create("job_coverage", {"job": job["id"], "disposition": "author", "status": "covered",
                                 "source": source["id"], "rationale": "Fixture coverage.", "eval_run": evaluation["id"]})
-        create("relationships", {"extender_a": primitive["id"], "extender_b": companion["id"],
-                                 "kind": "complementary", "job": job["id"], "evidence": "Fixture relation.",
-                                 "assessor": "ui-fixture-assessor", "eval_run": evaluation["id"]})
 
     def _run_body(self, index):
         paired = index < 2
