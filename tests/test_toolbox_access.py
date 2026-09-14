@@ -138,11 +138,19 @@ class ToolboxAccessTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
         shutil.copytree(ROOT / "evals" / "deploy", source / "evals" / "deploy")
-        for directory in (source / "evals" / "ui", source / "evals" / "ui" / "dist"):
-            directory.mkdir(parents=True, exist_ok=True)
-            (directory / "index.html").write_text("<!doctype html>", encoding="utf-8")
-            (directory / "styles.css").write_text("", encoding="utf-8")
-            (directory / "app.js").write_text("", encoding="utf-8")
+        legacy_ui = source / "evals" / "ui"
+        legacy_ui.mkdir(parents=True)
+        (legacy_ui / "index.html").write_text("<!doctype html>", encoding="utf-8")
+        (legacy_ui / "styles.css").write_text("", encoding="utf-8")
+        (legacy_ui / "app.js").write_text("", encoding="utf-8")
+        dist = legacy_ui / "dist"
+        assets = dist / "assets"
+        assets.mkdir(parents=True)
+        (dist / "index.html").write_text(
+            '<!doctype html><link rel="stylesheet" href="/assets/styles.css">'
+            '<script type="module" src="/assets/app.js"></script>', encoding="utf-8")
+        (assets / "styles.css").write_text("", encoding="utf-8")
+        (assets / "app.js").write_text("", encoding="utf-8")
 
     @unittest.skipUnless(shutil.which("pocketbase"), "requires PocketBase")
     def test_real_fixture_keeps_writes_and_users_private(self):
