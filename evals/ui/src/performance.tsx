@@ -68,6 +68,10 @@ export function responseMetric(response: { measurement?: unknown; [key: string]:
     && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+export function toolTiming(_tool: ToolCall): string {
+  return unavailable;
+}
+
 export function fileTokenResult(fresh: boolean, reply: { kind: string; token?: string }) {
   if (!fresh) return { state: "stale" as const };
   if (reply.kind === "ok" && typeof reply.token === "string" && reply.token.trim()) {
@@ -309,7 +313,7 @@ function EventRecords({ result, page, setPage }: { result: ReturnType<typeof use
 function ToolRecords({ result, page, setPage }: { result: ReturnType<typeof useLoad<Paged<ToolCall>>>; page: number; setPage: (page: number) => void }) {
   return <section className="surface performance-panel">
     <h2>Current tools</h2>
-    {result.state === "populated" ? <TableRegion label="Current run tools"><Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Call</TableHeader><TableHeader>Tool</TableHeader><TableHeader>Status</TableHeader><TableHeader>Timing</TableHeader><TableHeader>Payload</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.tool_call_id}</TableCell><TableCell>{item.tool_name}</TableCell><TableCell>{asText(item.status)}</TableCell><TableCell>{asText(item.wallclock_ms)}</TableCell><TableCell><details><summary>Input and output</summary><pre>{asText({ input: item.input, output: item.output })}</pre></details></TableCell></TableRow>)}</TableBody></Table></TableRegion> : <StateNotice state={result.state} subject="current tools" />}
+    {result.state === "populated" ? <TableRegion label="Current run tools"><Table><TableHead><TableRow><TableHeader>ID</TableHeader><TableHeader>Call</TableHeader><TableHeader>Tool</TableHeader><TableHeader>Status</TableHeader><TableHeader>Timing</TableHeader><TableHeader>Payload</TableHeader></TableRow></TableHead><TableBody>{result.data?.items.map((item) => <TableRow key={item.id}><TableCell>{item.id}</TableCell><TableCell>{item.tool_call_id}</TableCell><TableCell>{item.tool_name}</TableCell><TableCell>{asText(item.status)}</TableCell><TableCell>{toolTiming(item)}</TableCell><TableCell><details><summary>Input and output</summary><pre>{asText({ input: item.input, output: item.output })}</pre></details></TableCell></TableRow>)}</TableBody></Table></TableRegion> : <StateNotice state={result.state} subject="current tools" />}
     {result.data && <Pager page={page} total={result.data.totalItems} onChange={setPage} />}
   </section>;
 }
