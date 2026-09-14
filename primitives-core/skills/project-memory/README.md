@@ -16,7 +16,8 @@ renamed or moved ("my project memory disappeared after I moved the folder"). Two
 pure-Python-3-stdlib scripts run from the repo root: `project_memory.py`
 (init/status/path/list) wires and inspects a repo and never overwrites an existing memory
 file; `migrate_memory.py` relocates memory — and optionally session transcripts — after a
-move, previewing by default and copying only with `--apply`.
+move, previewing by default and copying only with `--apply`. The bundled scripts are the
+only path; nothing here assumes a CLI on the machine's `PATH`.
 
 ## Install
 
