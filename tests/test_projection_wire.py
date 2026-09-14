@@ -72,23 +72,25 @@ class ProjectionWireTest(unittest.TestCase):
             raise unittest.SkipTest(f"PocketBase 0.40.3 required, found: {version or 'unknown'}")
 
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(prefix="projection-wire-")
-        self.root = Path(self.tmp.name)
-        with socket.socket() as sock:
-            sock.bind(("127.0.0.1", 0))
-            self.port = sock.getsockname()[1]
-        self.url = f"http://127.0.0.1:{self.port}"
-        self.env = os.environ | {"PB_URL": self.url, "PB_ADMIN_EMAIL": EMAIL,
-                                 "PB_ADMIN_PASSWORD": PASSWORD}
-        self.old_pb_env = {key: os.environ.get(key) for key in self.env if key.startswith("PB_")}
-        os.environ.update({key: value for key, value in self.env.items() if key.startswith("PB_")})
-        data = self.root / "pb_data"
-        subprocess.run([PB_BINARY, "superuser", "create", EMAIL, PASSWORD, "--dir", str(data)],
-                       check=True, text=True, capture_output=True)
-        self.server = subprocess.Popen([PB_BINARY, "serve", "--http", f"127.0.0.1:{self.port}",
-                                        "--dir", str(data)], stdout=subprocess.DEVNULL,
-                                       stderr=subprocess.DEVNULL)
+        self.tmp = self.server = None
+        self.old_pb_env = {}
         try:
+            self.tmp = tempfile.TemporaryDirectory(prefix="projection-wire-")
+            self.root = Path(self.tmp.name)
+            with socket.socket() as sock:
+                sock.bind(("127.0.0.1", 0))
+                self.port = sock.getsockname()[1]
+            self.url = f"http://127.0.0.1:{self.port}"
+            self.env = os.environ | {"PB_URL": self.url, "PB_ADMIN_EMAIL": EMAIL,
+                                     "PB_ADMIN_PASSWORD": PASSWORD}
+            self.old_pb_env = {key: os.environ.get(key) for key in self.env if key.startswith("PB_")}
+            os.environ.update({key: value for key, value in self.env.items() if key.startswith("PB_")})
+            data = self.root / "pb_data"
+            subprocess.run([PB_BINARY, "superuser", "create", EMAIL, PASSWORD, "--dir", str(data)],
+                           check=True, text=True, capture_output=True)
+            self.server = subprocess.Popen([PB_BINARY, "serve", "--http", f"127.0.0.1:{self.port}",
+                                            "--dir", str(data)], stdout=subprocess.DEVNULL,
+                                           stderr=subprocess.DEVNULL)
             for _ in range(100):
                 try:
                     request(self.url + "/api/health")
@@ -149,15 +151,6 @@ class ProjectionWireTest(unittest.TestCase):
         replay = campaign_pb.list_all("eval_responses")
         self.assertEqual(len(replay), 1)
         self.assertEqual({key: replay[0][key] for key in projection}, projection)
-        before = loader.PB().get_collection("artifacts")
-        blob_before = next(field for field in before["fields"] if field["name"] == "blob")
-        subprocess.run([sys.executable, str(EVALS / "schema.py")], cwd=EVALS, env=self.env,
-                       check=True, text=True, capture_output=True)
-        after = loader.PB().get_collection("artifacts")
-        blob_after = next(field for field in after["fields"] if field["name"] == "blob")
-        self.assertEqual(after["listRule"], before["listRule"])
-        self.assertEqual(blob_after["id"], blob_before["id"])
-        self.assertTrue(blob_after.get("protected") or blob_after.get("options", {}).get("protected"))
         evidence = "shared protected evidence\n" + "x" * loader.ARTIFACT_TEXT_THRESHOLD
         logs = []
         for trial in (1, 2):
@@ -185,13 +178,39 @@ class ProjectionWireTest(unittest.TestCase):
         artifacts = pb.list_all("artifacts")
         self.assertEqual(len(artifacts), 1)
         artifact = artifacts[0]
-        self.assertEqual(len(pb.list_all("run_events", f"artifact='{artifact['id']}'")), 2)
-        self.assertEqual(len(pb.list_all("tool_calls", f"artifact='{artifact['id']}'")), 2)
+        event_refs = [(row["id"], row.get("artifact")) for row in pb.list_all("run_events")]
+        call_refs = [(row["id"], row.get("artifact")) for row in pb.list_all("tool_calls")]
+        self.assertEqual(sum(ref == artifact["id"] for _, ref in event_refs), 2)
+        self.assertEqual(sum(ref == artifact["id"] for _, ref in call_refs), 2)
+        rules = {"listRule": "@request.auth.id != ''", "viewRule": "@request.auth.id != '' && id != ''",
+                 "createRule": "@request.auth.id != '' && byte_size >= 0",
+                 "updateRule": "@request.auth.id != '' && sha256 != ''",
+                 "deleteRule": "@request.auth.id != '' && mime != ''"}
+        pb._req("PATCH", "/api/collections/artifacts", rules)
+        before = pb.get_collection("artifacts")
+        blob_before = next(field for field in before["fields"] if field["name"] == "blob")
+        subprocess.run([sys.executable, str(EVALS / "schema.py")], cwd=EVALS, env=self.env,
+                       check=True, text=True, capture_output=True)
+        after = pb.get_collection("artifacts")
+        blob_after = next(field for field in after["fields"] if field["name"] == "blob")
+        for key, value in rules.items():
+            self.assertEqual(after[key], value)
+        self.assertEqual(blob_after["id"], blob_before["id"])
+        self.assertTrue(blob_after.get("protected") or blob_after.get("options", {}).get("protected"))
+        artifact = pb.find_first("artifacts", f"sha256='{artifact['sha256']}'")
+        self.assertEqual(artifact["blob"], artifacts[0]["blob"])
+        self.assertEqual([(row["id"], row.get("artifact")) for row in pb.list_all("run_events")], event_refs)
+        self.assertEqual([(row["id"], row.get("artifact")) for row in pb.list_all("tool_calls")], call_refs)
         token = pb._req("POST", "/api/files/token", {})["token"]
         blob = urllib.parse.quote(artifact["blob"])
         with urllib.request.urlopen(f"{self.url}/api/files/artifacts/{artifact['id']}/{blob}?token={token}") as response:
             self.assertEqual(hashlib.sha256(response.read()).hexdigest(), artifact["sha256"])
 
+        prior_runs = {run["id"]: (run["session_id"], run["era"],
+                                   run["measurement"]["source_identity"]["log_sha256"])
+                    for run in runs}
+        for log in logs:
+            log.unlink()
         missing = [ledger_row(1, logs[0]), ledger_row(2, logs[1])]
         changed = self.ingest(missing)
         self.assertEqual(changed["runs"], (0, 2, 0))
@@ -202,4 +221,11 @@ class ProjectionWireTest(unittest.TestCase):
             # is the versioned wire contract that keeps that default from fabricating data.
             self.assertFalse(run["passed"])
             self.assertEqual(run["num_turns"], 0)
+            self.assertEqual((run["session_id"], run["era"],
+                              run["measurement"]["source_identity"]["log_sha256"]), prior_runs[run["id"]])
+        self.assertEqual([(row["id"], row.get("artifact")) for row in pb.list_all("run_events")], event_refs)
+        self.assertEqual([(row["id"], row.get("artifact")) for row in pb.list_all("tool_calls")], call_refs)
+        token = pb._req("POST", "/api/files/token", {})["token"]
+        with urllib.request.urlopen(f"{self.url}/api/files/artifacts/{artifact['id']}/{blob}?token={token}") as response:
+            self.assertEqual(hashlib.sha256(response.read()).hexdigest(), artifact["sha256"])
         self.assertEqual(self.ingest(missing)["runs"], (0, 0, 2))
