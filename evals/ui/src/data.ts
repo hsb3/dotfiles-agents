@@ -60,7 +60,7 @@ export const coverageFor = (session: Session, job: string, signal?: AbortSignal)
 export type Evaluation = Assessment & { verdict: string; evidence: string; assessor: string };
 export const evaluations = (session: Session, page = 1, signal?: AbortSignal) =>
   pageRecords<Evaluation>(session, "/api/collections/assessments/records", { fields: "id,framework,element,extender,eval_run,verdict,evidence,assessor", sort: "+created", page, signal });
-export type Coverage = JobCoverage & { status: string; disposition: string; rationale: string };
+export type Coverage = JobCoverage & { status: string; disposition: string; rationale: string; expand?: { job?: { id?: string; name?: string } } };
 export const jobCoverage = (session: Session, page = 1, signal?: AbortSignal) =>
   pageRecords<Coverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run,status,disposition,rationale,expand.job.id,expand.job.name", expand: "job", sort: "+created", page, signal });
 

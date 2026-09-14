@@ -1,4 +1,4 @@
-import { Button, Column, Grid, InlineNotification, PasswordInput, TextInput } from "@carbon/react";
+import { Breadcrumb, BreadcrumbItem, Button, Column, Grid, InlineNotification, PasswordInput, TextInput } from "@carbon/react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import type { Session } from "./api";
 
@@ -9,6 +9,7 @@ export async function submitLogin(session: Pick<Session, "login">, email: string
 export function Block({ children }: { children: ReactNode }) {
   return <Grid fullWidth className="content-block"><Column sm={4} md={8} lg={16}>{children}</Column></Grid>;
 }
+export function PageCrumbs({ current }: { current: string }) { return <Breadcrumb noTrailingSlash><BreadcrumbItem href="#home">Home</BreadcrumbItem>{current !== "Home" && <BreadcrumbItem isCurrentPage>{current}</BreadcrumbItem>}</Breadcrumb>; }
 
 export function StateNotice({ state, subject }: { state: "loading" | "access" | "error" | "empty"; subject: string }) {
   const copy = {
