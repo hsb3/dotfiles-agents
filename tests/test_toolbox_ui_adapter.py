@@ -67,6 +67,25 @@ assert.equal(late.kind, 'error');
 assert.equal(session.token, '');
 """)
 
+    def test_stale_access_cannot_clear_a_newer_login(self):
+        self.run_module("""
+let resolve, logins = 0;
+const session = new Session(async (url) => {
+  if (url.endsWith('auth-with-password')) return new Response(JSON.stringify({token: 'token-' + ++logins}));
+  return new Promise((done) => { resolve = done; });
+});
+await session.login('a@example.test', 'secret');
+const pending = session.request('/api/collections/files/records');
+await Promise.resolve();
+await session.login('a@example.test', 'secret');
+session.setSelection('fresh', ['record-2']);
+resolve(new Response('expired', {status: 401}));
+const late = await pending;
+assert.equal(late.kind, 'error');
+assert.equal(session.token, 'token-2');
+assert.deepEqual(session.snapshot().selections, {fresh: ['record-2']});
+""")
+
     def test_filters_escape_before_pagination_and_file_tokens_stay_out_of_urls(self):
         self.run_module("""
 let seen = [];
@@ -95,6 +114,15 @@ assert.equal(seen[4][1].headers.get('Authorization'), 'memory-token');
 assert.equal(safeHref('https://example.test/source'), 'https://example.test/source');
 assert.equal(safeHref('/documentation/ext-1'), '/documentation/ext-1');
 for (const unsafe of ['javascript:alert(1)', 'data:text/html,x', '//example.test/x', 'https://user@example.test/x', 'not a url']) assert.equal(safeHref(unsafe), undefined);
+for (const malformed of ['https:\\\\evil.example/x', 'http:\\\\evil.example/x', 'https:/evil.example/x']) assert.equal(safeHref(malformed), undefined);
+""")
+
+    def test_file_tokens_must_not_be_blank(self):
+        self.run_module("""
+const session = new Session(async (url) => new Response(JSON.stringify(url.endsWith('auth-with-password') ? {token: 'memory-token'} : {token: '   '})));
+await session.login('a@example.test', 'secret');
+const file = await protectedFileToken(session);
+assert.deepEqual(file, {kind: 'error', status: 0, message: 'File token missing'});
 """)
 
     def test_late_response_cannot_restore_cleared_state(self):

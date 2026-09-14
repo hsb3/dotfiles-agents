@@ -77,12 +77,12 @@ export class Session {
     const result = await request<T>(path, { ...options, signal: controller.signal, token: this.#token, fetcher: this.fetcher });
     options.signal?.removeEventListener("abort", cancel);
     this.#controllers.delete(controller);
+    if (generation !== this.#generation || controller.signal.aborted)
+      return { kind: "error", status: 0, message: "Request cancelled" } as const;
     if (result.kind === "access") {
       this.#clear();
       return result;
     }
-    if (generation !== this.#generation || controller.signal.aborted)
-      return { kind: "error", status: 0, message: "Request cancelled" } as const;
     return result;
   }
 
@@ -104,7 +104,7 @@ export class Session {
 export async function protectedFileToken(session: Session): Promise<{ kind: "ok"; token: string } | Exclude<ApiResult<unknown>, { kind: "ok" }>> {
   const result = await session.request<{ token?: string }>("/api/files/token", { method: "POST" });
   if (result.kind !== "ok") return result;
-  return typeof result.data.token === "string"
+  return typeof result.data.token === "string" && result.data.token.trim()
     ? { kind: "ok", token: result.data.token }
     : { kind: "error", status: 0, message: "File token missing" };
 }

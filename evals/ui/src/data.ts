@@ -44,11 +44,13 @@ export const coverageFor = (session: Session, job: string, signal?: AbortSignal)
   pageRecords<JobCoverage>(session, "/api/collections/job_coverage/records", { fields: "id,job,eval_run", filter: `job = ${pocketBaseLiteral(job)}`, sort: "+created", signal });
 
 export function safeHref(value: string): string | undefined {
+  if (value.trim() !== value || value.includes("\\")) return undefined;
   if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) {
     const route = new URL(value, "https://toolbox.invalid");
     return route.pathname + route.search + route.hash;
   }
   try {
+    if (!/^https?:\/\//i.test(value)) return undefined;
     const url = new URL(value);
     return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password ? url.href : undefined;
   } catch {
