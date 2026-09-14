@@ -442,6 +442,18 @@ class CampaignMeasurementProjectionTest(unittest.TestCase):
         self.assertNotEqual(first["resolved_response_sha256"], second["resolved_response_sha256"])
         self.assertEqual(second["resolved_response_canonicalization"], "json-sorted-keys-utf8")
 
+    def test_nonfinite_nested_response_json_leaves_no_partial_writes(self):
+        pb = CampaignPB(frameworks=[], extenders=[])
+        manifest = self._manifest({
+            "role": "judge",
+            "response_json": {"nested": {"value": float("nan")}},
+        })
+        with self.assertRaises(SystemExit) as caught:
+            self._load(pb, manifest)
+        self.assertIn("response judge", str(caught.exception))
+        self.assertIn("response_json", str(caught.exception))
+        self.assertEqual(pb.upserted, [])
+
 class ReferenceSource:
     """report.py's data-source shape: `list_all(coll)`, no filter argument (FixtureSource)."""
 

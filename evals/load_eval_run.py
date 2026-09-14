@@ -129,19 +129,23 @@ def load_manifest(pb, path):
                 rj = json.load(fh)
         prompt = _read(base, resp, "prompt", "prompt_file")
         response_text = _read(base, resp, "response_text", "response_text_file")
-        resolved_response_sha256 = _resolved_response_sha256({
-            "role": resp["role"],
-            "agent_type": resp.get("agent_type", ""),
-            "model": resp.get("model", ""),
-            "prompt": prompt,
-            "response_text": response_text,
-            "response_json": rj if rj is not None else {},
-            "extender_slugs": resp.get("extenders", []),
-            "tokens": {"value": tokens if tokens_available else None,
-                       "available": tokens_available},
-            "duration_ms": {"value": duration_ms if duration_available else None,
-                            "available": duration_available},
-        })
+        try:
+            resolved_response_sha256 = _resolved_response_sha256({
+                "role": resp["role"],
+                "agent_type": resp.get("agent_type", ""),
+                "model": resp.get("model", ""),
+                "prompt": prompt,
+                "response_text": response_text,
+                "response_json": rj if rj is not None else {},
+                "extender_slugs": resp.get("extenders", []),
+                "tokens": {"value": tokens if tokens_available else None,
+                           "available": tokens_available},
+                "duration_ms": {"value": duration_ms if duration_available else None,
+                                "available": duration_available},
+            })
+        except ValueError as e:
+            raise SystemExit(f"{path}: response {resp.get('role', '<unknown>')}: "
+                             f"response_json cannot be canonically serialized: {e}") from None
         responses.append({
             "run": None,
             "role": resp["role"],
