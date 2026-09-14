@@ -43,7 +43,7 @@ export function sortRuns(rows: readonly Run[], metric: KnownMetric, direction: S
   return [...rows].sort((left, right) => {
     const a = measurementNumber(left, metric); const b = measurementNumber(right, metric);
     if (a === null || b === null) return a === b ? left.id.localeCompare(right.id) : a === null ? 1 : -1;
-    return (a - b) * multiplier || left.id.localeCompare(right.id) * multiplier;
+    return (a - b) * multiplier || left.id.localeCompare(right.id);
   });
 }
 export const campaigns = (session: RequestSession, query = "", page = 1, signal?: AbortSignal) => {

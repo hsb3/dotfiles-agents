@@ -48,7 +48,7 @@ assert.equal(url.searchParams.get('filter'), filter);
 const measured = (id, duration) => ({id, duration_ms: duration, measurement: {version: 1, available: {duration_ms: true}}});
 const unknown = {id: 'z', duration_ms: 0, measurement: {version: 1, available: {duration_ms: false}}};
 assert.deepEqual(performance.sortRuns([unknown, measured('b', 4), measured('a', 4), measured('c', 1)], 'duration_ms', 'asc').map((run) => run.id), ['c', 'a', 'b', 'z']);
-assert.deepEqual(performance.sortRuns([unknown, measured('b', 4), measured('a', 4), measured('c', 1)], 'duration_ms', 'desc').map((run) => run.id), ['b', 'a', 'c', 'z']);
+assert.deepEqual(performance.sortRuns([unknown, measured('b', 4), measured('a', 4), measured('c', 1)], 'duration_ms', 'desc').map((run) => run.id), ['a', 'b', 'c', 'z']);
 """)
 
     def test_evidence_collects_all_reference_pages_deduplicates_sha_and_reports_unknown_completeness(self):
