@@ -55,6 +55,12 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
 - **`ci.yml` fires on `pull_request` ONLY.** A direct push to `dev` gets ZERO CI, and the owner's
   waiver means `remote: Bypassed rule violations` is expected on the handful of paths it covers.
   Run `make ci` locally first — nothing else will. Code still goes through a PR.
+- **The fallback runner is same-repo PRs only.** `ci.yml`'s `runs-on` sends a job to the
+  self-hosted `docker-fallback` runner only when `USE_FALLBACK_RUNNER=true` AND the PR's head
+  repo is this repo; a fork PR stays on `ubuntu-latest`, because a self-hosted job runs the
+  PR's code on the owner's Mac. That clause guards only our own routing: `pull_request` runs
+  the PR's copy of the workflow, so a fork can hardcode the labels. While a fallback runner is
+  live, approve no fork run whose diff touches `.github/`.
 - **CI job names are frozen.** Branch protection pins checks by NAME, so a new gate rides an
   existing job rather than adding one.
 - **`flow.yaml` is load-bearing.** `make flow` fails on any unhomed top-level path; regenerate the
