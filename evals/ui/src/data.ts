@@ -66,7 +66,7 @@ export const jobCoverage = (session: Session, page = 1, signal?: AbortSignal) =>
 
 export function safeHref(value: string): string | undefined {
   if (value.trim() !== value || value.includes("\\")) return undefined;
-  if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) {
+  if (value.startsWith("/") && !value.startsWith("//")) {
     const route = new URL(value, "https://toolbox.invalid");
     return route.pathname + route.search + route.hash;
   }
