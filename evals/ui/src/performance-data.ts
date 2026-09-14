@@ -34,8 +34,27 @@ export function runSearchFilter(query = "", config: RunFilter = "all"): string |
   const configuration = config === "all" ? "" : "config = " + pocketBaseLiteral(config);
   return [family, configuration].filter(Boolean).join(" && ") || undefined;
 }
-export function runs(session: RequestSession, options: { query?: string; config?: RunFilter; page?: number; perPage?: number; sort?: string; signal?: AbortSignal } = {}) {
-  return pageRecords<Run>(session, "/api/collections/runs/records", { fields: RUN_FIELDS, filter: runSearchFilter(options.query, options.config), page: options.page, perPage: pageSize(options.perPage), sort: options.sort ?? "-created", signal: options.signal });
+export async function runs(session: RequestSession, options: {
+  query?: string; config?: RunFilter; page?: number; perPage?: number; sort?: string;
+  metricSort?: { metric: KnownMetric; direction: SortDirection }; signal?: AbortSignal;
+} = {}): Promise<ApiResult<Page<Run>>> {
+  const filter = runSearchFilter(options.query, options.config);
+  if (!options.metricSort) {
+    return pageRecords<Run>(session, "/api/collections/runs/records", {
+      fields: RUN_FIELDS, filter, page: options.page, perPage: pageSize(options.perPage),
+      sort: options.sort ?? "-created", signal: options.signal,
+    });
+  }
+  const records = await allPages((page) => pageRecords<Run>(session, "/api/collections/runs/records", {
+    fields: RUN_FIELDS, filter, page, perPage: 50, sort: "+id", signal: options.signal,
+  }));
+  if (records.kind !== "ok") return records;
+  const perPage = pageSize(options.perPage);
+  const page = Math.max(1, Math.trunc(options.page ?? 1));
+  const totalItems = records.data.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const ordered = sortRuns(records.data, options.metricSort.metric, options.metricSort.direction);
+  return { kind: "ok", data: { items: ordered.slice((page - 1) * perPage, page * perPage), page, totalPages, totalItems } };
 }
 export const runById = (session: RequestSession, id: string, signal?: AbortSignal) => session.request<Run>("/api/collections/runs/records/" + encodeURIComponent(id) + "?fields=" + encodeURIComponent(RUN_FIELDS), { signal });
 export function sortRuns(rows: readonly Run[], metric: KnownMetric, direction: SortDirection): Run[] {
@@ -78,11 +97,19 @@ export type Evidence = { artifacts: Artifact[]; completeness: "complete" | "unkn
 export async function evidenceForRun(session: RequestSession, run: string, signal?: AbortSignal): Promise<ApiResult<Evidence>> {
   const owned = await allPages((page) => artifactsForRun(session, run, page, signal)); if (owned.kind !== "ok") return owned;
   const [events, tools] = await Promise.all([allPages((page) => eventsForRun(session, run, page, signal)), allPages((page) => toolCallsForRun(session, run, page, signal))]);
-  if (events.kind !== "ok" || tools.kind !== "ok") return { kind: "ok", data: { artifacts: deduplicateArtifacts(owned.data), completeness: "unknown" } };
-  const ids = new Set([...events.data, ...tools.data].map((record) => record.artifact).filter((id): id is string => Boolean(id)));
+  let complete = events.kind === "ok" && tools.kind === "ok";
+  const records = [
+    ...(events.kind === "ok" ? events.data : []),
+    ...(tools.kind === "ok" ? tools.data : []),
+  ];
+  const ids = new Set(records.map((record) => record.artifact).filter((id): id is string => Boolean(id)));
   const referenced: Artifact[] = [];
-  for (const id of ids) { const result = await session.request<Artifact>("/api/collections/artifacts/records/" + encodeURIComponent(id) + "?fields=" + encodeURIComponent(ARTIFACT_FIELDS), { signal }); if (result.kind !== "ok") return { kind: "ok", data: { artifacts: deduplicateArtifacts(owned.data), completeness: "unknown" } }; referenced.push(result.data); }
-  return { kind: "ok", data: { artifacts: deduplicateArtifacts([...owned.data, ...referenced]), completeness: "complete" } };
+  for (const id of ids) {
+    const result = await artifactById(session, id, signal);
+    if (result.kind !== "ok") complete = false;
+    else referenced.push(result.data);
+  }
+  return { kind: "ok", data: { artifacts: deduplicateArtifacts([...owned.data, ...referenced]), completeness: complete ? "complete" : "unknown" } };
 }
 function deduplicateArtifacts(artifacts: Artifact[]): Artifact[] { const seen = new Set<string>(); return artifacts.filter((artifact) => !seen.has(artifact.sha256) && (seen.add(artifact.sha256), true)); }
 export function protectedArtifactUrl(artifact: Pick<Artifact, "id" | "blob">, fileToken: string): string | undefined { return artifact.id && artifact.blob && fileToken.trim() ? "/api/files/artifacts/" + encodeURIComponent(artifact.id) + "/" + encodeURIComponent(artifact.blob) + "?token=" + encodeURIComponent(fileToken) : undefined; }

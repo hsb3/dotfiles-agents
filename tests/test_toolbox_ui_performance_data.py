@@ -51,6 +51,33 @@ assert.deepEqual(performance.sortRuns([unknown, measured('b', 4), measured('a', 
 assert.deepEqual(performance.sortRuns([unknown, measured('b', 4), measured('a', 4), measured('c', 1)], 'duration_ms', 'desc').map((run) => run.id), ['a', 'b', 'c', 'z']);
 """)
 
+    def test_metric_sort_collects_the_family_before_slicing_away_legacy_zeroes(self):
+        self.run_module("""
+const known = Array.from({length: 25}, (_, index) => ({
+  id: 'known-' + String(index).padStart(2, '0'), duration_ms: index,
+  measurement: {version: 1, available: {duration_ms: true}},
+}));
+const legacy = {id: 'legacy-zero', duration_ms: 0, measurement: {version: 1, available: {duration_ms: false}}};
+const seen = [];
+const session = {request: async (url) => {
+  seen.push(url);
+  const page = Number(new URL('https://toolbox.test' + url).searchParams.get('page'));
+  return {kind: 'ok', data: {
+    items: page === 1 ? [legacy, ...known.slice(0, 24)] : [known[24]],
+    page, totalPages: 2, totalItems: 26,
+  }};
+}};
+const first = await performance.runs(session, {page: 1, perPage: 25, metricSort: {metric: 'duration_ms', direction: 'asc'}});
+const second = await performance.runs(session, {page: 2, perPage: 25, metricSort: {metric: 'duration_ms', direction: 'asc'}});
+assert.equal(first.kind, 'ok');
+assert.deepEqual(first.data.items.map((run) => run.id), known.map((run) => run.id));
+assert.equal(first.data.totalItems, 26);
+assert.equal(first.data.totalPages, 2);
+assert.equal(second.kind, 'ok');
+assert.deepEqual(second.data.items.map((run) => run.id), ['legacy-zero']);
+for (const url of seen) assert.equal(new URL('https://toolbox.test' + url).searchParams.get('sort'), '+id');
+""")
+
     def test_evidence_collects_all_reference_pages_deduplicates_sha_and_reports_unknown_completeness(self):
         self.run_module("""
 const calls = [];
@@ -83,7 +110,7 @@ const failing = { request: async (url) => url.includes('/tool_calls/') ? {kind: 
 const incomplete = await performance.evidenceForRun(failing, 'run-1');
 assert.equal(incomplete.kind, 'ok');
 assert.equal(incomplete.data.completeness, 'unknown');
-assert.deepEqual(incomplete.data.artifacts.map((item) => item.id), ['direct']);
+assert.deepEqual(incomplete.data.artifacts.map((item) => item.id), ['direct', 'from-tool']);
 """)
 
     def test_file_urls_use_only_a_short_lived_file_token_and_unknown_size_stays_unavailable(self):
@@ -96,15 +123,47 @@ assert.equal(performance.artifactByteSize({}), null);
 assert.equal(performance.artifactByteSize({byte_size: -1}), null);
 """)
 
-    def test_typed_campaign_detail_uses_real_ids_prompts_raw_evidence_and_current_associations(self):
+    def test_evidence_keeps_successful_references_when_the_sibling_family_or_lookup_fails(self):
+        self.run_module("""
+const page = (items) => ({kind: 'ok', data: {items, page: 1, totalPages: 1, totalItems: items.length}});
+const owned = {id: 'owned', sha256: 'owned', run: 'run-1', blob: 'owned.txt'};
+const partialFamily = {request: async (url) => {
+  if (url.includes('/artifacts/records/event-ref')) return {kind: 'ok', data: {id: 'event-ref', sha256: 'event', run: 'other', blob: 'event.txt'}};
+  if (url.includes('/artifacts/records?')) return page([owned]);
+  if (url.includes('/run_events/')) return page([{id: 'event', run: 'run-1', artifact: 'event-ref'}]);
+  if (url.includes('/tool_calls/')) return {kind: 'error', status: 500, message: 'tools failed'};
+  throw new Error(url);
+}};
+const familyResult = await performance.evidenceForRun(partialFamily, 'run-1');
+assert.equal(familyResult.kind, 'ok');
+assert.equal(familyResult.data.completeness, 'unknown');
+assert.deepEqual(familyResult.data.artifacts.map((item) => item.id), ['owned', 'event-ref']);
+const partialLookup = {request: async (url) => {
+  if (url.includes('/artifacts/records/missing')) return {kind: 'error', status: 500, message: 'missing'};
+  if (url.includes('/artifacts/records/good')) return {kind: 'ok', data: {id: 'good', sha256: 'good', run: 'other', blob: 'good.txt'}};
+  if (url.includes('/artifacts/records?')) return page([owned]);
+  if (url.includes('/run_events/')) return page([{id: 'event', run: 'run-1', artifact: 'missing'}]);
+  if (url.includes('/tool_calls/')) return page([{id: 'tool', run: 'run-1', artifact: 'good'}]);
+  throw new Error(url);
+}};
+const lookupResult = await performance.evidenceForRun(partialLookup, 'run-1');
+assert.equal(lookupResult.kind, 'ok');
+assert.equal(lookupResult.data.completeness, 'unknown');
+assert.deepEqual(lookupResult.data.artifacts.map((item) => item.id), ['owned', 'good']);
+""")
+
+    def test_campaign_detail_uses_exact_escaped_relation_filters(self):
         self.run_module("""
 let urls = [];
 const session = {request: async (url) => { urls.push(url); return {kind: 'ok', data: {items: [], page: 1, totalPages: 1, totalItems: 0}}; }};
-await performance.campaigns(session, 'fixture');
-await performance.responsesForCampaign(session, 'campaign-id');
-await performance.assessmentsForCampaign(session, 'campaign-id');
-for (const needle of ['eval_runs', 'eval_responses', 'assessments', 'prompt', 'response_text', 'response_json', 'eval_run'])
-  assert.ok(urls.join('\\n').includes(needle), needle);
+const campaign = 'campaign\\\\id\\'\"';
+await performance.campaigns(session, campaign);
+await performance.responsesForCampaign(session, campaign);
+await performance.assessmentsForCampaign(session, campaign);
+const parsed = urls.map((url) => new URL('https://toolbox.test' + url));
+assert.equal(parsed[1].searchParams.get('filter'), 'run = \\'campaign\\\\\\\\id\\\\\\'\\\\\"\\'');
+assert.equal(parsed[2].searchParams.get('filter'), 'eval_run = \\'campaign\\\\\\\\id\\\\\\'\\\\\"\\'');
+assert.ok(parsed[1].searchParams.get('fields').includes('prompt,response_text,response_json'));
 """)
 
 
