@@ -98,6 +98,18 @@ class ReferencePB:
         return body
 
 
+class CampaignPB(ReferencePB):
+    """Records campaign writes while returning stable run ids for response filters."""
+
+    def __init__(self, **collections):
+        super().__init__(**collections)
+        self.upserted = []
+
+    def upsert(self, coll, flt, body):
+        self.upserted.append((coll, flt, body))
+        return {"id": "run-1" if coll == "eval_runs" else "response-1"}, False
+
+
 def row(rec_id, slug, kind="skill", origin="authored", **extra):
     return {"id": rec_id, "slug": slug, "kind": kind, "origin": origin, **extra}
 
@@ -337,6 +349,110 @@ class ConsumerFilterTest(unittest.TestCase):
         self.assertEqual(pb.collections.get("eval_runs", []), [])
         self.assertEqual(pb.collections.get("eval_responses", []), [])
 
+
+class CampaignMeasurementProjectionTest(unittest.TestCase):
+    def _load(self, pb, manifest, raw=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "manifest.json")
+            with open(path, "wb") as fh:
+                fh.write(raw if raw is not None else json.dumps(manifest).encode())
+            quiet(load_eval_run.load_manifest, pb, path)
+
+    def _manifest(self, response):
+        return {"run": {"slug": "campaign", "kind": "judged"}, "responses": [response]}
+
+    def test_projects_observed_zero_metrics_and_exact_manifest_sha(self):
+        raw = b'{"run":{"slug":"campaign","kind":"judged"},"responses":[{"role":"judge","tokens":0,"duration_ms":0}]}'
+        pb = CampaignPB(frameworks=[], extenders=[])
+        self._load(pb, None, raw)
+        body = pb.upserted[-1][2]
+        self.assertEqual(body["tokens"], 0)
+        self.assertEqual(body["duration_ms"], 0)
+        self.assertEqual(body["measurement"], {
+            "version": 1,
+            "source": "eval-run-manifest",
+            "available": {"tokens": True, "duration_ms": True},
+            "provenance": {"tokens": "manifest", "duration_ms": "manifest"},
+            "execution": {
+                "validity": "unknown",
+                "reason": "manifest does not attest execution validity",
+                "preconditions": None,
+            },
+            "source_identity": {
+                "manifest_file_sha256": "f9adff88286e0986fbde2ae0059d3a39dfd82726ec2579d018830dc30685c121",
+                "resolved_response_sha256": "7f9ff78ba5965ecdc634e41341ad5481c8a02790985b7913b548670ed4c224fb",
+                "resolved_response_canonicalization": "json-sorted-keys-utf8",
+                "revision": {"value": None, "available": False},
+            },
+        })
+
+    def test_reingestion_missing_metric_clears_number_and_marks_it_unavailable(self):
+        pb = CampaignPB(frameworks=[], extenders=[])
+        self._load(pb, self._manifest({"role": "judge", "tokens": 7, "duration_ms": 11}))
+        self._load(pb, self._manifest({"role": "judge", "tokens": 7}))
+        body = pb.upserted[-1][2]
+        self.assertEqual(body["tokens"], 7)
+        self.assertEqual(body["duration_ms"], 0)
+        self.assertEqual(body["measurement"]["available"],
+                         {"tokens": True, "duration_ms": False})
+        self.assertEqual(body["measurement"]["provenance"],
+                         {"tokens": "manifest", "duration_ms": None})
+
+    def test_invalid_metric_in_any_response_leaves_no_partial_writes(self):
+        for field, value in (("tokens", True), ("tokens", float("inf")),
+                             ("duration_ms", -1), ("duration_ms", "1")):
+            with self.subTest(field=field, value=value):
+                pb = CampaignPB(frameworks=[], extenders=[])
+                manifest = {"run": {"slug": "campaign", "kind": "judged"}, "responses": [
+                    {"role": "valid", "tokens": 1}, {"role": "invalid", field: value},
+                ]}
+                with self.assertRaises(SystemExit) as caught:
+                    self._load(pb, manifest)
+                self.assertIn(field, str(caught.exception))
+                self.assertEqual(pb.upserted, [])
+
+    def test_too_many_valid_extenders_leave_no_partial_writes(self):
+        extenders = [row(f"id-{n}", f"ext-{n}") for n in range(101)]
+        pb = CampaignPB(frameworks=[], extenders=extenders)
+        manifest = self._manifest({"role": "judge", "extenders": [e["slug"] for e in extenders]})
+        with self.assertRaises(SystemExit) as caught:
+            self._load(pb, manifest)
+        self.assertIn("at most 100", str(caught.exception))
+        self.assertEqual(pb.upserted, [])
+
+    def test_resolved_evidence_digest_changes_when_referenced_file_changes(self):
+        manifest = {"run": {"slug": "campaign", "kind": "judged"}, "responses": [
+            {"role": "judge", "prompt_file": "prompt.txt", "response_text": "answer"},
+        ]}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "manifest.json")
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(manifest, fh, sort_keys=True)
+            prompt = os.path.join(tmp, "prompt.txt")
+            with open(prompt, "w", encoding="utf-8") as fh:
+                fh.write("first prompt")
+            pb = CampaignPB(frameworks=[], extenders=[])
+            quiet(load_eval_run.load_manifest, pb, path)
+            first = pb.upserted[-1][2]["measurement"]["source_identity"]
+            with open(prompt, "w", encoding="utf-8") as fh:
+                fh.write("changed prompt")
+            quiet(load_eval_run.load_manifest, pb, path)
+            second = pb.upserted[-1][2]["measurement"]["source_identity"]
+        self.assertEqual(first["manifest_file_sha256"], second["manifest_file_sha256"])
+        self.assertNotEqual(first["resolved_response_sha256"], second["resolved_response_sha256"])
+        self.assertEqual(second["resolved_response_canonicalization"], "json-sorted-keys-utf8")
+
+    def test_nonfinite_nested_response_json_leaves_no_partial_writes(self):
+        pb = CampaignPB(frameworks=[], extenders=[])
+        manifest = self._manifest({
+            "role": "judge",
+            "response_json": {"nested": {"value": float("nan")}},
+        })
+        with self.assertRaises(SystemExit) as caught:
+            self._load(pb, manifest)
+        self.assertIn("response judge", str(caught.exception))
+        self.assertIn("response_json", str(caught.exception))
+        self.assertEqual(pb.upserted, [])
 
 class ReferenceSource:
     """report.py's data-source shape: `list_all(coll)`, no filter argument (FixtureSource)."""
