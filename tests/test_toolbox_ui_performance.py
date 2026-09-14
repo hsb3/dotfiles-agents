@@ -50,6 +50,32 @@ class PerformanceUiContracts(unittest.TestCase):
         self.assertIn("hash={hash}", VIEWS)
         self.assertIn("setHash((current) => location.hash === \"#main-content\" ? current", VIEWS)
 
+    def test_reconciliation_keeps_detail_context_and_ignores_stale_file_tokens(self):
+        self.assertNotIn("as never", SOURCE)
+        self.assertIn("const request = ++fileRequest.current;", SOURCE)
+        self.assertIn("if (request !== fileRequest.current) return;", SOURCE)
+        self.assertIn("export function performanceListState", SOURCE)
+        self.assertIn("campaignQuery", SOURCE)
+        self.assertIn("campaignPage", SOURCE)
+        self.assertIn("<Table>", SOURCE)
+        self.assertIn("Campaign facts", SOURCE)
+        self.assertIn("labelText={`Select run ${run.id}`}", SOURCE)
+
+    def test_campaign_and_paged_empty_states_keep_context_visible(self):
+        self.assertIn("Return to campaigns", SOURCE)
+        self.assertIn("Campaign search", SOURCE)
+        self.assertIn('subject="current events"', SOURCE)
+        self.assertIn('subject="current tools"', SOURCE)
+        self.assertIn('subject="responses"', SOURCE)
+        self.assertIn('subject="current assessments"', SOURCE)
+
+    def test_exit_status_and_tiny_numbers_preserve_observed_values(self):
+        self.assertIn("export function exitStatus", SOURCE)
+        self.assertIn("available.exit_code === true", SOURCE)
+        self.assertIn("Number.isInteger(run.exit_code)", SOURCE)
+        self.assertIn("value !== 0 && Math.abs(value) < 0.001", SOURCE)
+        self.assertIn("value.toExponential(2)", SOURCE)
+
 
 if __name__ == "__main__":
     unittest.main()
