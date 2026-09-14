@@ -1,0 +1,7 @@
+{
+  // main is the CI-published distribution branch (ADR 0007/0008) — never commit to it.
+  // VSCode cannot block a branch *checkout*; the .git/hooks/post-checkout warning and the
+  // .agents/hooks/no-main-checkout guard and its native links cover that.
+  "git.branchProtection": ["main"],
+  "git.branchProtectionPrompt": "alwaysPrompt"
+}

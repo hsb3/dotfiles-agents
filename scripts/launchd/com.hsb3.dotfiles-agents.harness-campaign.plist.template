@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTD/PropertyList-1.0.dtd">
+<!--
+  User LaunchAgent for the weekly agent-harness campaign.
+  Rendered by scripts/harness_campaign.sh install: @REPO@ -> repo abs path, @HOME@ -> $HOME.
+  Do not edit the installed copy under ~/Library/LaunchAgents; edit this template + reinstall.
+
+  StartCalendarInterval fires Monday 09:00 local. An interval missed while the Mac is
+  ASLEEP fires once on wake; an interval missed while the Mac is POWERED OFF is skipped
+  (launchd does not backfill across a full shutdown).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hsb3.dotfiles-agents.harness-campaign</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>@REPO@/scripts/harness_campaign.sh</string>
+        <string>run</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>@REPO@</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>@HOME@/Library/Logs/harness-campaign.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>@HOME@/Library/Logs/harness-campaign.err.log</string>
+</dict>
+</plist>

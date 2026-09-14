@@ -1,0 +1,64 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook start --source kata-agent-hook-start",
+            "commandWindows": "kata attention-hook start --source kata-agent-hook-start",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear"
+      },
+      {
+        "hooks": [
+          {
+            "command": "kata agent-contract-hook --source kata-agent-contract-hook",
+            "commandWindows": "kata agent-contract-hook --source kata-agent-contract-hook",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear|compact"
+      },
+      {
+        "hooks": [
+          {
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/board-health/hook.py\"",
+            "statusMessage": "Checking board health",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/no-main-checkout/hook.py\"",
+            "statusMessage": "Checking for main-branch checkout",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook end --source kata-agent-hook-end",
+            "commandWindows": "kata attention-hook end --source kata-agent-hook-end",
+            "timeout": 3,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

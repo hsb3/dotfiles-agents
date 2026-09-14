@@ -1,0 +1,70 @@
+{
+  "id": "morning-briefing",
+  "name": "Morning briefing",
+  "description": "Daily AM readout for the owner. The one job: the decision to make today, in the first 30 seconds. Lead with the recommendation, then the horizon, then concise summaries - never an exec summary that recaps everything.",
+  "slug": "-morning-status",
+  "default_theme": "boardroom",
+  "default_voice": "self-blunt",
+  "audio": "2-3 min companion narration in the same order as the deck; spell out acronyms and ids for TTS (read ESRD as E.S.R.D., say the issue number aloud as 'issue 128', never as a bare ref).",
+  "sections": [
+    {
+      "id": "title",
+      "name": "Title",
+      "pages": [1, 1],
+      "guide": "\"What to do today\" + date + one-line framing."
+    },
+    {
+      "id": "recommended-today",
+      "name": "Recommended today",
+      "pages": [1, 1],
+      "guide": "The 1-3 actions/decisions, each with a one-line why. Tag verbs: BUILD / DECIDE / PARALLEL. This is the slide that matters."
+    },
+    {
+      "id": "horizon",
+      "name": "On the horizon",
+      "pages": [1, 1],
+      "guide": "The active gate + what's next. Two columns: blockers vs what-comes-after."
+    },
+    {
+      "id": "at-a-glance",
+      "name": "Since last briefing, at a glance",
+      "pages": [1, 1],
+      "guide": "3 stat columns + 3 one-liner takeaways."
+    },
+    {
+      "id": "shipped",
+      "name": "What shipped",
+      "pages": [0, 3],
+      "required": false,
+      "guide": "The headline arc first, secondary arcs grouped; 4 bullets max per slide. Skippable by design - detail lives here so the decision slides stay clean. Scale to the day's volume."
+    },
+    {
+      "id": "line-for-today",
+      "name": "The line for today",
+      "pages": [1, 1],
+      "guide": "Hero callout: the ask, restated in one sentence."
+    }
+  ],
+  "sources": [
+    {
+      "label": "open issues (ALWAYS --limit 1000; the 30-row default silently undercounts)",
+      "command": "gh issue list --state open --limit 1000 --json number --jq 'length'"
+    },
+    {
+      "label": "PRs merged since the last briefing",
+      "command": "gh pr list --state merged --limit 1000 --json mergedAt --jq '[.[]|select(.mergedAt>=\"<DATE>T00:00:00Z\")]|length'"
+    },
+    {
+      "label": "per-gate counts, if the repo uses gate:<x> labels",
+      "command": "gh issue list --label gate:<x> --limit 1000 --json number --jq 'length'"
+    },
+    {
+      "label": "the merge story since the last briefing",
+      "command": "git log --oneline --since=\"<last briefing date>\""
+    },
+    {
+      "label": "unmilestoned vs total, if the board uses milestones",
+      "command": "gh issue list --state open --limit 1000 --json milestone --jq '[.[]|select(.milestone==null)]|length'"
+    }
+  ]
+}

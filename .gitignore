@@ -1,0 +1,72 @@
+# --- OS / editor ---
+.DS_Store
+*.swp
+
+# --- manual task worktrees ---
+.worktrees/
+
+# --- secrets ---
+.env*
+!.env*.example
+# any *.env credential file anywhere in the tree (e.g. evals/pb.py's
+# .claude/operations/extender-db.env) — basename-anchored, not just dotfiles at repo root
+*.env
+!*.env.example
+
+
+# --- PocketBase runtime ---
+# The hosted instance owns live state. Keep local database/files private for
+# backups or disposable fixtures; schema.py remains the schema source.
+evals/pb_data/
+evals/pb_migrations/
+
+# --- Python ---
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# --- runtime logs. Hook ledgers write outside the project, under
+# ${XDG_DATA_HOME:-~/.local/share}/agent-logs/; anything left here is stale. ---
+logs/
+*.log
+
+# --- agent harness (harness/ uv project) — runtime artifacts, never tracked
+# (results.jsonl IS tracked: battle-test evidence, DESIGN §8-D3). Temp workspaces
+# default to the system tempdir; harness/workspaces/ is a defensive ignore. ---
+harness/runs/
+harness/workspaces/
+harness/.venv/
+# weekly campaign runner logs (defensive; the global *.log already covers the files)
+harness/campaign-logs/
+
+# >>> cc-project-memory (managed) >>>
+# narrow-ignore: ignore only machine-local/transient; track everything else under .claude/
+# (memory/, rules/, settings.json stay tracked & transferable)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/*.lock
+.claude/**/.DS_Store
+# <<< cc-project-memory (managed) <<<
+
+# machine-local agent auto-memory (redirect target differs per machine; tracked store is .claude/memory/)
+.claude/agent-memory/
+
+# Codex setup writes machine-specific writable roots, permissions, and plugin choices here.
+# Shared lifecycle configuration lives in the tracked .codex/hooks.json instead.
+.codex/config.toml
+
+# per-project plugin activation — local by convention, except atelier.local.md: tracked
+# (owner ruling 2026-09-07) so worktree-isolated workers and the other Mac get the same
+# enforcement; a gitignored copy left every worktree worker with custody silently off (9r04).
+.claude/*.local.md
+.codex/*.local.md
+.agents/*.local.md
+!.agents/atelier.local.md
+
+# handoff freshness signal. The handoff itself is kata issue 4w08; this file carries no
+# content, only an mtime, and machine-local mtime is not something to share. A fresh clone
+# has no stamp, so the guard refuses the first manual /compact until /handoff runs — which
+# is the correct answer for a session that has not written a handoff yet.
+.claude/handoff.stamp
+.agents/handoff.stamp
+.kata.local.toml

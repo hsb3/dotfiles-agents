@@ -1,0 +1,8 @@
+{
+  "author": {
+    "name": "Henry S. Burden III"
+  },
+  "description": "Write executable work items, measure board health, rank backlog priorities through Kata or GitHub Projects adapters, and reconcile GitHub mirrors with explicit apply. Kata wiring and per-card audits come from the separately installed kata plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+  "name": "board-desk",
+  "version": "0.1.0"
+}

@@ -1,0 +1,142 @@
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CLI = ROOT / "evals" / "usage_digest.py"
+sys.path.insert(0, str(ROOT / "evals"))
+import usage_digest
+
+
+def observed(observation_id, total=10, **extra):
+    row = {
+        "schema": "codex-usage", "schema_version": 2, "kind": "delta",
+        "counter_state": "observed", "observation_id": observation_id,
+        "native_id": "child", "parent_id": "root", "lifecycle_id": "child-life",
+        "role": "atelier-builder", "model": "gpt-test", "host": "mac",
+        "source_repo": "/repo", "tokens": {"input": total - 4, "cached_input": min(2, total - 4),
+        "output": 4, "reasoning": 1, "total": total},
+        "cumulative_tokens": {"input": 100, "cached_input": 20, "output": 50,
+        "reasoning": 10, "total": 150}, "timing": {"lifetime_ms": 20},
+    }
+    row.update(extra)
+    return row
+
+
+class UsageDigestTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.path = Path(self.temp.name) / "usage.jsonl"
+
+    def write(self, *rows):
+        self.path.write_text("\n".join(json.dumps(row) if not isinstance(row, str) else row for row in rows))
+
+    def invoke(self, *args):
+        return subprocess.run([sys.executable, str(CLI), *args], text=True, capture_output=True)
+
+    def report(self, *inputs):
+        run = self.invoke("report", *(item for path in inputs for item in ("--input", str(path))))
+        self.assertEqual(run.returncode, 0, run.stderr)
+        return json.loads(run.stdout)
+
+    def test_root_child_totals_and_replay_use_deltas_not_cumulative(self):
+        self.write(observed("one", 10), observed("two", 7, native_id="root", parent_id=None,
+                                                    lifecycle_id="root", timing={"lifetime_ms": 30}))
+        report = usage_digest.digest([self.path, self.path])
+        self.assertEqual(report["tokens"]["total"], 17)
+        self.assertEqual(report["observed"], 2)
+        self.assertEqual(report["groups"]["root_child"], {"child": {"input": 6, "cached_input": 2,
+                         "output": 4, "reasoning": 1, "total": 10}, "root": {"input": 3,
+                         "cached_input": 2, "output": 4, "reasoning": 1, "total": 7}})
+
+    def test_reset_resume_and_model_changes_count_each_observed_delta(self):
+        self.write(observed("one", 10), {"schema": "codex-usage", "schema_version": 2, "kind": "delta",
+                                           "counter_state": "reset", "observation_id": "reset"},
+                   observed("two", 5, model="gpt-next"))
+        report = self.report(self.path)
+        self.assertEqual(report["tokens"]["total"], 15)
+        self.assertEqual(report["groups"]["model"]["gpt-next"]["total"], 5)
+        self.assertEqual(report["coverage"]["states"]["reset"], 1)
+
+    def test_invalid_future_missing_and_conflicting_rows_are_visible(self):
+        bad = observed("bad", 10, tokens={"input": -1})
+        future = observed("future", 10, schema_version=3)
+        clash = observed("one", 11)
+        self.write(observed("one", 10), clash, bad, future, "not-json",
+                   {"event": "delegation", "ctx_tokens": 999})
+        report = self.report(self.path)
+        self.assertEqual(report["tokens"]["total"], 10)
+        self.assertEqual(report["coverage"]["errors"]["conflicting-observation-id"], 1)
+        self.assertEqual(report["coverage"]["errors"]["malformed-json"], 1)
+        self.assertEqual(report["coverage"]["errors"]["invalid-tokens"], 1)
+        self.assertEqual(report["coverage"]["errors"]["unsupported-future-schema"], 1)
+        self.assertEqual(report["legacy_unknown"], 1)
+
+    def test_export_reimports_safely_and_excludes_prompts(self):
+        self.write(observed("one", 10, prompt="secret", host="mac", v=1, plugin="atelier",
+                            harness="codex", stream="codex-usage", ts="append-only", project="/project",
+                            package_path="/package", package_name="atelier", package_version="1.0",
+                            profile_path="/profile", profile_hash="hash"), observed("two", 5, host="linux"))
+        exported = Path(self.temp.name) / "mac.jsonl"
+        run = self.invoke("export", "--input", str(self.path), "--host", "mac", "--output", str(exported))
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertNotIn("secret", exported.read_text())
+        self.assertEqual(json.loads(exported.read_text().splitlines()[0])["package_path"], "/package")
+        report = self.report(self.path, exported, self.path)
+        self.assertEqual(report["tokens"]["total"], 15)
+        self.assertEqual(report["observed"], 2)
+        self.assertNotIn("conflicting-observation-id", report["coverage"]["errors"])
+
+    def test_host_repo_and_missing_coverage_are_grouped_explicitly(self):
+        self.write(observed("one", 10), observed("two", 6, host=None, source_repo=None,
+                                                    model=None, timing={}))
+        report = self.report(self.path)
+        self.assertEqual(report["groups"]["host"]["mac"]["total"], 10)
+        self.assertEqual(report["groups"]["source_repo"]["unknown"]["total"], 6)
+        self.assertEqual(report["coverage"]["missing"],
+                         {"active_ms": 2, "host": 1, "lifetime_ms": 1, "model": 1,
+                          "source_repo": 1, "tool_ms": 2, "wait_ms": 2})
+
+    def test_legacy_is_explicit_and_future_envelopes_are_rejected(self):
+        legacy = {"v": 1, "event": "delegation", "ctx_tokens": 999}
+        self.write(legacy, {"v": 99, "event": "delegation"},
+                   observed("future", 10, v=99),
+                   observed("bad-export", 10, timing={"lifetime_ms": 3, "secret": "no"}))
+        report = self.report(self.path, self.path)
+        self.assertEqual(report["legacy_unknown"], 1)
+        self.assertIsNone(report["tokens"])
+        self.assertEqual(report["coverage"]["errors"]["unsupported-future-envelope"], 4)
+        exported = Path(self.temp.name) / "safe.jsonl"
+        self.assertNotEqual(self.invoke("export", "--input", str(self.path), "--host", "mac",
+                                        "--output", str(exported)).returncode, 0)
+
+    def test_lifetimes_keep_hosts_and_children_separate_with_unknown_coverage(self):
+        self.write(observed("root", 10, native_id="root", parent_id=None, lifecycle_id="root"),
+                   observed("child-a", 10, native_id="a", parent_id="root", lifecycle_id="shared",
+                            timing={"lifetime_ms": 100, "active_ms": None, "tool_ms": None, "wait_ms": None}),
+                   observed("child-a-later", 6, native_id="a", parent_id="root", lifecycle_id="shared",
+                            timing={"lifetime_ms": 80, "active_ms": 1, "tool_ms": 2, "wait_ms": 3}),
+                   observed("child-b", 10, native_id="b", parent_id="root", lifecycle_id="shared",
+                            timing={"lifetime_ms": 200, "active_ms": None, "tool_ms": None, "wait_ms": None}),
+                   observed("other-host", 10, native_id="a", parent_id="root", lifecycle_id="shared", host="linux",
+                            timing={"lifetime_ms": 70, "active_ms": None, "tool_ms": None, "wait_ms": None}),
+                   observed("unknown", 10, native_id="odd", parent_id=None, lifecycle_id="different", timing={}))
+        report = self.report(self.path)
+        self.assertEqual(report["groups"]["root_child"]["root"]["total"], 10)
+        self.assertEqual(report["groups"]["root_child"]["child"]["total"], 36)
+        self.assertEqual(report["groups"]["root_child"]["unknown"]["total"], 10)
+        self.assertEqual(report["lifetime_ms_by_lifecycle"], {
+            '["linux","shared","a"]': 70, '["mac","root","root"]': 20,
+            '["mac","shared","a"]': 100, '["mac","shared","b"]': 200})
+        self.assertEqual(report["coverage"]["missing"],
+                         {"active_ms": 5, "lifetime_ms": 1, "tool_ms": 5, "wait_ms": 5,
+                          "root_child": 1})
+
+
+if __name__ == "__main__":
+    unittest.main()

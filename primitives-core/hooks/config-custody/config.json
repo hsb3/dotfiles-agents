@@ -1,0 +1,6 @@
+{
+  "event": "PreToolUse",
+  "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+  "timeout": 10,
+  "statusMessage": "Checking config custody..."
+}

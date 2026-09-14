@@ -1,0 +1,69 @@
+{
+  "enabledPlugins": {
+    "kata@kata-oversight": true,
+    "mcp-server-dev@workbench": true,
+    "plugin-dev@workbench": true,
+    "skill-creator@workbench": true
+  },
+  "extraKnownMarketplaces": {
+    "kata-oversight": {
+      "source": {
+        "repo": "hsb3/kata-oversight",
+        "source": "github"
+      }
+    },
+    "workbench": {
+      "source": {
+        "path": "./.claude/plugins",
+        "source": "directory"
+      }
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-main-checkout/hook.py",
+            "statusMessage": "Checking for main-branch checkout",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook end --source kata-agent-hook-end",
+            "type": "command"
+          }
+        ],
+        "matcher": "logout|prompt_input_exit|bypass_permissions_disabled|other"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "kata attention-hook start --source kata-agent-hook-start",
+            "type": "command"
+          },
+          {
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/board-health/hook.py",
+            "statusMessage": "Checking board health",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear"
+      }
+    ]
+  },
+  "worktree": {
+    "baseRef": "head",
+    "bgIsolation": "none"
+  }
+}

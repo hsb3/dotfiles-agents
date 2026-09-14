@@ -1,0 +1,1 @@
+../../../primitives-core/commands/pr-findings.md

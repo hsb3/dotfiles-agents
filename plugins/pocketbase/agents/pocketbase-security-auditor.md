@@ -1,0 +1,1 @@
+../../../primitives-core/agents/pocketbase-security-auditor.md

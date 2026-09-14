@@ -1,0 +1,134 @@
+# upstream-check — self-announcing upstream review reminder (full tier, optional).
+# TEMPLATE from the private-fork skill (proven in the opencode fork). Copy to
+# .github/workflows/ and fill {{PLACEHOLDERS}}. Needs only the default GITHUB_TOKEN.
+#
+# Monthly (or on demand) it runs scripts/upstream-digest.sh and, if any upstream
+# commits are unreviewed since the watermark in docs/upstream-review-log.md, opens
+# or updates a single `upstream-review` issue carrying the digest. Nothing to
+# review => quiet no-op. A digest-script failure => a real workflow failure.
+name: upstream-check
+
+on:
+  schedule:
+    - cron: "0 13 1 * *" # 13:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: upstream review digest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for merge-base math)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote and fetch
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Branch refs only — deliberately no tag fetch (a fork-local tag like
+          # `latest` can otherwise be clobbered by an upstream tag of the same name).
+          if ! git remote get-url upstream >/dev/null 2>&1; then
+            git remote add upstream https://github.com/{{UPSTREAM_ORG}}/{{NAME}}
+          fi
+          git fetch upstream --quiet
+
+      - name: Generate digest and count unreviewed commits
+        id: digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest_file="${RUNNER_TEMP}/upstream-digest.md"
+          bash scripts/upstream-digest.sh > "$digest_file"
+
+          # Watermark lookup mirrors upstream-digest.sh — keep the two in sync,
+          # or the issue's commit count can disagree with the digest it carries.
+          watermark="$(grep -m1 '^Last-reviewed-upstream-commit:' docs/upstream-review-log.md | awk '{print $2}')"
+          # `refs/heads/<name>` outranks `refs/remotes/<name>`, so every RESOLUTION names the
+          # tracking ref in full; `upstream-{{BRANCH}}` is the local mirror, `range` is display.
+          if [[ -z "$watermark" ]]; then
+            watermark="$(git rev-parse upstream-{{BRANCH}} 2>/dev/null || git rev-parse refs/remotes/upstream/{{BRANCH}})"
+          fi
+          range="${watermark}..upstream/{{BRANCH}}"
+          resolved_range="${watermark}..refs/remotes/upstream/{{BRANCH}}"
+          count="$(git rev-list --count "$resolved_range")"
+
+          {
+            echo "count=${count}"
+            echo "range=${range}"
+            echo "digest_file=${digest_file}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Unreviewed upstream commits: ${count} (${range})"
+
+      - name: Open or update the upstream-review issue
+        if: steps.digest.outputs.count != '0'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COUNT: ${{ steps.digest.outputs.count }}
+          RANGE: ${{ steps.digest.outputs.range }}
+          DIGEST_FILE: ${{ steps.digest.outputs.digest_file }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh label create upstream-review \
+            --repo "$REPO" \
+            --color FBCA04 \
+            --description "Unreviewed upstream commits awaiting a review session" \
+            2>/dev/null || true
+
+          # Assemble the body, truncating to stay under GitHub's 65536-char limit.
+          title="Upstream review due — ${COUNT} unreviewed commit(s)"
+          header="$(printf '%s\n\n%s\n\n%s\n\n---\n\n' \
+            "**${COUNT}** upstream commit(s) are unreviewed since the last watermark." \
+            "Range: \`${RANGE}\`" \
+            "Run the digest locally, record verdicts in \`docs/upstream-review-log.md\`, and advance the watermark. Digest below:")"
+
+          digest="$(cat "$DIGEST_FILE")"
+          limit=65000
+          combined="${header}"$'\n'"${digest}"
+          if (( ${#combined} > limit )); then
+            keep=$(( limit - ${#header} - 80 ))
+            (( keep < 0 )) && keep=0
+            # shellcheck disable=SC2016  # backticks are literal markdown, not a shell command
+            trunc_note=$'\n\n_…digest truncated to fit GitHub'"'"'s issue-body limit; run the digest locally for the full listing._'
+            digest="${digest:0:keep}${trunc_note}"
+            combined="${header}"$'\n'"${digest}"
+          fi
+
+          body_file="${RUNNER_TEMP}/issue-body.md"
+          printf '%s\n' "$combined" > "$body_file"
+
+          # Find an existing open issue; update its body if found, else create.
+          existing="$(gh issue list \
+            --repo "$REPO" \
+            --state open \
+            --label upstream-review \
+            --search 'in:title "Upstream review due"' \
+            --json number,title \
+            --jq 'map(select(.title | startswith("Upstream review due"))) | .[0].number // empty')"
+
+          if [[ -n "$existing" ]]; then
+            echo "Updating existing issue #${existing}"
+            gh issue edit "$existing" \
+              --repo "$REPO" \
+              --title "$title" \
+              --body-file "$body_file"
+          else
+            echo "Creating new upstream-review issue"
+            gh issue create \
+              --repo "$REPO" \
+              --title "$title" \
+              --label upstream-review \
+              --body-file "$body_file"
+          fi
+
+      - name: Nothing to review
+        if: steps.digest.outputs.count == '0'
+        run: echo "No unreviewed upstream commits — nothing to announce."

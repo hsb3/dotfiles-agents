@@ -1,0 +1,112 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "metadata": {
+    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), and plugin-feedback (report a plugin defect without leaving the session).",
+    "version": "0.13.1"
+  },
+  "name": "dotfiles-agents",
+  "owner": {
+    "name": "Henry S. Burden III"
+  },
+  "plugins": [
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, hold protected config in custody, and refuse a worker git call that would sweep away a sibling's uncommitted work or land on a protected branch. Enforcement follows the main checkout into a linked worktree, so an isolated worker is no longer an unguarded one. Run /atelier:activate to arm it in a project and see what each hook resolved. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "atelier",
+      "source": "./plugins/atelier",
+      "version": "0.36.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Write executable work items, measure board health, rank backlog priorities through Kata or GitHub Projects adapters, and reconcile GitHub mirrors with explicit apply. Kata wiring and per-card audits come from the separately installed kata plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "board-desk",
+      "version": "0.1.0",
+      "source": "./plugins/board-desk"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Bun as the default JS/TS runtime, package manager, test runner, and bundler — command mapping from npm/node habits, built-ins that replace dependencies, measured traps (bunfig exclusions, PATH order, mise interop), and a worked npm→bun migration. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "bun",
+      "source": "./plugins/bun",
+      "version": "0.1.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Build and audit IBM Carbon Design System UIs with IBM's own tooling packaged as one install: the official carbon-builder skill (vendored verbatim at a pinned upstream ref) driving the hosted Carbon MCP server this plugin registers — component/variant/prop search, docs and accessibility guidance, Carbon Charts source, Carbon Labs, and code-compliance audits — plus the official docs-index fallback and IBM's prompt-writing guidance for when the server is unreachable. The hosted server requires an IBM-approved account (authenticate via /mcp). Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "carbon",
+      "source": "./plugins/carbon",
+      "version": "0.2.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, recurring status comms and authored presentations with portable PptxGenJS packages, existing-deck editing and rendered verification, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "code-desk",
+      "source": "./plugins/code-desk",
+      "version": "0.14.4"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Structural diagrams for repo docs, decks, and briefings, with consistent SVG and PNG output: Mermaid for GitHub-rendered markdown, Python diagrams for cloud architecture with provider icons, draw.io reading and headless export, Excalidraw sketches, and raw Graphviz. Data charts belong to the dataviz skill, deck theming to presentations. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "diagrams",
+      "source": "./plugins/diagrams",
+      "version": "0.3.1"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "An in-repo _meta/ planning system: a documented directory standard, a read-only compliance audit against it, an additive-only scaffolder that fills exactly the gaps the audit found, and a planning desk under _meta/plans/ holding one build plan per unit of work. The supporting standards ship with it: the project-memory taxonomy whose checklist rows the audit and the scaffold both read, and the item-body form the desk writes tracker items to, carried as a dependency from its topical home in board-desk. The standard, the audit, and the scaffold assume the repo tree is the system of record, so install them only where that is true. The desk is the exception: it reads work items from a tracker through a pluggable adapter, and a Kata adapter ships. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "mise-en-place",
+      "source": "./plugins/mise-en-place",
+      "version": "0.5.3"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Build Obsidian plugins against the real API — lifecycle, settings, vault operations, commands, chat and copilot sidebar UIs, in-plugin MCP servers over Streamable HTTP — and automate vaults from the terminal with the official Obsidian CLI. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "obsidian-toolkit",
+      "source": "./plugins/obsidian-toolkit",
+      "version": "0.1.7"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "File a bug or feature request against a plugin you are using without leaving the session. Hooks tell the primary session and its dispatched workers what each may file, and a stdlib reporter writes the issue to a fixed template instead of a free-handed gh call. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "plugin-feedback",
+      "source": "./plugins/plugin-feedback",
+      "version": "0.2.0"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes), a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment, and three subject-matter agents that carry the backend laws into a delegated brief: a builder, an adversarial reviewer, and a security auditor, each proving its claims from its own clean-room server. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "pocketbase",
+      "source": "./plugins/pocketbase",
+      "version": "0.3.6"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, test quality, research and decision tooling, chart design, API and TUI craft, repo and project setup, and sandboxed opencode instances. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "solo-skills",
+      "source": "./plugins/solo-skills",
+      "version": "0.16.2"
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Tier-1 entry-gate machine floor — required status check on every PR into dev.
+  # A red floor is not mergeable (identity-neutrality · tests · provenance · hook-layout).
+  #
+  # runs-on ternary: setting the repo Actions variable USE_FALLBACK_RUNNER=true routes
+  # these jobs to the local Docker-based ephemeral runner (`gh-runner-fallback run`,
+  # ~/dotfiles _docs/reference/gh-runner-fallback.md) during a GitHub-hosted runner
+  # outage. A repo variable rather than the documented workflow_dispatch input because
+  # this repo's default branch is publish-only: a dispatch trigger could not land there
+  # without a publish, but pull_request runs use the PR branch's own workflow file.
+  # Unset the variable after the outage; unset, the ternary is 'ubuntu-latest'.
+  # The head-repo clause keeps fork PRs on 'ubuntu-latest' even with the variable set: a
+  # self-hosted runner executes the PR's code on the owner's machine. It guards only this
+  # file's own routing — a fork can edit runs-on in its PR — so while a fallback runner is
+  # live, approve no fork run whose diff touches .github/.
+  entry-gate-floor:
+    name: entry-gate floor (identity · tests · provenance · hook-layout)
+    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: make floor
+
+  # Distribution-surface guards — roster<->disk (provenance manifest), symlink-assembly
+  # lint (decision-030), repo-flow DAG (flow.yaml <-> tree). The job name is PINNED by dev's
+  # branch-protection required checks — renaming it strands PRs on a check that never
+  # reports; update the protection setting first if it must change (which is why it still
+  # reads "marketplace · catalog" after decision-030 retired those artifacts).
+  drift-guards:
+    name: drift guards (roster · marketplace · catalog)
+    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
+    # `gh label list` reads the GraphQL `repository.labels` connection, which is gated on
+    # `issues: read`; this repo is private, so the workflow-level `contents: read` alone
+    # would 403 the label gate below.
+    # Declaring permissions here replaces the workflow default for this job, so
+    # `contents: read` has to be restated for actions/checkout.
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      # fetch-depth: 0 is load-bearing for the README-currency gate inside `make check`
+      # (decision-015): it derives currency from `git log` per unit, and in the default
+      # depth-1 checkout every unit's body and README share the one synthetic commit, so
+      # the gate would pass vacuously. It fails loud on a shallow clone rather than
+      # reporting that green — full history here is what keeps it honest.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: make check symlinks flow
+      - name: Install Pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+      - name: Documentation build and project-subpath links
+        run: make docs-build
+      # Version-bump gate (TASK-032): each plugin's assembly, dereferenced, against the
+      # same plugin as published on origin/main — changed bytes must ship under a moved
+      # version or consumers keep serving the cached one. It rides THIS job rather than
+      # `make ci` because it needs network to reach origin/main and `make ci` is offline +
+      # zero-install by design; and rather than a job of its own because dev's branch
+      # protection pins required checks by job NAME (a new one would strand open PRs on a
+      # check that never reports). It fetches origin/main itself and is RED when that ref
+      # cannot be read at all: a gate that cannot measure is red (decision-016 point 4).
+      - name: version-bump gate (published bytes vs origin/main)
+        run: python3 scripts/check_version_bump.py
+      # Removal gate (card 7sv8): a unit published on origin/main and absent from this tree
+      # must be declared by the commit that removed it. Nothing else watches deletions — a
+      # removal moves no version, breaks no symlink and orphans no roster entry, so the
+      # version-bump gate above says outright that it does not cover one. Rides this job for
+      # the same two reasons as the gates around it (needs network to reach origin/main; dev's
+      # branch protection pins required checks by job NAME). An unreadable published tree is
+      # red here as everywhere (decision-016 point 4), and the failure says outright that it
+      # is not evidence of a removal. Needs this job's fetch-depth: 0 — the declaration is
+      # read from the commit that deleted the unit.
+      - name: removal gate (published units absent here must be declared)
+        run: python3 scripts/check_removals.py
+      # Vendored-drift gate: every `origin: vendored` base/ against its pinned upstream ref
+      # (docs/vendoring-rule.md). Rides this job for the same two reasons as the gate above
+      # — it needs network to reach the upstream, and dev's branch protection pins required
+      # checks by job NAME. An unreachable upstream is red (decision-016 point 4), naming
+      # itself as a gate that could not measure rather than as drift; a reachable upstream
+      # missing the ref, or a base/ that no longer matches, is red as drift.
+      - name: vendored-drift gate (base/ vs pinned upstream ref)
+        run: python3 scripts/check_vendored_drift.py
+      # Label-vocabulary gate (decision-016): the repo's GitHub label set is CLOSED, so an
+      # extra or a missing label is drift — kata's GitHub sync writes labels onto this repo,
+      # and nothing else constrains what can appear there. Rides this job for the same two
+      # reasons as the gates above: it needs `gh` plus network, which `make ci` (offline +
+      # zero-install) cannot have, and dev's branch protection pins required checks by job
+      # NAME. Every failure to read the live set is red, as in the gates above, because a
+      # step that exits 0 having measured nothing reads identically to one that measured
+      # and found the set clean (decision-016 point 4).
+      - name: label-vocabulary gate (live labels vs the closed set)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/check_labels.py
+      # plugin-feedback live default-label check (card tk1x): the reporter's per-kind
+      # DEFAULT_LABELS are the labels it puts on every issue it files, and every other
+      # assertion about them is against a fixture — so only a read of this repo's real
+      # label set can catch a rename, and a rename costs a filer their label. The check
+      # is a test in tests/test_plugin_feedback.py, opt-in behind
+      # PLUGIN_FEEDBACK_LIVE_TESTS and skipped without it, which is what keeps `make ci`
+      # offline + zero-install; setting the variable HERE is what makes the guarantee
+      # hold in CI instead of only on an authenticated developer machine. It rides this
+      # job for the same two reasons as the gates above (it needs `gh` plus network, and
+      # dev's branch protection pins required checks by job NAME) and reuses this job's
+      # `issues: read`, which `gh label list` needs on a private repo. As in every gate
+      # here, a read it cannot make is RED, not a skip (decision-016 point 4).
+      - name: plugin-feedback default labels (live vs the target repo)
+        env:
+          PLUGIN_FEEDBACK_LIVE_TESTS: "1"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 -m unittest -v tests.test_plugin_feedback.LiveLabelTests
+      # Manifest gate: the first-party validator over the marketplace and every assembly.
+      # `--strict` turns warnings into failures, catching what the runtime tolerates in
+      # silence — an unrecognized field (a `changelog:` key nothing reads), missing
+      # attribution. It rides THIS job for the same reason as the two gates above: dev's
+      # branch protection pins required checks by job NAME, so a new gate joins an existing
+      # job rather than adding one. It is out of `make ci` because it needs the `claude`
+      # binary and `make ci` is offline + zero-install by design.
+      #
+      # A missing binary is a FAILURE, not a skip — see scripts/check_manifests.py. That is
+      # why the install step below is not `continue-on-error`.
+      # PINNED TO WHAT LOCAL DEV MACHINES RUN — the `stable` tag. The pin is a correctness
+      # control, not tidiness, and matching local is the point: an unpinned `npm install -g`
+      # installs `latest`, and `latest` disagrees with `stable` about this gate — the newer
+      # CLI warns about symlinks where `stable` is silent, and --strict makes a warning
+      # fatal. A gate that fails only in CI is a gate nobody can reproduce, so CI tracks the
+      # machines rather than the other way round. Bump this when local `stable` moves, and
+      # re-run the gate when you do.
+      # Explicit rather than relying on the hosted image's preinstalled node, so the
+      # job also runs on the fallback runner container (which ships no node).
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.263
+      - name: manifest gate (claude plugin validate --strict)
+        run: make manifests
