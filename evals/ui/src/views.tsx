@@ -88,7 +88,6 @@ export function BrowserApp() {
   const [route, setRoute] = useState<Route>(() => parseRoute(location.hash));
   const clearUi = () => {
     setSignedIn(false);
-    setRoute("home");
   };
   const logout = () => {
     session.logout();
