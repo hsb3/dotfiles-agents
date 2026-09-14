@@ -173,9 +173,9 @@ MCP_JSON_STUB = '{\n  "mcpServers": {}\n}\n'
 
 SETTINGS_JSON_STUB = "{}\n"
 
-# Shape mirrors the MEMORY_STUB in ~/.local/bin/cc-project-memory (`init` creates the
-# index only when absent, so any scaffolded index makes a later `init` a no-op for the
-# files it owns). One deliberate rewording: cc-project-memory's literal example line
+# Shape mirrors the MEMORY_STUB in the project-memory skill's scripts/project_memory.py
+# (`init` creates the index only when absent, so any scaffolded index makes a later
+# `init` a no-op for the files it owns). One deliberate rewording: its literal example line
 # `- [Title](file.md) — short hook` parses as a dangling relative link under the
 # audit's MEM-04 index-links-resolve check, so the format hint here avoids markdown
 # link syntax.
