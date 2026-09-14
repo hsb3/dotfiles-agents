@@ -11,10 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "evals" / "ui" / "src" / "ui.tsx"
 VIEWS = ROOT / "evals" / "ui" / "src" / "views.tsx"
 DATA = ROOT / "evals" / "ui" / "src" / "data.ts"
+UI_DEPS = ROOT / "evals" / "ui" / "node_modules"
+HAS_UI_DEPS = all((UI_DEPS / name).exists() for name in (
+    "react", "react-dom", "@carbon/react", "@carbon/charts", "@carbon/charts-react",
+))
 
 
-@unittest.skipUnless(shutil.which("bun"), "Bun is required for React UI checks")
-class ToolboxUiTests(unittest.TestCase):
+@unittest.skipUnless(shutil.which("bun") and HAS_UI_DEPS, "Bun and UI production dependencies are required for React UI checks")
+class ToolboxServerRenderTests(unittest.TestCase):
     def run_module(self, body):
         script = """import assert from 'node:assert/strict';
 import React from 'react';
@@ -23,7 +27,7 @@ import { Home } from %s;
 import { submitLogin } from %s;
 %s
 """ % (json.dumps(VIEWS.as_uri()), json.dumps(UI.as_uri()), body)
-        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
+        result = subprocess.run(["bun", "--no-install", "--input-type=module", "-e", script], text=True,
                                 capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -47,6 +51,8 @@ await submitLogin({ login: async () => ({ kind: 'error', status: 0, message: 'No
 assert.equal(password, '');
 """)
 
+class ToolboxApiTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("bun"), "Bun is required for API checks")
     def test_catalog_filter_and_real_relation_queries(self):
         script = """import assert from 'node:assert/strict';
 import { Session } from %s;
@@ -71,9 +77,10 @@ assert.equal(recordScope('#documentation?extender=ext%%2F1', 'extender'), 'ext/1
 assert.equal(recordScope('#evaluations?extender=ext-1', 'extender'), 'ext-1');
 assert.equal(recordScope('#documentation?extender=', 'extender'), undefined);
 """ % (json.dumps((ROOT / "evals" / "ui" / "src" / "api.ts").as_uri()), json.dumps(DATA.as_uri()))
-        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True, capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
+        result = subprocess.run(["bun", "--no-install", "--input-type=module", "-e", script], text=True, capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("bun"), "Bun is required for API checks")
     def test_extender_source_access_and_errors_propagate(self):
         script = """import assert from 'node:assert/strict';
 import { Session } from %s;
@@ -96,10 +103,12 @@ for (const [status, kind] of [[403, 'access'], [500, 'error']]) {
   assert.equal(result.status, status);
 }
 """ % (json.dumps((ROOT / "evals" / "ui" / "src" / "api.ts").as_uri()), json.dumps(DATA.as_uri()))
-        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
+        result = subprocess.run(["bun", "--no-install", "--input-type=module", "-e", script], text=True,
                                 capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+@unittest.skipUnless(shutil.which("bun") and HAS_UI_DEPS, "Bun and UI production dependencies are required for React UI checks")
+class ToolboxRelationsRenderTests(unittest.TestCase):
     def test_documentation_and_evaluation_rows_render_actual_relations(self):
         script = """import assert from 'node:assert/strict';
 import React from 'react';
@@ -123,7 +132,7 @@ const fallback = renderToStaticMarkup(React.createElement(CoverageRows, {rows: [
 assert.match(fallback, /fallback-id/);
 assert.match(coverage, /#performance\\?campaign=run-8/);
 """ % (json.dumps((ROOT / "evals" / "ui" / "src" / "documentation.tsx").as_uri()), json.dumps((ROOT / "evals" / "ui" / "src" / "evaluations.tsx").as_uri()))
-        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
+        result = subprocess.run(["bun", "--no-install", "--input-type=module", "-e", script], text=True,
                                 capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
