@@ -13,7 +13,9 @@ claimed-log exclusion and the ambiguity warning.
 """
 
 import base64
+import contextlib
 import hashlib
+import io
 import json
 import os
 import sys
@@ -192,6 +194,231 @@ class OpencodeRollup(unittest.TestCase):
         self.assertEqual(body["era"], "na")
         self.assertEqual(body["cost_usd"], 0.99)              # ledger wins
         self.assertEqual(body["input_tokens"], 9)             # filled from rollup
+
+
+def _valid_preconditions() -> dict:
+    return {
+        "harness": "opencode", "cli_version": "1.0", "model": "model",
+        "campaign": "campaign", "grader_model": None, "timeout": 30,
+        "auth_env_present": [], "network_assumption": "assumed-available",
+        "self_installs": [],
+    }
+
+
+def _measurement_row(**overrides) -> dict:
+    row = {
+        "harness": "opencode", "candidate": "c", "case": "k", "config": "with",
+        "trial": 0, "passed": False, "skill_used": False, "exit_code": 0,
+        "plugin_errors": [], "error": None, "preconditions": _valid_preconditions(),
+        "cost_usd": 0, "input_tokens": 0,
+    }
+    row.update(overrides)
+    return row
+
+
+class MeasurementContract(unittest.TestCase):
+    def test_valid_failed_result_keeps_zero_false_and_ledger_identity(self):
+        row = _measurement_row()
+        body = L.build_run_row(row, None, None)
+        measurement = body["measurement"]
+        self.assertEqual(measurement["version"], 1)
+        self.assertEqual(measurement["source"], "harness-ledger")
+        self.assertTrue(measurement["available"]["passed"])
+        self.assertTrue(measurement["available"]["skill_used"])
+        self.assertTrue(measurement["available"]["cost_usd"])
+        self.assertEqual(measurement["provenance"]["cost_usd"], "ledger")
+        self.assertEqual(measurement["execution"]["validity"], "valid")
+        self.assertEqual(measurement["execution"]["preconditions"], row["preconditions"])
+        self.assertIsInstance(measurement["source_identity"]["record_sha256"], str)
+        self.assertEqual(measurement["source_identity"]["record_canonicalization"],
+                         "json-sorted-keys-utf8")
+        self.assertFalse(measurement["source_identity"]["log_available"])
+        self.assertIsNone(measurement["source_identity"]["log_sha256"])
+        self.assertEqual(measurement["source_identity"]["log_observation"], "unobserved-local")
+        self.assertEqual(body["plugin_errors"], [])
+        self.assertEqual(body["preconditions"], row["preconditions"])
+
+    def test_missing_values_remain_unavailable_but_zero_and_false_are_observed(self):
+        body = L.build_run_row(_measurement_row(num_turns=None, duration_ms=None), None, None)
+        measurement = body["measurement"]
+        self.assertFalse(measurement["available"]["num_turns"])
+        self.assertIsNone(measurement["provenance"]["num_turns"])
+        self.assertEqual(body["num_turns"], None)
+        self.assertFalse(body["passed"])
+        self.assertEqual(body["cost_usd"], 0)
+
+    def test_invalid_numeric_values_fail_before_db_write(self):
+        for value in (True, -1, float("nan"), float("inf")):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    L.build_run_row(_measurement_row(duration_ms=value), None, None)
+
+    def test_boolean_metrics_reject_coercible_non_booleans_before_writes(self):
+        for field, value in (("passed", "false"), ("passed", 0), ("skill_used", "true"),
+                             ("skill_used", 1)):
+            with self.subTest(field=field, value=value):
+                with self.assertRaises(ValueError):
+                    L.build_run_row(_measurement_row(**{field: value}), None, None)
+
+    def test_negative_integer_exit_code_is_an_invalid_execution_not_bad_measurement(self):
+        execution = L.build_run_row(_measurement_row(exit_code=-1), None, None)["measurement"]["execution"]
+        self.assertEqual(execution["validity"], "invalid")
+        self.assertIn("exit_code", execution["reason"])
+
+    def test_empty_or_malformed_preconditions_are_unknown(self):
+        for preconditions in ({}, dict(_valid_preconditions(), timeout="30")):
+            with self.subTest(preconditions=preconditions):
+                measurement = L.build_run_row(
+                    _measurement_row(preconditions=preconditions), None, None
+                )["measurement"]
+                self.assertEqual(measurement["execution"]["validity"], "unknown")
+                self.assertIn("preconditions", measurement["execution"]["reason"])
+
+    def test_explicit_unsupported_is_skipped_and_process_failure_is_invalid(self):
+        skipped = L.build_run_row(_measurement_row(
+            passed=None, exit_code=None, error="unsupported: opencode cannot host kind=hook"
+        ), None, None)["measurement"]["execution"]
+        invalid = L.build_run_row(_measurement_row(exit_code=1), None, None)["measurement"]["execution"]
+        self.assertEqual(skipped["validity"], "skipped")
+        self.assertEqual(invalid["validity"], "invalid")
+        self.assertIn("exit_code", invalid["reason"])
+        identity = L.build_run_row(_measurement_row(
+            passed=None, exit_code=None, error="unsupported: opencode cannot host kind=hook"
+        ), None, None)["measurement"]["source_identity"]
+        self.assertEqual(identity["log_observation"], "absent")
+
+    def test_unsupported_row_with_process_or_plugin_failure_is_invalid(self):
+        for overrides in ({"exit_code": -1}, {"plugin_errors": ["broken"]}):
+            with self.subTest(overrides=overrides):
+                execution = L.build_run_row(_measurement_row(
+                    passed=None, error="unsupported: opencode cannot host kind=hook", **overrides
+                ), None, None)["measurement"]["execution"]
+                self.assertEqual(execution["validity"], "invalid")
+
+    def test_log_digest_is_of_the_actual_log_bytes(self):
+        raw = _log(_oc("text", {"text": "hi"}, 1)).encode()
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "trial.log")
+            with open(path, "wb") as fh:
+                fh.write(raw)
+            row = _measurement_row()
+            key = L.run_key(row)
+            aggregate = L.build_aggregate({key: row}, {key: path})
+        identity = aggregate.runs[key]["measurement"]["source_identity"]
+        self.assertTrue(identity["log_available"])
+        self.assertEqual(identity["log_sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(identity["log_observation"], "observed")
+
+    def test_logless_replay_preserves_hosted_log_identity_and_fields(self):
+        body = L.build_run_row(_measurement_row(), None, None)
+        prior = dict(body, id="run-1", model_usage={"hosted": 1}, provenance={"tools": ["Read"]})
+        prior["measurement"] = json.loads(json.dumps(body["measurement"]))
+        identity = prior["measurement"]["source_identity"]
+        identity.update(log_sha256="a" * 64, log_available=True, log_observation="observed")
+
+        class PB:
+            def update(self, *args):
+                raise AssertionError("logless replay must be unchanged")
+
+        _, counts = L._apply_runs(PB(), {L.run_key(body): body}, {L.run_key(body): prior}, False)
+        self.assertEqual(counts, (0, 0, 1))
+        self.assertEqual(prior["model_usage"], {"hosted": 1})
+        self.assertEqual(prior["provenance"], {"tools": ["Read"]})
+
+    def test_logless_replay_preserves_hosted_session_and_era_even_without_envelope(self):
+        body = L.build_run_row(_measurement_row(), None, None)
+        prior = {"id": "run-1", "session_id": "hosted-session", "era": "legacy"}
+        updates = []
+
+        class PB:
+            def update(self, _coll, _id, update):
+                updates.append(update)
+
+        L._apply_runs(PB(), {L.run_key(body): body}, {L.run_key(body): prior}, False)
+        self.assertEqual(updates[0]["session_id"], "hosted-session")
+        self.assertEqual(updates[0]["era"], "legacy")
+
+    def test_logless_replay_preserves_legacy_scalar_without_claiming_provenance(self):
+        body = L.build_run_row(_measurement_row(num_turns=None), None, None)
+        updates = []
+
+        class PB:
+            def update(self, _coll, _id, update):
+                updates.append(update)
+
+        L._apply_runs(PB(), {L.run_key(body): body},
+                      {L.run_key(body): {"id": "run-1", "num_turns": 7}}, False)
+        self.assertEqual(updates[0]["num_turns"], 7)
+        measurement = updates[0]["measurement"]
+        self.assertFalse(measurement["available"]["num_turns"])
+        self.assertIsNone(measurement["provenance"]["num_turns"])
+
+    def test_logless_replay_retains_prior_v1_log_rollup_availability(self):
+        body = L.build_run_row(_measurement_row(duration_ms=None), None, None)
+        prior_measurement = json.loads(json.dumps(body["measurement"]))
+        prior_measurement["available"]["duration_ms"] = True
+        prior_measurement["provenance"]["duration_ms"] = "log-rollup"
+        prior_measurement["source_identity"].update(
+            log_sha256="a" * 64, log_available=True, log_observation="observed"
+        )
+        updates = []
+
+        class PB:
+            def update(self, _coll, _id, update):
+                updates.append(update)
+
+        L._apply_runs(PB(), {L.run_key(body): body}, {L.run_key(body): {
+            "id": "run-1", "duration_ms": 7, "measurement": prior_measurement,
+        }}, False)
+        self.assertEqual(updates[0]["duration_ms"], 7)
+        self.assertTrue(updates[0]["measurement"]["available"]["duration_ms"])
+        self.assertEqual(updates[0]["measurement"]["provenance"]["duration_ms"], "log-rollup")
+
+    def test_empty_child_replay_does_not_write_existing_relations(self):
+        class PB:
+            def list_all(self, *args):
+                return [{"id": "existing", "run": "run-a", "seq": 1}]
+
+            def create(self, *args):
+                raise AssertionError("no child creation")
+
+            def update(self, *args):
+                raise AssertionError("no child update")
+
+        counts = L._apply_children(PB(), "run_events", [], {"a": "run-a"}, {},
+                                   {"a": {"id": "run-a"}}, L._event_key,
+                                   L.RUN_EVENT_FIELDS, L.EVENT_JSON, False)
+        self.assertEqual(counts, (0, 0, 0))
+
+    def test_parse_summary_separates_unreadable_reference_from_observed_log(self):
+        row = L.build_run_row(_measurement_row(), None, "harness/runs/missing.log")
+        aggregate = L.Aggregate({"run": row}, [], [], {}, {"legacy": 0, "post": 0, "na": 0})
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            L._print_parse_summary(aggregate, [])
+        self.assertIn("runs with log reference: 1/1", output.getvalue())
+        self.assertIn("runs with observed log bytes: 0/1", output.getvalue())
+
+    def test_missing_metric_uses_null_once_and_ignores_pb_default_afterward(self):
+        body = L.build_run_row(_measurement_row(num_turns=None), None, None)
+        existing = dict(body, id="run-1", num_turns=0)
+
+        class PB:
+            def create(self, *args):
+                raise AssertionError("unexpected create")
+
+            def update(self, *args):
+                raise AssertionError("PB default must not cause update forever")
+
+        _, counts = L._apply_runs(PB(), {L.run_key(body): body}, {L.run_key(body): existing}, False)
+        self.assertEqual(counts, (0, 0, 1))
+
+    def test_existing_sha_can_link_to_another_runs_event(self):
+        sha_map = {"sha": "artifact-a"}
+        body = L._child_body({"seq": 3, "_artifact_shas": ["sha"]}, "run-b", sha_map,
+                             L.RUN_EVENT_FIELDS, L.EVENT_JSON)
+        self.assertEqual(body["run"], "run-b")
+        self.assertEqual(body["artifact"], "artifact-a")
 
 
 class MirrorDedup(unittest.TestCase):
