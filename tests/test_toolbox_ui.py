@@ -74,6 +74,32 @@ assert.equal(recordScope('#documentation?extender=', 'extender'), undefined);
         result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True, capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_extender_source_access_and_errors_propagate(self):
+        script = """import assert from 'node:assert/strict';
+import { Session } from %s;
+import { extenderWithSource } from %s;
+const expanded = await extenderWithSource(new Session(async (url) =>
+  url.startsWith('/api/collections/extenders/')
+    ? new Response(JSON.stringify({id: 'ext-1', source: 'source-1'}))
+    : new Response(JSON.stringify({id: 'source-1', name: 'Named source'})),
+), 'ext-1');
+assert.equal(expanded.kind, 'ok');
+assert.equal(expanded.data.expand.source.name, 'Named source');
+for (const [status, kind] of [[403, 'access'], [500, 'error']]) {
+  const session = new Session(async (url) => {
+    if (url.startsWith('/api/collections/extenders/'))
+      return new Response(JSON.stringify({id: 'ext-1', source: 'source-1'}));
+    return new Response('source failed', {status});
+  });
+  const result = await extenderWithSource(session, 'ext-1');
+  assert.equal(result.kind, kind);
+  assert.equal(result.status, status);
+}
+""" % (json.dumps((ROOT / "evals" / "ui" / "src" / "api.ts").as_uri()), json.dumps(DATA.as_uri()))
+        result = subprocess.run(["bun", "--input-type=module", "-e", script], text=True,
+                                capture_output=True, check=False, cwd=ROOT / "evals" / "ui")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_documentation_and_evaluation_rows_render_actual_relations(self):
         script = """import assert from 'node:assert/strict';
 import React from 'react';

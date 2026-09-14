@@ -3,11 +3,10 @@ import { useEffect, useState } from "react";
 import { Session } from "./api";
 import {
   documentationFor,
-  extenderById,
   extenders,
+  extenderWithSource,
   recordScope,
   safeHref,
-  sourceById,
   type DocumentationFile,
   type Extender,
 } from "./data";
@@ -80,20 +79,11 @@ export function Documentation({ session, onExpired }: { session: Session; onExpi
     setFiles([]);
     setFile(undefined);
     setFileState("loading");
-    extenderById(session, id, c.signal).then((r) => {
+    extenderWithSource(session, id, c.signal).then((r) => {
       if (c.signal.aborted) return;
       if (r.kind === "ok") {
-        if (!r.data.source) {
-          setParent(r.data);
-          setParentState("populated");
-          return;
-        }
-        sourceById(session, r.data.source, c.signal).then((source) => {
-          if (c.signal.aborted) return;
-          if (source.kind === "ok") setParent({ ...r.data, expand: { source: source.data } });
-          else expire(source, onExpired);
-          setParentState("populated");
-        });
+        setParent(r.data);
+        setParentState("populated");
       } else {
         setParentState(r.kind);
         expire(r, onExpired);

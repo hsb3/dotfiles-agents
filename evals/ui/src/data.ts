@@ -60,6 +60,13 @@ export const extenderById = (session: Session, id: string, signal?: AbortSignal)
   session.request<Extender>(`/api/collections/extenders/records/${encodeURIComponent(id)}?fields=id,body,entry_file,source`, { signal });
 export const sourceById = (session: Session, id: string, signal?: AbortSignal) =>
   session.request<Source>(`/api/collections/sources/records/${encodeURIComponent(id)}?fields=id,name,url,publisher_kind,maintenance`, { signal });
+export async function extenderWithSource(session: Session, id: string, signal?: AbortSignal): Promise<ApiResult<Extender>> {
+  const extender = await extenderById(session, id, signal);
+  if (extender.kind !== "ok" || !extender.data.source) return extender;
+  const source = await sourceById(session, extender.data.source, signal);
+  if (source.kind !== "ok") return source;
+  return { kind: "ok", data: { ...extender.data, expand: { ...extender.data.expand, source: source.data } } };
+}
 
 export type Distribution = { id: string; slug: string; kind: string; version: string; members: string[] };
 export const distributions = (session: Session, page = 1, signal?: AbortSignal) =>
