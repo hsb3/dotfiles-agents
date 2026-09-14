@@ -38,11 +38,15 @@ function measurement(recordValue: unknown): RunRecord | null {
     ? measurementValue : null;
 }
 
+function available(envelope: RunRecord | null, field: string): boolean {
+  return record(envelope?.available)?.[field] === true;
+}
+
 export function measurementNumber(run: unknown, field: string): number | null {
   const value = record(run);
   const envelope = measurement(value);
   const actual = value?.[field];
-  return envelope?.available?.[field] === true && typeof actual === "number"
+  return available(envelope, field) && typeof actual === "number"
     && Number.isFinite(actual) && actual >= 0 ? actual : null;
 }
 
@@ -50,7 +54,7 @@ export function measurementBoolean(run: unknown, field: string): boolean | null 
   const value = record(run);
   const envelope = measurement(value);
   const actual = value?.[field];
-  return envelope?.available?.[field] === true && typeof actual === "boolean" ? actual : null;
+  return available(envelope, field) && typeof actual === "boolean" ? actual : null;
 }
 
 function invalid(baseline: RunRecord | null, withValue: RunRecord | null,
