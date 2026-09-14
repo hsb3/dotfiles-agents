@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EVALS = ROOT / "evals"
 sys.path.insert(0, str(EVALS))
 import load_harness_runs as loader  # noqa: E402
+import load_eval_run  # noqa: E402
 
 
 PB_BINARY = os.environ.get("PB_BINARY", "/opt/homebrew/bin/pocketbase")
@@ -127,6 +128,27 @@ class ProjectionWireTest(unittest.TestCase):
         return loader.plan(loader.PB(), loader.build_aggregate(parsed, links), loader.Scope(campaign="wire"), False)
 
     def test_measurements_campaign_replay_and_shared_protected_artifact(self):
+        manifest_path = self.root / "campaign.json"
+        manifest = {"run": {"slug": "wire-campaign", "kind": "judged"}, "responses": [
+            {"role": "judge", "tokens": 0, "duration_ms": 7}]}
+        manifest_path.write_text(json.dumps(manifest))
+        campaign_pb = load_eval_run.PB()
+        load_eval_run.load_manifest(campaign_pb, str(manifest_path))
+        first_response = campaign_pb.list_all("eval_responses")[0]
+        manifest["responses"][0].pop("duration_ms")
+        manifest_path.write_text(json.dumps(manifest))
+        load_eval_run.load_manifest(campaign_pb, str(manifest_path))
+        second_response = campaign_pb.list_all("eval_responses")[0]
+        self.assertEqual(second_response["id"], first_response["id"])
+        self.assertEqual(second_response["tokens"], 0)
+        self.assertEqual(second_response["duration_ms"], 0)
+        self.assertFalse(second_response["measurement"]["available"]["duration_ms"])
+        projection = {key: second_response[key] for key in
+                      ("id", "role", "tokens", "duration_ms", "measurement")}
+        load_eval_run.load_manifest(campaign_pb, str(manifest_path))
+        replay = campaign_pb.list_all("eval_responses")
+        self.assertEqual(len(replay), 1)
+        self.assertEqual({key: replay[0][key] for key in projection}, projection)
         before = loader.PB().get_collection("artifacts")
         blob_before = next(field for field in before["fields"] if field["name"] == "blob")
         subprocess.run([sys.executable, str(EVALS / "schema.py")], cwd=EVALS, env=self.env,
