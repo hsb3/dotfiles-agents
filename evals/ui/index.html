@@ -3,102 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>toolbox / workflow finder</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Toolbox</title>
   </head>
   <body>
-    <main class="shell">
-      <header class="top">
-        <div class="brand">toolbox<span>/</span></div>
-        <span class="tag">Workflow finder</span>
-        <div id="session" hidden>
-          <span id="session-email"></span>
-          <button id="logout" type="button">Log out</button>
-        </div>
-      </header>
-      <section class="intro">
-        <div>
-          <p class="eyebrow">Workflow finder</p>
-          <h1>Start with the work in front of you.</h1>
-          <p class="lede">
-            Discover source workflows, then compare archived evaluation runs and
-            selected evidence.
-          </p>
-        </div>
-        <form id="login" class="card login">
-          <fieldset id="credentials">
-            <label
-              >Email
-              <input
-                name="email"
-                type="email"
-                required
-                autocomplete="email" /></label
-            ><label
-              >Password
-              <input
-                name="password"
-                type="password"
-                required
-                autocomplete="current-password"
-            /></label>
-          </fieldset>
-          <button id="login-submit">Log in</button>
-          <p id="auth-state" role="status">Sign in to load private records.</p>
-        </form>
-      </section>
-      <nav class="steps" aria-label="Workflow">
-        <button data-view="discover" class="active">
-          01 <small>Discover</small></button
-        ><button data-view="compare">02 <small>Compare runs</small></button
-        ><button data-view="detail">03 <small>Evidence detail</small></button>
-      </nav>
-      <section class="view" id="discover">
-        <p class="eyebrow">Source snapshot</p>
-        <h2>Choose a development workflow.</h2>
-        <div id="workflow-cards" class="task-grid" aria-label="Workflows"></div>
-        <label class="search"
-          >Search plugin names and descriptions
-          <input id="catalog-search" type="search" disabled
-        /></label>
-        <p id="catalog-state" role="status">
-          Sign in to load the source snapshot.
-        </p>
-        <div id="catalog" class="plugin-grid" aria-live="polite"></div>
-      </section>
-      <section class="view" id="compare" hidden>
-        <p class="eyebrow">Archived observations</p>
-        <h2>Compare two recorded runs.</h2>
-        <p id="runs-state" role="status">Sign in to load historical runs.</p>
-        <div id="runs" class="plugin-grid"></div>
-        <p>
-          <button id="previous" type="button" disabled>Previous</button>
-          <button id="next" type="button" disabled>Next</button>
-        </p>
-        <h3>Selected comparison</h3>
-        <p id="comparison-state" role="status">
-          Select two archived runs to compare.
-        </p>
-        <div id="comparison" class="comparison"></div>
-      </section>
-      <section class="view" id="detail" hidden>
-        <button class="crumb" data-view="compare">← Back to runs</button>
-        <div class="detail">
-          <p class="eyebrow">Selected evidence</p>
-          <h2>Artifact metadata</h2>
-          <p id="artifacts-state" role="status">
-            Select a run to load evidence metadata.
-          </p>
-          <div id="artifacts"></div>
-          <p>
-            <button id="artifact-previous" type="button" disabled>
-              Previous
-            </button>
-            <button id="artifact-next" type="button" disabled>Next</button>
-          </p>
-        </div>
-      </section>
-    </main>
-    <script type="module" src="app.js"></script>
+    <div id="root"></div>
+    <div id="session" hidden></div>
+    <div id="workflow-cards" hidden></div>
+    <script type="module" src="/src/api.ts"></script>
   </body>
 </html>
