@@ -73,7 +73,7 @@ jobs:
           cp -RL plugins "$ASM/plugins"
           mkdir -p "$ASM/.claude-plugin"
           cp .claude-plugin/marketplace.json "$ASM/.claude-plugin/marketplace.json"
-          cp README.md "$ASM/"
+          cp README.md LICENSE "$ASM/"
           # dev's .gitignore ships with the publish tree: main has no tracked files to
           # hide, but an accidental local checkout of main in a dev working directory
           # would otherwise surface every ignored-on-dev leftover as untracked noise.

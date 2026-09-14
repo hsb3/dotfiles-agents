@@ -1,8 +1,8 @@
 # dotfiles-agents
 
 A Claude Code and Codex plugin marketplace of coding-agent extenders (skills, agents, and hooks),
-installed by name. Original primitives are maintained here; Carbon builder, PocketBase best practices and
-the PPTX base include upstream material under component-specific licenses. See the
+installed by name. Original work is [MIT-licensed](LICENSE); Carbon builder and PocketBase best practices
+include upstream material under their own licenses. See the
 [license inventory](https://github.com/hsb3/dotfiles-agents/blob/dev/docs/licenses.md). Every bundle closes with an "Honest scope" section stating what it does
 not do.
 

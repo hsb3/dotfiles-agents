@@ -30,7 +30,7 @@ table rather than as a passing one. Six checks:
      definition (`[label]: dest`), and HTML `href=`/`src=` attribute in README.md is an
      absolute `http(s)://` URL, a pure `#anchor`, or a relative path that (a) exists on
      disk and (b) is on the publish lift map: anything under `plugins/`, or one of
-     `README.md`, `.gitignore`, `.claude-plugin/marketplace.json`. Nothing else exists on
+     `README.md`, `LICENSE`, `.gitignore`, `.claude-plugin/marketplace.json`. Nothing else exists on
      `main` — including the rest of `.claude-plugin/`.
   4. Manifest parity — every `plugins/<id>/.claude-plugin/plugin.json` agrees with that
      plugin's marketplace.json entry on BOTH `description` and `version`.
@@ -81,11 +81,11 @@ REF_LINK_DEF = re.compile(r"^\s{0,3}\[([^\]]+)\]:\s*(\S+)")
 HTML_LINK_ATTR = re.compile(r"\b(href|src)\s*=\s*[\"']([^\"']*)[\"']", re.IGNORECASE)
 
 # The publish lift map (.github/workflows/publish.yml): plugins/ is copied whole
-# (dereferenced), then three individual files. Everything else is dev-only.
+# (dereferenced), then four individual files. Everything else is dev-only.
 PUBLISHED_DIRS = {"plugins"}
-PUBLISHED_FILES = {"README.md", ".gitignore", os.path.join(".claude-plugin", "marketplace.json")}
+PUBLISHED_FILES = {"README.md", "LICENSE", ".gitignore", os.path.join(".claude-plugin", "marketplace.json")}
 PUBLISHED_BLURB = (
-    "only plugins/, .claude-plugin/marketplace.json, README.md, and .gitignore ship on main"
+    "only plugins/, .claude-plugin/marketplace.json, README.md, LICENSE, and .gitignore ship on main"
 )
 
 KINDS = ("bundle", "standalone")

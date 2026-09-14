@@ -13,7 +13,7 @@ The retained authored layer comes from source dev `84101f6`: semantic theme toke
 color/typography references, narrative guidance and the theme sampler. These existed
 outside the restrictive base. Their content is retained, with route/name corrections.
 The misleading wrapper-level Anthropic license is removed with the base rather than
-applied to new first-party work. No new blanket first-party license is selected.
+applied to new first-party work, which the repository [MIT license](../LICENSE) covers.
 
 The owner directed promotion from `/Users/henry/Developer/LEARNING/spike-make-decks`.
 That local private experiment has no commits or remote. Its README/HANDOFF and source
