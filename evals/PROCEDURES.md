@@ -28,6 +28,67 @@ Cold rebuild: start a private runtime, then 1 → 2, and re-load eval provenance
 Create a disposable superuser before serving a fresh test instance to avoid the installer
 browser. Never copy real authentication state into a fixture.
 
+## Procedure: update the existing Toolbox
+
+Use the existing service and volume. Publishing marketplace plugins through `main` is a
+separate operation. Merge through green PR checks into `dev`; retain the exact source SHA,
+local gate/build output, package hashes and resulting deployment ID in an external receipt.
+
+1. Verify the project, production environment, service, domain and `/pb/pb_data` volume against
+   the current operating record. Authenticate the ordinary user and administrator separately;
+   keep credentials outside the package. Capture collection IDs/counts and hashes of existing
+   records and protected files. Create a named PocketBase backup through `POST /api/backups`
+   and verify its key and nonzero size with `GET /api/backups` before schema or ingestion writes.
+2. Test schema/access/loader changes on a disposable PocketBase first. Apply only the reviewed
+   schema delta, preserving existing field IDs and all unrelated fields/rules. For the agreed
+   content areas, `python3 evals/toolbox_access.py` previews null read rules to be changed;
+   `--apply` grants authenticated read only after preflight. Unexpected existing rules stop
+   the operation. Users remain self-only, ordinary writes remain locked, and artifact blobs
+   remain protected. Read rules and actual ordinary/anonymous behavior back afterward.
+3. Run the relevant loader's parse-only/dry-run route before scoped ingestion. Deployment
+   does not ingest data. Keep original source hashes, scope, create/update counts and a second
+   ingestion receipt showing no duplicates. Missing source logs are a provenance limit, never
+   permission to erase previously stored events, tools or artifacts. Never upload synthetic
+   fixtures as live evidence or reinterpret historical default zeros as observations.
+4. Build and package an exact merged `dev` archive. From the repository root:
+
+   ```sh
+   git fetch origin dev
+   toolbox_sha=$(git rev-parse origin/dev)
+   toolbox_source=$(mktemp -d /tmp/toolbox-source.XXXXXX)
+   toolbox_release=$(mktemp -d /tmp/toolbox-release.XXXXXX)
+   git archive "$toolbox_sha" | tar -x -C "$toolbox_source"
+   bun install --cwd "$toolbox_source/evals/ui" --frozen-lockfile
+   bun run --cwd "$toolbox_source/evals/ui" typecheck
+   bun run --cwd "$toolbox_source/evals/ui" build
+   python3 "$toolbox_source/evals/package_toolbox.py" "$toolbox_release/package" \
+     --source-root "$toolbox_source" --ui-build "$toolbox_source/evals/ui/dist"
+   ```
+
+   The package inventory hashes UI source/build and catalog inputs; the recorded archive/build
+   commands establish their origin. Inspect the package before upload. No credentials,
+   database, original runtime artifacts, source maps or dependency trees belong in it.
+5. Upload only that package, substituting the verified existing IDs:
+
+   ```sh
+   railway up "$toolbox_release/package" --path-as-root \
+     --project PROJECT_ID --environment ENVIRONMENT_ID --service SERVICE_ID \
+     --detach --json --message "Toolbox dev@$toolbox_sha"
+   ```
+
+   Poll the
+   returned deployment ID to `SUCCESS`; a successful upload is not a successful deployment.
+6. Repeat ordinary-user desktop/mobile find, compare and evidence flows against real records.
+   Verify displayed values against their recorded source, missing-value labels, protected-file
+   token access, sign-out clearing and anonymous/write denial. Reconcile preexisting record IDs
+   and protected-file hashes with the baseline; explain only the intended projection additions
+   or updates. Keep fixture checks and hosted checks in separate receipts.
+
+For an application-only rollback, redeploy the previously verified package to the same service
+and volume. Additive schema fields need not be removed. Database restore replaces current data:
+preserve a current backup and obtain explicit recovery authorization before restoring the named
+pre-change backup. Never recreate or remove the volume as a rollback shortcut.
+
 ## Procedure: fresh Railway deployment
 
 The root owner alone provisions accounts, rules, cloud state, and deployment after the browser
@@ -35,7 +96,10 @@ login email arrives. First create a throwaway package; never deploy the reposito
 
 ```sh
 package_dir=/tmp/evals-toolbox-deploy
-python3 evals/package_toolbox.py "$package_dir"
+bun install --cwd evals/ui --frozen-lockfile
+bun run --cwd evals/ui typecheck
+bun run --cwd evals/ui build
+python3 evals/package_toolbox.py "$package_dir" --ui-build "$PWD/evals/ui/dist"
 cd "$package_dir"
 railway up --path-as-root
 ```
@@ -52,6 +116,7 @@ fresh synthetic credentials and an empty temporary data directory; do not copy a
 database or token into it:
 
 ```sh
+bun run --cwd evals/ui build
 python3 evals/toolbox_fixture.py --pocketbase /opt/homebrew/bin/pocketbase
 ```
 
@@ -61,20 +126,22 @@ process and temporary data on Ctrl-C. It reads no credential or configuration en
 test runs this actual fixture when PocketBase is present; otherwise it is explicitly skipped.
 
 The root creates the browser `users` account manually after its email is supplied. Public signup
-is disabled (`createRule = null`); users list and view are authenticated as appropriate, while
-users update and delete are `null`. Only `runs` and `artifacts` have authenticated read-only list
-and view rules; their create, update, and delete rules stay `null`. Keep `artifacts.blob` protected and use
+is disabled (`createRule = null`); users list and view are self-only, while
+users update and delete are `null`. Configure `runs` and `artifacts` with authenticated read-only list
+and view rules, then apply the same `toolbox_access.py` content-area rules used for existing
+deployments. All create, update, and delete rules stay `null`. Keep `artifacts.blob` protected and use
 PocketBase's authenticated short-lived file token route for it. The browser stores its token only
 in memory, clears it on logout, and never receives a superuser credential.
 
-After the root has authenticated as a superuser and set `PB_ADMIN_TOKEN` in that root-only shell,
+After schema setup and browser-user creation, authenticate as a superuser and set
+`PB_ADMIN_TOKEN` in that root-only shell, then
 apply and read back the rules with the following commands. The `users` rules limit a browser user
 to its own record; the business rule allows any authenticated browser account to read only.
 
 ```sh
 auth_header="Authorization: $PB_ADMIN_TOKEN"
 users_rule='id = @request.auth.id'
-business_rule='@request.auth.id != ""'
+business_rule="@request.auth.id != ''"
 curl --fail-with-body -X PATCH "$PB_URL/api/collections/users" \
   -H "$auth_header" -H 'Content-Type: application/json' \
   --data "{\"listRule\":\"$users_rule\",\"viewRule\":\"$users_rule\",\"createRule\":null,\"updateRule\":null,\"deleteRule\":null}"
@@ -85,6 +152,8 @@ for collection in runs artifacts; do
   curl --fail-with-body "$PB_URL/api/collections/$collection" -H "$auth_header"
 done
 curl --fail-with-body "$PB_URL/api/collections/users" -H "$auth_header"
+python3 evals/toolbox_access.py
+python3 evals/toolbox_access.py --apply
 ```
 
 The earlier empty-service procedure remains applicable to the resulting package. The root owner

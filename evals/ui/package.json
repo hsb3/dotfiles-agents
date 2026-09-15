@@ -1,0 +1,20 @@
+{
+  "name": "toolbox-ui",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "vite build", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@carbon/charts": "1.27.19",
+    "@carbon/charts-react": "1.27.19",
+    "@carbon/react": "1.116.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "sass": "1.92.1",
+    "typescript": "5.9.2",
+    "vite": "7.1.5"
+  }
+}

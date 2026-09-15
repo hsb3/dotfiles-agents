@@ -144,6 +144,15 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - name: Toolbox UI checks and production build
+        run: |
+          bun install --cwd evals/ui --frozen-lockfile
+          bun run --cwd evals/ui typecheck
+          bun run --cwd evals/ui build
+          python3 -m unittest discover -s tests -t . -p 'test_toolbox_ui*.py'
       - name: Install the Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code@2.1.263
       - name: manifest gate (claude plugin validate --strict)
