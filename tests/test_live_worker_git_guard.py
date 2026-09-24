@@ -1076,12 +1076,37 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             ("echo $((1 << 3))\ngit commit -m x", "commit"),
             ("cat <<< hi\ngit commit -m x", "commit"),
             ("cat <<EOF\ngit commit -m x", "commit"),
-            # A backslash-newline continues the line; a body line ending in
-            # one still strips with its terminator.
+            # A backslash-newline continues the line; under a quoted word a
+            # body line ending in one still strips with its terminator.
             ("git \\\ncommit -m x", "commit"),
             ("make ci \\\n  && git commit -m x", "commit"),
-            ("cat <<EOF\necho a && git rebase main \\\nEOF", None),
-            ("cat <<EOF\nhello \\\nEOF\ngit commit -m x", "commit"),
+            ("cat <<'EOF'\necho a && git rebase main \\\nEOF", None),
+            ("cat <<'EOF'\nhello \\\nEOF\ngit commit -m x", "commit"),
+            # Under an unquoted word bash joins it to the next line before
+            # looking for the terminator, so `EO\` + `F` closes the body.
+            ("cat <<EOF\nEO\\\nF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<EOF\nE\\\nO\\\nF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<-EOF\n\tEO\\\nF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<EOF\nEO\\\\\nF\ngit commit -m x\nEOF", None),
+            ("cat <<'EOF'\nEO\\\nF\ngit commit -m x\nEOF", None),
+            ('cat <<"EOF"\nEO\\\nF\ngit commit -m x\nEOF', None),
+            # ...and a terminator after a continued line is swallowed: the
+            # body never ends, so it is kept (bash runs neither; over-deny).
+            ("cat <<EOF\necho a && git rebase main \\\nEOF", "rebase"),
+            # The joined line must equal the word exactly (leading tabs only
+            # under `<<-`), or a later opener swallows the real terminator.
+            ("cat <<EOF\n E\\\nOF\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<EOF\nE\\\nOF \ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<EOF\nEOF\r\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<-EOF\n  EOF\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<-EOF\n\t\\\n\tEOF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<EOF\r\nbody\nEOF\r\ngit commit -m x\nEOF", "commit"),
+            ("cat <<'EOF'\r\nbody\nEOF\r\ngit commit -m x\nEOF", "commit"),
+            # An even run of backslashes is escaped, not a continuation.
+            ("cat <<EOF\ngit commit -m x\\\\\nEOF", None),
+            # Two heredocs on one line: both bodies are dropped, in order.
+            ("cat <<A <<B\nx\nA\ncat <<Y\nB\ngit commit -m x\nY", "commit"),
+            ("cat <<A <<B\ngit commit -m x\nA\ngit push\nB", None),
             # An escaped backslash does not continue the line.
             ("echo foo\\\\\ngit push", "push"),
             # A line break clears the inert state of a `<<` or `#`.
