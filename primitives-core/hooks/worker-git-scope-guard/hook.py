@@ -125,25 +125,30 @@ def _scan_line(line, quote):
 
     An opener counts only outside quotes and outside a comment, and never with an
     all-digit word, which is a shift (`$(( 1 <<3 ))`). A backslash escapes the next
-    character outside single quotes. A `#` at the start of the line or after
-    whitespace runs to the line end, so an apostrophe in a comment opens no quote.
+    character outside single quotes, and inside `$'...'` too. A `#` at the start
+    of the line, after whitespace or after one of `;&|()` runs to the line end, so an
+    apostrophe in a comment opens no quote.
     """
     terminator = None
     i = 0
     while i < len(line):
         char = line[i]
         if quote:
-            if char == quote:
+            if char == quote[-1]:
                 quote = None
-            elif char == "\\" and quote == '"':
+            elif char == "\\" and quote != "'":
                 i += 1
         elif char == "\\":
             if i == len(line) - 1:
                 return terminator, quote, True
             i += 1
+        elif line.startswith("$'", i):
+            quote = "$'"
+            i += 1
         elif char in "'\"":
             quote = char
-        elif char == "#" and (i == 0 or line[i - 1].isspace()):
+        elif char == "#" and (i == 0 or line[i - 1].isspace()
+                              or line[i - 1] in ";&|()"):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)

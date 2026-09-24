@@ -242,6 +242,13 @@ class CommandParsingTests(unittest.TestCase):
             with self.subTest(command=command):
                 self.assertTrue(blocked(command))
 
+    def test_a_comment_after_a_separator_and_an_ansi_c_string_open_no_heredoc(self):
+        for command in ('echo "<<Z" ;# <<A\ngit push\nA',
+                        "echo \"<<Z\" $'a\\' <<A'\ngit push\nA"):
+            with self.subTest(command=command):
+                self.assertEqual(
+                    [v for v, _, _ in hook.invocations(command, "/tmp")], ["push"])
+
     def test_a_herestring_is_not_a_heredoc(self):
         self.assertTrue(blocked("grep -q x <<< done\ngit stash\ndone"))
 

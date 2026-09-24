@@ -270,9 +270,9 @@ command string the hook is handed, so whatever still displaces them is invisible
   `(cd elsewhere && git commit)` is how a subshell cd is normally written and resolving it to the
   wrong tree returns an affirmative "no block"; the verb scan does not, so `(git commit)` stays a
   missed deny in the SAME tree;
-- a newline the line splitter misreads as quoted: a `#` comment glued to a separator
-  (`ls;# it's`) or an ANSI-C string (`$'it\'s'`) opens a quote at the apostrophe, so the next
-  line is read as part of it (`ls;# it's` then `git push` on the next line is missed);
+- a quoted heredoc word containing spaces (`<<'E O F'`): only `E` is taken as the word and the
+  closing `'` opens a quote, so the rest of the command reads as one line and a call after the
+  terminator is missed;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

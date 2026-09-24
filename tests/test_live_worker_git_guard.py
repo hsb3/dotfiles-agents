@@ -1049,6 +1049,12 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
              "push"),
             ("echo $(( 1 <<3 ))\ngit push\n3", "push"),
             ('echo "a\n<<EOF"\ngit push\nEOF', "push"),
+            # A `#` right after a separator is a comment; `$'...'` escapes a
+            # quote with a backslash.
+            ('echo "<<Z" ;# <<A\ngit push\nA', "push"),
+            ("echo \"<<Z\" $'a\\' <<A'\ngit push\nA", "push"),
+            ("ls;# it's\ngit push", "push"),
+            ("echo $'it\\'s'\ngit push", "push"),
         )
         for command, verb in cases:
             with self.subTest(command=command):
