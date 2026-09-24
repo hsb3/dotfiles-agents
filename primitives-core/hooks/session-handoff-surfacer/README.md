@@ -21,9 +21,9 @@ Fires at session start (`SessionStart`) only on `startup`/`clear` sources — ne
 in that order — unless a project overrides the location (see below), in which case it may
 instead surface a pointer to a handoff that lives outside the repo altogether.
 
-On the same sources, in a Claude Code main session inside a git worktree with no activation file, it also says
+On the same sources, in a main session inside a git worktree with no activation file, it also says
 `atelier is enabled here but not activated: its key-driven hooks are off; run /atelier:activate`,
-ahead of any handoff excerpt. Subagents and Codex are never told.
+ahead of any handoff excerpt. Subagents are never told.
 
 ## Configuration
 
@@ -126,4 +126,4 @@ Ships only in the atelier bundle, alongside the handoff skill it surfaces.
 
 ## Codex
 
-Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. Activation uses `.codex/atelier.local.md` with the documented legacy fallback; Codex payload cwd is authoritative even if a Claude environment variable is inherited.
+Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. Activation uses `.codex/atelier.local.md` with the documented legacy fallback; Codex payload cwd is authoritative even if a Claude environment variable is inherited. In a project with no activation file a Codex main session gets the not-activated line and nothing else: Codex hooks stay off in an inactive project, so no handoff is surfaced there.
