@@ -242,8 +242,10 @@ A heredoc body is not scanned at all: it is dropped, up to and including its ter
 tokenizing, so a `&&` or `|` in it opens nothing and a git call after the terminator is read. An
 opener counts only outside quotes (tracked across lines) and outside a comment, and never with an
 all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newline ends a command
-as `;` does, and a backslash-newline joins two lines into one. A `<<` whose terminator never appears
-drops nothing, so its body is read as command lines.
+as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
+before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
+(`<<'EOF'`) takes its body literally. A `<<` whose terminator never appears drops nothing, so its body
+is read as command lines.
 
 Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
 same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
@@ -272,9 +274,6 @@ command string the hook is handed, so whatever still displaces them is invisible
   missed deny in the SAME tree;
 - two heredocs opened on one line (`cat <<A <<B`): only the first body is dropped, so the second
   is read as commands (an over-deny);
-- a backslash-newline inside an unquoted body that forms the terminator (`EO\` then `F`): the
-  terminator is not seen, so the body runs on to a later line equal to the word and hides the
-  calls in between;
 - a quoted heredoc word containing spaces (`<<'E O F'`): only `E` is taken as the word and the
   closing `'` opens a quote, so the rest of the command reads as one line and a call after the
   terminator is missed;

@@ -1076,12 +1076,23 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             ("echo $((1 << 3))\ngit commit -m x", "commit"),
             ("cat <<< hi\ngit commit -m x", "commit"),
             ("cat <<EOF\ngit commit -m x", "commit"),
-            # A backslash-newline continues the line; a body line ending in
-            # one still strips with its terminator.
+            # A backslash-newline continues the line; under a quoted word a
+            # body line ending in one still strips with its terminator.
             ("git \\\ncommit -m x", "commit"),
             ("make ci \\\n  && git commit -m x", "commit"),
-            ("cat <<EOF\necho a && git rebase main \\\nEOF", None),
-            ("cat <<EOF\nhello \\\nEOF\ngit commit -m x", "commit"),
+            ("cat <<'EOF'\necho a && git rebase main \\\nEOF", None),
+            ("cat <<'EOF'\nhello \\\nEOF\ngit commit -m x", "commit"),
+            # Under an unquoted word bash joins it to the next line before
+            # looking for the terminator, so `EO\` + `F` closes the body.
+            ("cat <<EOF\nEO\\\nF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<EOF\nE\\\nO\\\nF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<-EOF\n\tEO\\\nF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<EOF\nEO\\\\\nF\ngit commit -m x\nEOF", None),
+            ("cat <<'EOF'\nEO\\\nF\ngit commit -m x\nEOF", None),
+            ('cat <<"EOF"\nEO\\\nF\ngit commit -m x\nEOF', None),
+            # ...and a terminator after a continued line is swallowed: the
+            # body never ends, so it is kept (bash runs neither; over-deny).
+            ("cat <<EOF\necho a && git rebase main \\\nEOF", "rebase"),
             # An escaped backslash does not continue the line.
             ("echo foo\\\\\ngit push", "push"),
             # A line break clears the inert state of a `<<` or `#`.

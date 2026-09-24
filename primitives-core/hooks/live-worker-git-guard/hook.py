@@ -246,7 +246,7 @@ SEPARATOR_CHARS = "&|;(){}<>"
 # A heredoc opener. The lookarounds reject a `<<<` herestring. A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*(['\"]?)(\w+)['\"]?(?=\s|$)")
 
 
 class _LineBreak(str):
@@ -326,9 +326,9 @@ def _emit(obj):
 # ---------------------------------------------------------------------------
 
 def _scan_line(line, quote):
-    """(the first heredoc terminator this line opens, the quote state at its
-    end, whether it ends in a line continuation), given the quote state it
-    starts in.
+    """(the first heredoc terminator this line opens as `(word, quoted)`, the
+    quote state at its end, whether it ends in a line continuation), given the
+    quote state it starts in.
 
     An opener counts only outside quotes and outside a comment, and never with
     an all-digit word or inside an unclosed `((`, where it is a shift
@@ -360,13 +360,30 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(1).isdigit()
+            if (m and not m.group(2).isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                terminator = terminator or m.group(1)
+                terminator = terminator or (m.group(2), bool(m.group(1)))
                 i = m.end()
                 continue
         i += 1
     return terminator, quote, False
+
+
+def _body_end(lines, j, word, quoted):
+    """The index of the line that closes a heredoc body starting at `lines[j]`,
+    or None. A line matches when equal to `word` after `strip()`, which also
+    takes a `<<-` tab-indented terminator. Under an unquoted word, bash joins a
+    line ending in an odd run of backslashes to the next before comparing."""
+    while j < len(lines):
+        line = lines[j]
+        while (not quoted and j + 1 < len(lines)
+               and (len(line) - len(line.rstrip("\\"))) % 2):
+            j += 1
+            line = line[:-1] + lines[j]
+        if line.strip() == word:
+            return j
+        j += 1
+    return None
 
 
 def _logical_lines(command):
@@ -376,8 +393,9 @@ def _logical_lines(command):
     A body runs from the opener's line end through the first line equal, after
     `strip()`, to the word (so a `<<-` tab-indented terminator matches), and is
     dropped with that line only when the terminator is found: dropping text is
-    a silent fail-open, keeping it is at worst an over-deny. The body is
-    dropped by whole lines, so a body line ending in `\\` joins nothing.
+    a silent fail-open, keeping it is at worst an over-deny. Under an
+    unquoted word a body line ending in an odd run of `\\` joins the next one
+    before the comparison, as bash does (`EO\\` then `F` closes `<<EOF`).
     """
     lines = command.split("\n")
     out, current, quote, pending, i = [], "", None, None, 0
@@ -396,10 +414,8 @@ def _logical_lines(command):
         out.append(current)
         current = ""
         if pending:
-            j = i
-            while j < len(lines) and lines[j].strip() != pending:
-                j += 1
-            if j < len(lines):
+            j = _body_end(lines, i, *pending)
+            if j is not None:
                 i = j + 1  # skip the body and the terminator line
             pending = None
     if current:

@@ -123,12 +123,13 @@ def _load_protected_branches(project_dir):
 # (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*(['\"]?)(\w+)['\"]?(?=\s|$)")
 
 
 def _scan_line(line, quote):
-    """(the first heredoc terminator this line opens, the quote state at its end,
-    whether it ends in a line continuation), given the quote state it starts in.
+    """(the first heredoc terminator this line opens as `(word, quoted)`, the quote
+    state at its end, whether it ends in a line continuation), given the quote state
+    it starts in.
 
     An opener counts only outside quotes and outside a comment, and never with an
     all-digit word or inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
@@ -160,13 +161,30 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(1).isdigit()
+            if (m and not m.group(2).isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                terminator = terminator or m.group(1)
+                terminator = terminator or (m.group(2), bool(m.group(1)))
                 i = m.end()
                 continue
         i += 1
     return terminator, quote, False
+
+
+def _body_end(lines, j, word, quoted):
+    """The index of the line that closes a heredoc body starting at `lines[j]`,
+    or None. A line matches when equal to `word` after `strip()`, which also
+    takes a `<<-` tab-indented terminator. Under an unquoted word, bash joins a
+    line ending in an odd run of backslashes to the next before comparing."""
+    while j < len(lines):
+        line = lines[j]
+        while (not quoted and j + 1 < len(lines)
+               and (len(line) - len(line.rstrip("\\"))) % 2):
+            j += 1
+            line = line[:-1] + lines[j]
+        if line.strip() == word:
+            return j
+        j += 1
+    return None
 
 
 def strip_heredocs(command):
@@ -177,7 +195,9 @@ def strip_heredocs(command):
     continuations after its opener. Only drops when the terminator is actually
     found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
     since dropping text here is a silent fail-open and keeping it is at worst an
-    over-deny.
+    over-deny. Under an unquoted word a body line ending in an odd run of `\\`
+    joins the next one before the comparison, as bash does (`EO\\` then `F`
+    closes `<<EOF`).
     """
     lines = command.split("\n")
     out, quote, pending, i = [], None, None, 0
@@ -188,10 +208,8 @@ def strip_heredocs(command):
         pending = pending or terminator
         if not pending or quote or continued:
             continue
-        j = i
-        while j < len(lines) and lines[j].strip() != pending:
-            j += 1
-        if j < len(lines):
+        j = _body_end(lines, i, *pending)
+        if j is not None:
             i = j + 1  # skip the body and the terminator line
         pending = None
     return "\n".join(out)
