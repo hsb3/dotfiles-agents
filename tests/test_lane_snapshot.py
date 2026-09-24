@@ -377,9 +377,8 @@ class SnapshotPass(unittest.TestCase):
         self.assertEqual(snaps[0]["stream"], "lane-snapshot")
         self.assertTrue(snaps[0]["commit"])
 
-    def test_separate_git_dir_codex_lane_is_snapshotted(self):
-        """No `.claude`/`.git` dir tree for the default glob to match — only
-        `git worktree list --porcelain` finds this lane at all."""
+    def sep_repo(self):
+        """A seeded repo whose git dir sits outside its checkout."""
         sep = os.path.join(self.box.base, "sep")
         subprocess.run(["git", "init", "-q", "--separate-git-dir",
                         os.path.join(self.box.base, "store.git"), sep],
@@ -387,6 +386,12 @@ class SnapshotPass(unittest.TestCase):
         write(os.path.join(sep, "seed.txt"), "seed\n")
         git(sep, "add", "-A")
         git(sep, "commit", "-q", "-m", "seed")
+        return sep
+
+    def test_separate_git_dir_codex_lane_is_snapshotted(self):
+        """No `.claude`/`.git` dir tree for the default glob to match — only
+        `git worktree list --porcelain` finds this lane at all."""
+        sep = self.sep_repo()
         self.add_worktree(
             os.path.join(self.box.base, "store.git", "atelier-codex", "checkouts", "t1", "lane-s"),
             "wt-lane-s", cwd=sep,
@@ -394,6 +399,46 @@ class SnapshotPass(unittest.TestCase):
         result = run_daemon(self.box, "--once", sep)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(self.ref_sha("lane-s", root=sep), "separate-git-dir codex lane got no ref")
+
+    def test_daemon_rooted_at_a_lane_reads_no_registry(self):
+        """linked_worktrees only fires when git-dir == common-dir; a daemon
+        rooted at a lane must see neither its sibling lane nor the main repo."""
+        sep = self.sep_repo()
+        lane_s = self.add_worktree(
+            os.path.join(self.box.base, "store.git", "atelier-codex", "checkouts", "t1", "lane-s"),
+            "wt-lane-s", cwd=sep,
+        )
+        self.add_worktree(
+            os.path.join(self.box.base, "store.git", "atelier-codex", "checkouts", "t2", "lane-t"),
+            "wt-lane-t", cwd=sep,
+        )
+        self.assertEqual(snapshot_lanes.lane_paths(lane_s, env={}), [])
+
+    def test_duplicate_basenames_get_distinct_hashed_refs(self):
+        a = self.add_worktree(os.path.join(self.box.root, ".worktrees", "dup"), "wt-dup-a")
+        write(os.path.join(a, "only-a.txt"), "a\n")
+        b = self.add_worktree(os.path.join(self.box.base, "x", "dup"), "wt-dup-b")
+        write(os.path.join(b, "only-b.txt"), "b\n")
+        result = run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        refs = git(self.box.root, "for-each-ref", "--format=%(refname)",
+                    "refs/lane-snapshots/").splitlines()
+        dup_refs = [r for r in refs if r.startswith("refs/lane-snapshots/dup-")]
+        self.assertEqual(len(dup_refs), 2)
+        trees = [set(git(self.box.root, "ls-tree", "-r", "--name-only", r).splitlines())
+                 for r in dup_refs]
+        self.assertTrue(any("only-a.txt" in t and "only-b.txt" not in t for t in trees))
+        self.assertTrue(any("only-b.txt" in t and "only-a.txt" not in t for t in trees))
+        check = run_daemon(self.box, "--check", self.box.root)
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+
+    def test_space_prone_lane_name_is_sanitized(self):
+        self.add_worktree(os.path.join(self.box.base, "sp ace", "lane sp"), "wt-lane-sp")
+        result = run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.ref_sha("lane-sp"), "sanitized lane name got no ref")
+        errors = [r for r in self.box.rows() if r.get("event") == "error"]
+        self.assertEqual(errors, [])
 
     def test_worktree_nested_under_a_linked_worktree_is_snapshotted(self):
         outer = self.add_worktree(os.path.join(self.box.root, ".worktrees", "outer"), "wt-outer")

@@ -59,9 +59,14 @@ Coverage rule: with `LANE_SNAPSHOT_WORKTREES` unset, a lane is every linked work
 list --porcelain` registers for the repository, plus whatever the default globs match. The
 registry is authoritative for every layout, so a Codex lane under a separate git dir, a lane nested
 under another linked worktree, and a lane outside the repo tree (a terminal multiplexer's worktree
-directory, for one) are all snapshotted, whichever checkout the daemon happens to be rooted at. The
-main checkout is never a lane, and a bare repository's worktrees are left to their own daemons.
-Setting `LANE_SNAPSHOT_WORKTREES` replaces all of this with the one glob.
+directory, for one) are all snapshotted. The main checkout is never a lane, and only a daemon
+rooted at the main worktree reads the registry: a bare or separate-git-dir repository runs one
+daemon per worktree, and those must not all write the same refs. Setting `LANE_SNAPSHOT_WORKTREES`
+replaces all of this with the one glob.
+
+A lane's ref name is its folder name, with anything that is not a valid ref character replaced by
+`-`. Two lanes whose names collide each get a suffix of their path's hash (`dup-1a2b3c4d`), so no
+two lanes ever share a ref.
 
 The shared daemon writes its ledger under the harness that launched it (it inherits
 `ATELIER_HARNESS`), so the other harness's ledger holds only that harness's `hook` rows.
@@ -86,7 +91,7 @@ No per-project activation file. The hook is armed by being present in an install
 |---|---|---|
 | `LANE_SNAPSHOT_ROOT` | *(unset)* | Repo root to protect. Highest precedence; overrides what the hook derives. |
 | `LANE_SNAPSHOT_INTERVAL` | `180` | Seconds between passes. Also sets the `--check` staleness threshold, at 2x. |
-| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts plus every registered linked worktree, deduped; the Codex one is `<checkout-root>/*/*` when the `checkout-root` activation key sets it, and an invalid key keeps the default and says why in the scan warning. |
+| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: every registered linked worktree, plus both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts plus every registered linked worktree, deduped; the Codex one is `<checkout-root>/*/*` when the `checkout-root` activation key sets it, and an invalid key keeps the default and says why in the scan warning. |
 | `LANE_SNAPSHOT_TTL` | `43200` | Seconds without a written snapshot (since start or the last one) after which the daemon exits. `0` disables. |
 | `LANE_SNAPSHOT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/lane-snapshot` | Where the per-repository pidfiles live. `XDG_STATE_HOME` is honoured only when absolute. |
 | `LANE_SNAPSHOT_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/lane-snapshot.jsonl` | Ledger |
