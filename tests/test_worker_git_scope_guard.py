@@ -1,6 +1,6 @@
 """Tests for primitives-core/hooks/worker-git-scope-guard/hook.py.
 
-`decide()` takes its three resolvers (branch, tree-kind, protected set) as arguments, so
+`decide()` takes its resolvers (branch, tree-kind, protected set, ownership) as arguments, so
 every behavioural case below runs with no git repo and no activation file at all. The two
 resolvers that DO touch disk get their own fixtures: tempdir activation files for the
 loader, real throwaway repos for the tree-kind probe.
@@ -25,12 +25,12 @@ _spec.loader.exec_module(hook)
 
 WORKER = {"agent_id": "agent-1", "cwd": "/repo"}
 SHARED = True
-OWN_WORKTREE = False
+LINKED = False  # a linked worktree; `owned` (default True in `call()`) says whose it is
 UNKNOWN = None
 
 
 def call(command, branch="feature", protected=("main",), shared=SHARED,
-         payload=None, branches=None, trees=None):
+         payload=None, branches=None, trees=None, owned=True):
     """One decide() call. `branches`/`trees` override the flat default per directory."""
     data = dict(payload or WORKER, tool_input={"command": command})
     btable = branches or {}
@@ -40,6 +40,7 @@ def call(command, branch="feature", protected=("main",), shared=SHARED,
         lambda cwd: btable.get(cwd, branch),
         lambda cwd: ttable.get(cwd, shared),
         frozenset(protected),
+        lambda cwd: owned,
     )
 
 
@@ -78,7 +79,7 @@ class StashInASharedTreeTests(unittest.TestCase):
         self.assertFalse(blocked("git stash show -p"))
 
     def test_stash_in_the_workers_own_worktree_is_allowed(self):
-        self.assertFalse(blocked("git stash", shared=OWN_WORKTREE))
+        self.assertFalse(blocked("git stash", shared=LINKED))
 
     def test_stash_where_the_tree_kind_is_unknown_is_allowed(self):
         """Not a repo, no git, a bare repo, a submodule: no grounds to block."""
@@ -92,7 +93,7 @@ class StashInASharedTreeTests(unittest.TestCase):
                                                       "cwd": "/repo"}))
 
     def test_the_tree_kind_is_resolved_per_directory_not_per_session(self):
-        table = {"/repo/.claude/worktrees/agent-x": OWN_WORKTREE, "/repo": SHARED}
+        table = {"/repo/.claude/worktrees/agent-x": LINKED, "/repo": SHARED}
         self.assertFalse(blocked(
             "cd /repo/.claude/worktrees/agent-x && git stash", trees=table))
         self.assertTrue(blocked("git -C /repo stash", trees=table))
@@ -101,6 +102,55 @@ class StashInASharedTreeTests(unittest.TestCase):
         text = reason("git stash")
         self.assertIn("stash", text)
         self.assertIn("commit", text)
+
+
+class StashInALinkedWorktreeTests(unittest.TestCase):
+    """refs/stash is repo-wide: every worktree of the repo reads and writes one stack."""
+
+    FIVE = ("push -u", "pop", "apply", "drop stash@{0}", "clear")
+
+    def test_a_linked_worktree_the_worker_does_not_own_denies_every_form(self):
+        for form in self.FIVE + ("", "save wip", "branch wip"):
+            with self.subTest(form=form):
+                self.assertTrue(blocked("git stash " + form, shared=LINKED, owned=False))
+
+    def test_the_stack_destroying_forms_are_denied_even_in_the_workers_own_worktree(self):
+        for form in ("pop", "drop stash@{0}", "clear", "branch wip"):
+            with self.subTest(form=form):
+                self.assertTrue(blocked("git stash " + form, shared=LINKED, owned=True))
+
+    def test_pushing_and_applying_in_the_workers_own_worktree_is_allowed(self):
+        for form in ("", "push -u", "-u", "apply", "save wip"):
+            with self.subTest(form=form):
+                self.assertFalse(blocked("git stash " + form, shared=LINKED, owned=True))
+
+    def test_the_main_checkout_denies_every_form_whoever_owns_what(self):
+        for form in self.FIVE:
+            with self.subTest(form=form):
+                self.assertTrue(blocked("git stash " + form, shared=SHARED, owned=True))
+
+    def test_an_unknown_tree_denies_the_destroying_forms(self):
+        """The stack is repo-wide, so tree kind is irrelevant to a destroying form."""
+        for form in ("pop", "drop", "clear", "branch wip"):
+            with self.subTest(form=form):
+                self.assertTrue(blocked("git stash " + form, shared=UNKNOWN, owned=False))
+
+    def test_an_unknown_tree_still_allows_the_push_form(self):
+        self.assertFalse(blocked("git stash push", shared=UNKNOWN, owned=False))
+
+    def test_reads_are_never_denied_in_an_unowned_linked_worktree(self):
+        self.assertFalse(blocked("git stash list", shared=LINKED, owned=False))
+        self.assertFalse(blocked("git stash show -p", shared=LINKED, owned=False))
+
+    def test_the_main_session_is_untouched_in_a_linked_worktree(self):
+        self.assertFalse(blocked("git stash drop", shared=LINKED, owned=False,
+                                 payload={"cwd": "/repo"}))
+
+    def test_the_deny_says_the_stack_is_repo_wide_and_offers_a_non_stash_route(self):
+        text = reason("git stash pop", shared=LINKED, owned=True)
+        self.assertIn("every worktree", text)
+        self.assertIn("git apply -R", text)
+        self.assertIn("`git stash list` and `git stash show` are reads", text)
 
 
 class ProtectedBranchTests(unittest.TestCase):
@@ -143,7 +193,7 @@ class ProtectedBranchTests(unittest.TestCase):
 
     def test_the_branch_half_does_not_depend_on_the_tree_being_shared(self):
         """A worktree shares .git and the remote, so its commit lands on the real branch."""
-        self.assertTrue(blocked("git commit -m wip", branch="main", shared=OWN_WORKTREE))
+        self.assertTrue(blocked("git commit -m wip", branch="main", shared=LINKED))
 
     def test_the_main_session_is_untouched(self):
         self.assertFalse(blocked("git commit -m x", branch="main",
@@ -192,12 +242,30 @@ class CommandParsingTests(unittest.TestCase):
     def test_a_bare_newline_separated_cd_still_sets_the_directory(self):
         self.assertFalse(blocked(
             "echo hi\ncd /repo/.claude/worktrees/agent-x\ngit stash",
-            trees={"/repo/.claude/worktrees/agent-x": OWN_WORKTREE, "/repo": SHARED}))
+            trees={"/repo/.claude/worktrees/agent-x": LINKED, "/repo": SHARED}))
 
     def test_git_c_overrides_the_directory(self):
         self.assertTrue(blocked(
             "git -C /repo commit -m x",
             branches={"/repo": "main"}, branch="feature"))
+
+    def test_a_relative_git_c_resolves_against_the_payload_cwd(self):
+        lane = "/repo/main/../lane"
+        self.assertEqual(
+            [w for _, _, w in hook.invocations("git -C ../lane stash push", "/repo/main")],
+            [lane])
+        self.assertFalse(blocked("git -C ../lane stash push",
+                                 payload={"agent_id": "a", "cwd": "/repo/main"},
+                                 trees={lane: LINKED}, shared=SHARED))
+
+    def test_a_relative_git_c_after_a_cd_resolves_against_the_cd(self):
+        self.assertEqual(
+            [w for _, _, w in hook.invocations("cd /a && git -C b stash", "/repo")],
+            ["/a/b"])
+
+    def test_an_absolute_git_c_stays_absolute(self):
+        self.assertEqual(
+            [w for _, _, w in hook.invocations("git -C /x stash", "/repo")], ["/x"])
 
     def test_a_second_invocation_after_an_allowed_one_is_still_seen(self):
         self.assertTrue(blocked("git status && git stash"))
@@ -426,7 +494,12 @@ class WorktreeActivationFallbackTests(unittest.TestCase):
     def test_the_fallback_does_not_leak_into_the_stash_half(self):
         """A worker in its own worktree may still stash, however it resolved the list."""
         self.arm(self.main, "shipped")
-        self.assertEqual(self.run_main("git stash", self.wt), "")
+        saved = hook.owned_worktree
+        hook.owned_worktree = lambda data: os.path.realpath(self.wt)
+        try:
+            self.assertEqual(self.run_main("git stash", self.wt), "")
+        finally:
+            hook.owned_worktree = saved
 
     def test_the_worktrees_own_activation_file_wins(self):
         self.arm(self.main, "shipped")
@@ -449,6 +522,154 @@ class WorktreeActivationFallbackTests(unittest.TestCase):
 
     def test_a_directory_that_is_not_a_repo_is_inert(self):
         self.assertEqual(hook._load_protected_branches(self.tmp.name), frozenset())
+
+
+class OwnedWorktreeCodexBranchTests(unittest.TestCase):
+    """`owned_worktree()`'s Codex path: the registry record, never the native sidecar."""
+
+    def setUp(self):
+        saved_is_codex, saved_lookup = hook.codex_workers.is_codex, hook.codex_workers.lookup
+        self.addCleanup(setattr, hook.codex_workers, "is_codex", saved_is_codex)
+        self.addCleanup(setattr, hook.codex_workers, "lookup", saved_lookup)
+        hook.codex_workers.is_codex = lambda data: True
+
+    def test_a_registry_worktree_resolves_to_its_realpath(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hook.codex_workers.lookup = lambda data: {"worktree": tmp}
+            self.assertEqual(hook.owned_worktree({}), os.path.realpath(tmp))
+
+    def test_no_registry_record_is_not_ownership(self):
+        hook.codex_workers.lookup = lambda data: None
+        self.assertIsNone(hook.owned_worktree({}))
+
+
+class StashOwnershipEndToEndTests(unittest.TestCase):
+    """main() against a real linked worktree and a real sidecar layout.
+
+    The sidecar is where Claude Code records `worktreePath` for an isolation: worktree
+    dispatch; without it the subagent is a guest in whatever linked tree it runs in.
+    """
+
+    FIVE = ("push -u", "pop", "apply", "drop stash@{0}", "clear")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.main = os.path.join(self.tmp.name, "main")
+        self.wt = os.path.join(self.tmp.name, "wt")
+        env = dict(os.environ,
+                   GIT_CONFIG_GLOBAL=os.path.join(self.tmp.name, "gitconfig"),
+                   GIT_CONFIG_SYSTEM=os.path.join(self.tmp.name, "gitconfig"),
+                   GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.invalid",
+                   GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.invalid")
+        try:
+            for args in (
+                ("git", "init", "-q", self.main),
+                ("git", "-C", self.main, "commit", "-q", "--allow-empty", "-m", "x"),
+                ("git", "-C", self.main, "worktree", "add", "-q", self.wt, "-b", "lane"),
+            ):
+                subprocess.run(args, check=True, env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("git unavailable")
+        project = os.path.join(self.tmp.name, "projects", "slug")
+        self.subagents = os.path.join(project, "sess", "subagents")
+        os.makedirs(self.subagents)
+        self.transcript = os.path.join(project, "sess.jsonl")
+
+        saved = {n: os.environ.pop(n, None)
+                 for n in ("CLAUDE_PROJECT_DIR", "ATELIER_ACTIVATION_FILE",
+                           "ATELIER_HARNESS")}
+
+        def restore():
+            for name, value in saved.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+        self.addCleanup(restore)
+
+    def sidecar(self, **extra):
+        with open(os.path.join(self.subagents, "agent-x.meta.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump(dict({"agentType": "pb-builder"}, **extra), fh)
+
+    def payload(self, command, cwd):
+        return json.dumps(
+            {"agent_id": "x", "agent_type": "pb-builder", "cwd": cwd or self.wt,
+             "transcript_path": self.transcript, "hook_event_name": "PreToolUse",
+             "tool_name": "Bash", "tool_input": {"command": command}})
+
+    def run_subprocess(self, command, cwd):
+        """The hook as its own process, whose cwd (/) is NOT the payload cwd."""
+        return subprocess.run([sys.executable, HOOK_PATH], cwd="/",
+                              input=self.payload(command, cwd), capture_output=True,
+                              text=True, timeout=30).stdout
+
+    def run_main(self, command, cwd=None):
+        stdin, stdout = sys.stdin, sys.stdout
+        sys.stdin = io.StringIO(self.payload(command, cwd))
+        sys.stdout = io.StringIO()
+        try:
+            hook.main()
+            return sys.stdout.getvalue()
+        finally:
+            sys.stdin, sys.stdout = stdin, stdout
+
+    def assert_denied(self, out):
+        payload = json.loads(out)["hookSpecificOutput"]
+        self.assertEqual(payload["permissionDecision"], "deny")
+        self.assertIn("every worktree", payload["permissionDecisionReason"])
+
+    def test_a_sidecar_without_worktree_path_denies_every_form(self):
+        self.sidecar()
+        for form in self.FIVE:
+            with self.subTest(form=form):
+                self.assert_denied(self.run_main("git stash " + form))
+
+    def test_no_sidecar_at_all_denies_every_form(self):
+        for form in self.FIVE:
+            with self.subTest(form=form):
+                self.assert_denied(self.run_main("git stash " + form))
+
+    def test_a_sidecar_naming_another_tree_is_not_ownership(self):
+        self.sidecar(worktreePath=self.main)
+        self.assert_denied(self.run_main("git stash push -u"))
+
+    def test_the_owned_worktree_may_push_and_apply_but_not_destroy(self):
+        self.sidecar(worktreePath=self.wt)
+        for form in ("push -u", "apply"):
+            with self.subTest(form=form):
+                self.assertEqual(self.run_main("git stash " + form), "")
+        for form in ("pop", "drop stash@{0}", "clear"):
+            with self.subTest(form=form):
+                self.assert_denied(self.run_main("git stash " + form))
+
+    def test_a_subdirectory_of_the_owned_worktree_is_still_owned(self):
+        self.sidecar(worktreePath=self.wt)
+        sub = os.path.join(self.wt, "sub")
+        os.makedirs(sub)
+        self.assertEqual(self.run_main("git stash push", cwd=sub), "")
+
+    def test_a_relative_git_c_resolves_against_the_payload_cwd_not_the_process_cwd(self):
+        self.sidecar(worktreePath=self.wt)
+        self.assert_denied(self.run_subprocess("git -C ../wt stash drop", self.main))
+        self.assertEqual(self.run_subprocess("git -C ../wt stash push", self.main), "")
+
+    def test_a_worktree_of_a_bare_repo_still_denies_the_destroying_forms(self):
+        bare = os.path.join(self.tmp.name, "bare.git")
+        bwt = os.path.join(self.tmp.name, "bwt")
+        env = dict(os.environ, GIT_CONFIG_GLOBAL=os.path.join(self.tmp.name, "gitconfig"),
+                   GIT_CONFIG_SYSTEM=os.path.join(self.tmp.name, "gitconfig"))
+        for args in (("git", "clone", "-q", "--bare", self.main, bare),
+                     ("git", "-C", bare, "worktree", "add", "-q", bwt, "-b", "blane")):
+            subprocess.run(args, check=True, env=env,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.assertIsNone(hook.shared_tree(bwt))  # the premise: tree kind unknown
+        for form in ("drop", "clear"):
+            with self.subTest(form=form):
+                self.assert_denied(self.run_subprocess("git stash " + form, bwt))
 
 
 class EntryPointTests(unittest.TestCase):

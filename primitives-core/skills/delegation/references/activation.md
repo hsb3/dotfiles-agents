@@ -124,9 +124,9 @@ The second half needs no key at all and cannot be turned off by one: a subagent 
 **shared, un-isolated tree** — the parent's own checkout, not a linked worktree of its own — is
 denied the mutating `git stash` forms outright. There is only one tree, so "stay inside your own
 worktree" has nothing to bind, and a conflicted `stash pop` followed by a `drop` has already
-destroyed a sibling's work irrecoverably. Inside its own linked worktree a worker may stash
-freely, which is exactly the isolation `isolate:` buys. `stash list` and `stash show` are reads
-and never fire.
+destroyed a sibling's work irrecoverably. In its own linked worktree a worker may push or apply
+a stash; `pop`, `drop`, `clear` and `branch` are denied everywhere, because the stash stack is
+repo-wide. `stash list` and `stash show` are reads and never fire.
 
 `worker-git-scope-guard` is the peer-to-peer sibling of `live-worker-git-guard`, not a duplicate
 of it: that one stops an *orchestrator* from clobbering the uncommitted state of children it

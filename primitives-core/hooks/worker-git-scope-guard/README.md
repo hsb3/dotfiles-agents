@@ -9,7 +9,7 @@ own. `PreToolUse` on `Bash`, two independent halves:
 
 | Half | Fires when | Armed by |
 |---|---|---|
-| **Stash in a shared tree** | a worker runs a mutating `git stash` form while the resolved directory is the **main checkout**, not its own linked worktree | nothing — live wherever the hook is installed |
+| **Stash on the shared stack** | a worker runs `git stash pop`/`drop`/`clear`/`branch` in **any** tree (even one whose kind is unknown), or another mutating form anywhere but **its own** linked worktree | nothing — live wherever the hook is installed |
 | **Write on a protected branch** | `commit`, `merge`, `rebase`, `cherry-pick`, `revert`, `am` with HEAD on a protected branch, or a `push` whose refspec targets one | `protected-branches:` in the selected `atelier.local.md` |
 
 Read-only git never fires. Neither do the read forms of the verbs above: `stash list` and
@@ -25,6 +25,34 @@ to the files you own; it takes the whole tree. One conflicted pop plus a drop, a
 files of sibling work were gone with nothing left to recover from. Prose could not stop
 it, and the doctrine text did not even cover it: a stash in a shared tree is not "touching
 state outside your own worktree", because there is only one tree.
+
+A linked worktree does not scope the stash either: `refs/stash` lives in the common `.git`,
+so every worktree of the repo reads and writes one stack, and a `git stash drop` in a lane
+worktree empties the main checkout's list. So the rule has two parts:
+
+- `pop`, `drop`, `clear` and `branch` take entries off that shared stack and are denied in
+  every tree, owned or not, including one whose kind cannot be determined.
+- The other mutating forms (bare or flag-only `git stash`, `push`, `save`, `apply`,
+  `create`, `store`) are denied in the main checkout, and in a linked worktree unless it is
+  the worker's **own**. A non-isolated subagent running in a shared lane worktree is
+  denied.
+
+A worker may push a stash in its own worktree, but can never pop or drop it — if it did,
+it reports the entry's selector and SHA (`git stash list --format='%gd %H %gs'`; drop needs
+the selector) so the dispatching session drops it.
+
+Ownership is read from the dispatch record, never guessed from the path. For a native
+subagent it is the `worktreePath` key of its `agent-<id>.meta.json` sidecar, which Claude
+Code writes only for an `isolation: worktree` dispatch (located with `_lib/pending.py`);
+for a Codex worker it is the registry record's `worktree`. The resolved directory's
+`git rev-parse --show-toplevel` must equal that path after `realpath`. No record, an
+unreadable one, or a different tree means not owned. A tree kind that cannot be
+determined (a bare repo's worktree, a submodule) stays silent for the non-destroying forms.
+
+The deny points at non-stash ways to get a clean or old copy: copy the file aside and back
+(`git diff` misses untracked files, so copy those directly), or `git diff >
+/tmp/<your-slug>.patch` with a name unique to the worker, `git apply -R
+/tmp/<your-slug>.patch`, and later `git apply /tmp/<your-slug>.patch`.
 
 **The protected-branch half** answers the other direction. A worktree shares the repo's
 `.git` and its remote, so isolation is no protection at all here — a commit made with HEAD
@@ -105,7 +133,7 @@ hook runs on every `Bash` call, so it must not shell out on each one. A command 
 `git` token in it skips the whole lookup, since no invocation can be found in one anyway.
 
 The fallback touches the **read of the key only**. Tree-kind detection is untouched, so a
-worker in its own worktree still stashes freely while now inheriting the main checkout's
+worker in its own worktree still pushes a stash freely while now inheriting the main checkout's
 protected branches — the two halves stay independent.
 
 `activation.py check` (via `/atelier:activate`) reports what this key actually resolved to
@@ -120,7 +148,7 @@ git -C <dir> rev-parse --git-common-dir --git-dir
   fails / empty / OSError   -> not a repo, or no git: stay silent
   basename is not `.git`    -> bare repo or submodule: stay silent, never guess
   the two resolve equal     -> main checkout: SHARED, a stash is denied
-  they differ              -> linked worktree: the worker's own tree, stash allowed
+  they differ              -> linked worktree: push/apply allowed only if the worker owns it
 ```
 
 Comparing the two paths is deliberate and was measured, not assumed. `--git-common-dir`
