@@ -11,9 +11,9 @@ edge (it nags before compaction if the handoff wasn't refreshed).
 Silent no-op on "resume"/"compact" (context is already present — surfacing
 would be pure noise) and when no handoff file exists, except that a Claude Code
 main session inside a git worktree with no activation file is told atelier is
-not activated (Codex
-never reaches that check: its lifecycle gate returns early for an inactive
-project).
+not activated. A Codex main session gets the same line, and only that line: its
+lifecycle gate skips everything else in an inactive project, handoff surfacing
+included.
 
 When the handoff lives outside the repo (see below) there is no file to
 excerpt, so a cold start gets a POINTER instead: where the handoff lives and
@@ -310,6 +310,24 @@ def _unarmed(project_dir):
     return proc.returncode == 0 and proc.stdout.strip() == b"true"
 
 
+def _nudge(payload, cwd):
+    """Whether this SessionStart gets the not-activated line: a cold main
+    session in an unarmed project. Shared by the Claude Code and Codex paths."""
+    return (payload.get("source") in SURFACE_SOURCES and not payload.get("agent_id")
+            and payload.get("agent_type") in (None, "", "main")
+            and _unarmed(_resolve_project_dir(cwd)))
+
+
+def _print_unarmed():
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": UNARMED_MESSAGE,
+        },
+        "systemMessage": UNARMED_MESSAGE,
+    }))
+
+
 HEAD_LINES = _env_int("HANDOFF_SURFACER_HEAD_LINES", HEAD_LINES_DEFAULT)
 
 
@@ -397,9 +415,12 @@ def main():
         raw_stdin = sys.stdin.read()
         payload = json.loads(raw_stdin)
         if isinstance(payload, dict):
-            payload = codex_lifecycle.prepare(payload)
-            if payload is None:
+            prepared = codex_lifecycle.prepare(payload)
+            if prepared is None:
+                if _nudge(payload, payload.get("cwd") or os.getcwd()):
+                    _print_unarmed()
                 return
+            payload = prepared
 
         session_id = payload.get("session_id", "unknown")
         cwd = payload.get("cwd") or os.getcwd()
@@ -461,18 +482,11 @@ def main():
             })
             sys.exit(0)
 
-        unarmed = (payload.get("agent_type") in (None, "", "main")
-                   and _unarmed(_resolve_project_dir(cwd)))
+        unarmed = _nudge(payload, cwd)
 
         if path is None:
             if unarmed:
-                print(json.dumps({
-                    "hookSpecificOutput": {
-                        "hookEventName": "SessionStart",
-                        "additionalContext": UNARMED_MESSAGE,
-                    },
-                    "systemMessage": UNARMED_MESSAGE,
-                }))
+                _print_unarmed()
             log({
                 "session_id": session_id,
                 "source": source,

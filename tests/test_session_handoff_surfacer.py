@@ -231,8 +231,27 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         payload["agent_type"] = "builder"
         self._assert_silent(self._run_hook(payload))
 
-    def test_codex_stays_silent_on_an_inactive_project(self):
+    def test_codex_says_not_activated_and_nothing_else(self):
         self._repo()
+        self._write_file("HANDOFF.md", "handoff body\n")
+        context, system = self._surfaced(self._run_hook(self._payload(), ATELIER_HARNESS="codex"))
+        self.assertEqual((context, system), (UNARMED, UNARMED))
+
+    def test_codex_not_activated_line_keeps_the_claude_gates(self):
+        self._repo()
+        self._assert_silent(self._run_hook(
+            self._payload(), ATELIER_HARNESS="codex", ATELIER_ACTIVATION_NUDGE="off"))
+        self._assert_silent(self._run_hook(self._payload(source="resume"), ATELIER_HARNESS="codex"))
+        worker = self._payload()
+        worker["agent_id"] = "019"
+        self._assert_silent(self._run_hook(worker, ATELIER_HARNESS="codex"))
+        role = self._payload()
+        role["agent_type"] = "atelier-builder"
+        self._assert_silent(self._run_hook(role, ATELIER_HARNESS="codex"))
+        outside = os.path.join(self.tmp.name, "outside")
+        os.makedirs(outside)
+        self._assert_silent(self._run_hook(self._payload(cwd=outside), ATELIER_HARNESS="codex"))
+        self._write_file(".codex/atelier.local.md", "---\nfoo: bar\n---\n")
         self._assert_silent(self._run_hook(self._payload(), ATELIER_HARNESS="codex"))
 
     def test_any_activation_file_counts_as_activated(self):
