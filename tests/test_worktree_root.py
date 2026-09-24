@@ -34,14 +34,14 @@ class WorktreeRootTests(unittest.TestCase):
 
     # -- helpers -------------------------------------------------------
 
-    def run_hook(self, payload):
-        env = {"PATH": os.environ.get("PATH", ""), "HOME": self.home}
+    def run_hook(self, payload, **extra_env):
+        env = {"PATH": os.environ.get("PATH", ""), "HOME": self.home, **extra_env}
         return subprocess.run([sys.executable, HOOK_PATH], input=json.dumps(payload),
                               capture_output=True, text=True, env=env, timeout=60)
 
-    def create(self, name, cwd=None):
+    def create(self, name, cwd=None, **extra_env):
         return self.run_hook({"hook_event_name": "WorktreeCreate",
-                              "cwd": cwd or self.main, "name": name})
+                              "cwd": cwd or self.main, "name": name}, **extra_env)
 
     def commit(self, cwd, msg):
         _git(cwd, *(_GIT_IDENTITY + ("commit", "-q", "--allow-empty", "-m", msg)))
@@ -63,7 +63,7 @@ class WorktreeRootTests(unittest.TestCase):
     def test_key_absent_native_path_branch_and_head_base_without_origin(self):
         head = self.commit(self.main, "ahead")
         path = self.created_path(self.create("feat/x"))
-        self.assertEqual(path, os.path.join(self.main, ".claude", "worktrees", "feat", "x"))
+        self.assertEqual(path, os.path.join(self.main, ".claude", "worktrees", "feat+x"))
         self.assertIn("worktree-feat+x", self.branches())
         self.assertEqual(_git(path, "rev-parse", "HEAD"), head)
 
@@ -77,6 +77,67 @@ class WorktreeRootTests(unittest.TestCase):
         self.commit(self.main, "local only")
         path = self.created_path(self.create("o"))
         self.assertEqual(_git(path, "rev-parse", "HEAD"), origin_head)
+
+    def add_origin(self, url=None):
+        origin = url or os.path.join(self.base, "origin.git")
+        if url is None:
+            _git(self.base, "clone", "-q", "--bare", self.main, origin)
+        _git(self.main, "remote", "add", "origin", origin)
+        return origin
+
+    def test_base_falls_back_to_origin_main_without_origin_head(self):
+        self.add_origin()
+        _git(self.main, "fetch", "-q", "origin", "HEAD:refs/remotes/origin/main")
+        _git(self.main, "remote", "set-head", "origin", "-d")
+        base = _git(self.main, "rev-parse", "refs/remotes/origin/main")
+        self.commit(self.main, "local only")
+        path = self.created_path(self.create("om"))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), base)
+
+    def test_failed_fetch_is_non_fatal_and_uses_local_origin_main(self):
+        self.add_origin(os.path.join(self.base, "missing.git"))
+        base = _git(self.main, "rev-parse", "HEAD")
+        _git(self.main, "update-ref", "refs/remotes/origin/main", base)
+        self.commit(self.main, "local only")
+        proc = self.create("ff")
+        self.assertEqual(_git(self.created_path(proc), "rev-parse", "HEAD"), base)
+        self.assertIn("fetch of origin/main failed", proc.stderr)
+
+    def test_stale_fetch_head_refreshes_origin_before_branching(self):
+        origin = self.add_origin()
+        _git(self.main, "fetch", "-q", "origin")
+        _git(self.main, "remote", "set-head", "origin", "-a")
+        other = os.path.join(self.base, "other")
+        _git(self.base, "clone", "-q", origin, other)
+        fresh = self.commit(other, "upstream")
+        _git(other, "push", "-q", "origin", "HEAD")
+        os.utime(os.path.join(self.main, ".git", "FETCH_HEAD"), (0, 0))
+        path = self.created_path(self.create("sf"))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), fresh)
+
+    def test_local_settings_override_project_settings(self):
+        self.add_origin()
+        _git(self.main, "fetch", "-q", "origin", "HEAD:refs/remotes/origin/main")
+        base = _git(self.main, "rev-parse", "refs/remotes/origin/main")
+        self.commit(self.main, "local only")
+        _write(self.main, ".claude/settings.json", '{"worktree": {"baseRef": "head"}}')
+        _write(self.main, ".claude/settings.local.json", '{"worktree": {"baseRef": "fresh"}}')
+        path = self.created_path(self.create("lp"))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), base)
+
+    def test_user_settings_come_from_claude_config_dir_when_set(self):
+        self.add_origin()
+        _git(self.main, "fetch", "-q", "origin", "HEAD:refs/remotes/origin/main")
+        base = _git(self.main, "rev-parse", "refs/remotes/origin/main")
+        head = self.commit(self.main, "local only")
+        _write(self.home, ".claude/settings.json", '{"worktree": {"baseRef": "head"}}')
+        config = os.path.join(self.base, "config")
+        os.makedirs(config)
+        path = self.created_path(self.create("cd1", CLAUDE_CONFIG_DIR=config))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), base)
+        _write(config, "settings.json", '{"worktree": {"baseRef": "head"}}')
+        path = self.created_path(self.create("cd2", CLAUDE_CONFIG_DIR=config))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), head)
 
     def test_base_ref_head_setting_uses_head(self):
         origin = os.path.join(self.base, "origin.git")
@@ -133,6 +194,46 @@ class WorktreeRootTests(unittest.TestCase):
         with open(os.path.join(path, "tracked.txt"), encoding="utf-8") as fh:
             self.assertEqual(fh.read(), "committed\n")
 
+    def test_worktreeinclude_never_writes_through_or_over_the_base_tree(self):
+        outside = os.path.join(self.base, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, os.path.join(self.main, "link"))
+        _write(self.main, "cfg.env", "committed\n")
+        _git(self.main, "add", "link", "cfg.env")
+        base = self.commit(self.main, "symlink and cfg")
+        _git(self.main, "update-ref", "refs/remotes/origin/main", base)
+        _git(self.main, "rm", "-q", "link", "cfg.env")
+        self.commit(self.main, "drop them")
+        _write(self.main, ".gitignore", ".claude/\nlink/\ncfg.env\n")
+        _write(self.main, "link/a.key", "a\n")
+        _write(self.main, "cfg.env", "local\n")
+        _write(self.main, ".worktreeinclude", "link/\ncfg.env\n")
+        path = self.created_path(self.create("esc"))
+        self.assertEqual(os.listdir(outside), [])
+        with open(os.path.join(path, "cfg.env"), encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), "committed\n")
+
+    def test_worktreeinclude_copy_failure_rolls_back(self):
+        _write(self.main, ".gitignore", ".claude/\n.env\n")
+        _write(self.main, ".worktreeinclude", ".env\n")
+        secret = _write(self.main, ".env", "E\n")
+        os.chmod(secret, 0)
+        self.addCleanup(os.chmod, secret, 0o600)
+        path = os.path.join(self.main, ".claude", "worktrees", "rb")
+        self.assertRefused(self.create("rb"), "rolled back")
+        self.assertFalse(os.path.lexists(path))
+        self.assertNotIn("worktree-rb", self.branches())
+
+    # -- WorktreeCreate: resume -------------------------------------------
+
+    def test_second_create_resumes_the_registered_worktree(self):
+        path = self.created_path(self.create("again"))
+        _write(path, "work.txt", "w\n")
+        proc = self.create("again")
+        self.assertEqual(proc.stdout.strip().splitlines(), [path])
+        self.assertEqual(self.created_path(proc), path)
+        self.assertTrue(os.path.isfile(os.path.join(path, "work.txt")))
+
     # -- WorktreeCreate: refusals -----------------------------------------
 
     def assertRefused(self, proc, fragment):
@@ -164,6 +265,19 @@ class WorktreeRootTests(unittest.TestCase):
         self.set_key("wt")
         self.assertRefused(self.create("s"), "strictly inside the project")
         self.assertEqual(os.listdir(outside), [])
+
+    def test_refuses_native_root_behind_a_symlinked_claude_dir(self):
+        outside = os.path.join(self.base, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, os.path.join(self.main, ".claude"))
+        self.assertRefused(self.create("r1"), "not strictly inside")
+        self.assertEqual(os.listdir(outside), [])
+
+    def test_refuses_name_that_is_a_symlink_to_a_registered_worktree(self):
+        root = os.path.join(self.main, ".claude", "worktrees")
+        os.makedirs(root)
+        os.symlink(self.linked, os.path.join(root, "evil"))
+        self.assertRefused(self.create("evil"), "resolves to")
 
     def test_refuses_existing_path(self):
         os.makedirs(os.path.join(self.main, ".claude", "worktrees", "taken"))
@@ -204,6 +318,24 @@ class WorktreeRootTests(unittest.TestCase):
         self.stop("mine", self.main)
         self.assertTrue(os.path.isdir(path))
 
+    def test_subagent_stop_keeps_detached_head_worktree(self):
+        path = self.created_path(self.create("agent-det"))
+        _git(path, "checkout", "-q", "--detach")
+        self.stop("det", path)
+        self.assertTrue(os.path.isdir(path))
+
+    def test_subagent_stop_ignores_agent_branch_outside_the_root(self):
+        path = os.path.join(self.main, ".worktrees", "agent-zz")
+        _git(self.main, "worktree", "add", "-q", "-b", "worktree-agent-zz", path)
+        self.stop("zz", path)
+        self.assertTrue(os.path.isdir(path))
+
+    def test_subagent_stop_git_failure_still_exits_zero(self):
+        path = self.created_path(self.create("agent-bad"))
+        _git(self.main, "worktree", "lock", path)
+        self.stop("bad", path)
+        self.assertTrue(os.path.isdir(path))
+
     # -- WorktreeRemove ----------------------------------------------------
 
     def test_worktree_remove_removes_and_deletes_branch(self):
@@ -224,6 +356,23 @@ class WorktreeRootTests(unittest.TestCase):
                               "worktree_path": self.main})
         self.assertEqual(proc.returncode, 1)
         self.assertTrue(os.path.isdir(self.main))
+
+    def test_worktree_remove_refuses_worktree_outside_the_root(self):
+        _write(self.linked, "mine.txt", "m\n")
+        proc = self.run_hook({"hook_event_name": "WorktreeRemove", "cwd": self.main,
+                              "worktree_path": self.linked})
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("left in place", proc.stderr)
+        self.assertTrue(os.path.isfile(os.path.join(self.linked, "mine.txt")))
+
+    def test_worktree_remove_refuses_unregistered_dir_in_root(self):
+        stray = os.path.join(self.main, ".claude", "worktrees", "stray")
+        os.makedirs(stray)
+        proc = self.run_hook({"hook_event_name": "WorktreeRemove", "cwd": self.main,
+                              "worktree_path": stray})
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("is not a linked worktree", proc.stderr)
+        self.assertTrue(os.path.isdir(stray))
 
     def test_other_event_is_silent(self):
         proc = self.run_hook({"hook_event_name": "PreToolUse", "cwd": self.main})

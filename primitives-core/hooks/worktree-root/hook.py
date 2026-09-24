@@ -9,7 +9,8 @@ One handler for three events, dispatched on `hook_event_name`:
 - SubagentStop: remove an agent worktree this hook created when it is clean and its
   branch holds no commit reachable only from itself (the harness keeps every
   hook-created agent worktree). Always exits 0.
-- WorktreeRemove: remove the registered worktree and its `worktree-*` branch.
+- WorktreeRemove: remove a registered worktree inside the root and its `worktree-*`
+  branch; anything else is refused and left in place.
 
 Stdlib-only.
 """
@@ -19,6 +20,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 # The shared modules live beside the hook dirs, at `<hooks-root>/_lib/`. That relative
 # hop resolves both in primitives-core/ and in an installed plugin, where `hooks/_lib`
@@ -29,14 +31,19 @@ sys.path.insert(
 import atelier_local  # noqa: E402
 
 
+FETCH_TIMEOUT = 15  # seconds; native waits 5, the hook's own budget is 60
+FETCH_MAX_AGE = 86400  # native refreshes origin when FETCH_HEAD is older than a day
+
+
 class Refused(Exception):
     pass
 
 
-def git(cwd, *args):
+def git(cwd, *args, timeout=60):
     env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
+    env["GIT_TERMINAL_PROMPT"] = "0"
     return subprocess.run(["git", "-C", str(cwd)] + list(args), env=env,
-                          capture_output=True, text=True, timeout=60)
+                          capture_output=True, text=True, timeout=timeout)
 
 
 def must(cwd, *args):
@@ -48,18 +55,28 @@ def must(cwd, *args):
 
 def placement(cwd):
     """(main checkout, root) for any dir in the repo; ValueError when invalid."""
-    main, _common = atelier_local.main_checkout(cwd)
+    main, common = atelier_local.main_checkout(cwd)
     root = atelier_local.checkout_root(str(main))
     if root is None:
         root = os.path.join(str(main), ".claude", "worktrees")
-    return str(main), os.path.realpath(str(root))
+    root = os.path.realpath(str(root))
+    # A committed `.claude` or `.claude/worktrees` symlink must not aim creation elsewhere.
+    if not inside(root, str(main)) or root == str(common) or inside(root, str(common)):
+        raise ValueError("worktree root {0} is not strictly inside {1} and outside {2}".format(
+            root, main, common))
+    return str(main), root
+
+
+def inside(path, parent):
+    return path.startswith(parent.rstrip(os.sep) + os.sep)
 
 
 def base_ref_setting(main):
     """`worktree.baseRef`: local project > project > user settings; unreadable skipped."""
+    user = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
     for path in (os.path.join(main, ".claude", "settings.local.json"),
                  os.path.join(main, ".claude", "settings.json"),
-                 os.path.join(os.path.expanduser("~"), ".claude", "settings.json")):
+                 os.path.join(user, "settings.json")):
         try:
             with open(path, encoding="utf-8") as fh:
                 value = json.load(fh).get("worktree", {}).get("baseRef")
@@ -68,6 +85,38 @@ def base_ref_setting(main):
         if value is not None:
             return value
     return None
+
+
+def refresh_origin(main):
+    """Best-effort `fetch origin <default>` when FETCH_HEAD is missing or a day old."""
+    if git(main, "remote", "get-url", "origin").returncode:
+        return
+    try:
+        age = time.time() - os.path.getmtime(os.path.join(main, ".git", "FETCH_HEAD"))
+    except OSError:
+        age = FETCH_MAX_AGE
+    if age < FETCH_MAX_AGE:
+        return
+    short = git(main, "symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD").stdout.strip()
+    branch = short[len("origin/"):] if short.startswith("origin/") else "main"
+    try:
+        failed = git(main, "fetch", "-q", "origin", branch, timeout=FETCH_TIMEOUT).returncode
+    except subprocess.TimeoutExpired:
+        failed = True
+    if failed:
+        print("worktree-root: fetch of origin/{0} failed; using local refs".format(branch),
+              file=sys.stderr)
+
+
+def base_commit(cwd, main):
+    """Native base: HEAD for `baseRef: head`, else origin/HEAD, origin/main, then HEAD."""
+    if base_ref_setting(main) != "head":
+        refresh_origin(main)
+        for ref in ("refs/remotes/origin/HEAD", "refs/remotes/origin/main"):
+            proc = git(main, "rev-parse", "--verify", "-q", ref + "^{commit}")
+            if proc.returncode == 0 and proc.stdout.strip():
+                return proc.stdout.strip()
+    return must(cwd, "rev-parse", "--verify", "HEAD").strip()
 
 
 def registered(main):
@@ -115,24 +164,27 @@ def create(payload):
     if not name or os.path.isabs(name) or ".." in name.replace("\\", "/").split("/"):
         raise Refused("worktree name {0!r} must be a non-empty relative name with no "
                       "'..' segment".format(name))
-    path = os.path.realpath(os.path.join(root, name))
-    if not path.startswith(root + os.sep):
-        raise Refused("worktree name {0!r} resolves to {1}, not strictly inside {2}".format(
-            name, path, root))
+    flat = name.replace("/", "+")
+    path = os.path.join(root, flat)
+    if os.path.realpath(path) != path:
+        raise Refused("worktree name {0!r} resolves to {1}, not {2}".format(
+            name, os.path.realpath(path), path))
     if os.path.lexists(path):
+        if path in registered(main):  # native resumes an existing worktree by name
+            print(path)
+            return
         raise Refused("{0} already exists".format(path))
-    branch = "worktree-" + name.replace("/", "+")
-    head = must(cwd, "rev-parse", "--verify", "HEAD").strip()
-    base = head
-    if base_ref_setting(main) != "head":
-        origin = git(main, "rev-parse", "--verify", "-q", "refs/remotes/origin/HEAD")
-        if origin.returncode == 0 and origin.stdout.strip():
-            base = origin.stdout.strip()
-    proc = git(main, "worktree", "add", "-b", branch, path, base)
+    branch = "worktree-" + flat
+    proc = git(main, "worktree", "add", "-b", branch, path, base_commit(cwd, main))
     sys.stderr.write(proc.stdout + proc.stderr)
     if proc.returncode:
         raise Refused("git worktree add failed")
-    copy_includes(main, path)
+    try:
+        copy_includes(main, path)
+    except (Refused, OSError) as exc:
+        git(main, "worktree", "remove", "--force", path)
+        git(main, "branch", "-D", branch)
+        raise Refused("{0}; rolled back {1}".format(exc, path))
     print(path)
 
 
@@ -169,13 +221,13 @@ def remove(payload):
         return
     path = os.path.realpath(target)
     try:
-        main, _common = atelier_local.main_checkout(payload.get("cwd") or path)
+        main, root = placement(payload.get("cwd") or path)
     except ValueError as exc:
         raise Refused(str(exc))
-    main = str(main)
     entries = registered(main)
-    if path == os.path.realpath(main) or path not in entries:
-        raise Refused("{0} is not a linked worktree of {1}".format(path, main))
+    if path not in entries or not inside(path, root):
+        raise Refused("{0} is not a linked worktree of {1} under {2}; left in place".format(
+            path, main, root))
     must(main, "worktree", "remove", "--force", path)
     branch = entries[path] or ""
     if branch.startswith("refs/heads/worktree-"):

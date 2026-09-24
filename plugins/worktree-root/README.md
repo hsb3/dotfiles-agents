@@ -61,6 +61,10 @@ uncommitted changes or commits no other ref holds is always kept.
 
 ## Honest scope
 
-Claude Code only. It does not fetch before branching (neither does native creation),
-does not handle `worktree.symlinkDirectories` or `worktree.sparsePaths`, and does not
-clean up worktrees left behind by `--worktree` sessions, which native creation keeps too.
+Claude Code only. Like native creation it refreshes `origin` before branching when the
+last fetch is over a day old, but it reads `worktree.baseRef` from settings files, so
+`--settings`, `--setting-sources` and managed settings can make its base differ from
+native. It does not handle `worktree.symlinkDirectories` or `worktree.sparsePaths`, does
+not git-lock `--worktree` sessions, and a worktree under a `checkout-root` cannot be
+re-entered with `EnterWorktree` by path. It does not clean up worktrees left behind by
+`--worktree` sessions, which native creation keeps too. The hook README lists the rest.
