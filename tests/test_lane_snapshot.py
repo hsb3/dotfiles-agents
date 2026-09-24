@@ -769,6 +769,32 @@ class HookGuard(unittest.TestCase):
                          (False, "daemon already running for this repo"))
         self.assertEqual(self.sandbox_daemons(), [])
 
+    def test_stale_pidfile_is_respawned_once(self):
+        """A pidfile left by a dead daemon, its lock released, is no daemon:
+        the hook launches one, and the next session launches no second."""
+        sys.path.insert(0, HOOK_DIR)
+        try:
+            import snapshot_lanes
+        finally:
+            sys.path.remove(HOOK_DIR)
+        dead = subprocess.Popen([sys.executable, "-c", "pass"])
+        dead.wait()
+        path = snapshot_lanes.pidfile_path(os.path.join(self.box.root, ".git"),
+                                           self.box.env())
+        write(path, json.dumps({"pid": dead.pid, "root": self.box.root}))
+        self.addCleanup(self.kill_sandbox)
+        self.assertEqual(self.run_hook().returncode, 0)
+        deadline = time.time() + 15
+        while time.time() < deadline and not self.sandbox_daemons():
+            time.sleep(0.2)
+        self.assertEqual(len(self.sandbox_daemons()), 1, "stale pidfile blocked the respawn")
+        self.assertEqual(self.run_hook().returncode, 0)
+        time.sleep(1.5)
+        hooks = [r for r in self.box.rows() if r.get("event") == "hook"]
+        self.assertEqual([(r["launched"], r.get("reason")) for r in hooks],
+                         [(True, None), (False, "daemon already running for this repo")])
+        self.assertEqual(len(self.sandbox_daemons()), 1)
+
     def test_codex_and_claude_sessions_share_one_daemon(self):
         activation = os.path.join(self.box.base, "atelier.local.md")
         write(activation, "---\nenforce: advisory\n---\n")
