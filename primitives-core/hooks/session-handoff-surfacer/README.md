@@ -126,4 +126,4 @@ Ships only in the atelier bundle, alongside the handoff skill it surfaces.
 
 ## Codex
 
-Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. Activation uses `.codex/atelier.local.md` with the documented legacy fallback; Codex payload cwd is authoritative even if a Claude environment variable is inherited. In a project with no activation file a Codex main session gets the not-activated line and nothing else: Codex hooks stay off in an inactive project, so no handoff is surfaced there.
+Codex SessionStart receives the same file excerpt or external pointer in `hookSpecificOutput.additionalContext`. Activation uses `.codex/atelier.local.md` with the documented legacy fallback; Codex payload cwd is authoritative even if a Claude environment variable is inherited. In a project with no activation file a Codex main session gets the not-activated line and nothing else: Codex hooks stay off in an inactive project, so no handoff is surfaced there. A present activation file that sets no key Codex acts on keeps a Codex session fully silent: no line and no handoff.

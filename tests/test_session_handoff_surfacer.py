@@ -245,6 +245,14 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         worker = self._payload()
         worker["agent_id"] = "019"
         self._assert_silent(self._run_hook(worker, ATELIER_HARNESS="codex"))
+        role = self._payload()
+        role["agent_type"] = "atelier-builder"
+        self._assert_silent(self._run_hook(role, ATELIER_HARNESS="codex"))
+        outside = os.path.join(self.tmp.name, "outside")
+        os.makedirs(outside)
+        self._assert_silent(self._run_hook(self._payload(cwd=outside), ATELIER_HARNESS="codex"))
+        self._write_file(".codex/atelier.local.md", "---\nfoo: bar\n---\n")
+        self._assert_silent(self._run_hook(self._payload(), ATELIER_HARNESS="codex"))
 
     def test_any_activation_file_counts_as_activated(self):
         self._repo()
