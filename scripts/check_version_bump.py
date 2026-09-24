@@ -239,6 +239,36 @@ def _walk_blobs(pdir, algo="sha1"):
     return blobs
 
 
+def drop_ignored(index, plugins_dir=None):
+    """`index` minus the files git ignores, judged at each file's dereferenced path.
+
+    A working tree holds ignored files (`*.log`, `.env*`) that `git add` never commits, so a
+    local run would read them as unbumped changes. Unchanged when git cannot say.
+    """
+    base = plugins_dir or PLUGINS_DIR
+    real = {
+        os.path.realpath(os.path.join(base, pid, rel)): (pid, rel)
+        for pid, blobs in index.items()
+        for rel in blobs
+    }
+    try:
+        proc = subprocess.run(
+            ["git", "check-ignore", "--stdin", "-z"],
+            cwd=base, input="\0".join(real).encode(), capture_output=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return index
+    if proc.returncode not in (0, 1):  # 1 = nothing ignored; anything else = git could not say
+        return index
+    kept = {pid: dict(blobs) for pid, blobs in index.items()}
+    for path in filter(None, proc.stdout.decode().split("\0")):
+        pid, rel = real.get(path, (None, None))
+        if pid is not None:
+            kept[pid].pop(rel, None)
+    return kept
+
+
 def local_plugin_json(pid, plugins_dir=None):
     """Raw bytes of plugins/<pid>/.claude-plugin/plugin.json, or None if absent."""
     path = os.path.join(plugins_dir or PLUGINS_DIR, pid, MANIFEST_REL)
@@ -701,11 +731,12 @@ def main(plugins_dir=None, tree=None, base_tree=None, out=print, local=False):
                 return _unmeasured(f"the PR base {base_ref} could not be read: {reason}", out)
             _not_checked(base_ref, reason, out)
             base_tree = None
-        elif local and getattr(base_tree, "is_ancestor_of_head", lambda: True)() is False:
-            # Behind dev, dev's own bumps read as this tree's changes; CI gates the merge ref.
+        elif local and getattr(base_tree, "is_ancestor_of_head", lambda: True)() is not True:
+            # Behind dev (or unknown, e.g. shallow), dev's own bumps read as this tree's
+            # changes; CI gates the merge ref.
             _not_checked(
-                base_ref, f"{base_ref} has moved past this tree; rebase or merge "
-                f"{BASE_BRANCH} to measure", out, hint="",
+                base_ref, f"{base_ref} is not known to be in this tree's history; rebase or "
+                f"merge {BASE_BRANCH} (or unshallow) to measure", out, hint="",
             )
             base_tree = None
         elif getattr(base_tree, "note", ""):
@@ -714,6 +745,8 @@ def main(plugins_dir=None, tree=None, base_tree=None, out=print, local=False):
         return 0
 
     here = local_index(plugins_dir)
+    if local:
+        here = drop_ignored(here, plugins_dir)
 
     def local_json(pid):
         return local_plugin_json(pid, plugins_dir)

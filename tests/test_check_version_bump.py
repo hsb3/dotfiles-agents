@@ -1518,9 +1518,40 @@ class LocalMode(unittest.TestCase):
         rc, text = self.run_with(True, base_tree=Behind(branch="dev", repo=self.work, offline=True))
         self.assertEqual(rc, 0, text)
         self.assertIn("NOT CHECKED against origin/dev", text)
-        self.assertIn("moved past this tree", text)
+        self.assertIn("not known to be in this tree's history", text)
         rc, text = self.run_with(False, base_tree=Behind(branch="dev", repo=self.work))
         self.assertEqual(rc, 1, text)
+
+    @needs_tar_filter
+    def test_unknown_ancestry_skips_the_dev_stage_locally(self):
+        class Shallow(V.GitPublishedTree):
+            def is_ancestor_of_head(self):
+                return None  # what a shallow clone answers
+
+        self._write(self.work, "plugins/alpha/.claude-plugin/plugin.json", plugin_json_bytes("alpha", "0.2.0"))
+        self._write(self.work, "plugins/alpha/hooks/_lib/common.sh", b"echo changed\n")
+        rc, text = self.run_with(True, base_tree=Shallow(branch="dev", repo=self.work, offline=True))
+        self.assertEqual(rc, 0, text)
+        self.assertIn("NOT CHECKED against origin/dev", text)
+
+    def test_git_ignored_files_are_not_changes_locally(self):
+        self._write(self.work, ".gitignore", b"*.log\n.env*\n")
+        self._write(self.work, "plugins/alpha/hooks/debug.log", b"noise\n")
+        self._write(self.work, "plugins/alpha/.env.local", b"SECRET=1\n")
+        rc, text = self.run_with(True)
+        self.assertEqual(rc, 0, text)
+        self.assertNotIn("✗", text)
+        # The same files without the filter are changes: the fixture really sees them.
+        here = V.local_index(self.plugins)
+        self.assertIn("hooks/debug.log", here["alpha"])
+        self.assertNotIn("hooks/debug.log", V.drop_ignored(here, self.plugins)["alpha"])
+        self.assertNotIn(".env.local", V.drop_ignored(here, self.plugins)["alpha"])
+
+    def test_drop_ignored_is_a_no_op_outside_git(self):
+        plain = tempfile.mkdtemp(prefix="check-version-bump-nogit-")
+        self.addCleanup(shutil.rmtree, plain, True)
+        index = {"alpha": {"x.log": "h"}}
+        self.assertEqual(V.drop_ignored(index, plain), index)
 
     def test_cli_flag_reaches_main(self):
         seen = []

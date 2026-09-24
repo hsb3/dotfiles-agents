@@ -184,9 +184,10 @@ def scaffold_skill(id_, description):
     print("added a member row to plugins/solo-skills/README.md's Uncategorized table")
     print("fixed the solo-skills catalog count in README.md")
     print(
-        "`make ci` is green. Two things remain for a human: move the Uncategorized row "
-        "into its real category when you write the skill's real body, and bump "
-        "plugins/solo-skills' version at ship time (check_version_bump.py, CI-only)."
+        "`make ci` is green except its version-bump step, which fails until "
+        "plugins/solo-skills' version is bumped (a human call at ship time). One more thing "
+        "remains for a human: move the Uncategorized row into its real category when you "
+        "write the skill's real body."
     )
 
 

@@ -30,7 +30,7 @@ measured and found the tree clean.
 
 | Script | Make target | Proves |
 |---|---|---|
-| `check_version_bump.py` | none — CI step only | changed published bytes ship under a moved version (compares against `origin/main`) |
+| `check_version_bump.py` | `version-bump` (in `ci`: `--local`, cached refs only, no fetch; a missing ref prints NOT CHECKED) — the CI step is the fetched, authoritative run | changed published bytes ship under a moved version (against `origin/main`), and bytes changed from `origin/dev` under a version greater than dev's |
 | `check_removals.py` | none — CI step only | a unit published on `origin/main` and absent here was declared by the commit that removed it (both sets derived from the two trees, never an inventory). `--notes` renders the removals as the release-page section |
 | `check_vendored_drift.py` | `vendored-drift` | every remaining `origin: vendored` `base/` matches its pinned upstream ref (authored replacements leave this check) |
 | `check_manifests.py` | `manifests` | `claude plugin validate --strict` over the marketplace and every assembly (needs the `claude` binary) |
