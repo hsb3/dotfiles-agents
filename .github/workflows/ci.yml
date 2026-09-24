@@ -2,6 +2,10 @@ name: ci
 
 on:
   pull_request:
+  # Post-merge backstop: dev requires a PR (admins included), so this run re-gates the
+  # merged tree as a whole — two individually green PRs can still combine red.
+  push:
+    branches: [dev]
 
 permissions:
   contents: read
@@ -18,12 +22,14 @@ jobs:
   # without a publish, but pull_request runs use the PR branch's own workflow file.
   # Unset the variable after the outage; unset, the ternary is 'ubuntu-latest'.
   # The head-repo clause keeps fork PRs on 'ubuntu-latest' even with the variable set: a
-  # self-hosted runner executes the PR's code on the owner's machine. It guards only this
+  # self-hosted runner executes the PR's code on the owner's machine. A push event has no
+  # pull_request payload (the clause would be null, silently hosted), so push — only ever
+  # to dev, by a writer — is routed by the variable alone. It guards only this
   # file's own routing — a fork can edit runs-on in its PR — so while a fallback runner is
   # live, approve no fork run whose diff touches .github/.
   entry-gate-floor:
     name: entry-gate floor (identity · tests · provenance · hook-layout)
-    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
+    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -38,7 +44,7 @@ jobs:
   # reads "marketplace · catalog" after decision-030 retired those artifacts).
   drift-guards:
     name: drift guards (roster · marketplace · catalog)
-    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
+    runs-on: ${{ vars.USE_FALLBACK_RUNNER == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","docker-fallback"]') || 'ubuntu-latest' }}
     # `gh label list` reads the GraphQL `repository.labels` connection, which is gated on
     # `issues: read`; this repo is private, so the workflow-level `contents: read` alone
     # would 403 the label gate below.

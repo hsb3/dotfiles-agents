@@ -56,12 +56,15 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   tracked body is evaluated over all of history, so any body change lands red unless that
   unit's README moves with it. `skipped` in the clean line now means only a unit with no
   tracked body — in practice, one whose files are not committed yet.
-- **`ci.yml` fires on `pull_request` ONLY.** A direct push to `dev` gets ZERO CI, and the owner's
-  waiver means `remote: Bypassed rule violations` is expected on the handful of paths it covers.
-  Run `make ci` locally first — nothing else will. Code still goes through a PR.
-- **The fallback runner is same-repo PRs only.** `ci.yml`'s `runs-on` sends a job to the
-  self-hosted `docker-fallback` runner only when `USE_FALLBACK_RUNNER=true` AND the PR's head
-  repo is this repo; a fork PR stays on `ubuntu-latest`, because a self-hosted job runs the
+- **`dev` takes changes only through a PR, admins included** (branch protection, owner ruling
+  2026-09-24), so a direct push is refused rather than waived. `ci.yml` also fires on `push` to
+  `dev` as a backstop: that post-merge run gates the merged tree as a whole, and its green is
+  the dev-green evidence (`gh run list --branch dev --event push`), not tree identity with the
+  PR head. Two individually green PRs can still combine red.
+- **The fallback runner is same-repo PRs and dev pushes only.** `ci.yml`'s `runs-on` sends a job
+  to the self-hosted `docker-fallback` runner only when `USE_FALLBACK_RUNNER=true` AND the event
+  is a push (only ever to `dev`) or a PR whose head repo is this repo; a fork PR stays on
+  `ubuntu-latest`, because a self-hosted job runs the
   PR's code on the owner's Mac. That clause guards only our own routing: `pull_request` runs
   the PR's copy of the workflow, so a fork can hardcode the labels. While a fallback runner is
   live, approve no fork run whose diff touches `.github/`.
