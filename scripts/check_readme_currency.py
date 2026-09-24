@@ -32,6 +32,15 @@ Two scope decisions, both taking the narrowest honest reading:
     invisible here and lands red on the next run — CI runs on the PR's checkout, which is
     the authoritative one.
 
+One exemption, for a plugin only: a **version bump inherited from the shared `hooks/_lib`**.
+Editing `_lib` moves the dereferenced bytes of every plugin that links it, so the version-bump
+guard makes each one bump — and each bump is a manifest commit that would otherwise demand a
+README edit with nothing true to say. The unit passes when every body commit since its README
+was last touched changed only `"version"` lines in the unit's JSON manifests, AND every path the
+unit reaches through its links that changed over that range lies under its `hooks/_lib` link
+(and at least one did). A member hook's change, any other manifest edit, or a bump with nothing
+behind it still trips the gate. Link targets are read from the checkout, not per commit.
+
 The README side DOES follow a link (a standalone plugin points at its member skill's
 README): history for the link entry or for its in-repo target counts, since the file a
 reader opens is the target, and editing the entry alone could never clear the unit.
@@ -45,11 +54,14 @@ Usage: python3 scripts/check_readme_currency.py [repo-root]   (run from anywhere
 """
 
 import os
+import re
 import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIT_ROOTS = (("skill", "primitives-core/skills"), ("plugin", "plugins"))
+LIB_LINK = "hooks/_lib"
+VERSION_LINE = re.compile(r'^[+-]\s*"version"\s*:')
 
 
 def _git(*args):
@@ -92,6 +104,51 @@ def _readme_pathspecs(rel):
     return [link] if target == link or target.startswith("..") else [link, target]
 
 
+def _version_only(commit, rel):
+    """True when a single-parent commit changed the unit (README aside) only in
+    `"version"` lines of its JSON manifests."""
+    if len(_git("rev-list", "--parents", "-n1", commit).split()) != 2:
+        return False
+    diff = _git("diff", "-U0", "--no-color", "--no-ext-diff", commit + "^", commit,
+                "--", rel, f":(exclude){rel}/README.md")
+    lines = [ln for ln in diff.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
+    files = re.findall(r"^diff --git a/(\S+) ", diff, re.M)
+    return (bool(lines) and all(VERSION_LINE.match(ln) for ln in lines)
+            and all(p.endswith(".json") for p in files))
+
+
+def _lib_inherited(rel, base, head):
+    """True when base..head changed something the unit links to, and all of it
+    under the unit's hooks/_lib link."""
+    root, unit = os.path.realpath(REPO), os.path.join(REPO, rel)
+    targets, lib = [], None
+    for dirpath, dirnames, filenames in os.walk(unit):
+        for name in dirnames + filenames:
+            path = os.path.join(dirpath, name)
+            if not os.path.islink(path):
+                continue
+            target = os.path.relpath(os.path.realpath(path), root)
+            if target.startswith(".."):
+                continue
+            targets.append(target)
+            if os.path.relpath(path, unit) == LIB_LINK:
+                lib = target
+    if lib is None:
+        return False
+    changed = [p for p in _git("diff", "--name-only", base, head).splitlines()
+               if any(p == t or p.startswith(t + "/") for t in targets)]
+    return bool(changed) and all(p.startswith(lib + "/") for p in changed)
+
+
+def _inherited_bump(rel, readme, body):
+    """The one exemption (module docstring): every body commit since the README
+    was touched is a version-only bump, carried by a hooks/_lib-only change."""
+    commits = _git("log", "--format=%H", f"{readme}..{body}",
+                   "--", rel, f":(exclude){rel}/README.md").split()
+    return (bool(commits) and all(_version_only(c, rel) for c in commits)
+            and _lib_inherited(rel, readme, body))
+
+
 def audit():
     """(problems, evaluated, skipped) — skipped = a unit with no tracked body."""
     if not _git("rev-parse", "--git-dir"):
@@ -110,6 +167,8 @@ def audit():
         evaluated += 1
         readme = _git("log", "-1", "--format=%H", "--", *_readme_pathspecs(rel))
         if readme and _is_ancestor(body, readme):
+            continue
+        if readme and kind == "plugin" and _inherited_bump(rel, readme, body):
             continue
         out.append(
             f"{kind} '{name}': last change {_git('log', '-1', '--format=%h %s', body)} "

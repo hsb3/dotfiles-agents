@@ -126,6 +126,56 @@ class ReadmeCurrencyGate(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertIn("plugin 'kit'", found[0])
 
+    # --- a version bump inherited from the shared hooks/_lib -----------
+    def _kit(self):
+        """A plugin whose hooks/_lib and one hook dir are links into primitives-core."""
+        self._write("primitives-core/hooks/_lib/shared.py", "v1\n")
+        self._write("primitives-core/hooks/h1/hook.py", "v1\n")
+        self._bump("0.1.0")
+        self._write("plugins/kit/README.md", "# kit\n\nWhat it bundles.\n")
+        os.makedirs(os.path.join(self.fix, "plugins/kit/hooks"))
+        for name in ("_lib", "h1"):
+            os.symlink(f"../../../primitives-core/hooks/{name}",
+                       os.path.join(self.fix, "plugins/kit/hooks", name))
+        self._commit("add kit")
+
+    def _bump(self, version):
+        self._write("plugins/kit/.claude-plugin/plugin.json",
+                    '{\n  "name": "kit",\n  "version": "%s"\n}\n' % version)
+
+    def test_a_lib_only_change_bumps_without_a_readme_edit(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._commit("shared _lib change")
+        self._bump("0.1.1")
+        self._commit("bump kit 0.1.1 (shared _lib changed)")
+        self.assertEqual(C.problems(), [])
+
+    def test_a_member_change_with_its_bump_still_needs_the_readme(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("primitives-core/hooks/h1/hook.py", "v2\n")
+        self._commit("change a kit hook")
+        self._bump("0.1.1")
+        self._commit("bump kit 0.1.1")
+        found = C.problems()
+        self.assertEqual(len(found), 1)
+        self.assertIn("plugin 'kit'", found[0])
+
+    def test_a_lib_bump_beside_a_manifest_edit_still_needs_the_readme(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("plugins/kit/.claude-plugin/plugin.json",
+                    '{\n  "name": "kit",\n  "version": "0.1.1",\n  "description": "new"\n}\n')
+        self._commit("bump kit and describe it")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_a_bump_with_nothing_changed_through_links_still_needs_the_readme(self):
+        self._kit()
+        self._bump("0.1.1")
+        self._commit("bump kit for no reason")
+        self.assertEqual(len(C.problems()), 1)
+
     def test_untracked_unit_is_not_this_gates_business(self):
         self._skill("alpha")
         self._commit("add alpha")
