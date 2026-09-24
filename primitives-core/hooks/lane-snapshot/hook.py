@@ -4,8 +4,9 @@ lane-snapshot — SessionStart hook.
 
 Starts the snapshot daemon (`snapshot_lanes.py`, beside this file) for the
 project this session opened in, once per repo rather than once per session: a
-`pgrep` guard keyed to the resolved repo root means the second, third and tenth
-concurrent session all share the first one's daemon.
+pidfile lock keyed to the repo's git common dir means the second, third and
+tenth concurrent session — from any linked worktree, under either harness — all
+share the first one's daemon.
 
 Why a daemon at all: workers run in linked worktrees under read-only git, so
 their output is uncommitted until hand-over, and a crash or a mistaken
@@ -34,7 +35,6 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only).
 
 import json
 import os
-import re
 import subprocess
 import sys
 import traceback
@@ -47,15 +47,16 @@ sys.path.insert(
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
 import codex_lifecycle
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import snapshot_lanes  # noqa: E402  (shares the pidfile key and lock with the daemon)
 
 LOG_STREAM = "lane-snapshot"
 LOG_PATH_ENV = "LANE_SNAPSHOT_LOG_PATH"
 DAEMON_NAME = "snapshot_lanes.py"
 DAEMON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), DAEMON_NAME)
-# Both run sequentially inside a hook whose declared budget is 10s
+# Two git calls run sequentially inside a hook whose declared budget is 10s
 # (config.json/hooks.json), so their sum has to fit under it.
 GIT_TIMEOUT = 4
-PGREP_TIMEOUT = 4
 
 
 def _repo_root(cwd):
@@ -84,39 +85,15 @@ def _repo_root(cwd):
     return out if proc.returncode == 0 and out else None
 
 
-def _pattern(root):
-    """The pgrep pattern: the daemon's filename, the root, and a boundary.
-
-    All three matter. The filename alone would match another repo's daemon and
-    report a false "already running", leaving that repo unprotected — and so
-    would an unterminated root, because `pgrep -f` matches a SUBSTRING. Both
-    shapes that bite are ordinary here: a sibling whose path merely extends
-    this one (`agent-a1` and `agent-a15` is this repo's own worktree scheme),
-    and a lane worktree UNDER this root, whose daemon would otherwise answer
-    for the whole repo while snapshotting nothing.
-    """
-    literal = "{0}{1} {2}".format(DAEMON_NAME,
-        " --harness codex" if codex_lifecycle.enabled() else "", root.rstrip("/") or "/")
-    escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", literal)
-    # `/` is NOT in the class: it would match `<root>/anything`, so a daemon
-    # rooted at a lane worktree would answer for the repo above it — the same
-    # defect one boundary over, and the likeliest one here.
-    return escaped + r"($| )"
-
-
-def _already_running(root):
-    """True when a daemon for this root is live. On a machine with no `pgrep`
-    this returns False: launching a possible second daemon is the cheap failure
-    (duplicate snapshot commits, same content), not launching any is the
-    expensive one."""
-    try:
-        proc = subprocess.run(
-            ["pgrep", "-f", "--", _pattern(root)],
-            capture_output=True, text=True, timeout=PGREP_TIMEOUT,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return proc.returncode == 0 and bool(proc.stdout.strip())
+def _already_running(common):
+    """True when a daemon holds this repo's pidfile lock. Probing takes the
+    lock for an instant; a daemon starting in that instant exits, and the one
+    this hook then spawns takes over."""
+    fd = snapshot_lanes.try_lock(snapshot_lanes.pidfile_path(common))
+    if fd is None:
+        return True
+    os.close(fd)
+    return False
 
 
 def _launch(root):
@@ -124,8 +101,7 @@ def _launch(root):
     devnull = open(os.devnull, "wb")  # noqa: SIM115 (handed to the child, then closed)
     try:
         proc = subprocess.Popen(
-            [sys.executable, DAEMON_PATH]
-            + (["--harness", "codex"] if codex_lifecycle.enabled() else []) + [root],
+            [sys.executable, DAEMON_PATH, root],
             stdin=subprocess.DEVNULL, stdout=devnull, stderr=devnull,
             start_new_session=True, close_fds=True,
         )
@@ -150,12 +126,11 @@ def main():
 
         cwd = payload.get("cwd") or os.getcwd()
         root = _repo_root(cwd)
-        if root and codex_lifecycle.enabled() and not os.environ.get("LANE_SNAPSHOT_ROOT"):
-            common = subprocess.check_output(
-                ["git", "-C", root, "rev-parse", "--git-common-dir"], text=True).strip()
-            common = os.path.realpath(os.path.join(root, common))
-            if os.path.basename(common) != ".git":
-                raise ValueError("Codex lane snapshots require a non-bare checkout")
+        common = snapshot_lanes.common_dir(root, GIT_TIMEOUT) if root else None
+        # Every checkout of a repo shares one daemon, rooted at the main
+        # checkout; a bare repo keeps its resolved root, still keyed by common.
+        if (common and os.path.basename(common) == ".git"
+                and not os.environ.get("LANE_SNAPSHOT_ROOT")):
             root = os.path.dirname(common)
         log = agentlog.make_logger(
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(cwd),
@@ -170,11 +145,14 @@ def main():
         if not root:
             log(dict(record, launched=False, reason="no repo root resolved"))
             sys.exit(0)
+        if not common:
+            log(dict(record, launched=False, reason="not a git worktree"))
+            sys.exit(0)
         if not os.path.isfile(DAEMON_PATH):
             log(dict(record, launched=False, reason="daemon missing at " + DAEMON_PATH))
             sys.exit(0)
-        if _already_running(root):
-            log(dict(record, launched=False, reason="daemon already running for this root"))
+        if _already_running(common):
+            log(dict(record, launched=False, reason="daemon already running for this repo"))
             sys.exit(0)
 
         try:

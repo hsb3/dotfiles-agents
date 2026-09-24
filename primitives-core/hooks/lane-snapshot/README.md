@@ -3,7 +3,8 @@
 Commits every agent worktree's working tree — tracked, untracked, staged, unstaged — to
 `refs/lane-snapshots/<name>` every three minutes, so a worker's uncommitted output survives a
 crash, a killed session, or a mistaken `git worktree remove`. A `SessionStart` hook starts one
-daemon per repo; concurrent sessions share it.
+daemon per repository; every concurrent session shares it, from any linked worktree and under
+either harness.
 
 Recover a file from a lane that is gone:
 
@@ -32,11 +33,25 @@ looking identical to a working net.
 ## When it fires
 
 `SessionStart`, every source (`startup`, `resume`, `clear`, `compact`). The hook resolves the
-repo root, checks `pgrep` for a daemon already running against that same root, and launches one
-only if there is none. It injects no context, never waits on the daemon, and exits 0 on every
-path — including a failed launch. Session start is not allowed to get slower because of this.
+repo root, rewrites it to the main checkout (the parent of `git rev-parse --git-common-dir`), and
+launches a daemon only if none holds that repository's pidfile lock. It injects no context, never
+waits on the daemon, and exits 0 on every path — including a failed launch. Session start is not
+allowed to get slower because of this.
 
-The daemon then loops: one pass over every matching worktree, one `sleep`, repeat.
+The daemon then loops: one pass over every matching worktree, one `sleep`, repeat. It exits on
+its own — one final `exit` row in the ledger — when its root is gone or no longer a git worktree,
+or when `LANE_SNAPSHOT_TTL` seconds pass without it writing a snapshot. Relaunch is free: the next
+`SessionStart` starts a fresh one.
+
+### One daemon per repository
+
+The key is the realpath of the repository's git common dir, so the main checkout, every linked
+worktree, and a Claude Code or Codex session all resolve to the same one. The lock is an
+exclusive `flock` on `<state>/<sha1(common dir)[:16]>.pid`, held by the daemon for its whole life;
+the file records `pid`, `root`, `common_dir` and `started`. The kernel releases a lock on any
+death, so a free lock always means no live daemon, with no pid-reuse guessing. Two sessions
+launching at once can both spawn; the loser fails the lock, logs an `exit` row with reason
+`already running`, and exits 0.
 
 ## Activation
 
@@ -53,7 +68,9 @@ No per-project activation file. The hook is armed by being present in an install
 |---|---|---|
 | `LANE_SNAPSHOT_ROOT` | *(unset)* | Repo root to protect. Highest precedence; overrides what the hook derives. |
 | `LANE_SNAPSHOT_INTERVAL` | `180` | Seconds between passes. Also sets the `--check` staleness threshold, at 2x. |
-| `LANE_SNAPSHOT_WORKTREES` | `.claude/worktrees/agent-*` | Glob, relative to the root, naming the lanes to snapshot. |
+| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts, deduped. |
+| `LANE_SNAPSHOT_TTL` | `43200` | Seconds without a written snapshot (since start or the last one) after which the daemon exits. `0` disables. |
+| `LANE_SNAPSHOT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/lane-snapshot` | Where the per-repository pidfiles live. `XDG_STATE_HOME` is honoured only when absolute. |
 | `LANE_SNAPSHOT_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/lane-snapshot.jsonl` | Ledger |
 
 The worktree glob is an override rather than a constant because a repo that parks its worktrees
@@ -68,7 +85,9 @@ error row while the scan still counts it as a lane. Set it to a path you meant.
 
 1. `$LANE_SNAPSHOT_ROOT`.
 2. `argv[1]`, which the hook fills in from the `SessionStart` payload's `cwd`, resolved with
-   `git rev-parse --show-toplevel`.
+   `git rev-parse --show-toplevel` and then rewritten to the main checkout (a bare repository
+   keeps its resolved root). `$LANE_SNAPSHOT_ROOT` skips the rewrite; the lock is still keyed by
+   that root's common dir.
 3. `git rev-parse --show-toplevel` run from the **daemon script's own directory**.
 
 (3) is the mechanism this hook was specified around, and it is deliberately the *fallback*, not
@@ -91,7 +110,7 @@ Add the `SessionStart` entry inside the **existing top-level `"hooks"` object** 
       {
         "hooks": [
           {
-            "command": "LANE_SNAPSHOT_INTERVAL=\"${LANE_SNAPSHOT_INTERVAL:-180}\" LANE_SNAPSHOT_WORKTREES=\"${LANE_SNAPSHOT_WORKTREES:-.claude/worktrees/agent-*}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lane-snapshot/hook.py\"",
+            "command": "LANE_SNAPSHOT_INTERVAL=\"${LANE_SNAPSHOT_INTERVAL:-180}\" python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lane-snapshot/hook.py\"",
             "statusMessage": "Starting the lane-snapshot daemon...",
             "timeout": 10,
             "type": "command"
@@ -135,11 +154,12 @@ path, so the directory symlink into the assembly carries both.
   `user.email` configured.
 - **`.gitignore` is respected**, because `git add -A` respects it. Work living only in ignored
   paths is not covered; that is the same limit a real commit has.
-- **The `pgrep` guard is racy by construction.** Two sessions starting in the same instant can
-  both see no daemon and both launch one. The cost is duplicate snapshot commits with identical
-  content, which is why it was not worth a lock file. On a machine with no `pgrep` the hook
-  launches unconditionally, for the same reason: a possible second daemon is the cheap failure,
-  no daemon at all is the expensive one.
+- **The lock replaced a `pgrep` guard** keyed to the root string, which gave a worktree session
+  and each harness their own daemon for the same repo, and a daemon never checked its root, so
+  daemons piled up against worktrees long deleted. The hook's probe takes the lock for an
+  instant; a daemon starting in that instant exits, and the one the hook then spawns takes over.
+- **Stale pidfiles are left in place.** Unlinking one races a daemon that has just opened it; a
+  pidfile whose lock is free is ignored by everything that reads it.
 
 ## Liveness
 
@@ -161,6 +181,10 @@ Exit 0 when every live lane has a snapshot ref newer than 2x the interval. Exit 
 lane has no ref at all, when a ref is stale, or when the refs cannot be read — a gate that cannot
 measure reports red, never green.
 
+`--check` also reads every pidfile in the state dir, whichever root it was pointed at: a live
+daemon (lock held) whose recorded root no longer exists is an **orphan**, reported with its pid
+and root, and makes the exit 1.
+
 ## Ledger
 
 Rows are appended to the `lane-snapshot` stream by `hooks/_lib/agentlog.py`, in the partitioned
@@ -171,8 +195,9 @@ ${XDG_DATA_HOME:-~/.local/share}/agent-logs/<harness>/<plugin>/<stream>.jsonl
 ```
 
 Every row carries the identity envelope — `v`, `plugin`, `harness`, `stream`, `ts` (ISO-8601
-UTC), `project` — plus an `event` naming which of the five shapes it is (`hook`, `start`,
-`snapshot`, `scan`, `error`):
+UTC), `project` — plus an `event` naming which of the six shapes it is (`hook`, `start`,
+`snapshot`, `scan`, `error`, `exit`). An `exit` row's `reason` is `root gone`, `not a git
+worktree`, `ttl`, or `already running`:
 
 ```json
 {"v":1,"plugin":"atelier","harness":"claude-code","stream":"lane-snapshot",
@@ -189,4 +214,8 @@ The `scan` rows are the dataset that answers "was the net ever actually up?" aft
 
 ## Codex
 
-Codex resolves the main checkout through Git’s common directory and scans `.git/atelier-codex/checkouts/*/*` by default. `LANE_SNAPSHOT_WORKTREES` still overrides the derived glob. Snapshot refs preserve isolated native worker changes without changing their working indexes.
+Codex and Claude Code sessions share one daemon per repository; the default glob covers
+`.git/atelier-codex/checkouts/*/*` alongside the Claude lanes. The daemon logs under the harness
+that launched it (`ATELIER_HARNESS`, or a legacy `--harness codex` argument, which now selects
+the ledger directory and nothing else). Snapshot refs preserve isolated native worker changes
+without changing their working indexes.

@@ -164,19 +164,6 @@ class CompactWireTests(unittest.TestCase):
             self.assertIs(result['continue'], False)
 
 
-class SnapshotIdentityTests(unittest.TestCase):
-    def test_codex_daemon_does_not_match_claude_daemon_for_same_repo(self):
-        import re
-        module = hook('lane-snapshot')
-        with patch.dict(os.environ, ATELIER_HARNESS='codex'):
-            native = module._pattern('/tmp/project')
-        with patch.dict(os.environ, ATELIER_HARNESS='claude-code'):
-            claude = module._pattern('/tmp/project')
-        self.assertIsNone(re.search(native, 'snapshot_lanes.py /tmp/project'))
-        self.assertIsNone(re.search(claude, 'snapshot_lanes.py --harness codex /tmp/project'))
-        self.assertIsNotNone(re.search(native, 'snapshot_lanes.py --harness codex /tmp/project'))
-
-
 class SetupTests(unittest.TestCase):
     def test_project_setup_is_additive_and_check_is_read_only(self):
         spec = importlib.util.spec_from_file_location('codex_activation_test',

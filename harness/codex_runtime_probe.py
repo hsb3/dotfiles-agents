@@ -113,9 +113,9 @@ def stop_snapshot_daemons(root):
         if result.returncode:
             continue
         argv = shlex.split(result.stdout.strip())
-        owned = (len(argv) >= 5 and argv[-3:] == ['--harness', 'codex', str(root / 'repo')]
-                 and Path(argv[-4]).name == 'snapshot_lanes.py'
-                 and Path(argv[-4]).resolve().is_relative_to(root / 'home'))
+        owned = (len(argv) >= 3 and argv[-1] == str(root / 'repo')
+                 and Path(argv[-2]).name == 'snapshot_lanes.py'
+                 and Path(argv[-2]).resolve().is_relative_to(root / 'home'))
         if not owned:
             raise RuntimeError('Refusing to stop snapshot PID whose command is not scratch-owned')
         os.kill(pid, signal.SIGTERM)

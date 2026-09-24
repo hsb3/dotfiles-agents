@@ -9,9 +9,11 @@ Three surfaces are covered, each for a different reason:
   * the daemon's one scan pass — run as a subprocess against a real git repo
     with a real linked worktree, because faking `git add -A` under a redirected
     `GIT_INDEX_FILE` would test our idea of git rather than git.
-  * the SessionStart hook's `pgrep` guard — run twice for real, counting live
-    daemons 0 -> 1 -> 1 (acceptance criterion 3 asks for this to be re-derived
-    here, not cited from another repo).
+  * the SessionStart hook's pidfile lock — run for real from the main checkout,
+    a linked worktree and both harnesses, counting live daemons with `pgrep` as
+    an observer independent of the lock under test.
+  * the daemon's lifecycle — self-exit when its root is gone or its TTL lapses,
+    and `--check` naming a live daemon whose root no longer exists.
 
 Every process this module starts is keyed to a path unique to its own tempdir,
 so a `pgrep` count can never pick up another worktree's crew or a parallel run
@@ -108,6 +110,7 @@ class Sandbox:
             "XDG_DATA_HOME": os.path.join(self.base, "xdg"),
             "TMPDIR": self.base,
             "LANE_SNAPSHOT_LOG_PATH": self.log_path,
+            "LANE_SNAPSHOT_STATE_DIR": os.path.join(self.base, "state"),
         }
         env.update(extra)
         return env
@@ -130,6 +133,29 @@ def run_daemon(sandbox, *args, **kwargs):
         env=sandbox.env(**env_extra),
         **kwargs
     )
+
+
+def spawn_daemon(sandbox, test, *args, **env_extra):
+    """A long-running daemon, reaped by pid in cleanup whatever the test does."""
+    proc = subprocess.Popen(
+        [sys.executable, DAEMON_PATH] + list(args),
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env=sandbox.env(**env_extra),
+    )
+
+    def reap():
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    test.addCleanup(reap)
+    return proc
+
+
+def wait_exit(proc, seconds=15):
+    try:
+        return proc.wait(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        return None
 
 
 class RootResolution(unittest.TestCase):
@@ -247,6 +273,45 @@ class SnapshotPass(unittest.TestCase):
         self.assertTrue(snaps[0]["commit"])
 
 
+class DaemonLifecycle(unittest.TestCase):
+    """A daemon must not outlive the repo it guards, nor run forever idle."""
+
+    def setUp(self):
+        require("git")
+        self.box = Sandbox()
+        self.addCleanup(self.box.destroy)
+
+    def wait_for_row(self, event, seconds=15):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            if any(r.get("event") == event for r in self.box.rows()):
+                return
+            time.sleep(0.1)
+
+    def test_root_removed_daemon_exits(self):
+        proc = spawn_daemon(self.box, self, "--interval", "1", self.box.root)
+        self.wait_for_row("scan")
+        shutil.rmtree(self.box.root)
+        self.assertEqual(wait_exit(proc), 0, "daemon outlived its root")
+        last = self.box.rows()[-1]
+        self.assertEqual((last["event"], last["reason"]), ("exit", "root gone"))
+
+    def test_ttl_with_nothing_written_exits(self):
+        proc = spawn_daemon(self.box, self, "--interval", "1", self.box.root,
+                            LANE_SNAPSHOT_TTL="1")
+        self.assertEqual(wait_exit(proc), 0, "idle daemon ignored its TTL")
+        last = self.box.rows()[-1]
+        self.assertEqual((last["event"], last["reason"]), ("exit", "ttl"))
+
+    def test_second_daemon_for_the_same_repo_exits(self):
+        """The lock, not the hook, is what finally resolves two launches."""
+        first = spawn_daemon(self.box, self, "--interval", "1", self.box.root)
+        self.wait_for_row("start")
+        second = spawn_daemon(self.box, self, "--interval", "1", self.box.root)
+        self.assertEqual(wait_exit(second), 0)
+        self.assertIsNone(first.poll(), "the lock holder died instead")
+
+
 class CheckMode(unittest.TestCase):
     """Criterion 2, half (b). House rule: a gate that cannot measure is red."""
 
@@ -278,6 +343,29 @@ class CheckMode(unittest.TestCase):
         result = self.check(LANE_SNAPSHOT_INTERVAL="0")
         self.assertEqual(result.returncode, 1)
         self.assertIn("stale", result.stdout)
+
+    def test_check_names_a_live_daemon_whose_root_is_gone(self):
+        write(os.path.join(self.lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(self.check().returncode, 0, "baseline must be green")
+
+        gone = Sandbox()
+        self.addCleanup(gone.destroy)
+        state = os.path.join(self.box.base, "state")
+        # A long interval keeps it asleep, and holding its lock, after the rmtree.
+        proc = spawn_daemon(gone, self, "--interval", "3600", gone.root,
+                            LANE_SNAPSHOT_STATE_DIR=state)
+        deadline = time.time() + 15
+        while time.time() < deadline and not any(
+                r.get("event") == "scan" for r in gone.rows()):
+            time.sleep(0.1)
+        shutil.rmtree(gone.root)
+        self.assertIsNone(proc.poll(), "daemon exited before it could be orphaned")
+
+        result = self.check()
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn(gone.root, result.stdout)
+        self.assertIn(str(proc.pid), result.stdout)
 
     def test_unresolvable_root_is_red_not_green(self):
         outside = os.path.join(self.box.base, "not-a-repo")
@@ -351,7 +439,7 @@ class HookGuard(unittest.TestCase):
                 return
             time.sleep(0.2)
 
-    def run_hook(self, cwd=None):
+    def run_hook(self, cwd=None, env_extra=None):
         payload = {
             "session_id": "test-session",
             "cwd": cwd or self.box.root,
@@ -361,7 +449,7 @@ class HookGuard(unittest.TestCase):
         return subprocess.run(
             [sys.executable, HOOK_PATH],
             input=json.dumps(payload), capture_output=True, text=True, timeout=60,
-            env=self.box.env(LANE_SNAPSHOT_INTERVAL="1"),
+            env=self.box.env(LANE_SNAPSHOT_INTERVAL="1", **(env_extra or {})),
         )
 
     def wait_for(self, count, seconds=15):
@@ -416,28 +504,42 @@ class HookGuard(unittest.TestCase):
         finally:
             self.kill_all()
 
-    def test_a_lane_worktrees_daemon_does_not_answer_for_the_repo_above_it(self):
-        """The boundary class must not contain `/`. A worker session opening in
-        `.claude/worktrees/agent-*` resolves its toplevel to the LANE, so its
-        daemon is rooted there and snapshots nothing; if that daemon can answer
-        for the repo above it, every lane goes unprotected while the ledger
-        says otherwise. This is the pgrep-substring defect one boundary over."""
-        lane = self.box.lanes["agent-one"]
-        lane_pattern = "snapshot_lanes\\.py " + re.escape(lane) + "($| )"
-        self.addCleanup(self.kill_pattern, lane_pattern)
-        try:
-            self.assertEqual(self.run_hook(cwd=lane).returncode, 0)
-            self.wait_for_pattern(lane_pattern, 1)
-            self.assertEqual(len(self._pgrep(lane_pattern)), 1, "lane daemon did not start")
+    def sandbox_daemons(self):
+        """Every daemon rooted anywhere under the sandbox, lanes included."""
+        return self._pgrep("snapshot_lanes\\.py .*" + re.escape(self.box.base))
 
-            self.assertEqual(self.run_hook().returncode, 0)
-            self.wait_for(1)
-            self.assertEqual(
-                len(self.daemons()), 1,
-                "the lane's daemon was mistaken for the repo root's",
-            )
-        finally:
-            self.kill_all()
+    def kill_sandbox(self):
+        for pid in self.sandbox_daemons():
+            try:
+                os.kill(int(pid), 15)
+            except (ProcessLookupError, ValueError, PermissionError):
+                pass
+
+    def test_a_linked_worktree_session_shares_the_main_checkouts_daemon(self):
+        """A worker session resolves its toplevel to its own lane; keyed by
+        the common dir, it still lands on the one daemon for the repo."""
+        self.addCleanup(self.kill_sandbox)
+        self.assertEqual(self.run_hook(cwd=self.box.lanes["agent-one"]).returncode, 0)
+        self.wait_for(1)
+        self.assertEqual(self.run_hook().returncode, 0)
+        time.sleep(1.5)
+        self.assertEqual(len(self.sandbox_daemons()), 1)
+        self.assertEqual(len(self.daemons()), 1, "the one daemon is not rooted at the repo")
+
+    def test_codex_and_claude_sessions_share_one_daemon(self):
+        activation = os.path.join(self.box.base, "atelier.local.md")
+        write(activation, "---\nenforce: advisory\n---\n")
+        self.addCleanup(self.kill_sandbox)
+        codex = self.run_hook(env_extra={"ATELIER_HARNESS": "codex",
+                                         "ATELIER_ACTIVATION_FILE": activation})
+        self.assertEqual(codex.returncode, 0, codex.stderr)
+        deadline = time.time() + 15
+        while time.time() < deadline and not self.sandbox_daemons():
+            time.sleep(0.2)
+        self.assertEqual(len(self.sandbox_daemons()), 1, "codex session launched nothing")
+        self.assertEqual(self.run_hook().returncode, 0)
+        time.sleep(1.5)
+        self.assertEqual(len(self.sandbox_daemons()), 1)
 
     def test_hook_never_blocks_when_the_root_is_not_a_repo(self):
         """Every path exits 0 and launches nothing: a failed resolution must
