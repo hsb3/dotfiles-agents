@@ -172,15 +172,9 @@ still *discriminate*. On 2026-09-08 the audit reported `no-priority: 0` and `bod
 board where 34 of 55 open items sat in one priority band, 16 carried no label, and the area
 grouping lived only in title prefixes. A per-card check cannot see a distribution. Run both.
 
-**Board conventions.** The vocabulary is not restated here — it is
-[`decision-023`](docs/decisions/decisions-023-kata-labels-are-the-triage-system-and-title-prefixes-are-not.md),
-declared machine-readably in `primitives-core/skills/board-triage/scripts/core-labels.txt`, and
-that record is the copy to change. What it means day to day: every open card carries exactly one
-`area:*` and exactly one `type:*`, titles carry **no prefix of any kind** (the grouping lives in
-labels, where a query can reach it), and this project adds areas on top of the core rather than
-instead of it — add one only when a genuine new domain appears, never for a single card. Board
-labels do NOT propagate to GitHub, and GitHub's own closed set (decision-016) is a *subset* of
-the core: the board-only names never reach the repo. `make labels` proves it.
+**Board conventions** — the root structure (wave milestones, feature and hygiene backlogs), the
+label rules of decision-023, and the grooming bias live in
+[`.agents/rules/kata-board.md`](.agents/rules/kata-board.md) (linked into `.claude/rules/`).
 
 **Step 5 — the GitHub reconcile** (owner ruling 2026-09-08). Board-desk ships
 `primitives-core/skills/board-triage/scripts/reconcile_github.py`, which
