@@ -123,13 +123,13 @@ def _load_protected_branches(project_dir):
 # (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*(['\"]?)(\w+)['\"]?(?=\s|$)")
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(?=\s|$)")
 
 
 def _scan_line(line, quote):
-    """(the first heredoc terminator this line opens as `(word, quoted)`, the quote
-    state at its end, whether it ends in a line continuation), given the quote state
-    it starts in.
+    """(the heredoc terminators this line opens, each `(word, quoted, dash)`,
+    the quote state at its end, whether it ends in a line continuation), given the
+    quote state it starts in.
 
     An opener counts only outside quotes and outside a comment, and never with an
     all-digit word or inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
@@ -138,7 +138,7 @@ def _scan_line(line, quote):
     of the line, after whitespace or after one of `;&|()` runs to the line end, so an
     apostrophe in a comment opens no quote.
     """
-    terminator = None
+    terminators = []
     i = 0
     while i < len(line):
         char = line[i]
@@ -149,7 +149,7 @@ def _scan_line(line, quote):
                 i += 1
         elif char == "\\":
             if i == len(line) - 1:
-                return terminator, quote, True
+                return terminators, quote, True
             i += 1
         elif line.startswith("$'", i):
             quote = "$'"
@@ -161,30 +161,43 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(2).isdigit()
+            if (m and not m.group(3).isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                terminator = terminator or (m.group(2), bool(m.group(1)))
+                terminators.append((m.group(3), bool(m.group(2)), bool(m.group(1))))
                 i = m.end()
                 continue
         i += 1
-    return terminator, quote, False
+    return terminators, quote, False
 
 
-def _body_end(lines, j, word, quoted):
+def _body_end(lines, j, word, quoted, dash):
     """The index of the line that closes a heredoc body starting at `lines[j]`,
-    or None. A line matches when equal to `word` after `strip()`, which also
-    takes a `<<-` tab-indented terminator. Under an unquoted word, bash joins a
-    line ending in an odd run of backslashes to the next before comparing."""
+    or None. As in bash, under an unquoted word a line ending in an odd run of
+    backslashes joins the next first, and the result must equal the word
+    exactly, after only its leading tabs are removed under `<<-`."""
     while j < len(lines):
         line = lines[j]
         while (not quoted and j + 1 < len(lines)
                and (len(line) - len(line.rstrip("\\"))) % 2):
             j += 1
             line = line[:-1] + lines[j]
-        if line.strip() == word:
+        if (line.lstrip("\t") if dash else line) == word:
             return j
         j += 1
     return None
+
+
+def _skip_bodies(lines, i, terminators):
+    """The index after the last of the heredoc bodies that `terminators`
+    opened on one line, read in order from `lines[i]`; `i` itself when one is
+    never closed, since dropping text is a silent fail-open."""
+    j = i
+    for terminator in terminators:
+        j = _body_end(lines, j, *terminator)
+        if j is None:
+            return i
+        j += 1
+    return j
 
 
 def strip_heredocs(command):
@@ -195,23 +208,20 @@ def strip_heredocs(command):
     continuations after its opener. Only drops when the terminator is actually
     found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
     since dropping text here is a silent fail-open and keeping it is at worst an
-    over-deny. Under an unquoted word a body line ending in an odd run of `\\`
-    joins the next one before the comparison, as bash does (`EO\\` then `F`
-    closes `<<EOF`).
+    over-deny. Bodies opened on one line follow in order, and each ends where
+    bash ends it (`_body_end`).
     """
     lines = command.split("\n")
-    out, quote, pending, i = [], None, None, 0
+    out, quote, pending, i = [], None, [], 0
     while i < len(lines):
         out.append(lines[i])
-        terminator, quote, continued = _scan_line(lines[i], quote)
+        terminators, quote, continued = _scan_line(lines[i], quote)
         i += 1
-        pending = pending or terminator
+        pending += terminators
         if not pending or quote or continued:
             continue
-        j = _body_end(lines, i, *pending)
-        if j is not None:
-            i = j + 1  # skip the body and the terminator line
-        pending = None
+        i = _skip_bodies(lines, i, pending)  # each body and its terminator line
+        pending = []
     return "\n".join(out)
 
 

@@ -1093,6 +1093,16 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             # ...and a terminator after a continued line is swallowed: the
             # body never ends, so it is kept (bash runs neither; over-deny).
             ("cat <<EOF\necho a && git rebase main \\\nEOF", "rebase"),
+            # The joined line must equal the word exactly (leading tabs only
+            # under `<<-`), or a later opener swallows the real terminator.
+            ("cat <<EOF\n E\\\nOF\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<EOF\nE\\\nOF \ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<EOF\nEOF\r\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<-EOF\n  EOF\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
+            ("cat <<-EOF\n\t\\\n\tEOF\ngit commit -m x\nEOF", "commit"),
+            # Two heredocs on one line: both bodies are dropped, in order.
+            ("cat <<A <<B\nx\nA\ncat <<Y\nB\ngit commit -m x\nY", "commit"),
+            ("cat <<A <<B\ngit commit -m x\nA\ngit push\nB", None),
             # An escaped backslash does not continue the line.
             ("echo foo\\\\\ngit push", "push"),
             # A line break clears the inert state of a `<<` or `#`.
