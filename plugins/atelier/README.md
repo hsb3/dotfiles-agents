@@ -116,7 +116,7 @@ codex plugin add atelier@dotfiles-agents
 
 Use Python 3.11 or newer for Codex setup. Invoke the installed activation skill for the consumer project. It creates the local
 policy in the sole configured native directory or `.agents` for multiple agents.
-Its `codex-setup` command reconciles policy placement and project sandbox writable roots.
+Its `codex-setup` command reconciles policy placement and project sandbox writable roots. A root someone added after atelier's own in its managed `writable_roots` block survives a rewrite of that block and is named as kept; anything the rewrite removes is named as dropped.
 It resolves each role from the project first, then current managed global profiles, generating
 only missing project roles. Use `codex-setup --refresh-global` to refresh owned global profiles
 after an update; user-owned or edited profiles are preserved by refusal. Start a fresh session

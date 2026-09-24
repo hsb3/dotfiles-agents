@@ -208,6 +208,9 @@ class ActivationPathsTests(unittest.TestCase):
         code, output, text, roots = self.rerun_with_checkout_root(main, '.worktrees')
         self.assertEqual(code, 0, output)
         self.assertEqual(roots[0], str(main / '.worktrees'))
+        # A former checkout root sat in atelier's own leading slots: dropped, not kept.
+        self.assertNotIn(str(elsewhere), roots)
+        self.assertNotIn('kept', output)
         self.assertEqual(text.count('# atelier managed writable roots'), 1)
 
     def rerun_with_checkout_root(self, main, value='.worktrees'):
@@ -232,6 +235,58 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertEqual(text.count('# atelier managed writable roots'), 1)
         self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
         self.assertIn('[profiles.later]\nmodel = "later"\n', text)
+
+    def test_codex_setup_keeps_a_user_root_inside_its_block(self):
+        main, code, output, _, _ = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        config = main / '.codex/config.toml'
+        text = config.read_text()
+        old = __import__('tomllib').loads(text)['sandbox_workspace_write']['writable_roots']
+        mine = str(self.root / 'my-cache-\U0001F600')
+        extra = old + [mine, mine, str(main / '.git/objects'), str(main / '.git/objects') + '/']
+        config.write_text(text.replace(__import__('json').dumps(old), __import__('json').dumps(
+            extra, ensure_ascii=False)[:-1] + ', 1979-05-27]'))
+        code, output, text, roots = self.rerun_with_checkout_root(main)
+        self.assertEqual(code, 0, output)
+        common = main / '.git'
+        self.assertEqual(roots, [str(main / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')] + [mine])
+        self.assertIn('kept', output)
+        self.assertIn(mine, output)
+        self.assertEqual(text.count('# atelier managed writable roots'), 1)
+
+    def test_codex_setup_drops_its_old_roots_after_the_project_moves(self):
+        main, code, output, _, before = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        config = main / '.codex/config.toml'
+        mine = str(self.root / 'my-cache')
+        config.write_text(config.read_text().replace(
+            __import__('json').dumps(before), __import__('json').dumps(before + [mine])))
+        moved = self.root / 'moved'
+        shutil.rmtree(self.root / 'worktree', ignore_errors=True)
+        main.rename(moved)
+        code, output, text, roots = self.rerun_with_checkout_root(moved)
+        self.assertEqual(code, 0, output)
+        common = moved / '.git'
+        self.assertEqual(roots, [str(moved / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')] + [mine])
+        self.assertFalse(set(before) & set(roots))
+
+    def test_codex_setup_names_what_it_drops_from_its_block(self):
+        main, code, output, _, before = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        config = main / '.codex/config.toml'
+        mine = str(self.root / 'my-cache')
+        # Removing one of atelier's roots shifts the user's root into atelier's leading slots.
+        edited = [r for r in before if not r.endswith('/objects')] + [mine, mine + '/']
+        config.write_text(config.read_text().replace(
+            __import__('json').dumps(before), __import__('json').dumps(edited)))
+        output = io.StringIO()
+        code = activation.main(['codex-setup', '--harness', 'codex', '--project-dir', str(main)], out=output)
+        self.assertEqual(code, 0, output.getvalue())
+        roots = __import__('tomllib').loads(config.read_text())['sandbox_workspace_write']['writable_roots']
+        self.assertEqual(roots, before + [mine + '/'])
+        self.assertIn("dropped roots from atelier's block: " + __import__('json').dumps([mine]), output.getvalue())
 
     def test_codex_setup_still_refuses_a_user_owned_table(self):
         main, _ = make_worktree(str(self.root))
