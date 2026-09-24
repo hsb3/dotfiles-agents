@@ -257,6 +257,237 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._settle("c2222222222222222")
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
+    # -- a kill fires no SubagentStop (measured, 2.1.281): read it from the
+    # session transcript instead. Line shapes are trimmed real lines.
+
+    def _transcript(self, *objs):
+        with open(self.transcript_path, "a", encoding="utf-8") as fh:
+            for obj in objs:
+                fh.write(json.dumps(obj) + "\n")
+
+    @staticmethod
+    def _taskstop(agent_id, tool="TaskStop", sidechain=False, use=True):
+        """A TaskStop call and its success result, trimmed from real 2.1.281
+        lines. `tool` renames the call the result answers; `use=False` drops it."""
+        use_id = "toolu_stop_{0}".format(agent_id)
+        message = "Successfully stopped task: {0} (Run sleep 300)".format(agent_id)
+        call = {
+            "type": "assistant", "isSidechain": sidechain,
+            "message": {"role": "assistant", "content": [{
+                "type": "tool_use", "id": use_id, "name": tool,
+                "input": {"task_id": agent_id}}]},
+        }
+        result = {
+            "type": "user", "isSidechain": sidechain,
+            "message": {"role": "user", "content": [{
+                "tool_use_id": use_id, "type": "tool_result",
+                "content": json.dumps({"message": message, "task_id": agent_id,
+                                       "task_type": "local_agent"})}]},
+            "toolUseResult": {
+                "message": message, "task_id": agent_id,
+                "task_type": "local_agent", "command": "Run sleep 300"},
+            "version": "2.1.281",
+        }
+        return [call, result] if use else [result]
+
+    @staticmethod
+    def _notification(agent_id, status="killed"):
+        text = (
+            "<task-notification>\n<task-id>{0}</task-id>\n"
+            "<tool-use-id>toolu_01UvzTyTiDyRZNga7qRBUzHz</tool-use-id>\n"
+            "<status>{1}</status>\n"
+            "<summary>Agent \"Run sleep 300\" was stopped by Claude</summary>\n"
+            "</task-notification>").format(agent_id, status)
+        return [
+            {"type": "queue-operation", "operation": "enqueue",
+             "timestamp": "2026-09-24T18:13:53.448Z", "content": text},
+            {"type": "attachment", "attachment": {
+                "type": "queued_command", "prompt": text,
+                "commandMode": "task-notification"}},
+        ]
+
+    @staticmethod
+    def _send_message(agent_id):
+        return {
+            "type": "assistant",
+            "message": {"role": "assistant", "content": [{
+                "type": "tool_use", "id": "toolu_resume", "name": "SendMessage",
+                "input": {"to": agent_id, "summary": "continue",
+                          "message": "keep going"}}]},
+        }
+
+    @staticmethod
+    def _resume_result(agent_id):
+        # Trimmed from a real 2.1.281 line: SendMessage addressed by NAME, so
+        # only this tool_result carries the id.
+        return {
+            "type": "user",
+            "message": {"role": "user", "content": [{
+                "tool_use_id": "toolu_01AQTS2z2WYtZoxcwL3JZFjL",
+                "type": "tool_result", "content": "Resuming agent sleeper"}]},
+            "toolUseResult": {
+                "success": True, "message": "Resuming agent sleeper",
+                "resumedAgentId": agent_id,
+                "pin": {"id": agent_id, "name": "sleeper", "ref": "8cd76e"}},
+            "version": "2.1.281",
+        }
+
+    def test_taskstop_result_settles_the_killed_child(self):
+        self._sidecar("d1111111111111111")
+        self._transcript(*self._taskstop("d1111111111111111"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_killed_notification_never_settles(self):
+        # A queued prompt can start with the same text, so no record kind of a
+        # notification settles; only the TaskStop result does.
+        self._sidecar("d2222222222222222")
+        queued, delivered = self._notification("d2222222222222222")
+        self._transcript(dict(queued, content=queued["content"] + "\nwhy was it killed?"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+        self._transcript(delivered)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_the_kills_own_notification_keeps_it_settled(self):
+        # The real 2.1.281 order: enqueue, TaskStop result, delivery, remove.
+        self._sidecar("d8888888888888888")
+        queued, delivered = self._notification("d8888888888888888")
+        self._transcript(queued, *self._taskstop("d8888888888888888"),
+                         delivered, dict(queued, operation="remove"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_send_message_after_the_kill_makes_it_live_again(self):
+        self._sidecar("d3333333333333333")
+        self._transcript(*self._taskstop("d3333333333333333"),
+                         *self._notification("d3333333333333333"))
+        self._transcript(self._send_message("d3333333333333333"))
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d3333333333333333", reason)
+
+    def test_a_late_remove_row_does_not_undo_a_resume(self):
+        self._sidecar("d4444444444444444")
+        queued, _ = self._notification("d4444444444444444")
+        self._transcript(*self._taskstop("d4444444444444444"),
+                         self._send_message("d4444444444444444"),
+                         dict(queued, operation="remove", reason="absorbed_mid_turn"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_late_attachment_does_not_undo_a_resume_by_name(self):
+        self._sidecar("d5555555555555555")
+        _, delivered = self._notification("d5555555555555555")
+        self._transcript(*self._taskstop("d5555555555555555"),
+                         self._resume_result("d5555555555555555"), delivered)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_an_unrelated_taskstop_does_not_settle_this_child(self):
+        self._sidecar("d6666666666666666")
+        self._transcript(*self._taskstop("d7777777777777777"))
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d6666666666666666", reason)
+
+    def test_a_resume_by_name_makes_it_live_again(self):
+        self._sidecar("e1111111111111111")
+        self._transcript(*self._taskstop("e1111111111111111"),
+                         self._resume_result("e1111111111111111"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_resumed_by_the_user_notification_makes_it_live_again(self):
+        # Shape inferred from the 2.1.281 binary, not captured live.
+        self._sidecar("e2222222222222222")
+        queued, _ = self._notification("e2222222222222222")
+        resumed = dict(queued, content=(
+            "<task-notification>\n<task-id>e2222222222222222</task-id>\n"
+            "<summary>Agent \"x\" was resumed by the user</summary>\n"
+            "</task-notification>"))
+        self._transcript(*self._taskstop("e2222222222222222"), resumed)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_later_non_kill_notification_makes_it_live_again(self):
+        self._sidecar("e3333333333333333")
+        later, _ = self._notification("e3333333333333333", "completed")
+        self._transcript(*self._taskstop("e3333333333333333"), later)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_y_quoting_a_notification_for_x_does_not_reopen_x(self):
+        # Y's final text in <result> quotes notifications; only the header of
+        # the first block is Y's own.
+        self._sidecar("e4444444444444444")
+        queued, _ = self._notification("e5555555555555555", "completed")
+        quoted_z = self._notification("e6666666666666666", "completed")[0]["content"]
+        quoted_x = self._notification("e4444444444444444", "completed")[0]["content"]
+        y_done = queued["content"].replace(
+            "</task-notification>",
+            "<result>seen: " + quoted_z + quoted_x + "</result>\n</task-notification>")
+        self._transcript(*self._taskstop("e4444444444444444"),
+                         dict(queued, content=y_done))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_second_taskstop_after_a_resume_settles_again(self):
+        self._sidecar("e5555555555555555")
+        self._transcript(*self._taskstop("e5555555555555555"),
+                         self._send_message("e5555555555555555"),
+                         *self._taskstop("e5555555555555555"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_deeply_nested_line_does_not_drop_every_worker(self):
+        self._sidecar("e7777777777777777")
+        with open(self.transcript_path, "a", encoding="utf-8") as fh:
+            fh.write('{"id":"e7777777777777777","x":' + "[" * 100000
+                     + "]" * 100000 + "}\n")
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_stop_result_answering_another_tool_does_not_settle(self):
+        self._sidecar("e9111111111111111")
+        self._transcript(*self._taskstop("e9111111111111111", tool="mcp__x__y"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_stop_result_with_no_call_does_not_settle(self):
+        self._sidecar("e9222222222222222")
+        self._transcript(*self._taskstop("e9222222222222222", use=False))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_managers_sidechain_taskstop_settles_its_builder(self):
+        # A nested caller's transcript is all sidechain lines.
+        manager = self._sidecar("e9333333333333333", agent_type="atelier:manager")
+        self._sidecar("e9444444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in self._taskstop("e9444444444444444", sidechain=True):
+                fh.write(json.dumps(obj) + "\n")
+        self._assert_silent(self._run(self._payload(
+            "git commit -m wave", transcript_path=own, agent_id=manager)))
+
+    def test_a_statusless_resume_quoting_a_kill_still_reopens(self):
+        self._sidecar("e9555555555555555")
+        queued, _ = self._notification("e9555555555555555")
+        resumed = dict(queued, content=(
+            "<task-notification>\n<task-id>e9555555555555555</task-id>\n"
+            "<summary>Agent \"x\" was resumed by the user</summary>\n"
+            "<result>earlier: <status>killed</status></result>\n"
+            "</task-notification>"))
+        self._transcript(*self._taskstop("e9555555555555555"), resumed)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_non_kill_notification_only_as_an_attachment_reopens(self):
+        self._sidecar("e9666666666666666")
+        _, delivered = self._notification("e9666666666666666", "completed")
+        self._transcript(*self._taskstop("e9666666666666666"), delivered)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_non_kill_notification_only_as_a_user_line_reopens(self):
+        self._sidecar("e9777777777777777")
+        queued, _ = self._notification("e9777777777777777", "completed")
+        user_line = {"type": "user", "origin": {"kind": "task-notification"},
+                     "message": {"role": "user", "content": queued["content"]}}
+        self._transcript(*self._taskstop("e9777777777777777"), user_line)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_failed_taskstop_does_not_settle(self):
+        self._sidecar("e8888888888888888")
+        call, failed = self._taskstop("e8888888888888888")
+        failed["toolUseResult"]["message"] = "Task e8888888888888888 is not running"
+        self._transcript(call, failed)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
     def test_worktree_isolated_child_never_blocks(self):
         self._sidecar("c3333333333333333",
                       worktree_path="/tmp/worktrees/agent-c3333333333333333")

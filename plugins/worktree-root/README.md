@@ -63,7 +63,8 @@ Once a WorktreeCreate hook owns creation, the harness skips its own `.worktreein
 copy and keeps every agent worktree, so the hook restores both. Removal, after a
 subagent or on `ExitWorktree`, touches only a worktree shaped like one this hook creates
 (`<root>/<name>` on branch `worktree-<name>`) that has no uncommitted or untracked
-change and no commit other refs lack. Anything else is kept, and `ExitWorktree` reports
+change (untracked files count even under `status.showUntrackedFiles=no`), no
+assume-unchanged or skip-worktree entry (either can hide an edit), and no commit other refs lack. Anything else is kept, and `ExitWorktree` reports
 why. With the key set, a native `.claude/worktrees` path, such as one a `claude
 --worktree` session made, is also accepted for removal under the same checks.
 
