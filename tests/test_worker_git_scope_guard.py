@@ -238,6 +238,8 @@ class CommandParsingTests(unittest.TestCase):
             "grep -q '<<EOF' gen.sh &&\n  git stash\ncat > f <<EOF\nbody\nEOF",
             "echo $(( 1 <<3 ))\ngit stash\n3",
             'echo "a\n<<EOF"\ngit stash\nEOF',
+            "echo $(( 1 << n ))\ngit stash\nn",
+            "(( y = 1 << n ))\ngit stash\nn",
         ):
             with self.subTest(command=command):
                 self.assertTrue(blocked(command))

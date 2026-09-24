@@ -245,8 +245,7 @@ SEPARATOR_CHARS = "&|;(){}<>"
 
 # A heredoc opener. The lookarounds reject a `<<<` herestring. A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
-# word, and a shift by a name (`y << n`) drops lines only if a later line is
-# exactly that name.
+# word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
 HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
 
 
@@ -332,7 +331,8 @@ def _scan_line(line, quote):
     starts in.
 
     An opener counts only outside quotes and outside a comment, and never with
-    an all-digit word, which is a shift (`$(( 1 <<3 ))`). A backslash escapes
+    an all-digit word or inside an unclosed `((`, where it is a shift
+    (`$(( 1 <<3 ))`, `(( y = 1 << n ))`). A backslash escapes
     the next character outside single quotes, and inside `$'...'` too. A `#`
     at the start of the line, after whitespace or after one of `;&|()` runs to
     the line end, so an apostrophe in a comment opens no quote.
@@ -360,7 +360,8 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if m and not m.group(1).isdigit():
+            if (m and not m.group(1).isdigit()
+                    and line.count("((", 0, i) <= line.count("))", 0, i)):
                 terminator = terminator or m.group(1)
                 i = m.end()
                 continue

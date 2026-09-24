@@ -1055,6 +1055,11 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             ("echo \"<<Z\" $'a\\' <<A'\ngit push\nA", "push"),
             ("ls;# it's\ngit push", "push"),
             ("echo $'it\\'s'\ngit push", "push"),
+            # A shift by a name inside `(( ))` is arithmetic, not a heredoc.
+            ("echo $(( 1 << n ))\ngit commit -m x\nn", "commit"),
+            ("(( y = 1 << n ))\ngit commit -m x\nn", "commit"),
+            ("bits=3\necho $(( 1 << bits ))\ngit commit -m x\nbits", "commit"),
+            ("echo $(( 1 << n ))\necho; git commit -m x\nn", "commit"),
         )
         for command, verb in cases:
             with self.subTest(command=command):
