@@ -19,7 +19,9 @@ in [`../CLAUDE.md`](../CLAUDE.md) and [`../primitives-core/README.md`](../primit
    the primitive ships — there is no build step. (Shipping a primitive in another plugin =
    one more symlink in that assembly + nothing else.)
 3. **Gate locally:** `make ci` (see below) must be fully green.
-4. **Open a PR into `dev`.** CI re-runs `make ci` on every PR into `dev`.
+4. **Open a PR into `dev`.** CI re-runs `make ci` on every PR into `dev`. A PR is the only way
+   in: branch protection refuses direct pushes to `dev`, admins included. After each merge CI
+   runs again on the `push` to `dev`; that post-merge run is the evidence `dev` is green.
 
 ```bash
 git switch -c my-change dev
