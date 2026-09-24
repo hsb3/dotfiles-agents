@@ -320,26 +320,31 @@ def main_checkout(project_dir):
 def checkout_root(project_dir):
     """`checkout-root` as a resolved absolute Path, None when unset; invalid raises ValueError.
 
-    Relative values resolve against the main checkout, so every worktree agrees. The
-    project, its ancestors, $HOME and the git dir are refused: each would widen the Codex
-    sandbox, scatter lane snapshots, or let `git worktree prune` delete a checkout.
+    `project_dir` may be any directory in the repo: the key is read from the main
+    checkout, so every worktree and every reader agrees. Allowlist: the resolved root
+    must sit strictly inside the main checkout and outside the git dir; anything else
+    would widen the Codex sandbox, scatter lane snapshots, or be pruned by git. A
+    layout with no main checkout (separate git dir, bare) refuses a set key.
     """
-    value = read_key(project_dir, "checkout-root")
+    try:
+        main, common = main_checkout(project_dir)
+    except ValueError as exc:
+        main, layout = None, exc
+    value = read_key(str(main) if main else project_dir, "checkout-root")
     if isinstance(value, str):
         value = value.strip()
     if value is None or value == "":
         return None
     if not isinstance(value, str):
         raise ValueError("checkout-root must be a single path, not {0!r}".format(value))
-    try:
-        main, common = main_checkout(project_dir)
-    except ValueError as exc:
-        raise ValueError("checkout-root {0!r}: {1}".format(value, exc)) from exc
+    if "$" in value:
+        raise ValueError("checkout-root {0!r}: variables are not expanded".format(value))
+    if main is None:
+        raise ValueError("checkout-root {0!r}: {1}".format(value, layout))
     root = Path(os.path.join(main, os.path.expanduser(value))).resolve()
-    if (root == main or root in main.parents
-            or root == Path(os.path.expanduser("~")).resolve() or root.is_relative_to(common)):
-        raise ValueError("checkout-root {0!r} resolves to {1}: the project, an ancestor of it, "
-                         "$HOME or inside {2} is refused".format(value, root, common))
+    if root == main or not root.is_relative_to(main) or root.is_relative_to(common):
+        raise ValueError("checkout-root {0!r} resolves to {1}: it must be strictly inside the "
+                         "project {2} and outside {3}".format(value, root, main, common))
     if root.exists() and not root.is_dir():
         raise ValueError("checkout-root {0!r} resolves to {1}, which is not a directory".format(
             value, root))

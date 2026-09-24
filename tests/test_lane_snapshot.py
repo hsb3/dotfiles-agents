@@ -309,6 +309,40 @@ class SnapshotPass(unittest.TestCase):
                 self.assertIn("checkout-root", error or "")
                 self.assertEqual(lanes, [self.lane])
 
+    def test_a_root_outside_the_project_is_never_globbed(self):
+        os.symlink("/etc", os.path.join(self.box.root, "etclink"))
+        for value in ("/etc", "etclink", "~/..", "$HOME"):
+            with self.subTest(value=value):
+                write(os.path.join(self.box.root, ".agents", "atelier.local.md"),
+                      "---\ncheckout-root: {0}\n---\n".format(value))
+                with mock.patch.dict(os.environ, HOME=os.path.join(self.box.base, "home", "me")):
+                    patterns, error = snapshot_lanes.default_patterns(self.box.root)
+                self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+                self.assertIn("checkout-root", error or "")
+
+    def separate_git_dir(self, value):
+        root = os.path.join(self.box.base, "sep")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(self.box.base, "store.git"), root],
+                       check=True, capture_output=True)
+        write(os.path.join(root, ".agents", "atelier.local.md"),
+              "---\n" + ("checkout-root: " + value + "\n" if value else "") + "---\n")
+        rows = []
+        snapshot_lanes.scan(root, rows.append)
+        return snapshot_lanes.default_patterns(root), rows[-1]
+
+    def test_separate_git_dir_with_the_key_falls_back_and_warns(self):
+        (patterns, error), row = self.separate_git_dir(".worktrees")
+        self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+        self.assertIn("unsupported git layout", error or "")
+        self.assertIn("unsupported git layout", row.get("warning", ""))
+
+    def test_separate_git_dir_without_the_key_uses_the_default_silently(self):
+        (patterns, error), row = self.separate_git_dir(None)
+        self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+        self.assertIsNone(error)
+        self.assertNotIn("checkout-root", row.get("warning", ""))
+
     def test_the_env_glob_still_wins_over_the_checkout_root_key(self):
         self.checkout_root_lane(".worktrees", ".worktrees", "t1", "lane-r")
         write(os.path.join(self.lane, "draft.txt"), "wip\n")

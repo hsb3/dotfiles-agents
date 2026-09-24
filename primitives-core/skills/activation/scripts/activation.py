@@ -495,7 +495,7 @@ def evaluate(project_dir, modules):
     except ValueError:
         policy_dir = project_dir
     try:
-        root = worker.atelier_local.checkout_root(policy_dir)
+        root = worker.atelier_local.checkout_root(project_dir)
     except ValueError as exc:
         result["rows"].append(_row(
             "checkout-root", "inert",
@@ -706,6 +706,32 @@ def cmd_create(project_dir, force, out):
 # CLI
 # ---------------------------------------------------------------------------
 
+def _managed_block(text, marker, tomllib):
+    """(start, end) of atelier's own writable-roots block, or None.
+
+    The block is the marker, the table header, and a `writable_roots` array that may
+    span lines (a TOML formatter reflows it): lines are taken until the header plus
+    them parses to a list. Anything else is the user's table."""
+    header = marker + "[sandbox_workspace_write]\n"
+    match = re.search("^" + re.escape(header), text, re.M)
+    if not match:
+        return None
+    end = match.end()
+    lines = text[end:].splitlines(keepends=True)
+    if not lines or not lines[0].startswith("writable_roots"):
+        return None
+    for line in lines:
+        end += len(line)
+        try:
+            table = tomllib.loads(header + text[match.end():end])
+        except tomllib.TOMLDecodeError:
+            continue
+        if isinstance(table["sandbox_workspace_write"].get("writable_roots"), list):
+            return match.start(), end
+        return None
+    return None
+
+
 def codex_setup(project_dir, out, check=False, refresh_global=False):
     """Generate local roles and the narrow writable-root addition; never approve hooks."""
     roots = _hook_roots()
@@ -724,7 +750,7 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
             text=True, env=codex_workers.clean_git_env()).strip()
         common = (Path(project_dir) / common).resolve()
         # The main checkout's policy, the same one codex_workers places checkouts by.
-        root = local.checkout_root(str(common.parent))
+        root = local.checkout_root(project_dir)
         writable = [str(root or common / "atelier-codex/checkouts")] + [str(common / path) for path in
                     ("worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
         config = Path(project_dir) / ".codex/config.toml"
@@ -759,8 +785,7 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
             return EXIT_PROBLEM
         marker = "# atelier managed writable roots\n"
         # Atelier's own block, exactly as written below; anything else in the table is the user's.
-        managed = re.search("^" + re.escape(marker) + r"\[sandbox_workspace_write\]\n"
-                            r"writable_roots = .*$\n?", text, re.M) if missing else None
+        managed = _managed_block(text, marker, tomllib) if missing else None
         if missing and "sandbox_workspace_write" in parsed and not managed:
             print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
                   + json.dumps(missing), file=out)
@@ -774,13 +799,24 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
         block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable)
         new_text = text
         if managed:
-            new_text = text[:managed.start()] + block + "\n" + text[managed.end():]
+            new_text = text[:managed[0]] + block + "\n" + text[managed[1]:]
         elif missing:
             additions.append(block)
         if agents is None:
             additions.append("[agents]\nmax_depth = 2")
         if additions:
             new_text = new_text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n"
+        try:
+            composed = tomllib.loads(new_text)
+        except tomllib.TOMLDecodeError as exc:
+            composed = exc
+        if new_text != text and (not isinstance(composed, dict) or missing and composed.get(
+                "sandbox_workspace_write", {}).get("writable_roots") != writable):
+            print("ERROR  refusing to write {0}: the updated config would not parse to these "
+                  "writable_roots ({1}); add them by hand: {2}".format(
+                      config, composed if not isinstance(composed, dict) else "wrong value",
+                      json.dumps(writable)), file=out)
+            return EXIT_PROBLEM
         if new_text != text and not check:
             config.parent.mkdir(parents=True, exist_ok=True)
             config.write_text(new_text)

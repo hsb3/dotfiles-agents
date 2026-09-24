@@ -487,6 +487,40 @@ class CodexWorkersTests(unittest.TestCase):
                     self.mod.register(self.payload(), isolate=True)
                 self.assertEqual(self.listed_worktrees(), [self.repo.resolve()])
 
+    def separate_git_dir_repo(self):
+        # `git init --separate-git-dir`: the common dir is not `<project>/.git`.
+        self.repo = Path(self.tmp.name) / 'sep'
+        subprocess.run(['git', 'init', '-q', '-b', 'dev', '--separate-git-dir',
+                        str(Path(self.tmp.name) / 'store.git'), str(self.repo)],
+                       check=True, capture_output=True)
+        self.git('-c', 'user.name=Test', '-c', 'user.email=test@invalid',
+                 'commit', '--allow-empty', '-m', 'Baseline')
+        self.activation()
+
+    def test_separate_git_dir_with_checkout_root_refuses_without_a_worktree(self):
+        self.separate_git_dir_repo()
+        self.checkout_root('.worktrees')
+        with self.assertRaisesRegex(self.mod.WorkerError, 'checkout-root.*unsupported git layout'):
+            self.mod.register(self.payload(), isolate=True)
+        self.assertEqual(len(self.listed_worktrees()), 1)  # git lists only the main entry
+        self.assertFalse((Path(self.tmp.name) / 'store.git/atelier-codex/checkouts').exists())
+
+    def test_separate_git_dir_without_checkout_root_keeps_the_default(self):
+        self.separate_git_dir_repo()
+        record = self.mod.register(self.payload(), isolate=True)
+        self.assertEqual(Path(record['worktree']), (Path(self.tmp.name) / 'store.git').resolve()
+                         / 'atelier-codex/checkouts/session-a/worker-a')
+
+    def test_system_or_home_ancestor_checkout_root_is_refused(self):
+        original = (self.repo / '.claude/atelier.local.md').read_text()
+        for value in ('/etc', '~/..', '$HOME'):
+            with self.subTest(value=value):
+                (self.repo / '.claude/atelier.local.md').write_text(original)
+                self.checkout_root(value)
+                with self.assertRaisesRegex(self.mod.WorkerError, 'checkout-root'):
+                    self.mod.register(self.payload(), isolate=True)
+                self.assertEqual(self.listed_worktrees(), [self.repo.resolve()])
+
     def test_routed_followup_revives_stopped_worker(self):
         p = self.payload()
         self.mod.register(p, isolate=True)

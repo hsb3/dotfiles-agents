@@ -636,16 +636,14 @@ class CheckoutRootTests(_Base):
         self.assertEqual(str(self.root(self.worktree)), os.path.join(self.main, ".worktrees"))
 
     def test_absolute_value_is_normalized(self):
-        self.policy("checkout-root: " + self.tmp.name + "/x/../elsewhere\n")
-        self.assertEqual(str(self.root()),
-                         os.path.join(os.path.realpath(self.tmp.name), "elsewhere"))
+        self.policy("checkout-root: " + self.main + "/x/../elsewhere\n")
+        self.assertEqual(str(self.root()), os.path.join(self.main, "elsewhere"))
 
     def test_tilde_is_expanded(self):
-        self.policy("checkout-root: ~/checkouts\n")
+        self.policy("checkout-root: ~/main/checkouts\n")
         from unittest.mock import patch
         with patch.dict(os.environ, HOME=self.tmp.name):
-            self.assertEqual(str(self.root()),
-                             os.path.join(os.path.realpath(self.tmp.name), "checkouts"))
+            self.assertEqual(str(self.root()), os.path.join(self.main, "checkouts"))
 
     # -- unsafe values: every reader goes through checkout_root, so it refuses them --
 
@@ -697,6 +695,43 @@ class CheckoutRootTests(_Base):
         self.policy("checkout-root: .worktrees\n", where=work)
         with self.assertRaisesRegex(ValueError, "checkout-root.*unsupported git layout"):
             self.root(work)
+
+    def test_anything_outside_the_project_is_rejected(self):
+        # Allowlist: strictly inside the main checkout. System dirs and ancestors of
+        # $HOME were armed under the old denylist (review-581 FR1).
+        home = os.path.join(os.path.realpath(self.tmp.name), "home", "me")
+        os.makedirs(home)
+        os.symlink("/etc", os.path.join(self.main, "etclink"))
+        from unittest.mock import patch
+        with patch.dict(os.environ, HOME=home):
+            for value in ("/etc", "etclink", "~/..", os.path.dirname(home), "/usr",
+                          os.path.join(os.path.realpath(self.tmp.name), "elsewhere")):
+                with self.subTest(value=value):
+                    self.assertIn("inside the project", self.assertRejected(value))
+
+    def test_a_variable_is_rejected_unexpanded(self):
+        for value in ("$HOME", "${HOME}/x", ".worktrees/$USER"):
+            with self.subTest(value=value):
+                self.assertIn("not expanded", self.assertRejected(value))
+
+    def test_quoted_or_commented_unsafe_values_are_rejected(self):
+        for value in ("'/'", '"~"', "/ # x", ".. # x", "'/etc'"):
+            with self.subTest(value=value):
+                self.assertRejected(value)
+
+    def test_separate_git_dir_key_absent_is_the_default(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep-wt")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store.git"), work], check=True, capture_output=True)
+        self.policy("", where=work)
+        self.assertIsNone(self.root(work))
+
+    def test_a_subdirectory_reads_the_main_checkout_policy(self):
+        self.policy("checkout-root: .worktrees\n")
+        sub = os.path.join(self.main, "sub")
+        os.makedirs(sub)
+        self.assertEqual(str(self.root(sub)), os.path.join(self.main, ".worktrees"))
 
     def test_symlink_to_a_subdirectory_is_accepted_resolved(self):
         real = os.path.join(self.main, ".worktrees")

@@ -15,6 +15,7 @@ import importlib.util
 import io
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -547,6 +548,32 @@ class CheckoutRootTests(_Base):
                 self.assertIn("inert", row)
                 self.assertIn("blocks every isolated Codex dispatch", row)
                 self.assertNotIn("armed", row)
+
+    def test_outside_the_project_is_reported_as_blocking(self):
+        for value in ("/etc", "$HOME"):
+            with self.subTest(value=value):
+                self.write("---\nenforce: strict\ncheckout-root: " + value + "\n---\n",
+                           project=self.main)
+                code, output = self.check(project=self.main)
+                self.assertEqual(code, 1, output)
+                row = self.row(output, "checkout-root")
+                self.assertIn("blocks every isolated Codex dispatch", row)
+                self.assertNotIn("armed", row)
+
+    def test_separate_git_dir_with_the_key_is_reported_as_blocking(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store.git"), work], check=True, capture_output=True)
+        os.makedirs(os.path.join(work, ".claude"))
+        self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=work)
+        code, output = self.check(project=work)
+        self.assertEqual(code, 1, output)
+        self.assertIn("unsupported git layout", self.row(output, "checkout-root"))
+        self.write("---\nenforce: strict\n---\n", project=work)
+        code, output = self.check(project=work)
+        self.assertEqual(code, 0, output)
+        self.assertIn("not configured", self.row(output, "checkout-root"))
 
     def test_linked_worktree_reports_the_main_checkout_policy(self):
         # Dispatch reads the main checkout's policy, so check must too.
