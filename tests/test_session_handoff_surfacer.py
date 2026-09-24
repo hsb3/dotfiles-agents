@@ -33,6 +33,10 @@ from worktree_fixture import make_worktree, require_git  # noqa: E402
 _SEQ = itertools.count()
 
 STAMP = ".claude/handoff.stamp"
+UNARMED = (
+    "atelier is enabled here but not activated: its key-driven hooks are off; "
+    "run /atelier:activate"
+)
 LOCATION = "Kaneo board task DFA-233"
 
 # Written into the stamp file itself. External mode must surface a POINTER, so
@@ -104,7 +108,7 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             "cwd": self.cwd if cwd is None else cwd,
         }
 
-    def _run_hook(self, payload):
+    def _run_hook(self, payload, **extra_env):
         env = {
             "PATH": os.environ.get("PATH", ""),
             # Sandbox the partitioned log root: a run that ever loses its
@@ -114,6 +118,7 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             "HOME": os.path.join(self.tmp.name, "home"),
             "XDG_DATA_HOME": os.path.join(self.tmp.name, "xdg"),
             "HANDOFF_SURFACER_LOG_PATH": self.log_path,
+            **extra_env,
         }
         return subprocess.run(
             [sys.executable, HOOK_PATH],
@@ -147,9 +152,9 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
     # -- tests -----------------------------------------------------------
 
     def test_override_absent_standard_search_unaffected(self):
-        """BACKWARD COMPAT: no activation file at all -- byte-identical to
-        pre-external-mode behavior, the standard candidate-path search finds
-        HANDOFF.md and the excerpt is unchanged."""
+        """BACKWARD COMPAT: no activation file outside a git repo -- the
+        standard candidate-path search finds HANDOFF.md and the excerpt is
+        unchanged."""
         self._write_file("HANDOFF.md", "root handoff\n")
         result = self._run_hook(self._payload())
         self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
@@ -159,6 +164,83 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             "A project handoff exists at HANDOFF.md — read it before starting. "
             "First lines:\nroot handoff",
         )
+
+    # -- not activated ---------------------------------------------------
+
+    def _repo(self):
+        require_git()
+        subprocess.run(["git", "init", "-q", self.cwd], check=True, capture_output=True)
+
+    def test_outside_a_git_repo_stays_silent(self):
+        self._assert_silent(self._run_hook(self._payload()))
+
+    def test_no_activation_file_says_atelier_is_not_activated(self):
+        self._repo()
+        context, system = self._surfaced(self._run_hook(self._payload()))
+        self.assertEqual(context, UNARMED)
+        self.assertEqual(system, UNARMED)
+
+    def test_not_activated_line_precedes_the_handoff_excerpt(self):
+        self._repo()
+        self._write_file("HANDOFF.md", "root handoff\n")
+        context, _ = self._surfaced(self._run_hook(self._payload()))
+        self.assertEqual(
+            context,
+            UNARMED + "\n\n"
+            "A project handoff exists at HANDOFF.md — read it before starting. "
+            "First lines:\nroot handoff",
+        )
+
+    def test_explicit_activation_file_that_is_missing_is_not_activated(self):
+        self._repo()
+        context, _ = self._surfaced(self._run_hook(
+            self._payload(), ATELIER_ACTIVATION_FILE="policy/missing.md"))
+        self.assertEqual(context, UNARMED)
+
+    def test_linked_worktree_without_any_activation_file_is_told(self):
+        require_git()
+        _main, worktree_dir = make_worktree(os.path.join(self.tmp.name, "repo"))
+        context, _ = self._surfaced(self._run_hook(self._payload(cwd=worktree_dir)))
+        self.assertEqual(context, UNARMED)
+
+    def test_linked_worktree_inherits_the_main_checkouts_activation(self):
+        require_git()
+        _main, worktree_dir = make_worktree(os.path.join(self.tmp.name, "repo"),
+                                            files={".claude/atelier.local.md": "---\n---\n"})
+        self._assert_silent(self._run_hook(self._payload(cwd=worktree_dir)))
+
+    def test_clear_also_says_not_activated(self):
+        self._repo()
+        context, _ = self._surfaced(self._run_hook(self._payload(source="clear")))
+        self.assertEqual(context, UNARMED)
+
+    def test_not_activated_line_stays_off_warm_sources(self):
+        self._repo()
+        for source in ("resume", "compact"):
+            self._assert_silent(self._run_hook(self._payload(source=source)))
+
+    def test_opt_out_env_silences_the_not_activated_line(self):
+        self._repo()
+        for value in ("off", "OFF", " off "):
+            self._assert_silent(self._run_hook(
+                self._payload(), ATELIER_ACTIVATION_NUDGE=value))
+
+    def test_subagent_is_never_told(self):
+        self._repo()
+        payload = self._payload()
+        payload["agent_type"] = "builder"
+        self._assert_silent(self._run_hook(payload))
+
+    def test_codex_stays_silent_on_an_inactive_project(self):
+        self._repo()
+        self._assert_silent(self._run_hook(self._payload(), ATELIER_HARNESS="codex"))
+
+    def test_any_activation_file_counts_as_activated(self):
+        self._repo()
+        self._write_activation()
+        self._assert_silent(self._run_hook(self._payload()))
+        self._write_activation(raw_text="not frontmatter at all\n")
+        self._assert_silent(self._run_hook(self._payload()))
 
     def test_override_existing_file_wins_over_standard_candidate(self):
         """BACKWARD COMPAT: the bare-path scalar form still wins and still
