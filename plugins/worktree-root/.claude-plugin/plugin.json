@@ -5,5 +5,5 @@
   "description": "Put Claude Code worktrees under the project checkout-root instead of .claude/worktrees: one hook creates them with native branch naming, base ref and .worktreeinclude copying, refuses a bad root or name loudly, and removes a clean agent worktree when the subagent stops. Opt-in per project. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "worktree-root",
   "repository": "https://github.com/hsb3/dotfiles-agents",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
