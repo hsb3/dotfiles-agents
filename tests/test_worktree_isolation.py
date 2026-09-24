@@ -429,8 +429,8 @@ class WorktreeIsolationTests(unittest.TestCase):
         """The field failure this covers: a manager briefed a builder's owned
         files as absolute paths into the manager's own worktree, assuming a
         shared checkout was available. It isn't under `isolate: writers` — the
-        worker always gets its own tree — so the notice says so at dispatch
-        time, before the manager writes a brief the builder cannot satisfy."""
+        worker always gets its own tree — so the notice says so. It reaches the
+        manager with the Agent result, so it informs the manager's next brief."""
         _main_dir, worktree_dir = self._armed_worktree()
         body, updated = self._rewrite(self._payload(cwd=worktree_dir))
         self.assertEqual(updated["isolation"], "worktree")

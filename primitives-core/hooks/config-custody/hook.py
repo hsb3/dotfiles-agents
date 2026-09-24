@@ -64,8 +64,8 @@ LOG_PATH_ENV = "ATELIER_CUSTODY_LOG_PATH"
 # file and reading it into a hook that runs on every edit is not worth it.
 ACTIVATION_MAX_BYTES = 256 * 1024
 
-# Both git reads can run on one call, so the pair has to fit inside the hook
-# timeout `config.json` declares (10s) with room for interpreter startup.
+# Per git call. A cross-worktree miss can chain several and exceed the 10s hook
+# timeout in `config.json`; the harness treats that as non-blocking (fail-open).
 GIT_TIMEOUT = 3
 
 OFF = "off"

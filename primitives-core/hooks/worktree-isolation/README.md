@@ -92,8 +92,8 @@ recorded so this is not re-litigated:
 What nesting actually costs is integration ergonomics — the dispatcher has to collect each
 worker's commits and clean up the leftovers — and briefing ergonomics: a dispatcher that
 mistakes the worker's checkout for its own hands out absolute paths that resolve nowhere the
-worker can write. So the notice on a nested rewrite carries both, at dispatch time rather than
-after a builder's writes land somewhere unexpected:
+worker can write. So the notice on a nested rewrite carries both. It reaches the dispatcher with
+the Agent result, not before the brief is written, so it informs the next brief, not this one:
 
 ```
 … You are standing in a linked worktree yourself, so this one is NESTED under it on its own
@@ -265,8 +265,8 @@ string test reports every subdirectory as a worktree.
 - **Announced, not silent.** The rewrite moves the worker to a checkout where the session's
   uncommitted work does not exist. That is worth one line of `systemMessage`, so a surprised reader
   can trace the behaviour to this hook rather than to the harness. `systemMessage` reaches only the
-  user, so the same notice also goes out as `additionalContext`, the copy the dispatcher reads —
-  the nested clause is addressed to it.
+  user, so every rewrite also sends the notice as `additionalContext`, the copy the dispatcher
+  reads. PreToolUse delivers that alongside the tool result, so it lands after the worker returns.
 - **Fail-open, always.** Every path exits 0. An un-isolated worker is the pre-hook status quo and
   merely risky; a hook that crashes on every dispatch is an outage.
 - **The activation parser is shared; the sourcing is not.** Parsing lives in

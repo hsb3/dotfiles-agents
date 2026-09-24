@@ -103,8 +103,8 @@ So the edited path is relativized against the **worktree root** when it sits ins
 to the first directory holding a `.git` **file** — a linked worktree's `.git` is a file pointing at
 the shared git dir, where an ordinary checkout's is a directory, so a vendored sub-repo nested in
 the project is correctly *not* a jurisdiction. The walk stops at the project dir, so the walk
-alone never relocates custody outside the project. No subprocess: a handful of `os.path` calls on
-the miss.
+alone never relocates custody outside the project; the walk itself is a handful of `os.path`
+calls.
 
 **Jurisdiction does not depend on the anchor.** A path outside the project dir but inside another
 worktree of the same repository (the main checkout or any linked worktree, found with
@@ -112,7 +112,9 @@ worktree of the same repository (the main checkout or any linked worktree, found
 Edit from a nested worktree into its dispatcher's worktree gets one verdict whether
 `CLAUDE_PROJECT_DIR` is empty or set. A path outside every worktree of the repo, or any git failure,
 stays out of jurisdiction. That lookup is one `git` call, made only for a subagent's edit outside the
-anchor. Bash writes remain outside the matcher either way.
+anchor. Matching against git's listing is lexical: a path spelled through a symlink or alias
+(`/tmp` for `/private/tmp`) does not match and stays out of jurisdiction. Bash writes remain
+outside the matcher either way.
 
 ## Install
 

@@ -432,8 +432,8 @@ def main():
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "updatedInput": updated,
-                # systemMessage is shown to the user only; this is the copy the
-                # dispatcher reads, and the nested clause is addressed to it.
+                # Every rewrite: systemMessage is user-only, this is the dispatcher's
+                # copy, delivered with the Agent result (so it informs the next brief).
                 "additionalContext": notice,
             },
             # Announced rather than silent: the rewrite moves the worker to a
