@@ -208,6 +208,9 @@ class ActivationPathsTests(unittest.TestCase):
         code, output, text, roots = self.rerun_with_checkout_root(main, '.worktrees')
         self.assertEqual(code, 0, output)
         self.assertEqual(roots[0], str(main / '.worktrees'))
+        # A former custom checkout root is indistinguishable from a user root: kept, named.
+        self.assertEqual(roots[-1], str(elsewhere))
+        self.assertIn('kept', output)
         self.assertEqual(text.count('# atelier managed writable roots'), 1)
 
     def rerun_with_checkout_root(self, main, value='.worktrees'):
@@ -232,6 +235,23 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertEqual(text.count('# atelier managed writable roots'), 1)
         self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
         self.assertIn('[profiles.later]\nmodel = "later"\n', text)
+
+    def test_codex_setup_keeps_a_user_root_inside_its_block(self):
+        main, code, output, _, _ = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        config = main / '.codex/config.toml'
+        text = config.read_text()
+        old = __import__('tomllib').loads(text)['sandbox_workspace_write']['writable_roots']
+        mine = str(self.root / 'my-cache')
+        config.write_text(text.replace(__import__('json').dumps(old), __import__('json').dumps(old + [mine])))
+        code, output, text, roots = self.rerun_with_checkout_root(main)
+        self.assertEqual(code, 0, output)
+        common = main / '.git'
+        self.assertEqual(roots, [str(main / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')] + [mine])
+        self.assertIn('kept', output)
+        self.assertIn(mine, output)
+        self.assertEqual(text.count('# atelier managed writable roots'), 1)
 
     def test_codex_setup_still_refuses_a_user_owned_table(self):
         main, _ = make_worktree(str(self.root))
