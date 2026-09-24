@@ -2,6 +2,7 @@
 import io
 import os
 from pathlib import Path
+import shutil
 import tempfile
 import sys
 import unittest
@@ -168,6 +169,30 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertIn('checkout-root', output)
         self.assertIsNone(roots)
         self.assertEqual(text, 'model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
+
+    def test_codex_setup_refuses_an_unsafe_checkout_root(self):
+        for value in ('/', '..', '.git/worktrees'):
+            with self.subTest(value=value):
+                shutil.rmtree(self.root / 'main', ignore_errors=True)
+                shutil.rmtree(self.root / 'worktree', ignore_errors=True)
+                main, code, output, text, roots = self.setup_roots(value)
+                self.assertNotEqual(code, 0)
+                self.assertIn('checkout-root', output)
+                self.assertIsNone(roots)
+                self.assertEqual(text, 'model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
+                self.assertFalse(list((main / '.codex').glob('agents/*')))
+
+    def test_codex_setup_rewrites_a_managed_root_containing_a_bracket(self):
+        main, _ = make_worktree(str(self.root))
+        main = Path(main)
+        elsewhere = self.root.resolve() / 'odd]dir'
+        code, output, _, roots = self.rerun_with_checkout_root(main, str(elsewhere))
+        self.assertEqual(code, 0, output)
+        self.assertEqual(roots[0], str(elsewhere))
+        code, output, text, roots = self.rerun_with_checkout_root(main, '.worktrees')
+        self.assertEqual(code, 0, output)
+        self.assertEqual(roots[0], str(main / '.worktrees'))
+        self.assertEqual(text.count('# atelier managed writable roots'), 1)
 
     def rerun_with_checkout_root(self, main, value='.worktrees'):
         self.write(main / '.codex/atelier.local.md', FULL.replace('---\n', '---\ncheckout-root: ' + value + '\n', 1))

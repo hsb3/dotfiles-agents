@@ -19,6 +19,7 @@ Stdlib-only; fixtures build into a tempdir per test.
 
 import importlib.util
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -636,13 +637,73 @@ class CheckoutRootTests(_Base):
 
     def test_absolute_value_is_normalized(self):
         self.policy("checkout-root: " + self.tmp.name + "/x/../elsewhere\n")
-        self.assertEqual(str(self.root()), os.path.join(self.tmp.name, "elsewhere"))
+        self.assertEqual(str(self.root()),
+                         os.path.join(os.path.realpath(self.tmp.name), "elsewhere"))
 
     def test_tilde_is_expanded(self):
         self.policy("checkout-root: ~/checkouts\n")
         from unittest.mock import patch
         with patch.dict(os.environ, HOME=self.tmp.name):
-            self.assertEqual(str(self.root()), os.path.join(self.tmp.name, "checkouts"))
+            self.assertEqual(str(self.root()),
+                             os.path.join(os.path.realpath(self.tmp.name), "checkouts"))
+
+    # -- unsafe values: every reader goes through checkout_root, so it refuses them --
+
+    def assertRejected(self, value, where=None):
+        self.policy("checkout-root: " + value + "\n")
+        with self.assertRaisesRegex(ValueError, "checkout-root") as caught:
+            self.root(where)
+        return str(caught.exception)
+
+    def test_filesystem_root_is_rejected(self):
+        self.assertIn("'/'", self.assertRejected("/"))
+
+    def test_home_is_rejected(self):
+        home = os.path.join(self.tmp.name, "home")  # not an ancestor of the project
+        os.makedirs(home)
+        from unittest.mock import patch
+        with patch.dict(os.environ, HOME=home):
+            message = self.assertRejected("~")
+        self.assertIn(os.path.realpath(home), message)
+
+    def test_project_parent_is_rejected(self):
+        self.assertIn(os.path.dirname(self.main), self.assertRejected(".."))
+
+    def test_main_checkout_itself_is_rejected(self):
+        self.assertIn(self.main, self.assertRejected("."))
+
+    def test_git_dir_is_rejected(self):
+        self.assertRejected(".git")
+
+    def test_inside_the_git_dir_is_rejected(self):
+        for value in (".git/worktrees", ".git/objects"):
+            with self.subTest(value=value):
+                self.assertRejected(value)
+
+    def test_rejected_from_a_linked_worktree_too(self):
+        self.policy("checkout-root: .git/worktrees\n")
+        with self.assertRaisesRegex(ValueError, "checkout-root"):
+            self.root(self.worktree)
+
+    def test_symlink_to_the_project_parent_is_rejected(self):
+        os.symlink(os.path.dirname(self.main), os.path.join(self.main, "lnk"))
+        self.assertIn(os.path.dirname(self.main), self.assertRejected("lnk"))
+
+    def test_separate_git_dir_is_an_unsupported_layout(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep-wt")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store.git"), work], check=True, capture_output=True)
+        self.policy("checkout-root: .worktrees\n", where=work)
+        with self.assertRaisesRegex(ValueError, "checkout-root.*unsupported git layout"):
+            self.root(work)
+
+    def test_symlink_to_a_subdirectory_is_accepted_resolved(self):
+        real = os.path.join(self.main, ".worktrees")
+        os.makedirs(real)
+        os.symlink(real, os.path.join(self.main, "lnk"))
+        self.policy("checkout-root: lnk\n")
+        self.assertEqual(str(self.root()), real)
 
     def test_list_or_mapping_is_invalid(self):
         for value in ("checkout-root: [a, b]\n", "checkout-root:\n  - a\n",

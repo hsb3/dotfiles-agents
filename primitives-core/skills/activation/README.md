@@ -68,7 +68,7 @@ Malformed selected policies never fall back. Custody reads the selected policy f
 
 `codex-setup` resolves each role from its project profile first, then a current managed global profile, and only bootstraps missing roles locally. It adds project writable roots without touching hook trust. `check --harness codex` is read-only; stale global profiles require explicit `codex-setup --refresh-global`. It reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
 
-`checkout-root` moves Codex worker checkouts, read from the main checkout's policy; setup makes it the first writable root, rewrites its own marked writable-roots table when the key changes, and adds an in-tree root to `info/exclude`.
+`checkout-root` moves Codex worker checkouts, read from the main checkout's policy; setup makes it the first writable root, rewrites its own marked writable-roots table when the key changes, and adds an in-tree root to `info/exclude`. The project itself, its ancestors, `$HOME`, anything inside `.git`, and a separate-git-dir or bare layout are refused; `check` reports the refusal and nothing is armed.
 
 Watermark diagnostics include an optional `notice` threshold when the hook loader returns it.
 

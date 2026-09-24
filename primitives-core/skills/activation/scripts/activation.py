@@ -488,21 +488,27 @@ def evaluate(project_dir, modules):
 
     # -- checkout-root (atelier_local.checkout_root; read directly by codex_workers.py
     # and this script's own Codex setup, neither of which is one of the loaded hooks) --
+    # Both read the main checkout's policy, so a linked worktree's own copy is not what runs.
     checkout_sources = ["codex_workers", "activation.py"]
-    if "checkout-root" not in present:
-        result["rows"].append(_row("checkout-root", "not configured", "", checkout_sources))
+    try:
+        policy_dir = str(worker.atelier_local.main_checkout(project_dir)[0])
+    except ValueError:
+        policy_dir = project_dir
+    try:
+        root = worker.atelier_local.checkout_root(policy_dir)
+    except ValueError as exc:
+        result["rows"].append(_row(
+            "checkout-root", "inert",
+            "invalid, so it blocks every isolated Codex dispatch: " + str(exc), checkout_sources))
     else:
-        try:
-            root = worker.atelier_local.checkout_root(project_dir)
-        except ValueError as exc:
-            result["rows"].append(_row("checkout-root", "inert", str(exc), checkout_sources))
+        if root is not None:
+            result["rows"].append(_row("checkout-root", "armed", str(root), checkout_sources))
+        elif "checkout-root" in present and os.path.samefile(policy_dir, project_dir):
+            result["rows"].append(_row(
+                "checkout-root", "not configured",
+                "blank - the default checkout root is used", checkout_sources))
         else:
-            if root is None:
-                result["rows"].append(_row(
-                    "checkout-root", "not configured",
-                    "blank - the default checkout root is used", checkout_sources))
-            else:
-                result["rows"].append(_row("checkout-root", "armed", str(root), checkout_sources))
+            result["rows"].append(_row("checkout-root", "not configured", "", checkout_sources))
 
     # -- anything else in the block -----------------------------------------
     for key in present:
@@ -754,7 +760,7 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
         marker = "# atelier managed writable roots\n"
         # Atelier's own block, exactly as written below; anything else in the table is the user's.
         managed = re.search("^" + re.escape(marker) + r"\[sandbox_workspace_write\]\n"
-                            r"writable_roots = \[[^\]\n]*\](\n|\Z)", text, re.M) if missing else None
+                            r"writable_roots = .*$\n?", text, re.M) if missing else None
         if missing and "sandbox_workspace_write" in parsed and not managed:
             print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
                   + json.dumps(missing), file=out)

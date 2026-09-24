@@ -536,6 +536,30 @@ class CheckoutRootTests(_Base):
         self.assertIn("afile", row)
         self.assertNotIn("unknown key", row)
 
+    def test_unsafe_value_is_reported_as_blocking_isolated_codex_dispatch(self):
+        for value in ("/", "..", ".git/worktrees"):
+            with self.subTest(value=value):
+                self.write("---\nenforce: strict\ncheckout-root: " + value + "\n---\n",
+                           project=self.main)
+                code, output = self.check(project=self.main)
+                self.assertEqual(code, 1, output)
+                row = self.row(output, "checkout-root")
+                self.assertIn("inert", row)
+                self.assertIn("blocks every isolated Codex dispatch", row)
+                self.assertNotIn("armed", row)
+
+    def test_linked_worktree_reports_the_main_checkout_policy(self):
+        # Dispatch reads the main checkout's policy, so check must too.
+        self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=self.main)
+        os.makedirs(os.path.join(self.worktree, ".claude"), exist_ok=True)
+        self.write("---\nenforce: strict\ncheckout-root: .elsewhere\n---\n",
+                   project=self.worktree)
+        code, output = self.check(project=self.worktree)
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn(os.path.join(self.main, ".worktrees"), row)
+        self.assertNotIn(".elsewhere", row)
+
 
 class AgreementTests(_Base):
     """The checker must report exactly what the hooks resolve, never its own reading."""

@@ -33,6 +33,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 HOOK_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -295,6 +296,18 @@ class SnapshotPass(unittest.TestCase):
         self.assertTrue(self.ref_sha("lane-c"), "default codex lane got no snapshot ref")
         scans = [r for r in self.box.rows() if r.get("event") == "scan"]
         self.assertIn("checkout-root", scans[-1].get("warning", ""))
+
+    def test_an_unsafe_checkout_root_is_never_globbed(self):
+        for value in ("/", "~", ".", ".."):
+            with self.subTest(value=value):
+                write(os.path.join(self.box.root, ".agents", "atelier.local.md"),
+                      "---\ncheckout-root: {0}\n---\n".format(value))
+                with mock.patch.dict(os.environ, HOME=self.box.base):
+                    patterns, error = snapshot_lanes.default_patterns(self.box.root)
+                    lanes = snapshot_lanes.lane_paths(self.box.root, env={})
+                self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+                self.assertIn("checkout-root", error or "")
+                self.assertEqual(lanes, [self.lane])
 
     def test_the_env_glob_still_wins_over_the_checkout_root_key(self):
         self.checkout_root_lane(".worktrees", ".worktrees", "t1", "lane-r")

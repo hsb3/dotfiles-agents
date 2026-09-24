@@ -477,6 +477,16 @@ class CodexWorkersTests(unittest.TestCase):
         self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
         self.assertEqual(self.listed_worktrees(), [self.repo.resolve()])
 
+    def test_unsafe_checkout_root_denies_without_creating_a_worktree(self):
+        original = (self.repo / '.claude/atelier.local.md').read_text()
+        for value in ('/', '..', '.', '.git/worktrees'):
+            with self.subTest(value=value):
+                (self.repo / '.claude/atelier.local.md').write_text(original)
+                self.checkout_root(value)
+                with self.assertRaisesRegex(self.mod.WorkerError, 'checkout-root'):
+                    self.mod.register(self.payload(), isolate=True)
+                self.assertEqual(self.listed_worktrees(), [self.repo.resolve()])
+
     def test_routed_followup_revives_stopped_worker(self):
         p = self.payload()
         self.mod.register(p, isolate=True)

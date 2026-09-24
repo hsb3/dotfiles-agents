@@ -79,14 +79,15 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 <!-- harness:claude-code -->
-Three more keys are read only on this harness (`checkout-root` only by its Codex path), and a GFM table cannot carry a harness marker, so
-they sit here instead of in the table above:
+Three more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
+they sit here instead of in the table above. `checkout-root` is read by the Codex path (worker
+placement and Codex setup); Claude Code does not read it yet.
 
 | key | read by | accepted values | enforced per hook call? |
 |---|---|---|---|
 | `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
 | `watermark` | `context-watermark` | a mapping of `notice` / `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on all three), plus optional `worker:` / `session:` sub-mappings of the same keys that override the flat ones for that layer; every sub-key optional | yes |
-| `checkout-root` | `codex_workers.py`, `activation.py` | a path, relative to the main checkout, `~`-relative, or absolute (absent/blank = default; invalid = dispatch refused) | placement: yes, read per dispatch; the Codex writable root: no, fixed when Codex setup runs (rerun `activation.py codex-setup` after changing the key) |
+| `checkout-root` | `codex_workers.py`, `activation.py` | a path, relative to the main checkout, `~`-relative, or absolute (absent/blank = default; invalid = dispatch refused; the project itself, its ancestors, `$HOME`, anything inside `.git`, and a separate-git-dir or bare layout are invalid, symlinks followed) | placement: yes, read per dispatch; the Codex writable root: no, fixed when Codex setup runs (rerun `activation.py codex-setup` after changing the key) |
 
 **No activation file at all** means every key is off. `session-handoff-surfacer` says so at each
 cold main-session start inside a git worktree (`atelier is enabled here but not activated: ...`). A project that runs

@@ -301,10 +301,28 @@ def read_key(project_dir, key):
         return None
 
 
-def checkout_root(project_dir):
-    """`checkout-root` as an absolute Path, None when unset; invalid raises ValueError.
+def main_checkout(project_dir):
+    """(main checkout, git common dir), both resolved; ValueError outside a `.git` layout."""
+    env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
+    try:
+        proc = subprocess.run(["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
+                              env=env, capture_output=True, text=True, timeout=3)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("git failed: {0}".format(exc)) from exc
+    if proc.returncode or not proc.stdout.strip():
+        raise ValueError("{0} is not in a git repository".format(project_dir))
+    common = Path(os.path.join(project_dir, proc.stdout.strip())).resolve()
+    if common.name != ".git":  # --separate-git-dir or bare: no main checkout to anchor on
+        raise ValueError("unsupported git layout {0}".format(common))
+    return common.parent, common
 
-    Relative values resolve against the main checkout, so every worktree agrees.
+
+def checkout_root(project_dir):
+    """`checkout-root` as a resolved absolute Path, None when unset; invalid raises ValueError.
+
+    Relative values resolve against the main checkout, so every worktree agrees. The
+    project, its ancestors, $HOME and the git dir are refused: each would widen the Codex
+    sandbox, scatter lane snapshots, or let `git worktree prune` delete a checkout.
     """
     value = read_key(project_dir, "checkout-root")
     if isinstance(value, str):
@@ -313,17 +331,15 @@ def checkout_root(project_dir):
         return None
     if not isinstance(value, str):
         raise ValueError("checkout-root must be a single path, not {0!r}".format(value))
-    env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
     try:
-        proc = subprocess.run(["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
-                              env=env, capture_output=True, text=True, timeout=3)
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise ValueError("checkout-root {0!r}: git failed: {1}".format(value, exc)) from exc
-    if proc.returncode or not proc.stdout.strip():
-        raise ValueError("checkout-root {0!r} is set but {1} is not in a git repository".format(
-            value, project_dir))
-    main = Path(os.path.join(project_dir, proc.stdout.strip())).resolve().parent
-    root = Path(os.path.normpath(os.path.join(main, os.path.expanduser(value))))
+        main, common = main_checkout(project_dir)
+    except ValueError as exc:
+        raise ValueError("checkout-root {0!r}: {1}".format(value, exc)) from exc
+    root = Path(os.path.join(main, os.path.expanduser(value))).resolve()
+    if (root == main or root in main.parents
+            or root == Path(os.path.expanduser("~")).resolve() or root.is_relative_to(common)):
+        raise ValueError("checkout-root {0!r} resolves to {1}: the project, an ancestor of it, "
+                         "$HOME or inside {2} is refused".format(value, root, common))
     if root.exists() and not root.is_dir():
         raise ValueError("checkout-root {0!r} resolves to {1}, which is not a directory".format(
             value, root))
