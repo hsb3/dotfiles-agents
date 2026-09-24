@@ -138,6 +138,34 @@ For the mechanical-transform variant (one codemod across many sites), use the wo
 `migrate-at-scale.md` instead — it adds the site list, the exact transform, and the odd-site
 escalation rule.
 
+A report-only brief (`reviewer`, `scout`) owns no files and replaces the "You own" line with its
+scratch location. Read-only roles run in the parent checkout, so a probe that defaults its
+project directory to the cwd writes into the very tree under review:
+
+```
+Report-only: write nothing under <repo> or any directory above it. Scratch lives in
+/tmp/rev<PR>-<slug>/ only: cd there in every command (a shell may reset its cwd between
+calls), and pass every tool that takes a project directory (--project-dir, -C, a positional
+repo path) an explicit path. A probe never defaults to the repo. Any mutate-then-restore proof
+runs in a copy under that scratch dir.
+```
+
+Brief wording is not enforcement. After a report-only worker returns, compare the checkout's
+status, untracked and ignored files included, against a snapshot taken before dispatch; any new
+or vanished entry is a protocol breach to report and clean up by hand.
+
+<!-- harness:claude-code -->
+Bracket every report-only dispatch with `scripts/trace_check.py` from this skill (from an
+installed plugin,
+`~/.claude/plugins/cache/dotfiles-agents/atelier/<version>/skills/delegation/scripts/trace_check.py`):
+`python3 trace_check.py snapshot <repo> /tmp/rev<PR>-<slug>.trace` before dispatch, then
+`python3 trace_check.py check <repo> /tmp/rev<PR>-<slug>.trace` after it returns. Exit 1 names
+each new or vanished status entry and any HEAD or stash change. It is blind to a rewrite of a
+path that was already dirty, to writes under `.git/`, and to writes inside a nested repo or
+worktree (including `.claude/worktrees/`); a concurrent writer in the same checkout shows up as
+noise, so snapshot with no other writer live there.
+<!-- /harness -->
+
 ## Reading a returned brief
 
 A handoff note is a **hypothesis**, not proof. Before accepting it: re-run the gate, check that
