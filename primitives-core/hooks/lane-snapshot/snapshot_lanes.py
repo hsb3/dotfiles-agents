@@ -55,6 +55,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import atelier_local  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable; the same defaults are hardcoded here as fallbacks so
@@ -140,11 +141,24 @@ def resolve_root(argv_root=None, env=None, script_dir=None):
     return out if code == 0 and out else None
 
 
+def default_patterns(root):
+    """(globs, error): both harnesses' defaults, the Codex one moved by the
+    `checkout-root` activation key. An invalid key keeps the default glob and
+    returns its error for the scan warning rather than stopping the net."""
+    try:
+        custom = atelier_local.checkout_root(root)
+    except ValueError as exc:
+        return WORKTREES_DEFAULTS, "checkout-root ignored: {0}".format(exc)
+    if custom is None:
+        return WORKTREES_DEFAULTS, None
+    return (WORKTREES_DEFAULTS[0], os.path.join(str(custom), "*", "*")), None
+
+
 def lane_paths(root, pattern=None, env=None):
     """Absolute paths of the worktrees matching the glob (or, unset, the union
     of both harnesses' defaults), sorted and deduped."""
     pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None, env)
-    patterns = [pattern] if pattern else WORKTREES_DEFAULTS
+    patterns = [pattern] if pattern else default_patterns(root)[0]
     return sorted({p for pat in patterns
                    for p in glob.glob(os.path.join(root, pat)) if os.path.isdir(p)})
 
@@ -291,15 +305,17 @@ def scan(root, log, pattern=None):
         if snapshot_lane(root, lane, log):
             written += 1
     row = {"event": "scan", "root": root, "lanes": len(lanes), "snapshots": written}
+    pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None)
+    defaults, error = ((pattern,), None) if pattern else default_patterns(root)
+    warnings = [error] if error else []
     if not lanes:
         # THE row this hook exists for. A glob that matches nothing looks
         # exactly like a working net from the outside; only the daemon can say
         # it protected nothing.
-        row["warning"] = (
-            "no worktrees matched {0} under {1} — snapshotting nothing".format(
-                pattern or env_str("LANE_SNAPSHOT_WORKTREES", WORKTREES_DEFAULT), root,
-            )
-        )
+        warnings.append("no worktrees matched {0} under {1} — snapshotting nothing".format(
+            " + ".join(defaults), root))
+    if warnings:
+        row["warning"] = "; ".join(warnings)
     log(row)
     return len(lanes), written
 

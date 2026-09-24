@@ -238,6 +238,8 @@ watermark:            # optional — every sub-key optional; anything absent sta
   soft: 90000         # tokens before the first /handoff nudge
   hard: 130000        # tokens before the hard warning
   complexity: 0.9     # multiplier on both, replacing the tracked-file-count factor
+checkout-root: .worktrees  # optional — where automatic Codex worker checkouts land;
+                            # absent/blank keeps the default checkout root
 ---
 
 # Why these paths
@@ -255,6 +257,7 @@ this project's gate is drawn where it is.
 | `isolate` | `worktree-isolation` hook | Gives writing workers their own git worktree. `writers` covers `builder`, `manager`, `general-purpose`; a list (block or inline) names your own set. `scout`, `reviewer`, `Explore`, `Plan`, and `fork` are never isolated, even if listed — a worktree cannot see uncommitted work, which is exactly what a reviewer was sent to read. |
 | `watermark` | `context-watermark` hook | Overrides the context thresholds the `/handoff` nudge fires at. `soft` and `hard` are absolute token counts; `complexity` is a multiplier applied to both, replacing the repo-size factor the hook computes. Each sub-key is independent, and every one that is absent, blank, or not a positive number leaves that value computed from the lead model's context window — no *unusable* value turns the hook off. A usable but enormous one does — a `soft` above anything a session will reach silences it, which is a consequence of taking the value at its word rather than a supported off switch. It is the one key an environment variable outranks: `CONTEXT_WATERMARK_SOFT` / `_HARD` beat the file, which beats the computed default. |
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` hooks | Overrides where the project's handoff lives. Two modes. **File** (a bare project-relative path, or `{mode: file, path: ...}`): an existing in-root file wins over the standard `_meta/HANDOFF.md` → `HANDOFF.md` → `.claude/HANDOFF.md` search; an in-root file that does not exist is still authoritative and turns handoff surfacing off (the trap); a path outside the project root is rejected and the standard search runs unchanged. **External** (`{mode: external, stamp: ..., location: ...}`), for a handoff kept on a tracker or board: `stamp` is a freshness signal judged by mtime, never the handoff itself; a missing/blank/out-of-root `stamp`, or an unrecognized `mode`, leaves the key inert and the standard search runs; once armed the surfacer always points a cold session at `location`, even before the stamp is first touched. |
+| `checkout-root` | `codex_workers.py`, `activation.py` (Codex setup), `lane-snapshot` | Where automatic Codex worker checkouts land: a relative value resolves against the main checkout, absent/blank keeps the default `<git-common-dir>/atelier-codex/checkouts`, and an invalid value is a hard error rather than a silent fallback: the path must resolve, symlinks followed, strictly inside the project and outside `.git`, and hold no tracked files; a git-less, separate-git-dir or bare project with the key set is refused everywhere; variables such as `$HOME` are not expanded and are refused. `lane-snapshot` scans the configured root, and Codex setup adds an in-tree root to `.git/info/exclude`. Claude Code subagent worktrees: not yet. |
 
 What each `enforce` level actually does:
 

@@ -19,6 +19,7 @@ Stdlib-only; fixtures build into a tempdir per test.
 
 import importlib.util
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -592,6 +593,207 @@ class PolicyPlacementTests(_Base):
         with open(path, "w", encoding="utf-8") as fh:
             fh.write("---\nenforce: strict\n---\n")
         self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
+
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
+POLICY = os.path.join(".claude", "atelier.local.md")
+
+
+class CheckoutRootTests(_Base):
+    def setUp(self):
+        super().setUp()
+        require_git()
+        self.main, self.worktree = make_worktree(self.tmp.name)
+
+    def policy(self, value, where=None):
+        path = os.path.join(where or self.main, POLICY)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n" + value + "---\n")
+
+    def root(self, where=None):
+        return atelier_local.checkout_root(where or self.main)
+
+    def test_absent_key_is_none(self):
+        self.policy("")
+        self.assertIsNone(self.root())
+
+    def test_blank_key_is_none(self):
+        self.policy("checkout-root:\n")
+        self.assertIsNone(self.root())
+        self.policy("checkout-root: ''\n")
+        self.assertIsNone(self.root())
+
+    def test_relative_value_resolves_against_the_main_checkout(self):
+        self.policy("checkout-root: .worktrees\n")
+        self.assertEqual(str(self.root()), os.path.join(self.main, ".worktrees"))
+
+    def test_linked_worktree_resolves_to_the_same_main_root(self):
+        self.policy("checkout-root: .worktrees\n")
+        self.assertEqual(self.root(self.worktree), self.root())
+        self.assertEqual(str(self.root(self.worktree)), os.path.join(self.main, ".worktrees"))
+
+    def test_absolute_value_is_normalized(self):
+        self.policy("checkout-root: " + self.main + "/x/../elsewhere\n")
+        self.assertEqual(str(self.root()), os.path.join(self.main, "elsewhere"))
+
+    def test_tilde_is_expanded(self):
+        self.policy("checkout-root: ~/main/checkouts\n")
+        from unittest.mock import patch
+        with patch.dict(os.environ, HOME=self.tmp.name):
+            self.assertEqual(str(self.root()), os.path.join(self.main, "checkouts"))
+
+    # -- unsafe values: every reader goes through checkout_root, so it refuses them --
+
+    def assertRejected(self, value, where=None):
+        self.policy("checkout-root: " + value + "\n")
+        with self.assertRaisesRegex(ValueError, "checkout-root") as caught:
+            self.root(where)
+        return str(caught.exception)
+
+    def test_filesystem_root_is_rejected(self):
+        self.assertIn("'/'", self.assertRejected("/"))
+
+    def test_home_is_rejected(self):
+        home = os.path.join(self.tmp.name, "home")  # not an ancestor of the project
+        os.makedirs(home)
+        from unittest.mock import patch
+        with patch.dict(os.environ, HOME=home):
+            message = self.assertRejected("~")
+        self.assertIn(os.path.realpath(home), message)
+
+    def test_project_parent_is_rejected(self):
+        self.assertIn(os.path.dirname(self.main), self.assertRejected(".."))
+
+    def test_main_checkout_itself_is_rejected(self):
+        self.assertIn(self.main, self.assertRejected("."))
+
+    def test_git_dir_is_rejected(self):
+        self.assertRejected(".git")
+
+    def test_inside_the_git_dir_is_rejected(self):
+        for value in (".git/worktrees", ".git/objects"):
+            with self.subTest(value=value):
+                self.assertRejected(value)
+
+    def test_rejected_from_a_linked_worktree_too(self):
+        self.policy("checkout-root: .git/worktrees\n")
+        with self.assertRaisesRegex(ValueError, "checkout-root"):
+            self.root(self.worktree)
+
+    def test_symlink_to_the_project_parent_is_rejected(self):
+        os.symlink(os.path.dirname(self.main), os.path.join(self.main, "lnk"))
+        self.assertIn(os.path.dirname(self.main), self.assertRejected("lnk"))
+
+    def test_separate_git_dir_is_an_unsupported_layout(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep-wt")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store.git"), work], check=True, capture_output=True)
+        self.policy("checkout-root: .worktrees\n", where=work)
+        with self.assertRaisesRegex(ValueError, "checkout-root.*unsupported git layout"):
+            self.root(work)
+
+    def test_separate_git_dir_is_unsupported_for_an_absolute_value_too(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep-wt-abs")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store2.git"), work], check=True, capture_output=True)
+        self.policy("checkout-root: " + os.path.join(work, ".worktrees") + "\n", where=work)
+        with self.assertRaisesRegex(ValueError, "checkout-root.*unsupported git layout"):
+            self.root(work)
+
+    def test_a_tracked_directory_is_rejected(self):
+        # A tracked root would make setup exclude real source (review-581 FR2-1):
+        # new files under it vanish from `git status`, and its subfolders become lanes.
+        base = os.path.join(self.tmp.name, "tracked-fixture")
+        os.makedirs(base)
+        main, _ = make_worktree(base, tracked={"src/a.py": "x"})
+        self.policy("checkout-root: src\n", where=main)
+        message = None
+        with self.assertRaisesRegex(ValueError, "checkout-root.*tracked files") as caught:
+            atelier_local.checkout_root(main)
+        message = str(caught.exception)
+        self.assertIn("src", message)
+
+    def test_an_untracked_or_nonexistent_directory_is_still_accepted(self):
+        base = os.path.join(self.tmp.name, "untracked-fixture")
+        os.makedirs(base)
+        main, _ = make_worktree(base, tracked={"src/a.py": "x"})
+        # `.worktrees` does not exist yet, and `build` exists but was never committed.
+        os.makedirs(os.path.join(main, "build"))
+        self.policy("checkout-root: .worktrees\n", where=main)
+        self.assertEqual(str(atelier_local.checkout_root(main)), os.path.join(main, ".worktrees"))
+        self.policy("checkout-root: build\n", where=main)
+        self.assertEqual(str(atelier_local.checkout_root(main)), os.path.join(main, "build"))
+
+    def test_anything_outside_the_project_is_rejected(self):
+        # Allowlist: strictly inside the main checkout. System dirs and ancestors of
+        # $HOME were armed under the old denylist (review-581 FR1).
+        home = os.path.join(os.path.realpath(self.tmp.name), "home", "me")
+        os.makedirs(home)
+        os.symlink("/etc", os.path.join(self.main, "etclink"))
+        from unittest.mock import patch
+        with patch.dict(os.environ, HOME=home):
+            for value in ("/etc", "etclink", "~/..", os.path.dirname(home), "/usr",
+                          os.path.join(os.path.realpath(self.tmp.name), "elsewhere")):
+                with self.subTest(value=value):
+                    self.assertIn("inside the project", self.assertRejected(value))
+
+    def test_a_variable_is_rejected_unexpanded(self):
+        for value in ("$HOME", "${HOME}/x", ".worktrees/$USER"):
+            with self.subTest(value=value):
+                self.assertIn("not expanded", self.assertRejected(value))
+
+    def test_quoted_or_commented_unsafe_values_are_rejected(self):
+        for value in ("'/'", '"~"', "/ # x", ".. # x", "'/etc'"):
+            with self.subTest(value=value):
+                self.assertRejected(value)
+
+    def test_separate_git_dir_key_absent_is_the_default(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep-wt")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store.git"), work], check=True, capture_output=True)
+        self.policy("", where=work)
+        self.assertIsNone(self.root(work))
+
+    def test_a_subdirectory_reads_the_main_checkout_policy(self):
+        self.policy("checkout-root: .worktrees\n")
+        sub = os.path.join(self.main, "sub")
+        os.makedirs(sub)
+        self.assertEqual(str(self.root(sub)), os.path.join(self.main, ".worktrees"))
+
+    def test_symlink_to_a_subdirectory_is_accepted_resolved(self):
+        real = os.path.join(self.main, ".worktrees")
+        os.makedirs(real)
+        os.symlink(real, os.path.join(self.main, "lnk"))
+        self.policy("checkout-root: lnk\n")
+        self.assertEqual(str(self.root()), real)
+
+    def test_list_or_mapping_is_invalid(self):
+        for value in ("checkout-root: [a, b]\n", "checkout-root:\n  - a\n",
+                      "checkout-root:\n  path: a\n"):
+            with self.subTest(value=value):
+                self.policy(value)
+                with self.assertRaisesRegex(ValueError, "checkout-root"):
+                    self.root()
+
+    def test_existing_file_is_invalid(self):
+        with open(os.path.join(self.main, "afile"), "w") as fh:
+            fh.write("x")
+        self.policy("checkout-root: afile\n")
+        with self.assertRaisesRegex(ValueError, "checkout-root.*afile"):
+            self.root()
+
+    def test_key_outside_a_git_repo_is_invalid(self):
+        self.policy("checkout-root: .worktrees\n", where=self.project)
+        with self.assertRaisesRegex(ValueError, "checkout-root.*\\.worktrees"):
+            self.root(self.project)
+        self.policy("", where=self.project)
+        self.assertIsNone(self.root(self.project))
 
 
 # ---------------------------------------------------------------------------

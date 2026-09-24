@@ -33,6 +33,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 HOOK_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -273,6 +274,82 @@ class SnapshotPass(unittest.TestCase):
         write(os.path.join(lane, "draft.txt"), "wip\n")
         run_daemon(self.box, "--once", self.box.root)
         self.assertTrue(self.ref_sha("lane-c"), "codex lane got no snapshot ref")
+
+    def checkout_root_lane(self, value, *parts):
+        write(os.path.join(self.box.root, ".agents", "atelier.local.md"),
+              "---\ncheckout-root: {0}\n---\n".format(value))
+        lane = os.path.join(self.box.root, *parts)
+        git(self.box.root, "worktree", "add", "-q", "-b", "wt-" + parts[-1], lane)
+        write(os.path.join(lane, "draft.txt"), "wip\n")
+        return lane
+
+    def test_codex_lanes_follow_the_checkout_root_key(self):
+        self.checkout_root_lane(".worktrees", ".worktrees", "t1", "lane-r")
+        result = run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.ref_sha("lane-r"), "checkout-root lane got no snapshot ref")
+
+    def test_an_invalid_checkout_root_falls_back_to_the_default_and_warns(self):
+        self.checkout_root_lane("seed.txt", ".git", "atelier-codex", "checkouts", "t1", "lane-c")
+        result = run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.ref_sha("lane-c"), "default codex lane got no snapshot ref")
+        scans = [r for r in self.box.rows() if r.get("event") == "scan"]
+        self.assertIn("checkout-root", scans[-1].get("warning", ""))
+
+    def test_an_unsafe_checkout_root_is_never_globbed(self):
+        for value in ("/", "~", ".", ".."):
+            with self.subTest(value=value):
+                write(os.path.join(self.box.root, ".agents", "atelier.local.md"),
+                      "---\ncheckout-root: {0}\n---\n".format(value))
+                with mock.patch.dict(os.environ, HOME=self.box.base):
+                    patterns, error = snapshot_lanes.default_patterns(self.box.root)
+                    lanes = snapshot_lanes.lane_paths(self.box.root, env={})
+                self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+                self.assertIn("checkout-root", error or "")
+                self.assertEqual(lanes, [self.lane])
+
+    def test_a_root_outside_the_project_is_never_globbed(self):
+        os.symlink("/etc", os.path.join(self.box.root, "etclink"))
+        for value in ("/etc", "etclink", "~/..", "$HOME"):
+            with self.subTest(value=value):
+                write(os.path.join(self.box.root, ".agents", "atelier.local.md"),
+                      "---\ncheckout-root: {0}\n---\n".format(value))
+                with mock.patch.dict(os.environ, HOME=os.path.join(self.box.base, "home", "me")):
+                    patterns, error = snapshot_lanes.default_patterns(self.box.root)
+                self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+                self.assertIn("checkout-root", error or "")
+
+    def separate_git_dir(self, value):
+        root = os.path.join(self.box.base, "sep")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(self.box.base, "store.git"), root],
+                       check=True, capture_output=True)
+        write(os.path.join(root, ".agents", "atelier.local.md"),
+              "---\n" + ("checkout-root: " + value + "\n" if value else "") + "---\n")
+        rows = []
+        snapshot_lanes.scan(root, rows.append)
+        return snapshot_lanes.default_patterns(root), rows[-1]
+
+    def test_separate_git_dir_with_the_key_falls_back_and_warns(self):
+        (patterns, error), row = self.separate_git_dir(".worktrees")
+        self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+        self.assertIn("unsupported git layout", error or "")
+        self.assertIn("unsupported git layout", row.get("warning", ""))
+
+    def test_separate_git_dir_without_the_key_uses_the_default_silently(self):
+        (patterns, error), row = self.separate_git_dir(None)
+        self.assertEqual(tuple(patterns), tuple(snapshot_lanes.WORKTREES_DEFAULTS))
+        self.assertIsNone(error)
+        self.assertNotIn("checkout-root", row.get("warning", ""))
+
+    def test_the_env_glob_still_wins_over_the_checkout_root_key(self):
+        self.checkout_root_lane(".worktrees", ".worktrees", "t1", "lane-r")
+        write(os.path.join(self.lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root,
+                   env_extra={"LANE_SNAPSHOT_WORKTREES": os.path.join(".claude", "worktrees", "agent-*")})
+        self.assertTrue(self.ref_sha())
+        self.assertFalse(self.ref_sha("lane-r"), "env glob did not override checkout-root")
 
     def test_another_daemons_scratch_index_is_left_alone(self):
         """A pre-upgrade daemon holds no lock, so it can run beside a new one;

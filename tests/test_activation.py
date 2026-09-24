@@ -15,6 +15,7 @@ import importlib.util
 import io
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -88,6 +89,9 @@ def _load(path, name):
 
 
 activation = _load(SCRIPT_PATH, "activation_cli_under_test")
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
 
 
 class _Base(unittest.TestCase):
@@ -495,6 +499,106 @@ class CheckTests(_Base):
         self.assertIn("prose-only", row)
         self.assertIn("deep", row)
         self.assertIn("no hook", row)
+
+
+class CheckoutRootTests(_Base):
+    """`checkout-root` is read directly from `atelier_local.checkout_root`, not
+    through a hook loader, so it needs a real git repo (the function shells out to
+    `git rev-parse --git-common-dir`)."""
+
+    def setUp(self):
+        super().setUp()
+        require_git()
+        self.main, self.worktree = make_worktree(self.tmp.name)
+        os.makedirs(os.path.join(self.main, ".claude"), exist_ok=True)
+
+    def test_absent_is_not_configured(self):
+        self.write("---\nenforce: strict\n---\n", project=self.main)
+        code, output = self.check(project=self.main)
+        self.assertEqual(code, 0, output)
+        self.assertIn("not configured", self.row(output, "checkout-root"))
+
+    def test_valid_relative_value_resolves_and_is_armed(self):
+        self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=self.main)
+        code, output = self.check(project=self.main)
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn("armed", row)
+        self.assertIn(os.path.join(self.main, ".worktrees"), row)
+
+    def test_invalid_value_reports_the_error_not_unknown(self):
+        with open(os.path.join(self.main, "afile"), "w") as fh:
+            fh.write("x")
+        self.write("---\nenforce: strict\ncheckout-root: afile\n---\n", project=self.main)
+        code, output = self.check(project=self.main)
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn("checkout-root", row)
+        self.assertIn("afile", row)
+        self.assertNotIn("unknown key", row)
+
+    def test_unsafe_value_is_reported_as_blocking_isolated_codex_dispatch(self):
+        for value in ("/", "..", ".git/worktrees"):
+            with self.subTest(value=value):
+                self.write("---\nenforce: strict\ncheckout-root: " + value + "\n---\n",
+                           project=self.main)
+                code, output = self.check(project=self.main)
+                self.assertEqual(code, 1, output)
+                row = self.row(output, "checkout-root")
+                self.assertIn("inert", row)
+                self.assertIn("blocks every isolated Codex dispatch", row)
+                self.assertNotIn("armed", row)
+
+    def test_outside_the_project_is_reported_as_blocking(self):
+        for value in ("/etc", "$HOME"):
+            with self.subTest(value=value):
+                self.write("---\nenforce: strict\ncheckout-root: " + value + "\n---\n",
+                           project=self.main)
+                code, output = self.check(project=self.main)
+                self.assertEqual(code, 1, output)
+                row = self.row(output, "checkout-root")
+                self.assertIn("blocks every isolated Codex dispatch", row)
+                self.assertNotIn("armed", row)
+
+    def test_separate_git_dir_with_the_key_is_reported_as_blocking(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store.git"), work], check=True, capture_output=True)
+        os.makedirs(os.path.join(work, ".claude"))
+        self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=work)
+        code, output = self.check(project=work)
+        self.assertEqual(code, 1, output)
+        self.assertIn("unsupported git layout", self.row(output, "checkout-root"))
+        self.write("---\nenforce: strict\n---\n", project=work)
+        code, output = self.check(project=work)
+        self.assertEqual(code, 0, output)
+        self.assertIn("not configured", self.row(output, "checkout-root"))
+
+    def test_tracked_directory_is_reported_as_blocking(self):
+        base = os.path.join(self.tmp.name, "tracked-fixture")
+        os.makedirs(base)
+        main, _ = make_worktree(base, tracked={"src/a.py": "x"})
+        os.makedirs(os.path.join(main, ".claude"), exist_ok=True)
+        self.write("---\nenforce: strict\ncheckout-root: src\n---\n", project=main)
+        code, output = self.check(project=main)
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn("blocks every isolated Codex dispatch", row)
+        self.assertIn("tracked files", row)
+        self.assertNotIn("armed", row)
+
+    def test_linked_worktree_reports_the_main_checkout_policy(self):
+        # Dispatch reads the main checkout's policy, so check must too.
+        self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=self.main)
+        os.makedirs(os.path.join(self.worktree, ".claude"), exist_ok=True)
+        self.write("---\nenforce: strict\ncheckout-root: .elsewhere\n---\n",
+                   project=self.worktree)
+        code, output = self.check(project=self.worktree)
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn(os.path.join(self.main, ".worktrees"), row)
+        self.assertNotIn(".elsewhere", row)
 
 
 class AgreementTests(_Base):

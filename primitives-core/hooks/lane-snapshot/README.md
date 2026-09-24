@@ -83,7 +83,7 @@ No per-project activation file. The hook is armed by being present in an install
 |---|---|---|
 | `LANE_SNAPSHOT_ROOT` | *(unset)* | Repo root to protect. Highest precedence; overrides what the hook derives. |
 | `LANE_SNAPSHOT_INTERVAL` | `180` | Seconds between passes. Also sets the `--check` staleness threshold, at 2x. |
-| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts, deduped. |
+| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts, deduped; the Codex one is `<checkout-root>/*/*` when the `checkout-root` activation key sets it, and an invalid key keeps the default and says why in the scan warning. |
 | `LANE_SNAPSHOT_TTL` | `43200` | Seconds without a written snapshot (since start or the last one) after which the daemon exits. `0` disables. |
 | `LANE_SNAPSHOT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/lane-snapshot` | Where the per-repository pidfiles live. `XDG_STATE_HOME` is honoured only when absolute. |
 | `LANE_SNAPSHOT_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/lane-snapshot.jsonl` | Ledger |
@@ -231,7 +231,8 @@ The `scan` rows are the dataset that answers "was the net ever actually up?" aft
 ## Codex
 
 Codex and Claude Code sessions share one daemon per repository; the default glob covers
-`.git/atelier-codex/checkouts/*/*` alongside the Claude lanes. The daemon logs under the harness
+`<git-common-dir>/atelier-codex/checkouts/*/*` (or `<checkout-root>/*/*` when the `checkout-root`
+activation key sets it) alongside the Claude lanes. The daemon logs under the harness
 that launched it (`ATELIER_HARNESS`, or a legacy `--harness codex` argument, which now selects
 the ledger directory and nothing else). Snapshot refs preserve isolated native worker changes
 without changing their working indexes.

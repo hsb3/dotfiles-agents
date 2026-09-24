@@ -164,7 +164,8 @@ one having read the failure. The dispatcher should see each worker's result.
 ## Lifecycle and retirement
 
 Worktrees are temporary execution state. Native Claude Code keeps its task checkouts in
-`.claude/worktrees/`; Codex/Atelier keeps them in `.git/atelier-codex/checkouts/`. For a manual
+`.claude/worktrees/`; Codex/Atelier keeps them in `<git-common-dir>/atelier-codex/checkouts/` unless
+the `checkout-root` activation key sets another location. For a manual
 checkout, use the repository-local `.worktrees/` directory. Never create task checkouts or clones
 as siblings of the repository.
 
@@ -300,8 +301,9 @@ PreToolUse hook having already rewritten the input.
 
 State lives under the repository's common Git directory:
 `.git/atelier-codex/workers/<session>/<agent>.json` and
-`.git/atelier-codex/checkouts/<session>/<agent>`. There is no automatic branch or worktree
-deletion. With `workspace-write`, the caller must authorize the checkout directory,
+`.git/atelier-codex/checkouts/<session>/<agent>` (the checkout moves to `<checkout-root>/<session>/<agent>`
+when the `checkout-root` activation key is set). There is no automatic branch or worktree
+deletion. With `workspace-write`, the caller must authorize the checkout directory (the key's value when set),
 `.git/worktrees` and `.git/objects` as writable roots. Registration failure never
 silently leaves an armed worker operating in its inherited checkout. Unarmed projects
 are inert, including non-Git projects; existing mappings persist across policy edits

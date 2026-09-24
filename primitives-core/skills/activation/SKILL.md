@@ -79,13 +79,15 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 <!-- harness:claude-code -->
-Two more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
-they sit here instead of in the table above:
+Three more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
+they sit here instead of in the table above. `checkout-root` is read by the Codex path (worker
+placement and Codex setup); Claude Code does not read it yet.
 
 | key | read by | accepted values | enforced per hook call? |
 |---|---|---|---|
 | `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
 | `watermark` | `context-watermark` | a mapping of `notice` / `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on all three), plus optional `worker:` / `session:` sub-mappings of the same keys that override the flat ones for that layer; every sub-key optional | yes |
+| `checkout-root` | `codex_workers.py`, `activation.py` | a path, relative to the main checkout, `~`-relative, or absolute (absent/blank = default; invalid = dispatch refused; it must resolve, symlinks followed, strictly inside the project and outside `.git`, and holds no tracked files; with the key set, a separate-git-dir or bare layout is refused everywhere; variables such as `$HOME` are not expanded and are refused) | placement: yes, read per dispatch; the Codex writable root: no, fixed when Codex setup runs (rerun `activation.py codex-setup` after changing the key) |
 
 **No activation file at all** means every key is off. `session-handoff-surfacer` says so at each
 cold main-session start inside a git worktree (`atelier is enabled here but not activated: ...`). A project that runs
@@ -123,6 +125,10 @@ exists to fix, and the stamp is only a freshness gauge, never the thing being su
 because it is live - just probably not as intended.
 
 <!-- harness:claude-code -->
+**`checkout-root` places automatic Codex worker checkouts, resolved by `codex_workers.py` and
+added as a writable root by `activation.py`'s Codex setup; absent or blank keeps the default
+`<git-common-dir>/atelier-codex/checkouts`. Claude Code subagent worktrees: not yet.**
+
 **`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
 unusable leaves that one value computed from the lead model's context window rather than turning
 anything off — so `check` calls a key with nothing readable under it inert, and a key naming only

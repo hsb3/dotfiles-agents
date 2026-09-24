@@ -23,6 +23,16 @@ protected:
 # protected-branches:
 #   - main
 
+# Where automatic Codex worker checkouts are placed. Read by codex_workers.py
+# (worker checkout placement) and activation.py's Codex writable-root setup; a
+# relative value resolves against the main checkout. It must resolve strictly
+# inside the project and outside .git; a separate-git-dir or bare layout with
+# the key set is refused everywhere; variables ($HOME) are not expanded.
+# Claude Code subagent worktrees: not yet.
+#
+# Ships commented out: the default (<git-common-dir>/atelier-codex/checkouts) works.
+# checkout-root: .worktrees
+
 # worktree-isolation: a writing subagent gets its own checkout instead of sharing
 # the strategist's working tree. Independent of `enforce`.
 isolate: writers           # off (default when absent) | writers | [builder, my-writer]
