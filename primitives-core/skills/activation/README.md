@@ -15,7 +15,7 @@ that is present, looks configured, and is silently doing nothing.
 Use it when someone asks to turn on, configure, or check atelier enforcement (custody,
 worker context, worktree isolation, protected branches, handoff routing, context
 watermarks) in a project, or when a hook that should be firing appears silent. Every atelier loader fails open by design. On Claude Code an
-absent activation file is announced at each cold session start by `session-handoff-surfacer`
+absent activation file inside a git worktree is announced at each cold session start by `session-handoff-surfacer`
 (`ATELIER_ACTIVATION_NUDGE=off` silences it); a typo'd one is indistinguishable from the outside. `check` reads the
 installed file through the hooks' own loader functions rather than parsing it itself, and
 exits nonzero on an inert key — a broken file becomes a failing command, not a hunch. One

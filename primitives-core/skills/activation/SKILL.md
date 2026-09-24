@@ -88,7 +88,7 @@ they sit here instead of in the table above:
 | `watermark` | `context-watermark` | a mapping of `notice` / `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on all three), plus optional `worker:` / `session:` sub-mappings of the same keys that override the flat ones for that layer; every sub-key optional | yes |
 
 **No activation file at all** means every key is off. `session-handoff-surfacer` says so at each
-cold main-session start (`atelier is enabled here but not activated: ...`). A project that runs
+cold main-session start inside a git worktree (`atelier is enabled here but not activated: ...`). A project that runs
 atelier unarmed on purpose silences that line with the environment variable
 `ATELIER_ACTIVATION_NUDGE=off`: with no file there is nowhere to put a key.
 <!-- /harness -->
