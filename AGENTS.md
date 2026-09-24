@@ -89,7 +89,8 @@ changed file against `dev` before calling the work superseded. History before 20
 from before that date resolves only there.
 
 **Worktrees are temporary execution state.** Native Claude Code stays in `.claude/worktrees/`
-and Codex/Atelier stays in `.git/atelier-codex/checkouts/`; manual task checkouts go under
+and Codex/Atelier stays in `<git-common-dir>/atelier-codex/checkouts/` unless the `checkout-root`
+activation key sets it; manual task checkouts go under
 `.worktrees/`. Never create task checkouts or clones as siblings of this repository.
 `git worktree list` is authoritative: a retained checkout is not stale. Before ordinary removal,
 confirm the worker is complete and no longer live; inspect tracked, untracked, and ignored state;

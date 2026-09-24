@@ -274,6 +274,36 @@ class SnapshotPass(unittest.TestCase):
         run_daemon(self.box, "--once", self.box.root)
         self.assertTrue(self.ref_sha("lane-c"), "codex lane got no snapshot ref")
 
+    def checkout_root_lane(self, value, *parts):
+        write(os.path.join(self.box.root, ".agents", "atelier.local.md"),
+              "---\ncheckout-root: {0}\n---\n".format(value))
+        lane = os.path.join(self.box.root, *parts)
+        git(self.box.root, "worktree", "add", "-q", "-b", "wt-" + parts[-1], lane)
+        write(os.path.join(lane, "draft.txt"), "wip\n")
+        return lane
+
+    def test_codex_lanes_follow_the_checkout_root_key(self):
+        self.checkout_root_lane(".worktrees", ".worktrees", "t1", "lane-r")
+        result = run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.ref_sha("lane-r"), "checkout-root lane got no snapshot ref")
+
+    def test_an_invalid_checkout_root_falls_back_to_the_default_and_warns(self):
+        self.checkout_root_lane("seed.txt", ".git", "atelier-codex", "checkouts", "t1", "lane-c")
+        result = run_daemon(self.box, "--once", self.box.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.ref_sha("lane-c"), "default codex lane got no snapshot ref")
+        scans = [r for r in self.box.rows() if r.get("event") == "scan"]
+        self.assertIn("checkout-root", scans[-1].get("warning", ""))
+
+    def test_the_env_glob_still_wins_over_the_checkout_root_key(self):
+        self.checkout_root_lane(".worktrees", ".worktrees", "t1", "lane-r")
+        write(os.path.join(self.lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root,
+                   env_extra={"LANE_SNAPSHOT_WORKTREES": os.path.join(".claude", "worktrees", "agent-*")})
+        self.assertTrue(self.ref_sha())
+        self.assertFalse(self.ref_sha("lane-r"), "env glob did not override checkout-root")
+
     def test_another_daemons_scratch_index_is_left_alone(self):
         """A pre-upgrade daemon holds no lock, so it can run beside a new one;
         the scratch index is per process or one deletes the other's mid-pass

@@ -447,6 +447,23 @@ class CodexWorkersTests(unittest.TestCase):
         self.assertIn(main / '.worktrees/session-a/leaf', self.listed_worktrees())
         self.assertEqual(self.mod.lookup(child)['worktree'], leaf['worktree'])
 
+    def test_nested_worker_reads_checkout_root_from_the_main_checkout(self):
+        self.git('add', '.claude/atelier.local.md')
+        self.git('-c', 'user.name=Test', '-c', 'user.email=test@invalid', 'commit', '-m', 'Policy')
+        self.checkout_root('.worktrees')  # uncommitted: the manager's checkout lacks the key
+        main = self.repo.resolve()
+        parent = self.payload('manager'); parent['agent_type'] = 'atelier-manager'
+        record = self.mod.register(parent, isolate=True)
+        self.assertNotIn('checkout-root', (Path(record['worktree']) / '.claude/atelier.local.md').read_text())
+        child = self.payload('leaf')
+        Path(child['transcript_path']).write_text(json.dumps({'type': 'session_meta', 'payload': {
+            'id': 'leaf', 'parent_thread_id': 'manager', 'agent_path': '/root/manager/leaf'}})+'\n')
+        leaf = self.mod.register(child, isolate=True)
+        self.assertEqual(leaf['source'], record['worktree'])
+        listed = self.listed_worktrees()
+        self.assertIn(main / '.worktrees/session-a/manager', listed)
+        self.assertIn(main / '.worktrees/session-a/leaf', listed)
+
     def test_invalid_checkout_root_denies_without_creating_a_worktree(self):
         (self.repo / 'afile').write_text('x')
         self.checkout_root('afile')

@@ -245,7 +245,8 @@ def register(payload, isolate=False):
         if isolate:
             common = path.parents[3]
             try:
-                root = atelier_local.checkout_root(str(source))
+                # The main checkout's policy, as codex_setup reads it: a worker's own copy may differ.
+                root = atelier_local.checkout_root(str(common.parent))
             except ValueError as exc:
                 raise WorkerError(str(exc)) from exc
             tree = (root or common / 'atelier-codex/checkouts') / session / agent

@@ -26,6 +26,7 @@ import difflib
 import importlib.util
 import os
 import json
+import re
 from pathlib import Path
 import subprocess
 import shutil
@@ -716,7 +717,8 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
             ["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
             text=True, env=codex_workers.clean_git_env()).strip()
         common = (Path(project_dir) / common).resolve()
-        root = local.checkout_root(project_dir)
+        # The main checkout's policy, the same one codex_workers places checkouts by.
+        root = local.checkout_root(str(common.parent))
         writable = [str(root or common / "atelier-codex/checkouts")] + [str(common / path) for path in
                     ("worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
         config = Path(project_dir) / ".codex/config.toml"
@@ -750,7 +752,10 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                   + "; ".join(agent_settings), file=out)
             return EXIT_PROBLEM
         marker = "# atelier managed writable roots\n"
-        if missing and "sandbox_workspace_write" in parsed:
+        # Atelier's own block, exactly as written below; anything else in the table is the user's.
+        managed = re.search("^" + re.escape(marker) + r"\[sandbox_workspace_write\]\n"
+                            r"writable_roots = \[[^\]\n]*\](\n|\Z)", text, re.M) if missing else None
+        if missing and "sandbox_workspace_write" in parsed and not managed:
             print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
                   + json.dumps(missing), file=out)
             return EXIT_PROBLEM
@@ -760,13 +765,19 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                 any(path.parent == global_agents for path in planned_roles)):
             raise ValueError("stale global Codex profiles; rerun with --refresh-global")
         additions = []
-        if missing:
-            additions.append(marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable))
+        block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable)
+        new_text = text
+        if managed:
+            new_text = text[:managed.start()] + block + "\n" + text[managed.end():]
+        elif missing:
+            additions.append(block)
         if agents is None:
             additions.append("[agents]\nmax_depth = 2")
-        if additions and not check:
+        if additions:
+            new_text = new_text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n"
+        if new_text != text and not check:
             config.parent.mkdir(parents=True, exist_ok=True)
-            config.write_text(text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n")
+            config.write_text(new_text)
         changed = codex_roles.setup(project_dir, check=check, refresh_global=refresh_global)
         moved = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=check)
         print(("needs " if check and changed else "ok    ") + " Codex roles: "
@@ -782,8 +793,12 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
         if not check:
             exclude.parent.mkdir(parents=True, exist_ok=True)
             old = exclude.read_text() if exclude.exists() else ""
-            additions = [line for line in ("/.codex/agents/atelier-*.toml", "/.codex/config.toml")
-                         if line not in old.splitlines()]
+            ignored = ["/.codex/agents/atelier-*.toml", "/.codex/config.toml"]
+            # An in-tree checkout root would otherwise show every worker checkout as untracked.
+            if root and root.is_relative_to(common.parent) and root != common.parent \
+                    and not root.is_relative_to(common):
+                ignored.append("/" + root.relative_to(common.parent).as_posix() + "/")
+            additions = [line for line in ignored if line not in old.splitlines()]
             if additions:
                 exclude.write_text(old.rstrip() + "\n" + "\n".join(additions) + "\n")
         print("unverified  hook trust: open /hooks in Codex for this project and approve the reviewed atelier hooks. "

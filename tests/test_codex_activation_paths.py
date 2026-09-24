@@ -168,3 +168,50 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertIn('checkout-root', output)
         self.assertIsNone(roots)
         self.assertEqual(text, 'model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
+
+    def rerun_with_checkout_root(self, main, value='.worktrees'):
+        self.write(main / '.codex/atelier.local.md', FULL.replace('---\n', '---\ncheckout-root: ' + value + '\n', 1))
+        output = io.StringIO()
+        code = activation.main(['codex-setup', '--harness', 'codex', '--project-dir', str(main)], out=output)
+        text = (main / '.codex/config.toml').read_text()
+        roots = __import__('tomllib').loads(text).get('sandbox_workspace_write', {}).get('writable_roots')
+        return code, output.getvalue(), text, roots
+
+    def test_codex_setup_rewrites_its_own_roots_when_checkout_root_is_enabled(self):
+        main, code, output, _, _ = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        config = main / '.codex/config.toml'
+        config.write_text(config.read_text() + '\n[profiles.later]\nmodel = "later"\n')
+        code, output, text, roots = self.rerun_with_checkout_root(main)
+        self.assertEqual(code, 0, output)
+        common = main / '.git'
+        self.assertEqual(roots, [str(main / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')])
+        self.assertNotIn(str(common / 'atelier-codex/checkouts'), roots)
+        self.assertEqual(text.count('# atelier managed writable roots'), 1)
+        self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
+        self.assertIn('[profiles.later]\nmodel = "later"\n', text)
+
+    def test_codex_setup_still_refuses_a_user_owned_table(self):
+        main, _ = make_worktree(str(self.root))
+        main = Path(main)
+        config = main / '.codex/config.toml'
+        user = 'model = "keep-me"\n\n[sandbox_workspace_write]\nwritable_roots = ["/elsewhere"]\n'
+        self.write(config, user)
+        code, output, text, _ = self.rerun_with_checkout_root(main)
+        self.assertNotEqual(code, 0)
+        self.assertIn('user-owned', output)
+        self.assertEqual(text, user)
+
+    def test_codex_setup_excludes_an_in_tree_checkout_root(self):
+        import subprocess
+        main, code, output, _, _ = self.setup_roots('.worktrees')
+        self.assertEqual(code, 0, output)
+        activation.main(['codex-setup', '--harness', 'codex', '--project-dir', str(main)], out=io.StringIO())
+        exclude = (main / '.git/info/exclude').read_text().splitlines()
+        self.assertEqual(exclude.count('/.worktrees/'), 1)
+        subprocess.run(['git', '-C', str(main), 'worktree', 'add', '-q', '-b', 'w',
+                        str(main / '.worktrees/s/w')], check=True, capture_output=True)
+        status = subprocess.run(['git', '-C', str(main), '-c', 'core.excludesFile=/dev/null',
+                                 'status', '--porcelain'], check=True, capture_output=True, text=True).stdout
+        self.assertNotIn('.worktrees', status)
