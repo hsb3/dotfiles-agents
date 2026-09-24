@@ -94,7 +94,7 @@ documents this. Setting it is a request an agent might honor, not a control a ho
 not describe it as equivalent to the hook-enforced keys.
 
 <!-- harness:claude-code -->
-**`protected-branches` is a different key from `protected`, and has no default.** One names branch names, the other names file paths, and neither hook reads the other's key - a file glob must never be taken for a branch name. Absent, empty, or unparseable leaves the protected-branch half of its hook inert; nothing is protected until the project names it, because a built-in `main`/`master` guard is wrong in every project whose default branch is a publish-only surface. The same hook's shared-tree stash ban needs no key and is live wherever the plugin is installed, which is why `check` reports an absent key as not configured rather than as the hook being off.
+**`protected-branches` is a different key from `protected`, and has no default.** One names branch names, the other names file paths, and neither hook reads the other's key - a file glob must never be taken for a branch name. Absent, an explicit empty list (`[]`, deliberately off), or unparseable leaves the protected-branch half of its hook off; nothing is protected until the project names it, because a built-in `main`/`master` guard is wrong in every project whose default branch is a publish-only surface. The same hook's shared-tree stash ban needs no key and is live wherever the plugin is installed, which is why `check` reports an absent key as not configured rather than as the hook being off.
 <!-- /harness -->
 
 **`handoff` has two modes, and each has a failure shape only one side of which is safe.** File

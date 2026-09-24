@@ -13,7 +13,8 @@ Two subcommands:
 hooks' own loader functions, loaded by path, so the report cannot drift from the
 behaviour it describes. The one thing the hooks cannot answer is which keys the
 operator actually typed — a misspelled key and an absent key look identical to a
-loader — so this script locates top-level key *names* and nothing else.
+loader — so this script locates top-level key *names*, plus the raw text of `effort`
+(which no hook reads) and of a key an explicit `[]` switched off.
 
 Stdlib only. Exit codes: 0 all clear, 1 something is inert/unknown/ignored,
 2 hard error (the hooks could not be found). All output goes to stdout: the
@@ -207,7 +208,7 @@ def is_explicit_empty_list(region, key, unquote):
     state, and cannot say which one was written — only the raw text can. This never
     decides armed/off itself, only whether an already-off key was deliberately so.
     """
-    return _raw_top_level_value(region, key, unquote).replace(" ", "") == "[]"
+    return "".join(_raw_top_level_value(region, key, unquote).split()) == "[]"
 
 
 # ---------------------------------------------------------------------------
@@ -802,8 +803,8 @@ def main(argv=None, out=None):
                         help="overwrite an existing activation file")
 
     check = sub.add_parser(
-        "check", help="report what each key actually resolves to: armed, inert, or "
-                      "not configured")
+        "check", help="report what each key actually resolves to: armed, inert, "
+                      "off (explicit), or not configured")
 
     setup = sub.add_parser("codex-setup", help="generate Codex roles and writable roots")
     setup.add_argument("--refresh-global", action="store_true",

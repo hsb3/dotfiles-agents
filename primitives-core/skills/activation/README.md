@@ -19,9 +19,10 @@ activation file and a typo'd one are indistinguishable from the outside. `check`
 installed file through the hooks' own loader functions rather than parsing it itself, and
 exits nonzero on an inert key — a broken file becomes a failing command, not a hunch. One
 key, `watermark`, overrides rather than arms: each sub-key it omits stays computed, so the
-report calls it inert only when nothing under it is readable at all. An explicit empty list (`isolate: []`,
-`protected-branches: []`) is the documented off value, so `check` reports it `off (explicit)`
-and passes; the loaders cannot tell it from a malformed value, so that one verdict reads the raw text.
+report calls it inert only when nothing under it is readable at all. An explicit empty
+list (`isolate: []`, `protected-branches: []`) is the documented off value, so `check`
+reports it `off (explicit)` and passes; the loaders cannot tell it from a malformed value,
+so that one verdict reads the raw text.
 
 Reporting through the loaders is what keeps `check` honest, and the loaders now sit on one
 frontmatter parser (`hooks/_lib/atelier_local.py`) instead of seven private copies — so two
