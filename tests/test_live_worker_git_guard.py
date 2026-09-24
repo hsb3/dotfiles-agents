@@ -369,6 +369,15 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._assert_denied(self._run(self._payload(
             "ATELIER_GIT_GUARD_OVERRIDE=1 echo hi && git commit -m x")))
 
+    def test_override_on_the_line_before_does_not_count(self):
+        # A newline ends a command as `;` does, so a bare assignment on its
+        # own line is a shell variable, not the git call's env prefix.
+        self._sidecar("d4444444444444444")
+        for command in ("ATELIER_GIT_GUARD_OVERRIDE=1\ngit push",
+                        "env ATELIER_GIT_GUARD_OVERRIDE=1\ngit push"):
+            with self.subTest(command=command):
+                self._assert_denied(self._run(self._payload(command)))
+
     def test_read_only_forms_of_mutating_verbs_are_silent(self):
         self._sidecar("d4444444444444444")
         for command in ("git stash list", "git stash show -p stash@{0}",
@@ -1028,6 +1037,24 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             with self.subTest(command=command):
                 self._assert_denied(self._run(self._payload(command)))
 
+    def test_a_heredoc_opener_counts_only_outside_quotes_and_comments(self):
+        # A `<<WORD` in a comment, a quoted string (even one opened on an
+        # earlier line) or an arithmetic shift opens no heredoc, so the lines
+        # up to a later line equal to WORD are still commands.
+        cases = (
+            ("# write the notes file with <<EOF below\n"
+             "git add x && git commit -m y\ncat > notes.md <<EOF\nbody\nEOF",
+             "commit"),
+            ("grep -q '<<EOF' gen.sh &&\n  git push\ncat > f <<EOF\nbody\nEOF",
+             "push"),
+            ("echo $(( 1 <<3 ))\ngit push\n3", "push"),
+            ('echo "a\n<<EOF"\ngit push\nEOF', "push"),
+        )
+        for command, verb in cases:
+            with self.subTest(command=command):
+                self.assertEqual(
+                    HOOK._first_mutating_verb(HOOK._tokens(command))[0], verb)
+
     def test_newline_reading_at_the_token_level(self):
         cases = (
             ('git commit -m "a\nb"', "commit"),
@@ -1044,6 +1071,11 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             ("make ci \\\n  && git commit -m x", "commit"),
             ("cat <<EOF\necho a && git rebase main \\\nEOF", None),
             ("cat <<EOF\nhello \\\nEOF\ngit commit -m x", "commit"),
+            # An escaped backslash does not continue the line.
+            ("echo foo\\\\\ngit push", "push"),
+            # A line break clears the inert state of a `<<` or `#`.
+            ("cat <<EOF\nx\nEOF\nif true; then git push; fi", "push"),
+            ("make ci # note\nfor f in *; do git commit -m x; done", "commit"),
         )
         for command, verb in cases:
             with self.subTest(command=command):

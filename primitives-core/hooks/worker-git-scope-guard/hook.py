@@ -112,33 +112,74 @@ def _load_protected_branches(project_dir):
 # Shell command parsing
 # ---------------------------------------------------------------------------
 
-# (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find); the trailing
-# lookahead rejects `<<` mid-expression (e.g. `1 << 3`), which is never a real opener
+# (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
+# matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
+# word, and a shift by a name (`y << n`) drops lines only if a later line is
+# exactly that name.
 HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+
+
+def _scan_line(line, quote):
+    """(the first heredoc terminator this line opens, the quote state at its end,
+    whether it ends in a line continuation), given the quote state it starts in.
+
+    An opener counts only outside quotes and outside a comment, and never with an
+    all-digit word, which is a shift (`$(( 1 <<3 ))`). A backslash escapes the next
+    character outside single quotes. A `#` at the start of the line or after
+    whitespace runs to the line end, so an apostrophe in a comment opens no quote.
+    """
+    terminator = None
+    i = 0
+    while i < len(line):
+        char = line[i]
+        if quote:
+            if char == quote:
+                quote = None
+            elif char == "\\" and quote == '"':
+                i += 1
+        elif char == "\\":
+            if i == len(line) - 1:
+                return terminator, quote, True
+            i += 1
+        elif char in "'\"":
+            quote = char
+        elif char == "#" and (i == 0 or line[i - 1].isspace()):
+            break
+        elif char == "<":
+            m = HEREDOC_START.match(line, i)
+            if m and not m.group(1).isdigit():
+                terminator = terminator or m.group(1)
+                i = m.end()
+                continue
+        i += 1
+    return terminator, quote, False
 
 
 def strip_heredocs(command):
     """Drop heredoc bodies so a git literal inside one is never read as an invocation.
 
-    Only drops when the terminator is actually found — an unmatched `<<` (a shift
-    operator, a stray word) must keep every line, since dropping text here is a
-    silent fail-open and keeping it is at worst an over-deny.
+    Quote state is carried across lines, so a `<<WORD` inside a quoted string or a
+    comment opens nothing. A body starts at the first line end outside quotes and
+    continuations after its opener. Only drops when the terminator is actually
+    found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
+    since dropping text here is a silent fail-open and keeping it is at worst an
+    over-deny.
     """
     lines = command.split("\n")
-    out, i = [], 0
+    out, quote, pending, i = [], None, None, 0
     while i < len(lines):
-        m = HEREDOC_START.search(lines[i])
-        if m:
-            terminator = m.group(1)
-            j = i + 1
-            while j < len(lines) and lines[j].strip() != terminator:
-                j += 1
-            if j < len(lines):
-                out.append(lines[i])
-                i = j + 1  # skip the body and the terminator line
-                continue
         out.append(lines[i])
+        terminator, quote, continued = _scan_line(lines[i], quote)
         i += 1
+        pending = pending or terminator
+        if not pending or quote or continued:
+            continue
+        j = i
+        while j < len(lines) and lines[j].strip() != pending:
+            j += 1
+        if j < len(lines):
+            i = j + 1  # skip the body and the terminator line
+        pending = None
     return "\n".join(out)
 
 

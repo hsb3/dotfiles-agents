@@ -220,8 +220,10 @@ The stash half fires wherever the plugin is installed; the protected-branch half
 - **Promoted from a field-tested implementation in another repo by the same author**,
   installed and running there before it was generalized here. The command parsing
   (`strip_heredocs`, `_cd_resolves`, `invocations`, `target_branches`) and the
-  resolver-as-argument shape of `decide()` come across unchanged; the stash half, the
-  configurable branch list, and the shared-tree test are new.
+  resolver-as-argument shape of `decide()` come across unchanged, apart from `strip_heredocs`
+  counting a `<<WORD` opener only outside quotes (tracked across lines) and comments, and never
+  with an all-digit word, so a quoted or commented mention cannot drop real command lines; the
+  stash half, the configurable branch list, and the shared-tree test are new.
 - **`decide()` takes its resolvers as arguments** — branch, tree kind, and the protected
   set are all injected. That is what lets the whole decision be tested with no git repo
   and no activation file, and it is the property to preserve in any change here.

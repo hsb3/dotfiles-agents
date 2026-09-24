@@ -243,8 +243,10 @@ SEPARATOR_TAILS = ("&", "|", ";", "(", ")", "{", "}")
 # matched nothing and the call was read as neither.
 SEPARATOR_CHARS = "&|;(){}<>"
 
-# A heredoc opener. The lookarounds reject a `<<<` herestring and a shift
-# (`1 << 3`), neither of which has a terminator to find.
+# A heredoc opener. The lookarounds reject a `<<<` herestring. A shift still
+# matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
+# word, and a shift by a name (`y << n`) drops lines only if a later line is
+# exactly that name.
 HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
 
 
@@ -324,61 +326,80 @@ def _emit(obj):
 # Reading the command
 # ---------------------------------------------------------------------------
 
-def _strip_heredocs(command):
-    """The command with every heredoc body and its terminator line removed,
-    opener lines kept.
+def _scan_line(line, quote):
+    """(the first heredoc terminator this line opens, the quote state at its
+    end, whether it ends in a line continuation), given the quote state it
+    starts in.
 
-    Only drops when the terminator is actually found (by `strip()` equality, so
-    a `<<-` tab-indented terminator matches): dropping text is a silent
-    fail-open, keeping it is at worst an over-deny.
+    An opener counts only outside quotes and outside a comment, and never with
+    an all-digit word, which is a shift (`$(( 1 <<3 ))`). A backslash escapes
+    the next character outside single quotes. A `#` at the start of the line or
+    after whitespace runs to the line end, so an apostrophe in a comment opens
+    no quote.
     """
-    lines = command.split("\n")
-    out, i = [], 0
-    while i < len(lines):
-        m = HEREDOC_START.search(lines[i])
-        if m:
-            j = i + 1
-            while j < len(lines) and lines[j].strip() != m.group(1):
-                j += 1
-            if j < len(lines):
-                out.append(lines[i])
-                i = j + 1  # skip the body and the terminator line
-                continue
-        out.append(lines[i])
-        i += 1
-    return "\n".join(out)
-
-
-def _logical_lines(command):
-    """The command split at every newline outside quotes and comments.
-
-    A backslash escapes the next character outside single quotes, so a
-    backslash-newline continues the line. A `#` starting a word runs to the
-    line end, so an apostrophe in a comment cannot open a quote that swallows
-    the lines after it.
-    """
-    lines, start, quote, i = [], 0, None, 0
-    while i < len(command):
-        char = command[i]
+    terminator = None
+    i = 0
+    while i < len(line):
+        char = line[i]
         if quote:
             if char == quote:
                 quote = None
             elif char == "\\" and quote == '"':
                 i += 1
         elif char == "\\":
+            if i == len(line) - 1:
+                return terminator, quote, True
             i += 1
         elif char in "'\"":
             quote = char
-        elif char == "#" and (i == 0 or command[i - 1].isspace()):
-            end = command.find("\n", i)
-            i = len(command) if end < 0 else end
-            continue
-        elif char == "\n":
-            lines.append(command[start:i])
-            start = i + 1
+        elif char == "#" and (i == 0 or line[i - 1].isspace()):
+            break
+        elif char == "<":
+            m = HEREDOC_START.match(line, i)
+            if m and not m.group(1).isdigit():
+                terminator = terminator or m.group(1)
+                i = m.end()
+                continue
         i += 1
-    lines.append(command[start:])
-    return lines
+    return terminator, quote, False
+
+
+def _logical_lines(command):
+    """The command split at every newline outside quotes, with heredoc bodies
+    and backslash-newlines removed.
+
+    A body runs from the opener's line end through the first line equal, after
+    `strip()`, to the word (so a `<<-` tab-indented terminator matches), and is
+    dropped with that line only when the terminator is found: dropping text is
+    a silent fail-open, keeping it is at worst an over-deny. The body is
+    dropped by whole lines, so a body line ending in `\\` joins nothing.
+    """
+    lines = command.split("\n")
+    out, current, quote, pending, i = [], "", None, None, 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        terminator, quote, continued = _scan_line(line, quote)
+        pending = pending or terminator
+        if continued:
+            current += line[:-1]
+            continue
+        current += line
+        if quote:
+            current += "\n"
+            continue
+        out.append(current)
+        current = ""
+        if pending:
+            j = i
+            while j < len(lines) and lines[j].strip() != pending:
+                j += 1
+            if j < len(lines):
+                i = j + 1  # skip the body and the terminator line
+            pending = None
+    if current:
+        out.append(current)
+    return out
 
 
 def _tokens(command):
@@ -390,15 +411,13 @@ def _tokens(command):
     be read as a call. An unbalanced quote makes shlex raise; the whitespace
     split is the fallback, which is coarser but never worse than nothing.
 
-    Heredoc bodies are dropped first, since they are text, and only then is a
-    backslash-newline removed, so a body line ending in `\\` cannot join its
-    terminator. shlex reads a newline as plain whitespace, so each logical
-    line is split on its own and the lines are joined with LINE_BREAK, which
-    opens command position as a `;` does.
+    Heredoc bodies are dropped, since they are text, and backslash-newlines
+    removed (`_logical_lines`). shlex reads a newline as plain whitespace, so
+    each logical line is split on its own and the lines are joined with
+    LINE_BREAK, which opens command position as a `;` does.
     """
     tokens = []
-    joined = _strip_heredocs(command).replace("\\\n", "")
-    for line in _logical_lines(joined):
+    for line in _logical_lines(command):
         try:
             words = shlex.split(line)
         except ValueError:
