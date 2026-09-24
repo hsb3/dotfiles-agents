@@ -272,48 +272,52 @@ def settled_ids(tail_bytes=TAIL_BYTES):
     return settled
 
 
-_NOTIFICATION_RE = re.compile(r"<task-notification>(.*?)</task-notification>", re.S)
-_TASK_ID_RE = re.compile(r"<task-id>\s*([^<\s]+)\s*</task-id>")
-_KILLED_RE = re.compile(r"<status>\s*killed\s*</status>")
 NOTIFICATION_OPEN = "<task-notification>"
-NOTIFICATION_MODE = "task-notification"
+_HEADER_END_RE = re.compile(r"<result>|</task-notification>")
+_TASK_ID_RE = re.compile(r"<task-id>\s*([^<\s]+)\s*</task-id>")
+_STATUS_RE = re.compile(r"<status>\s*([^<\s]*)\s*</status>")
 
 
-def _notifications(text):
-    """(key, killed) per `<task-notification>` block, or [] when `text` is not
-    a notification at all (a typed prompt that merely quotes one)."""
-    if not isinstance(text, str) or not text.lstrip().startswith(NOTIFICATION_OPEN):
-        return []
-    found = []
-    for block in _NOTIFICATION_RE.findall(text):
-        match = _TASK_ID_RE.search(block)
-        key = agent_key(match.group(1)) if match else None
-        if key:
-            found.append((key, bool(_KILLED_RE.search(block))))
-    return found
+def _reopened_by_notification(text):
+    """Agent key a notification reports in any state but killed, else None.
+
+    Only the FIRST block's header counts (text before its `<result>`): an
+    agent's final text inside `<result>` can quote other notifications.
+    """
+    if not isinstance(text, str):
+        return None
+    at = text.find(NOTIFICATION_OPEN)
+    if at == -1:
+        return None
+    head = _HEADER_END_RE.split(text[at + len(NOTIFICATION_OPEN):], 1)[0]
+    task_id = _TASK_ID_RE.search(head)
+    status = _STATUS_RE.search(head)
+    if not task_id or (status and status.group(1) == "killed"):
+        return None
+    return agent_key(task_id.group(1))
 
 
 def stopped_ids(transcript_path, candidates):
     """The subset of `candidates` the session transcript shows stopped.
 
     A TaskStop'd agent fires no SubagentStop (measured on Claude Code
-    2.1.281), so the ledger never settles it. Two records settle it: the
-    TaskStop tool_result (a `user` line whose `toolUseResult.task_id` is the
-    agent and whose message reports success), and a `<task-notification>`
-    with `<status>killed</status>`. Three records RESUME it, un-settling it
-    until its own SubagentStop settles it normally: an assistant `SendMessage`
-    whose `input.to` is the id; a `user` line whose `toolUseResult`
-    `resumedAgentId` is the id (measured: SendMessage addressed by NAME
-    leaves only this); and any later notification for the agent that is not
-    a kill. The user-resume notification ("was resumed by the user") is
-    inferred from the 2.1.281 binary, not measured on disk.
+    2.1.281), so the ledger never settles it. Exactly one record settles it
+    here: the TaskStop success result, a `user` line whose
+    `toolUseResult.task_id` is the agent and whose message starts
+    "Successfully stopped task". A `<task-notification>` never settles, since
+    a queued prompt or an agent's quoted output can carry the same text.
 
-    Notifications are events only where they are written first: a
-    `queue-operation` `enqueue`, or a `task-notification` attachment with no
-    outstanding enqueue of the same text. The `remove`/`dequeue` rows and an
-    attachment matching an earlier enqueue are delivery copies, which can land
-    after a resume and must not undo it. Counting enqueues rather than
-    remembering texts is what lets an identical second kill settle again.
+    Known limit: an agent killed by the user rather than by TaskStop stays
+    live here (it too fires no SubagentStop, assumed, not measured), until
+    its ledger stop row or a stall row settles it.
+
+    Any of these LATER records re-opens it, until its own SubagentStop settles
+    it normally: an assistant `SendMessage` whose `input.to` is the id; a
+    `toolUseResult.resumedAgentId` naming it (measured: SendMessage addressed
+    by NAME leaves only this); a notification for it, in any record kind,
+    whose first header does not say `killed` (the "was resumed by the user"
+    notification is inferred from the 2.1.281 binary, not measured).
+    Reading every notification copy only ever fails closed.
 
     Read whole, in order: not tail-bounded, because a kill aging out of a
     window would re-block on an agent that is long dead. Lines naming no
@@ -325,17 +329,6 @@ def stopped_ids(transcript_path, candidates):
     stopped = set()
     if not wanted or not transcript_path:
         return stopped
-    queued = {}  # enqueued notification text -> copies not yet delivered
-
-    def apply(text):
-        for key, killed in _notifications(text):
-            if key not in wanted:
-                continue
-            if killed:
-                stopped.add(key)
-            else:
-                stopped.discard(key)
-
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -348,6 +341,7 @@ def stopped_ids(transcript_path, candidates):
                 if not isinstance(obj, dict):
                     continue
                 kind = obj.get("type")
+                text = None
                 if kind == "user":
                     result = obj.get("toolUseResult")
                     if isinstance(result, dict):
@@ -357,21 +351,13 @@ def stopped_ids(transcript_path, candidates):
                                 and message.startswith("Successfully stopped task")):
                             stopped.add(key)
                         stopped.discard(agent_key(result.get("resumedAgentId")))
+                    message = obj.get("message")
+                    text = message.get("content") if isinstance(message, dict) else None
                 elif kind == "queue-operation":
-                    if obj.get("operation") == "enqueue":
-                        text = obj.get("content")
-                        apply(text)
-                        if isinstance(text, str):
-                            queued[text] = queued.get(text, 0) + 1
+                    text = obj.get("content")
                 elif kind == "attachment":
                     attachment = obj.get("attachment")
-                    if (isinstance(attachment, dict)
-                            and attachment.get("commandMode") == NOTIFICATION_MODE):
-                        text = attachment.get("prompt")
-                        if isinstance(text, str) and queued.get(text):
-                            queued[text] -= 1
-                        else:
-                            apply(text)
+                    text = attachment.get("prompt") if isinstance(attachment, dict) else None
                 elif kind == "assistant":
                     message = obj.get("message")
                     content = message.get("content") if isinstance(message, dict) else None
@@ -380,6 +366,7 @@ def stopped_ids(transcript_path, candidates):
                                 and block.get("name") == "SendMessage"
                                 and isinstance(block.get("input"), dict)):
                             stopped.discard(agent_key(block["input"].get("to")))
+                stopped.discard(_reopened_by_notification(text))
     except OSError:
         return set()
     return stopped

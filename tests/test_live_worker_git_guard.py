@@ -308,47 +308,6 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
                           "message": "keep going"}}]},
         }
 
-    def test_taskstop_result_settles_the_killed_child(self):
-        self._sidecar("d1111111111111111")
-        self._transcript(self._taskstop_result("d1111111111111111"))
-        self._assert_silent(self._run(self._payload("git commit -m done")))
-
-    def test_killed_task_notification_alone_settles(self):
-        self._sidecar("d2222222222222222")
-        self._transcript(*self._notification("d2222222222222222"))
-        self._assert_silent(self._run(self._payload("git commit -m done")))
-
-    def test_send_message_after_the_kill_makes_it_live_again(self):
-        self._sidecar("d3333333333333333")
-        self._transcript(self._taskstop_result("d3333333333333333"),
-                         *self._notification("d3333333333333333"))
-        self._transcript(self._send_message("d3333333333333333"))
-        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
-        self.assertIn("d3333333333333333", reason)
-
-    def test_a_late_copy_of_the_kill_does_not_settle_a_resumed_child(self):
-        # The notification is queued at the kill but delivered later; a resume
-        # in between must survive the delivered copy.
-        queued, delivered = self._notification("d7777777777777777")
-        self._sidecar("d7777777777777777")
-        self._transcript(queued, self._send_message("d7777777777777777"), delivered)
-        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
-        self.assertIn("d7777777777777777", reason)
-
-    def test_an_unrelated_kill_does_not_settle_this_child(self):
-        self._sidecar("d4444444444444444")
-        self._transcript(self._taskstop_result("d5555555555555555"),
-                         *self._notification("d5555555555555555"))
-        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
-        self.assertIn("d4444444444444444", reason)
-
-    def test_a_completed_notification_is_not_a_kill(self):
-        # Only the ledger settles a natural finish; a non-killed status here
-        # must not settle on its own.
-        self._sidecar("d6666666666666666")
-        self._transcript(*self._notification("d6666666666666666", "completed"))
-        self._assert_denied(self._run(self._payload("git commit -m x")))
-
     @staticmethod
     def _resume_result(agent_id):
         # Trimmed from a real 2.1.281 line: SendMessage addressed by NAME, so
@@ -365,6 +324,58 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "version": "2.1.281",
         }
 
+    def test_taskstop_result_settles_the_killed_child(self):
+        self._sidecar("d1111111111111111")
+        self._transcript(self._taskstop_result("d1111111111111111"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_killed_notification_never_settles(self):
+        # A queued prompt can start with the same text, so no record kind of a
+        # notification settles; only the TaskStop result does.
+        self._sidecar("d2222222222222222")
+        queued, delivered = self._notification("d2222222222222222")
+        self._transcript(dict(queued, content=queued["content"] + "\nwhy was it killed?"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+        self._transcript(delivered)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_the_kills_own_notification_keeps_it_settled(self):
+        # The real 2.1.281 order: enqueue, TaskStop result, delivery, remove.
+        self._sidecar("d8888888888888888")
+        queued, delivered = self._notification("d8888888888888888")
+        self._transcript(queued, self._taskstop_result("d8888888888888888"),
+                         delivered, dict(queued, operation="remove"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_send_message_after_the_kill_makes_it_live_again(self):
+        self._sidecar("d3333333333333333")
+        self._transcript(self._taskstop_result("d3333333333333333"),
+                         *self._notification("d3333333333333333"))
+        self._transcript(self._send_message("d3333333333333333"))
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d3333333333333333", reason)
+
+    def test_a_late_remove_row_does_not_undo_a_resume(self):
+        self._sidecar("d4444444444444444")
+        queued, _ = self._notification("d4444444444444444")
+        self._transcript(self._taskstop_result("d4444444444444444"),
+                         self._send_message("d4444444444444444"),
+                         dict(queued, operation="remove", reason="absorbed_mid_turn"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_late_attachment_does_not_undo_a_resume_by_name(self):
+        self._sidecar("d5555555555555555")
+        _, delivered = self._notification("d5555555555555555")
+        self._transcript(self._taskstop_result("d5555555555555555"),
+                         self._resume_result("d5555555555555555"), delivered)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_an_unrelated_taskstop_does_not_settle_this_child(self):
+        self._sidecar("d6666666666666666")
+        self._transcript(self._taskstop_result("d7777777777777777"))
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d6666666666666666", reason)
+
     def test_a_resume_by_name_makes_it_live_again(self):
         self._sidecar("e1111111111111111")
         self._transcript(self._taskstop_result("e1111111111111111"),
@@ -379,40 +390,34 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "<task-notification>\n<task-id>e2222222222222222</task-id>\n"
             "<summary>Agent \"x\" was resumed by the user</summary>\n"
             "</task-notification>"))
-        self._transcript(self._taskstop_result("e2222222222222222"), queued, resumed)
+        self._transcript(self._taskstop_result("e2222222222222222"), resumed)
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
     def test_a_later_non_kill_notification_makes_it_live_again(self):
         self._sidecar("e3333333333333333")
-        queued, _ = self._notification("e3333333333333333")
         later, _ = self._notification("e3333333333333333", "completed")
-        self._transcript(self._taskstop_result("e3333333333333333"), queued, later)
+        self._transcript(self._taskstop_result("e3333333333333333"), later)
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
-    def test_a_typed_prompt_quoting_a_kill_does_not_settle(self):
+    def test_y_quoting_a_notification_for_x_does_not_reopen_x(self):
+        # Y's final text in <result> quotes notifications; only the header of
+        # the first block is Y's own.
         self._sidecar("e4444444444444444")
-        queued, delivered = self._notification("e4444444444444444")
-        self._transcript(
-            dict(queued, content="please read this paste:\n" + queued["content"]))
-        self._assert_denied(self._run(self._payload("git commit -m x")))
-        self._transcript({"type": "attachment", "attachment": dict(
-            delivered["attachment"], commandMode="prompt")})
-        self._assert_denied(self._run(self._payload("git commit -m x")))
-
-    def test_a_second_identical_kill_after_a_resume_settles_again(self):
-        self._sidecar("e5555555555555555")
-        queued, delivered = self._notification("e5555555555555555")
-        self._transcript(queued, delivered,
-                         self._send_message("e5555555555555555"), queued)
+        queued, _ = self._notification("e5555555555555555", "completed")
+        quoted_z = self._notification("e6666666666666666", "completed")[0]["content"]
+        quoted_x = self._notification("e4444444444444444", "completed")[0]["content"]
+        y_done = queued["content"].replace(
+            "</task-notification>",
+            "<result>seen: " + quoted_z + quoted_x + "</result>\n</task-notification>")
+        self._transcript(self._taskstop_result("e4444444444444444"),
+                         dict(queued, content=y_done))
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
-    def test_an_undelivered_queue_is_not_needed_for_a_second_kill(self):
-        # A notification can arrive as an attachment with no enqueue before it;
-        # that attachment is an event, not a copy.
-        self._sidecar("e6666666666666666")
-        _, delivered = self._notification("e6666666666666666")
-        self._transcript(delivered, self._send_message("e6666666666666666"),
-                         delivered)
+    def test_a_second_taskstop_after_a_resume_settles_again(self):
+        self._sidecar("e5555555555555555")
+        self._transcript(self._taskstop_result("e5555555555555555"),
+                         self._send_message("e5555555555555555"),
+                         self._taskstop_result("e5555555555555555"))
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
     def test_a_deeply_nested_line_does_not_drop_every_worker(self):

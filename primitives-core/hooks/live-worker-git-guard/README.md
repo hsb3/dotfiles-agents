@@ -144,12 +144,14 @@ cannot disagree about who is live: the `agent-*.meta.json` sidecars in this sess
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
 already settled.
 
-A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281; a user kill is assumed
-to behave the same), so the ledger never settles it. The guard reads the kill from the session
-transcript instead (`pending.stopped_ids`): the TaskStop tool result, or a `<task-notification>`
-with status `killed`. A later resume makes it live again: a `SendMessage` to it (the tool result
-carries its id even when it was addressed by name), or any later notification for it that is not
-a kill. The user-resume notification's shape is inferred from the 2.1.281 binary, not measured.
+A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
+settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on the
+TaskStop success result only: a `<task-notification>` never settles, because a queued prompt or an
+agent's quoted output can carry the same text. A later resume makes it live again: a `SendMessage`
+to it (the tool result carries its id even when it was addressed by name), or any later
+notification for it whose own header is not a kill (the user-resume shape is inferred from the
+2.1.281 binary, not measured). Known limit: an agent the user kills without TaskStop stays live
+here until a ledger row settles it; it is assumed, not measured, to fire no `SubagentStop` either.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only
 scouts too — a `checkout` or `pull` changes the tree a scout is reading mid-read.
