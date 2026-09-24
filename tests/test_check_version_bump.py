@@ -1229,6 +1229,13 @@ class BranchParameterisedTree(unittest.TestCase):
         self.assertNotEqual(main_tree.stamp_path, dev_tree.stamp_path)
 
 
+# The dev stage extracts through tarfile's `data` filter; without it the gate reds as
+# unmeasured, which only the no-filter test below asserts.
+needs_tar_filter = unittest.skipUnless(
+    hasattr(V.tarfile, "data_filter"), "this Python's tarfile has no extraction filter"
+)
+
+
 @unittest.skipUnless(GIT, "git is not installed")
 class BaseStageIntegration(unittest.TestCase):
     """Real git: a bare origin carrying `main` (dereferenced, published) and `dev` (symlinks).
@@ -1293,21 +1300,25 @@ class BaseStageIntegration(unittest.TestCase):
         )
         return rc, "\n".join(lines)
 
+    @needs_tar_filter
     def test_claiming_devs_version_is_red(self):
         rc, text = self.run_main("0.2.0")
         self.assertEqual(rc, 1, text)
         self.assertIn("origin/dev", text)
         self.assertIn("plugins/alpha", text)
 
+    @needs_tar_filter
     def test_claiming_the_next_version_is_green(self):
         rc, text = self.run_main("0.3.0")
         self.assertEqual(rc, 0, text)
 
+    @needs_tar_filter
     def test_unchanged_symlink_assembly_matches_dev(self):
         """A branch equal to dev is green: dev's symlinks are compared as the bytes they reach."""
         rc, text = self.run_main("0.2.0", body=None)
         self.assertEqual(rc, 0, text)
 
+    @needs_tar_filter
     def test_dev_ahead_of_head_hints_to_update_the_branch(self):
         """A PR cut before dev moved: the red stands, and says to update rather than bump."""
         self.git(self.work, "reset", "-q", "--hard", "HEAD^")  # the PR predates dev's 0.2.0
@@ -1315,11 +1326,13 @@ class BaseStageIntegration(unittest.TestCase):
         self.assertEqual(rc, 1, text)
         self.assertIn("has moved past this tree", text)
 
+    @needs_tar_filter
     def test_no_hint_when_head_contains_dev(self):
         rc, text = self.run_main("0.2.0")
         self.assertEqual(rc, 1, text)
         self.assertNotIn("moved past", text)
 
+    @needs_tar_filter
     def test_escaping_symlink_on_dev_is_unmeasured_not_a_traceback(self):
         seed = os.path.join(self.root, "seed")
         os.symlink("/etc/hosts", os.path.join(seed, "escape"))
@@ -1333,9 +1346,10 @@ class BaseStageIntegration(unittest.TestCase):
 
     def test_python_without_a_tar_filter_is_unmeasured_not_a_traceback(self):
         """Python < 3.12 (bar late patch releases) has no `filter=`; red, but no TypeError."""
-        saved = V.tarfile.data_filter
-        del V.tarfile.data_filter
-        self.addCleanup(setattr, V.tarfile, "data_filter", saved)
+        saved = getattr(V.tarfile, "data_filter", None)
+        if saved is not None:
+            del V.tarfile.data_filter
+            self.addCleanup(setattr, V.tarfile, "data_filter", saved)
         rc, text = self.run_main("0.3.0")
         self.assertEqual(rc, 1, text)
         self.assertIn("NOT evidence of a missing version bump", text)
