@@ -214,7 +214,8 @@ def _cd_resolves(ctx, target):
 
 def _dash_c_string(toks):
     """The string argument to a shell's `-c`, when `toks` contains `<bash|sh|zsh> ...
-    -c <string> ...` at any position, else None. The shell word need not be first —
+    -c <string> ...`, else None. The caller passes only the tokens before any git word.
+    The shell word need not be first —
     `env bash -c ...`, `sudo bash -c ...`, `timeout 5 bash -c ...` all count. Matches a
     bare `-c` or a single-dash flag cluster containing it (`-lc`); a positional token
     before `-c` (a script path) means this is not the `-c` form at all, so scanning
@@ -350,15 +351,17 @@ def invocations(command, cwd):
                 ctx = (target if target.startswith("/")
                        else os.path.normpath(os.path.join(ctx, target)))
             toks = toks[consumed:]
-        wrapped = _dash_c_string(toks)
-        if wrapped is not None:
-            yield from invocations(wrapped, ctx)
-            continue
         # basename, not a literal "git" token: matches `/usr/bin/git` too, and still
         # excludes a quoted prose string (shlex hands that back as one multi-word token).
         # Lowercased: a case-insensitive filesystem runs `GIT` as git.
         git_at = next((i for i, t in enumerate(toks)
                        if os.path.basename(t).lower() == "git"), None)
+        # A shell is a wrapper only BEFORE git; after it (`git -C sh -c k=v stash drop`)
+        # it is git's own argument, and the outer git call is the one to check.
+        wrapped = _dash_c_string(toks[:git_at] if git_at is not None else toks)
+        if wrapped is not None:
+            yield from invocations(wrapped, ctx)
+            continue
         if git_at is None:
             continue
         toks = toks[git_at:]

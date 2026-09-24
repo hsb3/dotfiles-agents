@@ -166,7 +166,8 @@ directory an unresolved compare mismatches and, again, silently allows the stash
 
 A call is still recognised when it is not the bare word `git` in command position:
 
-- **`bash`/`sh`/`zsh -c '<string>'`**, anywhere in the command — the shell word need not be
+- **`bash`/`sh`/`zsh -c '<string>'`**, anywhere before a git word (after one, as in
+  `git -C sh ...`, it is git's argument and the outer git call is checked) — the shell word need not be
   first, so `env bash -c ...`, `sudo bash -c ...`, `nohup sh -c ...` and `timeout 5 bash -c
   ...` all count. Recognised past a flag cluster (`-lc`), long options, `-o`/`-O <value>`,
   `--rcfile`/`--init-file <value>`, and a `-c --` cluster (real bash takes the very next
@@ -187,10 +188,10 @@ A call is still recognised when it is not the bare word `git` in command positio
 ## Honest scope — this is a tripwire, not containment
 
 A worker that writes a shell script and runs that, or drives git through a tool other than
-`Bash`, is not caught. Command splitting is quote- and comment-aware, and a `$(...)` or
-subshell is split open, so git inside one is read. Remaining ceilings on the same parser:
+`Bash`, is not caught. Command splitting is quote- and comment-aware, and an unquoted
+`$(...)` or subshell is split open, so git inside one is read. Remaining ceilings on the same parser:
 `eval` fed a quoted string (`eval 'git stash drop'`; a bare `eval git stash drop` is
-caught), a backtick substitution, a git alias, a script piped or heredoc'd into a shell
+caught), a `$(...)` inside double quotes (`x="$(git stash drop)"`), a backtick substitution, a git alias, a script piped or heredoc'd into a shell
 (`echo 'git stash drop' | bash`), another interpreter (`python3 -c`), `git update-ref
 --stdin` fed a ref name over a pipe (the ref never appears in the argv this parser reads),
 and any shell besides `bash`/`sh`/`zsh` (`dash`, `fish`, `ksh`). A basename match also over-denies in one direction:

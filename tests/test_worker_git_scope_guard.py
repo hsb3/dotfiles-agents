@@ -212,6 +212,13 @@ class ShellWrapperAndAltGitFormsTests(unittest.TestCase):
     def test_a_redirect_ampersand_is_not_a_command(self):
         self.assertFalse(blocked("git stash list 2>&1 &>/dev/null"))
 
+    def test_a_shell_word_after_git_is_an_argument_not_a_wrapper(self):
+        # PR 587 review: `-C sh` / `-C ./zsh` must not turn the outer git call into a
+        # recursion into git's own `-c` config value
+        self.assertTrue(blocked("git -C sh -c a.b=1 stash drop"))
+        self.assertTrue(blocked("git -C ./zsh -c a.b=1 stash drop"))
+        self.assertTrue(blocked("git -C sh -c a.b=1 commit -m x", branch="main"))
+
     def test_update_ref_saving_the_stash_as_a_branch_is_allowed(self):
         self.assertFalse(blocked("git update-ref refs/heads/rescue stash"))
 
