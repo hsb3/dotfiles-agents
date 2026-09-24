@@ -1,0 +1,8 @@
+{
+  "event": ["WorktreeCreate", "WorktreeRemove", "SubagentStop"],
+  "timeout": 60,
+  "statusMessage": {
+    "WorktreeCreate": "Creating worktree under checkout-root...",
+    "WorktreeRemove": "Removing worktree..."
+  }
+}
