@@ -158,12 +158,15 @@ or vanished entry is a protocol breach to report and clean up by hand.
 Bracket every report-only dispatch with `scripts/trace_check.py` from this skill (from an
 installed plugin,
 `~/.claude/plugins/cache/dotfiles-agents/atelier/<version>/skills/delegation/scripts/trace_check.py`):
-`python3 trace_check.py snapshot <repo> /tmp/rev<PR>-<slug>.trace` before dispatch, then
-`python3 trace_check.py check <repo> /tmp/rev<PR>-<slug>.trace` after it returns. Exit 1 names
-each new or vanished status entry and any HEAD or stash change. It is blind to a rewrite of a
-path that was already dirty, to writes under `.git/`, and to writes inside a nested repo or
-worktree (including `.claude/worktrees/`); a concurrent writer in the same checkout shows up as
-noise, so snapshot with no other writer live there.
+`python3 trace_check.py snapshot <repo> /tmp/trace-rev<PR>-<slug>.json` before dispatch, then
+`python3 trace_check.py check <repo> /tmp/trace-rev<PR>-<slug>.json` after it returns. The
+snapshot sits outside the worker's `/tmp/rev<PR>-*` scratch so its cleanup cannot delete it.
+Exit 1 names each new or vanished status entry and each new or vanished ref, HEAD's target
+included; Python bytecode under `__pycache__/` is ignored, since re-running a test suite writes
+it. It is blind to a rewrite of a path that was already dirty, to other writes under `.git/`
+(config, hooks), to an empty new directory, and to writes inside a nested repo or worktree
+(including `.claude/worktrees/`). A concurrent writer in the same checkout, or a commit in a
+sibling worktree (refs are shared), shows up as noise, so snapshot with no other writer live.
 <!-- /harness -->
 
 ## Reading a returned brief

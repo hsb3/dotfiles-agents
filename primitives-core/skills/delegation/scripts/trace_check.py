@@ -8,16 +8,24 @@ Both run `git status --porcelain=v1 -z --untracked-files=all --ignored=tradition
 with `-uall`, `traditional` lists files inside an already-ignored dir individually
 instead of collapsing to the dir, so a leak dropped there is still caught. Every git
 call carries `--no-optional-locks` so a check never blocks on (or takes) index.lock.
+Ref state (branches, tags, stash, HEAD's target) is tracked separately via
+`git for-each-ref` plus a resolved HEAD line -- see `git_refs`.
 
 ponytail: a path already dirty/untracked at snapshot time is invisible to `check` unless
 its status code changes; only new (code, path) pairs are caught. Hash contents if a
-rewrite of an existing entry ever matters. Also invisible: a write under `.git/` itself
-(git status never reports it), and a write inside a nested repo or nested worktree --
-status collapses those to one dir entry regardless of `-uall`.
+rewrite of an existing entry ever matters. Also invisible: a write under `.git/` that
+isn't a ref (git config edits, hook scripts), a write inside a nested repo or nested
+worktree -- status collapses those to one dir entry regardless of `-uall` -- and an
+empty new directory, since git tracks files, not directories.
+
+ponytail: `__pycache__/` bytecode is noise from re-running the tests themselves, not a
+leak, so an ignored (`!!`) entry with a `__pycache__` path component is dropped before
+either snapshot or compare.
 
 Exit codes: snapshot 0 written, 2 usage/git error/refused path/missing parent dir.
-check 0 clean, 1 new/gone entries or HEAD/stash change found, 2 usage/git
-error/malformed snapshot/toplevel mismatch. Stdlib only.
+check 0 clean, 1 new/gone entries or refs found, 2 usage/git error/malformed
+snapshot/toplevel mismatch. Refs are shared by every worktree of a repository, so a
+commit in a sibling worktree also reads as `ref+`/`ref-`. Stdlib only.
 """
 
 import argparse
@@ -38,11 +46,19 @@ def run_git(repo, *args):
 
 
 def git_entries(repo):
-    """Run `git status` in `repo`; return (entries, error) -- error is a message or None."""
+    """Run `git status` in `repo`; return (entries, error) -- error is a message or None.
+
+    Ignored bytecode under any `__pycache__` path component is dropped -- see module
+    docstring.
+    """
     proc = run_git(repo, *STATUS_ARGS)
     if proc.returncode != 0:
         return None, proc.stderr.decode("utf-8", "replace").strip() or "git status failed"
-    return parse_status_z(proc.stdout), None
+    entries = parse_status_z(proc.stdout)
+    entries = [
+        e for e in entries if not (e[0] == "!!" and "__pycache__" in e[1].split("/"))
+    ]
+    return entries, None
 
 
 def parse_status_z(raw):
@@ -74,6 +90,28 @@ def git_ref(repo, ref):
     if proc.returncode != 0:
         return None
     return proc.stdout.decode("utf-8", "replace").strip()
+
+
+def git_refs(repo):
+    """Every ref line (`refs/for-each-ref '%(refname) %(objectname)'`, which covers
+    branches, tags and `refs/stash`) plus one `HEAD <target>` line -- the branch HEAD
+    points at, else its sha, else "none". Return (sorted lines, error)."""
+    proc = run_git(repo, "for-each-ref", "--format=%(refname) %(objectname)")
+    if proc.returncode != 0:
+        return None, proc.stderr.decode("utf-8", "replace").strip() or "git for-each-ref failed"
+    # A fetch rewrites refs/remotes/ without touching this checkout; not a trace.
+    lines = [
+        line for line in proc.stdout.decode("utf-8", "surrogateescape").splitlines()
+        if not line.startswith("refs/remotes/")
+    ]
+
+    symbolic = run_git(repo, "symbolic-ref", "-q", "HEAD")
+    if symbolic.returncode == 0:
+        target = symbolic.stdout.decode("utf-8", "replace").strip()
+    else:
+        target = git_ref(repo, "HEAD") or "none"
+    lines.append("HEAD %s" % target)
+    return sorted(lines), None
 
 
 def toplevel(repo):
@@ -115,7 +153,11 @@ def cmd_snapshot(repo, file_path, stderr):
         stderr.write("trace_check: %s\n" % error)
         return 2
 
-    inside = parent_dir_inside(root, file_path)
+    # Resolve symlinks before the inside-repo check: a symlinked leaf or a symlinked
+    # parent dir can point back into the repo even when file_path's own text does not.
+    resolved = os.path.realpath(file_path)
+
+    inside = parent_dir_inside(root, resolved)
     if inside is None:
         stderr.write("trace_check: parent directory of %s does not exist\n" % file_path)
         return 2
@@ -130,21 +172,24 @@ def cmd_snapshot(repo, file_path, stderr):
     if error is not None:
         stderr.write("trace_check: %s\n" % error)
         return 2
+    refs, error = git_refs(repo)
+    if error is not None:
+        stderr.write("trace_check: %s\n" % error)
+        return 2
 
     snapshot = {
         "toplevel": root,
-        "head": git_ref(repo, "HEAD"),
-        "stash": git_ref(repo, "refs/stash"),
+        "refs": refs,
         "entries": sorted(entries),
     }
-    with open(file_path, "w") as handle:
+    with open(resolved, "w") as handle:
         json.dump(snapshot, handle, sort_keys=True, indent=2)
         handle.write("\n")
     return 0
 
 
 def _load_snapshot(file_path, stderr):
-    """Read and validate the snapshot shape; return (toplevel, head, stash, pairs) or None."""
+    """Read and validate the snapshot shape; return (toplevel, refs, pairs) or None."""
     try:
         with open(file_path) as handle:
             data = json.load(handle)
@@ -152,19 +197,20 @@ def _load_snapshot(file_path, stderr):
         stderr.write("trace_check: could not read snapshot %s: %s\n" % (file_path, exc))
         return None
     try:
-        root, head, stash = data["toplevel"], data["head"], data["stash"]
+        root = data["toplevel"]
+        refs = [str(r) for r in data["refs"]]
         pairs = [(code, path) for code, path in data["entries"]]
     except (KeyError, TypeError, ValueError):
         stderr.write("trace_check: malformed snapshot %s\n" % file_path)
         return None
-    return root, head, stash, pairs
+    return root, refs, pairs
 
 
 def cmd_check(repo, file_path, stdout, stderr):
     loaded = _load_snapshot(file_path, stderr)
     if loaded is None:
         return 2
-    snap_root, snap_head, snap_stash, known = loaded
+    snap_root, snap_refs, known = loaded
 
     root, error = toplevel(repo)
     if error is not None:
@@ -180,24 +226,31 @@ def cmd_check(repo, file_path, stdout, stderr):
     if error is not None:
         stderr.write("trace_check: %s\n" % error)
         return 2
+    refs, error = git_refs(repo)
+    if error is not None:
+        stderr.write("trace_check: %s\n" % error)
+        return 2
+
     current = {(code, path) for code, path in entries}
     known_set = set(known)
     new = sorted(current - known_set)
     gone = sorted(known_set - current)
 
-    head = git_ref(repo, "HEAD")
-    stash = git_ref(repo, "refs/stash")
+    known_refs = set(snap_refs)
+    current_refs = set(refs)
+    new_refs = sorted(current_refs - known_refs)
+    gone_refs = sorted(known_refs - current_refs)
 
     for code, path in new:
         stdout.write("%s %s\n" % (code, display(path)))
     for code, path in gone:
         stdout.write("gone %s %s\n" % (code, display(path)))
-    if head != snap_head:
-        stdout.write("head %s -> %s\n" % (snap_head or "none", head or "none"))
-    if stash != snap_stash:
-        stdout.write("stash %s -> %s\n" % (snap_stash or "none", stash or "none"))
+    for line in new_refs:
+        stdout.write("ref+ %s\n" % display(line))
+    for line in gone_refs:
+        stdout.write("ref- %s\n" % display(line))
 
-    changed = bool(new) or bool(gone) or head != snap_head or stash != snap_stash
+    changed = bool(new) or bool(gone) or bool(new_refs) or bool(gone_refs)
     return 1 if changed else 0
 
 

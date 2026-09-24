@@ -39,7 +39,7 @@ def init_repo(repo):
     write(os.path.join(repo, "README.md"), "hi\n")
     os.makedirs(os.path.join(repo, "ignored_dir"))
     write(os.path.join(repo, "ignored_dir", "existing.txt"), "already there\n")
-    write(os.path.join(repo, ".gitignore"), "ignored_dir/\n")
+    write(os.path.join(repo, ".gitignore"), "ignored_dir/\n__pycache__/\n")
     git(repo, "add", "README.md", ".gitignore")
     git(repo, "commit", "-q", "-m", "init")
 
@@ -186,8 +186,9 @@ class Trace(unittest.TestCase):
         git(self.repo, "commit", "-q", "--allow-empty", "-m", "empty")
         code, out, _ = run(["check", self.repo, self.snap])
         self.assertEqual(1, code)
-        self.assertTrue(out.startswith("head "), out)
-        self.assertIn(" -> ", out)
+        lines = out.splitlines()
+        self.assertTrue(any(l.startswith("ref+ refs/heads/main ") for l in lines), out)
+        self.assertTrue(any(l.startswith("ref- refs/heads/main ") for l in lines), out)
 
     def test_stash_push_changes_stash_is_reported(self):
         # Fixture repo only -- never touches the real checkout's stash stack.
@@ -197,8 +198,39 @@ class Trace(unittest.TestCase):
         git(self.repo, "stash", "push", "-u", "-m", "trace-check-test")
         code, out, _ = run(["check", self.repo, self.snap])
         self.assertEqual(1, code)
-        self.assertIn("stash ", out)
-        self.assertIn(" -> ", out)
+        self.assertTrue(any(line.startswith("ref+ refs/stash ") for line in out.splitlines()), out)
+
+    def test_new_branch_is_caught(self):
+        self.snapshot()
+        git(self.repo, "branch", "feature")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        self.assertTrue(
+            any(line.startswith("ref+ refs/heads/feature ") for line in out.splitlines()), out
+        )
+
+    def test_checkout_dash_b_at_same_sha_is_caught(self):
+        self.snapshot()
+        git(self.repo, "checkout", "-q", "-b", "other")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        lines = out.splitlines()
+        self.assertTrue(any(l.startswith("ref+ refs/heads/other ") for l in lines), out)
+        self.assertTrue(any(l.startswith("ref+ HEAD ") for l in lines), out)
+        self.assertTrue(any(l.startswith("ref- HEAD ") for l in lines), out)
+
+    def test_new_tag_is_caught(self):
+        self.snapshot()
+        git(self.repo, "tag", "v1")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        self.assertTrue(any(line.startswith("ref+ refs/tags/v1 ") for line in out.splitlines()), out)
+
+    def test_remote_tracking_ref_update_is_not_a_trace(self):
+        self.snapshot()
+        git(self.repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(0, code, out)
 
     def test_check_refuses_when_toplevel_differs(self):
         self.snapshot()
@@ -210,7 +242,7 @@ class Trace(unittest.TestCase):
         self.assertNotEqual("", err)
 
     def test_malformed_snapshot_missing_entries_key_exits_two(self):
-        write(self.snap, json.dumps({"toplevel": self.repo, "head": None, "stash": None}))
+        write(self.snap, json.dumps({"toplevel": self.repo, "refs": []}))
         code, _, err = run(["check", self.repo, self.snap])
         self.assertEqual(2, code)
         self.assertNotEqual("", err)
@@ -218,7 +250,7 @@ class Trace(unittest.TestCase):
     def test_malformed_snapshot_entries_not_a_list_exits_two(self):
         write(
             self.snap,
-            json.dumps({"toplevel": self.repo, "head": None, "stash": None, "entries": "??"}),
+            json.dumps({"toplevel": self.repo, "refs": [], "entries": "??"}),
         )
         code, _, err = run(["check", self.repo, self.snap])
         self.assertEqual(2, code)
@@ -239,6 +271,40 @@ class Trace(unittest.TestCase):
         code, out, _ = run(["check", self.repo, self.snap])
         self.assertEqual(1, code)
         self.assertEqual("?? trailing.txt \n", out)
+
+    def test_new_pycache_bytecode_under_ignored_dir_is_not_reported(self):
+        self.snapshot()
+        os.makedirs(os.path.join(self.repo, "pkg", "__pycache__"))
+        write(os.path.join(self.repo, "pkg", "__pycache__", "x.cpython-314.pyc"), "junk")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(0, code, out)
+        self.assertEqual("", out)
+
+    def test_new_non_bytecode_ignored_file_still_reported(self):
+        self.snapshot()
+        write(os.path.join(self.repo, "ignored_dir", "new_leak.txt"), "leak\n")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        self.assertEqual("!! ignored_dir/new_leak.txt\n", out)
+
+    def test_snapshot_path_symlinked_into_repo_is_refused(self):
+        outside = os.path.join(self.tmp.name, "x")
+        os.makedirs(outside)
+        target = os.path.join(self.repo, "leak.json")
+        link = os.path.join(outside, "link.json")
+        os.symlink(target, link)
+        code, _, err = run(["snapshot", self.repo, link])
+        self.assertEqual(2, code)
+        self.assertIn(self.repo, err)
+        self.assertFalse(os.path.exists(target))
+
+    def test_snapshot_path_via_dir_symlink_into_dot_git_is_refused(self):
+        outside = os.path.join(self.tmp.name, "x")
+        os.symlink(os.path.join(self.repo, ".git"), outside)
+        link = os.path.join(outside, "link.json")
+        code, _, err = run(["snapshot", self.repo, link])
+        self.assertEqual(2, code)
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".git", "link.json")))
 
 
 class ParseStatusZ(unittest.TestCase):

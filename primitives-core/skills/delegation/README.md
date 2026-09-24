@@ -40,7 +40,7 @@ a brief is split, and the one answer each unresolved entry gets.
 
 A report-only worker gets a check too, because its brief's "write nothing here" is wording, not
 enforcement. `scripts/trace_check.py` snapshots the checkout's git status (untracked and ignored
-files included, plus HEAD and the stash) before a reviewer or scout is dispatched and names every
+files included, plus every ref and HEAD's target) before a reviewer or scout is dispatched and names every
 change after it returns; `references/briefs.md` carries the scratch-directory wording and when to
 run it.
 
