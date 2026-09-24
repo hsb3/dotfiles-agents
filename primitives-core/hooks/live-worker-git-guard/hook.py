@@ -246,7 +246,7 @@ SEPARATOR_CHARS = "&|;(){}<>"
 # A heredoc opener. The lookarounds reject a `<<<` herestring. A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(\r?)(?=\s|$)")
 
 
 class _LineBreak(str):
@@ -326,9 +326,9 @@ def _emit(obj):
 # ---------------------------------------------------------------------------
 
 def _scan_line(line, quote):
-    """(the first heredoc terminator this line opens, the quote state at its
-    end, whether it ends in a line continuation), given the quote state it
-    starts in.
+    """(the heredoc terminators this line opens, each `(word, quoted, dash)`,
+    the quote state at its end, whether it ends in a line continuation), given the
+    quote state it starts in.
 
     An opener counts only outside quotes and outside a comment, and never with
     an all-digit word or inside an unclosed `((`, where it is a shift
@@ -337,7 +337,7 @@ def _scan_line(line, quote):
     at the start of the line, after whitespace or after one of `;&|()` runs to
     the line end, so an apostrophe in a comment opens no quote.
     """
-    terminator = None
+    terminators = []
     i = 0
     while i < len(line):
         char = line[i]
@@ -348,7 +348,7 @@ def _scan_line(line, quote):
                 i += 1
         elif char == "\\":
             if i == len(line) - 1:
-                return terminator, quote, True
+                return terminators, quote, True
             i += 1
         elif line.startswith("$'", i):
             quote = "$'"
@@ -360,32 +360,63 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(1).isdigit()
+            if (m and not m.group(3).isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                terminator = terminator or m.group(1)
+                # bash keeps a CRLF opener's `\r` in the word
+                terminators.append((m.group(3) + m.group(4), bool(m.group(2)),
+                                    bool(m.group(1))))
                 i = m.end()
                 continue
         i += 1
-    return terminator, quote, False
+    return terminators, quote, False
+
+
+def _body_end(lines, j, word, quoted, dash):
+    """The index of the line that closes a heredoc body starting at `lines[j]`,
+    or None. As in bash, under an unquoted word a line ending in an odd run of
+    backslashes joins the next first, and the result must equal the word
+    exactly, after only its leading tabs are removed under `<<-`."""
+    while j < len(lines):
+        line = lines[j]
+        while (not quoted and j + 1 < len(lines)
+               and (len(line) - len(line.rstrip("\\"))) % 2):
+            j += 1
+            line = line[:-1] + lines[j]
+        if (line.lstrip("\t") if dash else line) == word:
+            return j
+        j += 1
+    return None
+
+
+def _skip_bodies(lines, i, terminators):
+    """The index after the last of the heredoc bodies that `terminators`
+    opened on one line, read in order from `lines[i]`; `i` itself when one is
+    never closed, since dropping text is a silent fail-open."""
+    j = i
+    for terminator in terminators:
+        j = _body_end(lines, j, *terminator)
+        if j is None:
+            return i
+        j += 1
+    return j
 
 
 def _logical_lines(command):
     """The command split at every newline outside quotes, with heredoc bodies
     and backslash-newlines removed.
 
-    A body runs from the opener's line end through the first line equal, after
-    `strip()`, to the word (so a `<<-` tab-indented terminator matches), and is
-    dropped with that line only when the terminator is found: dropping text is
-    a silent fail-open, keeping it is at worst an over-deny. The body is
-    dropped by whole lines, so a body line ending in `\\` joins nothing.
+    A body runs from the opener's line end through its terminator line, as
+    bash finds it (`_body_end`); bodies opened on one line follow in order. They
+    are dropped only when every terminator is found: dropping text is a silent
+    fail-open, keeping it is at worst an over-deny.
     """
     lines = command.split("\n")
-    out, current, quote, pending, i = [], "", None, None, 0
+    out, current, quote, pending, i = [], "", None, [], 0
     while i < len(lines):
         line = lines[i]
         i += 1
-        terminator, quote, continued = _scan_line(line, quote)
-        pending = pending or terminator
+        terminators, quote, continued = _scan_line(line, quote)
+        pending += terminators
         if continued:
             current += line[:-1]
             continue
@@ -395,13 +426,8 @@ def _logical_lines(command):
             continue
         out.append(current)
         current = ""
-        if pending:
-            j = i
-            while j < len(lines) and lines[j].strip() != pending:
-                j += 1
-            if j < len(lines):
-                i = j + 1  # skip the body and the terminator line
-            pending = None
+        i = _skip_bodies(lines, i, pending)  # each body and its terminator line
+        pending = []
     if current:
         out.append(current)
     return out

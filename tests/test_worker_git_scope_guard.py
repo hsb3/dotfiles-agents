@@ -340,6 +340,23 @@ class CommandParsingTests(unittest.TestCase):
     def test_a_git_literal_inside_a_heredoc_body_is_not_an_invocation(self):
         self.assertFalse(blocked("cat <<'EOF' > notes.md\ngit stash\nEOF"))
 
+    def test_a_backslash_newline_terminator_closes_only_an_unquoted_body(self):
+        # bash joins `EO\` + `F` into the terminator under an unquoted word only.
+        for command, verdict in (
+            ("cat <<EOF\nEO\\\nF\ngit stash\nEOF", True),
+            ("cat <<-EOF\n\tEO\\\nF\ngit stash\nEOF", True),
+            ("cat <<EOF\nEO\\\\\nF\ngit stash\nEOF", False),
+            ("cat <<'EOF'\nEO\\\nF\ngit stash\nEOF", False),
+            ("cat <<EOF\n E\\\nOF\ncat <<X\nEOF\ngit stash\nX", True),
+            ("cat <<-EOF\n  EOF\ncat <<X\nEOF\ngit stash\nX", True),
+            ("cat <<A <<B\nx\nA\ncat <<Y\nB\ngit stash\nY", True),
+            ("cat <<EOF\r\nbody\nEOF\r\ngit stash\nEOF", True),
+            ("cat <<EOF\ngit stash drop \\\\\nEOF", False),
+            ("cat <<A <<B\ngit stash\nA\ngit stash\nB", False),
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(blocked(command), verdict)
+
     def test_an_unmatched_shift_operator_must_not_swallow_a_real_command(self):
         self.assertTrue(blocked("python3 -c 'print(1 << 3)'\ngit stash"))
         self.assertTrue(blocked('echo "use << foo here"\ngit stash'))
