@@ -32,6 +32,7 @@ it. Every caller therefore wraps its call in its own fail-open handler.
 
 import json
 import os
+import re
 
 import agentlog
 
@@ -269,6 +270,97 @@ def settled_ids(tail_bytes=TAIL_BYTES):
                     if key:
                         settled.add(key)
     return settled
+
+
+_NOTIFICATION_RE = re.compile(r"<task-notification>(.*?)</task-notification>", re.S)
+_TASK_ID_RE = re.compile(r"<task-id>\s*([^<\s]+)\s*</task-id>")
+_KILLED_RE = re.compile(r"<status>\s*killed\s*</status>")
+
+
+def _killed_in_notification(text, seen):
+    """Agent keys a `<task-notification>` text reports with status killed.
+
+    One notification is written up to three times (queued, dequeued, and
+    delivered as an attachment), the later copies possibly after a
+    `SendMessage` has resumed the agent. `seen` holds the blocks already
+    counted, so only the first copy settles.
+    """
+    keys = set()
+    if not isinstance(text, str):
+        return keys
+    for block in _NOTIFICATION_RE.findall(text):
+        if block in seen:
+            continue
+        match = _TASK_ID_RE.search(block)
+        if match and _KILLED_RE.search(block):
+            seen.add(block)
+            key = agent_key(match.group(1))
+            if key:
+                keys.add(key)
+    return keys
+
+
+def stopped_ids(transcript_path, candidates):
+    """The subset of `candidates` the session transcript shows stopped.
+
+    A TaskStop'd or user-killed agent fires no SubagentStop (measured on
+    Claude Code 2.1.281), so the ledger never settles it. The parent
+    transcript records the kill two ways, either of which settles: the
+    TaskStop tool_result (a `user` line whose `toolUseResult.task_id` is the
+    agent), and a `<task-notification>` with `<status>killed</status>` (in a
+    `queue-operation` line's `content` or an attachment's `prompt`). A LATER
+    assistant `SendMessage` whose `input.to` is the agent resumes it, so it is
+    un-settled again; its own SubagentStop settles it from then on.
+
+    Read whole, in order: not tail-bounded, because a kill aging out of a
+    window would re-block on an agent that is long dead. Lines naming no
+    candidate are skipped before parsing. A missing or unreadable transcript
+    yields the empty set, per the module's convention — it only ever removes
+    agents from the pending set, so "cannot tell" leaves the ledger's answer.
+    """
+    wanted = {k for k in (agent_key(c) for c in candidates or ()) if k}
+    stopped = set()
+    seen = set()
+    if not wanted or not transcript_path:
+        return stopped
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if not any(k in line for k in wanted):
+                    continue
+                try:
+                    obj = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(obj, dict):
+                    continue
+                kind = obj.get("type")
+                if kind == "user":
+                    result = obj.get("toolUseResult")
+                    if isinstance(result, dict):
+                        key = agent_key(result.get("task_id"))
+                        message = result.get("message")
+                        if (key in wanted and isinstance(message, str)
+                                and message.startswith("Successfully stopped task")):
+                            stopped.add(key)
+                elif kind == "queue-operation":
+                    stopped.update(_killed_in_notification(obj.get("content"), seen) & wanted)
+                elif kind == "attachment":
+                    attachment = obj.get("attachment")
+                    if isinstance(attachment, dict):
+                        stopped.update(
+                            _killed_in_notification(attachment.get("prompt"), seen) & wanted)
+                elif kind == "assistant":
+                    message = obj.get("message")
+                    content = message.get("content") if isinstance(message, dict) else None
+                    for block in content if isinstance(content, list) else ():
+                        if (isinstance(block, dict) and block.get("type") == "tool_use"
+                                and block.get("name") == "SendMessage"
+                                and isinstance(block.get("input"), dict)):
+                            stopped.discard(agent_key(block["input"].get("to")))
+    except OSError:
+        return set()
+    return stopped
 
 
 def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES):

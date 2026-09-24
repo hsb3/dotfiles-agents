@@ -804,8 +804,12 @@ def _live_workers(transcript_path, caller):
     if caller and _is_isolated(directory, caller):
         return []
     workers = []
-    for key in pending.pending_keys(directory):
-        if key == caller:
+    candidates = pending.pending_keys(directory)
+    # A TaskStop'd or user-killed agent fires no SubagentStop, so the ledger
+    # never settles it; the session transcript records the kill instead.
+    stopped = pending.stopped_ids(transcript_path, candidates)
+    for key in candidates:
+        if key == caller or key in stopped:
             continue
         meta = pending.read_sidecar(pending.sidecar_path(directory, key)) or {}
         if meta.get("worktreePath"):

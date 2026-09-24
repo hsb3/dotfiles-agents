@@ -257,6 +257,98 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._settle("c2222222222222222")
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
+    # -- a kill fires no SubagentStop (measured, 2.1.281): read it from the
+    # session transcript instead. Line shapes are trimmed real lines.
+
+    def _transcript(self, *objs):
+        with open(self.transcript_path, "a", encoding="utf-8") as fh:
+            for obj in objs:
+                fh.write(json.dumps(obj) + "\n")
+
+    @staticmethod
+    def _taskstop_result(agent_id):
+        return {
+            "type": "user",
+            "message": {"role": "user", "content": [{
+                "tool_use_id": "toolu_01TKWwUauKkdBdPh7b1dMmVb",
+                "type": "tool_result",
+                "content": json.dumps({
+                    "message": "Successfully stopped task: {0} (Run sleep 300)".format(agent_id),
+                    "task_id": agent_id, "task_type": "local_agent"})}]},
+            "toolUseResult": {
+                "message": "Successfully stopped task: {0} (Run sleep 300)".format(agent_id),
+                "task_id": agent_id, "task_type": "local_agent",
+                "command": "Run sleep 300"},
+            "version": "2.1.281",
+        }
+
+    @staticmethod
+    def _notification(agent_id, status="killed"):
+        text = (
+            "<task-notification>\n<task-id>{0}</task-id>\n"
+            "<tool-use-id>toolu_01UvzTyTiDyRZNga7qRBUzHz</tool-use-id>\n"
+            "<status>{1}</status>\n"
+            "<summary>Agent \"Run sleep 300\" was stopped by Claude</summary>\n"
+            "</task-notification>").format(agent_id, status)
+        return [
+            {"type": "queue-operation", "operation": "enqueue",
+             "timestamp": "2026-09-24T18:13:53.448Z", "content": text},
+            {"type": "attachment", "attachment": {
+                "type": "queued_command", "prompt": text,
+                "commandMode": "task-notification"}},
+        ]
+
+    @staticmethod
+    def _send_message(agent_id):
+        return {
+            "type": "assistant",
+            "message": {"role": "assistant", "content": [{
+                "type": "tool_use", "id": "toolu_resume", "name": "SendMessage",
+                "input": {"to": agent_id, "summary": "continue",
+                          "message": "keep going"}}]},
+        }
+
+    def test_taskstop_result_settles_the_killed_child(self):
+        self._sidecar("d1111111111111111")
+        self._transcript(self._taskstop_result("d1111111111111111"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_killed_task_notification_alone_settles(self):
+        self._sidecar("d2222222222222222")
+        self._transcript(*self._notification("d2222222222222222"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_send_message_after_the_kill_makes_it_live_again(self):
+        self._sidecar("d3333333333333333")
+        self._transcript(self._taskstop_result("d3333333333333333"),
+                         *self._notification("d3333333333333333"))
+        self._transcript(self._send_message("d3333333333333333"))
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d3333333333333333", reason)
+
+    def test_a_late_copy_of_the_kill_does_not_settle_a_resumed_child(self):
+        # The notification is queued at the kill but delivered later; a resume
+        # in between must survive the delivered copy.
+        queued, delivered = self._notification("d7777777777777777")
+        self._sidecar("d7777777777777777")
+        self._transcript(queued, self._send_message("d7777777777777777"), delivered)
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d7777777777777777", reason)
+
+    def test_an_unrelated_kill_does_not_settle_this_child(self):
+        self._sidecar("d4444444444444444")
+        self._transcript(self._taskstop_result("d5555555555555555"),
+                         *self._notification("d5555555555555555"))
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("d4444444444444444", reason)
+
+    def test_a_completed_notification_is_not_a_kill(self):
+        # Only the ledger settles a natural finish; a non-killed status here
+        # must not settle on its own.
+        self._sidecar("d6666666666666666")
+        self._transcript(*self._notification("d6666666666666666", "completed"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
     def test_worktree_isolated_child_never_blocks(self):
         self._sidecar("c3333333333333333",
                       worktree_path="/tmp/worktrees/agent-c3333333333333333")
