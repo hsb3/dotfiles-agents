@@ -615,6 +615,18 @@ class WatermarkConfigLoaderTests(_ScrubbedEnv):
         self.assertEqual(hook._load_watermark_config(self.tmp, "worker"),
                          {"soft": 90_000})
 
+    def test_the_nested_sub_block_reads_the_same_as_the_flow_form(self):
+        self.write_activation(
+            "---\nwatermark:\n  soft: 90000\n  session: {soft: 200000, hard: 250000}\n---\n")
+        flow = {layer: hook._load_watermark_config(self.tmp, layer)
+                for layer in (None, "session", "worker")}
+        self.write_activation(
+            "---\nwatermark:\n  session:\n    soft: 200000\n    hard: 250000\n"
+            "  soft: 90000\n---\n")
+        nested = {layer: hook._load_watermark_config(self.tmp, layer)
+                  for layer in (None, "session", "worker")}
+        self.assertEqual(nested, flow)
+
 
 if __name__ == "__main__":
     unittest.main()

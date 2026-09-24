@@ -218,7 +218,22 @@ def _block(lines, index, end):
         index += 1
         colon = item.find(":")
         if colon != -1:
-            children[item[:colon].strip().lower()] = unquote(item[colon + 1:])
+            value = unquote(item[colon + 1:])
+            if not value:
+                # One level of nesting: lines deeper than this bare `sub:` are its mapping.
+                indent = len(line) - len(line.lstrip())
+                nested = {}
+                while index < end:
+                    inner = lines[index].strip()
+                    if inner and not inner.startswith("#"):
+                        if len(lines[index]) - len(lines[index].lstrip()) <= indent:
+                            break
+                        if ":" in inner and not inner.startswith("-"):
+                            sub, _, raw = inner.partition(":")
+                            nested[sub.strip().lower()] = unquote(raw)
+                    index += 1
+                value = nested or value
+            children[item[:colon].strip().lower()] = value
     return index, (children or None), (items if is_sequence else None)
 
 

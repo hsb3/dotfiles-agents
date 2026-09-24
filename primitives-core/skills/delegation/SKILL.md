@@ -149,7 +149,8 @@ exact objective, owned files, read-only config, evidence format, verification co
 conditions, and only the minimum relevant references and tools (`references/briefs.md`). Decompose
 until a leaf coding scope is simple; do not give a worker a highway-system pre-read. A short prompt
 does not prove a short inherited startup footprint — measure that footprint before treating it as
-small.
+small. A builder brief that requires reading beyond the files it owns gets a scout first, or goes
+to a manager.
 
 **Context it must never be given** — the negative list, which held across every round of the lab
 `[lab]`: cycle budgets, remaining passes, or the fact that a later pass exists; rubric scores or
@@ -559,28 +560,21 @@ or messy debugging as a useful checkpoint opportunity, and downtier only demonst
 with a strict DoD; see `references/tier-cutoff.md`.
 
 <!-- harness:claude-code -->
-Here, `context-watermark` emits the three advisory stages. These tier-aware defaults are tunable,
-unmeasured policy defaults, not performance facts:
+Here, `context-watermark` emits the three advisory stages from tunable, unmeasured policy
+defaults keyed by layer (`worker` when the payload carries `agent_id`, else `session`):
 
-| Tier | Notice | Soft | Hard |
+| Layer | Notice | Soft | Hard |
 | --- | ---: | ---: | ---: |
-| frontier | 60k | 120k | 160k |
-| heavy | 96k | 192k | 256k |
-| mid | 120k | 240k | 320k |
-| light | 160k | 320k | 480k |
+| worker | 100k | 160k | 250k |
+| session | 150k | 250k | 400k |
 
-Protect a model's actual context window with caps of roughly 30% for notice, 60% for soft, and 80%
-for hard. Unknown models use the conservative frontier defaults. Explicit soft and hard overrides keep
-their existing precedence. Notice is an optional override through that same convention; if absent,
-derive it at or below soft (half the resolved soft value is a reasonable default).
-
-Here, `CONTEXT_WATERMARK_NOTICE`, `_SOFT`, and `_HARD`, then `watermark.notice`, `.soft`, and
-`.hard` in the selected activation file, use the existing override precedence: explicit env beats
-activation policy beats computed tier default. A missing notice derives from resolved soft and
-never exceeds it. Each delegated worker uses the defaults and caps for its own model tier; it does
-not inherit a blanket half-soft budget from the session. The fresh session is `/clear`, and a
-`model:` value selects the dispatch tier. The handoff skill has no slash command because a command
-would shadow the skill of the same name.
+Each value is multiplied by complexity (1.0 unless the activation file sets it), then capped at
+30/60/80% of the model's window. Precedence per stage: `CONTEXT_WATERMARK_NOTICE`, `_SOFT`,
+`_HARD` in the environment (how an external coordinator such as wave-lanes sets session numbers),
+then `watermark.notice`/`.soft`/`.hard` in the activation file, where a `worker:` or `session:`
+sub-mapping overrides the flat keys for that layer, then the computed default. Notice never
+exceeds soft. The fresh session is `/clear`, and a `model:` value selects the dispatch tier. The
+handoff skill has no slash command because a command would shadow the skill of the same name.
 <!-- /harness -->
 
 These watermarks budget the current context; they do not make a manager disposable in the middle of

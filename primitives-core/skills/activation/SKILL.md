@@ -85,7 +85,7 @@ they sit here instead of in the table above:
 | key | read by | accepted values | enforced per hook call? |
 |---|---|---|---|
 | `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
-| `watermark` | `context-watermark` | a mapping of `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on both); every sub-key optional | yes |
+| `watermark` | `context-watermark` | a mapping of `notice` / `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on all three), plus optional `worker:` / `session:` sub-mappings of the same keys that override the flat ones for that layer; every sub-key optional | yes |
 <!-- /harness -->
 
 **`effort` is not machine-enforced.** No hook reads it. It only takes effect if the agent

@@ -24,25 +24,27 @@ Either way: immediately on a fresh crossing, then at most every 5 events while s
 ## The stages
 
 ```
-notice = min(tier_notice × complexity, 0.30 × window)
-soft = min(tier_soft × complexity, 0.60 × window)
-hard = min(tier_hard × complexity, 0.80 × window)
+notice = min(layer_notice × complexity, 0.30 × window)
+soft = min(layer_soft × complexity, 0.60 × window)
+hard = min(layer_hard × complexity, 0.80 × window)
 ```
 
-`window` and the model tier come from `_lib/model_catalog.json` via the model id on the
-transcript's last assistant line (no hook payload carries a `model` field). The tunable,
-unmeasured defaults are:
+The layer is `worker` when the payload carries `agent_id`, `session` otherwise. `window` comes
+from `_lib/model_catalog.json` via the model id on the transcript's last assistant line (no
+hook payload carries a `model` field). The tunable defaults are:
 
-| Tier | Notice | Soft | Hard |
+| Layer | Notice | Soft | Hard |
 | --- | ---: | ---: | ---: |
-| frontier | 60k | 120k | 160k |
-| heavy | 96k | 192k | 256k |
-| mid | 120k | 240k | 320k |
-| light | 160k | 320k | 480k |
+| worker | 100k | 160k | 250k |
+| session | 150k | 250k | 400k |
 
 **The window caps every stage after complexity and never lifts it.** The 30/60/80 percent caps
-protect small windows even when policy complexity is greater than one. An unmapped model uses the
-conservative frontier defaults.
+protect small windows even when complexity is greater than one; an unmapped model gets the layer
+values uncapped. Complexity is 1.0 unless the activation file sets it. Under `watermark:`, a
+`worker:` or `session:` sub-mapping overrides the flat keys for that layer, in either nested or
+flow form (`session: {soft: 200000}`). An external coordinator such as wave-lanes sets the
+session numbers through `CONTEXT_WATERMARK_NOTICE/_SOFT/_HARD` in the session's environment,
+which outrank the activation file.
 
 The ledger row for a model with no known window carries `window: null`
 and `window_fallback: true`, because a check that could not measure must not look identical
@@ -63,7 +65,7 @@ boundary and finish small bounded work. At hard, preserve the branch, worktree, 
 changes, and test proof in a manager-facilitated checkpoint before continuation. A verified
 self-handoff may be used where available; it is never assumed.
 
-Workers use the same tier-aware, window-capped budgets as sessions. The hook still names itself
+Workers use the worker band, window-capped the same way as sessions. The hook still names itself
 (`atelier context-watermark:`), so the advisory is attributable rather than an untrusted task
 instruction.
 

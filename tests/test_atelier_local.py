@@ -379,6 +379,30 @@ class ParseKeyTests(unittest.TestCase):
     def test_block_sequence(self):
         self.assertEqual(self.parse("protected:\n  - a\n  - b\n", "protected"), ["a", "b"])
 
+    def test_nested_mapping_parses_to_a_dict(self):
+        """One level of nesting: a bare `sub:` over deeper lines is its own mapping,
+        not flattened into the parent (which set `soft` for every layer)."""
+        self.assertEqual(
+            self.parse("watermark:\n  worker:\n    soft: 160000\n    # c\n    hard: 2\n",
+                       "watermark"),
+            {"worker": {"soft": "160000", "hard": "2"}})
+
+    def test_flat_key_after_a_nested_block_stays_top_level(self):
+        self.assertEqual(
+            self.parse("watermark:\n  session:\n    soft: 9\n  complexity: 1.5\n",
+                       "watermark"),
+            {"session": {"soft": "9"}, "complexity": "1.5"})
+
+    def test_flow_mapping_under_a_sub_key_stays_a_string(self):
+        self.assertEqual(
+            self.parse("watermark:\n  worker: {soft: 1, hard: 2}\n", "watermark"),
+            {"worker": "{soft: 1, hard: 2}"})
+
+    def test_nesting_under_a_sequence_item_is_not_attempted(self):
+        self.assertEqual(
+            self.parse("protected:\n  - a:\n      b: c\n  - d\n", "protected"),
+            ["a:", "d"])
+
     def test_block_sequence_at_column_zero(self):
         """YAML lets a block sequence sit unindented under its key, and the parsers
         this replaced all accepted it."""
