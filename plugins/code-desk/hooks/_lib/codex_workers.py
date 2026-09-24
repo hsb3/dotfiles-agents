@@ -244,7 +244,13 @@ def register(payload, isolate=False):
                       transcript_path=payload.get('transcript_path'))
         if isolate:
             common = path.parents[3]
-            tree = common / 'atelier-codex/checkouts' / session / agent
+            try:
+                # checkout_root reads the main checkout's policy (a worker's own copy may differ)
+                # and refuses a set key on a layout without one.
+                root = atelier_local.checkout_root(str(repo))
+            except ValueError as exc:
+                raise WorkerError(str(exc)) from exc
+            tree = (root or common / 'atelier-codex/checkouts') / session / agent
             branch = 'atelier/' + session + '/' + agent
             tree.parent.mkdir(parents=True, exist_ok=True)
             _git(source, 'worktree', 'add', '-b', branch, str(tree), 'HEAD')

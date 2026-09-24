@@ -89,18 +89,29 @@ recorded so this is not re-litigated:
    follows policy *into* a worktree. A hook that reads its policy through a worktree and then
    stands down inside one is incoherent.
 
-What nesting actually costs is integration ergonomics: the dispatcher has to collect each worker's
-commits and clean up the leftovers. So the notice on a nested rewrite carries the integrate step,
-at dispatch time rather than at the end of the wave:
+What nesting actually costs is integration ergonomics — the dispatcher has to collect each
+worker's commits and clean up the leftovers — and briefing ergonomics: a dispatcher that
+mistakes the worker's checkout for its own hands out absolute paths that resolve nowhere the
+worker can write. So the notice on a nested rewrite carries both. It reaches the dispatcher with
+the Agent result, not before the brief is written, so it informs the next brief, not this one:
 
 ```
 … You are standing in a linked worktree yourself, so this one is NESTED under it on its own
-branch — intended, not a misconfiguration. To integrate when it reports: `git worktree list`
-for its path and branch, then `git cherry HEAD <branch>` and READ it — `+` lines are commits
-you have not picked yet, `-` lines are already in — then `git cherry-pick <the + SHAs>` if
-there are any. Repeat that pair each round; it never re-applies. Finally
+branch — intended, not a misconfiguration. Its checkout is a separate tree from yours: brief
+its owned files as paths relative to its own checkout, not absolute paths into yours, and do
+not plan on it sharing your worktree under a disjoint file map — that is not available under
+isolate: writers. To integrate when it reports: `git worktree list` for its path and branch,
+then `git cherry HEAD <branch>` and READ it — `+` lines are commits you have not picked yet,
+`-` lines are already in — then `git cherry-pick <the + SHAs>` if there are any. Repeat that
+pair each round; it never re-applies. Finally
 follow the [Lifecycle and retirement](#lifecycle-and-retirement) checklist before any removal.
 ```
+
+**Why sharing the dispatcher's worktree under a disjoint file map is not offered as an
+alternative.** The Agent tool's `isolation` field takes `worktree` or `remote`, nothing that
+means "run in my own checkout" — there is no third value to ask for. And even if there were, it
+would just reintroduce reason 1 above: a disjoint file map inside one shared tree still gives
+concurrent writers one index, which is exactly the hazard this hook exists to prevent.
 
 **Why not the obvious `git cherry-pick HEAD..<branch>`, which the notice used to carry.** A worker
 reports more than once, and integration is per-round. Picking a commit rewrites it, so the original
@@ -153,7 +164,8 @@ one having read the failure. The dispatcher should see each worker's result.
 ## Lifecycle and retirement
 
 Worktrees are temporary execution state. Native Claude Code keeps its task checkouts in
-`.claude/worktrees/`; Codex/Atelier keeps them in `.git/atelier-codex/checkouts/`. For a manual
+`.claude/worktrees/`; Codex/Atelier keeps them in `<git-common-dir>/atelier-codex/checkouts/` unless
+the `checkout-root` activation key sets another location. For a manual
 checkout, use the repository-local `.worktrees/` directory. Never create task checkouts or clones
 as siblings of the repository.
 
@@ -253,7 +265,9 @@ string test reports every subdirectory as a worktree.
   `.claude/worktrees/agent-<id>`.
 - **Announced, not silent.** The rewrite moves the worker to a checkout where the session's
   uncommitted work does not exist. That is worth one line of `systemMessage`, so a surprised reader
-  can trace the behaviour to this hook rather than to the harness.
+  can trace the behaviour to this hook rather than to the harness. `systemMessage` reaches only the
+  user, so every rewrite also sends the notice as `additionalContext`, the copy the dispatcher
+  reads. PreToolUse delivers that alongside the tool result, so it lands after the worker returns.
 - **Fail-open, always.** Every path exits 0. An un-isolated worker is the pre-hook status quo and
   merely risky; a hook that crashes on every dispatch is an outage.
 - **The activation parser is shared; the sourcing is not.** Parsing lives in
@@ -287,8 +301,9 @@ PreToolUse hook having already rewritten the input.
 
 State lives under the repository's common Git directory:
 `.git/atelier-codex/workers/<session>/<agent>.json` and
-`.git/atelier-codex/checkouts/<session>/<agent>`. There is no automatic branch or worktree
-deletion. With `workspace-write`, the caller must authorize the checkout directory,
+`.git/atelier-codex/checkouts/<session>/<agent>` (the checkout moves to `<checkout-root>/<session>/<agent>`
+when the `checkout-root` activation key is set). There is no automatic branch or worktree
+deletion. With `workspace-write`, the caller must authorize the checkout directory (the key's value when set),
 `.git/worktrees` and `.git/objects` as writable roots. Registration failure never
 silently leaves an armed worker operating in its inherited checkout. Unarmed projects
 are inert, including non-Git projects; existing mappings persist across policy edits

@@ -79,13 +79,20 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
 <!-- harness:claude-code -->
-Two more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
-they sit here instead of in the table above:
+Three more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
+they sit here instead of in the table above. `checkout-root` is read by the Codex path (worker
+placement and Codex setup); Claude Code does not read it yet.
 
 | key | read by | accepted values | enforced per hook call? |
 |---|---|---|---|
 | `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
-| `watermark` | `context-watermark` | a mapping of `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on both); every sub-key optional | yes |
+| `watermark` | `context-watermark` | a mapping of `notice` / `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on all three), plus optional `worker:` / `session:` sub-mappings of the same keys that override the flat ones for that layer; every sub-key optional | yes |
+| `checkout-root` | `codex_workers.py`, `activation.py` | a path, relative to the main checkout, `~`-relative, or absolute (absent/blank = default; invalid = dispatch refused; it must resolve, symlinks followed, strictly inside the project and outside `.git`, and holds no tracked files; with the key set, a separate-git-dir or bare layout is refused everywhere; variables such as `$HOME` are not expanded and are refused) | placement: yes, read per dispatch; the Codex writable root: no, fixed when Codex setup runs (rerun `activation.py codex-setup` after changing the key) |
+
+**No activation file at all** means every key is off. `session-handoff-surfacer` says so at each
+cold main-session start inside a git worktree (`atelier is enabled here but not activated: ...`). A project that runs
+atelier unarmed on purpose silences that line with the environment variable
+`ATELIER_ACTIVATION_NUDGE=off`: with no file there is nowhere to put a key.
 <!-- /harness -->
 
 **`effort` is not machine-enforced.** No hook reads it. It only takes effect if the agent
@@ -94,7 +101,7 @@ documents this. Setting it is a request an agent might honor, not a control a ho
 not describe it as equivalent to the hook-enforced keys.
 
 <!-- harness:claude-code -->
-**`protected-branches` is a different key from `protected`, and has no default.** One names branch names, the other names file paths, and neither hook reads the other's key - a file glob must never be taken for a branch name. Absent, empty, or unparseable leaves the protected-branch half of its hook inert; nothing is protected until the project names it, because a built-in `main`/`master` guard is wrong in every project whose default branch is a publish-only surface. The same hook's shared-tree stash ban needs no key and is live wherever the plugin is installed, which is why `check` reports an absent key as not configured rather than as the hook being off.
+**`protected-branches` is a different key from `protected`, and has no default.** One names branch names, the other names file paths, and neither hook reads the other's key - a file glob must never be taken for a branch name. Absent, an explicit empty list (`[]`, deliberately off), or unparseable leaves the protected-branch half of its hook off; nothing is protected until the project names it, because a built-in `main`/`master` guard is wrong in every project whose default branch is a publish-only surface. The same hook's shared-tree stash ban needs no key and is live wherever the plugin is installed, which is why `check` reports an absent key as not configured rather than as the hook being off.
 <!-- /harness -->
 
 **`handoff` has two modes, and each has a failure shape only one side of which is safe.** File
@@ -118,12 +125,17 @@ exists to fix, and the stamp is only a freshness gauge, never the thing being su
 because it is live - just probably not as intended.
 
 <!-- harness:claude-code -->
+**`checkout-root` places automatic Codex worker checkouts, resolved by `codex_workers.py` and
+added as a writable root by `activation.py`'s Codex setup; absent or blank keeps the default
+`<git-common-dir>/atelier-codex/checkouts`. Claude Code subagent worktrees: not yet.**
+
 **`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
 unusable leaves that one value computed from the lead model's context window rather than turning
 anything off — so `check` calls a key with nothing readable under it inert, and a key naming only
-one threshold armed. It is also the one key the environment outranks: `CONTEXT_WATERMARK_SOFT`
-and `CONTEXT_WATERMARK_HARD` beat the file, which beats the computed default. `complexity`
-replaces the tracked-file factor the hook computes. The bundle's wiring sets neither variable, on
+one threshold armed. `worker:` and `session:` sub-mappings override the flat keys per layer. It
+is also the one key the environment outranks: `CONTEXT_WATERMARK_NOTICE`, `CONTEXT_WATERMARK_SOFT`,
+and `CONTEXT_WATERMARK_HARD` beat the file, which beats the computed default. `complexity` is 1.0
+unless this key sets it. The bundle's wiring sets neither variable, on
 purpose: a shell-expanded default would leave it always set and the top tier would win forever.
 <!-- /harness -->
 

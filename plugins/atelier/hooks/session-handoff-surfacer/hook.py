@@ -9,7 +9,11 @@ fresh session picks up prior work without re-deriving it. This is the
 edge (it nags before compaction if the handoff wasn't refreshed).
 
 Silent no-op on "resume"/"compact" (context is already present — surfacing
-would be pure noise) and when no handoff file exists.
+would be pure noise) and when no handoff file exists, except that a Claude Code
+main session inside a git worktree with no activation file is told atelier is
+not activated (Codex
+never reaches that check: its lifecycle gate returns early for an inactive
+project).
 
 When the handoff lives outside the repo (see below) there is no file to
 excerpt, so a cold start gets a POINTER instead: where the handoff lives and
@@ -26,7 +30,7 @@ Contract (SessionStart):
   - stdin JSON fields consumed: session_id, transcript_path, cwd,
     hook_event_name, source ("startup"|"resume"|"clear"|"compact"),
     optionally model, agent_type, session_title.
-  - stdout JSON (ONLY when surfacing):
+  - stdout JSON (ONLY when surfacing a handoff or the not-activated line):
     {"hookSpecificOutput": {"hookEventName": "SessionStart",
                              "additionalContext": "..."}}
     NOTE: SessionStart nests additionalContext under hookSpecificOutput —
@@ -278,6 +282,34 @@ def _env_path(name, default):
     return v if v else default
 
 
+UNARMED_MESSAGE = (
+    "atelier is enabled here but not activated: its key-driven hooks are off; "
+    "run /atelier:activate"
+)
+UNARMED_OPT_OUT_ENV = "ATELIER_ACTIVATION_NUDGE"
+
+
+def _unarmed(project_dir):
+    """True when no activation file resolves and the project has not set
+    ATELIER_ACTIVATION_NUDGE=off. Subagents are never told, and neither is a
+    session outside any git worktree: atelier is enabled at user scope, so ~ or
+    a scratch dir is not a project that intended it. A present file, even a malformed one, counts
+    as activated: the check verb is the place that judges its contents."""
+    if os.environ.get(UNARMED_OPT_OUT_ENV, "").strip().lower() == "off":
+        return False
+    path = _resolve_activation_path(project_dir)
+    if path is not None and os.path.lexists(path):
+        return False
+    try:
+        proc = subprocess.run(
+            ["git", "-C", project_dir, "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0 and proc.stdout.strip() == b"true"
+
+
 HEAD_LINES = _env_int("HANDOFF_SURFACER_HEAD_LINES", HEAD_LINES_DEFAULT)
 
 
@@ -429,7 +461,18 @@ def main():
             })
             sys.exit(0)
 
+        unarmed = (payload.get("agent_type") in (None, "", "main")
+                   and _unarmed(_resolve_project_dir(cwd)))
+
         if path is None:
+            if unarmed:
+                print(json.dumps({
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": UNARMED_MESSAGE,
+                    },
+                    "systemMessage": UNARMED_MESSAGE,
+                }))
             log({
                 "session_id": session_id,
                 "source": source,
@@ -437,11 +480,14 @@ def main():
                 "handoff_mode": mode,
                 "surfaced": False,
                 "reason": "no handoff file found",
+                "unarmed": unarmed,
             })
             sys.exit(0)
 
         head_text = _read_head_lines(path, HEAD_LINES)
         message = _format_message(relpath, head_text)
+        if unarmed:
+            message = UNARMED_MESSAGE + "\n\n" + message
 
         out = {
             "hookSpecificOutput": {
@@ -450,7 +496,8 @@ def main():
             },
             # Visible to the USER in the TUI — evidence the hook fired
             # (additionalContext is only ever seen by the model).
-            "systemMessage": f"atelier: surfaced project handoff ({relpath}).",
+            "systemMessage": f"atelier: surfaced project handoff ({relpath})."
+            + (f" {UNARMED_MESSAGE}" if unarmed else ""),
         }
         print(json.dumps(out))
 

@@ -107,8 +107,9 @@ A constraint in your brief with no budget, stop condition, or check attached is 
 brief. Satisfy it in the smallest way that plainly meets its intent, then say in your handoff note
 that it was unbounded and what bound you chose — never maximize it to be safe.
 
-At roughly 100k context, stop — externalize what you have to your handoff note and
-return a clean partial.
+The context watermark reports soft and hard stages; never pick your own number.
+At soft, finish the slice in hand and start no new one. At hard, stop — externalize what you
+have to your handoff note and return a clean partial.
 
 Context you need (flag gaps in your handoff note; don't reconstruct): the brief — task
 statement plus checkable acceptance criteria; your owned file list; pointers to the

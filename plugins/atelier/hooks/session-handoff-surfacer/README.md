@@ -21,12 +21,17 @@ Fires at session start (`SessionStart`) only on `startup`/`clear` sources — ne
 in that order — unless a project overrides the location (see below), in which case it may
 instead surface a pointer to a handoff that lives outside the repo altogether.
 
+On the same sources, in a Claude Code main session inside a git worktree with no activation file, it also says
+`atelier is enabled here but not activated: its key-driven hooks are off; run /atelier:activate`,
+ahead of any handoff excerpt. Subagents and Codex are never told.
+
 ## Configuration
 
 Env-overridable; shipped wiring leaves these at hook.py's built-in defaults:
 - `HANDOFF_SURFACER_HEAD_LINES` — default 15 (lines of the handoff excerpted).
 - `HANDOFF_SURFACER_LOG_PATH` — default `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/handoff-surfacer.jsonl`.
 - `ATELIER_ACTIVATION_FILE` — default harness-selected project policy (see above) (activation file location).
+- `ATELIER_ACTIVATION_NUDGE` — `off` silences the not-activated line; unset by default.
 - `CLAUDE_PROJECT_DIR` — set by Claude Code; anchors the activation file lookup and the ledger's `project` field, falling back to the payload `cwd` when unset.
 
 **Per-project handoff location override.** A project that keeps its handoff somewhere

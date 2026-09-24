@@ -18,10 +18,20 @@ protected:
 # Ships commented out on purpose: there is no sensible default. Name your own publish-only
 # or release branches here — a built-in main/master guard protects the wrong branch in any
 # project whose default branch is publish-only and whose real work happens elsewhere. The
-# same hook's other half — refusing a stash from a worker sharing this checkout — is live
-# regardless and needs no key at all.
+# same hook's other half — refusing a worker's stash outside its own worktree, and any
+# pop/drop/clear/branch on the repo-wide stack — is live regardless and needs no key at all.
 # protected-branches:
 #   - main
+
+# Where automatic Codex worker checkouts are placed. Read by codex_workers.py
+# (worker checkout placement) and activation.py's Codex writable-root setup; a
+# relative value resolves against the main checkout. It must resolve strictly
+# inside the project and outside .git; a separate-git-dir or bare layout with
+# the key set is refused everywhere; variables ($HOME) are not expanded.
+# Claude Code subagent worktrees: not yet.
+#
+# Ships commented out: the default (<git-common-dir>/atelier-codex/checkouts) works.
+# checkout-root: .worktrees
 
 # worktree-isolation: a writing subagent gets its own checkout instead of sharing
 # the strategist's working tree. Independent of `enforce`.
@@ -43,21 +53,26 @@ isolate: writers           # off (default when absent) | writers | [builder, my-
 # inert and the standard search runs.
 # handoff:
 #   mode: external
-#   stamp: .claudethe handoff skill.stamp
+#   stamp: .claude/handoff.stamp
 #   location: tracker issue PROJECT-123
 
-# context-watermark: where the the handoff skill nudge fires. Every sub-key is optional and
-# independent — `soft` and `hard` are absolute token counts, `complexity` is a
-# multiplier on both. Anything absent, blank, or not a positive number leaves that
-# one computed from the lead model's context window, so this key is only worth
-# writing when a project knows better than the formula.
+# context-watermark: where the handoff nudge fires. Every sub-key is optional and
+# independent — `notice`, `soft` and `hard` are absolute token counts, `complexity` is
+# a multiplier on all three. A `worker:` or `session:` sub-mapping overrides the flat
+# keys for that layer. Anything absent, blank, or not a positive number leaves that
+# one computed from the layer band and the model's context window, so this key is only
+# worth writing when a project knows better than the formula.
 #
 # Ships commented out on purpose: the computed default already scales to the model.
-# `CONTEXT_WATERMARK_SOFT` / `_HARD` in the environment outrank whatever is written here.
+# `CONTEXT_WATERMARK_NOTICE` / `_SOFT` / `_HARD` in the environment outrank whatever is
+# written here.
 # watermark:
-#   soft: 90000
-#   hard: 130000
-#   complexity: 0.9
+#   # when a coordinator cycles this lead at 250k
+#   session: {soft: 200000, hard: 250000}
+#   # the same override as a sub-block:
+#   # session:
+#   #   soft: 200000
+#   #   hard: 250000
 
 # Prose-only: no hook reads this. The delegation skill honours it when an agent
 # reads this file, and `activation.py check` validates the spelling.

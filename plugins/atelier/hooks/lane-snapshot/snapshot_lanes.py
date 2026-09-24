@@ -13,10 +13,13 @@ List what it holds:    git ls-tree -r --name-only refs/lane-snapshots/<name>
 Recover the lot:       git restore --source refs/lane-snapshots/<name> -- .
 
 Three modes:
-  (default)   loop forever, one scan every LANE_SNAPSHOT_INTERVAL seconds
+  (default)   one scan every LANE_SNAPSHOT_INTERVAL seconds, holding the repo's
+              pidfile lock; exits when the root is gone or LANE_SNAPSHOT_TTL
+              seconds pass with no snapshot written
   --once      one scan pass, then exit (what the tests drive)
-  --check     doctor mode: report ref staleness, exit nonzero when the net has
-              a hole. A gate that cannot measure reports red, never green.
+  --check     doctor mode: report ref staleness and orphaned daemons, exit
+              nonzero when the net has a hole. A gate that cannot measure
+              reports red, never green.
 
 Root resolution, in precedence order:
   1. $LANE_SNAPSHOT_ROOT
@@ -36,8 +39,10 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only).
 """
 
 import argparse
+import fcntl
 import glob
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -50,6 +55,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_lib")
 )
 import agentlog  # noqa: E402  (path must be primed before this import)
+import atelier_local  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Config (env-overridable; the same defaults are hardcoded here as fallbacks so
@@ -57,9 +63,11 @@ import agentlog  # noqa: E402  (path must be primed before this import)
 # ---------------------------------------------------------------------------
 
 INTERVAL_DEFAULT = 180
-WORKTREES_DEFAULT = (os.path.join(".git", "atelier-codex", "checkouts", "*", "*")
-                     if os.environ.get("ATELIER_HARNESS") == "codex"
-                     else os.path.join(".claude", "worktrees", "agent-*"))
+TTL_DEFAULT = 43200
+# Both harnesses' lane layouts: one daemon per repo serves Claude and Codex alike.
+WORKTREES_DEFAULTS = (os.path.join(".claude", "worktrees", "agent-*"),
+                      os.path.join(".git", "atelier-codex", "checkouts", "*", "*"))
+WORKTREES_DEFAULT = " + ".join(WORKTREES_DEFAULTS)
 LOG_STREAM = "lane-snapshot"
 LOG_PATH_ENV = "LANE_SNAPSHOT_LOG_PATH"
 REF_PREFIX = "refs/lane-snapshots/"
@@ -96,7 +104,7 @@ def env_str(name, default, env=None):
 # git
 # ---------------------------------------------------------------------------
 
-def git(args, env=None):
+def git(args, env=None, timeout=GIT_TIMEOUT):
     """Run one git command; return (returncode, stdout). Never raises — one
     lane's failing call must not take the daemon down for every other lane."""
     child = dict(os.environ)
@@ -105,7 +113,7 @@ def git(args, env=None):
     try:
         proc = subprocess.run(
             ["git"] + list(args),
-            capture_output=True, text=True, timeout=GIT_TIMEOUT, env=child,
+            capture_output=True, text=True, timeout=timeout, env=child,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         return 1, "{0}: {1}".format(type(exc).__name__, exc)
@@ -133,22 +141,92 @@ def resolve_root(argv_root=None, env=None, script_dir=None):
     return out if code == 0 and out else None
 
 
+def default_patterns(root):
+    """(globs, error): both harnesses' defaults, the Codex one moved by the
+    `checkout-root` activation key. An invalid key keeps the default glob and
+    returns its error for the scan warning rather than stopping the net."""
+    try:
+        custom = atelier_local.checkout_root(root)
+    except ValueError as exc:
+        return WORKTREES_DEFAULTS, "checkout-root ignored: {0}".format(exc)
+    if custom is None:
+        return WORKTREES_DEFAULTS, None
+    return (WORKTREES_DEFAULTS[0], os.path.join(str(custom), "*", "*")), None
+
+
 def lane_paths(root, pattern=None, env=None):
-    """Absolute paths of the worktrees matching the glob, sorted."""
-    pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", WORKTREES_DEFAULT, env)
-    return sorted(p for p in glob.glob(os.path.join(root, pattern)) if os.path.isdir(p))
+    """Absolute paths of the worktrees matching the glob (or, unset, the union
+    of both harnesses' defaults), sorted and deduped."""
+    pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None, env)
+    patterns = [pattern] if pattern else default_patterns(root)[0]
+    return sorted({p for pat in patterns
+                   for p in glob.glob(os.path.join(root, pat)) if os.path.isdir(p)})
+
+
+def common_dir(root, timeout=GIT_TIMEOUT):
+    """Realpath of the repo's git common dir — the one key every checkout of a
+    repo shares — or None when `root` is not a git worktree."""
+    code, out = git(["-C", root, "rev-parse", "--git-common-dir"], timeout=timeout)
+    if code != 0 or not out:
+        return None
+    return os.path.realpath(os.path.join(root, out))
+
+
+# ---------------------------------------------------------------------------
+# Pidfile lock: one daemon per repository
+# ---------------------------------------------------------------------------
+
+def state_dir(env=None):
+    """$LANE_SNAPSHOT_STATE_DIR, else ${XDG_STATE_HOME:-~/.local/state}/lane-snapshot
+    (XDG honoured only when absolute, as agentlog does for XDG_DATA_HOME)."""
+    env = os.environ if env is None else env
+    if env.get("LANE_SNAPSHOT_STATE_DIR"):
+        return env["LANE_SNAPSHOT_STATE_DIR"]
+    base = env.get("XDG_STATE_HOME")
+    if not base or not os.path.isabs(base):
+        base = os.path.join(os.path.expanduser("~"), ".local", "state")
+    return os.path.join(base, "lane-snapshot")
+
+
+def repo_key(root, common):
+    """What one daemon is keyed by: the common dir, which every checkout of a
+    repo shares — except for a bare repo, which has no main checkout to root a
+    shared daemon at, so each of its worktrees keeps its own."""
+    return common if os.path.basename(common) == ".git" else os.path.realpath(root)
+
+
+def pidfile_path(common, env=None):
+    digest = hashlib.sha1(common.encode("utf-8", "replace")).hexdigest()[:16]
+    return os.path.join(state_dir(env), digest + ".pid")
+
+
+def try_lock(path, create=True):
+    """An fd holding an exclusive flock on `path`, or None when another process
+    holds it. The kernel drops the lock on any death, so a free lock always
+    means no live daemon — no pid-reuse guessing."""
+    if create:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd = os.open(path, os.O_RDWR | (os.O_CREAT if create else 0), 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        return None
+    return fd
 
 
 def _index_path(root, name):
-    """A scratch index outside every worktree, unique per (root, lane).
+    """A scratch index outside every worktree, unique per (root, lane, process).
 
-    Out of tree so a live agent's own index is never touched, and keyed by root
-    so two repos with a same-named lane cannot collide.
+    Out of tree so a live agent's own index is never touched, keyed by root so
+    two repos with a same-named lane cannot collide, and by pid because a
+    pre-lock daemon can still be running beside this one: sharing the file, one
+    unlinks the other's index mid-pass and commits an empty tree.
     """
     digest = hashlib.sha1(root.encode("utf-8", "replace")).hexdigest()[:10]
     return os.path.join(
         os.environ.get("TMPDIR") or "/tmp",
-        "lane-snap-{0}-{1}.idx".format(digest, name),
+        "lane-snap-{0}-{1}-{2}.idx".format(digest, os.getpid(), name),
     )
 
 
@@ -227,15 +305,17 @@ def scan(root, log, pattern=None):
         if snapshot_lane(root, lane, log):
             written += 1
     row = {"event": "scan", "root": root, "lanes": len(lanes), "snapshots": written}
+    pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None)
+    defaults, error = ((pattern,), None) if pattern else default_patterns(root)
+    warnings = [error] if error else []
     if not lanes:
         # THE row this hook exists for. A glob that matches nothing looks
         # exactly like a working net from the outside; only the daemon can say
         # it protected nothing.
-        row["warning"] = (
-            "no worktrees matched {0} under {1} — snapshotting nothing".format(
-                pattern or env_str("LANE_SNAPSHOT_WORKTREES", WORKTREES_DEFAULT), root,
-            )
-        )
+        warnings.append("no worktrees matched {0} under {1} — snapshotting nothing".format(
+            " + ".join(defaults), root))
+    if warnings:
+        row["warning"] = "; ".join(warnings)
     log(row)
     return len(lanes), written
 
@@ -266,8 +346,41 @@ def ref_ages(root, now=None):
     return ages
 
 
+def orphans(env=None):
+    """[(pid, root)] for every live daemon (its lock is held) whose recorded
+    root no longer exists. A pidfile with a free lock is stale and ignored."""
+    found = []
+    for path in sorted(glob.glob(os.path.join(state_dir(env), "*.pid"))):
+        try:
+            fd = try_lock(path, create=False)
+        except OSError:
+            continue
+        if fd is not None:
+            os.close(fd)
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                record = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        root = record.get("root") if isinstance(record, dict) else None
+        if root and not os.path.isdir(root):
+            found.append((record.get("pid"), root))
+    return found
+
+
 def check(root, interval, pattern=None, out=sys.stdout):
-    """Report the net's health. 0 = every live lane has a fresh ref."""
+    """Report the net's health. 0 = every live lane has a fresh ref and no
+    live daemon guards a root that is gone."""
+    stranded = orphans()
+    for pid, gone in stranded:
+        print("lane-snapshot: orphan daemon pid {0} still guards {1}, which no "
+              "longer exists (kill {0})".format(pid, gone), file=out)
+    code = _check_refs(root, interval, pattern, out)
+    return 1 if stranded else code
+
+
+def _check_refs(root, interval, pattern, out):
     if not root:
         print("lane-snapshot: no repo root resolved — cannot measure, reporting red", file=out)
         return 1
@@ -329,6 +442,7 @@ def build_parser():
         help="repo root to protect; overridden by $LANE_SNAPSHOT_ROOT, and "
              "derived from this script's own location when neither is given",
     )
+    # Accepted for hooks that still pass it; it now picks only the ledger dir.
     parser.add_argument("--harness", choices=("claude-code", "codex"), default=None)
     parser.add_argument("--once", action="store_true", help="one scan pass, then exit")
     parser.add_argument(
@@ -345,10 +459,8 @@ def build_parser():
 
 
 def main(argv=None):
-    global WORKTREES_DEFAULT
     args = build_parser().parse_args(argv)
     if args.harness == "codex":
-        WORKTREES_DEFAULT = os.path.join(".git", "atelier-codex", "checkouts", "*", "*")
         agentlog.HARNESS = "codex"
     interval = args.interval if args.interval is not None else env_int(
         "LANE_SNAPSHOT_INTERVAL", INTERVAL_DEFAULT
@@ -364,23 +476,63 @@ def main(argv=None):
         print("lane-snapshot: no repo root resolved", file=sys.stderr)
         return 1
 
+    ttl = env_int("LANE_SNAPSHOT_TTL", TTL_DEFAULT)
+    common = common_dir(root)
+    if common is None:
+        log({"event": "exit", "reason": "not a git worktree", "root": root})
+        return 0
+    lock = None
+    if not args.once:
+        lock = try_lock(pidfile_path(repo_key(root, common)))
+        if lock is None:
+            log({"event": "exit", "reason": "already running", "root": root,
+                 "common_dir": common, "pid": os.getpid()})
+            return 0
+        os.ftruncate(lock, 0)
+        os.write(lock, json.dumps({
+            "pid": os.getpid(), "root": root, "common_dir": common,
+            "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }).encode("utf-8"))
+        # `lock` stays open for the process's life: the flock IS the liveness.
+
     log({
         "event": "start",
         "root": root,
         "interval": interval,
+        "ttl": ttl,
         "pattern": env_str("LANE_SNAPSHOT_WORKTREES", WORKTREES_DEFAULT),
         "pid": os.getpid(),
         "once": bool(args.once),
     })
 
+    last_write = time.time()
     while True:
+        reason = _exit_reason(root, common, ttl, last_write)
+        if reason:
+            log({"event": "exit", "reason": reason, "root": root, "pid": os.getpid()})
+            return 0
         try:
-            scan(root, log)
+            if scan(root, log)[1]:
+                last_write = time.time()
         except Exception as exc:  # a bad pass must not end the daemon
             log({"event": "error", "error": "scan: {0}: {1}".format(type(exc).__name__, exc)})
         if args.once:
             return 0
         time.sleep(max(interval, 1))
+
+
+def _exit_reason(root, common, ttl, last_write):
+    """Why this daemon should stop now, or None. Relaunch is free at the next
+    SessionStart, so leaving is always the cheap side."""
+    if not os.path.isdir(root):
+        return "root gone"
+    # Compared, not merely resolved: a root that lost its .git inside another
+    # repo still resolves, to the enclosing repo's common dir.
+    if common_dir(root) != common:
+        return "not a git worktree"
+    if ttl > 0 and time.time() - last_write >= ttl:
+        return "ttl"
+    return None
 
 
 if __name__ == "__main__":

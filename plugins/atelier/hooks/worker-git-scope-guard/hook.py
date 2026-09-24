@@ -3,11 +3,14 @@
 
 Two halves of one hazard: a worker's git call destroying work the worker does not own.
 
-  1. **A stash in a shared tree.** When workers are not worktree-isolated they share one
-     checkout, so a stash sweeps every sibling's uncommitted work into one entry and a
-     conflicted pop plus a drop loses it. Denied whenever the resolved directory is the
-     main checkout rather than the worker's own linked worktree. Independent of any
-     configuration and of where HEAD is.
+  1. **A stash in a shared tree, or on the shared stack.** When workers are not
+     worktree-isolated they share one checkout, so a stash sweeps every sibling's
+     uncommitted work into one entry and a conflicted pop plus a drop loses it. And
+     `refs/stash` is repo-wide: every worktree reads and writes the same stack, so a
+     `drop` in any linked worktree empties the main checkout's list. `pop`, `drop`,
+     `clear` and `branch` are denied in every tree; the other mutating forms are denied
+     unless the resolved directory is the worker's OWN linked worktree. Independent of
+     any configuration and of where HEAD is.
   2. **A write landing on a protected branch.** A worktree shares the repo's `.git` and
      its remote, so a commit made with HEAD on a protected branch lands on the real one.
      `commit`, `merge`, `rebase`, `cherry-pick`, `revert`, `am` while HEAD is protected,
@@ -43,6 +46,7 @@ sys.path.insert(
 )
 import codex_workers  # noqa: E402
 import atelier_local  # noqa: E402  (path must be primed before this import)
+import pending  # noqa: E402
 
 # git subcommands that write a commit onto the current branch
 WRITE_SUBS = {"commit", "merge", "rebase", "cherry-pick", "revert", "am"}
@@ -50,6 +54,9 @@ WRITE_SUBS = {"commit", "merge", "rebase", "cherry-pick", "revert", "am"}
 # The stash forms that MOVE work. `list` and `show` are reads and never fire.
 STASH_MUTATORS = {"push", "pop", "apply", "drop", "clear", "branch", "save",
                   "create", "store"}
+
+# The stash forms that take entries OFF the repo-wide stack, which every worktree shares.
+STASH_DESTROYERS = {"pop", "drop", "clear", "branch"}
 
 # git global options that consume a following value (skipped when locating the subcommand)
 VALUE_OPTS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
@@ -105,33 +112,80 @@ def _load_protected_branches(project_dir):
 # Shell command parsing
 # ---------------------------------------------------------------------------
 
-# (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find); the trailing
-# lookahead rejects `<<` mid-expression (e.g. `1 << 3`), which is never a real opener
+# (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
+# matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
+# word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
 HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+
+
+def _scan_line(line, quote):
+    """(the first heredoc terminator this line opens, the quote state at its end,
+    whether it ends in a line continuation), given the quote state it starts in.
+
+    An opener counts only outside quotes and outside a comment, and never with an
+    all-digit word or inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
+    `(( y = 1 << n ))`). A backslash escapes the next
+    character outside single quotes, and inside `$'...'` too. A `#` at the start
+    of the line, after whitespace or after one of `;&|()` runs to the line end, so an
+    apostrophe in a comment opens no quote.
+    """
+    terminator = None
+    i = 0
+    while i < len(line):
+        char = line[i]
+        if quote:
+            if char == quote[-1]:
+                quote = None
+            elif char == "\\" and quote != "'":
+                i += 1
+        elif char == "\\":
+            if i == len(line) - 1:
+                return terminator, quote, True
+            i += 1
+        elif line.startswith("$'", i):
+            quote = "$'"
+            i += 1
+        elif char in "'\"":
+            quote = char
+        elif char == "#" and (i == 0 or line[i - 1].isspace()
+                              or line[i - 1] in ";&|()"):
+            break
+        elif char == "<":
+            m = HEREDOC_START.match(line, i)
+            if (m and not m.group(1).isdigit()
+                    and line.count("((", 0, i) <= line.count("))", 0, i)):
+                terminator = terminator or m.group(1)
+                i = m.end()
+                continue
+        i += 1
+    return terminator, quote, False
 
 
 def strip_heredocs(command):
     """Drop heredoc bodies so a git literal inside one is never read as an invocation.
 
-    Only drops when the terminator is actually found — an unmatched `<<` (a shift
-    operator, a stray word) must keep every line, since dropping text here is a
-    silent fail-open and keeping it is at worst an over-deny.
+    Quote state is carried across lines, so a `<<WORD` inside a quoted string or a
+    comment opens nothing. A body starts at the first line end outside quotes and
+    continuations after its opener. Only drops when the terminator is actually
+    found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
+    since dropping text here is a silent fail-open and keeping it is at worst an
+    over-deny.
     """
     lines = command.split("\n")
-    out, i = [], 0
+    out, quote, pending, i = [], None, None, 0
     while i < len(lines):
-        m = HEREDOC_START.search(lines[i])
-        if m:
-            terminator = m.group(1)
-            j = i + 1
-            while j < len(lines) and lines[j].strip() != terminator:
-                j += 1
-            if j < len(lines):
-                out.append(lines[i])
-                i = j + 1  # skip the body and the terminator line
-                continue
         out.append(lines[i])
+        terminator, quote, continued = _scan_line(lines[i], quote)
         i += 1
+        pending = pending or terminator
+        if not pending or quote or continued:
+            continue
+        j = i
+        while j < len(lines) and lines[j].strip() != pending:
+            j += 1
+        if j < len(lines):
+            i = j + 1  # skip the body and the terminator line
+        pending = None
     return "\n".join(out)
 
 
@@ -181,7 +235,8 @@ def invocations(command, cwd):
         while i < len(toks):
             t = toks[i]
             if t == "-C":
-                cdir = toks[i + 1] if i + 1 < len(toks) else None
+                # resolve against the cd-tracked context, never the hook process cwd
+                cdir = os.path.join(ctx, toks[i + 1]) if i + 1 < len(toks) else None
                 i += 2
                 continue
             if t in VALUE_OPTS:
@@ -261,6 +316,33 @@ def shared_tree(cwd):
     return common == gitdir
 
 
+def owned_worktree(data):
+    """This subagent's own worktree root (realpath), or None when nothing records one.
+
+    Native: the sidecar `agent-<id>.meta.json` key `worktreePath`, which Claude Code
+    writes only for an isolation: worktree dispatch. Codex: the worker record's
+    `worktree`.
+    """
+    if codex_workers.is_codex(data):
+        path = (codex_workers.lookup(data) or {}).get("worktree")
+    else:
+        directory = pending.subagents_dir(data.get("transcript_path"))
+        key = pending.agent_key(data.get("agent_id"))
+        found = pending.sidecar_dir(directory, key) if directory and key else None
+        meta = pending.read_sidecar(pending.sidecar_path(found, key)) if found else None
+        path = (meta or {}).get("worktreePath")
+    return os.path.realpath(path) if isinstance(path, str) and path else None
+
+
+def owns_resolver(data):
+    """`owns(dir) -> bool` for this payload: is `dir` inside the subagent's own tree."""
+    def owns(where):
+        owned = owned_worktree(data)
+        top = _git(where, "--show-toplevel") if owned else None
+        return bool(top) and os.path.realpath(top) == owned
+    return owns
+
+
 def _git(cwd, *args):
     """`git -C cwd rev-parse <args>` stdout, or None on any failure."""
     try:
@@ -289,12 +371,13 @@ def _abspath(cwd, path):
 # Decision
 # ---------------------------------------------------------------------------
 
-def decide(data, branch_of, shared_of, protected):
+def decide(data, branch_of, shared_of, protected, owns):
     """The deny payload for one PreToolUse event, or None to stay silent.
 
     Every resolver is an argument so the whole decision is testable with no git repo
     and no activation file: `branch_of(dir) -> str|None`, `shared_of(dir) -> bool|None`,
-    `protected` = the frozenset of protected branch names (empty = that half is inert).
+    `protected` = the frozenset of protected branch names (empty = that half is inert),
+    `owns(dir) -> bool` = is `dir` the subagent's own worktree.
     """
     if not (data.get("agent_id") or data.get("agent_type")):
         return None  # the main session owns integration and is never restricted here
@@ -302,7 +385,14 @@ def decide(data, branch_of, shared_of, protected):
     cwd = data.get("cwd") or "."
     for sub, args, where in invocations(command, cwd):
         if sub == "stash":
-            if stash_moves_work(args) and shared_of(where) is True:
+            if not stash_moves_work(args):
+                continue
+            if args and args[0] in STASH_DESTROYERS:
+                return _deny_stash()  # the stack is repo-wide: tree kind is irrelevant
+            shared = shared_of(where)
+            if shared is None:
+                continue
+            if shared or not owns(where):
                 return _deny_stash()
         elif sub in WRITE_SUBS:
             if protected and branch_of(where) in protected:
@@ -331,13 +421,21 @@ def _deny(reason):
 
 def _deny_stash():
     return _deny(
-        "atelier worker-git-scope-guard: `git stash` in a checkout shared with sibling "
-        "workers. A stash here sweeps up every sibling's uncommitted work, and a "
-        "conflicted pop followed by a drop destroys it with nothing left to recover "
-        "from. Commit your own work on your own branch instead, or leave it in the tree "
-        "and report what is unfinished. If you need a clean tree to run something, say "
-        "so and stop — the dispatching session sequences that. `git stash list` and "
-        "`git stash show` are reads and are never blocked."
+        "atelier worker-git-scope-guard: `git stash` outside your own worktree, or a "
+        "form that takes entries off the stack. The stash stack is repo-wide, shared by "
+        "every worktree of this repo, so a pop or drop here can destroy another "
+        "session's entry, and a stash in a shared checkout sweeps up every sibling's "
+        "uncommitted work. Commit your own work on your own branch instead, or leave it "
+        "in the tree and report what is unfinished. Already pushed a stash here? You "
+        "cannot pop or drop it yourself: report its selector and SHA "
+        "(`git stash list --format='%gd %H %gs'`; drop needs the selector) so the "
+        "dispatching session drops it. For "
+        "a clean or old copy without the stash: copy the file aside (`cp file "
+        "/tmp/file.bak`, then copy it back — `git diff` misses untracked files, so copy "
+        "those directly), or `git diff > /tmp/<your-slug>.patch` with a name unique to "
+        "you, `git apply -R /tmp/<your-slug>.patch`, and later `git apply "
+        "/tmp/<your-slug>.patch`. `git stash list` and `git stash show` are reads and "
+        "are never blocked."
     )
 
 
@@ -399,7 +497,7 @@ def main():
         protected = (_load_protected_branches(data.get("cwd") if codex_workers.is_codex(data)
                                             else _resolve_project_dir(data.get("cwd")))
                      if "git" in command else frozenset())
-        out = decide(data, current_branch, shared_tree, protected)
+        out = decide(data, current_branch, shared_tree, protected, owns_resolver(data))
         if out is not None:
             print(json.dumps(out))
     except Exception:  # noqa: BLE001 — a guard fails open, never with a traceback

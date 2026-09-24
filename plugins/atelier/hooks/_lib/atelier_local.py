@@ -14,6 +14,7 @@ Stdlib-only, Python 3.9 compatible.
 """
 
 import os
+from pathlib import Path
 import subprocess
 
 ACTIVATION_MAX_BYTES = 256 * 1024
@@ -218,7 +219,22 @@ def _block(lines, index, end):
         index += 1
         colon = item.find(":")
         if colon != -1:
-            children[item[:colon].strip().lower()] = unquote(item[colon + 1:])
+            value = unquote(item[colon + 1:])
+            if not value:
+                # One level of nesting: lines deeper than this bare `sub:` are its mapping.
+                indent = len(line) - len(line.lstrip())
+                nested = {}
+                while index < end:
+                    inner = lines[index].strip()
+                    if inner and not inner.startswith("#"):
+                        if len(lines[index]) - len(lines[index].lstrip()) <= indent:
+                            break
+                        if ":" in inner and not inner.startswith("-"):
+                            sub, _, raw = inner.partition(":")
+                            nested[sub.strip().lower()] = unquote(raw)
+                    index += 1
+                value = nested or value
+            children[item[:colon].strip().lower()] = value
     return index, (children or None), (items if is_sequence else None)
 
 
@@ -283,3 +299,66 @@ def read_key(project_dir, key):
         return parse_key(text, key)
     except Exception:
         return None
+
+
+def main_checkout(project_dir):
+    """(main checkout, git common dir), both resolved; ValueError outside a `.git` layout."""
+    env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
+    try:
+        proc = subprocess.run(["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
+                              env=env, capture_output=True, text=True, timeout=3)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("git failed: {0}".format(exc)) from exc
+    if proc.returncode or not proc.stdout.strip():
+        raise ValueError("{0} is not in a git repository".format(project_dir))
+    common = Path(os.path.join(project_dir, proc.stdout.strip())).resolve()
+    if common.name != ".git":  # --separate-git-dir or bare: no main checkout to anchor on
+        raise ValueError("unsupported git layout {0}".format(common))
+    return common.parent, common
+
+
+def checkout_root(project_dir):
+    """`checkout-root` as a resolved absolute Path, None when unset; invalid raises ValueError.
+
+    `project_dir` may be any directory in the repo: the key is read from the main
+    checkout, so every worktree and every reader agrees. Allowlist: the resolved root
+    must sit strictly inside the main checkout and outside the git dir; anything else
+    would widen the Codex sandbox, scatter lane snapshots, or be pruned by git. A
+    layout with no main checkout (separate git dir, bare) refuses a set key.
+    """
+    try:
+        main, common = main_checkout(project_dir)
+    except ValueError as exc:
+        main, layout = None, exc
+    value = read_key(str(main) if main else project_dir, "checkout-root")
+    if isinstance(value, str):
+        value = value.strip()
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        raise ValueError("checkout-root must be a single path, not {0!r}".format(value))
+    if "$" in value:
+        raise ValueError("checkout-root {0!r}: variables are not expanded".format(value))
+    if main is None:
+        raise ValueError("checkout-root {0!r}: {1}".format(value, layout))
+    root = Path(os.path.join(main, os.path.expanduser(value))).resolve()
+    if root == main or not root.is_relative_to(main) or root.is_relative_to(common):
+        raise ValueError("checkout-root {0!r} resolves to {1}: it must be strictly inside the "
+                         "project {2} and outside {3}".format(value, root, main, common))
+    if root.exists() and not root.is_dir():
+        raise ValueError("checkout-root {0!r} resolves to {1}, which is not a directory".format(
+            value, root))
+    env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(main), "ls-files", "--", str(root.relative_to(main))],
+            env=env, capture_output=True, text=True, timeout=3)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("checkout-root {0!r}: git failed: {1}".format(value, exc)) from exc
+    if proc.returncode:
+        raise ValueError("checkout-root {0!r}: git failed: {1}".format(
+            value, proc.stderr.strip()))
+    if proc.stdout.strip():
+        raise ValueError(
+            "checkout-root {0!r} resolves to {1}, which holds tracked files".format(value, root))
+    return root

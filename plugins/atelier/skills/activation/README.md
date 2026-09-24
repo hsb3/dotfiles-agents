@@ -14,12 +14,16 @@ that is present, looks configured, and is silently doing nothing.
 
 Use it when someone asks to turn on, configure, or check atelier enforcement (custody,
 worker context, worktree isolation, protected branches, handoff routing, context
-watermarks) in a project, or when a hook that should be firing appears silent. Every atelier loader fails open by design, so an absent
-activation file and a typo'd one are indistinguishable from the outside. `check` reads the
+watermarks) in a project, or when a hook that should be firing appears silent. Every atelier loader fails open by design. On Claude Code an
+absent activation file inside a git worktree is announced at each cold session start by `session-handoff-surfacer`
+(`ATELIER_ACTIVATION_NUDGE=off` silences it); a typo'd one is indistinguishable from the outside. `check` reads the
 installed file through the hooks' own loader functions rather than parsing it itself, and
 exits nonzero on an inert key — a broken file becomes a failing command, not a hunch. One
 key, `watermark`, overrides rather than arms: each sub-key it omits stays computed, so the
-report calls it inert only when nothing under it is readable at all.
+report calls it inert only when nothing under it is readable at all. An explicit empty
+list (`isolate: []`, `protected-branches: []`) is the documented off value, so `check`
+reports it `off (explicit)` and passes; the hook wrappers read it and a malformed value
+alike as off, so that one verdict asks the shared parser underneath them.
 
 Reporting through the loaders is what keeps `check` honest, and the loaders now sit on one
 frontmatter parser (`hooks/_lib/atelier_local.py`) instead of seven private copies — so two
@@ -31,15 +35,18 @@ the main tree.
 
 ## Two keys are Claude Code only
 
-`protected-branches:` is read by `worker-git-scope-guard`, which exists only here. The opencode
+`protected-branches:` is read by `worker-git-scope-guard`, which exists only here; that hook's
+stash half (no stash outside a worker's own worktree, no pop/drop/clear/branch anywhere) needs no
+key. The opencode
 port's activation parser does not read it and that bundle ships no git guard at all, so the key
 and its explanation sit in `<!-- harness:claude-code -->` blocks rather than in the shared key
 table — a GFM table cannot carry a harness marker, so that row lives below the table. Do not
 confuse it with `protected:`, the file-glob key, which both harnesses read.
 
 `watermark:` is harness-local for a different reason: both harnesses scale a context watermark,
-but they spell the override differently — a `watermark:` mapping of `soft`/`hard`/`complexity`
-here, a top-level categorical `complexity:` key there. Same job, two schemas, so neither spelling
+but they spell the override differently — a `watermark:` mapping of `notice`/`soft`/`hard`/
+`complexity`, with optional `worker:`/`session:` sub-mappings, here, a top-level categorical
+`complexity:` key there. Same job, two schemas, so neither spelling
 belongs in the shared table. See `docs/atelier-parity.md`.
 
 ## Install
@@ -60,6 +67,8 @@ Malformed selected policies never fall back. Custody reads the selected policy f
 
 
 `codex-setup` resolves each role from its project profile first, then a current managed global profile, and only bootstraps missing roles locally. It adds project writable roots without touching hook trust. `check --harness codex` is read-only; stale global profiles require explicit `codex-setup --refresh-global`. It reports trust as unverified until checked in native `/hooks`. See the skill for setup and restart steps.
+
+`checkout-root` moves Codex worker checkouts, read from the main checkout's policy; setup makes it the first writable root, rewrites its own marked writable-roots table when the key changes, and adds an in-tree root to `info/exclude`. The root must resolve strictly inside the project and outside `.git`, and hold no tracked files; a separate-git-dir or bare layout with the key set is refused everywhere; variables are not expanded; `check` reports the refusal and nothing is armed.
 
 Watermark diagnostics include an optional `notice` threshold when the hook loader returns it.
 

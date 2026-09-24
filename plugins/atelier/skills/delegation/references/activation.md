@@ -124,9 +124,9 @@ The second half needs no key at all and cannot be turned off by one: a subagent 
 **shared, un-isolated tree** — the parent's own checkout, not a linked worktree of its own — is
 denied the mutating `git stash` forms outright. There is only one tree, so "stay inside your own
 worktree" has nothing to bind, and a conflicted `stash pop` followed by a `drop` has already
-destroyed a sibling's work irrecoverably. Inside its own linked worktree a worker may stash
-freely, which is exactly the isolation `isolate:` buys. `stash list` and `stash show` are reads
-and never fire.
+destroyed a sibling's work irrecoverably. In its own linked worktree a worker may push or apply
+a stash; `pop`, `drop`, `clear` and `branch` are denied everywhere, because the stash stack is
+repo-wide. `stash list` and `stash show` are reads and never fire.
 
 `worker-git-scope-guard` is the peer-to-peer sibling of `live-worker-git-guard`, not a duplicate
 of it: that one stops an *orchestrator* from clobbering the uncommitted state of children it
@@ -175,26 +175,27 @@ number means different things on a 200k-window model and a 1M-window one. How fa
 taken that is its own business, and each states its concrete mechanism below.
 
 <!-- harness:claude-code -->
-The hook computes `soft = min(120_000, 0.60 × window) × complexity` and
-`hard = min(160_000, 0.80 × window) × complexity`, taking `window` from the model id on the
-transcript's last assistant line (no hook payload carries a `model` field) and `complexity` from
-the repo's tracked-file count — under 5,000 files 1.00, 5,000–20,000 0.85, over 20,000 0.75, and
-1.00 in a tree that is not a checkout at all. The absolute terms are why a 1M-window model is
-still nudged at 120k: percent-of-window thresholds alone were inert against the ~967k
-auto-compact default. An unknown model, or one the catalog has no window for, falls back to the
-absolute 120k/160k pair — never to a fraction of an assumed window — and writes a ledger row
-marking the fallback, so a check that could not measure never looks like one that measured and
-found nothing.
+The hook computes each stage as `min(layer_value × complexity, frac × window)`, with `frac` 0.30
+for notice, 0.60 for soft and 0.80 for hard. `layer_value` comes from one of two bands, chosen by
+whether the payload carries `agent_id`: worker 100k/160k/250k, session 150k/250k/400k
+(notice/soft/hard). `window` comes from the model id on the transcript's last assistant line (no
+hook payload carries a `model` field); `complexity` is 1.0 unless the activation file sets it.
+The absolute terms are why a 1M-window model is still nudged: percent-of-window thresholds alone
+were inert against the ~967k auto-compact default. An unknown model, or one the catalog has no
+window for, gets the band values uncapped — never a fraction of an assumed window — and writes a
+ledger row marking the fallback, so a check that could not measure never looks like one that
+measured and found nothing.
 
-Precedence, applied per value: `CONTEXT_WATERMARK_SOFT` / `CONTEXT_WATERMARK_HARD` in the
-environment, then a `watermark:` key in the activation file (`soft`, `hard`, `complexity`, each
-independently optional and each fail-open to the tier below), then the computed default. The
-wiring deliberately supplies no shell-expanded env default: that would leave the variable always
-set, and the top tier would win forever.
+Precedence, applied per value: `CONTEXT_WATERMARK_NOTICE` / `_SOFT` / `_HARD` in the environment
+(how an external coordinator such as wave-lanes sets session numbers), then a `watermark:` key in
+the activation file (`notice`, `soft`, `hard`, `complexity`, each independently optional and each
+fail-open to the tier below; a `worker:` or `session:` sub-mapping overrides the flat keys for
+that layer), then the computed default. The wiring deliberately supplies no shell-expanded env
+default: that would leave the variable always set, and the top tier would win forever.
 
-A delegated worker is watched on `PostToolUse` (only a worker's payload carries `agent_id`), at
-half the session's soft line and with no hard tier, because it cannot hand off, compact, or start
-a fresh session — the nudge therefore names the one move it has, wrap up and report. Read the hook
+A delegated worker is watched on `PostToolUse` (only a worker's payload carries `agent_id`),
+against the worker band, because it cannot hand off, compact, or start a fresh session — the
+nudge therefore names the one move it has, wrap up and report. Read the hook
 for the values actually in force before quoting a number.
 <!-- /harness -->
 

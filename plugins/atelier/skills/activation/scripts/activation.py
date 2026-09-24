@@ -13,7 +13,8 @@ Two subcommands:
 hooks' own loader functions, loaded by path, so the report cannot drift from the
 behaviour it describes. The one thing the hooks cannot answer is which keys the
 operator actually typed — a misspelled key and an absent key look identical to a
-loader — so this script locates top-level key *names* and nothing else.
+loader — so this script locates top-level key *names* and nothing else. (Whether an
+off key was written as an explicit `[]` is asked of the shared parser, not answered here.)
 
 Stdlib only. Exit codes: 0 all clear, 1 something is inert/unknown/ignored,
 2 hard error (the hooks could not be found). All output goes to stdout: the
@@ -25,13 +26,14 @@ import difflib
 import importlib.util
 import os
 import json
+import re
 from pathlib import Path
 import subprocess
 import shutil
 import sys
 
 KEYS = ("enforce", "protected", "protected-branches", "isolate", "handoff",
-        "watermark", "effort")
+        "watermark", "effort", "checkout-root")
 EFFORT_VALUES = ("standard", "deep")
 
 HOOK_NAMES = (
@@ -192,6 +194,13 @@ def effort_value(region, unquote):
     return value
 
 
+def is_explicit_empty_list(text, key, parse_key):
+    """The shared parser's own answer: `key: []` parses to an empty sequence, a blank
+    to None and a scalar to a str. The hook wrappers collapse all three to off; this
+    tells the deliberate one apart without a parser of its own."""
+    return parse_key(text, key) == []
+
+
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
@@ -312,11 +321,16 @@ def evaluate(project_dir, modules):
             "protected-branches", "not configured",
             "the stash half of this hook is live regardless; only the "
             "protected-branch half needs this key", ["worker-git-scope-guard"]))
+    elif not branches and is_explicit_empty_list(
+            text, "protected-branches", isolation.atelier_local.parse_key):
+        result["rows"].append(_row(
+            "protected-branches", "off (explicit)",
+            "written as an empty list - deliberately off", ["worker-git-scope-guard"]))
     elif not branches:
         result["rows"].append(_row(
             "protected-branches", "inert",
-            "written, but no branch names were parsed - an empty list, or a scalar "
-            "where a sequence belongs", ["worker-git-scope-guard"]))
+            "written, but no branch names were parsed - a scalar where a "
+            "sequence belongs, or a blank value", ["worker-git-scope-guard"]))
     else:
         result["rows"].append(_row(
             "protected-branches", "armed", ", ".join(branches),
@@ -326,6 +340,11 @@ def evaluate(project_dir, modules):
     isolate_mode, isolate_types = isolation._load_activation(project_dir)
     if "isolate" not in present:
         result["rows"].append(_row("isolate", "not configured", "", ["worktree-isolation"]))
+    elif isolate_mode == "off" and is_explicit_empty_list(
+            text, "isolate", isolation.atelier_local.parse_key):
+        result["rows"].append(_row(
+            "isolate", "off (explicit)",
+            "written as an empty list - deliberately off", ["worktree-isolation"]))
     elif isolate_mode == "off":
         result["rows"].append(_row(
             "isolate", "inert",
@@ -428,21 +447,32 @@ def evaluate(project_dir, modules):
     # Absent sub-keys are not a defect: each one that is missing or unusable
     # leaves that tier computed from the model's window, which is the shipped
     # behaviour. Only a key written with nothing readable under it is inert.
-    thresholds = watermark._load_watermark_config(project_dir)
-    if "watermark" not in present:
-        result["rows"].append(_row("watermark", "not configured", "", ["context-watermark"]))
-    elif not thresholds:
-        result["rows"].append(_row(
-            "watermark", "inert",
-            "written, but no usable notice/soft/hard/complexity value - the sub-keys are "
-            "missing, blank, or not positive numbers, so every tier stays computed",
-            ["context-watermark"]))
+    # A `worker:`/`session:` sub-mapping splits the report per layer, only when they differ.
+    layers = {layer: watermark._load_watermark_config(project_dir, layer)
+              for layer in ("worker", "session")}
+    if layers["worker"] == layers["session"]:
+        layers = {"watermark": layers["worker"]}
     else:
-        result["rows"].append(_row(
-            "watermark", "armed",
-            ", ".join("{0}={1}".format(k, thresholds[k])
-                      for k in ("notice", "soft", "hard", "complexity") if k in thresholds),
-            ["context-watermark"]))
+        layers = {"watermark." + layer: config for layer, config in layers.items()}
+    for name, thresholds in layers.items():
+        if "watermark" not in present:
+            result["rows"].append(_row(name, "not configured", "", ["context-watermark"]))
+        elif not thresholds and len(layers) > 1:
+            result["rows"].append(_row(
+                name, "not configured", "no value for this layer, every tier computed",
+                ["context-watermark"]))
+        elif not thresholds:
+            result["rows"].append(_row(
+                name, "inert",
+                "written, but no usable notice/soft/hard/complexity value - the sub-keys "
+                "are missing, blank, or not positive numbers, so every tier stays computed",
+                ["context-watermark"]))
+        else:
+            result["rows"].append(_row(
+                name, "armed",
+                ", ".join("{0}={1}".format(k, thresholds[k])
+                          for k in ("notice", "soft", "hard", "complexity") if k in thresholds),
+                ["context-watermark"]))
 
     # -- effort (no hook) ---------------------------------------------------
     effort = effort_value(region, worker._unquote)
@@ -455,6 +485,27 @@ def evaluate(project_dir, modules):
             "effort", "inert",
             "unrecognised value {0!r} - expected one of {1}".format(
                 effort, "/".join(EFFORT_VALUES)), ["no hook"]))
+
+    # -- checkout-root (atelier_local.checkout_root; read directly by codex_workers.py
+    # and this script's own Codex setup, neither of which is one of the loaded hooks) --
+    # Both read the main checkout's policy, so a linked worktree's own copy is not what runs.
+    checkout_sources = ["codex_workers", "activation.py"]
+    try:
+        root = worker.atelier_local.checkout_root(project_dir)
+    except ValueError as exc:
+        result["rows"].append(_row(
+            "checkout-root", "inert",
+            "invalid, so it blocks every isolated Codex dispatch: " + str(exc), checkout_sources))
+    else:
+        if root is not None:
+            result["rows"].append(_row("checkout-root", "armed", str(root), checkout_sources))
+        elif "checkout-root" in present:
+            result["rows"].append(_row(
+                "checkout-root", "not configured",
+                "blank or unset in the main checkout - the default checkout root is used",
+                checkout_sources))
+        else:
+            result["rows"].append(_row("checkout-root", "not configured", "", checkout_sources))
 
     # -- anything else in the block -----------------------------------------
     for key in present:
@@ -652,6 +703,32 @@ def cmd_create(project_dir, force, out):
 # CLI
 # ---------------------------------------------------------------------------
 
+def _managed_block(text, marker, tomllib):
+    """(start, end) of atelier's own writable-roots block, or None.
+
+    The block is the marker, the table header, and a `writable_roots` array that may
+    span lines (a TOML formatter reflows it): lines are taken until the header plus
+    them parses to a list. Anything else is the user's table."""
+    header = marker + "[sandbox_workspace_write]\n"
+    match = re.search("^" + re.escape(header), text, re.M)
+    if not match:
+        return None
+    end = match.end()
+    lines = text[end:].splitlines(keepends=True)
+    if not lines or not lines[0].startswith("writable_roots"):
+        return None
+    for line in lines:
+        end += len(line)
+        try:
+            table = tomllib.loads(header + text[match.end():end])
+        except tomllib.TOMLDecodeError:
+            continue
+        if isinstance(table["sandbox_workspace_write"].get("writable_roots"), list):
+            return match.start(), end
+        return None
+    return None
+
+
 def codex_setup(project_dir, out, check=False, refresh_global=False):
     """Generate local roles and the narrow writable-root addition; never approve hooks."""
     roots = _hook_roots()
@@ -669,8 +746,10 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
             ["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
             text=True, env=codex_workers.clean_git_env()).strip()
         common = (Path(project_dir) / common).resolve()
-        writable = [str(common / path) for path in
-                    ("atelier-codex/checkouts", "worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
+        # The main checkout's policy, the same one codex_workers places checkouts by.
+        root = local.checkout_root(project_dir)
+        writable = [str(root or common / "atelier-codex/checkouts")] + [str(common / path) for path in
+                    ("worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
         config = Path(project_dir) / ".codex/config.toml"
         exclude = common / "info/exclude"
         for path in (config.parent, common / "info"):
@@ -702,7 +781,9 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                   + "; ".join(agent_settings), file=out)
             return EXIT_PROBLEM
         marker = "# atelier managed writable roots\n"
-        if missing and "sandbox_workspace_write" in parsed:
+        # Atelier's own block, exactly as written below; anything else in the table is the user's.
+        managed = _managed_block(text, marker, tomllib) if missing else None
+        if missing and "sandbox_workspace_write" in parsed and not managed:
             print("ERROR  existing sandbox_workspace_write table is user-owned; add these writable_roots: "
                   + json.dumps(missing), file=out)
             return EXIT_PROBLEM
@@ -712,13 +793,30 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                 any(path.parent == global_agents for path in planned_roles)):
             raise ValueError("stale global Codex profiles; rerun with --refresh-global")
         additions = []
-        if missing:
-            additions.append(marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable))
+        block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable)
+        new_text = text
+        if managed:
+            new_text = text[:managed[0]] + block + "\n" + text[managed[1]:]
+        elif missing:
+            additions.append(block)
         if agents is None:
             additions.append("[agents]\nmax_depth = 2")
-        if additions and not check:
+        if additions:
+            new_text = new_text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n"
+        try:
+            composed = tomllib.loads(new_text)
+        except tomllib.TOMLDecodeError as exc:
+            composed = exc
+        if new_text != text and (not isinstance(composed, dict) or missing and composed.get(
+                "sandbox_workspace_write", {}).get("writable_roots") != writable):
+            print("ERROR  refusing to write {0}: the updated config would not parse to these "
+                  "writable_roots ({1}); add them by hand: {2}".format(
+                      config, composed if not isinstance(composed, dict) else "wrong value",
+                      json.dumps(writable)), file=out)
+            return EXIT_PROBLEM
+        if new_text != text and not check:
             config.parent.mkdir(parents=True, exist_ok=True)
-            config.write_text(text.rstrip() + "\n\n" + "\n\n".join(additions) + "\n")
+            config.write_text(new_text)
         changed = codex_roles.setup(project_dir, check=check, refresh_global=refresh_global)
         moved = [] if os.environ.get("ATELIER_ACTIVATION_FILE") else reconcile_policy(project_dir, local, check=check)
         print(("needs " if check and changed else "ok    ") + " Codex roles: "
@@ -734,8 +832,12 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
         if not check:
             exclude.parent.mkdir(parents=True, exist_ok=True)
             old = exclude.read_text() if exclude.exists() else ""
-            additions = [line for line in ("/.codex/agents/atelier-*.toml", "/.codex/config.toml")
-                         if line not in old.splitlines()]
+            ignored = ["/.codex/agents/atelier-*.toml", "/.codex/config.toml"]
+            # An in-tree checkout root would otherwise show every worker checkout as untracked.
+            if root and root.is_relative_to(common.parent) and root != common.parent \
+                    and not root.is_relative_to(common):
+                ignored.append("/" + root.relative_to(common.parent).as_posix() + "/")
+            additions = [line for line in ignored if line not in old.splitlines()]
             if additions:
                 exclude.write_text(old.rstrip() + "\n" + "\n".join(additions) + "\n")
         print("unverified  hook trust: open /hooks in Codex for this project and approve the reviewed atelier hooks. "
@@ -765,8 +867,8 @@ def main(argv=None, out=None):
                         help="overwrite an existing activation file")
 
     check = sub.add_parser(
-        "check", help="report what each key actually resolves to: armed, inert, or "
-                      "not configured")
+        "check", help="report what each key actually resolves to: armed, inert, "
+                      "off (explicit), or not configured")
 
     setup = sub.add_parser("codex-setup", help="generate Codex roles and writable roots")
     setup.add_argument("--refresh-global", action="store_true",
