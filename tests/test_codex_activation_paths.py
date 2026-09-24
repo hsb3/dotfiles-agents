@@ -131,3 +131,40 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertNotEqual(
             activation.main(['codex-setup', '--harness', 'codex', '--project-dir', main], out=output), 0)
         self.assertFalse((Path(main) / '.codex/config.toml').exists())
+
+    def setup_roots(self, value=None):
+        main, _ = make_worktree(str(self.root))
+        self.write(Path(main) / '.codex/atelier.local.md',
+                   FULL.replace('---\n', '---\ncheckout-root: ' + value + '\n', 1) if value else FULL)
+        config = Path(main) / '.codex/config.toml'
+        config.write_text('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
+        output = io.StringIO()
+        code = activation.main(['codex-setup', '--harness', 'codex', '--project-dir', main], out=output)
+        text = config.read_text()
+        roots = __import__('tomllib').loads(text).get('sandbox_workspace_write', {}).get('writable_roots')
+        return Path(main), code, output.getvalue(), text, roots
+
+    def test_codex_setup_writable_root_defaults_to_the_common_dir(self):
+        main, code, output, text, roots = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        common = main / '.git'
+        self.assertEqual(roots, [str(common / p) for p in (
+            'atelier-codex/checkouts', 'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')])
+        self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
+
+    def test_codex_setup_writable_root_follows_checkout_root(self):
+        main, code, output, text, roots = self.setup_roots('.worktrees')
+        self.assertEqual(code, 0, output)
+        common = main / '.git'
+        self.assertEqual(roots, [str(main / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')])
+        self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
+
+    def test_codex_setup_refuses_an_invalid_checkout_root(self):
+        (self.root / 'main').mkdir()
+        (self.root / 'main/afile').write_text('x')
+        main, code, output, text, roots = self.setup_roots('afile')
+        self.assertNotEqual(code, 0)
+        self.assertIn('checkout-root', output)
+        self.assertIsNone(roots)
+        self.assertEqual(text, 'model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')

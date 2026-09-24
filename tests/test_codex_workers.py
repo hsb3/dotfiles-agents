@@ -418,6 +418,48 @@ class CodexWorkersTests(unittest.TestCase):
                     index.symlink_to(other_index)
                 self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
 
+    def checkout_root(self, value):
+        policy = self.repo / '.claude/atelier.local.md'
+        policy.write_text(policy.read_text().replace('---\n', '---\ncheckout-root: ' + value + '\n', 1))
+
+    def listed_worktrees(self):
+        return [Path(line[len('worktree '):]) for line in
+                self.git('worktree', 'list', '--porcelain').splitlines() if line.startswith('worktree ')]
+
+    def test_default_checkout_placement_is_unchanged(self):
+        record = self.mod.register(self.payload(), isolate=True)
+        self.assertEqual(Path(record['worktree']),
+                         self.repo.resolve() / '.git/atelier-codex/checkouts/session-a/worker-a')
+
+    def test_checkout_root_places_worker_and_nested_worker_checkouts(self):
+        self.checkout_root('.worktrees')
+        main = self.repo.resolve()
+        parent = self.payload('manager'); parent['agent_type'] = 'atelier-manager'
+        record = self.mod.register(parent, isolate=True)
+        self.assertEqual(Path(record['worktree']), main / '.worktrees/session-a/manager')
+        self.assertIn(main / '.worktrees/session-a/manager', self.listed_worktrees())
+        child = self.payload('leaf')
+        Path(child['transcript_path']).write_text(json.dumps({'type': 'session_meta', 'payload': {
+            'id': 'leaf', 'parent_thread_id': 'manager', 'agent_path': '/root/manager/leaf'}})+'\n')
+        leaf = self.mod.register(child, isolate=True)
+        self.assertEqual(leaf['source'], record['worktree'])
+        self.assertEqual(Path(leaf['worktree']), main / '.worktrees/session-a/leaf')
+        self.assertIn(main / '.worktrees/session-a/leaf', self.listed_worktrees())
+        self.assertEqual(self.mod.lookup(child)['worktree'], leaf['worktree'])
+
+    def test_invalid_checkout_root_denies_without_creating_a_worktree(self):
+        (self.repo / 'afile').write_text('x')
+        self.checkout_root('afile')
+        p = self.payload()
+        with self.assertRaisesRegex(self.mod.WorkerError, 'checkout-root'):
+            self.mod.register(p, isolate=True)
+        self.assertEqual(self.listed_worktrees(), [self.repo.resolve()])
+        p['hook_event_name'] = 'SubagentStart'
+        self.hook('worktree-isolation', p)
+        p['hook_event_name'] = 'PreToolUse'
+        self.assertEqual(self.decision(self.hook('worktree-isolation', p)), 'deny')
+        self.assertEqual(self.listed_worktrees(), [self.repo.resolve()])
+
     def test_routed_followup_revives_stopped_worker(self):
         p = self.payload()
         self.mod.register(p, isolate=True)

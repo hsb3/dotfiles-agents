@@ -89,6 +89,9 @@ def _load(path, name):
 
 activation = _load(SCRIPT_PATH, "activation_cli_under_test")
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
 
 class _Base(unittest.TestCase):
     def setUp(self):
@@ -495,6 +498,43 @@ class CheckTests(_Base):
         self.assertIn("prose-only", row)
         self.assertIn("deep", row)
         self.assertIn("no hook", row)
+
+
+class CheckoutRootTests(_Base):
+    """`checkout-root` is read directly from `atelier_local.checkout_root`, not
+    through a hook loader, so it needs a real git repo (the function shells out to
+    `git rev-parse --git-common-dir`)."""
+
+    def setUp(self):
+        super().setUp()
+        require_git()
+        self.main, self.worktree = make_worktree(self.tmp.name)
+        os.makedirs(os.path.join(self.main, ".claude"), exist_ok=True)
+
+    def test_absent_is_not_configured(self):
+        self.write("---\nenforce: strict\n---\n", project=self.main)
+        code, output = self.check(project=self.main)
+        self.assertEqual(code, 0, output)
+        self.assertIn("not configured", self.row(output, "checkout-root"))
+
+    def test_valid_relative_value_resolves_and_is_armed(self):
+        self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=self.main)
+        code, output = self.check(project=self.main)
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn("armed", row)
+        self.assertIn(os.path.join(self.main, ".worktrees"), row)
+
+    def test_invalid_value_reports_the_error_not_unknown(self):
+        with open(os.path.join(self.main, "afile"), "w") as fh:
+            fh.write("x")
+        self.write("---\nenforce: strict\ncheckout-root: afile\n---\n", project=self.main)
+        code, output = self.check(project=self.main)
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn("checkout-root", row)
+        self.assertIn("afile", row)
+        self.assertNotIn("unknown key", row)
 
 
 class AgreementTests(_Base):

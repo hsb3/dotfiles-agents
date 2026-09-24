@@ -32,7 +32,7 @@ import shutil
 import sys
 
 KEYS = ("enforce", "protected", "protected-branches", "isolate", "handoff",
-        "watermark", "effort")
+        "watermark", "effort", "checkout-root")
 EFFORT_VALUES = ("standard", "deep")
 
 HOOK_NAMES = (
@@ -485,6 +485,24 @@ def evaluate(project_dir, modules):
             "unrecognised value {0!r} - expected one of {1}".format(
                 effort, "/".join(EFFORT_VALUES)), ["no hook"]))
 
+    # -- checkout-root (atelier_local.checkout_root; read directly by codex_workers.py
+    # and this script's own Codex setup, neither of which is one of the loaded hooks) --
+    checkout_sources = ["codex_workers", "activation.py"]
+    if "checkout-root" not in present:
+        result["rows"].append(_row("checkout-root", "not configured", "", checkout_sources))
+    else:
+        try:
+            root = worker.atelier_local.checkout_root(project_dir)
+        except ValueError as exc:
+            result["rows"].append(_row("checkout-root", "inert", str(exc), checkout_sources))
+        else:
+            if root is None:
+                result["rows"].append(_row(
+                    "checkout-root", "not configured",
+                    "blank - the default checkout root is used", checkout_sources))
+            else:
+                result["rows"].append(_row("checkout-root", "armed", str(root), checkout_sources))
+
     # -- anything else in the block -----------------------------------------
     for key in present:
         if key in KEYS:
@@ -698,8 +716,9 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
             ["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
             text=True, env=codex_workers.clean_git_env()).strip()
         common = (Path(project_dir) / common).resolve()
-        writable = [str(common / path) for path in
-                    ("atelier-codex/checkouts", "worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
+        root = local.checkout_root(project_dir)
+        writable = [str(root or common / "atelier-codex/checkouts")] + [str(common / path) for path in
+                    ("worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
         config = Path(project_dir) / ".codex/config.toml"
         exclude = common / "info/exclude"
         for path in (config.parent, common / "info"):

@@ -14,6 +14,7 @@ Stdlib-only, Python 3.9 compatible.
 """
 
 import os
+from pathlib import Path
 import subprocess
 
 ACTIVATION_MAX_BYTES = 256 * 1024
@@ -298,3 +299,32 @@ def read_key(project_dir, key):
         return parse_key(text, key)
     except Exception:
         return None
+
+
+def checkout_root(project_dir):
+    """`checkout-root` as an absolute Path, None when unset; invalid raises ValueError.
+
+    Relative values resolve against the main checkout, so every worktree agrees.
+    """
+    value = read_key(project_dir, "checkout-root")
+    if isinstance(value, str):
+        value = value.strip()
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        raise ValueError("checkout-root must be a single path, not {0!r}".format(value))
+    env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
+    try:
+        proc = subprocess.run(["git", "-C", project_dir, "rev-parse", "--git-common-dir"],
+                              env=env, capture_output=True, text=True, timeout=3)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("checkout-root {0!r}: git failed: {1}".format(value, exc)) from exc
+    if proc.returncode or not proc.stdout.strip():
+        raise ValueError("checkout-root {0!r} is set but {1} is not in a git repository".format(
+            value, project_dir))
+    main = Path(os.path.join(project_dir, proc.stdout.strip())).resolve().parent
+    root = Path(os.path.normpath(os.path.join(main, os.path.expanduser(value))))
+    if root.exists() and not root.is_dir():
+        raise ValueError("checkout-root {0!r} resolves to {1}, which is not a directory".format(
+            value, root))
+    return root

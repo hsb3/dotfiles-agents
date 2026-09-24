@@ -594,6 +594,79 @@ class PolicyPlacementTests(_Base):
         self.assertEqual(atelier_local.activation_path(self.project, inherit=False), path)
 
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import make_worktree, require_git  # noqa: E402
+
+POLICY = os.path.join(".claude", "atelier.local.md")
+
+
+class CheckoutRootTests(_Base):
+    def setUp(self):
+        super().setUp()
+        require_git()
+        self.main, self.worktree = make_worktree(self.tmp.name)
+
+    def policy(self, value, where=None):
+        path = os.path.join(where or self.main, POLICY)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n" + value + "---\n")
+
+    def root(self, where=None):
+        return atelier_local.checkout_root(where or self.main)
+
+    def test_absent_key_is_none(self):
+        self.policy("")
+        self.assertIsNone(self.root())
+
+    def test_blank_key_is_none(self):
+        self.policy("checkout-root:\n")
+        self.assertIsNone(self.root())
+        self.policy("checkout-root: ''\n")
+        self.assertIsNone(self.root())
+
+    def test_relative_value_resolves_against_the_main_checkout(self):
+        self.policy("checkout-root: .worktrees\n")
+        self.assertEqual(str(self.root()), os.path.join(self.main, ".worktrees"))
+
+    def test_linked_worktree_resolves_to_the_same_main_root(self):
+        self.policy("checkout-root: .worktrees\n")
+        self.assertEqual(self.root(self.worktree), self.root())
+        self.assertEqual(str(self.root(self.worktree)), os.path.join(self.main, ".worktrees"))
+
+    def test_absolute_value_is_normalized(self):
+        self.policy("checkout-root: " + self.tmp.name + "/x/../elsewhere\n")
+        self.assertEqual(str(self.root()), os.path.join(self.tmp.name, "elsewhere"))
+
+    def test_tilde_is_expanded(self):
+        self.policy("checkout-root: ~/checkouts\n")
+        from unittest.mock import patch
+        with patch.dict(os.environ, HOME=self.tmp.name):
+            self.assertEqual(str(self.root()), os.path.join(self.tmp.name, "checkouts"))
+
+    def test_list_or_mapping_is_invalid(self):
+        for value in ("checkout-root: [a, b]\n", "checkout-root:\n  - a\n",
+                      "checkout-root:\n  path: a\n"):
+            with self.subTest(value=value):
+                self.policy(value)
+                with self.assertRaisesRegex(ValueError, "checkout-root"):
+                    self.root()
+
+    def test_existing_file_is_invalid(self):
+        with open(os.path.join(self.main, "afile"), "w") as fh:
+            fh.write("x")
+        self.policy("checkout-root: afile\n")
+        with self.assertRaisesRegex(ValueError, "checkout-root.*afile"):
+            self.root()
+
+    def test_key_outside_a_git_repo_is_invalid(self):
+        self.policy("checkout-root: .worktrees\n", where=self.project)
+        with self.assertRaisesRegex(ValueError, "checkout-root.*\\.worktrees"):
+            self.root(self.project)
+        self.policy("", where=self.project)
+        self.assertIsNone(self.root(self.project))
+
+
 # ---------------------------------------------------------------------------
 # The consolidation itself
 # ---------------------------------------------------------------------------
