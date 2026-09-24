@@ -297,14 +297,26 @@ def _reopened_by_notification(text):
     return agent_key(task_id.group(1))
 
 
+def _answers(obj, use_ids):
+    """True when a `user` line carries a tool_result for one of `use_ids`."""
+    message = obj.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    return any(isinstance(block, dict) and block.get("type") == "tool_result"
+               and isinstance(block.get("tool_use_id"), str)
+               and block["tool_use_id"] in use_ids
+               for block in (content if isinstance(content, list) else ()))
+
+
 def stopped_ids(transcript_path, candidates):
     """The subset of `candidates` the session transcript shows stopped.
 
     A TaskStop'd agent fires no SubagentStop (measured on Claude Code
     2.1.281), so the ledger never settles it. Exactly one record settles it
     here: the TaskStop success result, a `user` line whose
-    `toolUseResult.task_id` is the agent and whose message starts
-    "Successfully stopped task". A `<task-notification>` never settles, since
+    `toolUseResult.task_id` is the agent, whose message starts
+    "Successfully stopped task", and whose `tool_result.tool_use_id` answers
+    an earlier assistant `tool_use` named TaskStop. Sidechain lines count: a
+    nested caller's transcript is nothing else. A `<task-notification>` never settles, since
     a queued prompt or an agent's quoted output can carry the same text.
 
     Known limit: an agent killed by the user rather than by TaskStop stays
@@ -329,6 +341,7 @@ def stopped_ids(transcript_path, candidates):
     stopped = set()
     if not wanted or not transcript_path:
         return stopped
+    taskstop_uses = set()  # tool_use ids of TaskStop calls; their input names the id
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -348,7 +361,8 @@ def stopped_ids(transcript_path, candidates):
                         key = agent_key(result.get("task_id"))
                         message = result.get("message")
                         if (key in wanted and isinstance(message, str)
-                                and message.startswith("Successfully stopped task")):
+                                and message.startswith("Successfully stopped task")
+                                and _answers(obj, taskstop_uses)):
                             stopped.add(key)
                         stopped.discard(agent_key(result.get("resumedAgentId")))
                     message = obj.get("message")
@@ -362,8 +376,11 @@ def stopped_ids(transcript_path, candidates):
                     message = obj.get("message")
                     content = message.get("content") if isinstance(message, dict) else None
                     for block in content if isinstance(content, list) else ():
-                        if (isinstance(block, dict) and block.get("type") == "tool_use"
-                                and block.get("name") == "SendMessage"
+                        if not (isinstance(block, dict) and block.get("type") == "tool_use"):
+                            continue
+                        if block.get("name") == "TaskStop" and isinstance(block.get("id"), str):
+                            taskstop_uses.add(block["id"])
+                        elif (block.get("name") == "SendMessage"
                                 and isinstance(block.get("input"), dict)):
                             stopped.discard(agent_key(block["input"].get("to")))
                 stopped.discard(_reopened_by_notification(text))
