@@ -30,10 +30,27 @@ def checkouts_dir(root):
 
 def activation_frontmatter(checkout_root=None):
     """Content for the fixture's `.claude/atelier.local.md`, with the optional probed key."""
-    return ('---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
+    text = ('---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
             'protected-branches: [probe-parent]\n'
             + (f'checkout-root: {checkout_root}\n' if checkout_root else '')
             + '---\n')
+    # checkout_root flows unescaped into YAML-ish frontmatter; a value that doesn't
+    # round-trip (newline, trailing comment, empty string) could inject other keys.
+    if checkout_root is not None and atelier_local.parse_key(text, 'checkout-root') != checkout_root:
+        raise ValueError(f"checkout_root {checkout_root!r} does not round-trip through frontmatter")
+    return text
+
+
+def activate_fixture(command, package, repo, checkout_root):
+    """codex-setup, write the fixture's activation policy (with the probed key), then refresh."""
+    command('activation-setup', [sys.executable,
+        str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
+        '--project-dir', str(repo)])
+    (repo / '.claude').mkdir()
+    (repo / '.claude/atelier.local.md').write_text(activation_frontmatter(checkout_root))
+    command('activation-refresh', [sys.executable,
+        str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
+        '--project-dir', str(repo)])
 
 
 def routed_hook(root, payload):
@@ -424,14 +441,7 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                 package = Path(installed['installedPath'])
                 if installed['version'] != manifest['version']:
                     raise RuntimeError('Installed plugin version differs from the release manifest')
-                command('activation-setup', [sys.executable,
-                    str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
-                    '--project-dir', str(repo)])
-                (repo / '.claude').mkdir()
-                (repo / '.claude/atelier.local.md').write_text(activation_frontmatter(checkout_root))
-                command('activation-refresh', [sys.executable,
-                    str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
-                    '--project-dir', str(repo)])
+                activate_fixture(command, package, repo, checkout_root)
                 (repo / 'protected.txt').write_text('PRESERVED\n')
                 command('fixture-add', ['git', 'add', '.agents/atelier.local.md', 'protected.txt'])
                 command('fixture-commit', ['git', '-c', 'user.name=Runtime Probe', '-c',
@@ -571,7 +581,7 @@ if __name__ == "__main__":
         hook(args.hook)
     elif not args.auth_source or not args.output:
         parser.error("--auth-source and a new --output directory are required")
-    elif (args.production_workflow or args.marketplace or args.checkout_root) and not args.plugin_root:
+    elif (args.production_workflow or args.marketplace or args.checkout_root is not None) and not args.plugin_root:
         parser.error('--production-workflow, --marketplace and --checkout-root require --plugin-root (expected manifest version)')
     else:
         run(args.auth_source.expanduser(), args.output.resolve(), args.model,
