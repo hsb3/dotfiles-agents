@@ -208,9 +208,9 @@ class ActivationPathsTests(unittest.TestCase):
         code, output, text, roots = self.rerun_with_checkout_root(main, '.worktrees')
         self.assertEqual(code, 0, output)
         self.assertEqual(roots[0], str(main / '.worktrees'))
-        # A former custom checkout root is indistinguishable from a user root: kept, named.
-        self.assertEqual(roots[-1], str(elsewhere))
-        self.assertIn('kept', output)
+        # A former checkout root sat in atelier's own leading slots: dropped, not kept.
+        self.assertNotIn(str(elsewhere), roots)
+        self.assertNotIn('kept', output)
         self.assertEqual(text.count('# atelier managed writable roots'), 1)
 
     def rerun_with_checkout_root(self, main, value='.worktrees'):
@@ -242,8 +242,10 @@ class ActivationPathsTests(unittest.TestCase):
         config = main / '.codex/config.toml'
         text = config.read_text()
         old = __import__('tomllib').loads(text)['sandbox_workspace_write']['writable_roots']
-        mine = str(self.root / 'my-cache')
-        config.write_text(text.replace(__import__('json').dumps(old), __import__('json').dumps(old + [mine])))
+        mine = str(self.root / 'my-cache-\U0001F600')
+        extra = old + [mine, mine, str(main / '.git/objects')]
+        config.write_text(text.replace(__import__('json').dumps(old), __import__('json').dumps(
+            extra, ensure_ascii=False)[:-1] + ', 1979-05-27]'))
         code, output, text, roots = self.rerun_with_checkout_root(main)
         self.assertEqual(code, 0, output)
         common = main / '.git'
@@ -252,6 +254,23 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertIn('kept', output)
         self.assertIn(mine, output)
         self.assertEqual(text.count('# atelier managed writable roots'), 1)
+
+    def test_codex_setup_drops_its_old_roots_after_the_project_moves(self):
+        main, code, output, _, before = self.setup_roots()
+        self.assertEqual(code, 0, output)
+        config = main / '.codex/config.toml'
+        mine = str(self.root / 'my-cache')
+        config.write_text(config.read_text().replace(
+            __import__('json').dumps(before), __import__('json').dumps(before + [mine])))
+        moved = self.root / 'moved'
+        shutil.rmtree(self.root / 'worktree', ignore_errors=True)
+        main.rename(moved)
+        code, output, text, roots = self.rerun_with_checkout_root(moved)
+        self.assertEqual(code, 0, output)
+        common = moved / '.git'
+        self.assertEqual(roots, [str(moved / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')] + [mine])
+        self.assertFalse(set(before) & set(roots))
 
     def test_codex_setup_still_refuses_a_user_owned_table(self):
         main, _ = make_worktree(str(self.root))

@@ -793,12 +793,14 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                 any(path.parent == global_agents for path in planned_roles)):
             raise ValueError("stale global Codex profiles; rerun with --refresh-global")
         additions = []
-        # A root in atelier's block that atelier does not compute is the user's: keep it,
-        # after atelier's own. The default checkouts path is the one former root atelier
-        # can recognize as its own, so it alone is dropped when checkout-root moves.
-        kept = [path for path in configured if path not in writable
-                and path != str(common / "atelier-codex/checkouts")] if managed else []
-        block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable + kept)
+        # Atelier writes its own roots first, so the block's leading len(writable) entries are
+        # atelier's (whatever they resolved to before a move); later string roots are the user's.
+        kept = []
+        for path in configured[len(writable):] if managed else []:
+            if isinstance(path, str) and path not in writable + kept:
+                kept.append(path)
+        block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(
+            writable + kept, ensure_ascii=False)
         new_text = text
         if managed:
             new_text = text[:managed[0]] + block + "\n" + text[managed[1]:]
@@ -830,7 +832,7 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
               + json.dumps(writable), file=out)
         if kept:
             print("kept   user writable roots in atelier's block: "
-                  + json.dumps(kept), file=out)
+                  + json.dumps(kept, ensure_ascii=False), file=out)
         print(("needs " if check and agents is None else "ok    ")
               + " Codex manager depth: agents.max_depth = "
               + str(2 if agents is None else agents["max_depth"]), file=out)
