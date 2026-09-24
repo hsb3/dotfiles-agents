@@ -32,6 +32,19 @@ Two scope decisions, both taking the narrowest honest reading:
     invisible here and lands red on the next run — CI runs on the PR's checkout, which is
     the authoritative one.
 
+One exemption, for a plugin only: a **version bump inherited from the shared `hooks/_lib`**.
+Editing `_lib` moves the dereferenced bytes of every plugin that links it, so the version-bump
+guard makes each one bump — and each bump is a manifest commit that would otherwise demand a
+README edit with nothing true to say. The unit passes when every body commit since its README
+was last touched changed only `"version"` lines in the unit's `plugin.json` manifests, AND every
+path the unit reaches through its links that changed between that README commit and HEAD lies
+under its `hooks/_lib` link (and at least one did). HEAD, not the bump: nothing forces a second
+bump for a member change that lands after the first, so a hook edit committed or merged in after
+it counts — and in CI, HEAD is the PR merge ref, so a member change already on the base branch
+counts too; the failure names that path. A member hook's change, any other manifest edit, or a
+bump with nothing behind it still trips the gate. A removed `version` is not a bump here (the
+version-bump guard rejects it too). Link targets are read from the checkout, not per commit.
+
 The README side DOES follow a link (a standalone plugin points at its member skill's
 README): history for the link entry or for its in-repo target counts, since the file a
 reader opens is the target, and editing the entry alone could never clear the unit.
@@ -44,12 +57,14 @@ exit 1 = violations (prints every one).
 Usage: python3 scripts/check_readme_currency.py [repo-root]   (run from anywhere)
 """
 
+import json
 import os
 import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIT_ROOTS = (("skill", "primitives-core/skills"), ("plugin", "plugins"))
+LIB_LINK = "hooks/_lib"
 
 
 def _git(*args):
@@ -92,6 +107,68 @@ def _readme_pathspecs(rel):
     return [link] if target == link or target.startswith("..") else [link, target]
 
 
+def _version_only(commit, rel):
+    """True when a single-parent commit changed the unit (README aside) only in the
+    top-level `version` of its `plugin.json` manifests. Parsed, not diffed by line:
+    another key sharing the version's line is a real manifest change."""
+    if len(_git("rev-list", "--parents", "-n1", commit).split()) != 2:
+        return False
+    files = _git("diff", "--name-only", commit + "^", commit,
+                 "--", rel, f":(exclude){rel}/README.md").splitlines()
+    if not files or not all(os.path.basename(p) == "plugin.json" for p in files):
+        return False
+    for path in files:
+        try:
+            old, new = (json.loads(_git("show", f"{c}:{path}")) for c in (commit + "^", commit))
+        except ValueError:
+            return False
+        if not (isinstance(old, dict) and isinstance(new, dict)):
+            return False
+        if not isinstance(new.get("version"), str) or not new["version"]:
+            return False
+        if old.pop("version", None) == new.pop("version", None) or old != new:
+            return False
+    return True
+
+
+def _linked_changes(rel, base, head):
+    """(paths the unit reaches through its links that changed base..head, the
+    target of its hooks/_lib link or None)."""
+    root, unit = os.path.realpath(REPO), os.path.join(REPO, rel)
+    targets, lib = [], None
+    for dirpath, dirnames, filenames in os.walk(unit):
+        for name in dirnames + filenames:
+            path = os.path.join(dirpath, name)
+            if not os.path.islink(path):
+                continue
+            target = os.path.relpath(os.path.realpath(path), root)
+            if target.startswith(".."):
+                continue
+            targets.append(target)
+            if os.path.relpath(path, unit) == LIB_LINK:
+                lib = target
+    changed = [p for p in _git("diff", "--name-only", base, head).splitlines()
+               if any(p == t or p.startswith(t + "/") for t in targets)]
+    return changed, lib
+
+
+def _not_lib(changed, lib):
+    return [p for p in changed if not (lib and p.startswith(lib + "/"))]
+
+
+def _inherited_bump(rel, readme, body):
+    """The one exemption (module docstring): every body commit since the README
+    was touched is a version-only bump, carried by a hooks/_lib-only change. The
+    linked range runs to HEAD, not to the bump: a member change committed or
+    merged in after the bump forces no second bump, so it has to count here."""
+    commits = _git("log", "--format=%H", f"{readme}..{body}",
+                   "--", rel, f":(exclude){rel}/README.md").split()
+    if not commits or not all(_version_only(c, rel) for c in commits):
+        return False
+    changed, lib = _linked_changes(rel, readme, "HEAD")
+    return lib is not None and bool(changed) and not _not_lib(changed, lib)
+
+
 def audit():
     """(problems, evaluated, skipped) — skipped = a unit with no tracked body."""
     if not _git("rev-parse", "--git-dir"):
@@ -111,10 +188,16 @@ def audit():
         readme = _git("log", "-1", "--format=%H", "--", *_readme_pathspecs(rel))
         if readme and _is_ancestor(body, readme):
             continue
+        if readme and kind == "plugin" and _inherited_bump(rel, readme, body):
+            continue
+        # Why, when the change is not the one the author made: on a merge ref a
+        # member change from the base branch ships under this unit's bump too.
+        shipped = _not_lib(*_linked_changes(rel, readme, "HEAD")) if readme and kind == "plugin" else []
         out.append(
             f"{kind} '{name}': last change {_git('log', '-1', '--format=%h %s', body)} "
             f"left {rel}/README.md untouched — verify that README against the unit and "
             f"touch it in the same change"
+            + (f" (it also ships {shipped[0]}, changed since the README)" if shipped else "")
         )
     return out, evaluated, skipped
 

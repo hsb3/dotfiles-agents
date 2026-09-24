@@ -126,6 +126,124 @@ class ReadmeCurrencyGate(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertIn("plugin 'kit'", found[0])
 
+    # --- a version bump inherited from the shared hooks/_lib -----------
+    def _kit(self):
+        """A plugin whose hooks/_lib and one hook dir are links into primitives-core."""
+        self._write("primitives-core/hooks/_lib/shared.py", "v1\n")
+        self._write("primitives-core/hooks/h1/hook.py", "v1\n")
+        self._bump("0.1.0")
+        self._write("plugins/kit/README.md", "# kit\n\nWhat it bundles.\n")
+        os.makedirs(os.path.join(self.fix, "plugins/kit/hooks"))
+        for name in ("_lib", "h1"):
+            os.symlink(f"../../../primitives-core/hooks/{name}",
+                       os.path.join(self.fix, "plugins/kit/hooks", name))
+        self._commit("add kit")
+
+    def _bump(self, version):
+        self._write("plugins/kit/.claude-plugin/plugin.json",
+                    '{\n  "name": "kit",\n  "version": "%s"\n}\n' % version)
+
+    def test_a_lib_only_change_bumps_without_a_readme_edit(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._commit("shared _lib change")
+        self._bump("0.1.1")
+        self._commit("bump kit 0.1.1 (shared _lib changed)")
+        self.assertEqual(C.problems(), [])
+
+    def test_a_member_change_with_its_bump_still_needs_the_readme(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("primitives-core/hooks/h1/hook.py", "v2\n")
+        self._commit("change a kit hook")
+        self._bump("0.1.1")
+        self._commit("bump kit 0.1.1")
+        found = C.problems()
+        self.assertEqual(len(found), 1)
+        self.assertIn("plugin 'kit'", found[0])
+
+    def test_a_member_change_after_the_bump_still_needs_the_readme(self):
+        """One bump covers every change up to the next publish, so a hook edit
+        landing after the bump commit is judged too, not only what preceded it."""
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._bump("0.1.1")
+        self._commit("shared _lib change, bump kit")
+        self._write("primitives-core/hooks/h1/hook.py", "v2\n")
+        self._commit("change a kit hook")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_a_member_change_merged_from_a_side_branch_still_needs_the_readme(self):
+        self._kit()
+        main = self._git("rev-parse", "--abbrev-ref", "HEAD")
+        self._git("checkout", "-q", "-b", "side")
+        self._write("primitives-core/hooks/h1/hook.py", "v2\n")
+        self._commit("change a kit hook on a side branch")
+        self._git("checkout", "-q", main)
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._bump("0.1.1")
+        self._commit("shared _lib change, bump kit")
+        self._git("merge", "-q", "--no-ff", "-m", "merge side", "side")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_ci_merge_ref_names_the_member_change_the_bump_ships(self):
+        """CI runs on the PR merge ref: a _lib + bump PR behind a base-branch
+        member change ships that change too, so it fails, and the message must
+        name the path rather than only the bump the author made."""
+        self._kit()
+        base = self._git("rev-parse", "--abbrev-ref", "HEAD")
+        self._git("checkout", "-q", "-b", "pr")
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._bump("0.1.1")
+        self._commit("shared _lib change, bump kit")
+        self.assertEqual(C.problems(), [], "the PR tip alone is clean")
+        self._git("checkout", "-q", base)
+        self._write("primitives-core/hooks/h1/hook.py", "v2\n")
+        self._commit("change a kit hook on the base branch")
+        self._git("merge", "-q", "--no-ff", "-m", "merge ref", "pr")
+        found = C.problems()
+        self.assertEqual(len(found), 1)
+        self.assertIn("primitives-core/hooks/h1/hook.py", found[0])
+
+    def test_deleting_the_version_is_not_a_bump(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("plugins/kit/.claude-plugin/plugin.json", '{\n  "name": "kit"\n}\n')
+        self._commit("drop kit's version")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_a_bump_committed_before_its_lib_change_is_clean(self):
+        self._kit()
+        self._bump("0.1.1")
+        self._commit("bump kit 0.1.1")
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._commit("shared _lib change")
+        self.assertEqual(C.problems(), [])
+
+    def test_a_lib_bump_beside_a_manifest_edit_still_needs_the_readme(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("plugins/kit/.claude-plugin/plugin.json",
+                    '{\n  "name": "kit",\n  "version": "0.1.1",\n  "description": "new"\n}\n')
+        self._commit("bump kit and describe it")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_a_real_manifest_edit_on_the_version_line_still_needs_the_readme(self):
+        """Judged on parsed JSON, not on lines: a key sharing the version's line
+        is a real manifest change."""
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("plugins/kit/.claude-plugin/plugin.json",
+                    '{\n  "name": "kit",\n  "version": "0.1.1", "hooks": "./other.json"\n}\n')
+        self._commit("bump kit, repoint its hooks")
+        self.assertEqual(len(C.problems()), 1)
+
+    def test_a_bump_with_nothing_changed_through_links_still_needs_the_readme(self):
+        self._kit()
+        self._bump("0.1.1")
+        self._commit("bump kit for no reason")
+        self.assertEqual(len(C.problems()), 1)
+
     def test_untracked_unit_is_not_this_gates_business(self):
         self._skill("alpha")
         self._commit("add alpha")
