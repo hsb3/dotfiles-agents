@@ -1,0 +1,234 @@
+"""Tests for primitives-core/hooks/worktree-root/hook.py.
+
+Runs the hook as a subprocess (JSON on stdin) against real git repos in a tempdir,
+with HOME pointed into the tempdir so no user-level settings are read. Skips
+without a git binary.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from worktree_fixture import _GIT_IDENTITY, _git, _write, make_worktree, require_git  # noqa: E402
+
+HOOK_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "primitives-core", "hooks",
+    "worktree-root", "hook.py",
+)
+
+
+class WorktreeRootTests(unittest.TestCase):
+    def setUp(self):
+        require_git()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = os.path.realpath(self.tmp.name)
+        self.home = os.path.join(self.base, "home")
+        os.makedirs(self.home)
+        self.main, self.linked = make_worktree(
+            self.base, tracked={"README": "r\n", ".gitignore": ".claude/\n.worktrees/\n"})
+
+    # -- helpers -------------------------------------------------------
+
+    def run_hook(self, payload):
+        env = {"PATH": os.environ.get("PATH", ""), "HOME": self.home}
+        return subprocess.run([sys.executable, HOOK_PATH], input=json.dumps(payload),
+                              capture_output=True, text=True, env=env, timeout=60)
+
+    def create(self, name, cwd=None):
+        return self.run_hook({"hook_event_name": "WorktreeCreate",
+                              "cwd": cwd or self.main, "name": name})
+
+    def commit(self, cwd, msg):
+        _git(cwd, *(_GIT_IDENTITY + ("commit", "-q", "--allow-empty", "-m", msg)))
+        return _git(cwd, "rev-parse", "HEAD")
+
+    def set_key(self, value):
+        _write(self.main, ".claude/atelier.local.md",
+               "---\ncheckout-root: {0}\n---\n".format(value))
+
+    def created_path(self, proc):
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return proc.stdout.strip().splitlines()[-1]
+
+    def branches(self):
+        return _git(self.main, "branch", "--format=%(refname:short)").split()
+
+    # -- WorktreeCreate: placement and base --------------------------------
+
+    def test_key_absent_native_path_branch_and_head_base_without_origin(self):
+        head = self.commit(self.main, "ahead")
+        path = self.created_path(self.create("feat/x"))
+        self.assertEqual(path, os.path.join(self.main, ".claude", "worktrees", "feat", "x"))
+        self.assertIn("worktree-feat+x", self.branches())
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), head)
+
+    def test_base_is_origin_head_when_a_local_origin_exists(self):
+        origin = os.path.join(self.base, "origin.git")
+        _git(self.base, "clone", "-q", "--bare", self.main, origin)
+        _git(self.main, "remote", "add", "origin", origin)
+        _git(self.main, "fetch", "-q", "origin")
+        _git(self.main, "remote", "set-head", "origin", "-a")
+        origin_head = _git(self.main, "rev-parse", "refs/remotes/origin/HEAD")
+        self.commit(self.main, "local only")
+        path = self.created_path(self.create("o"))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), origin_head)
+
+    def test_base_ref_head_setting_uses_head(self):
+        origin = os.path.join(self.base, "origin.git")
+        _git(self.base, "clone", "-q", "--bare", self.main, origin)
+        _git(self.main, "remote", "add", "origin", origin)
+        _git(self.main, "fetch", "-q", "origin")
+        _git(self.main, "remote", "set-head", "origin", "-a")
+        head = self.commit(self.main, "local only")
+        _write(self.main, ".claude/settings.json", '{"worktree": {"baseRef": "head"}}')
+        path = self.created_path(self.create("h"))
+        self.assertEqual(_git(path, "rev-parse", "HEAD"), head)
+
+    def test_key_set_places_under_checkout_root(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("k"))
+        self.assertEqual(path, os.path.join(self.main, ".worktrees", "k"))
+        self.assertTrue(os.path.isfile(os.path.join(path, "README")))
+
+    def test_nested_call_lands_in_main_checkout_root(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("n", cwd=self.linked))
+        self.assertEqual(path, os.path.join(self.main, ".worktrees", "n"))
+
+    def test_nested_call_without_key_lands_in_main_native_root(self):
+        path = self.created_path(self.create("n", cwd=self.linked))
+        self.assertEqual(path, os.path.join(self.main, ".claude", "worktrees", "n"))
+
+    def test_stdout_is_only_the_path(self):
+        proc = self.create("only")
+        self.assertEqual(proc.stdout.strip().splitlines(), [self.created_path(proc)])
+
+    # -- WorktreeCreate: .worktreeinclude --------------------------------
+
+    def test_worktreeinclude_copies_ignored_listed_files_only(self):
+        _write(self.main, ".gitignore", ".claude/\n.env\nsecrets/\n*.log\nlink\n")
+        _write(self.main, "tracked.txt", "committed\n")
+        _git(self.main, "add", ".gitignore", "tracked.txt")
+        self.commit(self.main, "ignore")
+        _write(self.main, "tracked.txt", "modified\n")
+        _write(self.main, ".worktreeinclude",
+               "# comment\n.env\nsecrets/\ntracked.txt\nplain.txt\nlink\n")
+        _write(self.main, ".env", "E\n")
+        _write(self.main, "secrets/a.key", "a\n")
+        _write(self.main, "secrets/sub/b.key", "b\n")
+        _write(self.main, "other.log", "o\n")
+        _write(self.main, "plain.txt", "p\n")
+        os.symlink(os.path.join(self.main, ".env"), os.path.join(self.main, "link"))
+        path = self.created_path(self.create("inc"))
+        present = lambda rel: os.path.lexists(os.path.join(path, rel))  # noqa: E731
+        for rel in (".env", "secrets/a.key", "secrets/sub/b.key"):
+            self.assertTrue(present(rel), rel)
+        for rel in ("other.log", "plain.txt", "link"):
+            self.assertFalse(present(rel), rel)
+        with open(os.path.join(path, "tracked.txt"), encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), "committed\n")
+
+    # -- WorktreeCreate: refusals -----------------------------------------
+
+    def assertRefused(self, proc, fragment):
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertEqual(proc.stdout, "")
+        self.assertIn(fragment, proc.stderr)
+
+    def test_refuses_dotdot_name(self):
+        self.assertRefused(self.create("../escape"), "'..'")
+
+    def test_refuses_absolute_name(self):
+        self.assertRefused(self.create(os.path.join(self.base, "abs")), "relative")
+
+    def test_refuses_empty_name(self):
+        self.assertRefused(self.create(""), "non-empty")
+
+    def test_refuses_variable_key(self):
+        self.set_key("$HOME/wt")
+        self.assertRefused(self.create("v"), "variables are not expanded")
+
+    def test_refuses_key_outside_project(self):
+        self.set_key("../elsewhere")
+        self.assertRefused(self.create("v"), "strictly inside the project")
+
+    def test_refuses_symlinked_root_escaping_project(self):
+        outside = os.path.join(self.base, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, os.path.join(self.main, "wt"))
+        self.set_key("wt")
+        self.assertRefused(self.create("s"), "strictly inside the project")
+        self.assertEqual(os.listdir(outside), [])
+
+    def test_refuses_existing_path(self):
+        os.makedirs(os.path.join(self.main, ".claude", "worktrees", "taken"))
+        self.assertRefused(self.create("taken"), "already exists")
+
+    # -- SubagentStop ------------------------------------------------------
+
+    def stop(self, agent_id, cwd):
+        proc = self.run_hook({"hook_event_name": "SubagentStop", "agent_id": agent_id,
+                              "cwd": cwd})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
+        return proc
+
+    def test_subagent_stop_removes_clean_worktree_without_commits(self):
+        path = self.created_path(self.create("agent-abc"))
+        self.stop("abc", path)
+        self.assertFalse(os.path.exists(path))
+        self.assertNotIn("worktree-agent-abc", self.branches())
+
+    def test_subagent_stop_keeps_dirty_worktree(self):
+        path = self.created_path(self.create("agent-dirty"))
+        _write(path, "new.txt", "x\n")
+        self.stop("dirty", path)
+        self.assertTrue(os.path.isdir(path))
+        self.assertIn("worktree-agent-dirty", self.branches())
+
+    def test_subagent_stop_keeps_worktree_with_new_commit(self):
+        path = self.created_path(self.create("agent-work"))
+        self.commit(path, "agent work")
+        self.stop("work", path)
+        self.assertTrue(os.path.isdir(path))
+        self.assertIn("worktree-agent-work", self.branches())
+
+    def test_subagent_stop_ignores_non_matching_cwd(self):
+        path = self.created_path(self.create("agent-mine"))
+        self.stop("other", path)
+        self.stop("mine", self.main)
+        self.assertTrue(os.path.isdir(path))
+
+    # -- WorktreeRemove ----------------------------------------------------
+
+    def test_worktree_remove_removes_and_deletes_branch(self):
+        path = self.created_path(self.create("ew1"))
+        proc = self.run_hook({"hook_event_name": "WorktreeRemove", "cwd": path,
+                              "worktree_path": path})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse(os.path.exists(path))
+        self.assertNotIn("worktree-ew1", self.branches())
+
+    def test_worktree_remove_nonexistent_path_is_ok(self):
+        proc = self.run_hook({"hook_event_name": "WorktreeRemove", "cwd": self.main,
+                              "worktree_path": os.path.join(self.base, "gone")})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_worktree_remove_refuses_main_checkout(self):
+        proc = self.run_hook({"hook_event_name": "WorktreeRemove", "cwd": self.main,
+                              "worktree_path": self.main})
+        self.assertEqual(proc.returncode, 1)
+        self.assertTrue(os.path.isdir(self.main))
+
+    def test_other_event_is_silent(self):
+        proc = self.run_hook({"hook_event_name": "PreToolUse", "cwd": self.main})
+        self.assertEqual((proc.returncode, proc.stdout, proc.stderr), (0, "", ""))
+
+
+if __name__ == "__main__":
+    unittest.main()

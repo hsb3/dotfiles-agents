@@ -1,0 +1,66 @@
+# worktree-root
+
+Claude Code puts every worktree it creates (`--worktree`, `EnterWorktree`, subagent
+`isolation: worktree`) under `.claude/worktrees/`, and its `worktree.location` setting is
+not read by the CLI. This plugin owns creation instead, so worktrees land under the
+directory the project names as its `checkout-root` in the atelier activation file.
+
+## Install
+
+Opt-in per project. Installing it changes where every worktree in that project is
+created, so enable it at project scope, not user scope:
+
+```
+claude plugin install worktree-root@dotfiles-agents --scope project
+```
+
+or add it to the project's `.claude/settings.json`:
+
+```json
+{ "enabledPlugins": { "worktree-root@dotfiles-agents": true } }
+```
+
+For an already installed plugin, `claude plugin enable worktree-root@dotfiles-agents`
+turns it on. Then set the root in the activation file:
+
+```markdown
+---
+checkout-root: .worktrees
+---
+```
+
+Without the key, worktrees keep the native `.claude/worktrees/` placement.
+
+## How it fits together
+
+```mermaid
+flowchart TD
+    Ask[Session asks for a worktree] --> Create[worktree-root on WorktreeCreate]
+    Create --> Main[Resolve the main checkout]
+    Main --> Key{checkout-root set}
+    Key -->|yes, valid| Root[Root is that directory]
+    Key -->|no| Native[Root is .claude/worktrees]
+    Key -->|invalid| Fail[Creation fails with the reason]
+    Root --> Add[git worktree add, then copy .worktreeinclude files]
+    Native --> Add
+    Add --> Work[Agent works in the worktree]
+    Work --> Stop[worktree-root on SubagentStop]
+    Stop -->|clean, no unique commits| Gone[Worktree and branch removed]
+    Stop -->|dirty or new commits| Kept[Worktree kept for review]
+```
+
+## What it does
+
+| Hook | Fires | Does |
+|---|---|---|
+| [`worktree-root`](hooks/worktree-root/README.md) | `WorktreeCreate`, `WorktreeRemove`, `SubagentStop` | Creates worktrees under `checkout-root` with native branch naming, base ref and `.worktreeinclude` copying; removes them on `ExitWorktree` remove and after a clean subagent |
+
+Once a WorktreeCreate hook owns creation, the harness skips its own `.worktreeinclude`
+copy and keeps every agent worktree, so the hook restores both. A worktree with
+uncommitted changes or commits no other ref holds is always kept.
+
+## Honest scope
+
+Claude Code only. It does not fetch before branching (neither does native creation),
+does not handle `worktree.symlinkDirectories` or `worktree.sparsePaths`, and does not
+clean up worktrees left behind by `--worktree` sessions, which native creation keeps too.
