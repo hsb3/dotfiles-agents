@@ -134,16 +134,13 @@ def activation_path(project_dir, inherit=True):
 
 
 def unquote(value):
-    """Strip surrounding quotes, else a trailing ` #` comment."""
+    """Strip surrounding quotes, else a trailing comment."""
     value = value.strip()
     if value[:1] in ("'", '"'):
         quote = value[0]
         close = value.find(quote, 1)
         return value[1:close] if close != -1 else value[1:]
-    hash_at = value.find(" #")
-    if hash_at != -1:
-        value = value[:hash_at].rstrip()
-    return value
+    return _strip_comment(value)
 
 
 def _strip_comment(raw):

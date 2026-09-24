@@ -69,6 +69,8 @@ ROWS = (
     ("unspaced_hash_in_item_stays", " [a#b]", ["a#b"]),
     ("bare_scalar_with_trailing_comment", " bogus  # note", "bogus"),
     ("comment_only_opens_block_form", "  # c", None),
+    ("block_list_trailing_comment", "\n  - a  # note\n  - b", ["a", "b"]),
+    ("block_list_trailing_comment_tab", "\n  - a\t# note\n  - b", ["a", "b"]),
     ("malformed_unclosed_list_pinned", " [a, b", "[a, b"),
     ("malformed_trailing_junk_pinned", " [a, b] junk", "[a, b] junk"),
 )
