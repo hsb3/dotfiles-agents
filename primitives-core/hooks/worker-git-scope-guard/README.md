@@ -162,14 +162,43 @@ sides are resolved with `realpath` before comparison — git answers one of the 
 own already-resolved absolute path, so on a platform with a symlinked temp or home
 directory an unresolved compare mismatches and, again, silently allows the stash.
 
+## What it sees past a literal `git` token
+
+A call is still recognised when it is not the bare word `git` in command position:
+
+- **`bash`/`sh`/`zsh -c '<string>'`**, anywhere in the command — the shell word need not be
+  first, so `env bash -c ...`, `sudo bash -c ...`, `nohup sh -c ...` and `timeout 5 bash -c
+  ...` all count. Recognised past a flag cluster (`-lc`), long options, `-o`/`-O <value>`,
+  `--rcfile`/`--init-file <value>`, and a `-c --` cluster (real bash takes the very next
+  token as the string). A `$'...'` string is decoded first, as bash does. The string is
+  fed back through the same quote-aware split as the top-level command, so `&&`, `||`,
+  `;`, `|`, `&`, `(`, `)` and a newline **inside** it still separate commands — `bash -c 'git stash list; git stash drop'` is read exactly as if `git stash
+  list; git stash drop` had been the top-level command.
+- **Any path whose basename is `git`** counts, case-folded — `/usr/bin/git stash drop` and
+  `GIT stash drop` are not different from `git stash drop`. A quoted prose string stays
+  inert: `echo "git stash drop"` is one shlex token whose basename is the whole string,
+  not `git`. So does a comment: `# a && git stash drop` runs to the line end.
+- **Raw ref plumbing on the shared stash** is caught alongside the `stash` subcommand:
+  `git update-ref -d refs/stash`, `git reflog delete|expire refs/stash@{N}` and
+  `git reflog expire --all` are denied the same way a `pop`/`drop`/`clear` is. Only the
+  ref `update-ref` writes counts, so `git update-ref refs/heads/rescue stash` (saving the
+  stash as a branch) is allowed, and `git reflog show refs/stash` is a read.
+
 ## Honest scope — this is a tripwire, not containment
 
 A worker that writes a shell script and runs that, or drives git through a tool other than
-`Bash`, is not caught. Command parsing splits on raw text, so a separator inside a quoted
-argument can still fragment a command and hide an invocation. That is the ceiling any
-string-based Bash tripwire has, and it is worth accepting for the same reason: catching the path agents
-actually take, and leaving a refusal in the transcript, is worth much more than the
-partial coverage costs — but it is not a sandbox and must not be sold as one.
+`Bash`, is not caught. Command splitting is quote- and comment-aware, and a `$(...)` or
+subshell is split open, so git inside one is read. Remaining ceilings on the same parser:
+`eval` fed a quoted string (`eval 'git stash drop'`; a bare `eval git stash drop` is
+caught), a backtick substitution, a git alias, a script piped or heredoc'd into a shell
+(`echo 'git stash drop' | bash`), another interpreter (`python3 -c`), `git update-ref
+--stdin` fed a ref name over a pipe (the ref never appears in the argv this parser reads),
+and any shell besides `bash`/`sh`/`zsh` (`dash`, `fish`, `ksh`). A basename match also over-denies in one direction:
+`echo see /usr/lib/git stash drop` is refused even though nothing runs — a false deny, not a
+bypass, and low-risk enough to leave as is. That is the ceiling any string-based Bash
+tripwire has, and it is worth accepting for the same reason: catching the path agents
+actually take, and leaving a refusal in the transcript, is worth much more than the partial
+coverage costs — but it is not a sandbox and must not be sold as one.
 
 **Server-side branch protection is the layer above this one.** A local hook cannot stop a
 determined or novel path to the remote; a protected-branch rule on the forge can. This
