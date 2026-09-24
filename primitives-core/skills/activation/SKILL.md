@@ -121,9 +121,10 @@ because it is live - just probably not as intended.
 **`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
 unusable leaves that one value computed from the lead model's context window rather than turning
 anything off — so `check` calls a key with nothing readable under it inert, and a key naming only
-one threshold armed. It is also the one key the environment outranks: `CONTEXT_WATERMARK_SOFT`
-and `CONTEXT_WATERMARK_HARD` beat the file, which beats the computed default. `complexity`
-replaces the tracked-file factor the hook computes. The bundle's wiring sets neither variable, on
+one threshold armed. `worker:` and `session:` sub-mappings override the flat keys per layer. It
+is also the one key the environment outranks: `CONTEXT_WATERMARK_NOTICE`, `CONTEXT_WATERMARK_SOFT`,
+and `CONTEXT_WATERMARK_HARD` beat the file, which beats the computed default. `complexity` is 1.0
+unless this key sets it. The bundle's wiring sets neither variable, on
 purpose: a shell-expanded default would leave it always set and the top tier would win forever.
 <!-- /harness -->
 

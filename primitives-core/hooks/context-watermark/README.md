@@ -50,12 +50,8 @@ The ledger row for a model with no known window carries `window: null`
 and `window_fallback: true`, because a check that could not measure must not look identical
 to one that measured and found nothing.
 
-`complexity` is a session-level proxy for how expensive each grounding read is: the tracked-file
-count, `git ls-files | wc -l`, in three buckets — `< 5,000 → 1.00`, `5,000–20,000 → 0.85`,
-`> 20,000 → 0.75`. A bigger repo makes each read cost more, so the nudge comes **earlier**. The
-count is computed once per session and cached beside the anti-nag state, since the hook fires on
-every prompt and every worker tool call. A non-git tree, or a `git` that fails, is the neutral
-factor 1.00. The buckets are `[untested]` calibration, not measurement.
+`complexity` is 1.0 unless the activation file's `watermark.complexity` sets it. It multiplies
+every stage before the window cap applies.
 
 ## Advisory actions
 
@@ -99,7 +95,7 @@ level falls through to the next and never errors.
   ```
 
   A sub-key that is missing, blank, or not a positive number leaves that one computed;
-  `complexity` here replaces the tracked-file factor. `notice` is clamped to `soft`, so it
+  `complexity` here overrides the computed default of 1.0. `notice` is clamped to `soft`, so it
   cannot become a later stage. `activation.py check` reports the key through this hook's own
   loader.
 - Untouched by wiring: `CONTEXT_WATERMARK_TAIL_BYTES`, `CONTEXT_WATERMARK_REFIRE_EVERY`,
