@@ -36,9 +36,10 @@ One exemption, for a plugin only: a **version bump inherited from the shared `ho
 Editing `_lib` moves the dereferenced bytes of every plugin that links it, so the version-bump
 guard makes each one bump — and each bump is a manifest commit that would otherwise demand a
 README edit with nothing true to say. The unit passes when every body commit since its README
-was last touched changed only `"version"` lines in the unit's JSON manifests, AND every path the
-unit reaches through its links that changed over that range lies under its `hooks/_lib` link
-(and at least one did). A member hook's change, any other manifest edit, or a bump with nothing
+was last touched changed only `"version"` lines in the unit's `plugin.json` manifests, AND every
+path the unit reaches through its links that changed between that README commit and HEAD lies
+under its `hooks/_lib` link (and at least one did). HEAD, not the bump: one bump covers every
+member change until the next publish, so a hook edit committed or merged in after it counts. A member hook's change, any other manifest edit, or a bump with nothing
 behind it still trips the gate. Link targets are read from the checkout, not per commit.
 
 The README side DOES follow a link (a standalone plugin points at its member skill's
@@ -53,15 +54,14 @@ exit 1 = violations (prints every one).
 Usage: python3 scripts/check_readme_currency.py [repo-root]   (run from anywhere)
 """
 
+import json
 import os
-import re
 import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIT_ROOTS = (("skill", "primitives-core/skills"), ("plugin", "plugins"))
 LIB_LINK = "hooks/_lib"
-VERSION_LINE = re.compile(r'^[+-]\s*"version"\s*:')
 
 
 def _git(*args):
@@ -105,16 +105,25 @@ def _readme_pathspecs(rel):
 
 
 def _version_only(commit, rel):
-    """True when a single-parent commit changed the unit (README aside) only in
-    `"version"` lines of its JSON manifests."""
+    """True when a single-parent commit changed the unit (README aside) only in the
+    top-level `version` of its `plugin.json` manifests. Parsed, not diffed by line:
+    another key sharing the version's line is a real manifest change."""
     if len(_git("rev-list", "--parents", "-n1", commit).split()) != 2:
         return False
-    diff = _git("diff", "-U0", "--no-color", "--no-ext-diff", commit + "^", commit,
-                "--", rel, f":(exclude){rel}/README.md")
-    lines = [ln for ln in diff.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
-    files = re.findall(r"^diff --git a/(\S+) ", diff, re.M)
-    return (bool(lines) and all(VERSION_LINE.match(ln) for ln in lines)
-            and all(p.endswith(".json") for p in files))
+    files = _git("diff", "--name-only", commit + "^", commit,
+                 "--", rel, f":(exclude){rel}/README.md").splitlines()
+    if not files or not all(os.path.basename(p) == "plugin.json" for p in files):
+        return False
+    for path in files:
+        try:
+            old, new = (json.loads(_git("show", f"{c}:{path}")) for c in (commit + "^", commit))
+        except ValueError:
+            return False
+        if not (isinstance(old, dict) and isinstance(new, dict)):
+            return False
+        if old.pop("version", None) == new.pop("version", None) or old != new:
+            return False
+    return True
 
 
 def _lib_inherited(rel, base, head):
@@ -142,11 +151,13 @@ def _lib_inherited(rel, base, head):
 
 def _inherited_bump(rel, readme, body):
     """The one exemption (module docstring): every body commit since the README
-    was touched is a version-only bump, carried by a hooks/_lib-only change."""
+    was touched is a version-only bump, carried by a hooks/_lib-only change. The
+    linked range runs to HEAD, not to the bump: one bump covers every member change
+    until the next publish, including one committed or merged in after it."""
     commits = _git("log", "--format=%H", f"{readme}..{body}",
                    "--", rel, f":(exclude){rel}/README.md").split()
     return (bool(commits) and all(_version_only(c, rel) for c in commits)
-            and _lib_inherited(rel, readme, body))
+            and _lib_inherited(rel, readme, "HEAD"))
 
 
 def audit():
