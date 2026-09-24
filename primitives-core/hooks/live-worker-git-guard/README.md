@@ -245,7 +245,8 @@ all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newl
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
-tabs are removed under `<<-`, and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
+tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word bash
+would dequote, `<<\EOF` or `<<E"O"F`, is not recognized as an opener at all), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
 in order. A `<<` whose terminator never appears drops nothing, so its body
 is read as command lines.
 

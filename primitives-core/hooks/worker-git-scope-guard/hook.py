@@ -123,7 +123,7 @@ def _load_protected_branches(project_dir):
 # (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(?=\s|$)")
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(\r?)(?=\s|$)")
 
 
 def _scan_line(line, quote):
@@ -163,7 +163,9 @@ def _scan_line(line, quote):
             m = HEREDOC_START.match(line, i)
             if (m and not m.group(3).isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                terminators.append((m.group(3), bool(m.group(2)), bool(m.group(1))))
+                # bash keeps a CRLF opener's `\r` in the word
+                terminators.append((m.group(3) + m.group(4), bool(m.group(2)),
+                                    bool(m.group(1))))
                 i = m.end()
                 continue
         i += 1

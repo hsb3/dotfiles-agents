@@ -350,6 +350,8 @@ class CommandParsingTests(unittest.TestCase):
             ("cat <<EOF\n E\\\nOF\ncat <<X\nEOF\ngit stash\nX", True),
             ("cat <<-EOF\n  EOF\ncat <<X\nEOF\ngit stash\nX", True),
             ("cat <<A <<B\nx\nA\ncat <<Y\nB\ngit stash\nY", True),
+            ("cat <<EOF\r\nbody\nEOF\r\ngit stash\nEOF", True),
+            ("cat <<EOF\ngit stash drop \\\\\nEOF", False),
             ("cat <<A <<B\ngit stash\nA\ngit stash\nB", False),
         ):
             with self.subTest(command=command):

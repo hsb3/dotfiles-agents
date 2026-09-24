@@ -1100,6 +1100,10 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             ("cat <<EOF\nEOF\r\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
             ("cat <<-EOF\n  EOF\ncat <<X\nEOF\ngit commit -m x\nX", "commit"),
             ("cat <<-EOF\n\t\\\n\tEOF\ngit commit -m x\nEOF", "commit"),
+            ("cat <<EOF\r\nbody\nEOF\r\ngit commit -m x\nEOF", "commit"),
+            ("cat <<'EOF'\r\nbody\nEOF\r\ngit commit -m x\nEOF", "commit"),
+            # An even run of backslashes is escaped, not a continuation.
+            ("cat <<EOF\ngit commit -m x\\\\\nEOF", None),
             # Two heredocs on one line: both bodies are dropped, in order.
             ("cat <<A <<B\nx\nA\ncat <<Y\nB\ngit commit -m x\nY", "commit"),
             ("cat <<A <<B\ngit commit -m x\nA\ngit push\nB", None),
