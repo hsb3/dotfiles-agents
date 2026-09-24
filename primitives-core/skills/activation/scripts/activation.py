@@ -428,21 +428,32 @@ def evaluate(project_dir, modules):
     # Absent sub-keys are not a defect: each one that is missing or unusable
     # leaves that tier computed from the model's window, which is the shipped
     # behaviour. Only a key written with nothing readable under it is inert.
-    thresholds = watermark._load_watermark_config(project_dir)
-    if "watermark" not in present:
-        result["rows"].append(_row("watermark", "not configured", "", ["context-watermark"]))
-    elif not thresholds:
-        result["rows"].append(_row(
-            "watermark", "inert",
-            "written, but no usable notice/soft/hard/complexity value - the sub-keys are "
-            "missing, blank, or not positive numbers, so every tier stays computed",
-            ["context-watermark"]))
+    # A `worker:`/`session:` sub-mapping splits the report per layer, only when they differ.
+    layers = {layer: watermark._load_watermark_config(project_dir, layer)
+              for layer in ("worker", "session")}
+    if layers["worker"] == layers["session"]:
+        layers = {"watermark": layers["worker"]}
     else:
-        result["rows"].append(_row(
-            "watermark", "armed",
-            ", ".join("{0}={1}".format(k, thresholds[k])
-                      for k in ("notice", "soft", "hard", "complexity") if k in thresholds),
-            ["context-watermark"]))
+        layers = {"watermark." + layer: config for layer, config in layers.items()}
+    for name, thresholds in layers.items():
+        if "watermark" not in present:
+            result["rows"].append(_row(name, "not configured", "", ["context-watermark"]))
+        elif not thresholds and len(layers) > 1:
+            result["rows"].append(_row(
+                name, "not configured", "no value for this layer, every tier computed",
+                ["context-watermark"]))
+        elif not thresholds:
+            result["rows"].append(_row(
+                name, "inert",
+                "written, but no usable notice/soft/hard/complexity value - the sub-keys "
+                "are missing, blank, or not positive numbers, so every tier stays computed",
+                ["context-watermark"]))
+        else:
+            result["rows"].append(_row(
+                name, "armed",
+                ", ".join("{0}={1}".format(k, thresholds[k])
+                          for k in ("notice", "soft", "hard", "complexity") if k in thresholds),
+                ["context-watermark"]))
 
     # -- effort (no hook) ---------------------------------------------------
     effort = effort_value(region, worker._unquote)

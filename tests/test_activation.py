@@ -440,6 +440,22 @@ class CheckTests(_Base):
         self.assertEqual(code, 1, output)
         self.assertIn("'extreme'", self.row(output, "effort"))
 
+    def test_watermark_reports_per_layer_only_when_the_layers_differ(self):
+        self.write("---\nwatermark:\n  soft: 90000\n  session:\n    soft: 200000\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("soft=200000", self.row(output, "watermark.session"))
+        self.assertIn("soft=90000", self.row(output, "watermark.worker"))
+        self.write("---\nwatermark:\n  session: {hard: 250000}\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        self.assertIn("armed", self.row(output, "watermark.session"))
+        self.assertIn("not configured", self.row(output, "watermark.worker"))
+        self.write("---\nwatermark:\n  soft: 90000\n---\n")
+        code, output = self.check()
+        self.assertIn("soft=90000", self.row(output, "watermark"))
+        self.assertNotIn("watermark.", output)
+
     def test_unknown_effort_value_is_inert(self):
         self.write("---\neffort: extreme\n---\n")
         code, output = self.check()

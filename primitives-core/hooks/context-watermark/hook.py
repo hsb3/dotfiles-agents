@@ -4,9 +4,9 @@ context-watermark — UserPromptSubmit (session) + PostToolUse (subagent) hook.
 
 Reads the transcript tail, computes an approximate current-context token count
 from the last assistant usage block, and injects a reminder when the count
-crosses a watermark. The watermarks scale with the lead model's context window
-as a CAP, never a lift, and with a session-level complexity factor; both are
-overridable. Anti-nag state is persisted per session (and per worker) so the
+crosses a watermark. The watermarks are keyed by layer (a worker, or the
+session itself) and capped, never lifted, by the model's context window; every
+stage is overridable. Anti-nag state is persisted per session (and per worker) so the
 reminder does not fire on every event.
 
 Doc sources verified against:
@@ -23,14 +23,13 @@ Contract:
   - exit 0 always, even on internal error, so neither a prompt nor a tool call
     is ever broken by this hook.
 
-Thresholds, precedence, and the subagent tier are documented in README.md.
+Thresholds, precedence, and the two layers are documented in README.md.
 
 This file must have ZERO third-party dependencies (Python 3 stdlib only).
 """
 
 import json
 import os
-import subprocess
 import sys
 import traceback
 
@@ -50,23 +49,13 @@ import pending  # noqa: E402
 # Config
 # ---------------------------------------------------------------------------
 
-# These are tunable advisory defaults, not performance facts. The context
+# Tunable advisory defaults per layer, not performance facts. The context
 # window caps each stage so smaller models are protected at 30/60/80 percent.
 DEFAULT_STAGES = {
-    "frontier": (60_000, 120_000, 160_000),
-    "heavy": (96_000, 192_000, 256_000),
-    "mid": (120_000, 240_000, 320_000),
-    "light": (160_000, 320_000, 480_000),
+    "worker": (100_000, 160_000, 250_000),
+    "session": (150_000, 250_000, 400_000),
 }
 STAGE_FRACS = (0.30, 0.60, 0.80)
-
-# [untested] calibration, not measurement: a bigger repo makes each grounding
-# read cost more, so the nudge comes earlier.
-COMPLEXITY_SMALL = 5_000    # tracked files: below this, no discount
-COMPLEXITY_LARGE = 20_000   # tracked files: above this, the floor factor
-COMPLEXITY_MID_FACTOR = 0.85
-COMPLEXITY_FLOOR = 0.75
-COMPLEXITY_NEUTRAL = 1.00
 
 TAIL_BYTES_DEFAULT = 256 * 1024  # 256 KB
 REFIRE_EVERY_DEFAULT = 5  # prompts (or worker tool calls), while still above a tier
@@ -74,7 +63,6 @@ STATE_DIR_DEFAULT = "/tmp/context-watermark"
 LOG_STREAM = "context-watermark"
 LOG_PATH_ENV = "CONTEXT_WATERMARK_LOG_PATH"
 ACTIVATION_KEY = "watermark"
-GIT_TIMEOUT = 5  # under the hook's own 10s wiring timeout
 
 
 def _env_int(name, default):
@@ -101,37 +89,14 @@ STATE_DIR = _env_path("CONTEXT_WATERMARK_STATE_DIR", STATE_DIR_DEFAULT)
 # Thresholds
 # ---------------------------------------------------------------------------
 
-def compute_thresholds(window, complexity, tier="frontier"):
-    """(notice, soft, hard), capped by a known window; unknown is frontier."""
-    defaults = DEFAULT_STAGES.get(tier, DEFAULT_STAGES["frontier"])
+def compute_thresholds(window, complexity, layer="session"):
+    """(notice, soft, hard) for a layer, times complexity, then capped by a known window."""
+    defaults = DEFAULT_STAGES.get(layer, DEFAULT_STAGES["session"])
     defaults = tuple(value * complexity for value in defaults)
     if window and window > 0:
         defaults = tuple(min(value, frac * window)
                          for value, frac in zip(defaults, STAGE_FRACS))
     return tuple(int(value) for value in defaults)
-
-
-def complexity_for_count(count):
-    """Tracked-file count -> factor. An unknown count is the neutral factor."""
-    if count is None:
-        return COMPLEXITY_NEUTRAL
-    if count < COMPLEXITY_SMALL:
-        return COMPLEXITY_NEUTRAL
-    if count <= COMPLEXITY_LARGE:
-        return COMPLEXITY_MID_FACTOR
-    return COMPLEXITY_FLOOR
-
-
-def tracked_file_count(cwd):
-    """`git ls-files | wc -l` for `cwd`, or None outside a working tree."""
-    try:
-        proc = subprocess.run(
-            ["git", "-C", cwd, "ls-files"], capture_output=True, timeout=GIT_TIMEOUT)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if proc.returncode != 0:
-        return None
-    return proc.stdout.count(b"\n")
 
 
 def _positive(value, cast):
@@ -142,45 +107,42 @@ def _positive(value, cast):
     return parsed if parsed > 0 else None
 
 
-def _load_watermark_config(project_dir):
+def _flow_mapping(raw):
+    """`{soft: 200000, hard: 250000}` -> dict; the activation parser keeps it a string."""
+    if isinstance(raw, dict):
+        return raw
+    if not (isinstance(raw, str) and raw.startswith("{") and raw.endswith("}")):
+        return {}
+    pairs = (item.split(":", 1) for item in raw[1:-1].split(",") if ":" in item)
+    return {k.strip().lower(): v.strip() for k, v in pairs}
+
+
+def _load_watermark_config(project_dir, layer=None):
     """The `watermark:` key as {notice, soft, hard, complexity}, keys omitted when the
-    value is absent or unusable. `activation.py check` calls this."""
+    value is absent or unusable. A `worker:`/`session:` sub-mapping overrides the flat
+    keys for that layer; no layer is the flat view `activation.py check` reports."""
     raw = atelier_local.read_key(project_dir, ACTIVATION_KEY)
     if not isinstance(raw, dict):
         return {}
     config = {}
-    for key, cast in (("notice", int), ("soft", int), ("hard", int), ("complexity", float)):
-        value = _positive(raw.get(key), cast)
-        if value is not None:
-            config[key] = value
+    for source in (raw, _flow_mapping(raw.get(layer)) if layer else {}):
+        for key, cast in (("notice", int), ("soft", int), ("hard", int),
+                          ("complexity", float)):
+            value = _positive(source.get(key), cast)
+            if value is not None:
+                config[key] = value
     return config
 
 
-def _model_tier(model):
-    """Catalog tier for a transcript model; an unmapped model is frontier."""
-    try:
-        catalog = model_tiers.load()
-        for provider in catalog["providers"]:
-            for tier in model_tiers.tiers(catalog):
-                selected = model_tiers.model_for(catalog, tier, provider)
-                if (isinstance(model, str) and isinstance(selected, str)
-                        and (model == selected or model.startswith(selected + "-")
-                             or model.startswith(selected + "["))):
-                    return tier
-    except Exception:
-        pass
-    return "frontier"
-
-
-def resolve_stages(project_dir, window, complexity, model=None):
-    """(notice, soft, hard, info), preserving existing soft/hard overrides."""
-    config = _load_watermark_config(project_dir)
-    info = {"window": window, "complexity_source": "computed",
-            "model_tier": _model_tier(model)}
+def resolve_stages(project_dir, window, layer="session"):
+    """(notice, soft, hard, info): env > activation file > computed, per stage."""
+    config = _load_watermark_config(project_dir, layer)
+    info = {"window": window, "layer": layer, "complexity_source": "computed"}
+    complexity = 1.0
     if "complexity" in config:
         complexity, info["complexity_source"] = config["complexity"], "activation"
     info["complexity"] = complexity
-    values = list(compute_thresholds(window, complexity, info["model_tier"]))
+    values = list(compute_thresholds(window, complexity, layer))
     for index, tier in enumerate(("notice", "soft", "hard")):
         source = "computed"
         value = config.get(tier)
@@ -192,31 +154,6 @@ def resolve_stages(project_dir, window, complexity, model=None):
         info[tier + "_source"] = source
     values[0] = min(values[0], values[1])
     return values[0], values[1], values[2], info
-
-
-def _session_complexity(session_id, cwd):
-    """The complexity factor, computed once per session and cached.
-
-    The hook fires on every prompt and every worker tool call; `git ls-files`
-    on a large repo is a real cost to pay that often.
-    """
-    path = os.path.join(STATE_DIR, _state_key(session_id) + ".complexity.json")
-    try:
-        with open(path) as fh:
-            cached = json.load(fh)
-        if isinstance(cached, dict) and isinstance(cached.get("complexity"), float):
-            return cached["complexity"], cached.get("tracked_files")
-    except Exception:
-        pass
-    count = tracked_file_count(cwd)
-    factor = complexity_for_count(count)
-    try:
-        os.makedirs(STATE_DIR, exist_ok=True)
-        with open(path, "w") as fh:
-            json.dump({"complexity": factor, "tracked_files": count}, fh)
-    except Exception:
-        pass
-    return factor, count
 
 
 # ---------------------------------------------------------------------------
@@ -381,11 +318,17 @@ MESSAGES = {
         "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
         "before continuation."
     ),
+    "session_hard": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
+        "watermark. This is advisory: update the handoff now; if a coordinator owns "
+        "your cycle, stop after the handoff and wait for it rather than compacting."
+    ),
 }
 
 
-def _format_message(tier, ctx_tokens, notice, soft, hard):
-    return MESSAGES[tier].format(
+def _format_message(tier, ctx_tokens, notice, soft, hard, layer="worker"):
+    key = "session_hard" if (tier, layer) == ("hard", "session") else tier
+    return MESSAGES[key].format(
         k=round(ctx_tokens / 1000),
         notice=round(notice / 1000),
         soft=round(soft / 1000),
@@ -397,7 +340,7 @@ def _format_message(tier, ctx_tokens, notice, soft, hard):
 # Event branches
 # ---------------------------------------------------------------------------
 
-def _measure(transcript_path, project_dir, session_id, cwd):
+def _measure(transcript_path, project_dir, layer):
     """(ctx_tokens, model, (notice, soft, hard), error, info) for one transcript.
 
     Raises nothing the caller has to know about: a transcript it cannot read
@@ -412,18 +355,12 @@ def _measure(transcript_path, project_dir, session_id, cwd):
             return None, None, None, exc, None
         except (OSError, ValueError) as exc:
             return None, None, None, str(exc), None
-        complexity, tracked = _session_complexity(session_id, cwd)
-        notice, soft, hard, info = resolve_stages(
-            project_dir, measured["window"], complexity, measured["model"])
-        info["tracked_files"] = tracked
+        notice, soft, hard, info = resolve_stages(project_dir, measured["window"], layer)
         return measured["ctx_tokens"], measured["model"], (notice, soft, hard), None, info
     usage, model = _find_last_assistant_usage(_read_tail(transcript_path, TAIL_BYTES))
     if usage is None:
         return None, None, None, "no assistant usage found in tail window", None
-    complexity, tracked = _session_complexity(session_id, cwd)
-    window = _window_for(model)
-    notice, soft, hard, info = resolve_stages(project_dir, window, complexity, model)
-    info["tracked_files"] = tracked
+    notice, soft, hard, info = resolve_stages(project_dir, _window_for(model), layer)
     return _context_tokens_from_usage(usage), model, (notice, soft, hard), None, info
 
 
@@ -445,6 +382,7 @@ def _row(scope, session_id, ctx_tokens, tier, fired, model=None, info=None,
         "hard": hard,
     }
     if info:
+        row["layer"] = info.get("layer")
         row["notice"] = notice
         row["sources"] = {
             "notice": info.get("notice_source"),
@@ -467,7 +405,7 @@ def handle_session(payload, log):
     project_dir = (os.environ.get("CLAUDE_PROJECT_DIR") if os.environ.get("ATELIER_HARNESS") != "codex" else None) or cwd
 
     ctx_tokens, model, tiers, error, info = _measure(
-        payload.get("transcript_path"), project_dir, session_id, cwd)
+        payload.get("transcript_path"), project_dir, "session")
     if error:
         pending_measurement = isinstance(error, codex_lifecycle.PendingMeasurement)
         if codex_lifecycle.enabled() and not pending_measurement:
@@ -499,9 +437,11 @@ def handle_session(payload, log):
             print(json.dumps({
                 **({"hookSpecificOutput": {
                     "hookEventName": "UserPromptSubmit",
-                    "additionalContext": _format_message(tier, ctx_tokens, notice, soft, hard)}}
+                    "additionalContext": _format_message(
+                        tier, ctx_tokens, notice, soft, hard, "session")}}
                    if codex_lifecycle.enabled() else {
-                    "additionalContext": _format_message(tier, ctx_tokens, notice, soft, hard)}),
+                    "additionalContext": _format_message(
+                        tier, ctx_tokens, notice, soft, hard, "session")}),
                 "systemMessage": (
                     "atelier: context ~{0}k tokens — {1} watermark ({2}k/{3}k/{4}k) crossed.".format(
                         round(ctx_tokens / 1000), tier, round(notice / 1000),
@@ -533,7 +473,7 @@ def handle_subagent(payload, log):
         return
 
     ctx_tokens, model, tiers, error, info = _measure(
-        transcript, project_dir, session_id, cwd)
+        transcript, project_dir, "worker")
     if error:
         pending_measurement = isinstance(error, codex_lifecycle.PendingMeasurement)
         if codex_lifecycle.enabled() and not pending_measurement:

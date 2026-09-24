@@ -144,7 +144,7 @@ These roles run without an Atelier activation file. Install Atelier separately f
 isolation; shell access remains subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.
 When Atelier is installed, run its project setup after generating these roles. It reconciles
 policy into the sole configured agent's native directory or `.agents/atelier.local.md` when
-multiple coding agents are configured; this bundle ships the same policy-selection helpers.
+multiple coding agents are configured; this bundle ships the same policy-selection helpers, including the shared activation-file reader.
 Invoke the `pull-request` skill for the `/pr-findings` workflow; the Claude command itself is not a native Codex command.
 
 The shared catalog reserves Astra/Fable for the root strategist; heavy Codex subagents resolve

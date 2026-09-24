@@ -38,8 +38,9 @@ table — a GFM table cannot carry a harness marker, so that row lives below the
 confuse it with `protected:`, the file-glob key, which both harnesses read.
 
 `watermark:` is harness-local for a different reason: both harnesses scale a context watermark,
-but they spell the override differently — a `watermark:` mapping of `soft`/`hard`/`complexity`
-here, a top-level categorical `complexity:` key there. Same job, two schemas, so neither spelling
+but they spell the override differently — a `watermark:` mapping of `notice`/`soft`/`hard`/
+`complexity`, with optional `worker:`/`session:` sub-mappings, here, a top-level categorical
+`complexity:` key there. Same job, two schemas, so neither spelling
 belongs in the shared table. See `docs/atelier-parity.md`.
 
 ## Install
