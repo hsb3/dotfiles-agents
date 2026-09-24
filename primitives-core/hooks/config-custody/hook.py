@@ -168,9 +168,9 @@ def _worktree_root(abs_path, project_dir):
     finds the tree that file actually lives in, innermost first, which is the
     right answer when worktrees are nested.
 
-    The walk stops AT `project_dir`, inclusive, so a worktree outside the
-    project can never become a jurisdiction while the common case of the project
-    dir being the worktree itself is still found. Whatever the `.git` file points
+    The walk stops AT `project_dir`, inclusive, so the common case of the
+    project dir being the worktree itself is still found; a tree outside the
+    project is `_repo_worktree`'s question, not this walk's. Whatever the `.git` file points
     at is trusted: this is a guardrail, not a sandbox.
     """
     prefix = project_dir + os.sep
@@ -274,6 +274,52 @@ def _normalize(raw_path, project_dir):
     return abs_path, relpath
 
 
+def _repo_worktree(abs_path, project_dir):
+    """Longest worktree root of `project_dir`'s repository containing `abs_path`, or None.
+
+    Lets an edit into a sibling worktree (main checkout or linked) be judged the
+    same whichever tree the anchor sits in. Any git failure is None: out of
+    jurisdiction, as before. Paths compare lexically, like `_normalize`.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", project_dir, "worktree", "list", "--porcelain"],
+            env=codex_workers.clean_git_env() if codex_workers.is_codex({}) else None,
+            capture_output=True, timeout=GIT_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    best = None
+    for line in proc.stdout.decode("utf-8", "replace").splitlines():
+        if not line.startswith("worktree "):
+            continue
+        root = os.path.normpath(line[len("worktree "):])
+        if abs_path.startswith(root + os.sep) and (best is None or len(root) > len(best)):
+            best = root
+    return best
+
+
+def _resolve(raw_path, project_dir):
+    """(abs_path, relpath, jurisdiction) or (None, None, None) when out of jurisdiction.
+
+    The anchor first; failing that, any worktree of the same repository.
+    """
+    abs_path, relpath = _normalize(raw_path, project_dir)
+    if relpath is not None:
+        return abs_path, relpath, project_dir
+    try:
+        abs_path = os.path.normpath(os.path.join(project_dir, raw_path))
+    except Exception:
+        return None, None, None
+    root = _repo_worktree(abs_path, project_dir)
+    if root is None:
+        return None, None, None
+    abs_path, relpath = _normalize(abs_path, root)
+    return abs_path, relpath, root
+
+
 def _first_match(relpath, abs_path, patterns):
     """First protected pattern matching either form of the path, else None.
 
@@ -302,10 +348,10 @@ def _codex_custody(payload):
         effective = codex_workers.effective_payload(payload)
         project = effective["cwd"]
         for absolute in codex_workers.patch_paths(payload):
-            abs_path, relative = _normalize(absolute, project)
+            abs_path, relative, jurisdiction = _resolve(absolute, project)
             if relative is None:
                 continue
-            mode, patterns = _load_policy(abs_path, project)
+            mode, patterns = _load_policy(abs_path, jurisdiction)
             if mode not in ACTIVE_MODES:
                 continue
             pattern = _first_match(relative, abs_path, patterns)
@@ -354,13 +400,13 @@ def main():
         if not raw_path or not isinstance(raw_path, str):
             sys.exit(0)
 
-        abs_path, relpath = _normalize(raw_path, project_dir)
+        abs_path, relpath, jurisdiction = _resolve(raw_path, project_dir)
         if relpath is None:
-            sys.exit(0)  # outside the project: out of jurisdiction
+            sys.exit(0)  # outside every worktree of the repo: out of jurisdiction
 
         # The path is resolved first because the policy that governs the edit is
         # the one belonging to the tree the edited file lives in.
-        mode, patterns = _load_policy(abs_path, project_dir)
+        mode, patterns = _load_policy(abs_path, jurisdiction)
         if mode not in ACTIVE_MODES or not patterns:
             sys.exit(0)
 

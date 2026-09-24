@@ -144,8 +144,11 @@ NOTICE_TEMPLATE = (
 # for why the range form `HEAD..<branch>` cannot be repeated either.
 NESTED_CLAUSE = (
     " You are standing in a linked worktree yourself, so this one is NESTED under it "
-    "on its own branch — intended, not a misconfiguration. To integrate when it "
-    "reports: `git worktree list` for its path and branch, then `git cherry HEAD "
+    "on its own branch — intended, not a misconfiguration. Its checkout is a separate "
+    "tree from yours: brief its owned files as paths relative to its own checkout, not "
+    "absolute paths into yours, and do not plan on it sharing your worktree under a "
+    "disjoint file map — that is not available under isolate: writers. To integrate "
+    "when it reports: `git worktree list` for its path and branch, then `git cherry HEAD "
     "<branch>` and READ it — `+` lines are commits you have not picked yet, `-` "
     "lines are already in — then `git cherry-pick <the + SHAs>` if there are any. "
     "Repeat that pair each round; it never re-applies. Before cleanup, confirm the worker "

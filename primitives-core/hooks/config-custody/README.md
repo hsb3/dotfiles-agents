@@ -102,9 +102,16 @@ So the edited path is relativized against the **worktree root** when it sits ins
 `Makefile` means that worktree's `Makefile`. The root is found by walking up from the edited file
 to the first directory holding a `.git` **file** — a linked worktree's `.git` is a file pointing at
 the shared git dir, where an ordinary checkout's is a directory, so a vendored sub-repo nested in
-the project is correctly *not* a jurisdiction. The walk stops at the project dir, so custody can
-never be relocated to a tree outside the project, and a path outside the project is still not
-governed at all. No subprocess: a handful of `os.path` calls on the miss.
+the project is correctly *not* a jurisdiction. The walk stops at the project dir, so the walk
+alone never relocates custody outside the project. No subprocess: a handful of `os.path` calls on
+the miss.
+
+**Jurisdiction does not depend on the anchor.** A path outside the project dir but inside another
+worktree of the same repository (the main checkout or any linked worktree, found with
+`git worktree list --porcelain`) is judged by that tree exactly as if the anchor covered it. So an
+Edit from a nested worktree into its dispatcher's worktree gets one verdict whether
+`CLAUDE_PROJECT_DIR` is empty or set. A path outside every worktree of the repo, or any git failure,
+stays out of jurisdiction. Bash writes remain outside the matcher either way.
 
 ## Install
 
@@ -162,8 +169,8 @@ governed at all. No subprocess: a handful of `os.path` calls on the miss.
   anchored on the project dir), but a symlink aimed at a protected file is not caught. This is a
   guardrail on honest tool calls, not a sandbox — which is also why the deny text names shell
   routing explicitly instead of trying to block it.
-- **Out of jurisdiction is silent.** A path outside the project resolves to a relpath starting
-  with `..` and is left alone; the hook has no opinion about files it does not own.
+- **Out of jurisdiction is silent.** A path outside every worktree of the project's repository
+  is left alone; the hook has no opinion about files it does not own.
 - **Advisory logs would-be denials.** Turning enforcement on blind is how a guardrail earns a
   reputation for false positives. Run `advisory` for a few waves, read the ledger, and graduate to
   `strict` on evidence.

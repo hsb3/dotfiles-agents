@@ -89,18 +89,29 @@ recorded so this is not re-litigated:
    follows policy *into* a worktree. A hook that reads its policy through a worktree and then
    stands down inside one is incoherent.
 
-What nesting actually costs is integration ergonomics: the dispatcher has to collect each worker's
-commits and clean up the leftovers. So the notice on a nested rewrite carries the integrate step,
-at dispatch time rather than at the end of the wave:
+What nesting actually costs is integration ergonomics — the dispatcher has to collect each
+worker's commits and clean up the leftovers — and briefing ergonomics: a dispatcher that
+mistakes the worker's checkout for its own hands out absolute paths that resolve nowhere the
+worker can write. So the notice on a nested rewrite carries both, at dispatch time rather than
+after a builder's writes land somewhere unexpected:
 
 ```
 … You are standing in a linked worktree yourself, so this one is NESTED under it on its own
-branch — intended, not a misconfiguration. To integrate when it reports: `git worktree list`
-for its path and branch, then `git cherry HEAD <branch>` and READ it — `+` lines are commits
-you have not picked yet, `-` lines are already in — then `git cherry-pick <the + SHAs>` if
-there are any. Repeat that pair each round; it never re-applies. Finally
+branch — intended, not a misconfiguration. Its checkout is a separate tree from yours: brief
+its owned files as paths relative to its own checkout, not absolute paths into yours, and do
+not plan on it sharing your worktree under a disjoint file map — that is not available under
+isolate: writers. To integrate when it reports: `git worktree list` for its path and branch,
+then `git cherry HEAD <branch>` and READ it — `+` lines are commits you have not picked yet,
+`-` lines are already in — then `git cherry-pick <the + SHAs>` if there are any. Repeat that
+pair each round; it never re-applies. Finally
 follow the [Lifecycle and retirement](#lifecycle-and-retirement) checklist before any removal.
 ```
+
+**Why sharing the dispatcher's worktree under a disjoint file map is not offered as an
+alternative.** The Agent tool's `isolation` field takes `worktree` or `remote`, nothing that
+means "run in my own checkout" — there is no third value to ask for. And even if there were, it
+would just reintroduce reason 1 above: a disjoint file map inside one shared tree still gives
+concurrent writers one index, which is exactly the hazard this hook exists to prevent.
 
 **Why not the obvious `git cherry-pick HEAD..<branch>`, which the notice used to carry.** A worker
 reports more than once, and integration is per-round. Picking a commit rewrites it, so the original
