@@ -66,13 +66,15 @@ jobs:
         run: make docs-build
       # Version-bump gate (TASK-032): each plugin's assembly, dereferenced, against the
       # same plugin as published on origin/main — changed bytes must ship under a moved
-      # version or consumers keep serving the cached one. It rides THIS job rather than
-      # `make ci` because it needs network to reach origin/main and `make ci` is offline +
+      # version or consumers keep serving the cached one — and against the PR base
+      # origin/dev, where changed bytes need a version greater than dev's, so two PRs
+      # cannot ship under one unpublished version. It rides THIS job rather than
+      # `make ci` because it needs network to reach both refs and `make ci` is offline +
       # zero-install by design; and rather than a job of its own because dev's branch
       # protection pins required checks by job NAME (a new one would strand open PRs on a
-      # check that never reports). It fetches origin/main itself and is RED when that ref
+      # check that never reports). It fetches both refs itself and is RED when either
       # cannot be read at all: a gate that cannot measure is red (decision-016 point 4).
-      - name: version-bump gate (published bytes vs origin/main)
+      - name: version-bump gate (plugin bytes vs origin/main and origin/dev)
         run: python3 scripts/check_version_bump.py
       # Removal gate (card 7sv8): a unit published on origin/main and absent from this tree
       # must be declared by the commit that removed it. Nothing else watches deletions — a
