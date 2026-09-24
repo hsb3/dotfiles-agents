@@ -34,7 +34,9 @@ the main tree.
 
 ## Two keys are Claude Code only
 
-`protected-branches:` is read by `worker-git-scope-guard`, which exists only here. The opencode
+`protected-branches:` is read by `worker-git-scope-guard`, which exists only here; that hook's
+stash half (no stash outside a worker's own worktree, no pop/drop/clear/branch anywhere) needs no
+key. The opencode
 port's activation parser does not read it and that bundle ships no git guard at all, so the key
 and its explanation sit in `<!-- harness:claude-code -->` blocks rather than in the shared key
 table — a GFM table cannot carry a harness marker, so that row lives below the table. Do not
