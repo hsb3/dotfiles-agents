@@ -18,6 +18,40 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "primitives-core/hooks/_lib"))
+import atelier_local  # noqa: E402
+
+
+def checkouts_dir(root):
+    """Codex worker checkout root: the `checkout-root` activation key, else the default."""
+    repo = root / "repo"
+    return atelier_local.checkout_root(str(repo)) or repo / ".git/atelier-codex/checkouts"
+
+
+def activation_frontmatter(checkout_root=None):
+    """Content for the fixture's `.claude/atelier.local.md`, with the optional probed key."""
+    text = ('---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
+            'protected-branches: [probe-parent]\n'
+            + (f'checkout-root: {checkout_root}\n' if checkout_root else '')
+            + '---\n')
+    # checkout_root flows unescaped into YAML-ish frontmatter; a value that doesn't
+    # round-trip (newline, trailing comment, empty string) could inject other keys.
+    if checkout_root is not None and atelier_local.parse_key(text, 'checkout-root') != checkout_root:
+        raise ValueError(f"checkout_root {checkout_root!r} does not round-trip through frontmatter")
+    return text
+
+
+def activate_fixture(command, package, repo, checkout_root):
+    """codex-setup, write the fixture's activation policy (with the probed key), then refresh."""
+    command('activation-setup', [sys.executable,
+        str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
+        '--project-dir', str(repo)])
+    (repo / '.claude').mkdir()
+    (repo / '.claude/atelier.local.md').write_text(activation_frontmatter(checkout_root))
+    command('activation-refresh', [sys.executable,
+        str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
+        '--project-dir', str(repo)])
+
 
 def routed_hook(root, payload):
     event, agent = payload["hook_event_name"], payload.get("agent_id")
@@ -134,7 +168,7 @@ def stop_snapshot_daemons(root):
 def native_probe(root, command, model, production=False):
     if not production:
         (root / "route-workers").touch()
-    workers = root / ("repo/.git/atelier-codex/checkouts" if production else "workers")
+    workers = checkouts_dir(root) if production else root / "workers"
     workers.mkdir(parents=True, exist_ok=True)
     prompt = """This is a native worker collision-isolation probe. Spawn exactly two independent default agents.
 Worker A must run shell pwd, git branch --show-current and git rev-parse --git-path index,
@@ -261,8 +295,8 @@ Root waits for manager completion and reports the manager's exact final reply; d
 """
     command('production-workflow', ['codex', 'exec', '--json', '-C', str(root / 'repo'),
         '--model', model, '--sandbox', 'workspace-write',
-        *[arg for path in ('atelier-codex/checkouts', 'worktrees', 'objects',
-                          'refs/heads/atelier', 'logs/refs/heads/atelier')
+        '--add-dir', str(checkouts_dir(root)),
+        *[arg for path in ('worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')
           for arg in ('--add-dir', str(root / 'repo/.git' / path))],
         '--dangerously-bypass-hook-trust', prompt], timeout=480)
     rows = [json.loads(path.read_text()) for path in
@@ -310,7 +344,8 @@ Root waits for manager completion and reports the manager's exact final reply; d
         raise RuntimeError('Production workflow proof incomplete; inspect recorded evidence')
 
 
-def run(auth_source, output, model, native_isolation=False, plugin_root=None, workflow=False, marketplace_source=None):
+def run(auth_source, output, model, native_isolation=False, plugin_root=None, workflow=False,
+        marketplace_source=None, checkout_root=None):
     output.mkdir(parents=True, exist_ok=False)
     script = Path(__file__).resolve()
     with tempfile.TemporaryDirectory(prefix="atelier-codex-probe-") as directory:
@@ -406,16 +441,7 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                 package = Path(installed['installedPath'])
                 if installed['version'] != manifest['version']:
                     raise RuntimeError('Installed plugin version differs from the release manifest')
-                command('activation-setup', [sys.executable,
-                    str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
-                    '--project-dir', str(repo)])
-                (repo / '.claude').mkdir()
-                (repo / '.claude/atelier.local.md').write_text(
-                    '---\nenforce: strict\nisolate: writers\nprotected: [protected.txt]\n'
-                    'protected-branches: [probe-parent]\n---\n')
-                command('activation-refresh', [sys.executable,
-                    str(package / 'skills/activation/scripts/activation.py'), 'codex-setup',
-                    '--project-dir', str(repo)])
+                activate_fixture(command, package, repo, checkout_root)
                 (repo / 'protected.txt').write_text('PRESERVED\n')
                 command('fixture-add', ['git', 'add', '.agents/atelier.local.md', 'protected.txt'])
                 command('fixture-commit', ['git', '-c', 'user.name=Runtime Probe', '-c',
@@ -549,14 +575,16 @@ if __name__ == "__main__":
     parser.add_argument('--marketplace', help='Install from this published GitHub marketplace instead of a local copy; expects dotfiles-agents')
     parser.add_argument('--production-workflow', action='store_true',
                         help='With --plugin-root, exercise manager/builder/reviewer and stop correction')
+    parser.add_argument('--checkout-root', help='With --plugin-root, set the fixture checkout-root activation key')
     args = parser.parse_args()
     if args.hook:
         hook(args.hook)
     elif not args.auth_source or not args.output:
         parser.error("--auth-source and a new --output directory are required")
-    elif (args.production_workflow or args.marketplace) and not args.plugin_root:
-        parser.error('--production-workflow and --marketplace require --plugin-root (expected manifest version)')
+    elif (args.production_workflow or args.marketplace or args.checkout_root is not None) and not args.plugin_root:
+        parser.error('--production-workflow, --marketplace and --checkout-root require --plugin-root (expected manifest version)')
     else:
         run(args.auth_source.expanduser(), args.output.resolve(), args.model,
-            args.native_isolation, args.plugin_root, args.production_workflow, args.marketplace)
+            args.native_isolation, args.plugin_root, args.production_workflow, args.marketplace,
+            args.checkout_root)
         print(f"Evidence: {args.output.resolve()}; disposable home and credential copy removed")
