@@ -2,10 +2,10 @@
 
 Each probe command runs under every bash found (`/bin/bash`, and `bash` on PATH
 when it resolves elsewhere; no version assumed) with a fake `git` first on PATH
-that logs its argv as one JSON line and exits 0. Every logged argv the guard's
-OWN classifier would block, read as a standalone `git ...` call, must also make
-the guard flag the probe as written. A guard that flags while bash ran nothing is
-conservative and passes; the reverse is not asserted.
+that logs its argv as one JSON line and exits 0. Every logged argv whose verb is
+in that guard's fixed write set (`WRITES`, independent of the guard's own
+classifier) must make the guard flag the probe as written. A guard that flags
+while bash ran nothing is conservative and passes; the reverse is not asserted.
 
 The guards are read through their pure parser entry points, so no payload,
 sidecar or worktree state is needed:
@@ -15,15 +15,16 @@ sidecar or worktree state is needed:
   tree shared, every branch protected), so it flags every call it could ever deny.
 
 Probes never reach the real git: `{GIT}` is replaced with the fake's absolute
-path, PATH is `<fake dir>:/usr/bin:/bin`, GIT_DIR names no repo, and the fake dir also shadows `bash`
-and `zsh` with the bash under test, so `zsh -c` needs no zsh installed.
+path, PATH is `<fake dir>:/usr/bin:/bin`, GIT_DIR names no repo, and the fake dir
+also shadows `bash` and `zsh` with the bash under test, so `zsh -c` needs no zsh
+installed. `sh` is not shadowed: it is the system `/bin/sh`, which still finds the
+fake git on PATH.
 Stdlib-only.
 """
 
 import importlib.util
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import sys
@@ -70,6 +71,30 @@ def scope_flags(command, cwd="/tmp"):
 
 
 GUARDS = {"live": live_flags, "scope": scope_flags}
+
+# Write verbs each guard must catch, as an argv prefix after git's global options.
+# Deliberately not read from the hooks, so a guard that goes blind fails here.
+_COMMON_WRITES = [("commit",), ("push",), ("rebase",), ("merge",), ("stash", "push"),
+                  ("stash", "drop"), ("stash", "clear"), ("stash", "pop"),
+                  ("stash", "apply"), ("update-ref",)]
+WRITES = {
+    "live": _COMMON_WRITES + [("reset",), ("checkout",)],
+    "scope": _COMMON_WRITES + [("reflog", "delete"), ("reflog", "expire")],
+}
+
+
+def _subcommand(argv):
+    """argv after git's global options; a bare `stash` is `stash push`."""
+    i = 0
+    while i < len(argv) and argv[i].startswith("-"):
+        i += 2 if argv[i] in ("-C", "-c") else 1
+    rest = argv[i:]
+    return ["stash", "push"] if rest == ["stash"] else rest
+
+
+def is_write(guard, argv):
+    rest = _subcommand(argv)
+    return any(rest[:len(w)] == list(w) for w in WRITES[guard])
 
 # (name, command). `{GIT}` becomes the fake git's absolute path; str.replace,
 # not format, since probes carry literal braces.
@@ -179,20 +204,22 @@ PROBES = [
     ("sep_assignment_prefix", "GIT_AUTHOR_NAME=x git commit -m x"),
 ]
 
-# Cells not asserted: (probe, guard) -> why. Each is a documented bypass, not a
-# silent drop; a fix makes the cell pass, which needs no edit here.
+# Known bypasses: (probe, guard) -> where the gap is recorded. Each cell must
+# still fail; once a fix makes it pass, delete its entry here.
+_O1 = "O1, live-worker-git-guard README (opener not recognized) and ledger 0428"
+_O2 = "O2, `EOF)` terminator inside $( ), ledger 0428"
 EXCUSED = {
-    ("O1_backslash_word_apostrophe", "live"): "O1: known gap",
-    ("O1_partial_quote_apostrophe", "live"): "O1: known gap",
-    ("O2_paren_terminator", "live"): "O2: known gap",
-    ("O2_paren_terminator", "scope"): "O2: known gap",
+    ("O1_backslash_word_apostrophe", "live"): _O1,
+    ("O1_partial_quote_apostrophe", "live"): _O1,
+    ("O2_paren_terminator", "live"): _O2,
+    ("O2_paren_terminator", "scope"): _O2,
 }
-# live-worker-git-guard's docstring ceiling: `bash -c "..."` and a command word
-# glued to a separator displace the git word.
+# live-worker-git-guard README "What it cannot see": `bash -c "..."` and a command
+# word glued to a separator displace the git word.
 for _name in ("sh_bash_c", "sh_sh_c", "sh_zsh_c", "sh_bash_ec", "sh_env_bash_c",
               "sh_bash_c_heredoc_then_git"):
-    EXCUSED[(_name, "live")] = "documented ceiling: bash -c string"
-EXCUSED[("sep_glued", "live")] = "documented ceiling: word glued to a separator"
+    EXCUSED[(_name, "live")] = "live README ceiling: bash -c string"
+EXCUSED[("sep_glued", "live")] = "live README ceiling: word glued to a separator"
 
 
 def _bashes():
@@ -256,17 +283,19 @@ class GitGuardDifferential(unittest.TestCase):
                 command = probe.replace("{GIT}", self.git)
                 ran = self._run(bash, command)
                 verdicts = {g: flags(command) for g, flags in GUARDS.items()}
-                for guard, flags in GUARDS.items():
-                    if (name, guard) in EXCUSED:
-                        continue
-                    guarded = [argv for argv in ran
-                               if flags("git " + " ".join(map(shlex.quote, argv)))]
+                for guard in GUARDS:
+                    missed = not verdicts[guard] and any(
+                        is_write(guard, argv) for argv in ran)
+                    detail = "\nprobe: {0!r}\nbash: {1}\nbash ran: {2}\nverdicts: {3}".format(
+                        command, bash, ran, verdicts)
                     with self.subTest(bash=bash, probe=name, guard=guard):
-                        self.assertTrue(
-                            not guarded or verdicts[guard],
-                            "{0} guard allowed a call bash ran\nprobe: {1!r}\n"
-                            "bash: {2}\nbash ran: {3}\nverdicts: {4}".format(
-                                guard, command, bash, ran, verdicts))
+                        if (name, guard) in EXCUSED:
+                            self.assertTrue(missed, "{0} gap now closed ({1}): delete "
+                                            "its EXCUSED entry".format(guard, EXCUSED[
+                                                (name, guard)]) + detail)
+                        else:
+                            self.assertFalse(missed, "{0} guard allowed a write bash "
+                                             "ran".format(guard) + detail)
 
 
 if __name__ == "__main__":
