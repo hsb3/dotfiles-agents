@@ -18,8 +18,8 @@ protected:
 # Ships commented out on purpose: there is no sensible default. Name your own publish-only
 # or release branches here — a built-in main/master guard protects the wrong branch in any
 # project whose default branch is publish-only and whose real work happens elsewhere. The
-# same hook's other half — refusing a stash from a worker sharing this checkout — is live
-# regardless and needs no key at all.
+# same hook's other half — refusing a worker's stash outside its own worktree, and any
+# pop/drop/clear/branch on the repo-wide stack — is live regardless and needs no key at all.
 # protected-branches:
 #   - main
 

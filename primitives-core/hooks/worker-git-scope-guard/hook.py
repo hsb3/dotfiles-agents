@@ -188,7 +188,8 @@ def invocations(command, cwd):
         while i < len(toks):
             t = toks[i]
             if t == "-C":
-                cdir = toks[i + 1] if i + 1 < len(toks) else None
+                # resolve against the cd-tracked context, never the hook process cwd
+                cdir = os.path.join(ctx, toks[i + 1]) if i + 1 < len(toks) else None
                 i += 2
                 continue
             if t in VALUE_OPTS:
@@ -339,10 +340,12 @@ def decide(data, branch_of, shared_of, protected, owns):
         if sub == "stash":
             if not stash_moves_work(args):
                 continue
+            if args and args[0] in STASH_DESTROYERS:
+                return _deny_stash()  # the stack is repo-wide: tree kind is irrelevant
             shared = shared_of(where)
             if shared is None:
                 continue
-            if (args and args[0] in STASH_DESTROYERS) or shared or not owns(where):
+            if shared or not owns(where):
                 return _deny_stash()
         elif sub in WRITE_SUBS:
             if protected and branch_of(where) in protected:
@@ -377,8 +380,9 @@ def _deny_stash():
         "session's entry, and a stash in a shared checkout sweeps up every sibling's "
         "uncommitted work. Commit your own work on your own branch instead, or leave it "
         "in the tree and report what is unfinished. Already pushed a stash here? You "
-        "cannot pop or drop it yourself: report its tag and SHA "
-        "(`git stash list --format='%H %gs'`) so the dispatching session drops it. For "
+        "cannot pop or drop it yourself: report its selector and SHA "
+        "(`git stash list --format='%gd %H %gs'`; drop needs the selector) so the "
+        "dispatching session drops it. For "
         "a clean or old copy without the stash: copy the file aside (`cp file "
         "/tmp/file.bak`, then copy it back — `git diff` misses untracked files, so copy "
         "those directly), or `git diff > /tmp/<your-slug>.patch` with a name unique to "

@@ -9,7 +9,7 @@ own. `PreToolUse` on `Bash`, two independent halves:
 
 | Half | Fires when | Armed by |
 |---|---|---|
-| **Stash on the shared stack** | a worker runs `git stash pop`/`drop`/`clear`/`branch` in **any** tree, or another mutating form anywhere but **its own** linked worktree | nothing — live wherever the hook is installed |
+| **Stash on the shared stack** | a worker runs `git stash pop`/`drop`/`clear`/`branch` in **any** tree (even one whose kind is unknown), or another mutating form anywhere but **its own** linked worktree | nothing — live wherever the hook is installed |
 | **Write on a protected branch** | `commit`, `merge`, `rebase`, `cherry-pick`, `revert`, `am` with HEAD on a protected branch, or a `push` whose refspec targets one | `protected-branches:` in the selected `atelier.local.md` |
 
 Read-only git never fires. Neither do the read forms of the verbs above: `stash list` and
@@ -31,15 +31,15 @@ so every worktree of the repo reads and writes one stack, and a `git stash drop`
 worktree empties the main checkout's list. So the rule has two parts:
 
 - `pop`, `drop`, `clear` and `branch` take entries off that shared stack and are denied in
-  every tree, owned or not.
+  every tree, owned or not, including one whose kind cannot be determined.
 - The other mutating forms (bare or flag-only `git stash`, `push`, `save`, `apply`,
   `create`, `store`) are denied in the main checkout, and in a linked worktree unless it is
   the worker's **own**. A non-isolated subagent running in a shared lane worktree is
   denied.
 
 A worker may push a stash in its own worktree, but can never pop or drop it — if it did,
-it reports the entry's tag and SHA (`git stash list --format='%H %gs'`) so the dispatching
-session drops it.
+it reports the entry's selector and SHA (`git stash list --format='%gd %H %gs'`; drop needs
+the selector) so the dispatching session drops it.
 
 Ownership is read from the dispatch record, never guessed from the path. For a native
 subagent it is the `worktreePath` key of its `agent-<id>.meta.json` sidecar, which Claude
@@ -47,7 +47,7 @@ Code writes only for an `isolation: worktree` dispatch (located with `_lib/pendi
 for a Codex worker it is the registry record's `worktree`. The resolved directory's
 `git rev-parse --show-toplevel` must equal that path after `realpath`. No record, an
 unreadable one, or a different tree means not owned. A tree kind that cannot be
-determined still stays silent.
+determined (a bare repo's worktree, a submodule) stays silent for the non-destroying forms.
 
 The deny points at non-stash ways to get a clean or old copy: copy the file aside and back
 (`git diff` misses untracked files, so copy those directly), or `git diff >
