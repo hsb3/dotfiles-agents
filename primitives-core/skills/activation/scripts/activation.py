@@ -13,7 +13,8 @@ Two subcommands:
 hooks' own loader functions, loaded by path, so the report cannot drift from the
 behaviour it describes. The one thing the hooks cannot answer is which keys the
 operator actually typed — a misspelled key and an absent key look identical to a
-loader — so this script locates top-level key *names* and nothing else.
+loader — so this script locates top-level key *names* and nothing else. (Whether an
+off key was written as an explicit `[]` is asked of the shared parser, not answered here.)
 
 Stdlib only. Exit codes: 0 all clear, 1 something is inert/unknown/ignored,
 2 hard error (the hooks could not be found). All output goes to stdout: the
@@ -192,6 +193,13 @@ def effort_value(region, unquote):
     return value
 
 
+def is_explicit_empty_list(text, key, parse_key):
+    """The shared parser's own answer: `key: []` parses to an empty sequence, a blank
+    to None and a scalar to a str. The hook wrappers collapse all three to off; this
+    tells the deliberate one apart without a parser of its own."""
+    return parse_key(text, key) == []
+
+
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
@@ -312,11 +320,16 @@ def evaluate(project_dir, modules):
             "protected-branches", "not configured",
             "the stash half of this hook is live regardless; only the "
             "protected-branch half needs this key", ["worker-git-scope-guard"]))
+    elif not branches and is_explicit_empty_list(
+            text, "protected-branches", isolation.atelier_local.parse_key):
+        result["rows"].append(_row(
+            "protected-branches", "off (explicit)",
+            "written as an empty list - deliberately off", ["worker-git-scope-guard"]))
     elif not branches:
         result["rows"].append(_row(
             "protected-branches", "inert",
-            "written, but no branch names were parsed - an empty list, or a scalar "
-            "where a sequence belongs", ["worker-git-scope-guard"]))
+            "written, but no branch names were parsed - a scalar where a "
+            "sequence belongs, or a blank value", ["worker-git-scope-guard"]))
     else:
         result["rows"].append(_row(
             "protected-branches", "armed", ", ".join(branches),
@@ -326,6 +339,11 @@ def evaluate(project_dir, modules):
     isolate_mode, isolate_types = isolation._load_activation(project_dir)
     if "isolate" not in present:
         result["rows"].append(_row("isolate", "not configured", "", ["worktree-isolation"]))
+    elif isolate_mode == "off" and is_explicit_empty_list(
+            text, "isolate", isolation.atelier_local.parse_key):
+        result["rows"].append(_row(
+            "isolate", "off (explicit)",
+            "written as an empty list - deliberately off", ["worktree-isolation"]))
     elif isolate_mode == "off":
         result["rows"].append(_row(
             "isolate", "inert",
@@ -776,8 +794,8 @@ def main(argv=None, out=None):
                         help="overwrite an existing activation file")
 
     check = sub.add_parser(
-        "check", help="report what each key actually resolves to: armed, inert, or "
-                      "not configured")
+        "check", help="report what each key actually resolves to: armed, inert, "
+                      "off (explicit), or not configured")
 
     setup = sub.add_parser("codex-setup", help="generate Codex roles and writable roots")
     setup.add_argument("--refresh-global", action="store_true",

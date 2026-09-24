@@ -213,8 +213,18 @@ class CheckTests(_Base):
         self.assertEqual(code, 0, output)
         self.assertIn("not configured", self.row(output, "protected-branches"))
 
-    def test_protected_branches_written_but_unparseable_is_inert(self):
+    def test_protected_branches_explicit_empty_list_is_off_not_inert(self):
+        """`[]` is the documented off value (SKILL.md), not a mistake."""
         self.write("---\nprotected-branches: []\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "protected-branches")
+        self.assertIn("off (explicit)", row)
+        self.assertNotIn("inert", row)
+
+    def test_protected_branches_scalar_is_inert(self):
+        """A scalar where a sequence belongs is a genuine mistake, unlike `[]`."""
+        self.write("---\nprotected-branches: main\n---\n")
         code, output = self.check()
         self.assertEqual(code, 1, output)
         self.assertIn("inert", self.row(output, "protected-branches"))
@@ -225,6 +235,21 @@ class CheckTests(_Base):
         code, output = self.check()
         self.assertEqual(code, 0, output)
         self.assertIn("armed", self.row(output, "protected-branches"))
+
+    def test_isolate_explicit_empty_list_is_off_not_inert(self):
+        """`[]` is the documented off value (SKILL.md), not a mistake."""
+        self.write("---\nisolate: []\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 0, output)
+        row = self.row(output, "isolate")
+        self.assertIn("off (explicit)", row)
+        self.assertNotIn("inert", row)
+
+    def test_isolate_unknown_word_is_inert(self):
+        self.write("---\nisolate: bogus\n---\n")
+        code, output = self.check()
+        self.assertEqual(code, 1, output)
+        self.assertIn("inert", self.row(output, "isolate"))
 
     def test_the_two_protected_keys_do_not_bleed_into_each_other(self):
         self.write("---\nenforce: strict\nprotected:\n  - Makefile\n"
