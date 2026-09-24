@@ -793,7 +793,18 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
                 any(path.parent == global_agents for path in planned_roles)):
             raise ValueError("stale global Codex profiles; rerun with --refresh-global")
         additions = []
-        block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(writable)
+        # Atelier writes its own roots first, so the block's leading len(writable) entries are
+        # atelier's (whatever they resolved to before a move); later string roots are the user's,
+        # deduplicated by the directory they name. Everything else leaves the block, named.
+        kept = []
+        seen = {os.path.realpath(path) for path in writable}
+        for path in configured[len(writable):] if managed else []:
+            if isinstance(path, str) and os.path.realpath(os.path.expanduser(path)) not in seen:
+                seen.add(os.path.realpath(os.path.expanduser(path)))
+                kept.append(path)
+        dropped = [path for path in configured if managed and path not in writable + kept]
+        block = marker + "[sandbox_workspace_write]\nwritable_roots = " + json.dumps(
+            writable + kept, ensure_ascii=False)
         new_text = text
         if managed:
             new_text = text[:managed[0]] + block + "\n" + text[managed[1]:]
@@ -808,7 +819,7 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
         except tomllib.TOMLDecodeError as exc:
             composed = exc
         if new_text != text and (not isinstance(composed, dict) or missing and composed.get(
-                "sandbox_workspace_write", {}).get("writable_roots") != writable):
+                "sandbox_workspace_write", {}).get("writable_roots") != writable + kept):
             print("ERROR  refusing to write {0}: the updated config would not parse to these "
                   "writable_roots ({1}); add them by hand: {2}".format(
                       config, composed if not isinstance(composed, dict) else "wrong value",
@@ -823,6 +834,12 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
               + (", ".join(str(path) for path in changed) if changed else "current"), file=out)
         print(("needs " if check and missing else "ok    ") + " Codex writable roots: "
               + json.dumps(writable), file=out)
+        if kept:
+            print("kept   user writable roots in atelier's block: "
+                  + json.dumps(kept, ensure_ascii=False), file=out)
+        if dropped:
+            print("dropped roots from atelier's block: "
+                  + json.dumps(dropped, ensure_ascii=False, default=str), file=out)
         print(("needs " if check and agents is None else "ok    ")
               + " Codex manager depth: agents.max_depth = "
               + str(2 if agents is None else agents["max_depth"]), file=out)

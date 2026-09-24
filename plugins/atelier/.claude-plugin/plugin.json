@@ -4,5 +4,5 @@
   },
   "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, hold protected config in custody, and refuse a worker git call that would sweep away a sibling's uncommitted work or land on a protected branch. Enforcement follows the main checkout into a linked worktree, so an isolated worker is no longer an unguarded one. Run /atelier:activate to arm it in a project and see what each hook resolved. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "atelier",
-  "version": "0.37.3"
+  "version": "0.37.11"
 }

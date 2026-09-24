@@ -31,6 +31,7 @@ on a deny and nothing otherwise, and always exits 0 — a guard that crashes mus
 the Bash tool.
 """
 
+import codecs
 import json
 import os
 import re
@@ -57,6 +58,13 @@ STASH_MUTATORS = {"push", "pop", "apply", "drop", "clear", "branch", "save",
 
 # The stash forms that take entries OFF the repo-wide stack, which every worktree shares.
 STASH_DESTROYERS = {"pop", "drop", "clear", "branch"}
+
+# `bash`/`sh`/`zsh -c '<string>'` re-enter invocations() on the string, so a git call
+# quoted past the outer shlex split is still seen.
+SHELLS = {"bash", "sh", "zsh"}
+
+# The stash stack is also reachable through raw ref plumbing, not just `git stash`.
+STASH_REF = re.compile(r"^(refs/)?stash(@\{.*\})?$")
 
 # git global options that consume a following value (skipped when locating the subcommand)
 VALUE_OPTS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
@@ -115,12 +123,13 @@ def _load_protected_branches(project_dir):
 # (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(\r?)(?=\s|$)")
 
 
 def _scan_line(line, quote):
-    """(the first heredoc terminator this line opens, the quote state at its end,
-    whether it ends in a line continuation), given the quote state it starts in.
+    """(the heredoc terminators this line opens, each `(word, quoted, dash)`,
+    the quote state at its end, whether it ends in a line continuation), given the
+    quote state it starts in.
 
     An opener counts only outside quotes and outside a comment, and never with an
     all-digit word or inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
@@ -129,7 +138,7 @@ def _scan_line(line, quote):
     of the line, after whitespace or after one of `;&|()` runs to the line end, so an
     apostrophe in a comment opens no quote.
     """
-    terminator = None
+    terminators = []
     i = 0
     while i < len(line):
         char = line[i]
@@ -140,7 +149,7 @@ def _scan_line(line, quote):
                 i += 1
         elif char == "\\":
             if i == len(line) - 1:
-                return terminator, quote, True
+                return terminators, quote, True
             i += 1
         elif line.startswith("$'", i):
             quote = "$'"
@@ -152,13 +161,45 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(1).isdigit()
+            if (m and not m.group(3).isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                terminator = terminator or m.group(1)
+                # bash keeps a CRLF opener's `\r` in the word
+                terminators.append((m.group(3) + m.group(4), bool(m.group(2)),
+                                    bool(m.group(1))))
                 i = m.end()
                 continue
         i += 1
-    return terminator, quote, False
+    return terminators, quote, False
+
+
+def _body_end(lines, j, word, quoted, dash):
+    """The index of the line that closes a heredoc body starting at `lines[j]`,
+    or None. As in bash, under an unquoted word a line ending in an odd run of
+    backslashes joins the next first, and the result must equal the word
+    exactly, after only its leading tabs are removed under `<<-`."""
+    while j < len(lines):
+        line = lines[j]
+        while (not quoted and j + 1 < len(lines)
+               and (len(line) - len(line.rstrip("\\"))) % 2):
+            j += 1
+            line = line[:-1] + lines[j]
+        if (line.lstrip("\t") if dash else line) == word:
+            return j
+        j += 1
+    return None
+
+
+def _skip_bodies(lines, i, terminators):
+    """The index after the last of the heredoc bodies that `terminators`
+    opened on one line, read in order from `lines[i]`; `i` itself when one is
+    never closed, since dropping text is a silent fail-open."""
+    j = i
+    for terminator in terminators:
+        j = _body_end(lines, j, *terminator)
+        if j is None:
+            return i
+        j += 1
+    return j
 
 
 def strip_heredocs(command):
@@ -169,23 +210,20 @@ def strip_heredocs(command):
     continuations after its opener. Only drops when the terminator is actually
     found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
     since dropping text here is a silent fail-open and keeping it is at worst an
-    over-deny.
+    over-deny. Bodies opened on one line follow in order, and each ends where
+    bash ends it (`_body_end`).
     """
     lines = command.split("\n")
-    out, quote, pending, i = [], None, None, 0
+    out, quote, pending, i = [], None, [], 0
     while i < len(lines):
         out.append(lines[i])
-        terminator, quote, continued = _scan_line(lines[i], quote)
+        terminators, quote, continued = _scan_line(lines[i], quote)
         i += 1
-        pending = pending or terminator
+        pending += terminators
         if not pending or quote or continued:
             continue
-        j = i
-        while j < len(lines) and lines[j].strip() != pending:
-            j += 1
-        if j < len(lines):
-            i = j + 1  # skip the body and the terminator line
-        pending = None
+        i = _skip_bodies(lines, i, pending)  # each body and its terminator line
+        pending = []
     return "\n".join(out)
 
 
@@ -204,6 +242,115 @@ def _cd_resolves(ctx, target):
     return os.path.isdir(os.path.normpath(os.path.join(ctx, target)))
 
 
+def _dash_c_string(toks):
+    """The string argument to a shell's `-c`, when `toks` contains `<bash|sh|zsh> ...
+    -c <string> ...`, else None. The caller passes only the tokens before any git word.
+    The shell word need not be first —
+    `env bash -c ...`, `sudo bash -c ...`, `timeout 5 bash -c ...` all count. Matches a
+    bare `-c` or a single-dash flag cluster containing it (`-lc`); a positional token
+    before `-c` (a script path) means this is not the `-c` form at all, so scanning
+    stops there rather than matching a later unrelated `-c`. `-c --` is real bash's way
+    of saying the very next token is the string, even though it looks like an option.
+    """
+    start = next((k for k, t in enumerate(toks)
+                  if os.path.basename(t).lower() in SHELLS), None)
+    if start is None:
+        return None
+    i = start + 1
+    while i < len(toks):
+        t = toks[i]
+        if t in ("-o", "+o", "-O", "+O"):
+            i += 2  # `-o pipefail` / `-O extglob` consumes a value
+            continue
+        if t in ("--rcfile", "--init-file"):
+            i += 2  # consumes a filename
+            continue
+        if t.startswith("--") and t != "--":
+            i += 1  # a long option (`--norc`) is never the `-c` cluster
+            continue
+        if t[:1] not in ("-", "+") or t == "--":
+            return None
+        if "c" in t[1:]:
+            j = i + 1
+            if j < len(toks) and toks[j] == "--":
+                j += 1
+            return toks[j] if j < len(toks) else None
+        i += 1
+    return None
+
+
+def _split_commands(command):
+    """Split on `&&`, `||`, `;`, `|`, `&`, `(`, `)` and newline, but only outside a
+    quoted string or a comment, so a separator quoted inside a `-c` string
+    (`bash -c 'a && b'`) stays in that one token. Quoting, escapes and the comment rule
+    follow `_scan_line`; a separate tracker because that one scans a single physical
+    line for heredoc openers, while this one must see the newlines inside a quote.
+    """
+    parts, buf, quote, i, n = [], [], None, 0, len(command)
+    while i < n:
+        char = command[i]
+        if quote:
+            buf.append(char)
+            if char == quote[-1]:
+                quote = None
+            elif char == "\\" and quote != "'":
+                i += 1
+                if i < n:
+                    buf.append(command[i])
+            i += 1
+            continue
+        if char == "\\":
+            buf.append(char)
+            i += 1
+            if i < n:
+                buf.append(command[i])
+                i += 1
+            continue
+        if command.startswith("$'", i):
+            quote = "$'"
+            buf.append("$'")
+            i += 2
+            continue
+        if char in "'\"":
+            quote = char
+            buf.append(char)
+            i += 1
+            continue
+        if char == "#" and (i == 0 or command[i - 1] in " \t\n;&|()"):
+            # a comment runs to the line end (the `_scan_line` rule): an apostrophe or
+            # a separator inside it is prose, not shell
+            end = command.find("\n", i)
+            i = n if end < 0 else end
+            continue
+        if command.startswith("&&", i) or command.startswith("||", i):
+            parts.append("".join(buf))
+            buf = []
+            i += 2
+            continue
+        # a lone `&` (background), and `(`/`)` of a subshell or `$(...)`, start a new
+        # command too; a redirect's `&` (`2>&1`) splits off only a harmless fragment
+        if char in ";|&()\n":
+            parts.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(char)
+        i += 1
+    parts.append("".join(buf))
+    return parts
+
+
+def _ansi_c(part):
+    """`part` with each `$'...'` rewritten as a plain single-quoted string, escapes
+    decoded — what bash hands the command, and a form shlex (which knows only the
+    plain quotes) reads as one token instead of `$` glued to the literal body.
+    """
+    def plain(match):
+        body = codecs.decode(match.group(1), "unicode_escape", "replace")
+        return "'" + body.replace("'", "'\\''") + "'"
+    return re.sub(r"\$'((?:[^'\\]|\\.)*)'", plain, part)
+
+
 def invocations(command, cwd):
     """Yield (subcommand, args, resolved_dir) for each git call in a shell command.
 
@@ -211,14 +358,20 @@ def invocations(command, cwd):
     how `git -C` already does; an ambiguous target (bare `cd`, `cd -`, an unresolved
     env var / `~` / `..`, or a nonexistent relative path) leaves it unchanged rather
     than guess — the base cwd is always at least as safe as a wrong guess.
+
+    A `bash`/`sh`/`zsh -c '<string>'` wrapper recurses on the string (with the same
+    `cd`-tracked directory), so a git call quoted past the outer shlex split is still
+    found; heredoc-stripping and every later rule apply to it exactly as if it had been
+    the top-level command.
     """
     command = strip_heredocs(command)
     ctx = cwd
-    # ponytail: splits on raw text, so a separator INSIDE a quoted arg still fragments
-    # the command and can hide a real invocation; a real shell tokenizer would close this
-    for part in re.split(r"&&|\|\||;|\||\n", command):
+    # ponytail: a hand-rolled quote tracker, not a real shell grammar — `$(...)`/backtick
+    # substitution and a `(...)` subshell are not unwrapped; upgrade to a real tokenizer
+    # if those start hiding a real invocation.
+    for part in _split_commands(command):
         try:
-            toks = shlex.split(part)
+            toks = shlex.split(_ansi_c(part))
         except ValueError:
             toks = part.split()
         while toks and toks[0] == "cd":
@@ -228,9 +381,20 @@ def invocations(command, cwd):
                 ctx = (target if target.startswith("/")
                        else os.path.normpath(os.path.join(ctx, target)))
             toks = toks[consumed:]
-        if "git" not in toks:
+        # basename, not a literal "git" token: matches `/usr/bin/git` too, and still
+        # excludes a quoted prose string (shlex hands that back as one multi-word token).
+        # Lowercased: a case-insensitive filesystem runs `GIT` as git.
+        git_at = next((i for i, t in enumerate(toks)
+                       if os.path.basename(t).lower() == "git"), None)
+        # A shell is a wrapper only BEFORE git; after it (`git -C sh -c k=v stash drop`)
+        # it is git's own argument, and the outer git call is the one to check.
+        wrapped = _dash_c_string(toks[:git_at] if git_at is not None else toks)
+        if wrapped is not None:
+            yield from invocations(wrapped, ctx)
             continue
-        toks = toks[toks.index("git"):]
+        if git_at is None:
+            continue
+        toks = toks[git_at:]
         cdir, i = None, 1
         while i < len(toks):
             t = toks[i]
@@ -265,6 +429,33 @@ def stash_moves_work(args):
     run buys nothing.
     """
     return not args or args[0].startswith("-") or args[0] in STASH_MUTATORS
+
+
+def stash_ref_mutated(sub, args):
+    """True for `update-ref`/`reflog delete|expire` naming the shared stash ref —
+    the same repo-wide hazard as STASH_DESTROYERS, reached without the word `stash`.
+    `reflog expire --all` counts: it reaches refs/stash without naming it.
+    `reflog show` and a bare `reflog` are reads and stay allowed.
+    """
+    if sub == "update-ref":
+        # `-m <reason>` is a reflog message, not a ref: its value must not be matched
+        # against STASH_REF just because it happens to spell "stash".
+        # The first positional is the ref being written or deleted; a later one is a
+        # value (`update-ref refs/heads/rescue stash` saves the stash, a safe move).
+        # `-m <reason>` is a reflog message, so its value is skipped too.
+        skip = False
+        for a in args:
+            if skip:
+                skip = False
+            elif a == "-m":
+                skip = True
+            elif not a.startswith("-"):
+                return bool(STASH_REF.match(a))
+        return False
+    if sub == "reflog":
+        return (bool(args) and args[0] in {"delete", "expire"}
+                and any(STASH_REF.match(a) or a == "--all" for a in args[1:]))
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +585,8 @@ def decide(data, branch_of, shared_of, protected, owns):
                 continue
             if shared or not owns(where):
                 return _deny_stash()
+        elif stash_ref_mutated(sub, args):
+            return _deny_stash()  # ref plumbing reaching the same repo-wide stack
         elif sub in WRITE_SUBS:
             if protected and branch_of(where) in protected:
                 return _deny_branch(
@@ -490,13 +683,13 @@ def main():
                 print(json.dumps(codex_workers.deny(exc)))
                 return
 
-        # `invocations` can only yield on a literal `git` token, so without one there is
-        # nothing to decide — and this hook runs on EVERY Bash call, so the file read and
-        # the main-checkout lookup behind it must not.
+        # Without a `git` substring (case-folded: `GIT`/`Git` run the same binary) there is
+        # nothing `invocations` can find — and this hook runs on EVERY Bash call, so the
+        # file read and the main-checkout lookup behind it must not run needlessly.
         command = (data.get("tool_input") or {}).get("command") or ""
         protected = (_load_protected_branches(data.get("cwd") if codex_workers.is_codex(data)
                                             else _resolve_project_dir(data.get("cwd")))
-                     if "git" in command else frozenset())
+                     if "git" in command.lower() else frozenset())
         out = decide(data, current_branch, shared_tree, protected, owns_resolver(data))
         if out is not None:
             print(json.dumps(out))

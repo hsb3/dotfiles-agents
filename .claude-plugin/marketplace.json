@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "metadata": {
-    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), and plugin-feedback (report a plugin defect without leaving the session).",
+    "description": "Plugins for coding sessions: solo-skills (every skill that stands alone with no topical plugin, in one install), code-desk (quality contract, focus, and status comms), board-desk (task authoring, board health, triage and GitHub reconciliation), diagrams (structural diagrams), atelier (tiered delegation agents and session-discipline hooks), mise-en-place (an in-repo _meta planning system for board-less repos), obsidian-toolkit (Obsidian plugin development), pocketbase (build and operate PocketBase backends), carbon (IBM Carbon Design System via the hosted Carbon MCP server), bun (the bun toolchain as the default JS and TS runtime), plugin-feedback (report a plugin defect without leaving the session), and worktree-root (opt-in: Claude Code worktrees under the project checkout-root).",
     "version": "0.13.1"
   },
   "name": "dotfiles-agents",
@@ -16,7 +16,7 @@
       "description": "Delegate work to model-tiered agents instead of doing it all in one session: size the task, pick a delegation architecture, and dispatch scoped slices to scouts, builders, reviewers, and managers. Skills cover orchestration, session handoff, backlog waves, and a review cycle that runs before work lands. Hooks watch the context watermark, keep the handoff fresh and surface it on cold start, isolate writing workers in their own git worktrees, hold protected config in custody, and refuse a worker git call that would sweep away a sibling's uncommitted work or land on a protected branch. Enforcement follows the main checkout into a linked worktree, so an isolated worker is no longer an unguarded one. Run /atelier:activate to arm it in a project and see what each hook resolved. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "atelier",
       "source": "./plugins/atelier",
-      "version": "0.37.3"
+      "version": "0.37.11"
     },
     {
       "author": {
@@ -52,7 +52,7 @@
       "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, recurring status comms and authored presentations with portable PptxGenJS packages, existing-deck editing and rendered verification, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.14.5"
+      "version": "0.14.7"
     },
     {
       "author": {
@@ -97,7 +97,7 @@
       "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes), a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment, and three subject-matter agents that carry the backend laws into a delegated brief: a builder, an adversarial reviewer, and a security auditor, each proving its claims from its own clean-room server. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "pocketbase",
       "source": "./plugins/pocketbase",
-      "version": "0.3.7"
+      "version": "0.3.9"
     },
     {
       "author": {
@@ -107,6 +107,15 @@
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
       "version": "0.16.2"
+    },
+    {
+      "author": {
+        "name": "Henry S. Burden III"
+      },
+      "description": "Put Claude Code worktrees under the project checkout-root instead of .claude/worktrees: one hook creates them with native branch naming, base ref and .worktreeinclude copying, refuses a bad root or name loudly, and removes a clean agent worktree when the subagent stops. Opt-in per project. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
+      "name": "worktree-root",
+      "source": "./plugins/worktree-root",
+      "version": "0.1.1"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "atelier",
-  "version": "0.37.3",
+  "version": "0.37.11",
   "description": "Delegate scoped work to isolated native Codex workers with Atelier roles, review workflows and project safeguards.",
   "skills": "./skills",
   "hooks": "./hooks/codex-hooks.json"

@@ -32,6 +32,7 @@ it. Every caller therefore wraps its call in its own fail-open handler.
 
 import json
 import os
+import re
 
 import agentlog
 
@@ -269,6 +270,123 @@ def settled_ids(tail_bytes=TAIL_BYTES):
                     if key:
                         settled.add(key)
     return settled
+
+
+NOTIFICATION_OPEN = "<task-notification>"
+_HEADER_END_RE = re.compile(r"<result>|</task-notification>")
+_TASK_ID_RE = re.compile(r"<task-id>\s*([^<\s]+)\s*</task-id>")
+_STATUS_RE = re.compile(r"<status>\s*([^<\s]*)\s*</status>")
+
+
+def _reopened_by_notification(text):
+    """Agent key a notification reports in any state but killed, else None.
+
+    Only the FIRST block's header counts (text before its `<result>`): an
+    agent's final text inside `<result>` can quote other notifications.
+    """
+    if not isinstance(text, str):
+        return None
+    at = text.find(NOTIFICATION_OPEN)
+    if at == -1:
+        return None
+    head = _HEADER_END_RE.split(text[at + len(NOTIFICATION_OPEN):], 1)[0]
+    task_id = _TASK_ID_RE.search(head)
+    status = _STATUS_RE.search(head)
+    if not task_id or (status and status.group(1) == "killed"):
+        return None
+    return agent_key(task_id.group(1))
+
+
+def _answers(obj, use_ids):
+    """True when a `user` line carries a tool_result for one of `use_ids`."""
+    message = obj.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    return any(isinstance(block, dict) and block.get("type") == "tool_result"
+               and isinstance(block.get("tool_use_id"), str)
+               and block["tool_use_id"] in use_ids
+               for block in (content if isinstance(content, list) else ()))
+
+
+def stopped_ids(transcript_path, candidates):
+    """The subset of `candidates` the session transcript shows stopped.
+
+    A TaskStop'd agent fires no SubagentStop (measured on Claude Code
+    2.1.281), so the ledger never settles it. Exactly one record settles it
+    here: the TaskStop success result, a `user` line whose
+    `toolUseResult.task_id` is the agent, whose message starts
+    "Successfully stopped task", and whose `tool_result.tool_use_id` answers
+    an earlier assistant `tool_use` named TaskStop. Sidechain lines count: a
+    nested caller's transcript is nothing else. A `<task-notification>` never settles, since
+    a queued prompt or an agent's quoted output can carry the same text.
+
+    Known limit: an agent killed by the user rather than by TaskStop stays
+    live here (it too fires no SubagentStop, assumed, not measured), until
+    its ledger stop row or a stall row settles it.
+
+    Any of these LATER records re-opens it, until its own SubagentStop settles
+    it normally: an assistant `SendMessage` whose `input.to` is the id; a
+    `toolUseResult.resumedAgentId` naming it (measured: SendMessage addressed
+    by NAME leaves only this); a notification for it, in any record kind,
+    whose first header does not say `killed` (the "was resumed by the user"
+    notification is inferred from the 2.1.281 binary, not measured).
+    Reading every notification copy only ever fails closed.
+
+    Read whole, in order: not tail-bounded, because a kill aging out of a
+    window would re-block on an agent that is long dead. Lines naming no
+    candidate are skipped before parsing. A missing or unreadable transcript
+    yields the empty set, per the module's convention: it only ever removes
+    agents from the pending set, so "cannot tell" leaves the ledger's answer.
+    """
+    wanted = {k for k in (agent_key(c) for c in candidates or ()) if k}
+    stopped = set()
+    if not wanted or not transcript_path:
+        return stopped
+    taskstop_uses = set()  # tool_use ids of TaskStop calls; their input names the id
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if not any(k in line for k in wanted):
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (ValueError, RecursionError):
+                    continue
+                if not isinstance(obj, dict):
+                    continue
+                kind = obj.get("type")
+                text = None
+                if kind == "user":
+                    result = obj.get("toolUseResult")
+                    if isinstance(result, dict):
+                        key = agent_key(result.get("task_id"))
+                        message = result.get("message")
+                        if (key in wanted and isinstance(message, str)
+                                and message.startswith("Successfully stopped task")
+                                and _answers(obj, taskstop_uses)):
+                            stopped.add(key)
+                        stopped.discard(agent_key(result.get("resumedAgentId")))
+                    message = obj.get("message")
+                    text = message.get("content") if isinstance(message, dict) else None
+                elif kind == "queue-operation":
+                    text = obj.get("content")
+                elif kind == "attachment":
+                    attachment = obj.get("attachment")
+                    text = attachment.get("prompt") if isinstance(attachment, dict) else None
+                elif kind == "assistant":
+                    message = obj.get("message")
+                    content = message.get("content") if isinstance(message, dict) else None
+                    for block in content if isinstance(content, list) else ():
+                        if not (isinstance(block, dict) and block.get("type") == "tool_use"):
+                            continue
+                        if block.get("name") == "TaskStop" and isinstance(block.get("id"), str):
+                            taskstop_uses.add(block["id"])
+                        elif (block.get("name") == "SendMessage"
+                                and isinstance(block.get("input"), dict)):
+                            stopped.discard(agent_key(block["input"].get("to")))
+                stopped.discard(_reopened_by_notification(text))
+    except OSError:
+        return set()
+    return stopped
 
 
 def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES):

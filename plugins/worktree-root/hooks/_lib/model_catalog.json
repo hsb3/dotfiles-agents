@@ -1,0 +1,214 @@
+{
+  "active_provider": "anthropic",
+  "catalog_source": "https://models.dev/api.json",
+  "providers": {
+    "anthropic": {
+      "claude-fable-5": {
+        "context": 1000000
+      },
+      "claude-fable-5-1": {
+        "context": 1000000
+      },
+      "claude-haiku-4-5": {
+        "context": 200000
+      },
+      "claude-haiku-4-5-20251001": {
+        "context": 200000
+      },
+      "claude-opus-4-5": {
+        "context": 200000
+      },
+      "claude-opus-4-5-20251101": {
+        "context": 200000
+      },
+      "claude-opus-4-6": {
+        "context": 1000000
+      },
+      "claude-opus-4-7": {
+        "context": 1000000
+      },
+      "claude-opus-4-8": {
+        "context": 1000000
+      },
+      "claude-opus-5": {
+        "context": 1000000
+      },
+      "claude-opus-5-5": {
+        "context": 1000000
+      },
+      "claude-sonnet-4-5": {
+        "context": 1000000
+      },
+      "claude-sonnet-4-5-20250929": {
+        "context": 1000000
+      },
+      "claude-sonnet-4-6": {
+        "context": 1000000
+      },
+      "claude-sonnet-5": {
+        "context": 1000000
+      }
+    },
+    "openai": {
+      "gpt-3.5-turbo": {
+        "context": 16385
+      },
+      "gpt-4": {
+        "context": 8192
+      },
+      "gpt-4-turbo": {
+        "context": 128000
+      },
+      "gpt-4.1": {
+        "context": 1047576
+      },
+      "gpt-4.1-mini": {
+        "context": 1047576
+      },
+      "gpt-4.1-nano": {
+        "context": 1047576
+      },
+      "gpt-4o": {
+        "context": 128000
+      },
+      "gpt-4o-2024-05-13": {
+        "context": 128000
+      },
+      "gpt-4o-2024-08-06": {
+        "context": 128000
+      },
+      "gpt-4o-2024-11-20": {
+        "context": 128000
+      },
+      "gpt-4o-mini": {
+        "context": 128000
+      },
+      "gpt-5": {
+        "context": 400000
+      },
+      "gpt-5-mini": {
+        "context": 400000
+      },
+      "gpt-5-nano": {
+        "context": 400000
+      },
+      "gpt-5-pro": {
+        "context": 400000
+      },
+      "gpt-5.1": {
+        "context": 400000
+      },
+      "gpt-5.2": {
+        "context": 400000
+      },
+      "gpt-5.2-chat-latest": {
+        "context": 128000
+      },
+      "gpt-5.2-pro": {
+        "context": 400000
+      },
+      "gpt-5.3-chat-latest": {
+        "context": 128000
+      },
+      "gpt-5.3-codex": {
+        "context": 400000
+      },
+      "gpt-5.3-codex-spark": {
+        "context": 128000
+      },
+      "gpt-5.4": {
+        "context": 1050000
+      },
+      "gpt-5.4-mini": {
+        "context": 400000
+      },
+      "gpt-5.4-nano": {
+        "context": 400000
+      },
+      "gpt-5.4-pro": {
+        "context": 1050000
+      },
+      "gpt-5.5": {
+        "context": 1050000
+      },
+      "gpt-5.5-pro": {
+        "context": 1050000
+      },
+      "gpt-5.6": {
+        "context": 1050000
+      },
+      "gpt-5.6-luna": {
+        "context": 1050000
+      },
+      "gpt-5.6-sol": {
+        "context": 1050000
+      },
+      "gpt-5.6-terra": {
+        "context": 1050000
+      },
+      "gpt-6-astra": {
+        "context": 1050000
+      },
+      "gpt-realtime-2.1": {
+        "context": 128000
+      },
+      "o1": {
+        "context": 200000
+      },
+      "o1-pro": {
+        "context": 200000
+      },
+      "o3": {
+        "context": 200000
+      },
+      "o3-mini": {
+        "context": 200000
+      },
+      "o3-pro": {
+        "context": 200000
+      },
+      "o4-mini": {
+        "context": 200000
+      },
+      "text-embedding-3-large": {
+        "context": 8191
+      },
+      "text-embedding-3-small": {
+        "context": 8191
+      },
+      "text-embedding-ada-002": {
+        "context": 8192
+      }
+    }
+  },
+  "tiers": {
+    "light": {
+      "claude_code_keyword": "haiku",
+      "models": {
+        "anthropic": "claude-haiku-4-5",
+        "openai": "gpt-5.6-luna"
+      }
+    },
+    "mid": {
+      "claude_code_keyword": "sonnet",
+      "models": {
+        "anthropic": "claude-sonnet-5",
+        "openai": "gpt-5.6-terra"
+      }
+    },
+    "heavy": {
+      "claude_code_keyword": "opus",
+      "models": {
+        "anthropic": "claude-opus-5",
+        "openai": "gpt-5.6-sol"
+      }
+    },
+    "frontier": {
+      "claude_code_keyword": "fable",
+      "models": {
+        "anthropic": "claude-fable-5",
+        "openai": "gpt-6-astra"
+      }
+    }
+  }
+}
