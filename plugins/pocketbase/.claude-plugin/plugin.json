@@ -4,5 +4,5 @@
   },
   "description": "Build and operate PocketBase backends: an operational skill for driving a running instance (collection and record CRUD, auth, backups, migration generation, Go hooks and custom routes), a design skill of 63 prioritized rules for schema, API rules, auth flows, query performance, realtime, files, and deployment, and three subject-matter agents that carry the backend laws into a delegated brief: a builder, an adversarial reviewer, and a security auditor, each proving its claims from its own clean-room server. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "pocketbase",
-  "version": "0.3.7"
+  "version": "0.3.8"
 }
