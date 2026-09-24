@@ -19,6 +19,16 @@ What this proves, per plugin listed in `plugins/`:
   3. When anything differs, `plugins/<id>/.claude-plugin/plugin.json`'s `version` must
      differ from the published manifest's. An unmoved version is the violation.
 
+A SECOND STAGE compares against the PR base, `origin/dev`, read by the same fetch, ref and
+sync-stamp contract (its stamp is `version-bump-published-sync-dev`); dev's `plugins/` are
+symlinks, so its tree is extracted and walked exactly like the working tree. Two PRs that
+each bump a plugin to the same unpublished version both pass against `main`, and the second
+merge then ships two changes under one version. So a bundle whose bytes differ from dev's
+must carry a version GREATER than dev's; one identical to dev's, or absent on dev, owes this
+stage nothing.
+Versions are ordered as dotted non-negative ints (zero-padded); one that does not parse cannot
+be ordered, and is red.
+
 `main` is a FILTERED, PARENTED assembly, never a snapshot of `dev`: its `plugins/` are
 dereferenced regular files where `dev`'s are symlinks, and nothing else from `dev` is on
 it. So this never whole-tree diffs the two branches — only plugin subtrees, dereferenced
@@ -86,13 +96,15 @@ Deliberately NOT covered: parity between `plugin.json` and the root
 `.claude-plugin/marketplace.json` entry, which `scripts/check_catalog.py` already enforces
 (`version_problems()`) in the same CI job — with it, a bump proven here in `plugin.json`
 must appear in `marketplace.json` too, and a disagreement between the two is red there.
-Also not covered: version ORDERING (a version that moved backwards is a distinct version,
-so consumers still refetch); file modes; a plugin published on `main` but deleted on `dev`
+Also not covered against `main`: version ORDERING (a version that moved backwards is a
+distinct version, so consumers still refetch) — ordering is checked only against `dev`; file
+modes; a plugin published on `main` but deleted on `dev`
 (a removal has no version to bump); and anything outside `plugins/`.
 
 **NO SEMVER SEMANTICS, by design (decision-017).** This gate proves MOVEMENT and nothing
 else: it never reads major/minor/patch, so passing here says nothing about whether the digit
-that moved was the right one. Which digit a dual-homed change earns — owning bundle minor,
+that moved was the right one. The dev stage orders versions but likewise never grades which
+digit moved. Which digit a dual-homed change earns — owning bundle minor,
 carrying bundle patch, both minor for genuinely new capability in both, never "incidental"
 for a breaking change — is convention enforced by review and stated in the `publish-to-main`
 skill, where a session reads it before bumping. Grading a digit would require inferring
@@ -109,10 +121,13 @@ Usage: python3 scripts/check_version_bump.py   (run from anywhere)
 """
 
 import hashlib
+import io
 import json
 import os
 import subprocess
 import sys
+import tarfile
+import tempfile
 import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -135,6 +150,8 @@ SECONDS_PER_DAY = 86400
 # Where that sync is recorded: one line, unix seconds, under the git COMMON dir, so linked
 # worktrees share the record exactly as they share the remote-tracking ref it describes.
 SYNC_STAMP_NAME = "version-bump-published-sync"
+BASE_BRANCH = "dev"
+BASE_REF = f"{PUBLISHED_REMOTE}/{BASE_BRANCH}"
 
 # Mirrors the .gitignore rules that can surface inside a dereferenced plugins/ walk:
 # `cp -RL` copies them onto the publish tree, `git add -A` then drops them, so they are
@@ -266,19 +283,26 @@ def parse_ls_tree(out):
 
 
 class GitPublishedTree:
-    """The published plugins as they exist on `origin/main`, read through git.
+    """The plugins as they exist on `origin/<branch>` (default `main`), read through git.
 
     `prepare()` is the network step and the only one that can decline: it returns None when
     the ref is usable (leaving an advisory `note`), or a human-readable reason string when
     the published tree cannot be reached at all.
 
-    Every git command names `PUBLISHED_FULL_REF`; `self.ref` is the short form and belongs
+    Every git command names `self.full_ref`; `self.ref` is the short form and belongs
     in messages only. `stamp_path` is injectable so the sync record can be driven without
     a real git dir.
     """
 
-    def __init__(self, ref=PUBLISHED_REF, repo=None, run=None, stamp_path=None):
-        self.ref = ref
+    def __init__(self, ref=None, repo=None, run=None, stamp_path=None, branch=PUBLISHED_BRANCH):
+        self.branch = branch
+        self.ref = ref or f"{PUBLISHED_REMOTE}/{branch}"
+        self.full_ref = f"refs/remotes/{PUBLISHED_REMOTE}/{branch}"
+        # main keeps the original name so existing clones keep their sync record.
+        self.stamp_name = SYNC_STAMP_NAME + ("" if branch == PUBLISHED_BRANCH else f"-{branch}")
+        # main holds dereferenced files; any other branch is the symlink assembly itself.
+        self.dereference = branch != PUBLISHED_BRANCH
+        self._manifests = {}
         self.repo = repo or REPO
         self.note = ""
         self._run = run or (lambda args: run_git(args, repo=self.repo))
@@ -295,11 +319,11 @@ class GitPublishedTree:
             # Existence by exact ref path first: `rev-parse --verify` applies all six
             # resolution rules even to a full refname, so with no tracking ref a local
             # branch named `refs/remotes/origin/main` would become the published tree.
-            rc, out, _ = self._git(["show-ref", "--verify", "--quiet", PUBLISHED_FULL_REF])
+            rc, out, _ = self._git(["show-ref", "--verify", "--quiet", self.full_ref])
             if rc == 0:
                 # A second call because `show-ref` takes no `^{commit}` suffix.
                 rc, out, _ = self._git(
-                    ["rev-parse", "--verify", "--quiet", f"{PUBLISHED_FULL_REF}^{{commit}}"]
+                    ["rev-parse", "--verify", "--quiet", f"{self.full_ref}^{{commit}}"]
                 )
             if rc != 0 or not out.strip():
                 detail = f" ({self._fetch_error})" if self._fetch_error else ""
@@ -328,7 +352,7 @@ class GitPublishedTree:
             if gitdir and not os.path.isabs(gitdir):
                 # git resolves it against the directory it ran in, which is `self.repo`.
                 gitdir = os.path.join(self.repo, gitdir)
-            self._stamp_path = os.path.join(gitdir, SYNC_STAMP_NAME) if gitdir else ""
+            self._stamp_path = os.path.join(gitdir, self.stamp_name) if gitdir else ""
         return self._stamp_path
 
     def _remote_url(self):
@@ -431,7 +455,7 @@ class GitPublishedTree:
             args.append("--depth=1")
         args += [
             PUBLISHED_REMOTE,
-            f"+refs/heads/{PUBLISHED_BRANCH}:refs/remotes/{PUBLISHED_REMOTE}/{PUBLISHED_BRANCH}",
+            f"+refs/heads/{self.branch}:{self.full_ref}",
         ]
         rc, _, err = self._git(args)
         if rc != 0:
@@ -444,17 +468,58 @@ class GitPublishedTree:
         self._record_sync()
 
     def index(self):
+        if self.dereference:
+            return self._dereferenced_index()
         rc, out, err = self._git(
-            ["ls-tree", "-r", "-z", self._sha or PUBLISHED_FULL_REF, "--", PUBLISHED_PREFIX]
+            ["ls-tree", "-r", "-z", self._sha or self.full_ref, "--", PUBLISHED_PREFIX]
         )
         if rc != 0:
             raise RuntimeError(f"git ls-tree {self.ref} failed: {err}")
         return parse_ls_tree(out)
 
+    def _dereferenced_index(self):
+        """Extract the whole tree and walk it as `local_index` walks the working tree.
+
+        `ls-tree` would hash a symlink's target PATH, never the bytes it reaches.
+        """
+        if not hasattr(tarfile, "data_filter"):
+            raise RuntimeError(
+                "this Python's tarfile has no extraction filter (needs 3.12, or "
+                "3.8.17/3.9.17/3.10.12/3.11.4+), so dev's tree cannot be safely extracted"
+            )
+        rc, out, err = self._git(["archive", "--format=tar", self._sha or self.full_ref])
+        if rc != 0:
+            raise RuntimeError(f"git archive {self.ref} failed: {err}")
+        with tempfile.TemporaryDirectory(prefix="check-version-bump-") as tmp:
+            try:
+                with tarfile.open(fileobj=io.BytesIO(out)) as tar:
+                    tar.extractall(tmp, filter="data")  # refuses links escaping `tmp`
+            except (tarfile.TarError, OSError) as exc:
+                raise RuntimeError(f"extracting {self.ref} failed: {exc}") from exc
+            plugins = os.path.join(tmp, PUBLISHED_PREFIX)
+            index = local_index(plugins)
+            self._manifests = {pid: local_plugin_json(pid, plugins) for pid in index}
+        return index
+
+    def is_ancestor_of_head(self):
+        """Whether this ref's commit is in HEAD's history; None when git cannot say."""
+        try:
+            rc, out, _ = self._git(["rev-parse", "--is-shallow-repository"])
+            if rc != 0 or out.strip() == b"true":
+                return None  # shallow history hides HEAD's parents, so "no" would lie
+            rc, _, _ = self._git(
+                ["merge-base", "--is-ancestor", self._sha or self.full_ref, "HEAD"]
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        return {0: True, 1: False}.get(rc)
+
     def plugin_json(self, pid):
+        if self.dereference:
+            return self._manifests.get(pid)
         rel = f"{PUBLISHED_PREFIX}/{pid}/.claude-plugin/plugin.json"
         rc, out, _ = self._git(
-            ["cat-file", "blob", f"{self._sha or PUBLISHED_FULL_REF}:{rel}"]
+            ["cat-file", "blob", f"{self._sha or self.full_ref}:{rel}"]
         )
         return out if rc == 0 else None
 
@@ -533,26 +598,100 @@ def compare(local, published, local_json, published_json):
     return problems
 
 
-def main(plugins_dir=None, tree=None, out=print):
-    tree = tree if tree is not None else GitPublishedTree()
+def version_key(version):
+    """Dotted non-negative ints as a tuple (`1.10.0` > `1.9.0`), or None if unorderable.
+
+    Trailing zeros are dropped, which orders exactly like zero-padding (`2.4` == `2.4.0`).
+    """
+    parts = version.strip().split(".")
+    if not all(p.isdigit() and p.isascii() for p in parts):
+        return None
+    key = [int(p) for p in parts]
+    while key and key[-1] == 0:
+        key.pop()
+    return tuple(key)
+
+
+def compare_base(local, base, local_json, base_json, base_ref=BASE_REF):
+    """Violations for plugins whose bytes differ from the PR base without outranking its version.
+
+    Same injected shape as `compare()`. This is what catches two PRs bumping one plugin to
+    the same unpublished version: each differs from `main`, only one differs from `dev`.
+    """
+    problems = []
+    for pid in sorted(local):
+        if pid not in base or not any(_delta(local[pid], base[pid])):
+            continue
+        where = f"{PUBLISHED_PREFIX}/{pid}"
+        local_version, problem = _version(local_json(pid), f"{where}/.claude-plugin/plugin.json")
+        if problem:
+            problems.append(problem)
+            continue
+        base_version, problem = _version(
+            base_json(pid), f"{base_ref}:{where}/.claude-plugin/plugin.json"
+        )
+        if problem:
+            problems.append(problem)
+            continue
+        unorderable = [v for v in (local_version, base_version) if version_key(v) is None]
+        if unorderable:
+            problems.append(
+                f"{where}: version {unorderable[0]!r} cannot be ordered against {base_ref} "
+                "(expected dot-separated non-negative integers) — cannot verify the version bump"
+            )
+            continue
+        if not version_key(local_version) > version_key(base_version):
+            problems.append(
+                f"{where}: bytes differ from {base_ref}, which already ships another change "
+                f"under {base_version!r}, but the version here is {local_version!r} — it must "
+                f"be greater than {base_version!r} or the two changes ship as one version"
+            )
+    return problems
+
+
+def _unmeasured(reason, out):
+    out(
+        f"✗ version-bump guard: {reason}. Nothing was compared, so this is NOT evidence "
+        "of a missing version bump — it is a gate that could not measure, which "
+        "decision-016 point 4 makes red rather than green. Re-run once the published "
+        "tree is readable."
+    )
+    return 1
+
+
+def main(plugins_dir=None, tree=None, base_tree=None, out=print):
+    if tree is None:
+        # The CLI path runs both stages; a caller injecting `tree` alone gets main only.
+        tree = GitPublishedTree()
+        base_tree = base_tree or GitPublishedTree(branch=BASE_BRANCH)
     reason = tree.prepare()
     if reason:
-        out(
-            f"✗ version-bump guard: {reason}. Nothing was compared, so this is NOT evidence "
-            "of a missing version bump — it is a gate that could not measure, which "
-            "decision-016 point 4 makes red rather than green. Re-run once the published "
-            "tree is readable."
-        )
-        return 1
+        return _unmeasured(reason, out)
     if getattr(tree, "note", ""):
         out(f"⚠ version-bump guard: {tree.note}")
+    base_ref = getattr(base_tree, "ref", BASE_REF)
+    if base_tree is not None:
+        reason = base_tree.prepare()
+        if reason:
+            return _unmeasured(f"the PR base {base_ref} could not be read: {reason}", out)
+        if getattr(base_tree, "note", ""):
+            out(f"⚠ version-bump guard: {base_tree.note}")
 
-    problems = compare(
-        local_index(plugins_dir),
-        tree.index(),
-        lambda pid: local_plugin_json(pid, plugins_dir),
-        tree.plugin_json,
-    )
+    local = local_index(plugins_dir)
+
+    def local_json(pid):
+        return local_plugin_json(pid, plugins_dir)
+
+    base_problems = []
+    try:
+        problems = compare(local, tree.index(), local_json, tree.plugin_json)
+        if base_tree is not None:
+            base_problems = compare_base(
+                local, base_tree.index(), local_json, base_tree.plugin_json, base_ref
+            )
+    except RuntimeError as exc:
+        return _unmeasured(str(exc), out)
+    problems += base_problems
     if problems:
         out(f"✗ version-bump guard: {len(problems)} violation(s)")
         for p in problems:
@@ -562,10 +701,21 @@ def main(plugins_dir=None, tree=None, out=print):
             "the matching .claude-plugin/marketplace.json entry (scripts/check_catalog.py "
             "holds the two in parity)."
         )
+        # A fake tree without the method, or git unable to say, gives no hint.
+        if base_problems and getattr(base_tree, "is_ancestor_of_head", lambda: None)() is False:
+            out(
+                f"  Hint: {base_ref} has moved past this tree; update the branch (rebase or "
+                f"merge {BASE_BRANCH}) and re-run before bumping."
+            )
         return 1
     out(
         f"✓ version-bump guard clean — every plugin's dereferenced bytes either match "
         f"{PUBLISHED_REF} or ship under a moved version"
+        + (
+            f", and either match {base_ref} or ship under a version greater than the one it carries"
+            if base_tree is not None
+            else ""
+        )
     )
     return 0
 

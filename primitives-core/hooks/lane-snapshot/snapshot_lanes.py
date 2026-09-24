@@ -2,7 +2,8 @@
 """
 lane-snapshot — the snapshot daemon behind the SessionStart hook.
 
-Every worker worktree under the configured glob gets its whole working tree
+Every linked worktree the repo registers (or, with LANE_SNAPSHOT_WORKTREES set,
+every worktree under that glob) gets its whole working tree
 (tracked, untracked, staged, unstaged) committed to `refs/lane-snapshots/<name>`
 on a fixed interval. Workers hold read-only git and their output stays
 uncommitted until hand-over, so a crash, a mistaken `worktree remove`, or a
@@ -44,6 +45,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -154,13 +156,47 @@ def default_patterns(root):
     return (WORKTREES_DEFAULTS[0], os.path.join(str(custom), "*", "*")), None
 
 
+def linked_worktrees(root):
+    """Every linked worktree git has registered for this repo, wherever it sits:
+    a separate git dir, nested under another linked worktree, or outside the
+    repo tree altogether. The main checkout is not a lane. Only a daemon rooted
+    at the main worktree reads the registry: a bare or separate-git-dir repo
+    keys one daemon per worktree (repo_key), and N daemons must not share refs."""
+    code, dirs = git(["-C", root, "rev-parse", "--absolute-git-dir", "--git-common-dir"])
+    dirs = [os.path.realpath(os.path.join(root, d)) for d in dirs.splitlines()]
+    if code != 0 or len(dirs) != 2 or dirs[0] != dirs[1]:
+        return []  # a linked worktree: only the main one has git dir == common dir
+    code, out = git(["-C", root, "worktree", "list", "--porcelain", "-z"])
+    paths = [f[len("worktree "):] for f in out.split("\0") if f.startswith("worktree ")]
+    return paths[1:] if code == 0 else []
+
+
 def lane_paths(root, pattern=None, env=None):
-    """Absolute paths of the worktrees matching the glob (or, unset, the union
-    of both harnesses' defaults), sorted and deduped."""
+    """Absolute paths of the worktrees matching the glob, or, unset, the union
+    of both harnesses' defaults and every registered linked worktree; sorted
+    and deduped."""
     pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None, env)
     patterns = [pattern] if pattern else default_patterns(root)[0]
-    return sorted({p for pat in patterns
-                   for p in glob.glob(os.path.join(root, pat)) if os.path.isdir(p)})
+    found = [p for pat in patterns for p in glob.glob(os.path.join(root, pat))]
+    if not pattern:
+        found += linked_worktrees(root)
+    return sorted({os.path.realpath(p) for p in found if os.path.isdir(p)})
+
+
+def lane_names(lanes):
+    """{lane path: ref name}. The basename, made a valid ref component; lanes
+    whose names collide each get a hash of their path, so none shares a ref."""
+    def clean(lane):
+        name = re.sub(r"[^A-Za-z0-9._-]+|\.\.+", "-", os.path.basename(lane.rstrip(os.sep)))
+        name = name.strip(".") or "lane"
+        return name + "-" if name.endswith(".lock") else name
+    names = {lane: clean(lane) for lane in lanes}
+    counts = {}
+    for name in names.values():
+        counts[name] = counts.get(name, 0) + 1
+    return {lane: name if counts[name] == 1 else "{0}-{1}".format(
+                name, hashlib.sha1(lane.encode("utf-8", "replace")).hexdigest()[:8])
+            for lane, name in names.items()}
 
 
 def common_dir(root, timeout=GIT_TIMEOUT):
@@ -234,10 +270,10 @@ def _index_path(root, name):
 # One lane, one pass
 # ---------------------------------------------------------------------------
 
-def snapshot_lane(root, lane, log):
+def snapshot_lane(root, lane, log, name=None):
     """Snapshot one worktree. Returns the new commit sha, or None when nothing
     changed or the lane could not be read. Never raises."""
-    name = os.path.basename(lane.rstrip(os.sep))
+    name = name or lane_names([lane])[lane]
     ref = REF_PREFIX + name
     index = _index_path(root, name)
     try:
@@ -300,9 +336,10 @@ def snapshot_lane(root, lane, log):
 def scan(root, log, pattern=None):
     """One pass over every lane. Returns (lanes_seen, snapshots_written)."""
     lanes = lane_paths(root, pattern)
+    names = lane_names(lanes)
     written = 0
     for lane in lanes:
-        if snapshot_lane(root, lane, log):
+        if snapshot_lane(root, lane, log, names[lane]):
             written += 1
     row = {"event": "scan", "root": root, "lanes": len(lanes), "snapshots": written}
     pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None)
@@ -312,8 +349,8 @@ def scan(root, log, pattern=None):
         # THE row this hook exists for. A glob that matches nothing looks
         # exactly like a working net from the outside; only the daemon can say
         # it protected nothing.
-        warnings.append("no worktrees matched {0} under {1} — snapshotting nothing".format(
-            " + ".join(defaults), root))
+        warnings.append("no worktrees matched {0} under {1}{2} — snapshotting nothing".format(
+            " + ".join(defaults), root, "" if pattern else " and none is registered"))
     if warnings:
         row["warning"] = "; ".join(warnings)
     log(row)
@@ -391,7 +428,7 @@ def _check_refs(root, interval, pattern, out):
         return 1
 
     threshold = 2 * interval
-    lanes = [os.path.basename(p.rstrip(os.sep)) for p in lane_paths(root, pattern)]
+    lanes = list(lane_names(lane_paths(root, pattern)).values())
     problems = []
     for name in lanes:
         if name not in ages:
