@@ -55,10 +55,13 @@ launching at once can both spawn; the loser fails the lock, logs an `exit` row w
 `already running`, and exits 0. A bare repository has no main checkout to root a shared daemon
 at, so each of its worktrees is keyed by its own path and keeps its own daemon.
 
-Because the daemon is rooted at the main checkout, the default globs are read from there: lanes
-nested under a *linked* worktree (`<linked>/.claude/worktrees/agent-*`) are not scanned. Set
-`LANE_SNAPSHOT_WORKTREES` to a pattern that reaches them (relative globs may climb out of the
-root, or be absolute) when a crew works from inside a linked worktree.
+Coverage rule: with `LANE_SNAPSHOT_WORKTREES` unset, a lane is every linked worktree `git worktree
+list --porcelain` registers for the repository, plus whatever the default globs match. The
+registry is authoritative for every layout, so a Codex lane under a separate git dir, a lane nested
+under another linked worktree, and a lane outside the repo tree (a terminal multiplexer's worktree
+directory, for one) are all snapshotted, whichever checkout the daemon happens to be rooted at. The
+main checkout is never a lane, and a bare repository's worktrees are left to their own daemons.
+Setting `LANE_SNAPSHOT_WORKTREES` replaces all of this with the one glob.
 
 The shared daemon writes its ledger under the harness that launched it (it inherits
 `ATELIER_HARNESS`), so the other harness's ledger holds only that harness's `hook` rows.
@@ -74,7 +77,7 @@ No per-project activation file. The hook is armed by being present in an install
 `hooks.json`, and it is inert wherever there is nothing to protect:
 
 - The session's `cwd` is not inside a git repository -> nothing launches.
-- No worktree matches the glob -> the daemon runs and logs `"lanes": 0` with a `warning`, which
+- No worktree matches the glob and none is registered -> the daemon runs and logs `"lanes": 0` with a `warning`, which
   is the whole point: silence would be a false all-clear.
 
 ## Configuration
@@ -83,7 +86,7 @@ No per-project activation file. The hook is armed by being present in an install
 |---|---|---|
 | `LANE_SNAPSHOT_ROOT` | *(unset)* | Repo root to protect. Highest precedence; overrides what the hook derives. |
 | `LANE_SNAPSHOT_INTERVAL` | `180` | Seconds between passes. Also sets the `--check` staleness threshold, at 2x. |
-| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts, deduped; the Codex one is `<checkout-root>/*/*` when the `checkout-root` activation key sets it, and an invalid key keeps the default and says why in the scan warning. |
+| `LANE_SNAPSHOT_WORKTREES` | *(unset)*: both `.claude/worktrees/agent-*` and `.git/atelier-codex/checkouts/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts plus every registered linked worktree, deduped; the Codex one is `<checkout-root>/*/*` when the `checkout-root` activation key sets it, and an invalid key keeps the default and says why in the scan warning. |
 | `LANE_SNAPSHOT_TTL` | `43200` | Seconds without a written snapshot (since start or the last one) after which the daemon exits. `0` disables. |
 | `LANE_SNAPSHOT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/lane-snapshot` | Where the per-repository pidfiles live. `XDG_STATE_HOME` is honoured only when absolute. |
 | `LANE_SNAPSHOT_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/lane-snapshot.jsonl` | Ledger |
@@ -231,8 +234,9 @@ The `scan` rows are the dataset that answers "was the net ever actually up?" aft
 ## Codex
 
 Codex and Claude Code sessions share one daemon per repository; the default glob covers
-`<git-common-dir>/atelier-codex/checkouts/*/*` (or `<checkout-root>/*/*` when the `checkout-root`
-activation key sets it) alongside the Claude lanes. The daemon logs under the harness
+`.git/atelier-codex/checkouts/*/*` (or `<checkout-root>/*/*` when the `checkout-root`
+activation key sets it) alongside the Claude lanes, and the worktree registry covers Codex lanes a
+glob cannot reach, such as those under a separate git dir. The daemon logs under the harness
 that launched it (`ATELIER_HARNESS`, or a legacy `--harness codex` argument, which now selects
 the ledger directory and nothing else). Snapshot refs preserve isolated native worker changes
 without changing their working indexes.

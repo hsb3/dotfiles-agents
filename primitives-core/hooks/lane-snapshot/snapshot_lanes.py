@@ -2,7 +2,8 @@
 """
 lane-snapshot — the snapshot daemon behind the SessionStart hook.
 
-Every worker worktree under the configured glob gets its whole working tree
+Every linked worktree the repo registers (or, with LANE_SNAPSHOT_WORKTREES set,
+every worktree under that glob) gets its whole working tree
 (tracked, untracked, staged, unstaged) committed to `refs/lane-snapshots/<name>`
 on a fixed interval. Workers hold read-only git and their output stays
 uncommitted until hand-over, so a crash, a mistaken `worktree remove`, or a
@@ -154,13 +155,31 @@ def default_patterns(root):
     return (WORKTREES_DEFAULTS[0], os.path.join(str(custom), "*", "*")), None
 
 
+def linked_worktrees(root):
+    """Every linked worktree git has registered for this repo, wherever it sits:
+    a separate git dir, nested under another linked worktree, or outside the
+    repo tree altogether. The main checkout is not a lane, and a bare repo's
+    worktrees each keep their own daemon (repo_key), so both yield nothing."""
+    code, out = git(["-C", root, "worktree", "list", "--porcelain"])
+    if code != 0:
+        return []
+    blocks = [b.splitlines() for b in out.split("\n\n")]
+    if not blocks or "bare" in blocks[0]:
+        return []
+    return [line[len("worktree "):] for block in blocks[1:] for line in block
+            if line.startswith("worktree ")]
+
+
 def lane_paths(root, pattern=None, env=None):
-    """Absolute paths of the worktrees matching the glob (or, unset, the union
-    of both harnesses' defaults), sorted and deduped."""
+    """Absolute paths of the worktrees matching the glob, or, unset, the union
+    of both harnesses' defaults and every registered linked worktree; sorted
+    and deduped."""
     pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None, env)
     patterns = [pattern] if pattern else default_patterns(root)[0]
-    return sorted({p for pat in patterns
-                   for p in glob.glob(os.path.join(root, pat)) if os.path.isdir(p)})
+    found = [p for pat in patterns for p in glob.glob(os.path.join(root, pat))]
+    if not pattern:
+        found += linked_worktrees(root)
+    return sorted({os.path.realpath(p) for p in found if os.path.isdir(p)})
 
 
 def common_dir(root, timeout=GIT_TIMEOUT):
@@ -312,8 +331,8 @@ def scan(root, log, pattern=None):
         # THE row this hook exists for. A glob that matches nothing looks
         # exactly like a working net from the outside; only the daemon can say
         # it protected nothing.
-        warnings.append("no worktrees matched {0} under {1} — snapshotting nothing".format(
-            " + ".join(defaults), root))
+        warnings.append("no worktrees matched {0} under {1}{2} — snapshotting nothing".format(
+            " + ".join(defaults), root, "" if pattern else " and none is registered"))
     if warnings:
         row["warning"] = "; ".join(warnings)
     log(row)
