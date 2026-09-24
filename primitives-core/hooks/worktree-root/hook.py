@@ -6,11 +6,13 @@ One handler for three events, dispatched on `hook_event_name`:
   (native `.claude/worktrees` when unset) of the MAIN checkout, with native branch
   naming, base ref and `.worktreeinclude` copying. Prints only the path on stdout.
   Any refusal exits 1 with the reason on stderr: creation fails loudly.
-- SubagentStop: remove an agent worktree this hook created when it is clean and its
-  branch holds no commit reachable only from itself (the harness keeps every
-  hook-created agent worktree). Always exits 0.
-- WorktreeRemove: remove a registered worktree inside the root and its `worktree-*`
-  branch; anything else is refused and left in place.
+- SubagentStop: remove the agent's worktree through the shared guards below (the
+  harness keeps every hook-created agent worktree). Always exits 0.
+- WorktreeRemove: the same guards, at the root or the native root; a failed guard
+  exits 1 and leaves everything in place.
+
+Guards: `<root>/<leaf>` on branch `worktree-<leaf>`, clean including untracked files,
+no commit absent from every other ref. Removal is unforced; `branch -d` may keep it.
 
 Stdlib-only.
 """
@@ -53,18 +55,34 @@ def must(cwd, *args):
     return proc.stdout
 
 
-def placement(cwd):
-    """(main checkout, root) for any dir in the repo; ValueError when invalid."""
-    main, common = atelier_local.main_checkout(cwd)
-    root = atelier_local.checkout_root(str(main))
+def anchor(cwd):
+    """(top, git common dir), resolved; ValueError outside a repository."""
+    try:
+        main, common = atelier_local.main_checkout(cwd)
+        return str(main), str(common)
+    except ValueError:
+        pass
+    # No main checkout (separate git dir, submodule): native anchors on the toplevel.
+    top = git(cwd, "rev-parse", "--show-toplevel")
+    common = git(cwd, "rev-parse", "--git-common-dir")
+    if top.returncode or common.returncode:
+        raise ValueError("{0} is not in a git repository".format(cwd))
+    return (os.path.realpath(top.stdout.strip()),
+            os.path.realpath(os.path.join(cwd, common.stdout.strip())))
+
+
+def placement(cwd, native=False):
+    """(top, root) for any dir in the repo; `native` ignores the key. ValueError when invalid."""
+    main, common = anchor(cwd)
+    root = None if native else atelier_local.checkout_root(main)
     if root is None:
-        root = os.path.join(str(main), ".claude", "worktrees")
+        root = os.path.join(main, ".claude", "worktrees")
     root = os.path.realpath(str(root))
     # A committed `.claude` or `.claude/worktrees` symlink must not aim creation elsewhere.
-    if not inside(root, str(main)) or root == str(common) or inside(root, str(common)):
+    if not inside(root, main) or root == common or inside(root, common):
         raise ValueError("worktree root {0} is not strictly inside {1} and outside {2}".format(
             root, main, common))
-    return str(main), root
+    return main, root
 
 
 def inside(path, parent):
@@ -92,7 +110,8 @@ def refresh_origin(main):
     if git(main, "remote", "get-url", "origin").returncode:
         return
     try:
-        age = time.time() - os.path.getmtime(os.path.join(main, ".git", "FETCH_HEAD"))
+        common = git(main, "rev-parse", "--git-common-dir").stdout.strip()
+        age = time.time() - os.path.getmtime(os.path.join(main, common, "FETCH_HEAD"))
     except OSError:
         age = FETCH_MAX_AGE
     if age < FETCH_MAX_AGE:
@@ -188,31 +207,41 @@ def create(payload):
     print(path)
 
 
+def release(main, root, path):
+    """Remove `path` only as this hook creates it, clean and holding no unique commit."""
+    leaf = os.path.basename(path)
+    branch = "refs/heads/worktree-" + leaf
+    if os.path.dirname(path) != root:
+        raise Refused("{0} is not directly under {1}".format(path, root))
+    entries = registered(main)
+    if path not in entries:
+        raise Refused("{0} is not a linked worktree of {1}".format(path, main))
+    if entries[path] != branch:
+        raise Refused("{0} is on {1}, not worktree-{2}".format(path, entries[path], leaf))
+    if must(path, "status", "--porcelain").strip():
+        raise Refused("{0} has uncommitted changes".format(path))
+    if must(path, "rev-list", "HEAD", "--not", "--exclude=worktree-" + leaf, "--branches",
+            "--tags", "--remotes").strip():
+        raise Refused("{0} has commits on no other ref".format(path))
+    must(main, "worktree", "remove", path)
+    if git(main, "branch", "-d", "worktree-" + leaf).returncode:
+        print("worktree-root: removed {0}; kept branch worktree-{1}: not merged into HEAD".format(
+            path, leaf), file=sys.stderr)
+
+
 def subagent_stop(payload):
     agent_id, cwd = payload.get("agent_id"), payload.get("cwd")
     if not agent_id or not cwd:
         return
+    path = os.path.realpath(cwd)
+    if os.path.basename(path) != "agent-" + agent_id:
+        return
     try:
-        main, root = placement(cwd)
+        main, root = placement(os.path.dirname(path))
     except ValueError:
         return
-    path = os.path.realpath(cwd)
-    branch = "refs/heads/worktree-agent-" + agent_id
-    if path != os.path.realpath(os.path.join(root, "agent-" + agent_id)):
-        return
-    if registered(main).get(path) != branch:
-        return
-    if must(path, "status", "--porcelain").strip():
-        print("worktree-root: kept {0}: uncommitted changes".format(path), file=sys.stderr)
-        return
-    only_here = must(path, "rev-list", "HEAD", "--not",
-                     "--exclude=" + branch[len("refs/heads/"):], "--branches",
-                     "--tags", "--remotes")
-    if only_here.strip():
-        print("worktree-root: kept {0}: commits on no other ref".format(path), file=sys.stderr)
-        return
-    must(main, "worktree", "remove", "--force", path)
-    must(main, "branch", "-D", branch[len("refs/heads/"):])
+    if os.path.dirname(path) == root:
+        release(main, root, path)
 
 
 def remove(payload):
@@ -220,18 +249,14 @@ def remove(payload):
     if not target or not os.path.lexists(target):
         return
     path = os.path.realpath(target)
+    parent = os.path.dirname(path)
     try:
-        main, root = placement(payload.get("cwd") or path)
-    except ValueError as exc:
-        raise Refused(str(exc))
-    entries = registered(main)
-    if path not in entries or not inside(path, root):
-        raise Refused("{0} is not a linked worktree of {1} under {2}; left in place".format(
-            path, main, root))
-    must(main, "worktree", "remove", "--force", path)
-    branch = entries[path] or ""
-    if branch.startswith("refs/heads/worktree-"):
-        must(main, "branch", "-D", branch[len("refs/heads/"):])
+        main, root = placement(parent)
+        if parent != root:  # a `--worktree` session stays native while the key is set
+            main, root = placement(parent, native=True)
+        release(main, root, path)
+    except (Refused, ValueError) as exc:
+        raise Refused("{0}; left in place".format(exc))
 
 
 HANDLERS = {"WorktreeCreate": create, "SubagentStop": subagent_stop,

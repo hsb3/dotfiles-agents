@@ -374,6 +374,146 @@ class WorktreeRootTests(unittest.TestCase):
         self.assertIn("is not a linked worktree", proc.stderr)
         self.assertTrue(os.path.isdir(stray))
 
+    def remove(self, path):
+        return self.run_hook({"hook_event_name": "WorktreeRemove", "cwd": path,
+                              "worktree_path": path})
+
+    def assertKept(self, proc, path, branch, fragment):
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        self.assertIn(fragment, proc.stderr)
+        self.assertIn("left in place", proc.stderr)
+        self.assertTrue(os.path.isdir(path))
+        self.assertIn(branch, self.branches())
+
+    def test_worktree_remove_keeps_dirty_tracked_change(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("r2"))
+        _write(path, "README", "changed\n")
+        self.assertKept(self.remove(path), path, "worktree-r2", "uncommitted changes")
+
+    def test_worktree_remove_keeps_untracked_file(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("ru"))
+        _write(path, "new.txt", "n\n")
+        self.assertKept(self.remove(path), path, "worktree-ru", "uncommitted changes")
+
+    def test_worktree_remove_keeps_branch_with_own_commit(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("r3"))
+        self.commit(path, "own work")
+        self.assertKept(self.remove(path), path, "worktree-r3", "commits on no other ref")
+
+    def test_worktree_remove_keeps_hand_made_worktree_with_untracked_files(self):
+        self.set_key(".worktrees")
+        path = os.path.join(self.main, ".worktrees", "lane")
+        _git(self.main, "worktree", "add", "-q", "-b", "feature", path)
+        _write(path, "wip", "w\n")
+        self.assertKept(self.remove(path), path, "feature", "not worktree-lane")
+        self.assertTrue(os.path.isfile(os.path.join(path, "wip")))
+
+    def test_worktree_remove_keeps_clean_hand_made_worktree_on_other_branch(self):
+        self.set_key(".worktrees")
+        path = os.path.join(self.main, ".worktrees", "lane")
+        _git(self.main, "worktree", "add", "-q", "-b", "feature", path)
+        self.assertKept(self.remove(path), path, "feature", "not worktree-lane")
+
+    def test_worktree_remove_keeps_users_own_worktree_foo_branch(self):
+        # Same path and branch shape as a hook worktree: the unique-commit guard is what holds.
+        self.set_key(".worktrees")
+        path = os.path.join(self.main, ".worktrees", "foo")
+        _git(self.main, "worktree", "add", "-q", "-b", "worktree-foo", path)
+        self.commit(path, "user work")
+        self.assertKept(self.remove(path), path, "worktree-foo", "commits on no other ref")
+
+    def test_worktree_remove_under_key_removes_clean_tree_with_ignored_files(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("ok"))
+        _write(path, ".claude/scratch", "ignored\n")
+        proc = self.remove(path)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse(os.path.exists(path))
+        self.assertNotIn("worktree-ok", self.branches())
+
+    def test_worktree_remove_keeps_branch_when_not_merged_into_head(self):
+        tip = self.commit(self.main, "main moves on")
+        path = self.created_path(self.create("unmerged"))
+        _git(self.main, "checkout", "-q", "-b", "elsewhere", "HEAD~1")
+        proc = self.remove(path)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse(os.path.exists(path))
+        self.assertIn("worktree-unmerged", self.branches())
+        self.assertIn("kept branch", proc.stderr)
+        self.assertEqual(_git(self.main, "rev-parse", "worktree-unmerged"), tip)
+
+    def test_worktree_remove_accepts_native_path_while_key_is_set(self):
+        self.set_key(".worktrees")
+        path = os.path.join(self.main, ".claude", "worktrees", "nat")
+        _git(self.main, "worktree", "add", "-q", "-b", "worktree-nat", path)
+        proc = self.remove(path)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse(os.path.exists(path))
+        self.assertNotIn("worktree-nat", self.branches())
+
+    def test_worktree_remove_refuses_hook_shaped_worktree_outside_both_roots(self):
+        self.set_key(".worktrees")
+        path = os.path.join(self.main, ".claude", "x")
+        _git(self.main, "worktree", "add", "-q", "-b", "worktree-x", path)
+        self.assertKept(self.remove(path), path, "worktree-x", "is not directly under")
+
+    def test_worktree_remove_native_path_while_key_is_set_keeps_dirty(self):
+        self.set_key(".worktrees")
+        path = os.path.join(self.main, ".claude", "worktrees", "natd")
+        _git(self.main, "worktree", "add", "-q", "-b", "worktree-natd", path)
+        _write(path, "wip", "w\n")
+        self.assertKept(self.remove(path), path, "worktree-natd", "uncommitted changes")
+
+    # -- layouts with no main checkout -------------------------------------
+
+    def separate_git_dir_repo(self):
+        top = os.path.join(self.base, "sep")
+        _git(self.base, "init", "-q", "--separate-git-dir",
+             os.path.join(self.base, "sep-git"), top)
+        _write(top, ".gitignore", ".claude/\n")
+        _git(top, "add", ".gitignore")
+        self.commit(top, "sep")
+        return top
+
+    def submodule_repo(self):
+        src = os.path.join(self.base, "subsrc")
+        os.makedirs(src)
+        _git(src, "init", "-q")
+        _write(src, ".gitignore", ".claude/\n")
+        _git(src, "add", ".gitignore")
+        self.commit(src, "sub")
+        sup = os.path.join(self.base, "sup")
+        os.makedirs(sup)
+        _git(sup, "init", "-q")
+        _git(sup, "-c", "protocol.file.allow=always", "submodule", "add", "-q", src, "sub")
+        return os.path.join(sup, "sub")
+
+    def assert_native_round_trip(self, top):
+        path = self.created_path(self.create("lay", cwd=top))
+        self.assertEqual(path, os.path.join(top, ".claude", "worktrees", "lay"))
+        proc = self.remove(path)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse(os.path.exists(path))
+
+    def test_separate_git_dir_without_key_uses_native_layout(self):
+        self.assert_native_round_trip(self.separate_git_dir_repo())
+
+    def test_separate_git_dir_with_key_refuses(self):
+        top = self.separate_git_dir_repo()
+        _write(top, ".claude/atelier.local.md", "---\ncheckout-root: .worktrees\n---\n")
+        self.assertRefused(self.create("lay", cwd=top), "unsupported git layout")
+
+    def test_submodule_without_key_uses_native_layout(self):
+        self.assert_native_round_trip(self.submodule_repo())
+
+    def test_submodule_with_key_refuses(self):
+        top = self.submodule_repo()
+        _write(top, ".claude/atelier.local.md", "---\ncheckout-root: .worktrees\n---\n")
+        self.assertRefused(self.create("lay", cwd=top), "unsupported git layout")
+
     def test_other_event_is_silent(self):
         proc = self.run_hook({"hook_event_name": "PreToolUse", "cwd": self.main})
         self.assertEqual((proc.returncode, proc.stdout, proc.stderr), (0, "", ""))
