@@ -1,0 +1,1 @@
+../../.agents/rules/kata-board.md
