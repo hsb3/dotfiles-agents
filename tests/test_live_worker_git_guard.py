@@ -369,6 +369,15 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._assert_denied(self._run(self._payload(
             "ATELIER_GIT_GUARD_OVERRIDE=1 echo hi && git commit -m x")))
 
+    def test_override_on_the_line_before_does_not_count(self):
+        # A newline ends a command as `;` does, so a bare assignment on its
+        # own line is a shell variable, not the git call's env prefix.
+        self._sidecar("d4444444444444444")
+        for command in ("ATELIER_GIT_GUARD_OVERRIDE=1\ngit push",
+                        "env ATELIER_GIT_GUARD_OVERRIDE=1\ngit push"):
+            with self.subTest(command=command):
+                self._assert_denied(self._run(self._payload(command)))
+
     def test_read_only_forms_of_mutating_verbs_are_silent(self):
         self._sidecar("d4444444444444444")
         for command in ("git stash list", "git stash show -p stash@{0}",
@@ -990,6 +999,99 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         ):
             with self.subTest(command=command):
                 self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_separator_in_a_heredoc_body_does_not_reopen_command_position(self):
+        # The body is dropped before the scan, so a `&&` or `|` in a note being
+        # written reopens nothing, whatever the delimiter's quoting.
+        self._sidecar("n4444444444444444")
+        for command in (
+            "cat > /tmp/x.md <<EOF\nrun: git -C /tmp/wt fetch origin && "
+            "git -C /tmp/wt rebase origin/main\nEOF",
+            "cat > /tmp/x.md <<'EOF'\nrun: git -C /tmp/wt fetch origin && "
+            "git -C /tmp/wt rebase origin/main\nEOF",
+            "cat <<EOF\necho a | git rebase main\nEOF",
+            "cat <<-EOF\n\techo a && git rebase main\n\tEOF",
+            "cat <<EOF\nsee git rebase main\nEOF",
+        ):
+            with self.subTest(command=command):
+                self._assert_silent(self._run(self._payload(command)))
+
+    def test_a_git_call_after_the_heredoc_terminator_is_read(self):
+        self._sidecar("n5555555555555555")
+        for command in (
+            "cat > /tmp/x <<EOF\nhello\nEOF\ngit rebase main",
+            "cat <<-EOF\n\thello\n\tEOF\ngit rebase main",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run(self._payload(command)))
+
+    def test_an_unquoted_newline_opens_command_position(self):
+        # A newline ends a command exactly as `;` does, and a `#` comment ends
+        # with its line.
+        self._sidecar("n6666666666666666")
+        for command in (
+            "echo hi\ngit commit -m x",
+            "make ci  # comment\ngit commit -m x",
+            "for f in *\ndo git commit -m x\ndone",
+        ):
+            with self.subTest(command=command):
+                self._assert_denied(self._run(self._payload(command)))
+
+    def test_a_heredoc_opener_counts_only_outside_quotes_and_comments(self):
+        # A `<<WORD` in a comment, a quoted string (even one opened on an
+        # earlier line) or an arithmetic shift opens no heredoc, so the lines
+        # up to a later line equal to WORD are still commands.
+        cases = (
+            ("# write the notes file with <<EOF below\n"
+             "git add x && git commit -m y\ncat > notes.md <<EOF\nbody\nEOF",
+             "commit"),
+            ("grep -q '<<EOF' gen.sh &&\n  git push\ncat > f <<EOF\nbody\nEOF",
+             "push"),
+            ("echo $(( 1 <<3 ))\ngit push\n3", "push"),
+            ('echo "a\n<<EOF"\ngit push\nEOF', "push"),
+            # A `#` right after a separator is a comment; `$'...'` escapes a
+            # quote with a backslash.
+            ('echo "<<Z" ;# <<A\ngit push\nA', "push"),
+            ("echo \"<<Z\" $'a\\' <<A'\ngit push\nA", "push"),
+            ("ls;# it's\ngit push", "push"),
+            ("echo $'it\\'s'\ngit push", "push"),
+            # A shift by a name inside `(( ))` is arithmetic, not a heredoc.
+            ("echo $(( 1 << n ))\ngit commit -m x\nn", "commit"),
+            ("(( y = 1 << n ))\ngit commit -m x\nn", "commit"),
+            ("bits=3\necho $(( 1 << bits ))\ngit commit -m x\nbits", "commit"),
+            ("echo $(( 1 << n ))\necho; git commit -m x\nn", "commit"),
+        )
+        for command, verb in cases:
+            with self.subTest(command=command):
+                self.assertEqual(
+                    HOOK._first_mutating_verb(HOOK._tokens(command))[0], verb)
+
+    def test_newline_reading_at_the_token_level(self):
+        cases = (
+            ('git commit -m "a\nb"', "commit"),
+            ("echo 'a\ngit commit'", None),
+            ("echo hi\ngit commit -m x", "commit"),
+            ("cat <<EOF\nsee git rebase main\nEOF", None),
+            # An unmatched `<<` (a shift, a herestring) drops nothing.
+            ("echo $((1 << 3))\ngit commit -m x", "commit"),
+            ("cat <<< hi\ngit commit -m x", "commit"),
+            ("cat <<EOF\ngit commit -m x", "commit"),
+            # A backslash-newline continues the line; a body line ending in
+            # one still strips with its terminator.
+            ("git \\\ncommit -m x", "commit"),
+            ("make ci \\\n  && git commit -m x", "commit"),
+            ("cat <<EOF\necho a && git rebase main \\\nEOF", None),
+            ("cat <<EOF\nhello \\\nEOF\ngit commit -m x", "commit"),
+            # An escaped backslash does not continue the line.
+            ("echo foo\\\\\ngit push", "push"),
+            # A line break clears the inert state of a `<<` or `#`.
+            ("cat <<EOF\nx\nEOF\nif true; then git push; fi", "push"),
+            ("make ci # note\nfor f in *; do git commit -m x; done", "commit"),
+        )
+        for command, verb in cases:
+            with self.subTest(command=command):
+                self.assertEqual(
+                    HOOK._first_mutating_verb(HOOK._tokens(command))[0], verb)
 
     def test_the_tokenizer_ceilings_stay_ceilings(self):
         # Not a wish list: each needs a parser rather than a token scan, and

@@ -237,7 +237,13 @@ is inert, because that string is one token (`git commit -m "then git push"` deni
 Two places a keyword is deliberately NOT read: after a `#` and after a `<<`. A trailing comment
 (`make ci  # then git commit`) and a heredoc body (a script being written that contains a loop
 around a git call) are text, not command lines, and both were silent before the keyword rule
-existed. Separators still open command position inside them, exactly as they always did.
+existed. Separators still open command position inside a comment, exactly as they always did.
+A heredoc body is not scanned at all: it is dropped, up to and including its terminator line, before
+tokenizing, so a `&&` or `|` in it opens nothing and a git call after the terminator is read. An
+opener counts only outside quotes (tracked across lines) and outside a comment, and never with an
+all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newline ends a command
+as `;` does, and a backslash-newline joins two lines into one. A `<<` whose terminator never appears
+drops nothing, so its body is read as command lines.
 
 Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
 same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
@@ -256,7 +262,7 @@ command string the hook is handed, so whatever still displaces them is invisible
   `arch`, `caffeinate`, and every site-local wrapper script;
 - anything that re-parses a **string**, which is past a tokenizer by construction: `bash -c "..."`,
   a `$( )` substitution, a quoted `eval "cd x && git commit"`, `env -S 'git commit'`, and heredoc
-  body text;
+  body text (`cat <<EOF | bash`);
 - a **command word** glued to a separator (`ls&&git commit`, `(git commit)`) — a glued wrapper
   option is fine (`nice -n10`, `env -uNAME`, `xargs -I%`), and a separator glued to the *verb*
   (`git pull;`) is stripped; it is only the command word the separator still hides. **Asymmetry,
@@ -264,6 +270,14 @@ command string the hook is handed, so whatever still displaces them is invisible
   `(cd elsewhere && git commit)` is how a subshell cd is normally written and resolving it to the
   wrong tree returns an affirmative "no block"; the verb scan does not, so `(git commit)` stays a
   missed deny in the SAME tree;
+- two heredocs opened on one line (`cat <<A <<B`): only the first body is dropped, so the second
+  is read as commands (an over-deny);
+- a backslash-newline inside an unquoted body that forms the terminator (`EO\` then `F`): the
+  terminator is not seen, so the body runs on to a later line equal to the word and hides the
+  calls in between;
+- a quoted heredoc word containing spaces (`<<'E O F'`): only `E` is taken as the word and the
+  closing `'` opens a quote, so the rest of the command reads as one line and a call after the
+  terminator is missed;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 
@@ -280,8 +294,10 @@ change with its own over-denial surface.
 ATELIER_GIT_GUARD_OVERRIDE=1 git -C /verified/unshared/repo commit -m "..."
 ```
 
-The assignment must come **before** the `git` word; the same string as an argument is not an
-override. Restructure the operation to avoid an override first. It is only legitimate for a git
+The assignment must come **before** the `git` word, on the same command; the same string as an
+argument is not an override, and neither is an assignment on the line before, which a newline ends
+as `;` does.
+Restructure the operation to avoid an override first. It is only legitimate for a git
 write whose target is provably outside every live worker tree, never for this project repository
 or any of its worktrees. When it is legitimate, report the exact command and cwd, and explain why
 that target is not shared. The command goes through, and a `systemMessage` states that the
@@ -351,12 +367,12 @@ No activation file: the guard fires wherever the plugin is installed.
 - **An unreadable ledger is not an empty one.** `settled_ids` raises rather than returning an
   empty set, because rendering "cannot tell" as "nothing has settled" would deny on every agent
   the session ever started.
-- **`git` only counts in command position** — first token, after a shell separator, after an
-  env assignment, after a leading exec wrapper and its options, or after a shell keyword
-  (`; do`, `; then`) outside a comment or heredoc body. `man git commit`, `which git` and
-  `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a multi-word
-  string mentioning a git command is one token and cannot fire — a single quoted WORD is not
-  protected, since `shlex` strips its quotes.
+- **`git` only counts in command position** — first token, after a shell separator or an unquoted
+  newline, after an env assignment, after a leading exec wrapper and its options, or after a shell
+  keyword (`; do`, `; then`) outside a comment or heredoc body. `man git commit`, `which git` and
+  `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a multi-word string
+  mentioning a git command is one token and cannot fire — a single quoted WORD is not protected,
+  since `shlex` strips its quotes.
 - **The override emits no `permissionDecision`.** `"allow"` would short-circuit every other
   permission check in the session; this hook's opinion is only about live workers.
 - **A stale sidecar blocks until the ledger settles it.** There is no age threshold: an agent that

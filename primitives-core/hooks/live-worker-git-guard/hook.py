@@ -89,11 +89,15 @@ them. A leading exec wrapper: the named ones in EXEC_WRAPPERS are stepped over,
 with their own options and values, so `time git push` and `timeout 60 git push`
 are read as the calls they are. And a SHELL_KEYWORDS word, after which command
 position resumes, so the call inside `for f in *; do git commit; done` is read
-too — but NOT after a `#` comment or a `<<` heredoc, where the words are text
-and the keyword rule is suspended (separators keep opening command position
-there, as they always did). An unlisted wrapper still displaces them, and so do
-`bash -c "..."`, a `$( )` substitution, a command word glued to a separator
-(`ls&&git commit`), and heredoc body text. Anything that re-parses a STRING is
+too — but NOT after a `#` comment or a `<<` on the same line, where the
+keyword rule is suspended (separators keep opening command position there, as
+they always did). A heredoc body is dropped before the scan, up to and
+including its terminator line, so nothing in it opens command position and a
+call after the terminator is read. An unquoted newline ends a command as `;`
+does. An unlisted wrapper still displaces them, and so do `bash -c "..."`, a
+`$( )` substitution, a command word glued to a separator (`ls&&git commit`),
+and the body of a heredoc whose terminator is never found, which is kept and
+read as command lines. Anything that re-parses a STRING is
 past the ceiling by construction, including `env -S` and a quoted `eval`. A
 `GIT_*` variable exported by an EARLIER Bash call is the same ceiling in
 another place — it is not among this command's tokens at all. None of these is
@@ -123,6 +127,7 @@ must stay compatible with Python 3.9.
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -238,6 +243,21 @@ SEPARATOR_TAILS = ("&", "|", ";", "(", ")", "{", "}")
 # matched nothing and the call was read as neither.
 SEPARATOR_CHARS = "&|;(){}<>"
 
+# A heredoc opener. The lookarounds reject a `<<<` herestring. A shift still
+# matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
+# word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
+HEREDOC_START = re.compile(r"(?<!<)<<(?!<)-?\s*['\"]?(\w+)['\"]?(?=\s|$)")
+
+
+class _LineBreak(str):
+    """The token an unquoted newline becomes: a `;` to every separator check,
+    and told apart from a typed `;` by identity, because a line break also ends
+    a `#` comment and the rest of a heredoc opener line, and a `;` ends
+    neither."""
+
+
+LINE_BREAK = _LineBreak(";")
+
 # `git commit --help` opens a man page and touches nothing. Orientation has to
 # stay cheap, or the guard is the thing that gets turned off.
 HELP_FLAGS = frozenset(("--help", "-h"))
@@ -305,6 +325,88 @@ def _emit(obj):
 # Reading the command
 # ---------------------------------------------------------------------------
 
+def _scan_line(line, quote):
+    """(the first heredoc terminator this line opens, the quote state at its
+    end, whether it ends in a line continuation), given the quote state it
+    starts in.
+
+    An opener counts only outside quotes and outside a comment, and never with
+    an all-digit word or inside an unclosed `((`, where it is a shift
+    (`$(( 1 <<3 ))`, `(( y = 1 << n ))`). A backslash escapes
+    the next character outside single quotes, and inside `$'...'` too. A `#`
+    at the start of the line, after whitespace or after one of `;&|()` runs to
+    the line end, so an apostrophe in a comment opens no quote.
+    """
+    terminator = None
+    i = 0
+    while i < len(line):
+        char = line[i]
+        if quote:
+            if char == quote[-1]:
+                quote = None
+            elif char == "\\" and quote != "'":
+                i += 1
+        elif char == "\\":
+            if i == len(line) - 1:
+                return terminator, quote, True
+            i += 1
+        elif line.startswith("$'", i):
+            quote = "$'"
+            i += 1
+        elif char in "'\"":
+            quote = char
+        elif char == "#" and (i == 0 or line[i - 1].isspace()
+                              or line[i - 1] in ";&|()"):
+            break
+        elif char == "<":
+            m = HEREDOC_START.match(line, i)
+            if (m and not m.group(1).isdigit()
+                    and line.count("((", 0, i) <= line.count("))", 0, i)):
+                terminator = terminator or m.group(1)
+                i = m.end()
+                continue
+        i += 1
+    return terminator, quote, False
+
+
+def _logical_lines(command):
+    """The command split at every newline outside quotes, with heredoc bodies
+    and backslash-newlines removed.
+
+    A body runs from the opener's line end through the first line equal, after
+    `strip()`, to the word (so a `<<-` tab-indented terminator matches), and is
+    dropped with that line only when the terminator is found: dropping text is
+    a silent fail-open, keeping it is at worst an over-deny. The body is
+    dropped by whole lines, so a body line ending in `\\` joins nothing.
+    """
+    lines = command.split("\n")
+    out, current, quote, pending, i = [], "", None, None, 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        terminator, quote, continued = _scan_line(line, quote)
+        pending = pending or terminator
+        if continued:
+            current += line[:-1]
+            continue
+        current += line
+        if quote:
+            current += "\n"
+            continue
+        out.append(current)
+        current = ""
+        if pending:
+            j = i
+            while j < len(lines) and lines[j].strip() != pending:
+                j += 1
+            if j < len(lines):
+                i = j + 1  # skip the body and the terminator line
+            pending = None
+    if current:
+        out.append(current)
+    return out
+
+
 def _tokens(command):
     """Shell tokens for a Bash command string.
 
@@ -313,11 +415,23 @@ def _tokens(command):
     which is not `git`, so a mention of a git command inside a string can never
     be read as a call. An unbalanced quote makes shlex raise; the whitespace
     split is the fallback, which is coarser but never worse than nothing.
+
+    Heredoc bodies are dropped, since they are text, and backslash-newlines
+    removed (`_logical_lines`). shlex reads a newline as plain whitespace, so
+    each logical line is split on its own and the lines are joined with
+    LINE_BREAK, which opens command position as a `;` does.
     """
-    try:
-        return shlex.split(command)
-    except ValueError:
-        return command.split()
+    tokens = []
+    for line in _logical_lines(command):
+        try:
+            words = shlex.split(line)
+        except ValueError:
+            words = line.split()
+        if words:
+            if tokens:
+                tokens.append(LINE_BREAK)
+            tokens.extend(words)
+    return tokens
 
 
 def _is_assignment(token):
@@ -333,20 +447,23 @@ def _opens_command(token, inert):
     command (a separator), prefixes one (an assignment), or is a keyword a
     command follows (`; do git commit`).
 
-    `inert` once the scan has passed a `#` or a `<<`, where the words are a
-    comment or heredoc body rather than a command line. Only the keyword rule
-    is suspended there: separators behave as they always did, so
-    `make ci  # then git commit` is silent again and a heredoc body stays the
-    ceiling both prose surfaces promise.
+    `inert` once the scan has passed a `#` or a `<<` on the current line
+    (`_next_inert`). Only the keyword rule is suspended there: separators
+    behave as they always did, so `make ci  # then git commit` stays silent. A
+    heredoc body never reaches this scan — `_tokens` drops it — so neither a
+    keyword nor a separator in one opens command position.
     """
     if token.endswith(SEPARATOR_TAILS) or _is_assignment(token):
         return True
     return not inert and token in SHELL_KEYWORDS
 
 
-def _is_inert(token):
-    """A `#` comment or a `<<` heredoc redirect: what follows is text."""
-    return token.startswith("#") or token.startswith("<<")
+def _next_inert(inert, token):
+    """The scan's inert state after `token`: set by a `#` comment or a `<<`
+    heredoc redirect, cleared by a line break, which ends both."""
+    if token is LINE_BREAK:
+        return False
+    return inert or token.startswith("#") or token.startswith("<<")
 
 
 def _relocates(wrapper, token):
@@ -434,7 +551,7 @@ def _first_mutating_verb(tokens):
                 if verb in MUTATING_VERBS and not _is_read_form(
                         verb, tokens, verb_at + 1):
                     return verb, git_at, index
-        inert = inert or _is_inert(token)
+        inert = _next_inert(inert, token)
         command_position = _opens_command(token, inert)
     return None, None, None
 
@@ -594,7 +711,7 @@ def _target_directory(tokens, git_at, cwd):
                 return None
         if _is_assignment(token) and token.partition("=")[0] in TREE_AIMING_VARS:
             return None
-        inert = inert or _is_inert(token)
+        inert = _next_inert(inert, token)
         command_position = _opens_command(token, inert)
     directory = cwd
     index = git_at + 1

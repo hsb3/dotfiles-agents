@@ -229,6 +229,28 @@ class CommandParsingTests(unittest.TestCase):
         self.assertTrue(blocked("python3 -c 'print(1 << 3)'\ngit stash"))
         self.assertTrue(blocked('echo "use << foo here"\ngit stash'))
 
+    def test_a_heredoc_opener_counts_only_outside_quotes_and_comments(self):
+        # Each has a later line equal to the word, so a raw-text match would
+        # drop the real `git stash` line in between.
+        for command in (
+            "# write the notes file with <<EOF below\n"
+            "git stash\ncat > notes.md <<EOF\nbody\nEOF",
+            "grep -q '<<EOF' gen.sh &&\n  git stash\ncat > f <<EOF\nbody\nEOF",
+            "echo $(( 1 <<3 ))\ngit stash\n3",
+            'echo "a\n<<EOF"\ngit stash\nEOF',
+            "echo $(( 1 << n ))\ngit stash\nn",
+            "(( y = 1 << n ))\ngit stash\nn",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(blocked(command))
+
+    def test_a_comment_after_a_separator_and_an_ansi_c_string_open_no_heredoc(self):
+        for command in ('echo "<<Z" ;# <<A\ngit push\nA',
+                        "echo \"<<Z\" $'a\\' <<A'\ngit push\nA"):
+            with self.subTest(command=command):
+                self.assertEqual(
+                    [v for v, _, _ in hook.invocations(command, "/tmp")], ["push"])
+
     def test_a_herestring_is_not_a_heredoc(self):
         self.assertTrue(blocked("grep -q x <<< done\ngit stash\ndone"))
 
