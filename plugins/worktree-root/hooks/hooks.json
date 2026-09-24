@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-root/hook.py\"",
+            "statusMessage": "Creating worktree under checkout-root...",
+            "timeout": 60,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-root/hook.py\"",
+            "statusMessage": "Removing worktree...",
+            "timeout": 60,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-root/hook.py\"",
+            "timeout": 60,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

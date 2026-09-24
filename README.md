@@ -80,6 +80,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | Build an Obsidian plugin, or drive a vault from the terminal | [`obsidian-toolkit`](plugins/obsidian-toolkit/README.md) |
 | Build a PocketBase backend, drive a running one from the terminal, or delegate the build to agents that already carry the backend laws | [`pocketbase`](plugins/pocketbase/README.md) |
 | Report a defect in a plugin you are using, without leaving the session | [`plugin-feedback`](plugins/plugin-feedback/README.md) |
+| Put a project's Claude Code worktrees under its `checkout-root`, opted in per project | [`worktree-root`](plugins/worktree-root/README.md) |
 
 ## Catalog
 
@@ -96,6 +97,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill · 1 MCP server |
 | [`bun`](plugins/bun/README.md) | standalone | The bun toolchain as the default JS and TS runtime: command mapping off npm habits, built-ins that replace dependencies, measured traps. | 1 skill |
 | [`plugin-feedback`](plugins/plugin-feedback/README.md) | bundle | Tell every session and worker that plugin defects are reportable, then file one to a fixed template instead of a free-handed gh call. | 2 hooks |
+| [`worktree-root`](plugins/worktree-root/README.md) | bundle | Create Claude Code worktrees under the project checkout-root, with native parity and agent cleanup. | 1 hook |
 
 ## How the plugins are split
 
