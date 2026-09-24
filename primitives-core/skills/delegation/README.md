@@ -38,6 +38,12 @@ a directory, a missing or unreadable path is named with its reason and turns the
 so the number reads as a floor rather than a total. `SKILL.md` carries the threshold above which
 a brief is split, and the one answer each unresolved entry gets.
 
+A report-only worker gets a check too, because its brief's "write nothing here" is wording, not
+enforcement. `scripts/trace_check.py` snapshots the checkout's git status (untracked and ignored
+files included, plus every ref and HEAD's target) before a reviewer or scout is dispatched and names every
+change after it returns; `references/briefs.md` carries the scratch-directory wording and when to
+run it.
+
 Preconditions are checked the same way, at dispatch time rather than at authoring time: a gate
 has to be shown red on a break inside the very files the worker will change, since a gate with
 no subjects and a gate with fifty report the same green, and every factual premise a brief rests

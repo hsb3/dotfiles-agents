@@ -153,6 +153,121 @@ class StashInALinkedWorktreeTests(unittest.TestCase):
         self.assertIn("`git stash list` and `git stash show` are reads", text)
 
 
+class ShellWrapperAndAltGitFormsTests(unittest.TestCase):
+    """`invocations()` must reach a stash destroyer behind a shell `-c` string or an
+    absolute git path, and catch the two non-`stash` subcommands that reach the same
+    repo-wide ref. A quoted prose string must still read as no invocation at all.
+    """
+
+    def test_bash_dash_c_wrapping_a_stash_destroyer_is_denied(self):
+        self.assertTrue(blocked("bash -c 'git stash drop'"))
+
+    def test_sh_dash_c_wrapping_a_stash_destroyer_is_denied(self):
+        self.assertTrue(blocked('sh -c "git stash clear"'))
+
+    def test_zsh_dash_c_wrapping_a_stash_destroyer_is_denied(self):
+        self.assertTrue(blocked("zsh -c 'git stash pop'"))
+
+    def test_a_flag_cluster_dash_c_is_still_recognised(self):
+        self.assertTrue(blocked("bash -lc 'git stash drop'"))
+
+    def test_an_absolute_git_path_is_still_git(self):
+        self.assertTrue(blocked("/usr/bin/git stash drop"))
+
+    def test_update_ref_deleting_the_stash_ref_is_denied(self):
+        self.assertTrue(blocked("git update-ref -d refs/stash"))
+
+    def test_update_ref_m_message_value_matching_stash_is_allowed(self):
+        self.assertFalse(blocked("git update-ref -m stash refs/heads/x abc123"))
+
+    def test_reflog_delete_on_a_stash_entry_is_denied(self):
+        self.assertTrue(blocked("git reflog delete refs/stash@{0}"))
+
+    def test_a_quoted_prose_string_is_not_an_invocation(self):
+        self.assertFalse(blocked('echo "git stash drop"'))
+
+    def test_a_read_form_inside_a_shell_c_still_reads_as_a_read(self):
+        self.assertFalse(blocked("bash -c 'git stash list'"))
+
+    def test_reflog_show_on_the_stash_ref_is_a_read(self):
+        self.assertFalse(blocked("git reflog show refs/stash"))
+
+    def test_an_apostrophe_in_a_comment_does_not_hide_the_next_line(self):
+        self.assertTrue(blocked("git log --oneline # what's new\ngit stash drop"))
+
+    def test_a_separator_inside_a_comment_is_not_a_command(self):
+        self.assertFalse(blocked("echo hi # a && git stash drop"))
+
+    def test_an_ansi_c_quoted_dash_c_string_is_decoded(self):
+        self.assertTrue(blocked("bash -c $'git stash drop'"))
+        self.assertTrue(blocked("bash -c $'echo hi\\ngit stash drop'"))
+
+    def test_a_backgrounded_command_does_not_hide_the_next(self):
+        self.assertTrue(blocked("git stash list & git stash drop"))
+
+    def test_a_subshell_or_substitution_is_still_read(self):
+        self.assertTrue(blocked("(git stash drop)"))
+        self.assertTrue(blocked("echo $(git stash drop)"))
+
+    def test_a_redirect_ampersand_is_not_a_command(self):
+        self.assertFalse(blocked("git stash list 2>&1 &>/dev/null"))
+
+    def test_a_shell_word_after_git_is_an_argument_not_a_wrapper(self):
+        # PR 587 review: `-C sh` / `-C ./zsh` must not turn the outer git call into a
+        # recursion into git's own `-c` config value
+        self.assertTrue(blocked("git -C sh -c a.b=1 stash drop"))
+        self.assertTrue(blocked("git -C ./zsh -c a.b=1 stash drop"))
+        self.assertTrue(blocked("git -C sh -c a.b=1 commit -m x", branch="main"))
+
+    def test_update_ref_saving_the_stash_as_a_branch_is_allowed(self):
+        self.assertFalse(blocked("git update-ref refs/heads/rescue stash"))
+
+    def test_a_long_option_before_dash_c_is_skipped(self):
+        self.assertTrue(blocked("bash --norc -c 'git stash drop'"))
+
+    def test_dash_o_consumes_its_value_before_dash_c(self):
+        self.assertTrue(blocked("bash -o pipefail -c 'git stash drop'"))
+
+    def test_an_uppercase_git_is_still_git(self):
+        self.assertTrue(blocked("GIT stash drop"))
+
+    def test_reflog_expire_all_reaches_the_stash_ref(self):
+        self.assertTrue(blocked("git reflog expire --expire=now --all"))
+
+    def test_a_separator_inside_the_dash_c_string_is_still_denied(self):
+        for command in (
+            "bash -c 'cd /tmp && git stash drop'",
+            "bash -c 'git stash list; git stash drop'",
+            'sh -c "git fetch || git stash pop"',
+            'bash -c "git stash drop && echo done"',
+            "bash -c 'git stash drop\necho x'",  # a real newline inside plain '...' quotes
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(blocked(command))
+
+    def test_a_prefix_before_the_shell_word_does_not_hide_the_wrapper(self):
+        for command in (
+            "env bash -c 'git stash drop'",
+            "sudo bash -c 'git stash drop'",
+            "exec bash -c 'git stash drop'",
+            "nohup sh -c 'git stash drop'",
+            "timeout 5 bash -c 'git stash drop'",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(blocked(command))
+
+    def test_dash_c_dashdash_still_finds_the_string(self):
+        self.assertTrue(blocked("bash -c -- 'git stash drop'"))
+
+    def test_value_taking_shell_options_before_dash_c_are_skipped(self):
+        for command in (
+            "bash -O extglob -c 'git stash drop'",
+            "bash --rcfile /dev/null -c 'git stash drop'",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(blocked(command))
+
+
 class ProtectedBranchTests(unittest.TestCase):
     def test_a_write_on_a_protected_branch_is_denied(self):
         for sub in ("commit -m wip", "merge feature", "rebase dev",
@@ -255,11 +370,24 @@ class CommandParsingTests(unittest.TestCase):
         self.assertTrue(blocked("grep -q x <<< done\ngit stash\ndone"))
 
     def test_an_unresolvable_cd_target_falls_back_to_the_base_cwd(self):
-        for target in ("$TARGET", "~", "..", "../..", "'/repo/a;b'"):
+        for target in ("$TARGET", "~", "..", "../.."):
             with self.subTest(target=target):
                 self.assertTrue(blocked(
                     "cd {0} && git stash".format(target),
                     trees={"/repo": SHARED}, shared=UNKNOWN))
+
+    def test_a_quoted_cd_target_with_a_separator_character_is_one_argument(self):
+        """A quote-aware split must not fragment the quoted `cd` target on the `;`
+        inside it — that would carry the old raw-text-split bug into `cd` resolution
+        too. The resolved target is an absolute path, so `_cd_resolves` trusts it
+        as-is, same as any other absolute `cd` target."""
+        self.assertEqual(
+            [w for _, _, w in hook.invocations("cd '/repo/a;b' && git stash", "/repo")],
+            ["/repo/a;b"])
+
+    def test_an_ansi_c_quoted_separator_does_not_split(self):
+        self.assertEqual(hook._split_commands("echo $'a;b' && git stash"),
+                         ["echo $'a;b' ", " git stash"])
 
     def test_a_bare_newline_separated_cd_still_sets_the_directory(self):
         self.assertFalse(blocked(
@@ -733,6 +861,16 @@ class EntryPointTests(unittest.TestCase):
         self.assertEqual(payload["hookEventName"], "PreToolUse")
         self.assertEqual(payload["permissionDecision"], "deny")
         self.assertTrue(payload["permissionDecisionReason"])
+
+    def test_an_uppercase_git_still_loads_protected_branches(self):
+        """The precheck gating `_load_protected_branches` must not be case-sensitive,
+        or `GIT push origin main` skips the load and the branch stays unprotected."""
+        out = self.run_main(
+            {"agent_id": "a", "cwd": "/repo", "tool_input": {"command": "GIT push origin main"}},
+            monkey={"current_branch": lambda cwd: "main",
+                    "_load_protected_branches": lambda project: frozenset({"main"})})
+        payload = json.loads(out)["hookSpecificOutput"]
+        self.assertEqual(payload["permissionDecision"], "deny")
 
     def test_a_raising_resolver_fails_open(self):
         def boom(cwd):
