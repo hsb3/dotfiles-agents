@@ -349,6 +349,86 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._transcript(*self._notification("d6666666666666666", "completed"))
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
+    @staticmethod
+    def _resume_result(agent_id):
+        # Trimmed from a real 2.1.281 line: SendMessage addressed by NAME, so
+        # only this tool_result carries the id.
+        return {
+            "type": "user",
+            "message": {"role": "user", "content": [{
+                "tool_use_id": "toolu_01AQTS2z2WYtZoxcwL3JZFjL",
+                "type": "tool_result", "content": "Resuming agent sleeper"}]},
+            "toolUseResult": {
+                "success": True, "message": "Resuming agent sleeper",
+                "resumedAgentId": agent_id,
+                "pin": {"id": agent_id, "name": "sleeper", "ref": "8cd76e"}},
+            "version": "2.1.281",
+        }
+
+    def test_a_resume_by_name_makes_it_live_again(self):
+        self._sidecar("e1111111111111111")
+        self._transcript(self._taskstop_result("e1111111111111111"),
+                         self._resume_result("e1111111111111111"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_resumed_by_the_user_notification_makes_it_live_again(self):
+        # Shape inferred from the 2.1.281 binary, not captured live.
+        self._sidecar("e2222222222222222")
+        queued, _ = self._notification("e2222222222222222")
+        resumed = dict(queued, content=(
+            "<task-notification>\n<task-id>e2222222222222222</task-id>\n"
+            "<summary>Agent \"x\" was resumed by the user</summary>\n"
+            "</task-notification>"))
+        self._transcript(self._taskstop_result("e2222222222222222"), queued, resumed)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_later_non_kill_notification_makes_it_live_again(self):
+        self._sidecar("e3333333333333333")
+        queued, _ = self._notification("e3333333333333333")
+        later, _ = self._notification("e3333333333333333", "completed")
+        self._transcript(self._taskstop_result("e3333333333333333"), queued, later)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_typed_prompt_quoting_a_kill_does_not_settle(self):
+        self._sidecar("e4444444444444444")
+        queued, delivered = self._notification("e4444444444444444")
+        self._transcript(
+            dict(queued, content="please read this paste:\n" + queued["content"]))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+        self._transcript({"type": "attachment", "attachment": dict(
+            delivered["attachment"], commandMode="prompt")})
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_second_identical_kill_after_a_resume_settles_again(self):
+        self._sidecar("e5555555555555555")
+        queued, delivered = self._notification("e5555555555555555")
+        self._transcript(queued, delivered,
+                         self._send_message("e5555555555555555"), queued)
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_an_undelivered_queue_is_not_needed_for_a_second_kill(self):
+        # A notification can arrive as an attachment with no enqueue before it;
+        # that attachment is an event, not a copy.
+        self._sidecar("e6666666666666666")
+        _, delivered = self._notification("e6666666666666666")
+        self._transcript(delivered, self._send_message("e6666666666666666"),
+                         delivered)
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_deeply_nested_line_does_not_drop_every_worker(self):
+        self._sidecar("e7777777777777777")
+        with open(self.transcript_path, "a", encoding="utf-8") as fh:
+            fh.write('{"id":"e7777777777777777","x":' + "[" * 100000
+                     + "]" * 100000 + "}\n")
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_failed_taskstop_does_not_settle(self):
+        self._sidecar("e8888888888888888")
+        failed = self._taskstop_result("e8888888888888888")
+        failed["toolUseResult"]["message"] = "Task e8888888888888888 is not running"
+        self._transcript(failed)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
     def test_worktree_isolated_child_never_blocks(self):
         self._sidecar("c3333333333333333",
                       worktree_path="/tmp/worktrees/agent-c3333333333333333")

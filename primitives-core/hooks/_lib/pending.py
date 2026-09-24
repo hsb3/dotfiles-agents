@@ -275,54 +275,67 @@ def settled_ids(tail_bytes=TAIL_BYTES):
 _NOTIFICATION_RE = re.compile(r"<task-notification>(.*?)</task-notification>", re.S)
 _TASK_ID_RE = re.compile(r"<task-id>\s*([^<\s]+)\s*</task-id>")
 _KILLED_RE = re.compile(r"<status>\s*killed\s*</status>")
+NOTIFICATION_OPEN = "<task-notification>"
+NOTIFICATION_MODE = "task-notification"
 
 
-def _killed_in_notification(text, seen):
-    """Agent keys a `<task-notification>` text reports with status killed.
-
-    One notification is written up to three times (queued, dequeued, and
-    delivered as an attachment), the later copies possibly after a
-    `SendMessage` has resumed the agent. `seen` holds the blocks already
-    counted, so only the first copy settles.
-    """
-    keys = set()
-    if not isinstance(text, str):
-        return keys
+def _notifications(text):
+    """(key, killed) per `<task-notification>` block, or [] when `text` is not
+    a notification at all (a typed prompt that merely quotes one)."""
+    if not isinstance(text, str) or not text.lstrip().startswith(NOTIFICATION_OPEN):
+        return []
+    found = []
     for block in _NOTIFICATION_RE.findall(text):
-        if block in seen:
-            continue
         match = _TASK_ID_RE.search(block)
-        if match and _KILLED_RE.search(block):
-            seen.add(block)
-            key = agent_key(match.group(1))
-            if key:
-                keys.add(key)
-    return keys
+        key = agent_key(match.group(1)) if match else None
+        if key:
+            found.append((key, bool(_KILLED_RE.search(block))))
+    return found
 
 
 def stopped_ids(transcript_path, candidates):
     """The subset of `candidates` the session transcript shows stopped.
 
-    A TaskStop'd or user-killed agent fires no SubagentStop (measured on
-    Claude Code 2.1.281), so the ledger never settles it. The parent
-    transcript records the kill two ways, either of which settles: the
+    A TaskStop'd agent fires no SubagentStop (measured on Claude Code
+    2.1.281), so the ledger never settles it. Two records settle it: the
     TaskStop tool_result (a `user` line whose `toolUseResult.task_id` is the
-    agent), and a `<task-notification>` with `<status>killed</status>` (in a
-    `queue-operation` line's `content` or an attachment's `prompt`). A LATER
-    assistant `SendMessage` whose `input.to` is the agent resumes it, so it is
-    un-settled again; its own SubagentStop settles it from then on.
+    agent and whose message reports success), and a `<task-notification>`
+    with `<status>killed</status>`. Three records RESUME it, un-settling it
+    until its own SubagentStop settles it normally: an assistant `SendMessage`
+    whose `input.to` is the id; a `user` line whose `toolUseResult`
+    `resumedAgentId` is the id (measured: SendMessage addressed by NAME
+    leaves only this); and any later notification for the agent that is not
+    a kill. The user-resume notification ("was resumed by the user") is
+    inferred from the 2.1.281 binary, not measured on disk.
+
+    Notifications are events only where they are written first: a
+    `queue-operation` `enqueue`, or a `task-notification` attachment with no
+    outstanding enqueue of the same text. The `remove`/`dequeue` rows and an
+    attachment matching an earlier enqueue are delivery copies, which can land
+    after a resume and must not undo it. Counting enqueues rather than
+    remembering texts is what lets an identical second kill settle again.
 
     Read whole, in order: not tail-bounded, because a kill aging out of a
     window would re-block on an agent that is long dead. Lines naming no
     candidate are skipped before parsing. A missing or unreadable transcript
-    yields the empty set, per the module's convention — it only ever removes
+    yields the empty set, per the module's convention: it only ever removes
     agents from the pending set, so "cannot tell" leaves the ledger's answer.
     """
     wanted = {k for k in (agent_key(c) for c in candidates or ()) if k}
     stopped = set()
-    seen = set()
     if not wanted or not transcript_path:
         return stopped
+    queued = {}  # enqueued notification text -> copies not yet delivered
+
+    def apply(text):
+        for key, killed in _notifications(text):
+            if key not in wanted:
+                continue
+            if killed:
+                stopped.add(key)
+            else:
+                stopped.discard(key)
+
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -330,7 +343,7 @@ def stopped_ids(transcript_path, candidates):
                     continue
                 try:
                     obj = json.loads(line)
-                except ValueError:
+                except (ValueError, RecursionError):
                     continue
                 if not isinstance(obj, dict):
                     continue
@@ -343,13 +356,22 @@ def stopped_ids(transcript_path, candidates):
                         if (key in wanted and isinstance(message, str)
                                 and message.startswith("Successfully stopped task")):
                             stopped.add(key)
+                        stopped.discard(agent_key(result.get("resumedAgentId")))
                 elif kind == "queue-operation":
-                    stopped.update(_killed_in_notification(obj.get("content"), seen) & wanted)
+                    if obj.get("operation") == "enqueue":
+                        text = obj.get("content")
+                        apply(text)
+                        if isinstance(text, str):
+                            queued[text] = queued.get(text, 0) + 1
                 elif kind == "attachment":
                     attachment = obj.get("attachment")
-                    if isinstance(attachment, dict):
-                        stopped.update(
-                            _killed_in_notification(attachment.get("prompt"), seen) & wanted)
+                    if (isinstance(attachment, dict)
+                            and attachment.get("commandMode") == NOTIFICATION_MODE):
+                        text = attachment.get("prompt")
+                        if isinstance(text, str) and queued.get(text):
+                            queued[text] -= 1
+                        else:
+                            apply(text)
                 elif kind == "assistant":
                     message = obj.get("message")
                     content = message.get("content") if isinstance(message, dict) else None

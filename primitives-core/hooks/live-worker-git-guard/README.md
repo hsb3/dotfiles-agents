@@ -147,7 +147,9 @@ already settled.
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281; a user kill is assumed
 to behave the same), so the ledger never settles it. The guard reads the kill from the session
 transcript instead (`pending.stopped_ids`): the TaskStop tool result, or a `<task-notification>`
-with status `killed`. A later `SendMessage` to that agent resumes it and makes it live again.
+with status `killed`. A later resume makes it live again: a `SendMessage` to it (the tool result
+carries its id even when it was addressed by name), or any later notification for it that is not
+a kill. The user-resume notification's shape is inferred from the 2.1.281 binary, not measured.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only
 scouts too — a `checkout` or `pull` changes the tree a scout is reading mid-read.
