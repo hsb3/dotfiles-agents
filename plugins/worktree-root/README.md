@@ -5,6 +5,10 @@ Claude Code puts every worktree it creates (`--worktree`, `EnterWorktree`, subag
 not read by the CLI. This plugin owns creation instead, so worktrees land under the
 directory the project names as its `checkout-root` in the atelier activation file.
 
+Scope: subagent `isolation: worktree` (and `EnterWorktree`) only. A `claude --worktree`
+session worktree is created before plugin hooks load, so it stays at the native
+location (measured on claude 2.1.281).
+
 ## Install
 
 Opt-in per project. Installing it changes where every worktree in that project is

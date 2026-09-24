@@ -2,6 +2,8 @@
 
 Takes over Claude Code's worktree creation so worktrees land under the project's
 `checkout-root` instead of `.claude/worktrees/`. One `hook.py` handles three events.
+Delivered as a plugin it covers subagent `isolation: worktree` and `EnterWorktree`;
+`claude --worktree` creates its worktree before plugin hooks load, so that path stays native.
 
 | Event | What it does |
 |---|---|
