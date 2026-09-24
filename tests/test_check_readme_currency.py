@@ -186,6 +186,32 @@ class ReadmeCurrencyGate(unittest.TestCase):
         self._git("merge", "-q", "--no-ff", "-m", "merge side", "side")
         self.assertEqual(len(C.problems()), 1)
 
+    def test_ci_merge_ref_names_the_member_change_the_bump_ships(self):
+        """CI runs on the PR merge ref: a _lib + bump PR behind a base-branch
+        member change ships that change too, so it fails, and the message must
+        name the path rather than only the bump the author made."""
+        self._kit()
+        base = self._git("rev-parse", "--abbrev-ref", "HEAD")
+        self._git("checkout", "-q", "-b", "pr")
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._bump("0.1.1")
+        self._commit("shared _lib change, bump kit")
+        self.assertEqual(C.problems(), [], "the PR tip alone is clean")
+        self._git("checkout", "-q", base)
+        self._write("primitives-core/hooks/h1/hook.py", "v2\n")
+        self._commit("change a kit hook on the base branch")
+        self._git("merge", "-q", "--no-ff", "-m", "merge ref", "pr")
+        found = C.problems()
+        self.assertEqual(len(found), 1)
+        self.assertIn("primitives-core/hooks/h1/hook.py", found[0])
+
+    def test_deleting_the_version_is_not_a_bump(self):
+        self._kit()
+        self._write("primitives-core/hooks/_lib/shared.py", "v2\n")
+        self._write("plugins/kit/.claude-plugin/plugin.json", '{\n  "name": "kit"\n}\n')
+        self._commit("drop kit's version")
+        self.assertEqual(len(C.problems()), 1)
+
     def test_a_bump_committed_before_its_lib_change_is_clean(self):
         self._kit()
         self._bump("0.1.1")
