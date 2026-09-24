@@ -146,6 +146,20 @@ def unquote(value):
     return value
 
 
+def _strip_comment(raw):
+    """`raw` minus a trailing comment: a `#` after whitespace, outside quotes."""
+    quote = None
+    for index, ch in enumerate(raw):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in ("'", '"'):
+            quote = ch
+        elif ch == "#" and index and raw[index - 1] in " \t":
+            return raw[:index].rstrip()
+    return raw
+
+
 def _frontmatter(text):
     """(lines, start, end) of the frontmatter block, or None."""
     lines = text.splitlines()
@@ -268,7 +282,7 @@ def parse_key(text, key):
         colon = item.find(":")
         if colon == -1 or item[:colon].strip().lower() != key:
             continue
-        rest = item[colon + 1:].strip()
+        rest = _strip_comment(item[colon + 1:].strip())
         if rest.startswith("[") and rest.endswith("]"):
             items.extend(_inline_list(rest))
             sequence = True
