@@ -1363,5 +1363,174 @@ class BaseStageIntegration(unittest.TestCase):
         self.assertTrue(os.path.isfile(main_stamp))
         self.assertTrue(os.path.isfile(dev_stamp))
 
+
+@unittest.skipUnless(GIT, "git is not installed")
+class LocalMode(unittest.TestCase):
+    """`--local`: the cached origin/main and origin/dev, no fetch, no sync stamp.
+
+    Same fixture as BaseStageIntegration, so both refs are cached and `dev` is also a
+    local branch (which must not stand in for a deleted refs/remotes/origin/dev).
+    """
+
+    git = GitPublishedTreeIntegration.git
+    _write = BaseStageIntegration._write
+    setUp = BaseStageIntegration.setUp
+
+    def run_local(self, version, extra=None):
+        self._write(self.work, "plugins/alpha/.claude-plugin/plugin.json", plugin_json_bytes("alpha", version))
+        self._write(self.work, extra or "plugins/alpha/hooks/_lib/common.sh", b"echo changed\n")
+        lines = []
+        rc = V.main(
+            plugins_dir=self.plugins,
+            tree=V.GitPublishedTree(repo=self.work, offline=True),
+            base_tree=V.GitPublishedTree(branch="dev", repo=self.work, offline=True),
+            out=lines.append,
+            local=True,
+        )
+        return rc, "\n".join(lines)
+
+    def drop(self, branch):
+        self.git(self.work, "update-ref", "-d", f"refs/remotes/origin/{branch}")
+
+    @needs_tar_filter
+    def test_unbumped_change_is_red(self):
+        rc, text = self.run_local("0.2.0")  # dev's version: bumped past main, not past dev
+        self.assertEqual(rc, 1, text)
+        self.assertIn("bytes differ from origin/dev", text)
+        self.assertIn("locally cached", text)
+
+    @needs_tar_filter
+    def test_bump_above_dev_is_green(self):
+        rc, text = self.run_local("0.3.0")
+        self.assertEqual(rc, 0, text)
+        self.assertIn("✓ version-bump guard clean", text)
+        self.assertNotIn("NOT CHECKED", text)
+
+    def test_missing_dev_skips_only_the_dev_stage(self):
+        self.drop("dev")
+        rc, text = self.run_local("0.1.0")  # main's version, bytes changed
+        self.assertEqual(rc, 1, text)
+        self.assertIn("NOT CHECKED against origin/dev", text)
+        self.assertIn("git fetch origin", text)
+        self.assertIn("published bytes differ from origin/main", text)
+
+    def test_missing_dev_green_names_only_main(self):
+        self.drop("dev")
+        rc, text = self.run_local("0.1.1")
+        self.assertEqual(rc, 0, text)
+        clean = next(line for line in text.splitlines() if line.startswith("✓"))
+        self.assertIn("origin/main", clean)
+        self.assertNotIn("origin/dev", clean)
+
+    def test_neither_ref_is_two_not_checked_lines_and_exit_zero(self):
+        self.drop("dev")
+        self.drop("main")
+        rc, text = self.run_local("0.1.0")
+        self.assertEqual(rc, 0, text)
+        self.assertEqual(text.count("NOT CHECKED"), 2, text)
+        self.assertNotIn("✓", text)
+        self.assertNotIn("✗", text)
+
+    def test_never_fetches_and_never_writes_a_stamp(self):
+        calls = []
+
+        def run(args):
+            calls.append(args)
+            return V.run_git(args, repo=self.work)
+
+        stamps = tempfile.mkdtemp(prefix="check-version-bump-local-")
+        self.addCleanup(shutil.rmtree, stamps, True)
+        main_stamp, dev_stamp = os.path.join(stamps, "m"), os.path.join(stamps, "d")
+        tree = V.GitPublishedTree(repo=self.work, run=run, stamp_path=main_stamp, offline=True)
+        base = V.GitPublishedTree(
+            branch="dev", repo=self.work, run=run, stamp_path=dev_stamp, offline=True
+        )
+        V.main(plugins_dir=self.plugins, tree=tree, base_tree=base, out=lambda _: None, local=True)
+        self.assertTrue(calls)
+        self.assertFalse([c for c in calls if c[0] in ("fetch", "remote")], calls)
+        self.assertFalse(os.path.exists(main_stamp) or os.path.exists(dev_stamp))
+        real = V.GitPublishedTree(repo=self.work).stamp_path
+        self.assertFalse(os.path.exists(real), real)
+
+    def test_local_builds_offline_trees(self):
+        built = []
+
+        class Fake:
+            ref, note = "origin/x", ""
+
+            def __init__(self, **kw):
+                built.append(kw)
+
+            def prepare(self):
+                return "absent"
+
+        with mock.patch.object(V, "GitPublishedTree", Fake):
+            self.assertEqual(V.main(plugins_dir=self.plugins, out=lambda _: None, local=True), 0)
+        self.assertEqual([kw.get("offline") for kw in built], [True, True])
+
+    class Unreadable:
+        note = ""
+
+        def __init__(self, ref):
+            self.ref = ref
+
+        def prepare(self):
+            return None
+
+        def index(self):
+            raise RuntimeError(f"extracting {self.ref} failed: no data filter")
+
+    def run_with(self, local, tree=None, base_tree=None):
+        lines = []
+        rc = V.main(
+            plugins_dir=self.plugins,
+            tree=tree or V.GitPublishedTree(repo=self.work, offline=local),
+            base_tree=base_tree or V.GitPublishedTree(branch="dev", repo=self.work, offline=local),
+            out=lines.append,
+            local=local,
+        )
+        return rc, "\n".join(lines)
+
+    def test_unreadable_dev_tree_is_not_checked_locally_and_red_in_ci(self):
+        rc, text = self.run_with(True, base_tree=self.Unreadable("origin/dev"))
+        self.assertEqual(rc, 0, text)
+        self.assertIn("NOT CHECKED against origin/dev", text)
+        self.assertIn("✓ version-bump guard clean", text)
+        rc, text = self.run_with(False, base_tree=self.Unreadable("origin/dev"))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("could not measure", text)
+
+    def test_unreadable_main_tree_is_not_checked_locally(self):
+        rc, text = self.run_with(True, tree=self.Unreadable("origin/main"))
+        self.assertIn("NOT CHECKED against origin/main", text)
+        self.assertNotIn("could not measure", text)
+        clean = [line for line in text.splitlines() if line.startswith("✓")]
+        self.assertTrue(all("origin/main" not in line for line in clean), text)
+
+    @needs_tar_filter
+    def test_behind_dev_skips_the_dev_stage_locally_only(self):
+        class Behind(V.GitPublishedTree):
+            def is_ancestor_of_head(self):
+                return False
+
+        self._write(self.work, "plugins/alpha/.claude-plugin/plugin.json", plugin_json_bytes("alpha", "0.2.0"))
+        self._write(self.work, "plugins/alpha/hooks/_lib/common.sh", b"echo changed\n")
+        rc, text = self.run_with(True, base_tree=Behind(branch="dev", repo=self.work, offline=True))
+        self.assertEqual(rc, 0, text)
+        self.assertIn("NOT CHECKED against origin/dev", text)
+        self.assertIn("moved past this tree", text)
+        rc, text = self.run_with(False, base_tree=Behind(branch="dev", repo=self.work))
+        self.assertEqual(rc, 1, text)
+
+    def test_cli_flag_reaches_main(self):
+        seen = []
+        with mock.patch.object(V, "main", lambda **kw: seen.append(kw) or 0):
+            V.cli(["--local"])
+            V.cli([])
+        self.assertEqual(seen, [{"local": True}, {"local": False}])
+        with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+            V.cli(["--locl"])
+
+
 if __name__ == "__main__":
     unittest.main()

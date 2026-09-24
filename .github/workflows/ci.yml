@@ -68,9 +68,10 @@ jobs:
       # same plugin as published on origin/main — changed bytes must ship under a moved
       # version or consumers keep serving the cached one — and against the PR base
       # origin/dev, where changed bytes need a version greater than dev's, so two PRs
-      # cannot ship under one unpublished version. It rides THIS job rather than
-      # `make ci` because it needs network to reach both refs and `make ci` is offline +
-      # zero-install by design; and rather than a job of its own because dev's branch
+      # cannot ship under one unpublished version. `make ci` runs it with `--local` against
+      # the cached refs only (NOT CHECKED when a ref is missing or HEAD is behind dev), since
+      # `make ci` is offline + zero-install by design; THIS step is the fetched, authoritative
+      # run. It rides this job rather than a job of its own because dev's branch
       # protection pins required checks by job NAME (a new one would strand open PRs on a
       # check that never reports). It fetches both refs itself and is RED when either
       # cannot be read at all: a gate that cannot measure is red (decision-016 point 4).

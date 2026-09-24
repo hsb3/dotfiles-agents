@@ -34,11 +34,12 @@ dereferenced regular files where `dev`'s are symlinks, and nothing else from `de
 it. So this never whole-tree diffs the two branches — only plugin subtrees, dereferenced
 against published.
 
-Where it runs: a step in the `drift guards` CI job, NOT in `make ci`. Reaching
-`origin/main` needs NETWORK, and `make ci` is offline-and-zero-install by design; a new CI
-job was equally unavailable because `dev`'s branch protection pins required checks by job
-NAME, so adding one would strand every open PR on a check that never reports (owner
-ruling, TASK-032).
+Where it runs: a step in the `drift guards` CI job (a new job would strand every open PR,
+since `dev`'s branch protection pins required checks by job NAME; owner ruling, TASK-032).
+`make ci` runs it with `--local`: no fetch and no sync stamp, each stage against the LOCALLY
+cached ref, which may be stale; a ref not cached, or a dev ref HEAD does not contain (dev's own
+bumps would read as this tree's), prints NOT CHECKED and skips only that stage, so CI's fetched
+run stays authoritative.
 
 Network contract — uniform across every CI-only gate here (decision-016 point 4): a gate
 that cannot measure is red, never green, so no usable published ref at all exits 1 saying
@@ -117,9 +118,12 @@ never commits them, so leaving them in produces phantom diffs.
 
 Stdlib-only, deterministic. Exit 0 = the published tree was read and every plugin is clean;
 exit 1 = violations (prints every one), or a published tree that could not be read at all.
-Usage: python3 scripts/check_version_bump.py   (run from anywhere)
+`--local` exits 0 for a stage it could not measure (NOT CHECKED), including a dev stage
+on a tree `origin/dev` has moved past.
+Usage: python3 scripts/check_version_bump.py [--local]   (run from anywhere)
 """
 
+import argparse
 import hashlib
 import io
 import json
@@ -294,8 +298,13 @@ class GitPublishedTree:
     a real git dir.
     """
 
-    def __init__(self, ref=None, repo=None, run=None, stamp_path=None, branch=PUBLISHED_BRANCH):
+    def __init__(
+        self, ref=None, repo=None, run=None, stamp_path=None, branch=PUBLISHED_BRANCH,
+        offline=False,
+    ):
         self.branch = branch
+        # offline: resolve the cached ref only — no fetch, no sync stamp read or written.
+        self.offline = offline
         self.ref = ref or f"{PUBLISHED_REMOTE}/{branch}"
         self.full_ref = f"refs/remotes/{PUBLISHED_REMOTE}/{branch}"
         # main keeps the original name so existing clones keep their sync record.
@@ -315,7 +324,8 @@ class GitPublishedTree:
 
     def prepare(self):
         try:
-            self._fetch()
+            if not self.offline:
+                self._fetch()
             # Existence by exact ref path first: `rev-parse --verify` applies all six
             # resolution rules even to a full refname, so with no tracking ref a local
             # branch named `refs/remotes/origin/main` would become the published tree.
@@ -329,6 +339,11 @@ class GitPublishedTree:
                 detail = f" ({self._fetch_error})" if self._fetch_error else ""
                 return f"{self.ref} could not be resolved{detail}"
             self._sha = out.decode("ascii", "replace").strip()
+            if self.offline:
+                self.note = (
+                    f"{self.ref} is the locally cached ref at {self._sha[:12]} (may be stale; "
+                    "no fetch was made)"
+                )
             # A ref just rewritten from the remote is current by definition, so the sync
             # record is only worth reading — and only capable of declining — on the
             # fallback path, where no contact was made.
@@ -659,38 +674,73 @@ def _unmeasured(reason, out):
     return 1
 
 
-def main(plugins_dir=None, tree=None, base_tree=None, out=print):
+def _not_checked(ref, reason, out, hint=f"Run `git fetch {PUBLISHED_REMOTE}` to measure; "):
+    out(f"○ version-bump guard: NOT CHECKED against {ref} — {reason}. {hint}CI runs the full check.")
+
+
+def main(plugins_dir=None, tree=None, base_tree=None, out=print, local=False):
+    """`local`: an unreadable ref skips its stage (NOT CHECKED) instead of going red."""
     if tree is None:
         # The CLI path runs both stages; a caller injecting `tree` alone gets main only.
-        tree = GitPublishedTree()
-        base_tree = base_tree or GitPublishedTree(branch=BASE_BRANCH)
+        tree = GitPublishedTree(offline=local)
+        base_tree = base_tree or GitPublishedTree(branch=BASE_BRANCH, offline=local)
+    main_ref = getattr(tree, "ref", PUBLISHED_REF)
     reason = tree.prepare()
     if reason:
-        return _unmeasured(reason, out)
-    if getattr(tree, "note", ""):
+        if not local:
+            return _unmeasured(reason, out)
+        _not_checked(main_ref, reason, out)
+        tree = None
+    elif getattr(tree, "note", ""):
         out(f"⚠ version-bump guard: {tree.note}")
     base_ref = getattr(base_tree, "ref", BASE_REF)
     if base_tree is not None:
         reason = base_tree.prepare()
         if reason:
-            return _unmeasured(f"the PR base {base_ref} could not be read: {reason}", out)
-        if getattr(base_tree, "note", ""):
+            if not local:
+                return _unmeasured(f"the PR base {base_ref} could not be read: {reason}", out)
+            _not_checked(base_ref, reason, out)
+            base_tree = None
+        elif local and getattr(base_tree, "is_ancestor_of_head", lambda: True)() is False:
+            # Behind dev, dev's own bumps read as this tree's changes; CI gates the merge ref.
+            _not_checked(
+                base_ref, f"{base_ref} has moved past this tree; rebase or merge "
+                f"{BASE_BRANCH} to measure", out, hint="",
+            )
+            base_tree = None
+        elif getattr(base_tree, "note", ""):
             out(f"⚠ version-bump guard: {base_tree.note}")
+    if tree is None and base_tree is None:
+        return 0
 
-    local = local_index(plugins_dir)
+    here = local_index(plugins_dir)
 
     def local_json(pid):
         return local_plugin_json(pid, plugins_dir)
 
-    base_problems = []
-    try:
-        problems = compare(local, tree.index(), local_json, tree.plugin_json)
-        if base_tree is not None:
+    # A tree that resolved can still fail to read (e.g. a Python whose tarfile lacks the
+    # extraction filter); locally that skips its stage like an uncached ref.
+    problems, base_problems = [], []
+    if tree is not None:
+        try:
+            problems = compare(here, tree.index(), local_json, tree.plugin_json)
+        except RuntimeError as exc:
+            if not local:
+                return _unmeasured(str(exc), out)
+            _not_checked(main_ref, str(exc), out, hint="")
+            tree = None
+    if base_tree is not None:
+        try:
             base_problems = compare_base(
-                local, base_tree.index(), local_json, base_tree.plugin_json, base_ref
+                here, base_tree.index(), local_json, base_tree.plugin_json, base_ref
             )
-    except RuntimeError as exc:
-        return _unmeasured(str(exc), out)
+        except RuntimeError as exc:
+            if not local:
+                return _unmeasured(str(exc), out)
+            _not_checked(base_ref, str(exc), out, hint="")
+            base_tree = None
+    if tree is None and base_tree is None:
+        return 0
     problems += base_problems
     if problems:
         out(f"✗ version-bump guard: {len(problems)} violation(s)")
@@ -708,17 +758,28 @@ def main(plugins_dir=None, tree=None, base_tree=None, out=print):
                 f"merge {BASE_BRANCH}) and re-run before bumping."
             )
         return 1
-    out(
-        f"✓ version-bump guard clean — every plugin's dereferenced bytes either match "
-        f"{PUBLISHED_REF} or ship under a moved version"
-        + (
-            f", and either match {base_ref} or ship under a version greater than the one it carries"
-            if base_tree is not None
-            else ""
+    clauses = []
+    if tree is not None:
+        clauses.append(f"either match {PUBLISHED_REF} or ship under a moved version")
+    if base_tree is not None:
+        clauses.append(
+            f"either match {base_ref} or ship under a version greater than the one it carries"
         )
+    out(
+        "✓ version-bump guard clean — every plugin's dereferenced bytes "
+        + ", and ".join(clauses)
     )
     return 0
 
 
+def cli(argv=None):
+    parser = argparse.ArgumentParser(description="Version-bump gate.")
+    parser.add_argument(
+        "--local", action="store_true",
+        help="cached origin/main + origin/dev only: no fetch, an unreadable ref is NOT CHECKED",
+    )
+    return main(local=parser.parse_args(argv).local)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cli())
