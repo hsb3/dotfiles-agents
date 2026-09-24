@@ -432,6 +432,9 @@ def main():
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "updatedInput": updated,
+                # systemMessage is shown to the user only; this is the copy the
+                # dispatcher reads, and the nested clause is addressed to it.
+                "additionalContext": notice,
             },
             # Announced rather than silent: the rewrite moves the worker to a
             # checkout where the session's uncommitted work does not exist, and

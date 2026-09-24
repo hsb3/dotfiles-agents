@@ -264,7 +264,9 @@ string test reports every subdirectory as a worktree.
   `.claude/worktrees/agent-<id>`.
 - **Announced, not silent.** The rewrite moves the worker to a checkout where the session's
   uncommitted work does not exist. That is worth one line of `systemMessage`, so a surprised reader
-  can trace the behaviour to this hook rather than to the harness.
+  can trace the behaviour to this hook rather than to the harness. `systemMessage` reaches only the
+  user, so the same notice also goes out as `additionalContext`, the copy the dispatcher reads —
+  the nested clause is addressed to it.
 - **Fail-open, always.** Every path exits 0. An un-isolated worker is the pre-hook status quo and
   merely risky; a hook that crashes on every dispatch is an outage.
 - **The activation parser is shared; the sourcing is not.** Parsing lives in

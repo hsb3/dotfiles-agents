@@ -111,7 +111,8 @@ worktree of the same repository (the main checkout or any linked worktree, found
 `git worktree list --porcelain`) is judged by that tree exactly as if the anchor covered it. So an
 Edit from a nested worktree into its dispatcher's worktree gets one verdict whether
 `CLAUDE_PROJECT_DIR` is empty or set. A path outside every worktree of the repo, or any git failure,
-stays out of jurisdiction. Bash writes remain outside the matcher either way.
+stays out of jurisdiction. That lookup is one `git` call, made only for a subagent's edit outside the
+anchor. Bash writes remain outside the matcher either way.
 
 ## Install
 

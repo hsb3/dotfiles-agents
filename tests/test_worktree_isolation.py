@@ -435,7 +435,8 @@ class WorktreeIsolationTests(unittest.TestCase):
         body, updated = self._rewrite(self._payload(cwd=worktree_dir))
         self.assertEqual(updated["isolation"], "worktree")
 
-        message = body["systemMessage"]
+        # systemMessage reaches only the user; the manager reads additionalContext.
+        message = body["hookSpecificOutput"]["additionalContext"]
         self.assertIn("relative to its own checkout", message)
         self.assertIn("not available under isolate: writers", message)
 
