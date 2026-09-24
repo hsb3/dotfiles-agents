@@ -43,10 +43,10 @@ isolate: writers           # off (default when absent) | writers | [builder, my-
 # inert and the standard search runs.
 # handoff:
 #   mode: external
-#   stamp: .claudethe handoff skill.stamp
+#   stamp: .claude/handoff.stamp
 #   location: tracker issue PROJECT-123
 
-# context-watermark: where the the handoff skill nudge fires. Every sub-key is optional and
+# context-watermark: where the handoff nudge fires. Every sub-key is optional and
 # independent — `notice`, `soft` and `hard` are absolute token counts, `complexity` is
 # a multiplier on all three. A `worker:` or `session:` sub-mapping overrides the flat
 # keys for that layer. Anything absent, blank, or not a positive number leaves that

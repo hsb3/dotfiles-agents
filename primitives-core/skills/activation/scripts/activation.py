@@ -171,14 +171,12 @@ def top_level_keys(region):
     return keys
 
 
-def effort_value(region, unquote):
-    """`effort:`'s raw value, or "".
+def _raw_top_level_value(region, key, unquote):
+    """The last top-level `key:`'s raw text (comment/quote-stripped), or "".
 
-    The single value this script reads for itself, and the exception that proves the
-    rule above: no hook parses `effort`, so here the checker IS the only reader. Even
-    so, `unquote` is the hooks' own `_unquote` rather than a copy of it, and the loop
-    runs to the end so a key written twice takes the last value — both so a file that
-    reads one way to the hooks reads the same way here.
+    `unquote` is the hooks' own `_unquote` rather than a copy of it, and the loop runs
+    to the end so a key written twice takes the last value — both so a file that reads
+    one way to the hooks reads the same way here.
     """
     value = ""
     for line in region:
@@ -186,10 +184,30 @@ def effort_value(region, unquote):
         if not item or item.startswith("#") or line[:1].isspace():
             continue
         colon = item.find(":")
-        if colon == -1 or item[:colon].strip().lower() != "effort":
+        if colon == -1 or item[:colon].strip().lower() != key:
             continue
         value = unquote(item[colon + 1:])
     return value
+
+
+def effort_value(region, unquote):
+    """`effort:`'s raw value, or "".
+
+    The exception that proves the "check owns no frontmatter parser" rule above: no
+    hook parses `effort`, so here the checker IS the only reader.
+    """
+    return _raw_top_level_value(region, "effort", unquote)
+
+
+def is_explicit_empty_list(region, key, unquote):
+    """True when `key:`'s raw text is `[]` (whitespace tolerant), false otherwise.
+
+    A second, narrower exception to "no frontmatter parser": the hooks' loaders
+    resolve an explicit `key: []` and a malformed scalar/blank to the identical off
+    state, and cannot say which one was written — only the raw text can. This never
+    decides armed/off itself, only whether an already-off key was deliberately so.
+    """
+    return _raw_top_level_value(region, key, unquote).replace(" ", "") == "[]"
 
 
 # ---------------------------------------------------------------------------
@@ -312,11 +330,15 @@ def evaluate(project_dir, modules):
             "protected-branches", "not configured",
             "the stash half of this hook is live regardless; only the "
             "protected-branch half needs this key", ["worker-git-scope-guard"]))
+    elif not branches and is_explicit_empty_list(region, "protected-branches", worker._unquote):
+        result["rows"].append(_row(
+            "protected-branches", "off (explicit)",
+            "written as an empty list - deliberately off", ["worker-git-scope-guard"]))
     elif not branches:
         result["rows"].append(_row(
             "protected-branches", "inert",
-            "written, but no branch names were parsed - an empty list, or a scalar "
-            "where a sequence belongs", ["worker-git-scope-guard"]))
+            "written, but no branch names were parsed - a scalar where a "
+            "sequence belongs, or a blank value", ["worker-git-scope-guard"]))
     else:
         result["rows"].append(_row(
             "protected-branches", "armed", ", ".join(branches),
@@ -326,6 +348,10 @@ def evaluate(project_dir, modules):
     isolate_mode, isolate_types = isolation._load_activation(project_dir)
     if "isolate" not in present:
         result["rows"].append(_row("isolate", "not configured", "", ["worktree-isolation"]))
+    elif isolate_mode == "off" and is_explicit_empty_list(region, "isolate", worker._unquote):
+        result["rows"].append(_row(
+            "isolate", "off (explicit)",
+            "written as an empty list - deliberately off", ["worktree-isolation"]))
     elif isolate_mode == "off":
         result["rows"].append(_row(
             "isolate", "inert",
