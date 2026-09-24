@@ -78,11 +78,6 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` | a project-relative path to a file that **already exists** (file mode), or a mapping naming an external tracker plus a freshness stamp (external mode) - see below | yes |
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
-**No activation file at all** means every key above is off. `session-handoff-surfacer` says so
-at each cold session start (`atelier is enabled here but not activated: ...`). A project that
-runs atelier unarmed on purpose silences that line with the environment variable
-`ATELIER_ACTIVATION_NUDGE=off`: with no file there is nowhere to put a key.
-
 <!-- harness:claude-code -->
 Two more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
 they sit here instead of in the table above:
@@ -91,6 +86,11 @@ they sit here instead of in the table above:
 |---|---|---|---|
 | `protected-branches` | `worker-git-scope-guard` | branch names, block or inline list (empty list = off) | yes |
 | `watermark` | `context-watermark` | a mapping of `notice` / `soft` / `hard` (absolute token counts) and `complexity` (a multiplier on all three), plus optional `worker:` / `session:` sub-mappings of the same keys that override the flat ones for that layer; every sub-key optional | yes |
+
+**No activation file at all** means every key is off. `session-handoff-surfacer` says so at each
+cold main-session start (`atelier is enabled here but not activated: ...`). A project that runs
+atelier unarmed on purpose silences that line with the environment variable
+`ATELIER_ACTIVATION_NUDGE=off`: with no file there is nowhere to put a key.
 <!-- /harness -->
 
 **`effort` is not machine-enforced.** No hook reads it. It only takes effect if the agent

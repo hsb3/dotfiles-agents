@@ -34,7 +34,7 @@ _SEQ = itertools.count()
 
 STAMP = ".claude/handoff.stamp"
 UNARMED = (
-    "atelier is enabled here but not activated: every enforcing hook is off; "
+    "atelier is enabled here but not activated: its key-driven hooks are off; "
     "run /atelier:activate"
 )
 LOCATION = "Kaneo board task DFA-233"
@@ -184,6 +184,14 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
         for value in ("off", "OFF", " off "):
             self._assert_silent(self._run_hook(
                 self._payload(), ATELIER_ACTIVATION_NUDGE=value))
+
+    def test_subagent_is_never_told(self):
+        payload = self._payload()
+        payload["agent_type"] = "builder"
+        self._assert_silent(self._run_hook(payload))
+
+    def test_codex_stays_silent_on_an_inactive_project(self):
+        self._assert_silent(self._run_hook(self._payload(), ATELIER_HARNESS="codex"))
 
     def test_any_activation_file_counts_as_activated(self):
         self._write_activation()

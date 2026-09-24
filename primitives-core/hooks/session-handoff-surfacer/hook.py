@@ -9,7 +9,10 @@ fresh session picks up prior work without re-deriving it. This is the
 edge (it nags before compaction if the handoff wasn't refreshed).
 
 Silent no-op on "resume"/"compact" (context is already present — surfacing
-would be pure noise) and when no handoff file exists.
+would be pure noise) and when no handoff file exists, except that a Claude Code
+main session with no activation file is told atelier is not activated (Codex
+never reaches that check: its lifecycle gate returns early for an inactive
+project).
 
 When the handoff lives outside the repo (see below) there is no file to
 excerpt, so a cold start gets a POINTER instead: where the handoff lives and
@@ -279,7 +282,7 @@ def _env_path(name, default):
 
 
 UNARMED_MESSAGE = (
-    "atelier is enabled here but not activated: every enforcing hook is off; "
+    "atelier is enabled here but not activated: its key-driven hooks are off; "
     "run /atelier:activate"
 )
 UNARMED_OPT_OUT_ENV = "ATELIER_ACTIVATION_NUDGE"
@@ -287,7 +290,7 @@ UNARMED_OPT_OUT_ENV = "ATELIER_ACTIVATION_NUDGE"
 
 def _unarmed(project_dir):
     """True when no activation file resolves and the project has not set
-    ATELIER_ACTIVATION_NUDGE=off. A present file, even a malformed one, counts
+    ATELIER_ACTIVATION_NUDGE=off. Subagents are never told. A present file, even a malformed one, counts
     as activated: the check verb is the place that judges its contents."""
     if os.environ.get(UNARMED_OPT_OUT_ENV, "").strip().lower() == "off":
         return False
@@ -446,7 +449,8 @@ def main():
             })
             sys.exit(0)
 
-        unarmed = _unarmed(_resolve_project_dir(cwd))
+        unarmed = (payload.get("agent_type") in (None, "", "main")
+                   and _unarmed(_resolve_project_dir(cwd)))
 
         if path is None:
             if unarmed:

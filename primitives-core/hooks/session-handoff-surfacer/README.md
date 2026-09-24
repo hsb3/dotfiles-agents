@@ -21,8 +21,9 @@ Fires at session start (`SessionStart`) only on `startup`/`clear` sources — ne
 in that order — unless a project overrides the location (see below), in which case it may
 instead surface a pointer to a handoff that lives outside the repo altogether.
 
-On the same sources, when no activation file resolves, it also says `atelier is enabled here but
-not activated: every enforcing hook is off; run /atelier:activate`, ahead of any handoff excerpt.
+On the same sources, in a Claude Code main session with no activation file, it also says
+`atelier is enabled here but not activated: its key-driven hooks are off; run /atelier:activate`,
+ahead of any handoff excerpt. Subagents and Codex are never told.
 
 ## Configuration
 
