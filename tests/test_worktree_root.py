@@ -397,6 +397,35 @@ class WorktreeRootTests(unittest.TestCase):
         _write(path, "new.txt", "n\n")
         self.assertKept(self.remove(path), path, "worktree-ru", "uncommitted changes")
 
+    def test_worktree_remove_keeps_untracked_file_when_status_hides_them(self):
+        self.set_key(".worktrees")
+        _git(self.main, "config", "status.showUntrackedFiles", "no")
+        path = self.created_path(self.create("rh"))
+        _write(path, "new.txt", "n\n")
+        self.assertKept(self.remove(path), path, "worktree-rh", "uncommitted changes")
+
+    def test_worktree_remove_keeps_assume_unchanged_edit(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("ra"))
+        _git(path, "update-index", "--assume-unchanged", "README")
+        _write(path, "README", "hidden edit\n")
+        self.assertKept(self.remove(path), path, "worktree-ra", "hidden change")
+
+    def test_worktree_remove_keeps_skip_worktree_edit(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("rs"))
+        _git(path, "update-index", "--skip-worktree", "README")
+        _write(path, "README", "hidden edit\n")
+        self.assertKept(self.remove(path), path, "worktree-rs", "hidden change")
+
+    def test_worktree_remove_outside_any_repo_names_the_path(self):
+        outside = os.path.join(self.base, "loose")
+        os.makedirs(outside)
+        proc = self.remove(outside)
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn(outside + " is not a worktree this hook manages", proc.stderr)
+        self.assertTrue(os.path.isdir(outside))
+
     def test_worktree_remove_keeps_branch_with_own_commit(self):
         self.set_key(".worktrees")
         path = self.created_path(self.create("r3"))
@@ -500,6 +529,14 @@ class WorktreeRootTests(unittest.TestCase):
 
     def test_separate_git_dir_without_key_uses_native_layout(self):
         self.assert_native_round_trip(self.separate_git_dir_repo())
+
+    def test_separate_git_dir_fresh_fetch_head_skips_fetch(self):
+        top = self.separate_git_dir_repo()
+        _git(top, "remote", "add", "origin", os.path.join(self.base, "no-such-origin"))
+        _write(os.path.join(self.base, "sep-git"), "FETCH_HEAD", "")
+        proc = self.create("fresh", cwd=top)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("fetch", proc.stderr)
 
     def test_separate_git_dir_with_key_refuses(self):
         top = self.separate_git_dir_repo()

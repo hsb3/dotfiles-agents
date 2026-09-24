@@ -15,7 +15,9 @@ Delivered as a plugin it covers subagent `isolation: worktree` and `EnterWorktre
 
 Both removal paths share one check. The path must be exactly `<root>/<leaf>`, registered
 with git on branch `worktree-<leaf>` (the shape this hook creates), with no tracked change
-and no untracked file (`git status --porcelain`; ignored files do not count), and its
+and no untracked file (`git status --porcelain --untracked-files=all`, so
+`status.showUntrackedFiles=no` cannot hide one; ignored files do not count), no
+assume-unchanged entry and no skip-worktree entry present on disk, and its
 branch must hold no commit that no other branch, tag or remote ref has. Removal is
 `git worktree remove` without `--force`, so a locked worktree is refused too, then
 `git branch -d`: when the branch is not merged into the main checkout's HEAD, the branch

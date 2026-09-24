@@ -218,8 +218,15 @@ def release(main, root, path):
         raise Refused("{0} is not a linked worktree of {1}".format(path, main))
     if entries[path] != branch:
         raise Refused("{0} is on {1}, not worktree-{2}".format(path, entries[path], leaf))
-    if must(path, "status", "--porcelain").strip():
+    # Explicit flag: `status.showUntrackedFiles=no` would otherwise hide untracked work.
+    if must(path, "status", "--porcelain", "--untracked-files=all").strip():
         raise Refused("{0} has uncommitted changes".format(path))
+    for line in must(path, "ls-files", "-v", "-z").split("\0"):
+        tag, rel = line[:1], line[2:]
+        # Both flags hide edits from status: assume-unchanged always, skip-worktree on disk.
+        if tag.islower() or (tag == "S" and os.path.lexists(os.path.join(path, rel))):
+            raise Refused("{0} has a hidden change at {1} (assume-unchanged or "
+                          "skip-worktree)".format(path, rel))
     if must(path, "rev-list", "HEAD", "--not", "--exclude=worktree-" + leaf, "--branches",
             "--tags", "--remotes").strip():
         raise Refused("{0} has commits on no other ref".format(path))
@@ -255,8 +262,11 @@ def remove(payload):
         if parent != root:  # a `--worktree` session stays native while the key is set
             main, root = placement(parent, native=True)
         release(main, root, path)
-    except (Refused, ValueError) as exc:
+    except Refused as exc:
         raise Refused("{0}; left in place".format(exc))
+    except ValueError as exc:
+        raise Refused("{0} is not a worktree this hook manages ({1}); left in place".format(
+            path, exc))
 
 
 HANDLERS = {"WorktreeCreate": create, "SubagentStop": subagent_stop,
