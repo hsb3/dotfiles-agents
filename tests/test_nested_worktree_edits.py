@@ -140,19 +140,38 @@ class NestedWorktreeEditTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "")
         self.assertFalse(os.path.exists(self.isolation_log), "wrote a decision row for an Edit")
 
-    def test_config_custody_is_inert_across_the_worktree_boundary(self):
-        """A path under A is outside B's jurisdiction, so custody stays silent.
+    def test_config_custody_denies_visibly_across_the_worktree_boundary_unanchored(self):
+        """A path under A is judged by A even when the anchor is only B.
 
-        Pinned as INERT, not deny, and the empty anchor is what makes it so:
-        with no `CLAUDE_PROJECT_DIR`, jurisdiction is the payload cwd (B), and a
-        path under A relativizes to a `..` prefix — out of jurisdiction. Custody
-        governs the tree the agent stands in; the boundary itself is the
-        harness's to enforce. Anchored at A instead, custody does reach the same
-        edit — and denies it out loud, which the next test pins.
+        With no `CLAUDE_PROJECT_DIR`, the anchor is the payload cwd (B), and a
+        path under A relativizes to a `..` prefix. A and B are worktrees of one
+        repository, so custody judges the edit by A exactly as if the anchor
+        covered it: the same edit gets the same verdict under either anchor
+        (the next test pins the anchored-at-A half).
         """
-        result = self._run(CUSTODY_HOOK, self._edit_payload(os.path.join(self.tree_a, TARGET)))
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), "")
+        hso = self._assert_allow_or_visible_deny(
+            self._run(CUSTODY_HOOK, self._edit_payload(os.path.join(self.tree_a, TARGET))),
+            "custody cross-boundary, unanchored",
+        )
+        self.assertIsNotNone(hso, "custody was inert for a protected path in a sibling worktree")
+        self.assertIn("docs/*", hso["permissionDecisionReason"])
+        self.assertIn("docs/target.md", hso["permissionDecisionReason"])
+
+    def test_config_custody_stays_silent_outside_every_worktree_of_the_repo(self):
+        """Only the repo's own worktrees join the jurisdiction. A tree beside
+        them with its own armed activation file is still a stranger's."""
+        outside = os.path.join(os.path.realpath(self.tmp.name), "outside")
+        for relpath, text in ((os.path.join(".claude", "atelier.local.md"), ACTIVATION),
+                              (TARGET, "original\n")):
+            os.makedirs(os.path.dirname(os.path.join(outside, relpath)), exist_ok=True)
+            with open(os.path.join(outside, relpath), "w", encoding="utf-8") as fh:
+                fh.write(text)
+        for anchor_name, anchor in (("unanchored", ""), ("anchored-at-A", self.tree_a)):
+            with self.subTest(anchor=anchor_name):
+                result = self._run(CUSTODY_HOOK, self._edit_payload(
+                    os.path.join(outside, TARGET)), project_dir=anchor)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout.strip(), "", anchor_name)
         self.assertFalse(os.path.exists(self.custody_log), "logged an out-of-jurisdiction edit")
 
     def test_config_custody_denies_visibly_when_the_anchor_covers_both_trees(self):
@@ -178,20 +197,17 @@ class NestedWorktreeEditTests(unittest.TestCase):
 
         Silence is the allow branch, so asserting only "allow or visible deny"
         would pass on a deny path that had been silenced outright. Each case
-        therefore also pins WHICH of the two outcomes is correct: custody acts
-        only where the anchor puts the target in its jurisdiction, and the
-        isolation hook — an `Agent`-tool hook — never acts on an edit at all.
+        therefore also pins WHICH of the two outcomes is correct: custody denies
+        a protected path in any worktree of the repo (A or the main checkout)
+        under either anchor, and the isolation hook — an `Agent`-tool hook —
+        never acts on an edit at all.
         """
         for hook_path in (ISOLATION_HOOK, CUSTODY_HOOK):
             hook_name = os.path.basename(os.path.dirname(hook_path))
             for tool_name in ("Edit", "Write"):
                 for target_name, target_root in (("A", self.tree_a), ("main", self.main_dir)):
                     for anchor_name, anchor in (("unanchored", ""), ("anchored-at-A", self.tree_a)):
-                        must_deny = (
-                            hook_path == CUSTODY_HOOK
-                            and anchor == self.tree_a
-                            and target_root == self.tree_a
-                        )
+                        must_deny = hook_path == CUSTODY_HOOK
                         label = "{0} {1} -> {2} ({3})".format(
                             hook_name, tool_name, target_name, anchor_name,
                         )

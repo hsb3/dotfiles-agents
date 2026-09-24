@@ -425,6 +425,21 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.assertTrue(rows[0]["isolated"])
         self.assertTrue(rows[0]["nested"])
 
+    def test_nested_dispatch_tells_the_manager_paths_are_relative_to_the_worker(self):
+        """The field failure this covers: a manager briefed a builder's owned
+        files as absolute paths into the manager's own worktree, assuming a
+        shared checkout was available. It isn't under `isolate: writers` — the
+        worker always gets its own tree — so the notice says so. It reaches the
+        manager with the Agent result, so it informs the manager's next brief."""
+        _main_dir, worktree_dir = self._armed_worktree()
+        body, updated = self._rewrite(self._payload(cwd=worktree_dir))
+        self.assertEqual(updated["isolation"], "worktree")
+
+        # systemMessage reaches only the user; the manager reads additionalContext.
+        message = body["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("relative to its own checkout", message)
+        self.assertIn("not available under isolate: writers", message)
+
     def test_a_main_checkout_dispatch_message_is_unchanged(self):
         """The non-nested notice must not grow an integrate step it does not
         need — the baseline the nested clause is measured against."""
