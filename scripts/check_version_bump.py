@@ -482,6 +482,11 @@ class GitPublishedTree:
 
         `ls-tree` would hash a symlink's target PATH, never the bytes it reaches.
         """
+        if not hasattr(tarfile, "data_filter"):
+            raise RuntimeError(
+                "this Python's tarfile has no extraction filter (needs 3.12, or "
+                "3.8.17/3.9.17/3.10.12/3.11.4+), so dev's tree cannot be safely extracted"
+            )
         rc, out, err = self._git(["archive", "--format=tar", self._sha or self.full_ref])
         if rc != 0:
             raise RuntimeError(f"git archive {self.ref} failed: {err}")

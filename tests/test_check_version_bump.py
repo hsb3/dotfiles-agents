@@ -1331,6 +1331,16 @@ class BaseStageIntegration(unittest.TestCase):
         self.assertIn("NOT evidence of a missing version bump", text)
         self.assertIn("origin/dev", text)
 
+    def test_python_without_a_tar_filter_is_unmeasured_not_a_traceback(self):
+        """Python < 3.12 (bar late patch releases) has no `filter=`; red, but no TypeError."""
+        saved = V.tarfile.data_filter
+        del V.tarfile.data_filter
+        self.addCleanup(setattr, V.tarfile, "data_filter", saved)
+        rc, text = self.run_main("0.3.0")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+        self.assertIn("no extraction filter", text)
+
     def test_each_branch_keeps_its_own_sync_stamp(self):
         self.run_main("0.3.0")
         main_stamp = V.GitPublishedTree(repo=self.work).stamp_path
