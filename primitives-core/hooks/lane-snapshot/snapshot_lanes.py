@@ -491,7 +491,7 @@ def main(argv=None):
 
     last_write = time.time()
     while True:
-        reason = _exit_reason(root, ttl, last_write)
+        reason = _exit_reason(root, common, ttl, last_write)
         if reason:
             log({"event": "exit", "reason": reason, "root": root, "pid": os.getpid()})
             return 0
@@ -505,12 +505,14 @@ def main(argv=None):
         time.sleep(max(interval, 1))
 
 
-def _exit_reason(root, ttl, last_write):
+def _exit_reason(root, common, ttl, last_write):
     """Why this daemon should stop now, or None. Relaunch is free at the next
     SessionStart, so leaving is always the cheap side."""
     if not os.path.isdir(root):
         return "root gone"
-    if common_dir(root) is None:
+    # Compared, not merely resolved: a root that lost its .git inside another
+    # repo still resolves, to the enclosing repo's common dir.
+    if common_dir(root) != common:
         return "not a git worktree"
     if ttl > 0 and time.time() - last_write >= ttl:
         return "ttl"

@@ -318,6 +318,21 @@ class DaemonLifecycle(unittest.TestCase):
         last = self.box.rows()[-1]
         self.assertEqual((last["event"], last["reason"]), ("exit", "root gone"))
 
+    def test_a_nested_repo_losing_its_git_dir_exits(self):
+        """With the root's .git gone, git answers from the enclosing repo; the
+        daemon must notice the common dir changed rather than carry on into
+        the outer repo's refs."""
+        inner = os.path.join(self.box.root, "inner")
+        os.makedirs(inner)
+        git(inner, "init", "-q", ".")
+        proc = spawn_daemon(self.box, self, "--interval", "1", inner,
+                            LANE_SNAPSHOT_TTL="0")
+        self.wait_for_row("scan")
+        shutil.rmtree(os.path.join(inner, ".git"))
+        self.assertEqual(wait_exit(proc), 0, "daemon adopted the enclosing repo")
+        last = self.box.rows()[-1]
+        self.assertEqual((last["event"], last["reason"]), ("exit", "not a git worktree"))
+
     def test_ttl_with_nothing_written_exits(self):
         proc = spawn_daemon(self.box, self, "--interval", "1", self.box.root,
                             LANE_SNAPSHOT_TTL="1")
@@ -562,6 +577,26 @@ class HookGuard(unittest.TestCase):
         self.wait_for_pattern(pattern, 2)
         time.sleep(1.5)
         self.assertEqual(len(self._pgrep(pattern)), 2)
+
+    def test_hook_spawns_nothing_while_the_repo_lock_is_held(self):
+        """The hook's own probe, apart from the daemon-side lock: with the
+        pidfile held, it logs and launches nothing."""
+        sys.path.insert(0, HOOK_DIR)
+        try:
+            import snapshot_lanes
+        finally:
+            sys.path.remove(HOOK_DIR)
+        common = os.path.join(self.box.root, ".git")
+        env = self.box.env()
+        fd = snapshot_lanes.try_lock(snapshot_lanes.pidfile_path(common, env))
+        self.assertIsNotNone(fd)
+        self.addCleanup(os.close, fd)
+        self.addCleanup(self.kill_sandbox)
+        self.assertEqual(self.run_hook().returncode, 0)
+        hooks = [r for r in self.box.rows() if r.get("event") == "hook"]
+        self.assertEqual((hooks[-1]["launched"], hooks[-1]["reason"]),
+                         (False, "daemon already running for this repo"))
+        self.assertEqual(self.sandbox_daemons(), [])
 
     def test_codex_and_claude_sessions_share_one_daemon(self):
         activation = os.path.join(self.box.base, "atelier.local.md")

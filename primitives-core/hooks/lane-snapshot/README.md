@@ -55,6 +55,14 @@ launching at once can both spawn; the loser fails the lock, logs an `exit` row w
 `already running`, and exits 0. A bare repository has no main checkout to root a shared daemon
 at, so each of its worktrees is keyed by its own path and keeps its own daemon.
 
+Because the daemon is rooted at the main checkout, the default globs are read from there: lanes
+nested under a *linked* worktree (`<linked>/.claude/worktrees/agent-*`) are not scanned. Set
+`LANE_SNAPSHOT_WORKTREES` to a pattern that reaches them (relative globs may climb out of the
+root, or be absolute) when a crew works from inside a linked worktree.
+
+The shared daemon writes its ledger under the harness that launched it (it inherits
+`ATELIER_HARNESS`), so the other harness's ledger holds only that harness's `hook` rows.
+
 Daemons from before the lock hold no pidfile, never exit, and are invisible to `--check`; they
 run beside the new one harmlessly (the scratch index is per process) but loop until killed. List
 them once after upgrading and kill the ones whose root is gone:
@@ -190,7 +198,8 @@ measure reports red, never green.
 
 `--check` also reads every pidfile in the state dir, whichever root it was pointed at: a live
 daemon (lock held) whose recorded root no longer exists is an **orphan**, reported with its pid
-and root, and makes the exit 1.
+and root, and makes the exit 1. That is deliberate: an orphan in any repository is a daemon
+looping for nothing on this machine, so `--check` in one repo goes red on another repo's orphan.
 
 ## Ledger
 
