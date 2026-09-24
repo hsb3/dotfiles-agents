@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels models-drift board-health board-reconcile
+.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels models-drift board-health board-reconcile version-bump
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -31,6 +31,9 @@ floor: identity test provenance hook-layout ## The Tier-1 entry-gate machine flo
 
 harness-coupling: ## No-repo-coupling gate for harness/ (stdlib-only; extraction guard, DESIGN §5)
 	@python3 scripts/check_harness_coupling.py
+
+version-bump: ## Version-bump gate against the LOCALLY cached origin/main + origin/dev (no fetch; an uncached ref prints NOT CHECKED; CI runs the fetched check)
+	@python3 scripts/check_version_bump.py --local
 
 flow: ## Repo-flow DAG guard (flow.yaml <-> tree: homes, planned paths, acyclicity, doc DAG)
 	@python3 scripts/check_flow.py
@@ -72,7 +75,7 @@ test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check 
 # guard the distribution surface; agent-refs keeps shipped bodies from routing through an
 # agent nobody ships; harness-coupling keeps harness/ extraction-clean
 # (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout agent-refs model-tiers symlinks harness-coupling flow test ## All gates: floor + assembly/flow guards
+ci: check identity provenance hook-layout agent-refs model-tiers symlinks harness-coupling flow version-bump test ## All gates: floor + assembly/flow guards
 
 # --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
 # (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).
