@@ -1025,5 +1025,343 @@ class GitPublishedTreeIntegration(unittest.TestCase):
         self.assertIsNone(tree._sha)
 
 
+class VersionOrdering(unittest.TestCase):
+    def test_numeric_not_lexical(self):
+        self.assertGreater(V.version_key("1.10.0"), V.version_key("1.9.0"))
+
+    def test_shorter_tuple_pads_with_zeros(self):
+        self.assertEqual(V.version_key("2.4"), V.version_key("2.4.0"))
+        self.assertGreater(V.version_key("1.0.1"), V.version_key("1.0"))
+
+    def test_unorderable_versions_have_no_key(self):
+        for raw in ("2.4.0-beta", "v1.0.0", "1..0", "", "1.-1.0"):
+            self.assertIsNone(V.version_key(raw), raw)
+
+
+class BaseStage(ComparisonBase):
+    """The second stage: a bundle that differs from origin/dev must outrank dev's version.
+
+    Scenario: main publishes beta 2.3.4; dev already carries another change to beta shipped
+    as 2.4.0; this PR changes beta differently and claims some version.
+    """
+
+    FakeTree = MainEntryPoint.FakeTree
+
+    def setUp(self):
+        super().setUp()
+        self.dev_files = dict(self.published_files)
+        self.dev_files["plugins/beta/README.md"] = b"# beta\n\ndev change\n"
+        self.dev_files["plugins/beta/.claude-plugin/plugin.json"] = plugin_json_bytes("beta", "2.4.0")
+        self.write_local("plugins/beta/README.md", b"# beta\n\nthis PR's change\n")
+
+    def run_main(self, base_tree):
+        lines = []
+        rc = V.main(
+            plugins_dir=self.plugins,
+            tree=self.FakeTree(self.published_files),
+            base_tree=base_tree,
+            out=lines.append,
+        )
+        return rc, "\n".join(lines)
+
+    def test_same_version_as_dev_is_red(self):
+        self.bump("beta", "2.4.0")
+        rc, text = self.run_main(self.FakeTree(self.dev_files))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("plugins/beta", text)
+        self.assertIn("origin/dev", text)
+        self.assertIn("2.4.0", text)
+        self.assertIn("already ships", text)
+
+    def test_version_above_dev_is_green(self):
+        self.bump("beta", "2.5.0")
+        rc, text = self.run_main(self.FakeTree(self.dev_files))
+        self.assertEqual(rc, 0, text)
+        self.assertIn("origin/main", text)
+        self.assertIn("origin/dev", text)
+
+    def test_version_below_dev_but_above_main_is_red(self):
+        self.bump("beta", "2.3.9")
+        rc, text = self.run_main(self.FakeTree(self.dev_files))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("2.3.9", text)
+        self.assertIn("2.4.0", text)
+
+    def test_identical_to_dev_needs_nothing_from_this_stage(self):
+        self.write_local("plugins/beta/README.md", b"# beta\n\ndev change\n")
+        self.bump("beta", "2.4.0")
+        rc, text = self.run_main(self.FakeTree(self.dev_files))
+        self.assertEqual(rc, 0, text)
+
+    def test_plugin_absent_on_dev_is_skipped(self):
+        self.bump("beta", "2.4.0")
+        dev = {k: v for k, v in self.dev_files.items() if not k.startswith("plugins/beta/")}
+        rc, text = self.run_main(self.FakeTree(dev))
+        self.assertEqual(rc, 0, text)
+
+    def test_unorderable_version_is_red(self):
+        self.bump("beta", "2.5.0-rc1")
+        rc, text = self.run_main(self.FakeTree(self.dev_files))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("cannot be ordered", text)
+
+    def test_unreachable_dev_is_red_and_names_it(self):
+        self.bump("beta", "2.5.0")
+        rc, text = self.run_main(self.FakeTree(self.dev_files, reason="origin/dev could not be resolved"))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("the PR base origin/dev", text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+
+    def test_dev_note_is_surfaced(self):
+        self.bump("beta", "2.5.0")
+        rc, text = self.run_main(self.FakeTree(self.dev_files, note="using a cached origin/dev"))
+        self.assertEqual(rc, 0, text)
+        self.assertIn("cached origin/dev", text)
+
+    def test_unreadable_dev_tree_is_red_not_a_traceback(self):
+        class Broken(self.FakeTree):
+            def index(self):
+                raise RuntimeError("git archive origin/dev failed: link escapes")
+
+        self.bump("beta", "2.5.0")
+        rc, text = self.run_main(Broken(self.dev_files))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("link escapes", text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+
+    def test_unreadable_main_tree_is_red_not_a_traceback(self):
+        class Broken(self.FakeTree):
+            def index(self):
+                raise RuntimeError("git ls-tree origin/main failed: bad object")
+
+        lines = []
+        rc = V.main(plugins_dir=self.plugins, tree=Broken(self.published_files), out=lines.append)
+        self.assertEqual(rc, 1, "\n".join(lines))
+        self.assertIn("NOT evidence of a missing version bump", "\n".join(lines))
+
+    def test_dev_moved_past_this_tree_adds_an_update_hint(self):
+        class Moved(self.FakeTree):
+            def is_ancestor_of_head(self):
+                return False
+
+        self.bump("beta", "2.4.0")
+        rc, text = self.run_main(Moved(self.dev_files))
+        self.assertEqual(rc, 1, text)
+        self.assertIn("has moved past this tree", text)
+
+    def test_no_update_hint_when_dev_is_contained_or_unknown(self):
+        class Contained(self.FakeTree):
+            def is_ancestor_of_head(self):
+                return True
+
+        self.bump("beta", "2.4.0")
+        for tree in (Contained(self.dev_files), self.FakeTree(self.dev_files)):
+            rc, text = self.run_main(tree)
+            self.assertEqual(rc, 1, text)
+            self.assertNotIn("moved past", text)
+
+    def test_no_arg_entry_point_runs_the_dev_stage(self):
+        """`__main__` calls main() bare; that path must build and run the origin/dev tree too."""
+        built = []
+
+        def factory(branch=V.PUBLISHED_BRANCH, **_):
+            built.append(branch)
+            return self.FakeTree(self.dev_files if branch == V.BASE_BRANCH else self.published_files)
+
+        self.bump("beta", "2.4.0")
+        lines = []
+        with mock.patch.object(V, "GitPublishedTree", factory), \
+                mock.patch.object(V, "PLUGINS_DIR", self.plugins):
+            rc = V.main(out=lines.append)
+        self.assertEqual(sorted(built), ["dev", "main"])
+        self.assertEqual(rc, 1, "\n".join(lines))
+        self.assertIn("origin/dev", "\n".join(lines))
+
+    def test_without_a_base_tree_the_stage_does_not_run(self):
+        self.bump("beta", "2.4.0")
+        lines = []
+        rc = V.main(plugins_dir=self.plugins, tree=self.FakeTree(self.published_files), out=lines.append)
+        self.assertEqual(rc, 0, "\n".join(lines))
+
+
+class BranchParameterisedTree(unittest.TestCase):
+    """GitPublishedTree(branch="dev") reads and records origin/dev, never origin/main."""
+
+    def test_dev_tree_fetches_and_resolves_dev(self):
+        calls = []
+
+        def run(args):
+            calls.append(args)
+            if args[0] == "rev-parse" and args[1] == "--verify":
+                return 0, b"d" * 40 + b"\n", ""
+            if args[:2] == ["remote", "get-url"]:
+                return 0, b"file:///origin\n", ""
+            return 0, b"false\n", ""
+
+        gitdir = tempfile.mkdtemp(prefix="check-version-bump-dev-")
+        self.addCleanup(shutil.rmtree, gitdir, True)
+        tree = V.GitPublishedTree(branch="dev", run=run, stamp_path=os.path.join(gitdir, "s"))
+        self.assertIsNone(tree.prepare())
+        self.assertEqual(tree.ref, "origin/dev")
+        fetch = next(c for c in calls if c[0] == "fetch")
+        self.assertIn("+refs/heads/dev:refs/remotes/origin/dev", fetch)
+        show = next(c for c in calls if c[0] == "show-ref")
+        self.assertIn("refs/remotes/origin/dev", show)
+        self.assertFalse(any("main" in " ".join(c) for c in calls), calls)
+
+    def test_ancestry_is_unknown_in_a_shallow_clone(self):
+        """Shallow history cuts HEAD's parents, so "not an ancestor" would be a false hint."""
+        def run(args):
+            if args[0] == "merge-base":
+                return 1, b"", ""
+            return 0, b"true\n", ""
+
+        self.assertIsNone(V.GitPublishedTree(branch="dev", run=run).is_ancestor_of_head())
+
+    def test_dev_stamp_is_distinct_from_mains(self):
+        def run(args):
+            return 0, b".git\n", ""
+
+        main_tree = V.GitPublishedTree(repo="/r", run=run)
+        dev_tree = V.GitPublishedTree(repo="/r", run=run, branch="dev")
+        self.assertEqual(main_tree.stamp_path, os.path.join("/r", ".git", V.SYNC_STAMP_NAME))
+        self.assertEqual(os.path.basename(main_tree.stamp_path), "version-bump-published-sync")
+        self.assertNotEqual(main_tree.stamp_path, dev_tree.stamp_path)
+
+
+# The dev stage extracts through tarfile's `data` filter; without it the gate reds as
+# unmeasured, which only the no-filter test below asserts.
+needs_tar_filter = unittest.skipUnless(
+    hasattr(V.tarfile, "data_filter"), "this Python's tarfile has no extraction filter"
+)
+
+
+@unittest.skipUnless(GIT, "git is not installed")
+class BaseStageIntegration(unittest.TestCase):
+    """Real git: a bare origin carrying `main` (dereferenced, published) and `dev` (symlinks).
+
+    dev is the symlink assembly over primitives-core/, as the real one is, so its tree must be
+    dereferenced before it can be compared with the local walk.
+    """
+
+    git = GitPublishedTreeIntegration.git
+
+    def _write(self, root, rel, data):
+        full = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "wb") as fh:
+            fh.write(data)
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="check-version-bump-base-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.home = os.path.join(self.root, "home")
+        os.makedirs(self.home)
+        with open(os.path.join(self.home, "gitconfig"), "w") as fh:
+            fh.write("")
+
+        manifest = "plugins/alpha/.claude-plugin/plugin.json"
+        seed = os.path.join(self.root, "seed")
+        os.makedirs(seed)
+        self.git(seed, "init", "-q", "-b", "main")
+        self._write(seed, manifest, plugin_json_bytes("alpha", "0.1.0"))
+        self._write(seed, "plugins/alpha/skills/shared/SKILL.md", b"published body\n")
+        self.git(seed, "add", "-A")
+        self.git(seed, "commit", "-qm", "publish: fixture")
+        self.git(seed, "checkout", "-qb", "dev")
+        shutil.rmtree(os.path.join(seed, "plugins", "alpha", "skills", "shared"))
+        self.body_rel = "primitives-core/skills/shared/SKILL.md"
+        self._write(seed, self.body_rel, b"another change already on dev\n")
+        os.symlink(
+            os.path.join("..", "..", "..", "primitives-core", "skills", "shared"),
+            os.path.join(seed, "plugins", "alpha", "skills", "shared"),
+        )
+        self._write(seed, manifest, plugin_json_bytes("alpha", "0.2.0"))
+        self.git(seed, "add", "-A")
+        self.git(seed, "commit", "-qm", "dev: another PR ships 0.2.0")
+        self.origin = os.path.join(self.root, "origin.git")
+        subprocess.run([GIT, "clone", "-q", "--bare", seed, self.origin], check=True, timeout=60)
+
+        # work: a PR branch cut from dev, so plugins/ is the symlink assembly
+        self.work = os.path.join(self.root, "work")
+        subprocess.run([GIT, "clone", "-q", "-b", "dev", self.origin, self.work], check=True, timeout=60)
+        self.plugins = os.path.join(self.work, "plugins")
+
+    def run_main(self, version, body=b"this PR's change\n"):
+        self._write(self.work, "plugins/alpha/.claude-plugin/plugin.json", plugin_json_bytes("alpha", version))
+        if body is not None:
+            self._write(self.work, self.body_rel, body)
+        lines = []
+        rc = V.main(
+            plugins_dir=self.plugins,
+            tree=V.GitPublishedTree(repo=self.work),
+            base_tree=V.GitPublishedTree(branch="dev", repo=self.work),
+            out=lines.append,
+        )
+        return rc, "\n".join(lines)
+
+    @needs_tar_filter
+    def test_claiming_devs_version_is_red(self):
+        rc, text = self.run_main("0.2.0")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("origin/dev", text)
+        self.assertIn("plugins/alpha", text)
+
+    @needs_tar_filter
+    def test_claiming_the_next_version_is_green(self):
+        rc, text = self.run_main("0.3.0")
+        self.assertEqual(rc, 0, text)
+
+    @needs_tar_filter
+    def test_unchanged_symlink_assembly_matches_dev(self):
+        """A branch equal to dev is green: dev's symlinks are compared as the bytes they reach."""
+        rc, text = self.run_main("0.2.0", body=None)
+        self.assertEqual(rc, 0, text)
+
+    @needs_tar_filter
+    def test_dev_ahead_of_head_hints_to_update_the_branch(self):
+        """A PR cut before dev moved: the red stands, and says to update rather than bump."""
+        self.git(self.work, "reset", "-q", "--hard", "HEAD^")  # the PR predates dev's 0.2.0
+        rc, text = self.run_main("0.1.5", body=b"this PR's change\n")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("has moved past this tree", text)
+
+    @needs_tar_filter
+    def test_no_hint_when_head_contains_dev(self):
+        rc, text = self.run_main("0.2.0")
+        self.assertEqual(rc, 1, text)
+        self.assertNotIn("moved past", text)
+
+    @needs_tar_filter
+    def test_escaping_symlink_on_dev_is_unmeasured_not_a_traceback(self):
+        seed = os.path.join(self.root, "seed")
+        os.symlink("/etc/hosts", os.path.join(seed, "escape"))
+        self.git(seed, "add", "-A")
+        self.git(seed, "commit", "-qm", "dev: an absolute symlink")
+        self.git(seed, "push", "-q", self.origin, "dev")
+        rc, text = self.run_main("0.3.0")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+        self.assertIn("origin/dev", text)
+
+    def test_python_without_a_tar_filter_is_unmeasured_not_a_traceback(self):
+        """Python < 3.12 (bar late patch releases) has no `filter=`; red, but no TypeError."""
+        saved = getattr(V.tarfile, "data_filter", None)
+        if saved is not None:
+            del V.tarfile.data_filter
+            self.addCleanup(setattr, V.tarfile, "data_filter", saved)
+        rc, text = self.run_main("0.3.0")
+        self.assertEqual(rc, 1, text)
+        self.assertIn("NOT evidence of a missing version bump", text)
+        self.assertIn("no extraction filter", text)
+
+    def test_each_branch_keeps_its_own_sync_stamp(self):
+        self.run_main("0.3.0")
+        main_stamp = V.GitPublishedTree(repo=self.work).stamp_path
+        dev_stamp = V.GitPublishedTree(branch="dev", repo=self.work).stamp_path
+        self.assertNotEqual(main_stamp, dev_stamp)
+        self.assertTrue(os.path.isfile(main_stamp))
+        self.assertTrue(os.path.isfile(dev_stamp))
+
 if __name__ == "__main__":
     unittest.main()

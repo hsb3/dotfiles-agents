@@ -15,7 +15,8 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
   offline-and-zero-install by design and each needs something it cannot have. Run them all
   by hand before assuming green:
   `scripts/check_version_bump.py` (needs network; changed published bytes must ship under a
-  moved version — it caught `solo-skills` shipping two new skills under an unmoved 0.1.8 on
+  moved version, and bytes changed from `origin/dev` under a version greater than dev's —
+  it caught `solo-skills` shipping two new skills under an unmoved 0.1.8 on
   2026-08-20), `scripts/check_removals.py` (needs network; a unit published on `origin/main`
   and absent here must be declared by the commit that removed it — the deletion case the
   version-bump gate says outright it does not cover), `scripts/check_vendored_drift.py` /
