@@ -33,6 +33,10 @@ from worktree_fixture import make_worktree, require_git  # noqa: E402
 _SEQ = itertools.count()
 
 STAMP = ".claude/handoff.stamp"
+UNARMED = (
+    "atelier is enabled here but not activated: every enforcing hook is off; "
+    "run /atelier:activate"
+)
 LOCATION = "Kaneo board task DFA-233"
 
 # Written into the stamp file itself. External mode must surface a POINTER, so
@@ -104,7 +108,7 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             "cwd": self.cwd if cwd is None else cwd,
         }
 
-    def _run_hook(self, payload):
+    def _run_hook(self, payload, **extra_env):
         env = {
             "PATH": os.environ.get("PATH", ""),
             # Sandbox the partitioned log root: a run that ever loses its
@@ -114,6 +118,7 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
             "HOME": os.path.join(self.tmp.name, "home"),
             "XDG_DATA_HOME": os.path.join(self.tmp.name, "xdg"),
             "HANDOFF_SURFACER_LOG_PATH": self.log_path,
+            **extra_env,
         }
         return subprocess.run(
             [sys.executable, HOOK_PATH],
@@ -147,18 +152,44 @@ class SessionHandoffSurfacerOverrideTests(unittest.TestCase):
     # -- tests -----------------------------------------------------------
 
     def test_override_absent_standard_search_unaffected(self):
-        """BACKWARD COMPAT: no activation file at all -- byte-identical to
-        pre-external-mode behavior, the standard candidate-path search finds
-        HANDOFF.md and the excerpt is unchanged."""
+        """No activation file at all: the standard candidate-path search finds
+        HANDOFF.md, and the excerpt follows the not-activated line."""
         self._write_file("HANDOFF.md", "root handoff\n")
         result = self._run_hook(self._payload())
         self.assertEqual(self._surfaced_relpath(result), "HANDOFF.md")
         body = json.loads(result.stdout)
         self.assertEqual(
             body["hookSpecificOutput"]["additionalContext"],
+            UNARMED + "\n\n"
             "A project handoff exists at HANDOFF.md — read it before starting. "
             "First lines:\nroot handoff",
         )
+
+    # -- not activated ---------------------------------------------------
+
+    def test_no_activation_file_says_atelier_is_not_activated(self):
+        context, system = self._surfaced(self._run_hook(self._payload()))
+        self.assertEqual(context, UNARMED)
+        self.assertEqual(system, UNARMED)
+
+    def test_clear_also_says_not_activated(self):
+        context, _ = self._surfaced(self._run_hook(self._payload(source="clear")))
+        self.assertEqual(context, UNARMED)
+
+    def test_not_activated_line_stays_off_warm_sources(self):
+        for source in ("resume", "compact"):
+            self._assert_silent(self._run_hook(self._payload(source=source)))
+
+    def test_opt_out_env_silences_the_not_activated_line(self):
+        for value in ("off", "OFF", " off "):
+            self._assert_silent(self._run_hook(
+                self._payload(), ATELIER_ACTIVATION_NUDGE=value))
+
+    def test_any_activation_file_counts_as_activated(self):
+        self._write_activation()
+        self._assert_silent(self._run_hook(self._payload()))
+        self._write_activation(raw_text="not frontmatter at all\n")
+        self._assert_silent(self._run_hook(self._payload()))
 
     def test_override_existing_file_wins_over_standard_candidate(self):
         """BACKWARD COMPAT: the bare-path scalar form still wins and still

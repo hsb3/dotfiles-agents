@@ -78,6 +78,11 @@ script, and a second copy here is exactly the drift this skill exists to catch.
 | `handoff` | `session-handoff-surfacer`, `handoff-freshness-guard` | a project-relative path to a file that **already exists** (file mode), or a mapping naming an external tracker plus a freshness stamp (external mode) - see below | yes |
 | `effort` | nothing — prose only | `standard` \| `deep` | **no** |
 
+**No activation file at all** means every key above is off. `session-handoff-surfacer` says so
+at each cold session start (`atelier is enabled here but not activated: ...`). A project that
+runs atelier unarmed on purpose silences that line with the environment variable
+`ATELIER_ACTIVATION_NUDGE=off`: with no file there is nowhere to put a key.
+
 <!-- harness:claude-code -->
 Two more keys are read only on this harness, and a GFM table cannot carry a harness marker, so
 they sit here instead of in the table above:

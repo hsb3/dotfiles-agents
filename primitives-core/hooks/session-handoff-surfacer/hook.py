@@ -278,6 +278,23 @@ def _env_path(name, default):
     return v if v else default
 
 
+UNARMED_MESSAGE = (
+    "atelier is enabled here but not activated: every enforcing hook is off; "
+    "run /atelier:activate"
+)
+UNARMED_OPT_OUT_ENV = "ATELIER_ACTIVATION_NUDGE"
+
+
+def _unarmed(project_dir):
+    """True when no activation file resolves and the project has not set
+    ATELIER_ACTIVATION_NUDGE=off. A present file, even a malformed one, counts
+    as activated: the check verb is the place that judges its contents."""
+    if os.environ.get(UNARMED_OPT_OUT_ENV, "").strip().lower() == "off":
+        return False
+    path = _resolve_activation_path(project_dir)
+    return path is None or not os.path.lexists(path)
+
+
 HEAD_LINES = _env_int("HANDOFF_SURFACER_HEAD_LINES", HEAD_LINES_DEFAULT)
 
 
@@ -429,7 +446,17 @@ def main():
             })
             sys.exit(0)
 
+        unarmed = _unarmed(_resolve_project_dir(cwd))
+
         if path is None:
+            if unarmed:
+                print(json.dumps({
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": UNARMED_MESSAGE,
+                    },
+                    "systemMessage": UNARMED_MESSAGE,
+                }))
             log({
                 "session_id": session_id,
                 "source": source,
@@ -437,11 +464,14 @@ def main():
                 "handoff_mode": mode,
                 "surfaced": False,
                 "reason": "no handoff file found",
+                "unarmed": unarmed,
             })
             sys.exit(0)
 
         head_text = _read_head_lines(path, HEAD_LINES)
         message = _format_message(relpath, head_text)
+        if unarmed:
+            message = UNARMED_MESSAGE + "\n\n" + message
 
         out = {
             "hookSpecificOutput": {
@@ -450,7 +480,8 @@ def main():
             },
             # Visible to the USER in the TUI — evidence the hook fired
             # (additionalContext is only ever seen by the model).
-            "systemMessage": f"atelier: surfaced project handoff ({relpath}).",
+            "systemMessage": f"atelier: surfaced project handoff ({relpath})."
+            + (f" {UNARMED_MESSAGE}" if unarmed else ""),
         }
         print(json.dumps(out))
 
