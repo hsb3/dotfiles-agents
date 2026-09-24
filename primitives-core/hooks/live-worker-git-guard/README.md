@@ -237,7 +237,11 @@ is inert, because that string is one token (`git commit -m "then git push"` deni
 Two places a keyword is deliberately NOT read: after a `#` and after a `<<`. A trailing comment
 (`make ci  # then git commit`) and a heredoc body (a script being written that contains a loop
 around a git call) are text, not command lines, and both were silent before the keyword rule
-existed. Separators still open command position inside them, exactly as they always did.
+existed. Separators still open command position inside a comment, exactly as they always did.
+A heredoc body is not scanned at all: it is dropped, up to and including its terminator line,
+before tokenizing, so a `&&` or `|` in it opens nothing and a git call after the terminator is
+read. An unquoted newline ends a command as `;` does. A `<<` whose terminator never appears drops
+nothing, so its body is read as command lines.
 
 Two deliberate non-widenings. `command -v git` and `command -V git` are lookups, not calls — the
 same exclusion `which git` already had. And a wrapper option that **relocates the tree** is
@@ -256,7 +260,7 @@ command string the hook is handed, so whatever still displaces them is invisible
   `arch`, `caffeinate`, and every site-local wrapper script;
 - anything that re-parses a **string**, which is past a tokenizer by construction: `bash -c "..."`,
   a `$( )` substitution, a quoted `eval "cd x && git commit"`, `env -S 'git commit'`, and heredoc
-  body text;
+  body text (`cat <<EOF | bash`);
 - a **command word** glued to a separator (`ls&&git commit`, `(git commit)`) — a glued wrapper
   option is fine (`nice -n10`, `env -uNAME`, `xargs -I%`), and a separator glued to the *verb*
   (`git pull;`) is stripped; it is only the command word the separator still hides. **Asymmetry,
@@ -351,9 +355,9 @@ No activation file: the guard fires wherever the plugin is installed.
 - **An unreadable ledger is not an empty one.** `settled_ids` raises rather than returning an
   empty set, because rendering "cannot tell" as "nothing has settled" would deny on every agent
   the session ever started.
-- **`git` only counts in command position** — first token, after a shell separator, after an
-  env assignment, after a leading exec wrapper and its options, or after a shell keyword
-  (`; do`, `; then`) outside a comment or heredoc body. `man git commit`, `which git` and
+- **`git` only counts in command position** — first token, after a shell separator or an
+  unquoted newline, after an env assignment, after a leading exec wrapper and its options, or
+  after a shell keyword (`; do`, `; then`) outside a comment or heredoc body. `man git commit`, `which git` and
   `command -v git` are not git calls. Quoted text is tokenized with `shlex`, so a multi-word
   string mentioning a git command is one token and cannot fire — a single quoted WORD is not
   protected, since `shlex` strips its quotes.
