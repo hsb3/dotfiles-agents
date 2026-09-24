@@ -41,7 +41,8 @@ allowed to get slower because of this.
 The daemon then loops: one pass over every matching worktree, one `sleep`, repeat. It exits on
 its own — one final `exit` row in the ledger — when its root is gone or no longer a git worktree,
 or when `LANE_SNAPSHOT_TTL` seconds pass without it writing a snapshot. Relaunch is free: the next
-`SessionStart` starts a fresh one.
+`SessionStart` starts a fresh one. The TTL's cost: a session idle past it loses its daemon, and a
+worker dispatched later in that same session runs unprotected until the next `SessionStart`.
 
 ### One daemon per repository
 
@@ -51,7 +52,13 @@ exclusive `flock` on `<state>/<sha1(common dir)[:16]>.pid`, held by the daemon f
 the file records `pid`, `root`, `common_dir` and `started`. The kernel releases a lock on any
 death, so a free lock always means no live daemon, with no pid-reuse guessing. Two sessions
 launching at once can both spawn; the loser fails the lock, logs an `exit` row with reason
-`already running`, and exits 0.
+`already running`, and exits 0. A bare repository has no main checkout to root a shared daemon
+at, so each of its worktrees is keyed by its own path and keeps its own daemon.
+
+Daemons from before the lock hold no pidfile, never exit, and are invisible to `--check`; they
+run beside the new one harmlessly (the scratch index is per process) but loop until killed. List
+them once after upgrading and kill the ones whose root is gone:
+`ps -eo pid,args | grep "[s]napshot_lanes"`.
 
 ## Activation
 
@@ -86,8 +93,8 @@ error row while the scan still counts it as a lane. Set it to a path you meant.
 1. `$LANE_SNAPSHOT_ROOT`.
 2. `argv[1]`, which the hook fills in from the `SessionStart` payload's `cwd`, resolved with
    `git rev-parse --show-toplevel` and then rewritten to the main checkout (a bare repository
-   keeps its resolved root). `$LANE_SNAPSHOT_ROOT` skips the rewrite; the lock is still keyed by
-   that root's common dir.
+   keeps its resolved root and its own daemon). `$LANE_SNAPSHOT_ROOT` skips the rewrite; the lock is
+   still keyed by that root's common dir.
 3. `git rev-parse --show-toplevel` run from the **daemon script's own directory**.
 
 (3) is the mechanism this hook was specified around, and it is deliberately the *fallback*, not

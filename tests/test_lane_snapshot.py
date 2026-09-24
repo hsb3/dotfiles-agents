@@ -23,6 +23,7 @@ asserted, because a test that leaves a process running is a defect.
 Stdlib-only. Skips cleanly when `git` or `pgrep` is missing.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -263,6 +264,27 @@ class SnapshotPass(unittest.TestCase):
         self.assertTrue(scans, "daemon logged no scan row at all")
         self.assertEqual(scans[-1]["lanes"], 0)
         self.assertTrue(scans[-1].get("warning"))
+
+    def test_codex_lanes_are_scanned_when_no_glob_is_set(self):
+        """One daemon serves both harnesses, so whichever launched it, the
+        unset default has to reach Codex's checkout layout too."""
+        lane = os.path.join(self.box.root, ".git", "atelier-codex", "checkouts", "t1", "lane-c")
+        git(self.box.root, "worktree", "add", "-q", "-b", "wt-lane-c", lane)
+        write(os.path.join(lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root)
+        self.assertTrue(self.ref_sha("lane-c"), "codex lane got no snapshot ref")
+
+    def test_another_daemons_scratch_index_is_left_alone(self):
+        """A pre-upgrade daemon holds no lock, so it can run beside a new one;
+        the scratch index is per process or one deletes the other's mid-pass
+        and commits an empty tree."""
+        digest = hashlib.sha1(self.box.root.encode("utf-8")).hexdigest()[:10]
+        theirs = os.path.join(self.box.base, "lane-snap-{0}-agent-one.idx".format(digest))
+        write(theirs, "in flight\n")
+        write(os.path.join(self.lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root)
+        self.assertTrue(self.ref_sha())
+        self.assertTrue(os.path.isfile(theirs), "daemon deleted another process's index")
 
     def test_snapshot_row_is_logged(self):
         write(os.path.join(self.lane, "draft.txt"), "wip\n")
@@ -525,6 +547,21 @@ class HookGuard(unittest.TestCase):
         time.sleep(1.5)
         self.assertEqual(len(self.sandbox_daemons()), 1)
         self.assertEqual(len(self.daemons()), 1, "the one daemon is not rooted at the repo")
+
+    def test_each_worktree_of_a_bare_repo_keeps_its_own_daemon(self):
+        """A bare repo has no main checkout to root a shared daemon at, so its
+        worktrees keep one daemon each rather than leaving the second bare."""
+        self.addCleanup(self.kill_sandbox)
+        bare = os.path.join(self.box.base, "bare.git")
+        git(self.box.base, "clone", "-q", "--bare", self.box.root, bare)
+        pattern = "snapshot_lanes\\.py .*" + re.escape(os.path.join(self.box.base, "bt-"))
+        for name in ("bt-a", "bt-b"):
+            path = os.path.join(self.box.base, name)
+            git(bare, "worktree", "add", "-q", "-b", name, path)
+            self.assertEqual(self.run_hook(cwd=path).returncode, 0)
+        self.wait_for_pattern(pattern, 2)
+        time.sleep(1.5)
+        self.assertEqual(len(self._pgrep(pattern)), 2)
 
     def test_codex_and_claude_sessions_share_one_daemon(self):
         activation = os.path.join(self.box.base, "atelier.local.md")

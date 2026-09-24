@@ -174,6 +174,13 @@ def state_dir(env=None):
     return os.path.join(base, "lane-snapshot")
 
 
+def repo_key(root, common):
+    """What one daemon is keyed by: the common dir, which every checkout of a
+    repo shares — except for a bare repo, which has no main checkout to root a
+    shared daemon at, so each of its worktrees keeps its own."""
+    return common if os.path.basename(common) == ".git" else os.path.realpath(root)
+
+
 def pidfile_path(common, env=None):
     digest = hashlib.sha1(common.encode("utf-8", "replace")).hexdigest()[:16]
     return os.path.join(state_dir(env), digest + ".pid")
@@ -195,15 +202,17 @@ def try_lock(path, create=True):
 
 
 def _index_path(root, name):
-    """A scratch index outside every worktree, unique per (root, lane).
+    """A scratch index outside every worktree, unique per (root, lane, process).
 
-    Out of tree so a live agent's own index is never touched, and keyed by root
-    so two repos with a same-named lane cannot collide.
+    Out of tree so a live agent's own index is never touched, keyed by root so
+    two repos with a same-named lane cannot collide, and by pid because a
+    pre-lock daemon can still be running beside this one: sharing the file, one
+    unlinks the other's index mid-pass and commits an empty tree.
     """
     digest = hashlib.sha1(root.encode("utf-8", "replace")).hexdigest()[:10]
     return os.path.join(
         os.environ.get("TMPDIR") or "/tmp",
-        "lane-snap-{0}-{1}.idx".format(digest, name),
+        "lane-snap-{0}-{1}-{2}.idx".format(digest, os.getpid(), name),
     )
 
 
@@ -458,7 +467,7 @@ def main(argv=None):
         return 0
     lock = None
     if not args.once:
-        lock = try_lock(pidfile_path(common))
+        lock = try_lock(pidfile_path(repo_key(root, common)))
         if lock is None:
             log({"event": "exit", "reason": "already running", "root": root,
                  "common_dir": common, "pid": os.getpid()})

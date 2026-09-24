@@ -85,11 +85,11 @@ def _repo_root(cwd):
     return out if proc.returncode == 0 and out else None
 
 
-def _already_running(common):
+def _already_running(key):
     """True when a daemon holds this repo's pidfile lock. Probing takes the
     lock for an instant; a daemon starting in that instant exits, and the one
     this hook then spawns takes over."""
-    fd = snapshot_lanes.try_lock(snapshot_lanes.pidfile_path(common))
+    fd = snapshot_lanes.try_lock(snapshot_lanes.pidfile_path(key))
     if fd is None:
         return True
     os.close(fd)
@@ -128,7 +128,7 @@ def main():
         root = _repo_root(cwd)
         common = snapshot_lanes.common_dir(root, GIT_TIMEOUT) if root else None
         # Every checkout of a repo shares one daemon, rooted at the main
-        # checkout; a bare repo keeps its resolved root, still keyed by common.
+        # checkout; a bare repo's worktrees keep one each (snapshot_lanes.repo_key).
         if (common and os.path.basename(common) == ".git"
                 and not os.environ.get("LANE_SNAPSHOT_ROOT")):
             root = os.path.dirname(common)
@@ -151,7 +151,7 @@ def main():
         if not os.path.isfile(DAEMON_PATH):
             log(dict(record, launched=False, reason="daemon missing at " + DAEMON_PATH))
             sys.exit(0)
-        if _already_running(common):
+        if _already_running(snapshot_lanes.repo_key(root, common)):
             log(dict(record, launched=False, reason="daemon already running for this repo"))
             sys.exit(0)
 
