@@ -491,10 +491,6 @@ def evaluate(project_dir, modules):
     # Both read the main checkout's policy, so a linked worktree's own copy is not what runs.
     checkout_sources = ["codex_workers", "activation.py"]
     try:
-        policy_dir = str(worker.atelier_local.main_checkout(project_dir)[0])
-    except ValueError:
-        policy_dir = project_dir
-    try:
         root = worker.atelier_local.checkout_root(project_dir)
     except ValueError as exc:
         result["rows"].append(_row(
@@ -503,10 +499,11 @@ def evaluate(project_dir, modules):
     else:
         if root is not None:
             result["rows"].append(_row("checkout-root", "armed", str(root), checkout_sources))
-        elif "checkout-root" in present and os.path.samefile(policy_dir, project_dir):
+        elif "checkout-root" in present:
             result["rows"].append(_row(
                 "checkout-root", "not configured",
-                "blank - the default checkout root is used", checkout_sources))
+                "blank or unset in the main checkout - the default checkout root is used",
+                checkout_sources))
         else:
             result["rows"].append(_row("checkout-root", "not configured", "", checkout_sources))
 

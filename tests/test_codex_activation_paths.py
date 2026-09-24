@@ -182,6 +182,22 @@ class ActivationPathsTests(unittest.TestCase):
                 self.assertEqual(text, 'model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
                 self.assertFalse(list((main / '.codex').glob('agents/*')))
 
+    def test_codex_setup_refuses_a_tracked_directory_as_checkout_root(self):
+        main, _ = make_worktree(str(self.root), tracked={'src/a.py': 'x'})
+        main = Path(main)
+        self.write(main / '.codex/atelier.local.md',
+                   FULL.replace('---\n', '---\ncheckout-root: src\n', 1))
+        config = main / '.codex/config.toml'
+        config.write_text('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
+        output = io.StringIO()
+        code = activation.main(['codex-setup', '--harness', 'codex', '--project-dir', str(main)],
+                               out=output)
+        self.assertNotEqual(code, 0, output.getvalue())
+        self.assertIn('checkout-root', output.getvalue())
+        self.assertIn('tracked files', output.getvalue())
+        self.assertEqual(config.read_text(), 'model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n')
+        self.assertFalse(list((main / '.codex').glob('agents/*')))
+
     def test_codex_setup_rewrites_a_managed_root_containing_a_bracket(self):
         main, _ = make_worktree(str(self.root))
         main = Path(main)

@@ -696,6 +696,39 @@ class CheckoutRootTests(_Base):
         with self.assertRaisesRegex(ValueError, "checkout-root.*unsupported git layout"):
             self.root(work)
 
+    def test_separate_git_dir_is_unsupported_for_an_absolute_value_too(self):
+        base = os.path.realpath(self.tmp.name)
+        work = os.path.join(base, "sep-wt-abs")
+        subprocess.run(["git", "init", "-q", "--separate-git-dir",
+                        os.path.join(base, "store2.git"), work], check=True, capture_output=True)
+        self.policy("checkout-root: " + os.path.join(work, ".worktrees") + "\n", where=work)
+        with self.assertRaisesRegex(ValueError, "checkout-root.*unsupported git layout"):
+            self.root(work)
+
+    def test_a_tracked_directory_is_rejected(self):
+        # A tracked root would make setup exclude real source (review-581 FR2-1):
+        # new files under it vanish from `git status`, and its subfolders become lanes.
+        base = os.path.join(self.tmp.name, "tracked-fixture")
+        os.makedirs(base)
+        main, _ = make_worktree(base, tracked={"src/a.py": "x"})
+        self.policy("checkout-root: src\n", where=main)
+        message = None
+        with self.assertRaisesRegex(ValueError, "checkout-root.*tracked files") as caught:
+            atelier_local.checkout_root(main)
+        message = str(caught.exception)
+        self.assertIn("src", message)
+
+    def test_an_untracked_or_nonexistent_directory_is_still_accepted(self):
+        base = os.path.join(self.tmp.name, "untracked-fixture")
+        os.makedirs(base)
+        main, _ = make_worktree(base, tracked={"src/a.py": "x"})
+        # `.worktrees` does not exist yet, and `build` exists but was never committed.
+        os.makedirs(os.path.join(main, "build"))
+        self.policy("checkout-root: .worktrees\n", where=main)
+        self.assertEqual(str(atelier_local.checkout_root(main)), os.path.join(main, ".worktrees"))
+        self.policy("checkout-root: build\n", where=main)
+        self.assertEqual(str(atelier_local.checkout_root(main)), os.path.join(main, "build"))
+
     def test_anything_outside_the_project_is_rejected(self):
         # Allowlist: strictly inside the main checkout. System dirs and ancestors of
         # $HOME were armed under the old denylist (review-581 FR1).

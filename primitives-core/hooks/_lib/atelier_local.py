@@ -348,4 +348,17 @@ def checkout_root(project_dir):
     if root.exists() and not root.is_dir():
         raise ValueError("checkout-root {0!r} resolves to {1}, which is not a directory".format(
             value, root))
+    env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(main), "ls-files", "--", str(root.relative_to(main))],
+            env=env, capture_output=True, text=True, timeout=3)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("checkout-root {0!r}: git failed: {1}".format(value, exc)) from exc
+    if proc.returncode:
+        raise ValueError("checkout-root {0!r}: git failed: {1}".format(
+            value, proc.stderr.strip()))
+    if proc.stdout.strip():
+        raise ValueError(
+            "checkout-root {0!r} resolves to {1}, which holds tracked files".format(value, root))
     return root

@@ -575,6 +575,19 @@ class CheckoutRootTests(_Base):
         self.assertEqual(code, 0, output)
         self.assertIn("not configured", self.row(output, "checkout-root"))
 
+    def test_tracked_directory_is_reported_as_blocking(self):
+        base = os.path.join(self.tmp.name, "tracked-fixture")
+        os.makedirs(base)
+        main, _ = make_worktree(base, tracked={"src/a.py": "x"})
+        os.makedirs(os.path.join(main, ".claude"), exist_ok=True)
+        self.write("---\nenforce: strict\ncheckout-root: src\n---\n", project=main)
+        code, output = self.check(project=main)
+        self.assertEqual(code, 1, output)
+        row = self.row(output, "checkout-root")
+        self.assertIn("blocks every isolated Codex dispatch", row)
+        self.assertIn("tracked files", row)
+        self.assertNotIn("armed", row)
+
     def test_linked_worktree_reports_the_main_checkout_policy(self):
         # Dispatch reads the main checkout's policy, so check must too.
         self.write("---\nenforce: strict\ncheckout-root: .worktrees\n---\n", project=self.main)
