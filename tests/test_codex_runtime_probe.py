@@ -42,9 +42,9 @@ class CheckoutsDirTests(unittest.TestCase):
         (self.repo / ".agents").mkdir(exist_ok=True)
         (self.repo / ".agents/atelier.local.md").write_text(text)
 
-    def test_no_key_defaults_to_dotgit_checkouts(self):
+    def test_no_key_defaults_to_project_worktrees(self):
         self.assertEqual(probe.checkouts_dir(self.root),
-                          self.repo / ".git/atelier-codex/checkouts")
+                          self.repo / ".worktrees")
 
     def test_checkout_root_key_resolves_relative_to_repo(self):
         self.write_activation("---\ncheckout-root: .worktrees\n---\n")

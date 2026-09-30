@@ -109,7 +109,7 @@ class CodexWorkersTests(unittest.TestCase):
             self.assertEqual(self.mod.register(p, isolate=True), record)
         self.assertNotEqual(*indexes)
         self.assertFalse((self.repo / 'shared.txt').exists())
-        self.assertEqual(self.git('status', '--porcelain'), '?? .claude/')
+        self.assertEqual(self.git('status', '--porcelain'), '?? .claude/\n?? .worktrees/')
 
     def test_patch_all_headers_and_idempotence(self):
         p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: a\n+x\n*** Update File: b\n*** Move to: c\n@@\n-x\n+y\n*** Delete File: d\n*** End Patch')
@@ -426,26 +426,31 @@ class CodexWorkersTests(unittest.TestCase):
         return [Path(line[len('worktree '):]) for line in
                 self.git('worktree', 'list', '--porcelain').splitlines() if line.startswith('worktree ')]
 
-    def test_default_checkout_placement_is_unchanged(self):
+    def test_default_checkout_placement_is_project_worktrees(self):
         record = self.mod.register(self.payload(), isolate=True)
         self.assertEqual(Path(record['worktree']),
-                         self.repo.resolve() / '.git/atelier-codex/checkouts/session-a/worker-a')
+                         self.repo.resolve() / '.worktrees/session-a/worker-a')
 
     def test_checkout_root_places_worker_and_nested_worker_checkouts(self):
-        self.checkout_root('.worktrees')
+        self.checkout_root('.agent-checkouts')
         main = self.repo.resolve()
         parent = self.payload('manager'); parent['agent_type'] = 'atelier-manager'
         record = self.mod.register(parent, isolate=True)
-        self.assertEqual(Path(record['worktree']), main / '.worktrees/session-a/manager')
-        self.assertIn(main / '.worktrees/session-a/manager', self.listed_worktrees())
+        self.assertEqual(Path(record['worktree']), main / '.agent-checkouts/session-a/manager')
+        self.assertIn(main / '.agent-checkouts/session-a/manager', self.listed_worktrees())
         child = self.payload('leaf')
         Path(child['transcript_path']).write_text(json.dumps({'type': 'session_meta', 'payload': {
             'id': 'leaf', 'parent_thread_id': 'manager', 'agent_path': '/root/manager/leaf'}})+'\n')
         leaf = self.mod.register(child, isolate=True)
         self.assertEqual(leaf['source'], record['worktree'])
-        self.assertEqual(Path(leaf['worktree']), main / '.worktrees/session-a/leaf')
-        self.assertIn(main / '.worktrees/session-a/leaf', self.listed_worktrees())
+        self.assertEqual(Path(leaf['worktree']), main / '.agent-checkouts/session-a/leaf')
+        self.assertIn(main / '.agent-checkouts/session-a/leaf', self.listed_worktrees())
         self.assertEqual(self.mod.lookup(child)['worktree'], leaf['worktree'])
+        parent['tool_name'] = 'apply_patch'
+        parent['tool_input'] = {'command': '*** Begin Patch\n*** Add File: '
+                                + str(Path(leaf['worktree']) / 'x') + '\n+x\n*** End Patch'}
+        with self.assertRaisesRegex(self.mod.WorkerError, 'another checkout'):
+            self.mod.route_tool(parent)
 
     def test_nested_worker_reads_checkout_root_from_the_main_checkout(self):
         self.git('add', '.claude/atelier.local.md')
@@ -505,11 +510,11 @@ class CodexWorkersTests(unittest.TestCase):
         self.assertEqual(len(self.listed_worktrees()), 1)  # git lists only the main entry
         self.assertFalse((Path(self.tmp.name) / 'store.git/atelier-codex/checkouts').exists())
 
-    def test_separate_git_dir_without_checkout_root_keeps_the_default(self):
+    def test_separate_git_dir_without_checkout_root_refuses(self):
         self.separate_git_dir_repo()
-        record = self.mod.register(self.payload(), isolate=True)
-        self.assertEqual(Path(record['worktree']), (Path(self.tmp.name) / 'store.git').resolve()
-                         / 'atelier-codex/checkouts/session-a/worker-a')
+        with self.assertRaisesRegex(self.mod.WorkerError, 'unsupported git layout'):
+            self.mod.register(self.payload(), isolate=True)
+        self.assertEqual(len(self.listed_worktrees()), 1)
 
     def test_system_or_home_ancestor_checkout_root_is_refused(self):
         original = (self.repo / '.claude/atelier.local.md').read_text()

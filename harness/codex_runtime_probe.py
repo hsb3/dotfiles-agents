@@ -25,7 +25,7 @@ import atelier_local  # noqa: E402
 def checkouts_dir(root):
     """Codex worker checkout root: the `checkout-root` activation key, else the default."""
     repo = root / "repo"
-    return atelier_local.checkout_root(str(repo)) or repo / ".git/atelier-codex/checkouts"
+    return atelier_local.checkout_root(str(repo), default=".worktrees")
 
 
 def activation_frontmatter(checkout_root=None):

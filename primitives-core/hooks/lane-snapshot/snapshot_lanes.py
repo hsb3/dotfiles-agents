@@ -68,7 +68,7 @@ INTERVAL_DEFAULT = 180
 TTL_DEFAULT = 43200
 # Both harnesses' lane layouts: one daemon per repo serves Claude and Codex alike.
 WORKTREES_DEFAULTS = (os.path.join(".claude", "worktrees", "agent-*"),
-                      os.path.join(".git", "atelier-codex", "checkouts", "*", "*"))
+                      os.path.join(".worktrees", "*", "*"))
 WORKTREES_DEFAULT = " + ".join(WORKTREES_DEFAULTS)
 LOG_STREAM = "lane-snapshot"
 LOG_PATH_ENV = "LANE_SNAPSHOT_LOG_PATH"

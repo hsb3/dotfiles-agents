@@ -28,10 +28,10 @@ protected:
 # relative value resolves against the main checkout. It must resolve strictly
 # inside the project and outside .git; a separate-git-dir or bare layout with
 # the key set is refused everywhere; variables ($HOME) are not expanded.
-# Claude Code subagent worktrees: not yet.
+# Claude Code placement uses the separate `worktree-root` plugin.
 #
-# Ships commented out: the default (<git-common-dir>/atelier-codex/checkouts) works.
-# checkout-root: .worktrees
+# Ships commented out: the default (<project>/.worktrees) works.
+# checkout-root: .agent-checkouts
 
 # worktree-isolation: a writing subagent gets its own checkout instead of sharing
 # the strategist's working tree. Independent of `enforce`.

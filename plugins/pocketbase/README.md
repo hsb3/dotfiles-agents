@@ -107,6 +107,9 @@ get them.
 
 ## Codex
 
+When Atelier isolation is enabled, shared Codex worker checkouts default to the main
+project's `.worktrees/`; Atelier's `checkout-root` setting overrides that location.
+
 Install with `codex plugin add pocketbase@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
 project roles with the shared Codex helper from its installed root (the path returned by `codex plugin add --json`):
 

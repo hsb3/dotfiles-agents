@@ -145,19 +145,19 @@ class ActivationPathsTests(unittest.TestCase):
         roots = __import__('tomllib').loads(text).get('sandbox_workspace_write', {}).get('writable_roots')
         return Path(main), code, output.getvalue(), text, roots
 
-    def test_codex_setup_writable_root_defaults_to_the_common_dir(self):
+    def test_codex_setup_writable_root_defaults_to_project_worktrees(self):
         main, code, output, text, roots = self.setup_roots()
         self.assertEqual(code, 0, output)
         common = main / '.git'
-        self.assertEqual(roots, [str(common / p) for p in (
-            'atelier-codex/checkouts', 'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')])
+        self.assertEqual(roots, [str(main / '.worktrees')] + [str(common / p) for p in (
+            'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')])
         self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
 
     def test_codex_setup_writable_root_follows_checkout_root(self):
-        main, code, output, text, roots = self.setup_roots('.worktrees')
+        main, code, output, text, roots = self.setup_roots('.agent-checkouts')
         self.assertEqual(code, 0, output)
         common = main / '.git'
-        self.assertEqual(roots, [str(main / '.worktrees')] + [str(common / p) for p in (
+        self.assertEqual(roots, [str(main / '.agent-checkouts')] + [str(common / p) for p in (
             'worktrees', 'objects', 'refs/heads/atelier', 'logs/refs/heads/atelier')])
         self.assertIn('model = "keep-me"\n\n[profiles.mine]\nmodel = "mine"\n', text)
 
@@ -225,7 +225,9 @@ class ActivationPathsTests(unittest.TestCase):
         main, code, output, _, _ = self.setup_roots()
         self.assertEqual(code, 0, output)
         config = main / '.codex/config.toml'
-        config.write_text(config.read_text() + '\n[profiles.later]\nmodel = "later"\n')
+        config.write_text(config.read_text().replace(str(main / '.worktrees'),
+                                                   str(main / '.git/atelier-codex/checkouts'))
+                          + '\n[profiles.later]\nmodel = "later"\n')
         code, output, text, roots = self.rerun_with_checkout_root(main)
         self.assertEqual(code, 0, output)
         common = main / '.git'
@@ -237,7 +239,7 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertIn('[profiles.later]\nmodel = "later"\n', text)
 
     def test_codex_setup_keeps_a_user_root_inside_its_block(self):
-        main, code, output, _, _ = self.setup_roots()
+        main, code, output, _, _ = self.setup_roots('.old-worktrees')
         self.assertEqual(code, 0, output)
         config = main / '.codex/config.toml'
         text = config.read_text()
@@ -344,12 +346,11 @@ class ActivationPathsTests(unittest.TestCase):
         self.assertFalse(list((main / '.codex').glob('agents/*')))
         self.assertFalse((self.root / 'store.git/info/exclude').read_text().count('/.codex/'))
 
-    def test_codex_setup_separate_git_dir_without_the_key_keeps_the_default(self):
+    def test_codex_setup_separate_git_dir_without_the_key_refuses(self):
         main, code, output = self.separate_git_dir()
-        self.assertEqual(code, 0, output)
-        roots = __import__('tomllib').loads((main / '.codex/config.toml').read_text())[
-            'sandbox_workspace_write']['writable_roots']
-        self.assertEqual(roots[0], str(self.root / 'store.git/atelier-codex/checkouts'))
+        self.assertNotEqual(code, 0, output)
+        self.assertIn('unsupported git layout', output)
+        self.assertFalse((main / '.codex/config.toml').exists())
 
     def test_codex_setup_rewrites_a_multi_line_managed_block(self):
         main, code, output, _, _ = self.setup_roots()

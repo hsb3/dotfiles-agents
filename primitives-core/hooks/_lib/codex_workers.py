@@ -246,11 +246,11 @@ def register(payload, isolate=False):
             common = path.parents[3]
             try:
                 # checkout_root reads the main checkout's policy (a worker's own copy may differ)
-                # and refuses a set key on a layout without one.
-                root = atelier_local.checkout_root(str(repo))
+                # and validates the default as well as an explicit override.
+                root = atelier_local.checkout_root(str(repo), default=".worktrees")
             except ValueError as exc:
                 raise WorkerError(str(exc)) from exc
-            tree = (root or common / 'atelier-codex/checkouts') / session / agent
+            tree = root / session / agent
             branch = 'atelier/' + session + '/' + agent
             tree.parent.mkdir(parents=True, exist_ok=True)
             _git(source, 'worktree', 'add', '-b', branch, str(tree), 'HEAD')
@@ -321,6 +321,9 @@ def _owned_path(raw, record):
         elif path.is_relative_to(source) or path.is_relative_to(Path(record['repo'])):
             base = source if path.is_relative_to(source) else Path(record['repo'])
             relative = path.relative_to(base)
+            if any((parent / '.git').is_file() for parent in path.parents
+                   if parent != base and parent.is_relative_to(base)):
+                raise WorkerError('Patch targets another checkout: ' + raw)
             if '.git' in relative.parts:
                 raise WorkerError('Patch targets Git metadata or another worker: ' + raw)
             target = tree / relative

@@ -747,8 +747,8 @@ def codex_setup(project_dir, out, check=False, refresh_global=False):
             text=True, env=codex_workers.clean_git_env()).strip()
         common = (Path(project_dir) / common).resolve()
         # The main checkout's policy, the same one codex_workers places checkouts by.
-        root = local.checkout_root(project_dir)
-        writable = [str(root or common / "atelier-codex/checkouts")] + [str(common / path) for path in
+        root = local.checkout_root(project_dir, default=".worktrees")
+        writable = [str(root)] + [str(common / path) for path in
                     ("worktrees", "objects", "refs/heads/atelier", "logs/refs/heads/atelier")]
         config = Path(project_dir) / ".codex/config.toml"
         exclude = common / "info/exclude"

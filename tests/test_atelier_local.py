@@ -620,6 +620,15 @@ class CheckoutRootTests(_Base):
         self.policy("")
         self.assertIsNone(self.root())
 
+    def test_caller_default_is_shared_by_linked_worktrees_and_validated(self):
+        self.policy("")
+        root = atelier_local.checkout_root(self.main, default=".worktrees")
+        self.assertEqual(str(root), os.path.join(self.main, ".worktrees"))
+        self.assertEqual(root, atelier_local.checkout_root(self.worktree, default=".worktrees"))
+        os.symlink(self.tmp.name, root)
+        with self.assertRaisesRegex(ValueError, "strictly inside"):
+            atelier_local.checkout_root(self.main, default=".worktrees")
+
     def test_blank_key_is_none(self):
         self.policy("checkout-root:\n")
         self.assertIsNone(self.root())

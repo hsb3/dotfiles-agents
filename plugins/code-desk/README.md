@@ -131,6 +131,9 @@ Since the decision-020 sweep this bundle is the only home for `presentations` an
 
 ## Codex
 
+When Atelier isolation is enabled, shared Codex worker checkouts default to the main
+project's `.worktrees/`; Atelier's `checkout-root` setting overrides that location.
+
 Install with `codex plugin add code-desk@dotfiles-agents`. Use Python 3.11 or newer to generate this package’s
 project roles with the shared Codex helper from its installed root (the path returned by `codex plugin add --json`):
 
