@@ -1,0 +1,17 @@
+@use "@carbon/react";
+@use "@carbon/react/scss/type" as type;
+
+body { margin: 0; background: var(--cds-background); color: var(--cds-text-primary); }
+.sidebar { background: var(--cds-layer-01); border-right: 1px solid var(--cds-border-subtle-01); }
+.sidebar p { margin: 2rem 1.5rem; color: var(--cds-text-secondary); font-size: .875rem; }
+.content { padding: 1.5rem 1rem; }
+.header-caption { margin-left: 1rem; color: var(--cds-text-on-color); font-size: .875rem; }
+.logout { margin-left: auto; color: var(--cds-text-on-color); }
+.content-block { margin-bottom: 1.5rem; }
+h1 { @include type.type-style("heading-05"); } h2 { @include type.type-style("heading-03"); }
+.lede { color: var(--cds-text-secondary); font-size: 1.125rem; }
+.area-grid { margin-bottom: 1.5rem; }.area-card, .surface, .login-card { background: var(--cds-layer-01); padding: 1.5rem; height: calc(100% - 3rem); }
+.area-card p, .surface p { line-height: 1.5; }.area-card .cds--btn { margin-top: 1rem; }
+pre { overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.login-main { padding-top: 4rem; min-height: calc(100vh - 4rem); }.login-card form > * { margin-top: 1rem; }.login-card .cds--btn { margin-top: 1.5rem; }
+@media (max-width: 65.999rem) { .sidebar { border-right: 0; }.sidebar p { display: none; }.header-caption { display: none; } .sidebar ~ .content { margin-inline-start: 0; } .content { padding: 1rem; } }
