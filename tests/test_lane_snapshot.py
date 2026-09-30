@@ -272,7 +272,7 @@ class SnapshotPass(unittest.TestCase):
         self.assertEqual(scans[-1]["lanes"], 0)
         self.assertTrue(scans[-1].get("warning"))
 
-    def test_codex_lanes_are_scanned_when_no_glob_is_set(self):
+    def test_existing_dotgit_codex_lanes_are_still_scanned(self):
         """One daemon serves both harnesses, so whichever launched it, the
         unset default has to reach Codex's checkout layout too."""
         lane = os.path.join(self.box.root, ".git", "atelier-codex", "checkouts", "t1", "lane-c")
@@ -296,7 +296,7 @@ class SnapshotPass(unittest.TestCase):
         self.assertTrue(self.ref_sha("lane-r"), "checkout-root lane got no snapshot ref")
 
     def test_an_invalid_checkout_root_falls_back_to_the_default_and_warns(self):
-        self.checkout_root_lane("seed.txt", ".git", "atelier-codex", "checkouts", "t1", "lane-c")
+        self.checkout_root_lane("seed.txt", ".worktrees", "t1", "lane-c")
         result = run_daemon(self.box, "--once", self.box.root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(self.ref_sha("lane-c"), "default codex lane got no snapshot ref")

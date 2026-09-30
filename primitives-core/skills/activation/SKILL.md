@@ -127,7 +127,12 @@ because it is live - just probably not as intended.
 <!-- harness:claude-code -->
 **`checkout-root` places automatic Codex worker checkouts, resolved by `codex_workers.py` and
 added as a writable root by `activation.py`'s Codex setup; absent or blank keeps the default
-`<git-common-dir>/atelier-codex/checkouts`. Claude Code subagent worktrees: not yet.**
+`<project>/.worktrees`. Set `checkout-root: .agent-checkouts` in the main checkout's
+`.agents/atelier.local.md` frontmatter to override it. Rerun `codex-setup` and restart Codex
+after upgrading or changing the root so its writable roots agree. Existing worktrees stay
+where they are; unsupported separate-git-dir and bare layouts refuse Codex setup and isolated
+dispatch rather than placing checkouts inside Git metadata. Claude Code placement uses the
+separate `worktree-root` plugin.**
 
 **`watermark` is the one key whose sub-keys are independently optional.** Absent, blank, or
 unusable leaves that one value computed from the lead model's context window rather than turning
