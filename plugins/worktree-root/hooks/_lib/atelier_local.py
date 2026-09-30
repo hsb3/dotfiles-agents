@@ -328,14 +328,14 @@ def main_checkout(project_dir):
     return common.parent, common
 
 
-def checkout_root(project_dir):
-    """`checkout-root` as a resolved absolute Path, None when unset; invalid raises ValueError.
+def checkout_root(project_dir, default=None):
+    """Resolve and validate `checkout-root`, using the caller default when unset.
 
     `project_dir` may be any directory in the repo: the key is read from the main
     checkout, so every worktree and every reader agrees. Allowlist: the resolved root
     must sit strictly inside the main checkout and outside the git dir; anything else
     would widen the Codex sandbox, scatter lane snapshots, or be pruned by git. A
-    layout with no main checkout (separate git dir, bare) refuses a set key.
+    layout with no main checkout (separate git dir, bare) refuses a key or default.
     """
     try:
         main, common = main_checkout(project_dir)
@@ -345,6 +345,8 @@ def checkout_root(project_dir):
     if isinstance(value, str):
         value = value.strip()
     if value is None or value == "":
+        value = default
+    if value is None:
         return None
     if not isinstance(value, str):
         raise ValueError("checkout-root must be a single path, not {0!r}".format(value))
