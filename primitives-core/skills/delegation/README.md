@@ -97,6 +97,11 @@ commitments behind the enforcement layer: fail-open everywhere, custody scoped t
 the strategy layer is never restricted, and each guard stating its own ceiling instead of
 implying containment it does not have.
 
+`isolate` arms the checkout; it does not prove one. `references/dispatch-knobs.md` (Worktree
+isolation) carries the field traps for the session that relies on it: confirm the worktree an
+agent names exists before trusting it, an unchanged worktree dies with its agent and takes its
+artifacts along, and a worktree branch is integrated by cherry-pick, never by checking out files.
+
 ## Reading the evidence
 
 Every rule carries a provenance tag: `[lab]` and `[cost]` were measured, `[measured]` was

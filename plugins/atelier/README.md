@@ -320,7 +320,9 @@ a new worktree branches from `origin/<default-branch>` unless the project sets t
 ```
 
 The key is nested under `worktree`; a flat top-level spelling of it is a `/config` widget id, not
-a settings key, and is silently ignored.
+a settings key, and is silently ignored. The delegation skill's `references/dispatch-knobs.md`
+(Worktree isolation) lists the other traps of relying on it: confirm the worktree exists, write a
+command-only agent's artifacts outside its worktree, and integrate by cherry-pick.
 
 A dispatcher that is itself in a linked worktree gets its writers **nested** under it, one branch
 each, and the hook's notice hands it the integrate step at dispatch time. That step is
