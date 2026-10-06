@@ -31,4 +31,3 @@ laydowns and the weekly harness-campaign launchd job. That guide wins on any con
 ## Branches
 
 - Work only on a branch in a `.worktrees/<branch>` checkout, branched off `dev`.
-- Tell the machine's coordinator session before pushing any branch to dotfiles.
