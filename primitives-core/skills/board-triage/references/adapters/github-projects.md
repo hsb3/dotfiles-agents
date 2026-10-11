@@ -5,6 +5,9 @@ whole adapter is one script that ships with this skill: `scripts/github_projects
 only — it shells out to `gh` (`graphql` for the project surface, REST for dependency edges) rather
 than holding credentials of its own.
 
+Detected when the repo's GitHub remote has issues in use. Detection cannot see which
+project board is in play, so the project number still comes from the owner.
+
 ## Prerequisite
 
 `gh` on PATH, authenticated with `project` scope (`gh auth refresh -s project`). A `GITHUB_TOKEN`
