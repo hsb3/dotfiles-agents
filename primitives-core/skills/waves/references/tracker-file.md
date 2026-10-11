@@ -15,8 +15,9 @@ python3 <waves-skill-dir>/scripts/file_tracker.py list         # open items, one
 python3 <waves-skill-dir>/scripts/file_tracker.py list --all   # done and dropped too
 ```
 
-Each line is id, priority, `ready` or `blocked by <ids>`, labels, title; the footer counts
-open, ready and closed items and names the next free id. Exit 1 means an item file is broken
+Each line is id, priority, state (`ready`, `owner-gated` for an item labelled `decision`, or
+`blocked by <ids>`), labels, title; the footer counts open, ready, owner-gated and closed items
+and names the next free id. Only `ready` items are buildable. Exit 1 means an item file is broken
 (`BROKEN <path>: <why>` on stderr). Fix it before triaging: a file the parser cannot read is an
 item the plan cannot see.
 <!-- /harness -->
@@ -28,7 +29,9 @@ then area) → owner rulings in the handoff. An item labelled `decision` is owne
 
 `.tasks/triage.md`, ignored by `.tasks/.gitignore`. Read it, edit it, write it back whole. Use
 the same template as the GitHub triage issue (see `tracker-github.md`, Init), with refs written
-as `t<n>`. Write it from the main checkout, never from a worktree, because it exists only in the
+as `t<n>`, and adapt its GitHub-only lines: drop pinning, the dependabot and self-exclusion
+notes and the Milestone section, write the merge commit where the plan table says PR, and
+take the ranking inputs from this binding. Write it from the main checkout, never from a worktree, because it exists only in the
 checkout that wrote it; record its path in the handoff.
 
 ## Landing a wave

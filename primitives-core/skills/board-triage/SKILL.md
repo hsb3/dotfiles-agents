@@ -59,11 +59,12 @@ extra declared name can only ever make a prefix look more reachable, never less.
 | Backlog.md | [`references/adapters/backlog.md`](references/adapters/backlog.md) |
 | File tracker (`.tasks/`) | [`references/adapters/file.md`](references/adapters/file.md) |
 
-**Not told which board?** Detect it: walk the table top to bottom and take the first board this
-repo has (each adapter names its marker). With none present, fall back to the last row, the
+**Not told which board?** A project pins it with `tracker: <id>` in `.claude/tracker.local.md`,
+using the id the adapter page gives, and that setting wins. Otherwise detect it: walk the table
+top to bottom and take the first board this repo has (each adapter names its marker). With none present, fall back to the last row, the
 file tracker, and say so; a pass is never refused for want of a board.
-`python3 <board-triage-skill-dir>/scripts/file_tracker.py detect` applies that order and prints
-the board and why.
+`python3 <board-triage-skill-dir>/scripts/file_tracker.py detect` reads the setting, then applies
+that order, and prints the board and why.
 
 No adapter for your board? Write one against §2 — it is two commands and a field map.
 

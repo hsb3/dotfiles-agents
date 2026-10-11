@@ -17,7 +17,8 @@ The campaign loop is tracker-agnostic. It needs three operations from whatever h
 backlog — an inventory, a rewritable triage view that lives off commit history, and a way to
 land a wave and close its items. Bindings ship under `references/` for GitHub issues, kata,
 Backlog.md and the file tracker — one Markdown file per item under `.tasks/`, whose format is
-specified in `references/file-tracker-format.md`. Untold, the skill detects the tracker in that
+specified in `references/file-tracker-format.md`. A project pins its tracker with a `tracker:` key in
+`.claude/tracker.local.md`. Untold and unpinned, the skill detects the tracker in that
 order (kata binding, GitHub issues in use, a Backlog.md board, `.tasks/`) and, finding none, falls back
 to the file tracker and says so rather than refusing. `scripts/file_tracker.py` does the
 detecting and parses the item files, reporting a broken one by path instead of skipping it. A

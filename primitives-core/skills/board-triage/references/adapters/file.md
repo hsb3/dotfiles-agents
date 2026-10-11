@@ -6,7 +6,7 @@ Markdown file per item under `.tasks/`, specified in
 `scripts/file_tracker.py`, stdlib only. It reads and writes the item files directly, so there
 is no daemon, token or network to configure.
 
-Detected by `.tasks/` at the repo root, and the fallback when detection finds no other board.
+Tracker id `file`. Detected by `.tasks/` at the repo root, and the fallback when detection finds no other board.
 
 ## Key
 
@@ -57,3 +57,7 @@ Log.
 ```bash
 python3 "$S/board_health.py" --vocabulary "$S/core-labels.txt" <(python3 "$S/file_tracker.py" export)
 ```
+
+`core-labels.txt` is the shipped core vocabulary. On a tracker that has not adopted it, read the
+fossil findings as the adoption gap, as the Kata adapter explains; point `--vocabulary` at the
+project's own list once it declares one.

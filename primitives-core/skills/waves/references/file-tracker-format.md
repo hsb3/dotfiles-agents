@@ -73,7 +73,8 @@ in `.tasks/` that is neither an item nor `triage.md`.
   Closes for one landing go in one commit on the trunk after it lands:
   `tasks: close t3 t7, landed <merge-sha>`.
 - A triage pass writes `priority` and `labels` in place and commits the pass as one commit.
-- To file an item, take the next id, write every key, and commit it.
+- To file an item, take the next id, write every key, and commit it. `priority` and `labels`
+  may stay empty until the next triage pass; several filings can share one commit.
 
 ## The triage view
 
@@ -101,8 +102,8 @@ repo root (`--root` points it elsewhere):
 
 | Command | Does |
 |---|---|
-| `detect` | names the tracker in play and why: `kata`, `github`, `backlog` or `file` |
-| `list [--all]` | one line per open item: id, priority, `ready` or `blocked by ...`, labels, title; a footer with counts and the next id |
+| `detect` | names the tracker in play and why: `kata`, `github`, `backlog` or `file`; a `tracker:` key in `.claude/tracker.local.md` wins over detection |
+| `list [--all]` | one line per open item: id, priority, `ready`, `owner-gated` (labelled `decision`) or `blocked by ...`, labels, title; a footer with counts and the next id |
 | `export [--out FILE]` | a triage snapshot of the open items |
 | `apply --changeset FILE [--apply]` | writes `priority`/`labels` cells that differ; dry-run by default |
 

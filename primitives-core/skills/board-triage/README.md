@@ -9,8 +9,9 @@ The judgment is backend-agnostic and lives in `SKILL.md`. The board's I/O lives 
 adapter under `references/adapters/` — **GitHub Projects (v2)**, **Kata**, **Backlog.md** and
 the **file tracker** (Markdown item files under `.tasks/`) ship, each with its own export/apply
 script in `scripts/`. A new backend is a new adapter file: two commands and a field map, no
-edit to the rubric. Told no board, the skill detects one in that order and falls back to the
-file tracker. The file tracker's format and parser are shared with the waves skill and arrive
+edit to the rubric. A `tracker:` key in `.claude/tracker.local.md` pins the board; told none
+and pinned none, the skill detects one in the order kata, GitHub, Backlog.md, file tracker, and
+falls back to the file tracker. The file tracker's format and parser are shared with the waves skill and arrive
 here as symlinks (`references/file-tracker-format.md`, `scripts/file_tracker.py`), resolved to
 regular files at install.
 

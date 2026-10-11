@@ -8,7 +8,7 @@
     file_tracker.py apply --changeset changeset.tsv --apply # write
 
 The format is specified in references/file-tracker-format.md next to this script's
-skill. Every command reads from --root (default: the current directory). A file that
+skill. `detect` honours a `tracker:` key in .claude/tracker.local.md before detecting. Every command reads from --root (default: the current directory). A file that
 breaks the grammar is reported by path and fails the command: `list` exits 1 after
 printing what did parse, `export` and `apply` refuse to run at all.
 
@@ -30,6 +30,8 @@ STATUSES = ("open", "done", "dropped")
 BANDS = ("P0", "P1", "P2", "P3")
 ITEM_NAME = re.compile(r"^t([1-9][0-9]*)\.md$")
 TRIAGE_VIEW = "triage.md"
+TRACKERS = ("kata", "github", "backlog", "file")
+SETTING = os.path.join(".claude", "tracker.local.md")
 
 
 # --- reading ----------------------------------------------------------------
@@ -123,8 +125,33 @@ def next_id(root):
 
 
 # --- detection --------------------------------------------------------------
+def configured(root):
+    """The `tracker:` key in .claude/tracker.local.md frontmatter, or None when absent or blank."""
+    path = os.path.join(root, SETTING)
+    if not os.path.isfile(path):
+        return None
+    with open(path, encoding="utf-8") as handle:
+        lines = handle.read().split("\n")
+    if lines[0].strip() != "---":
+        return None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        key, _, value = line.partition(":")
+        if key.strip() == "tracker" and value.strip():
+            value = value.strip().strip("'\"")
+            if value not in TRACKERS:
+                raise SystemExit(f"{SETTING}: tracker {value!r} is not one of {', '.join(TRACKERS)}")
+            return value
+    return None
+
+
 def detect(root, run=subprocess.run):
-    """First rung that holds: kata binding, GitHub issues in use, a Backlog.md board, .tasks/."""
+    """The configured tracker, else the first rung that holds: kata binding, GitHub issues in
+    use, a Backlog.md board, .tasks/, else the file tracker as the fallback."""
+    pinned = configured(root)
+    if pinned:
+        return pinned, f"set by {SETTING}"
     if os.path.isfile(os.path.join(root, ".kata.toml")):
         return "kata", ".kata.toml binds a kata project"
     try:
@@ -252,15 +279,17 @@ def cmd_list(args):
     for item in shown:
         if item["status"] != "open":
             state = item["status"]
+        elif open_blockers(item, by_id):
+            state = f"blocked by {', '.join(open_blockers(item, by_id))}"
         else:
-            waiting = open_blockers(item, by_id)
-            state = f"blocked by {', '.join(waiting)}" if waiting else "ready"
+            state = "owner-gated" if "decision" in item["labels"] else "ready"
         print("\t".join([item["id"], item["priority"] or "-", state,
                          ",".join(item["labels"]) or "-", item["title"]]))
     opened = [item for item in items if item["status"] == "open"]
-    ready = sum(1 for item in opened if not open_blockers(item, by_id))
-    print(f"# {len(opened)} open ({ready} ready), {len(items) - len(opened)} closed; "
-          f"next id {next_id(args.root)}")
+    unblocked = [item for item in opened if not open_blockers(item, by_id)]
+    gated = sum(1 for item in unblocked if "decision" in item["labels"])
+    print(f"# {len(opened)} open ({len(unblocked) - gated} ready, {gated} owner-gated), "
+          f"{len(items) - len(opened)} closed; next id {next_id(args.root)}")
     report(problems)
     return 1 if problems else 0
 

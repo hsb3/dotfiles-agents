@@ -29,7 +29,9 @@ parent task → labels → owner rulings in the handoff. A task labelled `decisi
 `.backlog/triage.md`, ignored by `.backlog/.gitignore`. It is deliberately not a `backlog doc`:
 docs are tracked files, and a refresh must stay off commit history. Read it, edit it, write it
 back whole, using the same template as the GitHub triage issue (see `tracker-github.md`, Init)
-with refs written as task ids (`TASK-12`). It exists only in the checkout that wrote it, so
+with refs written as task ids (`TASK-12`). Adapt its GitHub-only lines: drop pinning and the
+dependabot and self-exclusion notes, write the merge commit where the plan table says PR when
+there is no remote, and take the ranking inputs from this binding. It exists only in the checkout that wrote it, so
 write it from the main checkout and record its path in the handoff.
 
 ## Landing a wave

@@ -12,7 +12,7 @@ working directory, so the adapter runs every call with cwd set to `--root` (defa
 current directory); no credentials are involved. `--root` that holds no board fails with
 backlog's own `No Backlog.md project found` and exit 1.
 
-Detected by a `.backlog/` or `backlog/` directory holding the board's `config.yml`.
+Tracker id `backlog`. Detected by a `.backlog/` or `backlog/` directory holding the board's `config.yml`.
 
 ## Key
 

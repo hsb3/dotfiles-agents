@@ -15,7 +15,10 @@ this page existed; the page names the rule they were already following.
 Naming: the `.local.md` file is named for the **owning bundle** when the setting is
 bundle-wide (`.claude/atelier.local.md`) and for the
 **skill** when it is one skill's business (`.claude/comms.local.md`,
-`.claude/owner-signoff.local.md`). The key inside is named for what it configures.
+`.claude/owner-signoff.local.md`). When skills in different bundles must agree on one fact,
+neither bundle owns it and the file is named for the setting: `.claude/tracker.local.md`, whose
+`tracker:` key pins the backlog tracker for both the waves and board-triage skills. The key
+inside is named for what it configures.
 
 Fail-open is the default: a key that is absent, blank, or resolves outside the project
 root leaves the shipped default in force, and the primitive never errors on it. The one

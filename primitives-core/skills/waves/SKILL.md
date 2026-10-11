@@ -50,15 +50,17 @@ tracker-agnostic.
 | **Triage view** | Hold the ranked backlog and the delivery plan where the owner reads it without asking the session. Durable, fully rewritable, and **off commit history**. |
 | **Landing a wave** | Verify and land a wave's code, then close its items with a link back to what landed them. |
 
-**Bind the seam before Phase 0.** When the owner has not named the tracker, detect it: the
-first of these that holds is the tracker in play — a kata binding (`.kata.toml`), GitHub issues
+**Bind the seam before Phase 0.** A project pins its tracker with a `tracker:` key (`kata`,
+`github`, `backlog` or `file`) in its tracker setting, and that setting wins. When neither the
+owner nor the setting names one, detect it: the first of these that holds is the tracker in play — a kata binding (`.kata.toml`), GitHub issues
 in use on a GitHub remote, a Backlog.md board (`.backlog/` or `backlog/`), the file tracker (`.tasks/`). With
 none present, fall back to the file tracker and say so in your first message; never refuse a
 run for want of a tracker.
 
 <!-- harness:claude-code -->
-`python3 <waves-skill-dir>/scripts/file_tracker.py detect` applies that order and prints the
-tracker and why. It exits non-zero when a GitHub remote exists but `gh` cannot list its
+The setting is the frontmatter of `.claude/tracker.local.md`. `python3
+<waves-skill-dir>/scripts/file_tracker.py detect` reads it first, then applies that order, and
+prints the tracker and why; an unknown `tracker:` value is an error, not a fallback. It exits non-zero when a GitHub remote exists but `gh` cannot list its
 issues, rather than guessing past the GitHub rung.
 <!-- /harness -->
 

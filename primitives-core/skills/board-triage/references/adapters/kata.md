@@ -12,7 +12,7 @@ The `kata` binary on PATH, already pointed at the right daemon (`KATA_SERVER` /
 separate credentials for this adapter: it runs as whatever actor your shell already
 resolves (`--as` overrides, same as any other kata command).
 
-Detected by a `.kata.toml` binding at the repo root; it is the first board detection checks.
+Tracker id `kata`. Detected by a `.kata.toml` binding at the repo root; it is the first board detection checks.
 
 Kata also ships an MCP server (`kata mcp serve`) — this adapter goes around it and calls
 the CLI directly instead. Both surfaces return full issue bodies from `list`/`show` alike

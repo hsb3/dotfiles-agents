@@ -261,7 +261,7 @@ class Readiness(TrackerCase):
             "t2\t-\tblocked by t1\t-\tSecond",
             "t5\t-\tready\t-\tFifth",
             "t6\t-\tblocked by t1, t2\t-\tSixth",
-            "# 4 open (2 ready), 2 closed; next id t7",
+            "# 4 open (2 ready, 0 owner-gated), 2 closed; next id t7",
         ], out.splitlines())
 
     def test_list_all_includes_closed_items(self):
@@ -274,21 +274,68 @@ class Readiness(TrackerCase):
             "t1\t-\tready\t-\tFirst",
             "t2\t-\tdone\t-\tSecond",
             "t3\t-\tdropped\t-\tThird",
-            "# 1 open (1 ready), 2 closed; next id t4",
+            "# 1 open (1 ready, 0 owner-gated), 2 closed; next id t4",
         ], out.splitlines())
 
     def test_list_on_an_absent_tracker_is_empty_and_clean(self):
         code, out, err = run_main(["--root", self.root, "list"])
-        self.assertEqual((0, "# 0 open (0 ready), 0 closed; next id t1\n", ""), (code, out, err))
+        self.assertEqual((0, "# 0 open (0 ready, 0 owner-gated), 0 closed; next id t1\n", ""), (code, out, err))
 
     def test_list_prints_what_parsed_and_exits_1_for_a_broken_file(self):
         self.item(1, title="Fine")
         self.item(2, status="wip")
         code, out, err = run_main(["--root", self.root, "list"])
         self.assertEqual(1, code)
-        self.assertEqual(["t1\t-\tready\t-\tFine", "# 1 open (1 ready), 0 closed; next id t3"],
+        self.assertEqual(["t1\t-\tready\t-\tFine", "# 1 open (1 ready, 0 owner-gated), 0 closed; next id t3"],
                          out.splitlines())
         self.assertTrue(err.startswith("BROKEN .tasks/t2.md: "), err)
+
+
+class OwnerGated(TrackerCase):
+    def test_an_unblocked_decision_item_is_owner_gated_not_ready(self):
+        self.item(1, title="Decide", labels=["decision"])
+        self.item(2, title="Build", blocked=["t3"])
+        self.item(3, title="Gate", labels=["decision"], blocked=[])
+        self.item(4, title="Later", labels=["decision"], blocked=["t2"])
+        code, out, _ = run_main(["--root", self.root, "list"])
+        lines = out.splitlines()
+        self.assertEqual(0, code)
+        self.assertIn("t1\t-\towner-gated\tdecision\tDecide", lines)
+        self.assertIn("t4\t-\tblocked by t2\tdecision\tLater", lines)
+        self.assertEqual("# 4 open (0 ready, 2 owner-gated), 0 closed; next id t5", lines[-1])
+
+
+class Setting(TrackerCase):
+    def setting(self, text):
+        os.makedirs(os.path.join(self.root, ".claude"), exist_ok=True)
+        with open(os.path.join(self.root, ".claude", "tracker.local.md"), "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+    def test_the_setting_wins_over_every_marker_without_shelling_out(self):
+        with open(os.path.join(self.root, ".kata.toml"), "w", encoding="utf-8") as handle:
+            handle.write('project = "x"\n')
+        self.setting("---\ntracker: backlog\n---\nwhy: the repo's tasks live in Backlog.md\n")
+
+        def boom(*_, **__):
+            raise AssertionError("a configured tracker must not shell out")
+
+        self.assertEqual(("backlog", "set by .claude/tracker.local.md"), ft.detect(self.root, run=boom))
+
+    def test_an_unknown_tracker_is_loud(self):
+        self.setting("---\ntracker: jira\n---\n")
+        with self.assertRaises(SystemExit) as raised:
+            ft.detect(self.root, run=fake_run())
+        self.assertIn("'jira' is not one of", str(raised.exception.code))
+
+    def test_absent_blank_or_bodyless_settings_fall_through_to_detection(self):
+        for text in ["---\ntracker:\n---\n", "---\nother: x\n---\n", "tracker: kata\n"]:
+            with self.subTest(text):
+                self.setting(text)
+                self.assertEqual("file", ft.detect(self.root, run=fake_run())[0])
+
+    def test_a_quoted_value_is_accepted(self):
+        self.setting('---\ntracker: "file"\n---\n')
+        self.assertEqual("file", ft.detect(self.root, run=fake_run())[0])
 
 
 class NextId(TrackerCase):
