@@ -27,7 +27,7 @@ flowchart TD
 | Skill | What it does |
 |---|---|
 | `task-authoring` | Writes task bodies with testable acceptance criteria, explicit gates and scoped ownership. Tracker-agnostic. |
-| `board-triage` | Measures board-wide discrimination, ranks priorities through Kata or GitHub Projects adapters, and supplies the declared label vocabulary, relabel helper and GitHub mirror reconciler. Writes require explicit apply. |
+| `board-triage` | Measures board-wide discrimination, ranks priorities through Kata, GitHub Projects, Backlog.md or plain-file adapters, and supplies the declared label vocabulary, relabel helper and GitHub mirror reconciler. Writes require explicit apply. |
 
 ## Install and use
 
@@ -40,7 +40,8 @@ Ask to author a work item or run board triage. Resolve scripts from the installe
 board-triage skill directory; no plugin environment variable is required.
 
 The adapters require their backend client: authenticated `gh` with project scope for
-GitHub Projects, or `kata` connected to the chosen daemon. GitHub reconciliation needs
+GitHub Projects, `kata` connected to the chosen daemon, or the `backlog` CLI for Backlog.md;
+the file tracker adapter needs only Python. GitHub reconciliation needs
 both clients and must run against the repository imported by the selected Kata project.
 It is dry-run by default; `--apply` closes stale mirrors, never creates issues or cards.
 

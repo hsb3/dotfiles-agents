@@ -5,8 +5,8 @@ description: >
   crews — the full loop: refresh the triage view, group buildable items into branch-sized waves,
   launch worktree-isolated teams via the delegation skill, verify and land each wave in order,
   reconcile, and externalize. Tracker-agnostic: the backlog can live on GitHub issues, a kata
-  board or any tracker that can list open items and hold a written plan — see
-  the tracker bindings under references/. Use when the user says "work through the waves",
+  board, a Backlog.md board, or plain Markdown files in the repo (the fallback when no tracker
+  is set up) — see the tracker bindings under references/. Use when the user says "work through the waves",
   "launch isolated teams to resolve/close the issues", "run the backlog", "triage and execute",
   points at the triage view, or asks to plan development branches around open items. Use
   "/waves init" to create the triage view in a project that lacks one. Composes the delegation
@@ -50,10 +50,27 @@ tracker-agnostic.
 | **Triage view** | Hold the ranked backlog and the delivery plan where the owner reads it without asking the session. Durable, fully rewritable, and **off commit history**. |
 | **Landing a wave** | Verify and land a wave's code, then close its items with a link back to what landed them. |
 
-**Bind the seam before Phase 0.** Read the binding for the tracker in play:
+**Bind the seam before Phase 0.** A project pins its tracker with a `tracker:` key (`kata`,
+`github`, `backlog` or `file`) in its tracker setting, and that setting wins. When neither the
+owner nor the setting names one, detect it: the first of these that holds is the tracker in play — a kata binding (`.kata.toml`), GitHub issues
+in use on a GitHub remote, a Backlog.md board (`.backlog/` or `backlog/`), the file tracker (`.tasks/`). With
+none present, fall back to the file tracker and say so in your first message; never refuse a
+run for want of a tracker.
+
+<!-- harness:claude-code -->
+The setting is the frontmatter of `.claude/tracker.local.md`. `python3
+<waves-skill-dir>/scripts/file_tracker.py detect` reads it first, then applies that order, and
+prints the tracker and why; an unknown `tracker:` value is an error, not a fallback. It exits non-zero when a GitHub remote exists but `gh` cannot list its
+issues, rather than guessing past the GitHub rung.
+<!-- /harness -->
+
+Then read the binding for that tracker:
 
 - `references/tracker-github.md` — issues, a pinned issue body, PRs
 - `references/tracker-kata.md` — the kata CLI
+- `references/tracker-backlog.md` — the Backlog.md CLI and an ignored view file
+- `references/tracker-file.md` — Markdown item files under `.tasks/`, the fallback; the
+  format is `references/file-tracker-format.md`
 
 For a tracker with no binding file, name the three operations explicitly in your first message
 and confirm them with the owner before triaging. A campaign run against a seam nobody wrote
