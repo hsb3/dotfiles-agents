@@ -4,7 +4,9 @@ Extracted from `subagent-telemetry/hook.py`, which computes exactly this set to
 decide whether a delegation has stalled. `live-worker-git-guard` needs the same
 set to decide whether the working tree is shared with a live worker, and the
 answer must be the same one in both places: two readers of the same on-disk
-records that disagree about who is live is worse than either reader alone.
+records that disagree about who is live is worse than either reader alone. One
+deliberate exception: only the guard passes `transcript_path`, so an agent
+resumed after it settled is live to the guard and still settled to telemetry.
 
 The records, as Claude Code writes them (verified against real files under
 ~/.claude/projects, 2026-08):

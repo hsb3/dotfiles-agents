@@ -263,7 +263,8 @@ before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
 tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word with quotes or
 backslashes in it, `<<\EOF` or `<<E"O"F`, is dequoted to `EOF` and its body is literal; inside an open
-`$(` the line `EOF)` also closes the body), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
+`$(` bash also closes the body at the line `EOF)` and zsh does not, so the command is read both ways and
+flagged if either reading finds a call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
 in order. A `<<` whose terminator never appears drops nothing, so its body
 is read as command lines.
 

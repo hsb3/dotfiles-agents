@@ -372,8 +372,8 @@ def _scan_line(line, quote):
             if (m and not (word.isdigit() and word == m.group(2))
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
                 # bash keeps a CRLF opener's `\r` in the word; inside an open
-                # `$(` a line `WORD)` also ends the body (`depth` counts only
-                # unquoted parens)
+                # `$(` bash also ends the body at a line `WORD)`, zsh does not
+                # (`_mutating_call` reads both; `depth` counts only unquoted parens)
                 terminators.append((word + m.group(3), word != m.group(2),
                                     bool(m.group(1)),
                                     depth > 0))
@@ -400,20 +400,21 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
     return None
 
 
-def _skip_bodies(lines, i, terminators):
+def _skip_bodies(lines, i, terminators, paren=True):
     """The index after the last of the heredoc bodies that `terminators`
     opened on one line, read in order from `lines[i]`; `i` itself when one is
-    never closed, since dropping text is a silent fail-open."""
+    never closed, since dropping text is a silent fail-open. `paren=False`
+    never ends a body at `WORD)`."""
     j = i
-    for terminator in terminators:
-        j = _body_end(lines, j, *terminator)
+    for word, quoted, dash, in_subst in terminators:
+        j = _body_end(lines, j, word, quoted, dash, in_subst and paren)
         if j is None:
             return i
         j += 1
     return j
 
 
-def _logical_lines(command):
+def _logical_lines(command, paren=True):
     """The command split at every newline outside quotes, with heredoc bodies
     and backslash-newlines removed.
 
@@ -438,14 +439,14 @@ def _logical_lines(command):
             continue
         out.append(current)
         current = ""
-        i = _skip_bodies(lines, i, pending)  # each body and its terminator line
+        i = _skip_bodies(lines, i, pending, paren)  # each body and its terminator line
         pending = []
     if current:
         out.append(current)
     return out
 
 
-def _tokens(command):
+def _tokens(command, paren=True):
     """Shell tokens for a Bash command string.
 
     shlex first, and its quote handling is the point rather than an accident:
@@ -460,7 +461,7 @@ def _tokens(command):
     LINE_BREAK, which opens command position as a `;` does.
     """
     tokens = []
-    for line in _logical_lines(command):
+    for line in _logical_lines(command, paren):
         try:
             words = shlex.split(line)
         except ValueError:
@@ -561,6 +562,19 @@ def _unwrap(tokens, start):
             continue
         wrapper = None  # a bare token after a wrapper's options: the command
     return None, relocated
+
+
+def _mutating_call(command):
+    """(tokens, verb, git index, command-word index) for the first mutating git
+    call `_first_mutating_verb` finds in either reading of `command`: bash ends a
+    heredoc body opened inside `$(` at a line `WORD)`, zsh (the Bash tool's shell
+    on macOS) reads on."""
+    for paren in (True, False):
+        tokens = _tokens(command, paren)
+        found = _first_mutating_verb(tokens)
+        if found[0] is not None:
+            break
+    return (tokens,) + found
 
 
 def _first_mutating_verb(tokens):
@@ -899,8 +913,7 @@ def main():
         if not command or not isinstance(command, str):
             sys.exit(0)
 
-        tokens = _tokens(command)
-        verb, git_at, cmd_start = _first_mutating_verb(tokens)
+        tokens, verb, git_at, cmd_start = _mutating_call(command)
         if verb is None:
             sys.exit(0)
 

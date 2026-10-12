@@ -173,8 +173,8 @@ def _scan_line(line, quote):
             if (m and not (word.isdigit() and word == m.group(2))
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
                 # bash keeps a CRLF opener's `\r` in the word; inside an open
-                # `$(` a line `WORD)` also ends the body (`depth` counts only
-                # unquoted parens)
+                # `$(` bash also ends the body at a line `WORD)`, zsh does not
+                # (`invocations` reads both; `depth` counts only unquoted parens)
                 terminators.append((word + m.group(3), word != m.group(2),
                                     bool(m.group(1)),
                                     depth > 0))
@@ -201,20 +201,21 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
     return None
 
 
-def _skip_bodies(lines, i, terminators):
+def _skip_bodies(lines, i, terminators, paren=True):
     """The index after the last of the heredoc bodies that `terminators`
     opened on one line, read in order from `lines[i]`; `i` itself when one is
-    never closed, since dropping text is a silent fail-open."""
+    never closed, since dropping text is a silent fail-open. `paren=False`
+    never ends a body at `WORD)`."""
     j = i
-    for terminator in terminators:
-        j = _body_end(lines, j, *terminator)
+    for word, quoted, dash, in_subst in terminators:
+        j = _body_end(lines, j, word, quoted, dash, in_subst and paren)
         if j is None:
             return i
         j += 1
     return j
 
 
-def strip_heredocs(command):
+def strip_heredocs(command, paren=True):
     """Drop heredoc bodies so a git literal inside one is never read as an invocation.
 
     Quote state is carried across lines, so a `<<WORD` inside a quoted string or a
@@ -234,7 +235,7 @@ def strip_heredocs(command):
         pending += terminators
         if not pending or quote or continued:
             continue
-        i = _skip_bodies(lines, i, pending)  # each body and its terminator line
+        i = _skip_bodies(lines, i, pending, paren)  # each body and its terminator line
         pending = []
     return "\n".join(out)
 
@@ -375,8 +376,19 @@ def invocations(command, cwd):
     `cd`-tracked directory), so a git call quoted past the outer shlex split is still
     found; heredoc-stripping and every later rule apply to it exactly as if it had been
     the top-level command.
+
+    Both readings of a heredoc body opened inside `$(` are scanned: bash ends it at a
+    line `WORD)`, zsh (the Bash tool's shell on macOS) reads on.
     """
-    command = strip_heredocs(command)
+    stripped = strip_heredocs(command)
+    yield from _invocations(stripped, cwd)
+    unparened = strip_heredocs(command, paren=False)
+    if unparened != stripped:
+        yield from _invocations(unparened, cwd)
+
+
+def _invocations(command, cwd):
+    """`invocations` over one heredoc-stripped reading of the command."""
     ctx = cwd
     # ponytail: a hand-rolled quote tracker, not a real shell grammar — `$(...)`/backtick
     # substitution and a `(...)` subshell are not unwrapped; upgrade to a real tokenizer

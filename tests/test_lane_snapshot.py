@@ -564,10 +564,13 @@ class DaemonLifecycle(unittest.TestCase):
         self.addCleanup(writer.join, 5)
         self.addCleanup(stop.set)  # LIFO: stops the writer before box.destroy
         max_age, interval, slack = 5, 1, 6
+        launched = time.monotonic()
         proc = spawn_daemon(box, self, "--interval", str(interval), box.root,
                             LANE_SNAPSHOT_TTL="3", LANE_SNAPSHOT_MAX_AGE=str(max_age))
         self.assertEqual(wait_exit(proc, max_age + interval + slack), 0,
                          "busy daemon outlived its max age")
+        self.assertGreaterEqual(time.monotonic() - launched, max_age,
+                                "daemon exited before its max age")
         rows = box.rows()
         self.assertEqual((rows[-1]["event"], rows[-1].get("reason")), ("exit", "max-age"))
         wrote = [r.get("wrote") for r in rows if r.get("event") == "scan"]
