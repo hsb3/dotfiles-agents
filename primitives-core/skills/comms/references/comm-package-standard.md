@@ -41,6 +41,7 @@ replaced the MCP renderer; a bare `slides.json` array still builds today.
 For presentations decks, invoke the **`presentations` skill** - it owns the approved palette, semantic
 theme tokens, typography, and the visual-QA workflow. Available token themes: `actuarial-signal`,
 `boardroom`, `clinical-intelligence`, `human-outcomes`, `carbon-white`, `ivory`, `midnight`.
+Before delivering a deck, run the presentations skill's semantic review (`references/semantic-review.md`) alongside the render checks.
 
 ## Per-project parameters (auto-detect, never hard-code)
 

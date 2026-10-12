@@ -20,6 +20,10 @@ you a way to inspect and make focused changes to an existing deck without rebuil
   exact paragraphs; fill template text; reorder, split, duplicate and merge supported decks.
 - **A reviewable output:** render PDF, slide images and a labeled review grid, then check
   package structure and inspect the visuals before delivery.
+- **A check that the deck does its job:** write a short intent contract before authoring,
+  then run a [semantic review](references/semantic-review.md) separate from render QA. The
+  starters open on a cover that names the topic, purpose and scope, with the bottom line
+  in a decision strip.
 
 This is an authoring workflow, not an automatic finished presentation. Supply the real
 content and review every layout. Paragraph edits adopt the first run's formatting;

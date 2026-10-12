@@ -13,6 +13,7 @@ Read [narrative](references/narrative.md), [palettes](references/color-palettes.
 and [typography](references/typography.md) before choosing content or layout.
 Use the user's design when following a supplied template. Otherwise choose a theme
 by subject, state the choice, and verify the chosen font is installed.
+Before authoring, write the intent contract in [semantic review](references/semantic-review.md).
 
 ## Create
 
@@ -64,4 +65,6 @@ contact sheet. Inspect every distinct layout, dense slide, title and closing sli
 Check text completeness, wrapping, clipping, alignment, contrast, font substitution
 and footer collisions. Fix discovered problems and rerender to a fresh directory.
 Structural validation does not prove layout quality or full ISO/ECMA XSD conformance.
+Then run the semantic review in [semantic review](references/semantic-review.md): a passing
+render does not mean the deck works.
 Deliver source, PPTX, rendered PDF and the verification/limitations that matter.
