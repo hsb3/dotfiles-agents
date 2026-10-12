@@ -31,6 +31,7 @@ The package includes editable illustrative slides, native chart data and notes.
 Replace example claims and sources before delivery. `status`, `advisor` and `client`
 select audience-specific starting text. They impose no layout or content schema.
 Direct PptxGenJS remains available through `deck.pptx` and the returned slides.
+For image placement and status icons, follow `assets/media-example.js` (`deck-kit/` in the package).
 Copy `assets/theme-tokens.js` into older generators and change only their import;
 all existing theme keys and exports remain. See [migration](references/migration.md).
 

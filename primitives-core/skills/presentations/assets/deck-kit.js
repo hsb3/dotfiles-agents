@@ -83,6 +83,66 @@ function addStatCard(deck, slide, { x, y, w, h, value, label, detail, accent = d
   slide.addText(detail, { x: x + 0.3, y: y + 1.13, w: w - 0.5, h: h - 1.28, fontFace: deck.fontFace, fontSize: 11.5, color: deck.colors.textPrimary, margin: 0, valign: "top" });
 }
 
+// Nothing in this package can measure an image file (image-size is a stub), so callers pass pixels.
+function fitImage(srcW, srcH, box, mode = "contain") {
+  if (![srcW, srcH].every(v => Number.isFinite(v) && v >= 1)) {
+    throw new Error(`srcW and srcH must be the image's pixel size (>= 1), got ${srcW} x ${srcH}: nothing here can measure the file`);
+  }
+  if (!(box.w > 0 && box.h > 0)) throw new Error(`Image box needs w and h > 0, got ${box.w} x ${box.h}`);
+  if (mode !== "contain" && mode !== "cover") throw new Error(`Image mode must be contain or cover, got ${mode}`);
+  const scale = (mode === "contain" ? Math.min : Math.max)(box.w / srcW, box.h / srcH);
+  const w = srcW * scale, h = srcH * scale;
+  if (mode === "contain") {
+    return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h, crop: { l: 0, r: 0, t: 0, b: 0 } };
+  }
+  const l = (1 - box.w / w) / 2, t = (1 - box.h / h) / 2;
+  return { x: box.x, y: box.y, w: box.w, h: box.h, crop: { l, r: l, t, b: t } };
+}
+
+function addImageFit(deck, slide, { path: file, data, srcW, srcH, x, y, w, h, mode = "contain", name, altText, ...rest }) {
+  if (!file === !data) throw new Error("addImageFit needs exactly one of path or data");
+  if (!name) throw new Error("addImageFit needs a name; the picture is named img:<name>");
+  const fit = fitImage(srcW, srcH, { x, y, w, h }, mode);
+  // PptxGenJS writes the file path into descr when altText is absent, which leaks it into the deck.
+  const image = { ...rest, ...(file ? { path: file } : { data }), altText: altText || name, objectName: `img:${name}` };
+  // pptxgenjs "contain" pads with negative srcRect across the whole box, so place the fitted size.
+  if (mode === "contain") slide.addImage({ ...image, x: fit.x, y: fit.y, w: fit.w, h: fit.h });
+  // pptxgenjs "cover" reads w/h as the source's own size; numbers >= 100 stay EMU, keeping the ratio exact.
+  else slide.addImage({ ...image, x, y, w: srcW * 1000, h: srcH * 1000, sizing: { type: "cover", w, h } });
+  return fit;
+}
+
+// OOXML extents cannot be negative: direction lives in flipH/flipV, never in a negative w/h.
+function addLine(deck, slide, x1, y1, x2, y2, opts = {}) {
+  slide.addShape(deck.pptx.ShapeType.line, {
+    line: { color: deck.colors.textPrimary, width: 1 }, ...opts,
+    x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1),
+    flipH: x2 < x1, flipV: y2 < y1,
+  });
+}
+
+// The three statuses differ by shape, not only colour: check, cross, circled question mark.
+function addStatusIcon(deck, slide, status, { x, y, size = 0.32 }) {
+  const C = deck.colors;
+  const at = (fx, fy) => [x + fx * size, y + fy * size];
+  const stroke = color => ({ line: { color, width: size * 8 }, objectName: `icon:${status}` });
+  if (status === "pass") {
+    addLine(deck, slide, ...at(0.12, 0.52), ...at(0.4, 0.8), stroke(C.positive));
+    addLine(deck, slide, ...at(0.4, 0.8), ...at(0.9, 0.18), stroke(C.positive));
+  } else if (status === "fail") {
+    addLine(deck, slide, ...at(0.18, 0.18), ...at(0.82, 0.82), stroke(C.negative));
+    addLine(deck, slide, ...at(0.82, 0.18), ...at(0.18, 0.82), stroke(C.negative));
+  } else if (status === "unknown") {
+    slide.addShape(deck.pptx.ShapeType.ellipse, { x, y, w: size, h: size, line: { color: C.textSecondary, width: size * 5 }, objectName: "icon:unknown" });
+    slide.addText("?", {
+      x, y, w: size, h: size, fontFace: deck.fontFace, fontSize: Math.round(size * 44), bold: true, objectName: "icon:unknown",
+      color: C.textSecondary, align: "center", valign: "middle", margin: 0,
+    });
+  } else {
+    throw new Error(`Status must be pass, fail or unknown, got ${status}`);
+  }
+}
+
 async function writeDeck(pptx, outputPath) {
   const absolute = path.resolve(outputPath);
   fs.mkdirSync(path.dirname(absolute), { recursive: true });
@@ -102,5 +162,5 @@ async function writeDeck(pptx, outputPath) {
 
 module.exports = {
   W, H, MX, CW, FOOTER_Y, createDeck, addSlide, addKicker, addTitle, addFooter,
-  addCard, addAccentBar, addBullets, addStatCard, writeDeck,
+  addCard, addAccentBar, addBullets, addStatCard, fitImage, addImageFit, addLine, addStatusIcon, writeDeck,
 };

@@ -24,7 +24,7 @@ def create(output, slug, kind):
         package.mkdir()
         kit = package / 'deck-kit'
         kit.mkdir()
-        for name in ('deck-kit.js', 'theme-tokens.js'):
+        for name in ('deck-kit.js', 'theme-tokens.js', 'media-example.js'):
             shutil.copyfile(ASSETS / name, kit / name)
         # 4.0.1 declares image-size but never imports it. Omit the vulnerable parser;
         # a future caller must fail visibly rather than receive fabricated dimensions.

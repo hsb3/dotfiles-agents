@@ -20,6 +20,10 @@ you a way to inspect and make focused changes to an existing deck without rebuil
   exact paragraphs; fill template text; reorder, split, duplicate and merge supported decks.
 - **A reviewable output:** render PDF, slide images and a labeled review grid, then check
   package structure and inspect the visuals before delivery.
+- **Images and status icons that hold their shape:** `assets/media-example.js` places
+  images without stretching (contained or deliberately cropped, each with its source),
+  draws check/cross/unknown icons as shapes rather than emoji, and splits a long matrix
+  across slides instead of shrinking type.
 - **A check that the deck does its job:** write a short intent contract before authoring,
   then run a [semantic review](references/semantic-review.md) separate from render QA. The
   starters open on a cover that names the topic, purpose and scope, with the bottom line
