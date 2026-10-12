@@ -2,7 +2,8 @@
 
 Rigorous, cited, comparative evaluation of technology options — producing a ranked
 shortlist, a capability comparison matrix, and a recommendation backed by primary sources
-instead of marketing pages.
+instead of marketing pages. When nothing clears every hard filter it says so — no verified
+match, with the decisive gates — rather than promoting a near-miss or a narrower pilot.
 
 ## When it triggers
 
