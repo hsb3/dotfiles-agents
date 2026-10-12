@@ -329,7 +329,7 @@ def _emit(obj):
 # ---------------------------------------------------------------------------
 
 def _scan_line(line, quote):
-    """(the heredoc terminators this line opens, each `(word, quoted, dash)`,
+    """(the heredoc terminators this line opens, each `(word, quoted, dash, in_subst)`,
     the quote state at its end, whether it ends in a line continuation), given the
     quote state it starts in.
 
@@ -341,7 +341,7 @@ def _scan_line(line, quote):
     the line end, so an apostrophe in a comment opens no quote.
     """
     terminators = []
-    i = 0
+    i = depth = 0
     while i < len(line):
         char = line[i]
         if quote:
@@ -356,6 +356,11 @@ def _scan_line(line, quote):
         elif line.startswith("$'", i):
             quote = "$'"
             i += 1
+        elif line.startswith("$(", i):
+            depth += 1
+            i += 1
+        elif char == ")":
+            depth -= 1
         elif char in "'\"":
             quote = char
         elif char == "#" and (i == 0 or line[i - 1].isspace()
@@ -364,14 +369,14 @@ def _scan_line(line, quote):
         elif char == "<":
             m = HEREDOC_START.match(line, i)
             word = m and re.sub(r"[\\'\"]", "", m.group(2))
-            if (m and not word.isdigit()
+            if (m and not (word.isdigit() and word == m.group(2))
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
                 # bash keeps a CRLF opener's `\r` in the word; inside an open
-                # `$(` a line `WORD)` also ends the body (ponytail: counts
-                # parens ignoring quotes, so a stray one only over-keeps text)
+                # `$(` a line `WORD)` also ends the body (`depth` counts only
+                # unquoted parens)
                 terminators.append((word + m.group(3), word != m.group(2),
                                     bool(m.group(1)),
-                                    line.count("$(", 0, i) > line.count(")", 0, i)))
+                                    depth > 0))
                 i = m.end()
                 continue
         i += 1

@@ -872,6 +872,24 @@ class HookGuard(unittest.TestCase):
         time.sleep(1.5)
         self.assertEqual(len(self.sandbox_daemons()), 1)
 
+    def test_inherited_git_routing_cannot_point_the_hook_at_another_repo(self):
+        """GIT_WORK_TREE/GIT_DIR in the launching shell must not move the root
+        the hook resolves or the daemon it launches."""
+        decoy = os.path.join(self.box.base, "decoy")
+        os.makedirs(decoy)
+        git(decoy, "init", "-q", "-b", "main", ".")
+        self.addCleanup(self.kill_sandbox)
+        proc = self.run_hook(env_extra={"GIT_WORK_TREE": decoy,
+                                        "GIT_DIR": os.path.join(decoy, ".git")})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        deadline = time.time() + 15
+        while time.time() < deadline and not self.sandbox_daemons():
+            time.sleep(0.2)
+        hooks = [r for r in self.box.rows() if r.get("event") == "hook"]
+        self.assertEqual([r["root"] for r in hooks], [self.box.root])
+        self.assertEqual(len(self.daemons()), 1, "no daemon rooted at the real repo")
+        self.assertEqual(self._pgrep("snapshot_lanes\\.py " + re.escape(decoy)), [])
+
     def test_hook_never_blocks_when_the_root_is_not_a_repo(self):
         """Every path exits 0 and launches nothing: a failed resolution must
         not slow or fail a session start."""

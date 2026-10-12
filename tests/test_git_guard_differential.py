@@ -158,6 +158,16 @@ PROBES = [
     ("O1_partial_quote_apostrophe", 'cat <<E"O"F\nit\'s\nEOF\ngit commit -m x'),
     ("O2_paren_terminator",
      "x=$(cat <<EOF\nbody\nEOF)\ngit commit -m x\nEOF\n)"),
+    # a `$(` inside quotes opens no substitution, so `EOF)` is body
+    ("R1_quoted_dollar_paren",
+     "echo '$(' ; cat <<EOF\nbody\nEOF)\nit's\nEOF\ngit commit -m x\ntrue # '"),
+    ("R1_quoted_dollar_paren_heredoc",
+     "echo '$(' ; cat <<EOF\nEOF)\n: <<X\nEOF\ngit commit -m x\nX"),
+    ("R1_grep_dollar_paren",
+     "grep -c '$(' <<EOF\nfoo $(\nEOF)\nit's\nEOF\ngit push\n: '"),
+    # a quoted all-digit word is a heredoc, never a shift
+    ("N2_quoted_digit_word", "cat <<'1'\nit's\n1\ngit commit -m x"),
+    ("N2_backslash_digit_word", "cat <<\\1\nit's\n1\ngit commit -m x"),
     # arithmetic (PR 580)
     ("arith_cmd_shift", "x=1\n((x<<2))\ngit commit -m x"),
     ("arith_expansion", "echo $((1<<2))\ngit commit -m x"),
@@ -289,6 +299,13 @@ class GitGuardDifferential(unittest.TestCase):
                         else:
                             self.assertFalse(missed, "{0} guard allowed a write bash "
                                              "ran".format(guard) + detail)
+
+    def test_scope_strip_heredocs_keeps_git_after_backslash_word_body(self):
+        # at 630a04ca the apostrophe in the body left the quote open, so the
+        # git line after the real terminator was swallowed
+        self.assertEqual(
+            SCOPE.strip_heredocs("cat <<\\EOF\nit's\nEOF\ngit commit -m x"),
+            "cat <<\\EOF\ngit commit -m x")
 
 
 if __name__ == "__main__":

@@ -315,7 +315,8 @@ def _resumed_after(transcript_path, settled_at):
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
-                if not any(k in line for k in settled_at):
+                if ("resumedAgentId" not in line
+                        or not any(k in line for k in settled_at)):
                     continue
                 try:
                     obj = json.loads(line)
