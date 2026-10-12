@@ -267,7 +267,7 @@ def render(snapshot: dict, findings: list[dict], count: int) -> str:
         if found["affected"]:
             shown = found["affected"][:PRINT_CAP]
             extra = len(found["affected"]) - len(shown)
-            lines.append("     " + " ".join(shown) + (f" +{extra} more" if extra else ""))
+            lines.append("     " + " ".join(map(str, shown)) + (f" +{extra} more" if extra else ""))
         lines.append("")
     real = actionable(findings)
     if not real:

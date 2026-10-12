@@ -395,3 +395,13 @@ class Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IntegerKeys(unittest.TestCase):
+    """A GitHub Projects snapshot keys items by issue number, an int; the report must still render."""
+
+    def test_render_lists_integer_keys(self):
+        snap = snapshot([item(232, priority=None), item(503, priority=None)])
+        findings = bh.analyze(snap)
+        text = bh.render(snap, findings, 2)
+        self.assertIn("232 503", text)

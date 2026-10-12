@@ -48,7 +48,7 @@ It is dry-run by default; `--apply` closes stale mirrors, never creates issues o
 For the full Kata maintenance rhythm, install `kata@kata-oversight` separately from
 the kata-oversight marketplace. Its wiring check and per-card definition/dependency audit
 remain upstream; this plugin's board health check measures how the whole board is grouped
-and prioritized. Neither replaces the other. The dependency is a reference, not bundled
+and prioritized, on any adapter's snapshot. Neither replaces the other. The dependency is a reference, not bundled
 upstream code.
 
 ## Migration and limits

@@ -28,8 +28,8 @@ filter them out.
 
 `scripts/board_health.py <snapshot.json>` (or on stdin) is the other half: six decay checks
 that answer whether the board has rotted enough to be worth a pass, and afterwards whether the
-pass took. It reads the same §2 snapshot every adapter already emits, so it is backend-agnostic
-for free and talks to no board itself.
+pass took. It reads the same §2 snapshot every adapter already emits, string keys and integer issue
+numbers alike, so it is backend-agnostic for free and talks to no board itself.
 
 One of the six needs an input the board cannot supply: `--vocabulary` takes a declared label
 list, one name per line, and `scripts/core-labels.txt` ships as that declaration. Without it
