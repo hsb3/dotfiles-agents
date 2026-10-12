@@ -2,12 +2,13 @@
 
 Claude Code puts every worktree it creates (`--worktree`, `EnterWorktree`, subagent
 `isolation: worktree`) under `.claude/worktrees/`, and its `worktree.location` setting is
-not read by the CLI. This plugin owns creation instead, so worktrees land under the
-directory the project names as its `checkout-root` in the atelier activation file.
+not read by the CLI. This plugin owns `EnterWorktree` and subagent `isolation: worktree`
+creation instead, so those worktrees land under the directory the project names as its
+`checkout-root` in the atelier activation file.
 
-Scope: subagent `isolation: worktree` (and `EnterWorktree`) only. A `claude --worktree`
-session worktree is created before plugin hooks load, so it stays at the native
-location (measured on claude 2.1.281).
+Scope: a `claude --worktree` session worktree is created before plugin hooks load, so it
+stays at the native location (measured on claude 2.1.281 and 2.1.289). With `checkout-root`
+set, the plugin warns at `SessionStart` when a session starts inside one.
 
 ## Install
 
@@ -57,7 +58,7 @@ flowchart TD
 
 | Hook | Fires | Does |
 |---|---|---|
-| [`worktree-root`](hooks/worktree-root/README.md) | `WorktreeCreate`, `WorktreeRemove`, `SubagentStop` | Creates worktrees under `checkout-root` with native branch naming, base ref and `.worktreeinclude` copying; removes them on `ExitWorktree` remove and after a clean subagent |
+| [`worktree-root`](hooks/worktree-root/README.md) | `WorktreeCreate`, `WorktreeRemove`, `SubagentStop`, `SessionStart` | Creates worktrees under `checkout-root` with native branch naming, base ref and `.worktreeinclude` copying; removes them on `ExitWorktree` remove and after a clean subagent; warns when a session starts inside a native `.claude/worktrees` checkout while `checkout-root` is set |
 
 Once a WorktreeCreate hook owns creation, the harness skips its own `.worktreeinclude`
 copy and keeps every agent worktree, so the hook restores both. Removal, after a

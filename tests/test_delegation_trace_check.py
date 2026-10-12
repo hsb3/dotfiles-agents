@@ -280,6 +280,39 @@ class Trace(unittest.TestCase):
         self.assertEqual(0, code, out)
         self.assertEqual("", out)
 
+    def pycache_file(self, name):
+        os.makedirs(os.path.join(self.repo, "pkg", "__pycache__"), exist_ok=True)
+        write(os.path.join(self.repo, "pkg", "__pycache__", name), "x")
+
+    def stop_ignoring_pycache(self):
+        write(os.path.join(self.repo, ".gitignore"), "ignored_dir/\n")
+        git(self.repo, "add", ".gitignore")
+        git(self.repo, "commit", "-q", "-m", "unignore")
+
+    def test_non_bytecode_under_ignored_pycache_is_reported(self):
+        self.snapshot()
+        self.pycache_file("notes.md")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        self.assertEqual("!! pkg/__pycache__/notes.md\n", out)
+
+    def test_bytecode_under_unignored_pycache_is_not_reported(self):
+        self.stop_ignoring_pycache()
+        self.snapshot()
+        self.pycache_file("x.cpython-314.pyc")
+        self.pycache_file("y.cpython-314.opt-1.pyo")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(0, code, out)
+
+    def test_non_bytecode_under_unignored_pycache_is_reported(self):
+        self.stop_ignoring_pycache()
+        self.snapshot()
+        self.pycache_file("x.cpython-314.pyc")
+        self.pycache_file("notes.md")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        self.assertEqual("?? pkg/__pycache__/notes.md\n", out)
+
     def test_new_non_bytecode_ignored_file_still_reported(self):
         self.snapshot()
         write(os.path.join(self.repo, "ignored_dir", "new_leak.txt"), "leak\n")

@@ -1,6 +1,6 @@
 """worktree-root — own Claude Code's worktree creation so `checkout-root` places it.
 
-One handler for three events, dispatched on `hook_event_name`:
+One handler for four events, dispatched on `hook_event_name`:
 
 - WorktreeCreate: create the worktree under the activation file's `checkout-root`
   (native `.claude/worktrees` when unset) of the MAIN checkout, with native branch
@@ -10,6 +10,9 @@ One handler for three events, dispatched on `hook_event_name`:
   harness keeps every hook-created agent worktree). Always exits 0.
 - WorktreeRemove: the same guards, at the root or the native root; a failed guard
   exits 1 and leaves everything in place.
+- SessionStart: warn (JSON on stdout) when the session runs inside a native
+  `.claude/worktrees` checkout while `checkout-root` is set; `claude --worktree` made it
+  before plugin hooks loaded. Always exits 0.
 
 Guards: `<root>/<leaf>` on branch `worktree-<leaf>`, clean including untracked files,
 no commit absent from every other ref. Removal is unforced; `branch -d` may keep it.
@@ -269,8 +272,25 @@ def remove(payload):
             path, exc))
 
 
+def session_start(payload):
+    cwd = os.path.realpath(payload.get("cwd") or os.getcwd())
+    try:
+        main, root = placement(cwd)
+    except ValueError:
+        return
+    native = os.path.realpath(os.path.join(main, ".claude", "worktrees"))
+    if root == native or not inside(cwd, native):
+        return
+    msg = ("This session runs in a native .claude/worktrees checkout because `claude "
+           "--worktree` creates its worktree before plugin hooks load, so checkout-root "
+           "({0}) did not place it. To use the root, create the worktree from inside a "
+           "session (EnterWorktree) or with `git worktree add` under it.".format(root))
+    print(json.dumps({"systemMessage": msg, "hookSpecificOutput": {
+        "hookEventName": "SessionStart", "additionalContext": msg}}))
+
+
 HANDLERS = {"WorktreeCreate": create, "SubagentStop": subagent_stop,
-            "WorktreeRemove": remove}
+            "WorktreeRemove": remove, "SessionStart": session_start}
 
 
 def main():
@@ -286,7 +306,7 @@ def main():
         handler(payload)
     except (Refused, OSError, subprocess.SubprocessError) as exc:
         print("worktree-root: {0}: {1}".format(event, exc), file=sys.stderr)
-        return 0 if event == "SubagentStop" else 1
+        return 0 if event in ("SubagentStop", "SessionStart") else 1
     return 0
 
 

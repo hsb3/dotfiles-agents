@@ -211,7 +211,11 @@ and requires an observed rejection followed by a corrected proof package. Add
 `--marketplace hsb3/dotfiles-agents` to a runtime probe to install the published GitHub
 package into a fresh consumer cache instead of copying the local assembly. Private GitHub
 marketplaces require authenticated `gh`; the probe scopes its credential helper to GitHub
-and does not import arbitrary global Git configuration.
+and does not import arbitrary global Git configuration. Add `--checkout-root <path>`, which
+also requires `--plugin-root`, to write that `checkout-root` key into the fixture's activation
+policy, so worker checkouts and the sandbox grant land under that path instead of the default
+`.worktrees`. The fixture writes the policy to `.claude/atelier.local.md`; the second
+`codex-setup` moves it to `.agents/atelier.local.md`, the file the probe commits.
 
 Official references checked against the installed runtime: [plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [hooks](https://learn.chatgpt.com/docs/hooks), and [custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).

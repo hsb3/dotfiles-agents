@@ -590,6 +590,29 @@ class SubagentTelemetryTests(unittest.TestCase):
         # A Stop is not a delegation: it must not fabricate a delegation row.
         self.assertEqual(self._delegation_rows(), [])
 
+    def test_taskstopd_delegation_is_not_reported_stalled(self):
+        # A TaskStop fires no SubagentStop; the transcript's TaskStop result
+        # is the only record, and the stall scan must honour it.
+        self._pending_delegation("b7777777777777777", 1000)
+        self._pending_delegation("b8888888888888888", 1000)
+        stopped = "b7777777777777777"
+        message = "Successfully stopped task: {0} (Run sleep 300)".format(stopped)
+        with open(self.transcript_path, "a", encoding="utf-8") as fh:
+            for obj in (
+                {"type": "assistant", "message": {"role": "assistant", "content": [{
+                    "type": "tool_use", "id": "toolu_stop_1", "name": "TaskStop",
+                    "input": {"task_id": stopped}}]}},
+                {"type": "user", "message": {"role": "user", "content": [{
+                    "tool_use_id": "toolu_stop_1", "type": "tool_result",
+                    "content": message}]},
+                 "toolUseResult": {"message": message, "task_id": stopped,
+                                   "task_type": "local_agent"}},
+            ):
+                fh.write(json.dumps(obj) + "\n")
+        self._run(self._stop_payload())
+        named = [e["agent_id"] for r in self._stall_rows() for e in r["pending"]]
+        self.assertEqual(named, ["b8888888888888888"], _read_rows(self.log_path))
+
     def test_no_stall_row_under_the_threshold(self):
         self._pending_delegation("b2222222222222222", 60)
         self._run(self._stop_payload())

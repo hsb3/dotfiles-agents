@@ -7,6 +7,7 @@ This is deliberately outside CI: it requires an authenticated Codex installation
 """
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,14 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "primitives-core/hooks/_lib"))
 import atelier_local  # noqa: E402
+
+
+def load_atelier_local(lib):
+    """atelier_local from an installed package's `hooks/_lib`, the copy its hooks run."""
+    spec = importlib.util.spec_from_file_location("atelier_local", Path(lib) / "atelier_local.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def checkouts_dir(root):
@@ -346,6 +355,7 @@ Root waits for manager completion and reports the manager's exact final reply; d
 
 def run(auth_source, output, model, native_isolation=False, plugin_root=None, workflow=False,
         marketplace_source=None, checkout_root=None):
+    global atelier_local
     output.mkdir(parents=True, exist_ok=False)
     script = Path(__file__).resolve()
     with tempfile.TemporaryDirectory(prefix="atelier-codex-probe-") as directory:
@@ -441,6 +451,7 @@ def run(auth_source, output, model, native_isolation=False, plugin_root=None, wo
                 package = Path(installed['installedPath'])
                 if installed['version'] != manifest['version']:
                     raise RuntimeError('Installed plugin version differs from the release manifest')
+                atelier_local = load_atelier_local(package / 'hooks/_lib')
                 activate_fixture(command, package, repo, checkout_root)
                 (repo / 'protected.txt').write_text('PRESERVED\n')
                 command('fixture-add', ['git', 'add', '.agents/atelier.local.md', 'protected.txt'])
