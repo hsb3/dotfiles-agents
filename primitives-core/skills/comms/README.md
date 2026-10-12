@@ -32,7 +32,8 @@ directory, so nothing in `examples/` breaks when only this skill is present.
 **Lead with the outcome, bury the detail** — the standing complaint is drowning in detail
 before reaching the decision. **Honest framing only** — describe what is actually proven and
 call out gaps explicitly. **Claim-by-claim provenance** in `sources.md`; the board or registry
-is the live truth, not the deck.
+is the live truth, not the deck. **A deck also passes the presentations semantic review**
+before delivery, not only its render checks.
 
 ## The engine
 

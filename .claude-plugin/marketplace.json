@@ -52,7 +52,7 @@
       "description": "Set a project's starting conditions and run the work through them: interview the owner into a written quality contract, build and red-prove the one gate command that enforces it, then keep the release loop honest — the review findings a green check hides, recurring status comms and authored presentations with portable PptxGenJS packages, existing-deck editing and rendered verification, READMEs backed by live screenshots, and the project-memory taxonomy. The in-repo _meta planning system that used to ship here now lives in the mise-en-place plugin. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "code-desk",
       "source": "./plugins/code-desk",
-      "version": "0.14.10"
+      "version": "0.15.0"
     },
     {
       "author": {
@@ -61,7 +61,7 @@
       "description": "Structural diagrams for repo docs, decks, and briefings, with consistent SVG and PNG output: Mermaid for GitHub-rendered markdown, Python diagrams for cloud architecture with provider icons, draw.io reading and headless export, Excalidraw sketches, and raw Graphviz. Data charts belong to the dataviz skill, deck theming to presentations. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "diagrams",
       "source": "./plugins/diagrams",
-      "version": "0.3.1"
+      "version": "0.3.2"
     },
     {
       "author": {
@@ -106,7 +106,7 @@
       "description": "The home for every skill that stands on its own and has no topical plugin of its own, in one install instead of a shelf of one-skill plugins: harness and environment config, test quality, research and decision tooling, chart design, API and TUI craft, repo and project setup, and sandboxed opencode instances. Membership is derived, not curated — a gate re-reads the skill bodies every run and keeps out anything that needs a companion agent or hook, anything a topical plugin already owns, plus a documented exemption class for skills that prescribe an opt-in system the consumer chooses deliberately, in-repo or external. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "solo-skills",
       "source": "./plugins/solo-skills",
-      "version": "0.16.2"
+      "version": "0.16.3"
     },
     {
       "author": {

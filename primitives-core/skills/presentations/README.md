@@ -20,6 +20,14 @@ you a way to inspect and make focused changes to an existing deck without rebuil
   exact paragraphs; fill template text; reorder, split, duplicate and merge supported decks.
 - **A reviewable output:** render PDF, slide images and a labeled review grid, then check
   package structure and inspect the visuals before delivery.
+- **Images and status icons that hold their shape:** `assets/media-example.js` places
+  images without stretching (contained or deliberately cropped, each with its source),
+  draws check/cross/unknown icons as shapes rather than emoji, and splits a long matrix
+  across slides instead of shrinking type.
+- **A check that the deck does its job:** write a short intent contract before authoring,
+  then run a [semantic review](references/semantic-review.md) separate from render QA. The
+  starters open on a cover that names the topic, purpose and scope, with the bottom line
+  in a decision strip.
 
 This is an authoring workflow, not an automatic finished presentation. Supply the real
 content and review every layout. Paragraph edits adopt the first run's formatting;
@@ -65,7 +73,7 @@ npm install --ignore-scripts
 node deck.js
 ```
 
-Authoring needs Node/npm. Rendering needs Poppler plus LibreOffice or Microsoft PowerPoint
+Authoring needs Node 20.15 or later and npm. Rendering needs Poppler plus LibreOffice or Microsoft PowerPoint
 on macOS. Python's stdlib handles package creation, inspection and focused editing;
 repository CI remains zero-install. The official PptxGenJS release stays unchanged;
 generated projects [omit its unused vulnerable image parser](references/migration.md#unused-image-parser-removal).

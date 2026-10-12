@@ -2,10 +2,14 @@
 import importlib.util
 import json
 import os
+import posixpath
+import shutil
 from pathlib import Path
+import struct
 import subprocess
 import tempfile
 import unittest
+import zlib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +46,118 @@ def fixture():
         'ppt/charts/chart1.xml': '<chart><value>42</value></chart>'.encode(),
     }
     return parts
+
+
+PNG_SIG = b'\x89PNG\r\n\x1a\n'
+
+
+def png(w, h):
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+    return (PNG_SIG + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 0, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(b'\x00\x00')) + chunk(b'IEND', b''))
+
+
+def geometry_findings(path, counts=None):
+    """Distortion, box-overflow and negative-extent findings for a .pptx; counts is filled if given."""
+    counts = {} if counts is None else counts
+    counts.update(pictures=0, boxed=0, extents=0, lines=0)
+    findings = []
+    P, A, R = pptx.P, pptx.A, pptx.R
+    with zipfile.ZipFile(path) as z:  # not pptx.load: hand-built fixtures lack a full OPC skeleton
+        parts = {n: z.read(n) for n in z.namelist()}
+    slide_names = sorted((n for n in parts if n.startswith('ppt/slides/slide') and n.endswith('.xml')),
+                         key=lambda n: int(n[len('ppt/slides/slide'):-4]))
+    for name in slide_names:
+        tree = pptx.xml(parts[name])
+        parent = {c: p for p in tree.iter() for c in p}
+        def shape_name(el):
+            while el is not None:
+                c = el.find(f'.//{{{P}}}cNvPr')
+                if el.tag in {f'{{{P}}}{t}' for t in ('sp', 'pic', 'cxnSp', 'grpSp', 'graphicFrame')} and c is not None:
+                    return c.get('name')
+                el = parent.get(el)
+            return '?'
+
+        where = lambda el: f'{name} {shape_name(el)!r}'
+        # PptxGenJS draws lines as p:sp with a "line" preset, other tools as p:cxnSp connectors.
+        counts['lines'] += len(list(tree.iter(f'{{{P}}}cxnSp'))) + sum(
+            g.get('prst') == 'line' for g in tree.iter(f'{{{A}}}prstGeom'))
+        for el in tree.iter():
+            if 'cx' in el.attrib or 'cy' in el.attrib:
+                counts['extents'] += 1
+                for k in ('cx', 'cy'):
+                    if int(el.get(k, 0)) < 0:  # G1
+                        findings.append(f'G1 {where(el)}: negative {k}={el.get(k)}')
+        rels_path = posixpath.join('ppt/slides/_rels', posixpath.basename(name) + '.rels')
+        targets = {r.get('Id'): posixpath.normpath(posixpath.join('ppt/slides', r.get('Target')))
+                   for r in pptx.xml(parts[rels_path])} if rels_path in parts else {}
+
+        def rect(sp):
+            x, e = sp.find(f'.//{{{A}}}off'), sp.find(f'.//{{{A}}}ext')
+            x0, y0, w, h = (int(x.get('x')), int(x.get('y')), int(e.get('cx')), int(e.get('cy')))
+            return x0, y0, x0 + w, y0 + h
+
+        boxes = {c.get('name')[4:]: sp for sp in tree.iter(f'{{{P}}}sp')
+                 for c in sp.iter(f'{{{P}}}cNvPr') if (c.get('name') or '').startswith('box:')}
+        for pic in tree.iter(f'{{{P}}}pic'):
+            counts['pictures'] += 1
+            media = targets.get(pic.find(f'.//{{{A}}}blip').get(f'{{{R}}}embed'))
+            data = parts.get(media, b'')
+            if data[:8] != PNG_SIG:  # G2
+                findings.append(f'G2 {where(pic)}: cannot measure {media}, not a PNG')
+            else:
+                width, height = struct.unpack('>II', data[16:24])
+                src = pic.find(f'.//{{{A}}}srcRect')
+                crop = {k: int(src.get(k, 0)) if src is not None else 0 for k in 'ltrb'}
+                seen = (width * (100000 - crop['l'] - crop['r'])) / (height * (100000 - crop['t'] - crop['b']))
+                x0, y0, x1, y1 = rect(pic)
+                if x1 == x0 or y1 == y0:
+                    findings.append(f'G2 {where(pic)}: zero-size frame {x1 - x0} x {y1 - y0}')
+                    continue
+                want = (x1 - x0) / (y1 - y0)
+                if abs(seen / want - 1) > 0.01:
+                    findings.append(f'G2 {where(pic)}: visible aspect {seen:.4f} != frame aspect {want:.4f}')
+            pic_name = pic.find(f'.//{{{P}}}cNvPr').get('name')
+            descr = pic.find(f'.//{{{P}}}cNvPr').get('descr') or ''
+            if '/' in descr or '\\' in descr:  # G4: PptxGenJS defaults descr to the image file path
+                findings.append(f'G4 {where(pic)}: alt text looks like a path: {descr!r}')
+            if pic_name.startswith('img:'):  # G3
+                box = boxes.get(pic_name[4:])
+                if box is None:
+                    findings.append(f'G3 {where(pic)}: no box:{pic_name[4:]} on slide')
+                    continue
+                counts['boxed'] += 1
+                p, b = rect(pic), rect(box)
+                if p[0] < b[0] - 1 or p[1] < b[1] - 1 or p[2] > b[2] + 1 or p[3] > b[3] + 1:
+                    findings.append(f'G3 {where(pic)}: {p} outside box {b}')
+    return findings
+
+
+def deck_file(directory, slides, media):
+    """slides: list of lists of shape XML; media: {media filename: bytes}; every slide relates rId2 to image1."""
+    path = Path(directory) / 'geometry.pptx'
+    with zipfile.ZipFile(path, 'w') as z:
+        for n, shapes in enumerate(slides, 1):
+            z.writestr(f'ppt/slides/slide{n}.xml', f'<p:sld xmlns:p="{pptx.P}" xmlns:a="{pptx.A}" xmlns:r="{pptx.R}"><p:cSld><p:spTree>{"".join(shapes)}</p:spTree></p:cSld></p:sld>')
+            z.writestr(f'ppt/slides/_rels/slide{n}.xml.rels', f'<Relationships xmlns="{pptx.REL}"><Relationship Id="rId2" Type="{pptx.R}/image" Target="../media/{next(iter(media))}"/></Relationships>')
+        for n, data in media.items():
+            z.writestr(f'ppt/media/{n}', data)
+    return path
+
+
+def xfrm(x, y, cx, cy):
+    return f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+
+
+def pic(id, rect, crop='', descr=None):
+    d = '' if descr is None else f' descr="{descr}"'
+    return (f'<p:pic><p:nvPicPr><p:cNvPr id="2" name="img:{id}"{d}/></p:nvPicPr><p:blipFill><a:blip r:embed="rId2"/>{crop}<a:stretch/></p:blipFill>'
+            f'<p:spPr>{xfrm(*rect)}</p:spPr></p:pic>')
+
+
+def box(id, rect):
+    return f'<p:sp><p:nvSpPr><p:cNvPr id="3" name="box:{id}"/></p:nvSpPr><p:spPr>{xfrm(*rect)}</p:spPr></p:sp>'
 
 
 class PresentationPackages(unittest.TestCase):
@@ -191,6 +307,7 @@ class PresentationPackages(unittest.TestCase):
             self.assertNotIn(str(ROOT), source)
             self.assertEqual((out / 'deck-kit/theme-tokens.js').read_bytes(), (SCRIPTS.parent / 'assets/theme-tokens.js').read_bytes())
             manifest = json.loads((out / 'package.json').read_text())
+            self.assertEqual(manifest['engines'], {'node': '>=20.15'})
             self.assertEqual(manifest['dependencies'], {'pptxgenjs': '4.0.1', 'image-size': 'file:./deck-kit/unused-image-size'})
             self.assertEqual(manifest['overrides'], {'pptxgenjs@4.0.1': {'image-size': '$image-size'}})
             self.assertTrue((out / 'deck-kit/unused-image-size/index.js').is_file())
@@ -235,6 +352,98 @@ deck.writeFile({fileName:process.argv[2]}).catch(e => {console.error(e); process
             self.assertIn('Speaker notes preserved', pptx.inspect(parts)['slides'][0]['notes'])
             self.assertEqual(len(pptx.inspect(parts)['charts']), 1)
             self.assertIn(png, parts.values())
+
+
+class PictureGeometry(unittest.TestCase):
+    def check(self, slides, media=None):
+        with tempfile.TemporaryDirectory() as directory:
+            counts = {}
+            found = geometry_findings(deck_file(directory, slides, media or {'image1.png': png(1600, 900)}), counts)
+        return found, counts
+
+    def one(self, rule, pic_xml, box_xml, media=None):
+        found, _ = self.check([[box_xml, pic_xml]] if box_xml else [[pic_xml]], media)
+        self.assertEqual(len(found), 1, found)
+        self.assertTrue(found[0].startswith(rule), found)
+        return found[0]
+
+    def test_clean_shapes_have_no_findings_and_are_counted(self):
+        crop = '<a:srcRect l="25000" r="25000"/>'
+        cases = [('landscape', (1600, 900), (0, 150000, 1600000, 900000), (0, 0, 1600000, 1200000), ''),
+                 ('portrait', (900, 1600), (150000, 0, 900000, 1600000), (0, 0, 1200000, 1600000), ''),
+                 ('square', (800, 800), (100000, 100000, 800000, 800000), (0, 0, 1000000, 1000000), ''),
+                 ('crop', (1600, 900), (0, 0, 800000, 900000), (0, 0, 800000, 900000), crop)]
+        for id, size, frame, outer, src in cases:
+            with self.subTest(id), tempfile.TemporaryDirectory() as directory:
+                counts = {}
+                path = deck_file(directory, [[box(id, outer), pic(id, frame, src)]], {'image1.png': png(*size)})
+                self.assertEqual(geometry_findings(path, counts), [])
+                self.assertEqual(counts, {'pictures': 1, 'boxed': 1, 'extents': 2, 'lines': 0})
+
+    def test_stretched_picture_is_found(self):
+        self.assertIn('visible aspect', self.one('G2', pic('a', (0, 0, 1680000, 900000)), box('a', (0, 0, 2000000, 1200000))))
+
+    def test_negative_extent_is_found(self):
+        line = f'<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="4" name="line:x"/></p:nvCxnSpPr><p:spPr>{xfrm(0, 0, -12700, 0)}</p:spPr></p:cxnSp>'
+        found, counts = self.check([[line]])
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("G1 ppt/slides/slide1.xml 'line:x': negative cx=-12700", found[0])
+        self.assertEqual(counts['extents'], 1)
+
+    def test_picture_outside_box_is_found(self):
+        self.assertIn('outside box', self.one('G3', pic('a', (100000, 0, 1600000, 900000)), box('a', (0, 0, 1600000, 900000))))
+
+    def test_crop_not_matching_frame_is_found(self):
+        crop = '<a:srcRect l="25000" r="25000"/>'
+        self.assertIn('visible aspect', self.one('G2', pic('a', (0, 0, 1600000, 900000), crop), box('a', (0, 0, 1600000, 900000))))
+
+    def test_path_in_alt_text_is_found(self):
+        frame, outer = (0, 0, 1600000, 900000), box('a', (0, 0, 1600000, 900000))
+        self.assertIn('/home/someone/shot.png', self.one('G4', pic('a', frame, descr='/home/someone/shot.png'), outer))
+        found, _ = self.check([[outer, pic('a', frame, descr='Quarterly revenue chart')]])
+        self.assertEqual(found, [])
+
+    def test_img_without_box_is_found(self):
+        self.assertIn('no box:a', self.one('G3', pic('a', (0, 0, 1600000, 900000)), None))
+
+    def test_non_png_media_cannot_be_measured(self):
+        self.assertIn('cannot measure', self.one('G2', pic('a', (0, 0, 1600000, 900000)), box('a', (0, 0, 1600000, 900000)),
+                                                 {'image1.jpg': b'\xff\xd8\xff\xe0JFIF'}))
+
+    def test_zero_extent_picture_is_found_not_raised(self):
+        for rect in ((0, 0, 1600000, 0), (0, 0, 0, 900000)):
+            with self.subTest(rect=rect):
+                self.assertIn('zero', self.one('G2', pic('a', rect), box('a', (0, 0, 1600000, 900000))))
+
+    @unittest.skipUnless(shutil.which('node'), 'Node is required to load deck-kit.js')
+    def test_fit_image_rejects_non_finite_or_missing_box_numbers(self):
+        script = '''
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+const load = Module._load;
+Module._load = (id, ...rest) => id === 'pptxgenjs' ? function () {} : load(id, ...rest);
+const {fitImage} = require(process.argv[1]);
+for (const box of [{x: 0, y: 0, w: Infinity, h: 1}, {y: 0, w: 1, h: 1}, {x: 0, w: 1, h: 1}, {x: 0, y: NaN, w: 1, h: 1}]) {
+  assert.throws(() => fitImage(10, 10, box), /box/i, JSON.stringify(box));
+}
+assert.deepEqual(fitImage(10, 10, {x: 1, y: 2, w: 4, h: 2}).x, 2);
+'''
+        asset = SCRIPTS.parent / 'assets/deck-kit.js'
+        result = subprocess.run(['node', '-e', script, str(asset)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_package_ships_media_example(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = creator.create(Path(directory) / 'board', 'board', 'advisor')
+            self.assertTrue((out / 'deck-kit/media-example.js').is_file())
+
+    @unittest.skipUnless(os.environ.get('PRESENTATIONS_MEDIA_PPTX'), 'set PRESENTATIONS_MEDIA_PPTX to a generated media-example .pptx')
+    def test_generated_media_deck_geometry(self):
+        counts = {}
+        self.assertEqual(geometry_findings(os.environ['PRESENTATIONS_MEDIA_PPTX'], counts), [])
+        self.assertGreaterEqual(counts['pictures'], 4)
+        self.assertGreaterEqual(counts['boxed'], 4)
+        self.assertGreaterEqual(counts['lines'], 1)
 
 
 if __name__ == '__main__':

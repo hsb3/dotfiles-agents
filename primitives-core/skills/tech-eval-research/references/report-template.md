@@ -4,14 +4,14 @@ Save as markdown in the user's folder, named `{topic-slug}-{YYYY-MM-DD}.md`. Ope
 
 ## 1. Executive summary (≤200 words)
 
-Which candidates clear both the hard filters and the maturity bar, the single best fit for the user's specific context, and the one-line reason. Name the confirmed failure of any baseline/incumbent the user was escaping.
+Which candidates clear both the hard filters and the maturity bar, and, when one passes every hard filter, the best fit for the user's specific context with the one-line reason; otherwise "no verified match" and the decisive gates. Name the confirmed failure of any baseline/incumbent the user was escaping. The summary and the recommendation carry the same evidence qualifiers as the matrix; a contradiction between sections (e.g. "pilot" in the summary, "adopt" in the recommendation) is a defect to fix before delivery.
 
 ## 2. Comparison matrix
 
-Candidates as rows, evaluation axes as columns. Required columns: candidate + layer tag, license type (+ OSI or equivalent filter status), hard-filter verdict (Pass / Fail — reason), one column per checklist capability, secondary axes (observability, ecosystem fit, integration effort), maturity verdict, and an overall "required features paywalled?" column.
+Candidates as rows, evaluation axes as columns. Required columns: candidate + layer tag, license type (+ OSI or equivalent filter status), hard-filter verdict (Pass / Fail / Unverified — reason), one column per checklist capability, secondary axes (observability, ecosystem fit, integration effort), maturity verdict, and an overall "required features paywalled?" column.
 
 Legend (state it above the table):
-✅ Yes, free/OSS · ◐ Partial (see note) · 💰 Paywalled · ❌ No (confirmed) · ❓ Not documented
+✅ Yes, free/OSS · ◐ Partial (see note) · 💰 Paywalled · ❌ No (confirmed) · ❓ Not documented · 🧪 Untested runtime (documented, not run here)
 
 Use numbered footnotes below the table for every ◐ and for any cell whose one-word verdict hides a decision-relevant nuance. The footnotes are where the evaluation earns its keep — a matrix without them is a listicle.
 
@@ -28,7 +28,9 @@ Everything considered and cut, one sentence each with the failure category: fail
 ## 5. Recommendation & caveats
 
 - The recommended option(s) for this specific context, and what to prototype first (concretely — the fastest path to a validating proof).
-- If no single candidate covers everything, say so and recommend the composition.
+- **Zero eligible:** if no candidate passes every hard filter, lead the report with "no verified match" and the decisive gates. Near-misses are investigation leads, not a shortlist, and a requested count ("top three") is never filled by calling failures eligible. A composition or narrowed pilot is labelled a SCOPE CHANGE; it does not satisfy the original request until the user accepts it.
+- Terms: a VERIFIED MATCH passes every hard filter on cited evidence, and the report says which passes rest on documentation alone; a hard filter left Not documented makes a candidate UNVERIFIED, not eligible; a NEAR-MISS fails or is unverified on at least one hard filter.
+- The closing recommendation answers the same decision the introduction posed.
 - Top 2–3 risks to validate before committing (bus factor, integration drift, backlog trend, pin-version risk...), each with a mitigation.
 - **State the bias**: which axes this research deliberately weighted (e.g., license purity over vendor support) so the reader can discount for their own priorities.
 
@@ -40,17 +42,17 @@ Primary sources grouped by candidate, each with what it supports; state the date
 
 # Deck spec (only when requested)
 
-Follow the pptx skill for construction. Structure (~10–13 slides):
+Follow the presentations skill for construction. Structure (~10–13 slides):
 
 1. Title — topic, date, the one-line framing.
-2. **First content slide: the recommendation.** Single option, named, with 4–6 rationale points drawn from the report and a small honest-caveats strip. If there's a fallback option, one line at the bottom. This slide leads because executives read one slide.
+2. **First content slide: the recommendation** (only if a candidate passes every hard filter; otherwise "no verified match" and the decisive gates). Single option, named, with 4–6 rationale points drawn from the report and a small honest-caveats strip. If there's a fallback option, one line at the bottom. This slide leads because executives read one slide.
 3. Why this research exists — the failure mode or decision pressure that triggered it.
 4. Method — hard filters, capability checklist, maturity bar, verification tally.
 5. Results overview — who passed.
-6. Condensed comparison matrix (shortlist rows only; symbols + legend; this is the densest slide — table, minimal footnotes).
+6. Condensed comparison matrix (shortlist rows only, or near-misses labelled as leads; symbols + legend; the densest slide — keep visible keyed footnotes for decision-relevant qualifications; a screenshot shows a UI, not integration proof).
 7–n. One profile slide per shortlisted runner-up (stats strip + wins + honest caveats).
 n+1. Notable fails, grouped by which bar they missed.
-n+2. Recommended path forward (sequence: prototype → scale choice → conditional options).
+n+2. Recommended path forward (sequence: prototype → scale choice → conditional options; if none passes: next investigation steps and scope-change options for the user to accept, not a winner's rollout).
 n+3. Risks to validate + stated bias.
 
-Always QA before delivery: render every slide to an image, view each one, fix overflow/overlap/broken glyphs, re-render to confirm. An independent reviewer pass (subagent) that also fact-checks the recommendation and matrix slides against the report catches what the builder can't see.
+Always QA before delivery: render every slide to an image, view each one, fix overflow/overlap/broken glyphs, re-render to confirm. For a consequential comparative deck, an independent review by someone or some agent that did not author the deck, fact-checking the recommendation and matrix slides against the evidence, is a delivery check, not advisory.
