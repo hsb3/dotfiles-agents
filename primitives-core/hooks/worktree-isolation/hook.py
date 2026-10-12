@@ -34,13 +34,15 @@ is its own decisions, to the shared `worktree-isolation` stream (see
 invisible to anyone asking why a worker landed in a different checkout.
 
 The ledger starts at activation, not before. Once a project has armed the
-hook, every Agent dispatch it sees produces exactly one row — `isolated: true`
-for a rewrite, `isolated: false` with a `reason` for one it leaves alone. A
-project that has not armed it writes no decision rows, which is the same rule
-config-custody follows: an un-adopted hook must stay silent rather than open
-a ledger nobody asked for. The cheap pre-activation exits (wrong tool, an
-isolation already set, a `cwd` already present) are likewise unlogged — they
-are reached before the activation file is read.
+hook, every Agent dispatch it could rewrite produces exactly one row —
+`isolated: true` for a rewrite, `isolated: false` with a `reason` for one it
+leaves alone. A dispatch that set `isolation: "worktree"` itself is never
+rewritten and writes a row only when refused. A project that has not armed it
+writes no decision rows, which is the same rule config-custody follows: an
+un-adopted hook must stay silent rather than open a ledger nobody asked for.
+The cheap pre-activation exits (wrong tool, any other isolation already set, a
+`cwd` already present) are likewise unlogged — they are reached before the
+activation file is read.
 
 The one exception is the error path, which logs regardless of activation. It
 has to: it is reached when the hook could not get far enough to know whether
@@ -64,7 +66,8 @@ Contract (PreToolUse, matcher `Agent`):
       {"hookSpecificOutput": {"hookEventName": "PreToolUse",
                               "updatedInput": {...tool_input, isolation: worktree}},
        "systemMessage": "..."}
-    One exception: an armed rewrite whose payload cwd sits in a different
+    One exception: an armed rewrite, or an armed dispatch that set
+    `isolation: "worktree"` itself, whose payload cwd sits in a different
     repository from the project dir is a `permissionDecision: "deny"` instead.
     Every other path prints nothing.
   - exit 0 always. Forcing a worktree is a correction, not a refusal; the
@@ -408,8 +411,11 @@ def main():
             sys.exit(0)
 
         # An explicit isolation already answers the question — including
-        # `remote`, which this hook must not downgrade.
-        if tool_input.get("isolation"):
+        # `remote`, which this hook must not downgrade. An explicit `worktree`
+        # still builds from the session cwd, so it goes on to the same
+        # repository check, but is never rewritten and logs only a refusal.
+        explicit = tool_input.get("isolation")
+        if explicit and explicit != WORKTREE:
             sys.exit(0)
 
         # `cwd` is documented as mutually exclusive with isolation:"worktree";
@@ -426,7 +432,8 @@ def main():
         if mode == OFF:
             sys.exit(0)
 
-        # Armed from here on, so every remaining path is one ledger row.
+        # Armed from here on, so every remaining path is one ledger row,
+        # except an explicit worktree's, which logs only its refusal.
         log = agentlog.make_logger(
             LOG_STREAM, LOG_PATH_ENV, agentlog.resolve_project(payload.get("cwd")),
         )
@@ -438,13 +445,15 @@ def main():
         }
 
         if not _should_isolate(agent_type, armed_types):
-            log(dict(row, isolated=False, reason="agent type not armed"))
+            if not explicit:
+                log(dict(row, isolated=False, reason="agent type not armed"))
             sys.exit(0)
 
         # Checked last: the walk is the most expensive step, and every cheaper
         # inert path above has already returned.
         if not _is_git_repo(project_dir):
-            log(dict(row, isolated=False, reason="project dir is not a git repo"))
+            if not explicit:
+                log(dict(row, isolated=False, reason="project dir is not a git repo"))
             sys.exit(0)
 
         # Claude Code builds the worktree from the session's live cwd, which a
@@ -465,12 +474,16 @@ def main():
                          reason="payload cwd is outside the project repository"))
                 sys.exit(0)
 
+        if explicit:
+            sys.exit(0)
+
         updated = dict(tool_input)
         updated["isolation"] = WORKTREE
 
         # Asked only here, on the one path that actually rewrites: it is a git
-        # subprocess, and every inert exit above has already returned.
-        nested = _in_linked_worktree(project_dir)
+        # subprocess, and every inert exit above has already returned. The
+        # dispatcher's own location (payload cwd), not the anchor, decides.
+        nested = _in_linked_worktree(cwd if isinstance(cwd, str) and cwd else project_dir)
         notice = NOTICE_TEMPLATE.format(agent_type=agent_type, mode=mode)
         if nested:
             notice += NESTED_CLAUSE
