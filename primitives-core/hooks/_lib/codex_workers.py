@@ -345,7 +345,8 @@ def _patch(payload):
     if not isinstance(command, str) or not command.startswith('*** Begin Patch\n') or not command.rstrip().endswith('*** End Patch'):
         raise WorkerError('Unrecognized apply_patch input')
     lines, paths, in_update = [], [], False
-    for line in command.splitlines():
+    for line in command.split('\n'):
+        line = line.removesuffix('\r')
         # ponytail: mirrors Codex's per-mode trim (streaming_parser.rs: trim() outside Update File, trim_end() in it);
         # Python's strip also eats U+001C-U+001F where Rust's keeps them, so such a header tail is cut from the path.
         stripped = line.rstrip() if in_update else line.strip()

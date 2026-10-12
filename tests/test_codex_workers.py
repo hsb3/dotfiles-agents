@@ -327,6 +327,14 @@ class CodexWorkersTests(unittest.TestCase):
         lines = self.mod.route_tool(p)['command'].splitlines()
         self.assertIn('*** Add File: '+str(tree / 'x.txt'), lines)
 
+    def test_patch_lines_break_on_newline_only(self):
+        # Codex splits on \n alone; a form feed inside a `+` line must not start an Update hunk.
+        self.activation()
+        p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: o\n+foo\x0c*** Update File: a\n  *** Add File: config.toml\n+w\n*** End Patch')
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        self.assertEqual(self.mod.patch_paths(p), [str(tree / 'o'), str(tree / 'config.toml')])
+        self.assertEqual(self.decision(self.hook('config-custody', p)), 'deny')
+
     def test_git_guard_uses_owned_branch(self):
         self.activation()
         p = self.payload(command='git commit -m test')
