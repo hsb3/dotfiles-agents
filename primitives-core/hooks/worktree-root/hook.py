@@ -279,12 +279,12 @@ def session_start(payload):
     except ValueError:
         return
     native = os.path.realpath(os.path.join(main, ".claude", "worktrees"))
-    if root == native or not inside(cwd, native):
+    if cwd == root or inside(cwd, root) or not inside(cwd, native):
         return
-    msg = ("This session runs in a native .claude/worktrees checkout because `claude "
-           "--worktree` creates its worktree before plugin hooks load, so checkout-root "
-           "({0}) did not place it. To use the root, create the worktree from inside a "
-           "session (EnterWorktree) or with `git worktree add` under it.".format(root))
+    msg = ("This session runs in a native .claude/worktrees checkout, not under checkout-root "
+           "({0}); likely a `claude --worktree` session, whose worktree is created before "
+           "plugin hooks load. To use the root, create the worktree from inside a session "
+           "(EnterWorktree) or with `git worktree add` under it.".format(root))
     print(json.dumps({"systemMessage": msg, "hookSpecificOutput": {
         "hookEventName": "SessionStart", "additionalContext": msg}}))
 

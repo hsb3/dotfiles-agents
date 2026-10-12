@@ -304,6 +304,14 @@ class Trace(unittest.TestCase):
         code, out, _ = run(["check", self.repo, self.snap])
         self.assertEqual(0, code, out)
 
+    def test_bytecode_outside_pycache_is_reported(self):
+        self.stop_ignoring_pycache()
+        self.snapshot()
+        write(os.path.join(self.repo, "stray.pyc"), "x")
+        code, out, _ = run(["check", self.repo, self.snap])
+        self.assertEqual(1, code)
+        self.assertEqual("?? stray.pyc\n", out)
+
     def test_non_bytecode_under_unignored_pycache_is_reported(self):
         self.stop_ignoring_pycache()
         self.snapshot()

@@ -12,8 +12,9 @@ set, the plugin warns at `SessionStart` when a session starts inside one.
 
 ## Install
 
-Opt-in per project. Installing it changes where every worktree in that project is
-created, so enable it at project scope, not user scope:
+Opt-in per project. Installing it changes where `EnterWorktree` and subagent
+`isolation: worktree` worktrees in that project are created, so enable it at project
+scope, not user scope:
 
 ```
 claude plugin install worktree-root@dotfiles-agents --scope project

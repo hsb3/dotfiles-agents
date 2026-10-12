@@ -585,6 +585,11 @@ class WorktreeRootTests(unittest.TestCase):
         path = self.created_path(self.create("rooted"))
         self.assertEqual(self.session_start(path).stdout, "")
 
+    def test_session_start_silent_under_checkout_root_nested_in_native(self):
+        self.set_key(".claude/worktrees/rooted")
+        path = self.created_path(self.create("x"))
+        self.assertEqual(self.session_start(path).stdout, "")
+
     def test_session_start_silent_with_invalid_key_or_outside_repo(self):
         self.set_key("../elsewhere")
         self.assertEqual(self.session_start(self.native_session_worktree()).stdout, "")
