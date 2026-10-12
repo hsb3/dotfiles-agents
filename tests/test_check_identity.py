@@ -38,6 +38,12 @@ class RedAble(unittest.TestCase):
     def test_owner_handle_flagged(self):
         self.assertTrue(any("hsb3" in p for p in _scan("run against hsb3/projects/9")))
 
+    def test_private_repo_slug_flagged(self):
+        for slug in ("functionform-obsidian", "dotfiles-agents-oc", "fleet-dashboard", "kata-oversight"):
+            for spelled in (slug, slug.upper()):
+                with self.subTest(slug=spelled):
+                    self.assertTrue(any(f"private repo '{slug}'" in p for p in _scan(f"install from {spelled} first")))
+
     def test_issue_ref_flagged(self):
         self.assertTrue(any("issue" in p for p in _scan("fixes #128 today")))
 

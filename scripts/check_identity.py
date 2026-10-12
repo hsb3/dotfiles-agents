@@ -90,11 +90,11 @@ IDENTITY = [
     (re.compile(r"(?<![\w-])headcase(?![\w-])"), "client token 'headcase'"),
     (re.compile(r"(?<![\w-])dotfiles-agents-workbench(?![\w-])"), "internal repo slug 'dotfiles-agents-workbench'"),
     (re.compile(r"(?<![\w-])fable-optimization(?![\w-])"), "internal repo slug 'fable-optimization'"),
-    # Private repos (docstring): a shipped body never points at one, however it is phrased.
-    (re.compile(r"(?<![\w-])functionform-obsidian(?![\w-])"), "private repo 'functionform-obsidian' (a public plugin never names a private repo)"),
-    (re.compile(r"(?<![\w-])dotfiles-agents-oc(?![\w-])"), "private repo 'dotfiles-agents-oc' (a public plugin never names a private repo)"),
-    (re.compile(r"(?<![\w-])fleet-dashboard(?![\w-])"), "private repo 'fleet-dashboard' (a public plugin never names a private repo)"),
-    (re.compile(r"(?<![\w-])kata-oversight(?![\w-])"), "private repo 'kata-oversight' (a public plugin never names a private repo)"),
+    # Private repos (docstring): a shipped body never points at one, in any case (slugs are case-insensitive).
+    (re.compile(r"(?<![\w-])functionform-obsidian(?![\w-])", re.I), "private repo 'functionform-obsidian' (a public plugin never names a private repo)"),
+    (re.compile(r"(?<![\w-])dotfiles-agents-oc(?![\w-])", re.I), "private repo 'dotfiles-agents-oc' (a public plugin never names a private repo)"),
+    (re.compile(r"(?<![\w-])fleet-dashboard(?![\w-])", re.I), "private repo 'fleet-dashboard' (a public plugin never names a private repo)"),
+    (re.compile(r"(?<![\w-])kata-oversight(?![\w-])", re.I), "private repo 'kata-oversight' (a public plugin never names a private repo)"),
 ]
 
 # ── Issue refs: repo-specific personalization, kept separate from IDENTITY above so the

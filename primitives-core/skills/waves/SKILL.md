@@ -215,7 +215,8 @@ Send that amendment with `SendMessage` to the running manager.
   per item. For a multi-item queue, use the **owner-signoff** skill if installed (local HTML
   form); record rulings back onto the items and the handoff (no handoff: see Phase 0), and
   execute any that unblock same-session work.
-- Run the **`handoff`** skill; prune worktrees and branches (`git worktree prune`).
+- Run the **`handoff`** skill (no handoff: see Phase 0); prune worktrees and branches
+  (`git worktree prune`).
 
 <!-- harness:claude-code -->
 There is no `/handoff` command: in Claude Code a command silently shadows a same-named skill in

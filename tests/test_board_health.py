@@ -128,8 +128,10 @@ class PriorityMissing(unittest.TestCase):
         snap = snapshot(items, label_options=("infra", "docs", "decision"))
         self.assertEqual([], actionable(snap))
         found = findings_by_id(snap)["priority-missing"]
-        self.assertEqual("skip", found["severity"])
+        # SKIP means "did not run" elsewhere; an exempt-only result passed.
+        self.assertEqual("pass", found["severity"])
         self.assertIn("1 decision item(s) exempt", found["finding"])
+        self.assertIn("PASS priority-missing", bh.render(snap, bh.analyze(snap), len(items)))
 
     def test_blank_without_decision_label_still_fails_and_counts_exemptions(self):
         items = CLEAN_ITEMS + [item("z1", priority=None),
@@ -137,7 +139,7 @@ class PriorityMissing(unittest.TestCase):
         found = findings_by_id(snapshot(items))["priority-missing"]
         self.assertEqual("fail", found["severity"])
         self.assertEqual(["z1"], found["affected"])
-        self.assertIn("1 decision item(s) exempt", found["finding"])
+        self.assertIn("1 decision item(s) exempt: z2", found["finding"])
 
     def test_a_missing_fields_block_is_missing_priority_not_a_crash(self):
         broken = {"key": "z9", "title": "t", "state": "open", "labels": ["infra"]}

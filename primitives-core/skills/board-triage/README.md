@@ -52,7 +52,7 @@ two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read.
 machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
 norms. Every check that can fail judges open items only, so a board's retired label history can
 never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
-Kata's `P4` band counts as triaged, and items labelled `decision` may stay blank (reported as exempt).
+Kata's `P4` band counts as triaged, and items labelled `decision` may stay blank: the check lists them as exempt, and an exempt-only result passes.
 
 ## Putting a board back on the vocabulary
 

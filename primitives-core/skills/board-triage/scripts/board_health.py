@@ -131,17 +131,17 @@ def check_priority_skew(items: list[dict], threshold: float) -> dict | None:
 def check_priority_missing(items: list[dict]) -> dict | None:
     """Blank priority fails, except on `decision` items: SKILL.md §6 leaves those blank for the owner."""
     blank = [i for i in items if priority_of(i) == UNSET]
-    exempt = [i for i in blank if EXEMPT_LABEL in (i.get("labels") or [])]
-    keys = sorted(i["key"] for i in blank if i not in exempt)
-    note = f" ({len(exempt)} {EXEMPT_LABEL} item(s) exempt)" if exempt else ""
+    exempt = sorted(i["key"] for i in blank if EXEMPT_LABEL in (i.get("labels") or []))
+    keys = sorted(i["key"] for i in blank if i["key"] not in exempt)
+    note = f" ({len(exempt)} {EXEMPT_LABEL} item(s) exempt: {' '.join(map(str, exempt))})" if exempt else ""
     if not keys:
         if not exempt:
             return None
         return _finding(
             "priority-missing",
-            "skip",
+            "pass",
             f"{len(exempt)} {EXEMPT_LABEL} item(s) exempt — owner-gated, priority left blank",
-            sorted(i["key"] for i in exempt),
+            exempt,
         )
     return _finding(
         "priority-missing",
@@ -259,8 +259,8 @@ def analyze(
 
 
 def actionable(entries: list[dict]) -> list[dict]:
-    """Findings the reader can act on — a skipped check is reported but never counted."""
-    return [e for e in entries if e["severity"] != "skip"]
+    """Findings the reader can act on — a skipped or passing check is reported but never counted."""
+    return [e for e in entries if e["severity"] not in ("skip", "pass")]
 
 
 def render(snapshot: dict, findings: list[dict], count: int) -> str:
