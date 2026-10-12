@@ -15,6 +15,7 @@ linked worktree, so they shell out to a real `git` and skip without one.
 import itertools
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -77,7 +78,7 @@ class WorktreeIsolationTests(unittest.TestCase):
             "cwd": self.cwd if cwd is None else cwd,
         }
 
-    def _run_hook(self, stdin_text):
+    def _run_hook(self, stdin_text, project_dir=None):
         env = {
             "PATH": os.environ.get("PATH", ""),
             # Sandbox the partitioned log root. Without this the hook's own
@@ -87,6 +88,8 @@ class WorktreeIsolationTests(unittest.TestCase):
             "HOME": os.path.join(self.tmp.name, "home"),
             "XDG_DATA_HOME": self.xdg,
         }
+        if project_dir:
+            env["CLAUDE_PROJECT_DIR"] = project_dir
         return subprocess.run(
             [sys.executable, HOOK_PATH],
             input=stdin_text,
@@ -247,6 +250,104 @@ class WorktreeIsolationTests(unittest.TestCase):
             "prompt": "p", "subagent_type": "builder", "cwd": "/somewhere/else",
         })
         self._assert_silent(self._run_hook(json.dumps(payload)))
+
+    # -- payload cwd vs CLAUDE_PROJECT_DIR (GitHub #608) -----------------
+    #
+    # Claude Code creates the worktree from the session's live cwd, which a
+    # Bash `cd` moves; the hook anchors on CLAUDE_PROJECT_DIR. When those are
+    # different repositories the hook refuses rather than arm the wrong one.
+
+    def _two_repos(self, isolate="writers", name="project"):
+        """(project, other): two real repos, the project one armed."""
+        require_git()
+        project, other = (os.path.realpath(os.path.join(self.tmp.name, n))
+                          for n in (name, "other"))
+        for repo in (project, other):
+            os.makedirs(repo)
+            _git(repo, "init", "-q", ".")
+        self._write_activation(isolate=isolate, project_dir=project)
+        return project, other
+
+    def _denied(self, result):
+        """The deny's reason; asserts nothing was rewritten."""
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.strip(), "expected a deny, got silence")
+        hso = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertEqual(hso["hookEventName"], "PreToolUse")
+        self.assertEqual(hso.get("permissionDecision"), "deny")
+        self.assertNotIn("updatedInput", hso)
+        return hso["permissionDecisionReason"]
+
+    def test_cwd_in_another_repo_is_refused(self):
+        project, other = self._two_repos()
+        reason = self._denied(self._run_hook(
+            json.dumps(self._payload(cwd=other)), project_dir=project))
+        self.assertIn(project, reason)
+        self.assertIn(other, reason)
+        self.assertIn("cd ", reason)
+
+        rows = self._rows()
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0]["isolated"])
+        self.assertEqual(rows[0]["reason"], "payload cwd is outside the project repository")
+
+    def test_refusal_offers_only_cd_and_quotes_the_path(self):
+        """Explicit isolation or cwd would bypass the guard, so neither is advised."""
+        project, other = self._two_repos(name="my project")
+        reason = self._denied(self._run_hook(
+            json.dumps(self._payload(cwd=other)), project_dir=project))
+        self.assertIn("`cd " + shlex.quote(project) + "`", reason)
+        self.assertNotIn("isolation`", reason)
+        self.assertNotIn("explicit", reason)
+
+    def test_cwd_in_a_linked_worktree_of_the_project_still_rewrites(self):
+        """A nested manager dispatches from its own worktree while
+        CLAUDE_PROJECT_DIR names the main checkout: same repository."""
+        require_git()
+        project, sibling = make_worktree(self.tmp.name)
+        for rel in (".claude/worktrees/agent-a", ".worktrees/feature"):
+            _git(project, "worktree", "add", "-q", "-b", os.path.basename(rel),
+                 os.path.join(project, rel))
+        os.makedirs(os.path.join(project, ".worktrees", "feature", "src"))
+        self._write_activation(isolate="writers", project_dir=project)
+        for cwd in (os.path.join(project, ".claude", "worktrees", "agent-a"),
+                    os.path.join(project, ".worktrees", "feature", "src"),
+                    sibling, os.path.join(project, ".git")):
+            with self.subTest(cwd=cwd):
+                result = self._run_hook(json.dumps(self._payload(cwd=cwd)), project_dir=project)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertTrue(result.stdout.strip(), "expected a rewrite, got silence")
+                hso = json.loads(result.stdout)["hookSpecificOutput"]
+                self.assertNotIn("permissionDecision", hso)
+                self.assertEqual(hso["updatedInput"]["isolation"], "worktree")
+
+    def test_cwd_in_a_project_subdirectory_still_rewrites(self):
+        """The unresolved anchor is deliberate: on macOS the tempdir runs
+        through a symlink, so only a realpath'd compare sees one checkout."""
+        project, _other = self._two_repos()
+        subdir = os.path.join(project, "pkg", "deep")
+        os.makedirs(subdir)
+        anchor = os.path.join(self.tmp.name, "project")
+        result = self._run_hook(json.dumps(self._payload(cwd=subdir)), project_dir=anchor)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        updated = json.loads(result.stdout)["hookSpecificOutput"]["updatedInput"]
+        self.assertEqual(updated["isolation"], "worktree")
+
+    def test_cwd_outside_any_repo_is_refused(self):
+        project, _other = self._two_repos()
+        loose = os.path.realpath(os.path.join(self.tmp.name, "loose"))
+        os.makedirs(loose)
+        reason = self._denied(self._run_hook(
+            json.dumps(self._payload(cwd=loose)), project_dir=project))
+        self.assertIn(project, reason)
+        self.assertIn(loose, reason)
+
+    def test_mismatched_cwd_in_an_unarmed_project_is_inert(self):
+        """Off means off: the check sits behind activation, not before it."""
+        project, other = self._two_repos(isolate="off")
+        self._assert_silent(self._run_hook(
+            json.dumps(self._payload(cwd=other)), project_dir=project))
+        self.assertEqual(self._rows(), [])
 
     def test_non_git_project_is_inert(self):
         """Forcing isolation outside a repo is a hard error, not a no-op."""

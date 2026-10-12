@@ -346,12 +346,15 @@ def _patch(payload):
         raise WorkerError('Unrecognized apply_patch input')
     lines, paths = [], []
     for line in command.splitlines():
-        header = next((prefix for prefix in PATCH_HEADERS if line.startswith(prefix)), None)
+        # ponytail: trims in every mode, so an Update-hunk context line starting with '*** ' is
+        # rewritten or refused; mirror Codex's per-mode trimming (streaming_parser.rs) if that bites.
+        stripped = line.strip()
+        header = next((prefix for prefix in PATCH_HEADERS if stripped.startswith(prefix)), None)
         if header:
-            target = _owned_path(line[len(header):], record)
+            target = _owned_path(stripped[len(header):], record)
             paths.append(target)
-            line = header + target
-        elif line.startswith('*** ') and line not in {
+            line = line[:len(line) - len(line.lstrip())] + header + target
+        elif stripped.startswith('*** ') and stripped not in {
                 '*** Begin Patch', '*** End Patch', '*** End of File'}:
             raise WorkerError('Unrecognized patch directive: ' + line)
         lines.append(line)

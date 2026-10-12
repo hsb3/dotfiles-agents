@@ -120,6 +120,33 @@ class CodexWorkersTests(unittest.TestCase):
         p['tool_input'] = routed
         self.assertEqual(self.mod.route_tool(p), routed)
 
+    def indented_patch(self, indent, header, body):
+        return '*** Begin Patch\n*** Add File: ok.txt\n+x\n'+indent+header+'escaped.txt\n'+body+'\n*** End Patch'
+
+    def test_patch_indented_headers_route_and_keep_indent(self):
+        p = self.payload(tool='apply_patch')
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        for indent, header, body in [('  ', '*** Add File: ', '+y'), ('\t', '*** Update File: ', '@@\n-x\n+y')]:
+            with self.subTest(indent=indent):
+                p['tool_input'] = {'command': self.indented_patch(indent, header, body)}
+                routed = self.mod.route_tool(p)
+                lines = routed['command'].splitlines()
+                self.assertIn('*** Add File: '+str(tree / 'ok.txt'), lines)
+                self.assertIn(indent+header+str(tree / 'escaped.txt'), lines)
+                p['tool_input'] = routed
+                self.assertEqual(self.mod.route_tool(p), routed)
+
+    def test_patch_paths_include_indented_headers(self):
+        p = self.payload(tool='apply_patch', command=self.indented_patch('  ', '*** Add File: ', '+y'))
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        self.assertEqual(self.mod.patch_paths(p), [str(tree / 'ok.txt'), str(tree / 'escaped.txt')])
+
+    def test_indented_unknown_patch_directive_raises(self):
+        p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: ok.txt\n+x\n  *** Environment ID: x\n*** End Patch')
+        self.mod.register(p, isolate=True)
+        with self.assertRaisesRegex(self.mod.WorkerError, 'Unrecognized patch directive'):
+            self.mod.route_tool(p)
+
     def test_parent_absolute_maps_owned_absolute_remains(self):
         p = self.payload(tool='apply_patch')
         r = self.mod.register(p, isolate=True)
@@ -221,6 +248,31 @@ class CodexWorkersTests(unittest.TestCase):
         p['tool_input']['command'] = '*** Begin Patch\n*** Add File: okay.py\n+x\n*** End Patch'
         self.activation()
         self.assertEqual(self.hook('config-custody', p), {})
+
+    def test_custody_denies_indented_protected_header(self):
+        self.activation()
+        p = self.payload(tool='apply_patch')
+        self.mod.register(p, isolate=True)
+        for indent in ['  ', '\t']:
+            p['tool_input']['command'] = '*** Begin Patch\n*** Add File: safe-first\n+x\n'+indent+'*** Add File: config.toml\n+y\n*** End Patch'
+            with self.subTest(indent=indent):
+                self.assertEqual(self.decision(self.hook('config-custody', p)), 'deny')
+
+    def test_custody_denies_protected_header_with_trailing_whitespace(self):
+        # Codex trims both ends of a header line, so `config.toml ` writes config.toml.
+        self.activation()
+        p = self.payload(tool='apply_patch')
+        self.mod.register(p, isolate=True)
+        for tail in [' ', '\t']:
+            p['tool_input']['command'] = '*** Begin Patch\n*** Add File: safe-first\n+x\n*** Add File: config.toml'+tail+'\n+y\n*** End Patch'
+            with self.subTest(tail=tail):
+                self.assertEqual(self.decision(self.hook('config-custody', p)), 'deny')
+
+    def test_patch_header_trailing_whitespace_is_dropped(self):
+        p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: x.txt \n+x\n*** End Patch')
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        lines = self.mod.route_tool(p)['command'].splitlines()
+        self.assertIn('*** Add File: '+str(tree / 'x.txt'), lines)
 
     def test_git_guard_uses_owned_branch(self):
         self.activation()
