@@ -108,8 +108,8 @@ bun test --watch
 ```
 
 For **new** projects prefer `bun test` over jest/vitest. For an existing vitest suite,
-migrating the runner is a separate decision from migrating the package manager — the
-`functionform-obsidian` migration deliberately kept vitest (see [migration.md](migration.md)).
+migrating the runner is a separate decision from migrating the package manager — a
+production-app migration deliberately kept vitest (see [migration.md](migration.md)).
 
 ## Bundling
 

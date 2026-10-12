@@ -1,15 +1,16 @@
 # worktree-root
 
 Takes over Claude Code's worktree creation so worktrees land under the project's
-`checkout-root` instead of `.claude/worktrees/`. One `hook.py` handles three events.
+`checkout-root` instead of `.claude/worktrees/`. One `hook.py` handles four events.
 Delivered as a plugin it covers subagent `isolation: worktree` and `EnterWorktree`;
-`claude --worktree` creates its worktree before plugin hooks load, so that path stays native.
+`claude --worktree` creates its worktree before plugin hooks load, so that path stays native (`SessionStart` warns about it).
 
 | Event | What it does |
 |---|---|
 | `WorktreeCreate` | Creates `<root>/<name>` on branch `worktree-<name>` (`/` becomes `+` in both) and prints the resolved path; a name already registered as a linked worktree is resumed (path printed, tree untouched) |
 | `SubagentStop` | Removes the agent's worktree `<root>/agent-<agent_id>` and its branch when every removal guard passes; otherwise keeps both. Always exits 0 |
 | `WorktreeRemove` | Removes a worktree (`ExitWorktree` with remove) under `<root>` or, with the key set, the native `.claude/worktrees`, when every removal guard passes; a failed guard exits 1, names the reason and leaves everything in place |
+| `SessionStart` | With the key set, when the session cwd is inside the main checkout's native `.claude/worktrees` (a `claude --worktree` session), prints a JSON `systemMessage` and `additionalContext` saying `checkout-root` did not place it; an invalid `checkout-root` gets the same warning in every session; otherwise silent. Always exits 0 |
 
 ## Removal guards
 

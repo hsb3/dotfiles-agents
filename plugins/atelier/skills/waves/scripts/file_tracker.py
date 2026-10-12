@@ -3,9 +3,12 @@
 
     file_tracker.py detect                                  # kata | github | backlog | file
     file_tracker.py list [--all]                            # inventory with readiness
-    file_tracker.py export [--out board-snapshot.json]      # triage snapshot
-    file_tracker.py apply --changeset changeset.tsv         # dry-run diff
-    file_tracker.py apply --changeset changeset.tsv --apply # write
+    file_tracker.py export [--out "$T/board-snapshot.json"]      # triage snapshot
+    file_tracker.py apply --changeset "$T/changeset.tsv"         # dry-run diff
+    file_tracker.py apply --changeset "$T/changeset.tsv" --apply # write
+
+`$T` is a scratch dir outside the working tree (`T=$(mktemp -d)`), deleted after the pass's
+post-check runs.
 
 The format is specified in references/file-tracker-format.md next to this script's
 skill. `detect` honours a `tracker:` key in .claude/tracker.local.md before detecting. Every command reads from --root (default: the current directory). A file that

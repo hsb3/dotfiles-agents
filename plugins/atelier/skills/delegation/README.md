@@ -41,7 +41,8 @@ a brief is split, and the one answer each unresolved entry gets.
 A report-only worker gets a check too, because its brief's "write nothing here" is wording, not
 enforcement. `scripts/trace_check.py` snapshots the checkout's git status (untracked and ignored
 files included, plus every ref and HEAD's target) before a reviewer or scout is dispatched and names every
-change after it returns; `references/briefs.md` carries the scratch-directory wording and when to
+change after it returns, ignoring Python bytecode under `__pycache__` and remote-tracking refs; its docstring
+lists what it cannot see; `references/briefs.md` carries the scratch-directory wording and when to
 run it.
 
 Preconditions are checked the same way, at dispatch time rather than at authoring time: a gate
@@ -127,7 +128,7 @@ appended to live, and independent derivations of the same figure have already di
 ## Shared with the opencode port
 
 These references are one text with two copies (`docs/atelier-parity.md`); the peer lives in
-`dotfiles-agents-oc`. A passage that is true of only one harness belongs in a
+the opencode port. A passage that is true of only one harness belongs in a
 `<!-- harness:claude-code -->` block, never in the neutral prose the parity gate compares — that
 includes anything naming `protected-branches:`, `worker-git-scope-guard`, or how this harness
 resolves a worker's relative paths, none of which have an opencode counterpart.

@@ -9,8 +9,20 @@ would put a **writing** worker in the orchestrator's own checkout is rewritten t
 `isolation: "worktree"`, so the worker gets its own git worktree instead of sharing the working
 tree and index the session is using.
 
-It fails open on every error path and never denies a dispatch — forcing a worktree is a
-correction, not a refusal.
+It fails open on every error path and denies a dispatch in exactly one case, below — forcing a
+worktree is a correction, not a refusal.
+
+**The one refusal: a session cwd in a different repository.** Claude Code creates the worker's
+worktree from the session's *live* working directory, which follows a Bash `cd` (the PreToolUse
+payload `cwd`, read from the Claude Code 2.1.289 bundle), while this hook reads its policy from
+`CLAUDE_PROJECT_DIR`. After a `cd` into another repository the hook would arm isolation for the
+project and Claude Code would build the worktree in the other repository. The hook has no way to
+re-anchor where the harness puts it, so on an armed rewrite whose `cwd` resolves (`git rev-parse
+--git-common-dir`, symlinks resolved) to a different repository from the project dir, or to no
+repository at all, it returns `permissionDecision: "deny"` naming both paths and telling the model
+to `cd` back into the project, then dispatch again. An unarmed project or type never reaches the
+check. A subdirectory of the project, its `.git` directory, and any linked worktree of it (a
+nested manager's own `.claude/worktrees/agent-<id>`) are the same repository, so they still rewrite.
 
 ## Why
 
@@ -241,7 +253,8 @@ ${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/worktree-isolati
 
 Each row carries the identity envelope (`v`, `plugin`, `harness`, `stream`, `ts`, `project`) plus
 `session_id`, `agent_type`, `mode`, `isolated` (bool), and `reason` (`null` when isolated, else
-`"agent type not armed"` or `"project dir is not a git repo"`). A row written from the fail-open
+`"agent type not armed"`, `"project dir is not a git repo"` or
+`"payload cwd is outside the project repository"`). A row written from the fail-open
 error path also carries `error` and a truncated `traceback`.
 
 Rewrite rows carry one more field, `nested` (bool): whether the **dispatcher** was itself standing
@@ -262,7 +275,7 @@ string test reports every subdirectory as a worktree.
 - **Rewrite, never deny.** `hookSpecificOutput.updatedInput` (PreToolUse only) replaces the tool
   input in place, so the dispatch proceeds with isolation added rather than bouncing back for the
   model to retry. Verified by live probe against Claude Code 2.1.220: the subagent landed in
-  `.claude/worktrees/agent-<id>`.
+  `.claude/worktrees/agent-<id>`. The cwd-mismatch refusal above is the one exception.
 - **Announced, not silent.** The rewrite moves the worker to a checkout where the session's
   uncommitted work does not exist. That is worth one line of `systemMessage`, so a surprised reader
   can trace the behaviour to this hook rather than to the harness. `systemMessage` reaches only the

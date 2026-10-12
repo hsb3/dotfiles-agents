@@ -62,7 +62,8 @@ by editing this issue (no repo commits). Excludes itself and dependabot PRs._
 ## Milestone — what actually remains
 ## Backlog — no milestone
 ## On hold — parked by owner ruling, don't pick up
-## Decision gaps — the owner queue
+## Decision gaps — the owner queue (items awaiting a ruling)
+### Session questions — not tracker items (authority, scope, a branch merge)
 
 # Delivery history — shipped, provenance only
 

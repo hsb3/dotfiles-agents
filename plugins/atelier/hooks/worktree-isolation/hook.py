@@ -64,9 +64,11 @@ Contract (PreToolUse, matcher `Agent`):
       {"hookSpecificOutput": {"hookEventName": "PreToolUse",
                               "updatedInput": {...tool_input, isolation: worktree}},
        "systemMessage": "..."}
+    One exception: an armed rewrite whose payload cwd sits in a different
+    repository from the project dir is a `permissionDecision: "deny"` instead.
     Every other path prints nothing.
-  - exit 0 always. This hook never emits a permissionDecision: forcing a
-    worktree is a correction, not a refusal.
+  - exit 0 always. Forcing a worktree is a correction, not a refusal; the
+    one deny exists because the harness would place it in the wrong repo.
 
 This file must have ZERO third-party dependencies (Python 3 stdlib only) and
 must stay compatible with Python 3.9.
@@ -74,6 +76,7 @@ must stay compatible with Python 3.9.
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import traceback
@@ -128,6 +131,12 @@ NOTICE_TEMPLATE = (
     "atelier worktree-isolation: '{agent_type}' dispatched with isolation:worktree "
     "(isolate: {mode} in the selected atelier.local.md). It gets its own checkout, so "
     "uncommitted work in this tree is NOT visible to it."
+)
+
+MISMATCH_TEMPLATE = (
+    "atelier worktree-isolation refused this dispatch: the session's working directory "
+    "{cwd} is not inside the project repository {project}, and Claude Code would create the "
+    "worker's worktree from {cwd}, not from the project. Run `cd {quoted}`, then dispatch again."
 )
 
 # Appended when the DISPATCHER is itself standing in a linked worktree. Nesting
@@ -213,6 +222,26 @@ def _in_linked_worktree(path):
     if os.path.basename(common) != ".git":
         return False
     return git_dir != common
+
+
+def _repository(path):
+    """Realpath of the git common dir `path` belongs to; None outside git.
+
+    Every linked worktree shares its repository's common dir, so a manager
+    standing in its own worktree matches the main checkout. The output can be
+    relative to `path`, hence the join.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--git-common-dir"],
+            env=codex_workers.clean_git_env(), capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    common = proc.stdout.decode("utf-8", "replace").strip()
+    if proc.returncode != 0 or not common:
+        return None
+    return os.path.realpath(os.path.join(path, common))
 
 
 def _is_git_repo(project_dir):
@@ -417,6 +446,24 @@ def main():
         if not _is_git_repo(project_dir):
             log(dict(row, isolated=False, reason="project dir is not a git repo"))
             sys.exit(0)
+
+        # Claude Code builds the worktree from the session's live cwd, which a
+        # Bash `cd` moves; the hook cannot re-anchor it, so it refuses.
+        cwd = payload.get("cwd")
+        if isinstance(cwd, str) and cwd and os.path.realpath(cwd) != os.path.realpath(project_dir):
+            here, there = _repository(cwd), _repository(project_dir)
+            # ponytail: no git-resolvable project repo (no git binary) skips
+            # the check and fails open, like every other path that cannot decide.
+            if there and here != there:
+                _emit({"hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": MISMATCH_TEMPLATE.format(
+                        cwd=cwd, project=project_dir, quoted=shlex.quote(project_dir)),
+                }})
+                log(dict(row, isolated=False,
+                         reason="payload cwd is outside the project repository"))
+                sys.exit(0)
 
         updated = dict(tool_input)
         updated["isolation"] = WORKTREE

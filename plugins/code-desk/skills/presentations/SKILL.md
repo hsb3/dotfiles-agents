@@ -13,6 +13,7 @@ Read [narrative](references/narrative.md), [palettes](references/color-palettes.
 and [typography](references/typography.md) before choosing content or layout.
 Use the user's design when following a supplied template. Otherwise choose a theme
 by subject, state the choice, and verify the chosen font is installed.
+Before authoring, write the intent contract in [semantic review](references/semantic-review.md).
 
 ## Create
 
@@ -30,6 +31,7 @@ The package includes editable illustrative slides, native chart data and notes.
 Replace example claims and sources before delivery. `status`, `advisor` and `client`
 select audience-specific starting text. They impose no layout or content schema.
 Direct PptxGenJS remains available through `deck.pptx` and the returned slides.
+For image placement and status icons, follow `assets/media-example.js` (`deck-kit/` in the package).
 Copy `assets/theme-tokens.js` into older generators and change only their import;
 all existing theme keys and exports remain. See [migration](references/migration.md).
 
@@ -64,4 +66,6 @@ contact sheet. Inspect every distinct layout, dense slide, title and closing sli
 Check text completeness, wrapping, clipping, alignment, contrast, font substitution
 and footer collisions. Fix discovered problems and rerender to a fresh directory.
 Structural validation does not prove layout quality or full ISO/ECMA XSD conformance.
+Then run the semantic review in [semantic review](references/semantic-review.md): a passing
+render does not mean the deck works.
 Deliver source, PPTX, rendered PDF and the verification/limitations that matter.

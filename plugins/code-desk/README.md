@@ -48,7 +48,7 @@ flowchart TD
 |---|---|
 | `starting-conditions` | Interview-first. Decides what is being built, in what language, and which rules a machine enforces, then writes a `RULES.md` contract, one gate command that proves it, and the baseline of what that gate says about the tree today. Measures; never remediates. |
 | `comms` | Produces recurring status deliverables — a morning briefing, end-of-day wrap-up, weekly planning briefing, board readout, or product overview — as a deck, to one consistent standard. |
-| `presentations` | Builds the decks `comms` ships as, with authored semantic palettes, typography, portable PptxGenJS sources, existing-deck editing and rendered visual verification. |
+| `presentations` | Builds the decks `comms` ships as, with authored semantic palettes, typography, portable PptxGenJS sources, an image and status-icon example, existing-deck editing, rendered visual verification and a semantic review of whether the deck does its job. |
 | `readme-value-and-proof` | Turns a README into an honest pitch — what a user gets, backed by real screenshots captured from the running app with Playwright, not mockups. No machine-local helpers. |
 | `pull-request` | The pass that runs after the checks go green: collect a PR's inline review comments, its review and summary comments, and its gate statuses, then classify each finding as actionable (it sits on a line this PR changed, or it is a failing hard gate) or as pre-existing rot named as deferred rather than dropped. |
 | `project-memory` | The memory taxonomy and the tooling that realizes it — where agent memory lives (global vs. project-level), memory vs. rules vs. skills, and when a fact is worth promoting up a layer, plus opting a repo into tracked, in-repo auto-memory (wires `.claude/memory/` as the memory directory; never overwrites) and recovering memory after a folder move (dry-run by default). Pure Python 3 stdlib. |
@@ -142,7 +142,7 @@ python3 "$PLUGIN_ROOT/hooks/_lib/codex_roles.py" /path/to/project --plugin-root 
 ```
 
 Start a fresh session and trust the package hooks in `/hooks`. The native `worker-context` and `worktree-isolation` hooks inject
-canonical role instructions and enforce each role’s dispatch and patch-tool exclusions.
+canonical role instructions and enforce each role’s dispatch and patch-tool exclusions. With Atelier's worker isolation active, patch file headers indented with spaces or tabs route into the worker's checkout like any other.
 These roles run without an Atelier activation file. Install Atelier separately for worktree
 isolation; shell access remains subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.
 When Atelier is installed, run its project setup after generating these roles. It reconciles

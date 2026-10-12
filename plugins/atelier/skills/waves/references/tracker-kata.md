@@ -56,7 +56,7 @@ kata comment <epic-ref> --body "refreshed $(date +%F)"  # optional pointer comme
 ```
 
 Use the same body template as the GitHub triage issue (Now / Milestone / Backlog / On hold /
-Decision gaps / Delivery history) — kata renders markdown identically. `--comment` on `edit` can
+Decision gaps / Delivery history / Maintenance protocol) — kata renders markdown identically. `--comment` on `edit` can
 append a changelog line after the mutation if a history-of-refreshes matters; the body itself
 stays the durable copy.
 
@@ -102,7 +102,7 @@ EOF
 
 If the project already has a natural epic (a parent issue with several child tasks under it),
 reuse that epic's body as the triage view instead of creating a second one; record its ref in
-the handoff so future sessions find it by pointer.
+the handoff so future sessions find it by pointer (no handoff: see Phase 0).
 
 ## Gotchas
 

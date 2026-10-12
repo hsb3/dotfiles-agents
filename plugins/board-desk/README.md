@@ -45,11 +45,8 @@ the file tracker adapter needs only Python. GitHub reconciliation needs
 both clients and must run against the repository imported by the selected Kata project.
 It is dry-run by default; `--apply` closes stale mirrors, never creates issues or cards.
 
-For the full Kata maintenance rhythm, install `kata@kata-oversight` separately from
-the kata-oversight marketplace. Its wiring check and per-card definition/dependency audit
-remain upstream; this plugin's board health check measures how the whole board is grouped
-and prioritized, on any adapter's snapshot. Neither replaces the other. The dependency is a reference, not bundled
-upstream code.
+The Kata adapter needs the kata CLI. The board health check measures how the whole board
+is grouped and prioritized, on any adapter's snapshot.
 
 ## Migration and limits
 

@@ -46,6 +46,11 @@ left on a hardening list is re-routed rather than filed on sight. Each landing r
 wave closed against what it filed, so the run's totals show whether a wave shrank the backlog or
 grew it.
 
+A run on a project with no handoff names the triage view in its stop report and writes none; a view created in that run
+supplies the default scope, and an empty ready set is a stop, not an empty plan. The view's
+Decision gaps section is the one home for the owner queue, including session questions that
+never touched the tracker. A first run skips prior-run fold sources and folds duplicate intake.
+
 ## Concurrent campaigns
 
 Phase 0 checks for a live coordination signal before anything is planned: another session

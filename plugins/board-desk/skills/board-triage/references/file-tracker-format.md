@@ -81,7 +81,7 @@ in `.tasks/` that is neither an item nor `triage.md`.
 `.tasks/triage.md` uses the same template as a GitHub or kata triage view (Now / Milestone /
 Backlog / On hold / Decision gaps / Delivery history / Maintenance protocol), with refs written
 as `t<n>`. Its header states that the item files are the source of truth and the view is a view
-of them. The handoff records its path.
+of them. The handoff records its path (no handoff: see Phase 0).
 
 Known ceiling: the view is untracked, so it exists only in the checkout that wrote it, not in
 worktrees or other clones, and its delivery history goes with it. That is acceptable for a view
@@ -109,4 +109,7 @@ repo root (`--root` points it elsewhere):
 
 A broken file prints as `BROKEN <path>: <why>` on stderr. `list` still prints what parsed and
 exits 1; `export` and `apply` refuse to run until the tracker parses clean.
+
+Scratch files (an export, a changeset) go in a temporary directory outside the working tree
+(`T=$(mktemp -d)`), never the repo root, and are deleted after the pass's post-check runs.
 <!-- /harness -->

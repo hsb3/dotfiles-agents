@@ -24,7 +24,7 @@ def create(output, slug, kind):
         package.mkdir()
         kit = package / 'deck-kit'
         kit.mkdir()
-        for name in ('deck-kit.js', 'theme-tokens.js'):
+        for name in ('deck-kit.js', 'theme-tokens.js', 'media-example.js'):
             shutil.copyfile(ASSETS / name, kit / name)
         # 4.0.1 declares image-size but never imports it. Omit the vulnerable parser;
         # a future caller must fail visibly rather than receive fabricated dimensions.
@@ -42,6 +42,7 @@ def create(output, slug, kind):
         (package / '.gitignore').write_text('node_modules/\n*.pptx\nrender/\n')
         (package / 'package.json').write_text(json.dumps({
             'name': slug, 'private': True, 'scripts': {'build': 'node deck.js'},
+            'engines': {'node': '>=20.15'},  # media-example.js uses zlib.crc32
             'dependencies': {'pptxgenjs': '4.0.1', 'image-size': 'file:./deck-kit/unused-image-size'},
             'overrides': {'pptxgenjs@4.0.1': {'image-size': '$image-size'}},
         }, indent=2) + '\n')

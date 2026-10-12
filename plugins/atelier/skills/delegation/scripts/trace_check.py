@@ -18,9 +18,11 @@ isn't a ref (git config edits, hook scripts), a write inside a nested repo or ne
 worktree -- status collapses those to one dir entry regardless of `-uall` -- and an
 empty new directory, since git tracks files, not directories.
 
-ponytail: `__pycache__/` bytecode is noise from re-running the tests themselves, not a
-leak, so an ignored (`!!`) entry with a `__pycache__` path component is dropped before
-either snapshot or compare.
+ponytail: Python bytecode (`.pyc`/`.pyo`) under `__pycache__` is noise from re-running the
+tests themselves, not a leak, so an ignored (`!!`) or untracked (`??`) entry of that shape is
+dropped before either snapshot or compare, whether or not the repo gitignores `__pycache__`.
+Any other file under `__pycache__`, bytecode elsewhere, and a tracked-and-modified `.pyc` are
+still reported.
 
 Exit codes: snapshot 0 written, 2 usage/git error/refused path/missing parent dir.
 check 0 clean, 1 new/gone entries or refs found, 2 usage/git error/malformed
@@ -48,15 +50,16 @@ def run_git(repo, *args):
 def git_entries(repo):
     """Run `git status` in `repo`; return (entries, error) -- error is a message or None.
 
-    Ignored bytecode under any `__pycache__` path component is dropped -- see module
-    docstring.
+    Ignored or untracked `.pyc`/`.pyo` under `__pycache__` are dropped -- see module docstring.
     """
     proc = run_git(repo, *STATUS_ARGS)
     if proc.returncode != 0:
         return None, proc.stderr.decode("utf-8", "replace").strip() or "git status failed"
     entries = parse_status_z(proc.stdout)
     entries = [
-        e for e in entries if not (e[0] == "!!" and "__pycache__" in e[1].split("/"))
+        e for e in entries
+        if not (e[0] in ("!!", "??") and e[1].endswith((".pyc", ".pyo"))
+                and "__pycache__" in e[1].split("/"))
     ]
     return entries, None
 

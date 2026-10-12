@@ -8,10 +8,12 @@ render target.
 
 1. **Action titles.** A content slide's title is the takeaway as a full
    sentence, not a topic label. "Revenue grew 18% on enterprise wins" beats
-   "Revenue". The body exists to prove the title.
+   "Revenue". The body exists to prove the title. The cover is not a content
+   slide: it names the topic.
 2. **One message per slide.** If a slide has two messages, split it.
-3. **BLUF.** Lead with the conclusion. An exec deck opens title →
-   executive summary, then evidence, then the ask.
+3. **BLUF.** Lead with the conclusion. The cover orients (topic, purpose,
+   scope). The cover may carry the conclusion as a decision strip; otherwise
+   the first content slide states it as an action title, then evidence, then the ask.
 4. **Cite sources.** Put a source footer on any slide with data.
 5. **Be scannable.** ≤6 bullets, ≤~10 words each. Prefer numbers and short
    phrases over sentences. Spotlight the one number that matters with
@@ -28,7 +30,7 @@ render target.
 
 | You need to… | Layout pattern |
 |---|---|
-| Open the deck | Title: light canvas, kicker line, large title, supporting card |
+| Open the deck | Title: kicker, topic title, purpose/scope line, optional decision strip |
 | Mark a new part | Section divider: `surfaceInverse` background (light themes only) |
 | State the whole story up front | Executive summary: stat callouts + narrative bullets |
 | Make a body argument | Action-title slide: takeaway-sentence title, top-aligned proof |
@@ -42,13 +44,15 @@ render target.
 
 ## Deck Recipes (scenario → sequence)
 
-- **Executive readout:** title → executive summary → action-title slides
+- **Executive readout:** title (orients, decision strip) → executive summary
+  (states the conclusion) → action-title slides
   (evidence) → KPI row or chart → takeaway (the ask).
-- **Strategy recommendation:** title → section (situation) → action-title
-  slides → 2×2 matrix (options) → roadmap → takeaway.
-- **Status update:** title → KPI row (health) → action-title (progress) →
+- **Strategy recommendation:** title (decision strip) → executive summary
+  (the recommendation) → section (situation) → action-title slides → 2×2
+  matrix (options) → roadmap → takeaway.
+- **Status update:** title (decision strip) → KPI row (health) → action-title (progress) →
   timeline (milestones) → action-title (risks) → takeaway.
-- **Data story:** title → big stat → chart → action-title (implication) →
+- **Data story:** title (decision strip) → big stat → chart → action-title (implication) →
   takeaway.
 
 ## Explanatory Register (the confirmed preference)
@@ -72,9 +76,15 @@ For a comprehensive or decision briefing:
   project shorthand). Do not assume the reader carries context between slides.
 - **Callouts, ledes, and takeaway lines are complete sentences**; fragments
   stay inside tables and stat cards where structure explains them.
+- **The cover orients first**: topic, purpose (the decision or action asked
+  for) and scope. The conclusion goes in a cover decision strip, or else on
+  the first content slide, never as the cover title.
 - **Orientation up front pays**: an early slide mapping where the underlying
   artifacts live (and how the material was produced) earns trust for
   everything after it.
+
+Before authoring, write the intent contract; before delivery, run the semantic
+review — both in `semantic-review.md`.
 
 ## Composition Pitfalls
 

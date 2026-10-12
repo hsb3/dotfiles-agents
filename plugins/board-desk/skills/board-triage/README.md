@@ -52,6 +52,7 @@ two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read.
 machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
 norms. Every check that can fail judges open items only, so a board's retired label history can
 never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
+Kata's `P4` band counts as triaged, and items labelled `decision` may stay blank: the check lists them as exempt, and an exempt-only result passes.
 
 ## Putting a board back on the vocabulary
 
@@ -76,10 +77,9 @@ promotes nothing and reports every prefixed title, which is the fail-safe.
 The Kata adapter also states how kata's import-only GitHub sync constrains the loop: a mirror is an
 epic to decompose, and anything rewritten in place must be a native card.
 
-Triage is one move in a longer loop, and its tools are split across plugins. The Kata adapter
-writes that loop out end to end — wiring check, per-card definition audit, health check, the
-pass, health again — under "The maintenance rhythm", including why a per-card audit and a
-whole-board health check are not redundant.
+Triage is one move in a longer loop. The Kata adapter writes that loop out end to end — health
+check, the pass, health again, mirror reconcile — under "The maintenance rhythm", including why
+a per-card definition check and a whole-board health check are not redundant.
 
 **Every check reads open items only, the label ones included.** An adapter builds
 `fields.labels.options` from the board's whole history, so a label surviving on closed cards is
@@ -100,8 +100,7 @@ project with the GitHub repository selected by `gh` in the consuming checkout. O
 project imports. Dry-run reports tracked, stale and untracked issues; only `--apply`
 closes stale mirrors. It never creates cards or issues. Reverse drift is informational.
 GitHub reads are capped at 500 issues per state; larger repositories need a pagination
-change before this can serve as a complete sweep. The Kata adapter reference documents
-the separate kata plugin required for wiring and per-card definition audits.
+change before this can serve as a complete sweep. The Kata adapter needs the kata CLI.
 
 ## When it triggers
 

@@ -549,7 +549,7 @@ CI_TARGET_RE = re.compile(r"^ci\s*:", re.M)
 def makefile_has_ci_target(repo):
     """True when the target repo's Makefile defines a `ci:` target. The standard
     ci.yml template runs `make ci`; a repo without the target gets a red check on its
-    first push (fleet-dashboard test-bed finding). The Makefile stub deliberately
+    first push (test-bed finding). The Makefile stub deliberately
     ships without a no-op `ci:` — a green gate that runs nothing would be worse."""
     path = os.path.join(repo, "Makefile")
     if not os.path.isfile(path):

@@ -1,6 +1,6 @@
 # Adversarial verification agent prompt template
 
-Run after Phase 1, before synthesis. Select the 5–10 claims that decide the outcome: license identifications, paywall/tier boundaries, hard-filter pass/fail calls, and capability verdicts for shortlist candidates. Skip claims that wouldn't change the ranking if wrong.
+Run after Phase 1, before synthesis. Select the 5–10 claims that decide the outcome: license identifications, paywall/tier boundaries, hard-filter verdicts (pass, fail or unverified), and capability verdicts for shortlist candidates. Skip claims that wouldn't change the ranking if wrong.
 
 ---
 

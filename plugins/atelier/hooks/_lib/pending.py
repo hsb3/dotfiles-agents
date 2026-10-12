@@ -4,7 +4,9 @@ Extracted from `subagent-telemetry/hook.py`, which computes exactly this set to
 decide whether a delegation has stalled. `live-worker-git-guard` needs the same
 set to decide whether the working tree is shared with a live worker, and the
 answer must be the same one in both places: two readers of the same on-disk
-records that disagree about who is live is worse than either reader alone.
+records that disagree about who is live is worse than either reader alone. One
+deliberate exception: only the guard passes `transcript_path`, so an agent
+resumed after it settled is live to the guard and still settled to telemetry.
 
 The records, as Claude Code writes them (verified against real files under
 ~/.claude/projects, 2026-08):
@@ -33,6 +35,7 @@ it. Every caller therefore wraps its call in its own fail-open handler.
 import json
 import os
 import re
+from datetime import datetime, timezone
 
 import agentlog
 
@@ -242,7 +245,33 @@ def settled_ids(tail_bytes=TAIL_BYTES):
     module docstring. An absent ledger is not an error — nothing has settled
     because nothing has been recorded yet.
     """
-    settled = set()
+    return set(_settled_at(tail_bytes))
+
+
+# A row whose `ts` cannot be read settles at an unknowable moment, so no resume
+# can be shown to follow it: the ledger's answer stands.
+_UNKNOWN_MOMENT = datetime.max.replace(tzinfo=timezone.utc)
+
+
+def _moment(text):
+    """Aware datetime from an ISO-8601 stamp (`...Z` included), or None."""
+    if not isinstance(text, str):
+        return None
+    try:
+        moment = datetime.fromisoformat(text.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def _settled_at(tail_bytes):
+    """`settled_ids` as {agent key: latest moment a row settled it}."""
+    settled = {}
+
+    def note(key, obj):
+        moment = _moment(obj.get("ts")) or _UNKNOWN_MOMENT
+        settled[key] = max(moment, settled.get(key, moment))
+
     path = agentlog.stream_path(LEDGER_STREAM, LEDGER_PATH_ENV)
     if not path or not os.path.isfile(path):
         return settled
@@ -261,15 +290,52 @@ def settled_ids(tail_bytes=TAIL_BYTES):
             # agent_key guard below drops it without a second predicate.
             key = agent_key(obj.get("agent_id"))
             if key:
-                settled.add(key)
+                note(key, obj)
         elif obj.get("event") == STALL_EVENT:
             # Any session's stall row settles it — same uniqueness argument.
             for entry in obj.get("pending") or []:
                 if isinstance(entry, dict):
                     key = agent_key(entry.get("agent_id"))
                     if key:
-                        settled.add(key)
+                        note(key, obj)
     return settled
+
+
+def _resumed_after(transcript_path, settled_at):
+    """Keys of `settled_at` that `transcript_path` resumed after their settle.
+
+    A resume is a `user` line whose `toolUseResult.resumedAgentId` names it
+    and whose `timestamp` is later than the ledger row's `ts` (measured live,
+    2026-10-12). The `SendMessage` call alone never counts, since a failed send
+    writes no resumedAgentId; nor does a notification, since a background
+    agent's own completion notice lands after its stop row. Unreadable or
+    unordered evidence resumes nothing.
+    """
+    resumed = set()
+    if not settled_at or not transcript_path:
+        return resumed
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if ("resumedAgentId" not in line
+                        or not any(k in line for k in settled_at)):
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (ValueError, RecursionError):
+                    continue
+                if not isinstance(obj, dict):
+                    continue
+                result = obj.get("toolUseResult")
+                if obj.get("type") != "user" or not isinstance(result, dict):
+                    continue
+                key = agent_key(result.get("resumedAgentId"))
+                moment = _moment(obj.get("timestamp"))
+                if moment and key in settled_at and moment > settled_at[key]:
+                    resumed.add(key)
+    except OSError:
+        return set()
+    return resumed
 
 
 NOTIFICATION_OPEN = "<task-notification>"
@@ -389,9 +455,17 @@ def stopped_ids(transcript_path, candidates):
     return stopped
 
 
-def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES):
-    """Sorted agent_ids started in `directory` that the ledger has not settled."""
-    settled = settled_ids(tail_bytes)
+def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES,
+                 transcript_path=None):
+    """Sorted agent_ids started in `directory` that the ledger has not settled.
+
+    With `transcript_path`, an agent it resumed after its latest settle is
+    unsettled again until its next one (the git guard; telemetry passes none).
+    """
+    started = started_keys(directory)
+    settled_at = _settled_at(tail_bytes)
+    settled = set(settled_at) - _resumed_after(
+        transcript_path, {k: settled_at[k] for k in started if k in settled_at})
     if extra_settled:
         settled.update(k for k in extra_settled if k)
-    return sorted(key for key in started_keys(directory) if key not in settled)
+    return sorted(key for key in started if key not in settled)

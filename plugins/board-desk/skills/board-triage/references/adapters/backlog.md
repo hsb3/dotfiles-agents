@@ -29,18 +29,19 @@ are not required.
 
 ```bash
 S="<board-triage-skill-dir>/scripts"
-python3 "$S/backlog_board.py" export --root . --out board-snapshot.json
+T=$(mktemp -d)   # scratch for snapshot + changeset; see SKILL.md §5
+python3 "$S/backlog_board.py" export --root . --out "$T/board-snapshot.json"
 ```
 
-Prints `<n> items (<n> untriaged) -> board-snapshot.json`. Tasks in the last configured
+Prints `<n> items (<n> untriaged) -> <path>`. Tasks in the last configured
 status (the done lane) are left out; everything else is `state: "open"`. Bodies never
 appear: `task list --json` does not return them.
 
 ## Apply
 
 ```bash
-python3 "$S/backlog_board.py" apply --root . --changeset changeset.tsv            # dry-run diff
-python3 "$S/backlog_board.py" apply --root . --changeset changeset.tsv --apply    # write
+python3 "$S/backlog_board.py" apply --root . --changeset "$T/changeset.tsv"            # dry-run diff
+python3 "$S/backlog_board.py" apply --root . --changeset "$T/changeset.tsv" --apply    # write
 ```
 
 Dry-run by default. Cells already at the target value are dropped, so re-runs are free;

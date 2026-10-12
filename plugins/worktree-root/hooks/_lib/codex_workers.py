@@ -344,14 +344,20 @@ def _patch(payload):
     command = (payload.get('tool_input') or {}).get('command')
     if not isinstance(command, str) or not command.startswith('*** Begin Patch\n') or not command.rstrip().endswith('*** End Patch'):
         raise WorkerError('Unrecognized apply_patch input')
-    lines, paths = [], []
-    for line in command.splitlines():
-        header = next((prefix for prefix in PATCH_HEADERS if line.startswith(prefix)), None)
+    lines, paths, in_update = [], [], False
+    for line in command.split('\n'):
+        line = line.removesuffix('\r')
+        # ponytail: mirrors Codex's per-mode trim (streaming_parser.rs: trim() outside Update File, trim_end() in it);
+        # Python's strip also eats U+001C-U+001F where Rust's keeps them, so such a header tail is cut from the path.
+        stripped = line.rstrip() if in_update else line.strip()
+        header = next((prefix for prefix in PATCH_HEADERS if stripped.startswith(prefix)), None)
         if header:
-            target = _owned_path(line[len(header):], record)
+            target = _owned_path(stripped[len(header):], record)
             paths.append(target)
-            line = header + target
-        elif line.startswith('*** ') and line not in {
+            line = line[:len(line) - len(line.lstrip())] + header + target
+            if header != '*** Move to: ':
+                in_update = header == '*** Update File: '
+        elif stripped.startswith('*** ') and stripped not in {
                 '*** Begin Patch', '*** End Patch', '*** End of File'}:
             raise WorkerError('Unrecognized patch directive: ' + line)
         lines.append(line)

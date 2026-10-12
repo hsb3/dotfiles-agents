@@ -31,10 +31,11 @@ are not required.
 
 ```bash
 S="<board-triage-skill-dir>/scripts"
-python3 "$S/github_projects_board.py" export -o acme -n 8 --out board-snapshot.json
+T=$(mktemp -d)   # scratch for snapshot + changeset; see SKILL.md §5
+python3 "$S/github_projects_board.py" export -o acme -n 8 --out "$T/board-snapshot.json"
 ```
 
-Prints `<n> items (<n> untriaged) -> board-snapshot.json`, the untriaged count only when the board
+Prints `<n> items (<n> untriaged) -> <path>`, the untriaged count only when the board
 has a Priority field; without `--out` the snapshot goes to stdout and there is no count line. Add
 `--owner-type org` for an org-owned board (default `user`). The snapshot's top-level `fields` block
 carries the legal values for every single-select and iteration field, so triage needs no second read
@@ -44,8 +45,8 @@ instead, since their legal values are not an enumerable set.
 ## Apply
 
 ```bash
-python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset changeset.tsv            # dry-run
-python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset changeset.tsv --apply    # write
+python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset "$T/changeset.tsv"            # dry-run
+python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset "$T/changeset.tsv" --apply    # write
 python3 "$S/github_projects_board.py" apply -o acme -n 8 --changeset edges.tsv --repo acme/widgets --apply
 ```
 

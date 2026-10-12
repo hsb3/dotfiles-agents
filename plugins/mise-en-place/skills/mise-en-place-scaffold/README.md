@@ -26,7 +26,8 @@ per-repo deviations and GitHub-side knobs a consumer provisions by hand with `gh
 
 **Additive-only, by design.** It never overwrites, merges, edits, deletes, or moves an
 existing file, never provisions GitHub-side objects, and never authors README, CLAUDE.md, or
-AGENTS.md content. A conflict is reported, not resolved.
+AGENTS.md content. A conflict is reported, not resolved. When the standard `ci.yml` is planned for a repo whose
+Makefile has no `ci` target, the plan carries a note, because the workflow runs `make ci`.
 
 ## Siblings
 
