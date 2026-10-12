@@ -291,8 +291,62 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.assertFalse(rows[0]["isolated"])
         self.assertEqual(rows[0]["reason"], "payload cwd is outside the project repository")
 
+    # An explicit isolation:"worktree" also builds from the session cwd, so it
+    # gets the same refusal; "remote" and an explicit cwd build nothing there.
+
+    def _explicit(self, session_cwd, extra):
+        tool_input = {"prompt": "p", "subagent_type": "builder"}
+        tool_input.update(extra)
+        return json.dumps(self._payload(cwd=session_cwd, tool_input=tool_input))
+
+    def test_explicit_worktree_from_another_repo_is_refused(self):
+        project, other = self._two_repos()
+        reason = self._denied(self._run_hook(
+            self._explicit(other, {"isolation": "worktree"}), project_dir=project))
+        self.assertIn(project, reason)
+        self.assertIn(other, reason)
+        rows = self._rows()
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0]["isolated"])
+        self.assertEqual(rows[0]["reason"], "payload cwd is outside the project repository")
+
+    def test_explicit_worktree_in_an_unarmed_project_is_inert(self):
+        project, other = self._two_repos(isolate="off")
+        self._assert_silent(self._run_hook(
+            self._explicit(other, {"isolation": "worktree"}), project_dir=project))
+        self.assertEqual(self._rows(), [])
+
+    def test_explicit_worktree_for_an_unarmed_agent_type_is_inert(self):
+        project, other = self._two_repos()
+        payload = self._payload(cwd=other, tool_input={
+            "prompt": "p", "subagent_type": "scout", "isolation": "worktree"})
+        self._assert_silent(self._run_hook(json.dumps(payload), project_dir=project))
+        self.assertEqual(self._rows(), [])
+
+    def test_explicit_remote_or_cwd_from_another_repo_is_inert(self):
+        project, other = self._two_repos()
+        for extra in ({"isolation": "remote"}, {"cwd": "/somewhere/else"}):
+            with self.subTest(extra=extra):
+                self._assert_silent(self._run_hook(
+                    self._explicit(other, extra), project_dir=project))
+        self.assertEqual(self._rows(), [])
+
+    def test_explicit_worktree_inside_the_project_is_left_alone(self):
+        project, _other = self._two_repos()
+        self._assert_silent(self._run_hook(
+            self._explicit(project, {"isolation": "worktree"}), project_dir=project))
+        self.assertEqual(self._rows(), [])
+
+    def test_explicit_worktree_in_a_non_git_project_writes_no_row(self):
+        nogit = os.path.join(self.tmp.name, "nogit")
+        os.makedirs(nogit)
+        self._write_activation(isolate="writers", project_dir=nogit)
+        self._assert_silent(self._run_hook(
+            self._explicit(nogit, {"isolation": "worktree"}), project_dir=nogit))
+        self.assertEqual(self._rows(), [])
+
     def test_refusal_offers_only_cd_and_quotes_the_path(self):
-        """Explicit isolation or cwd would bypass the guard, so neither is advised."""
+        """`remote` or an explicit cwd would bypass the guard, so neither is advised."""
         project, other = self._two_repos(name="my project")
         reason = self._denied(self._run_hook(
             json.dumps(self._payload(cwd=other)), project_dir=project))
@@ -600,6 +654,41 @@ class WorktreeIsolationTests(unittest.TestCase):
         os.makedirs(subdir, exist_ok=True)
         body, _updated = self._rewrite(self._payload(cwd=subdir))
         self.assertNotIn("NESTED", body["systemMessage"])
+        self.assertFalse(self._rows()[0]["nested"])
+
+    def test_nested_follows_the_payload_cwd_not_the_project_dir(self):
+        """Production anchors on CLAUDE_PROJECT_DIR (the main checkout) while
+        the payload cwd is where the dispatcher stands."""
+        main_dir, worktree_dir = self._armed_worktree()
+        subdir = os.path.join(worktree_dir, "deep")
+        os.makedirs(subdir)
+        for label, cwd in (("worktree", worktree_dir), ("worktree subdir", subdir)):
+            with self.subTest(cwd=label):
+                result = self._run_hook(
+                    json.dumps(self._payload(cwd=cwd)), project_dir=main_dir)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                hso = json.loads(result.stdout)["hookSpecificOutput"]
+                self.assertIn("NESTED", hso["additionalContext"])
+                self.assertTrue(self._rows()[-1]["nested"])
+
+    def test_nested_falls_back_to_the_project_dir_without_a_payload_cwd(self):
+        _main_dir, worktree_dir = self._armed_worktree()
+        payload = self._payload()
+        del payload["cwd"]
+        result = self._run_hook(json.dumps(payload), project_dir=worktree_dir)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        hso = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertIn("NESTED", hso["additionalContext"])
+        self.assertTrue(self._rows()[0]["nested"])
+
+    def test_a_main_checkout_cwd_under_a_worktree_project_dir_is_not_nested(self):
+        """By design: the dispatcher's location decides, not the anchor."""
+        main_dir, worktree_dir = self._armed_worktree()
+        result = self._run_hook(
+            json.dumps(self._payload(cwd=main_dir)), project_dir=worktree_dir)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        hso = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertNotIn("NESTED", hso["additionalContext"])
         self.assertFalse(self._rows()[0]["nested"])
 
     def test_a_symlinked_path_is_resolved_before_comparing(self):

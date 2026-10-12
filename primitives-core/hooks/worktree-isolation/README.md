@@ -20,9 +20,13 @@ project and Claude Code would build the worktree in the other repository. The ho
 re-anchor where the harness puts it, so on an armed rewrite whose `cwd` resolves (`git rev-parse
 --git-common-dir`, symlinks resolved) to a different repository from the project dir, or to no
 repository at all, it returns `permissionDecision: "deny"` naming both paths and telling the model
-to `cd` back into the project, then dispatch again. An unarmed project or type never reaches the
-check. A subdirectory of the project, its `.git` directory, and any linked worktree of it (a
-nested manager's own `.claude/worktrees/agent-<id>`) are the same repository, so they still rewrite.
+to `cd` back into the project, then dispatch again. The refusal also covers a dispatch that set
+`isolation: "worktree"` itself (armed project and armed type only), since Claude Code builds that
+worktree from the session cwd too; it is otherwise left untouched. `isolation: "remote"` and an
+explicit `cwd` are never checked, because no worktree is built from the session cwd. An unarmed
+project or type never reaches the check. A subdirectory of the project, its `.git` directory, and
+any linked worktree of it (a nested manager's own `.claude/worktrees/agent-<id>`) are the same
+repository, so they still rewrite.
 
 ## Why
 
@@ -194,7 +198,8 @@ only after that validation.
 
 Beyond an unarmed activation file, the hook stands down when:
 
-- the dispatch already sets `isolation` (including `remote`, which it must not downgrade);
+- the dispatch already sets `isolation` (including `remote`, which it must not downgrade); an
+  explicit `worktree` is never rewritten, but still meets the refusal above;
 - the dispatch sets `cwd`, documented as mutually exclusive with `isolation: "worktree"`;
 - the agent type is in the never-isolate set above;
 - the project is not a git repository. This one is not cosmetic: Claude Code raises
@@ -244,8 +249,10 @@ Beyond an unarmed activation file, the hook stands down when:
 ## Ledger
 
 One row per armed dispatch, appended to the `worktree-isolation` stream once the activation file
-is on. Nothing is logged while the hook is inert (unarmed, `isolation`/`cwd` already set, or no
-resolvable project dir) — those paths exit before the logger is even opened.
+is on. Nothing is logged while the hook is inert (unarmed, `remote` isolation or `cwd` already
+set, or no resolvable project dir) — those paths exit before the logger is even opened. A dispatch
+that set `isolation: "worktree"` itself is logged only when refused; the "not armed" and "not a
+git repo" rows belong to dispatches that did not set `isolation` themselves.
 
 ```
 ${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/worktree-isolation.jsonl
@@ -264,11 +271,13 @@ stray-branch audit — how many leftover worker branches a wave should have prod
 subprocess and every non-rewrite row is a path where no worktree was created, so there is nothing
 to audit.
 
-The question is answered by comparing `git rev-parse --git-dir` against `--git-common-dir` (equal
-in a main checkout, `<common>/worktrees/<name>` vs `<common>` in a linked one), with both sides
-resolved through symlinks first. Not by the common dir's literal value: that is `.git` only at a
-main checkout's *root* and a relative `../../.git` from any subdirectory of the same checkout, so a
-string test reports every subdirectory as a worktree.
+The dispatcher's location is the payload `cwd` (any subdirectory of it works), falling back to the
+project dir when the payload carries none. The question is answered by comparing `git rev-parse
+--git-dir` against `--git-common-dir` (equal in a main checkout, `<common>/worktrees/<name>` vs
+`<common>` in a linked one), with both sides resolved through symlinks first. Not by the common
+dir's literal value: that is `.git` only at a main checkout's *root* and a relative `../../.git`
+from any subdirectory of the same checkout, so a string test reports every subdirectory as a
+worktree.
 
 ## Design notes
 
