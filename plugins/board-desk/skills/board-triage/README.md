@@ -6,9 +6,14 @@ context, and applies only the diff rather than guessing a rank it can't justify.
 board full of captured-but-unranked items into a workable, ranked backlog.
 
 The judgment is backend-agnostic and lives in `SKILL.md`. The board's I/O lives in a thin
-adapter under `references/adapters/` — **GitHub Projects (v2)** and **Kata**
-ship, each with its own export/apply script in `scripts/`. A new backend is a new adapter
-file: two commands and a field map, no edit to the rubric.
+adapter under `references/adapters/` — **GitHub Projects (v2)**, **Kata**, **Backlog.md** and
+the **file tracker** (Markdown item files under `.tasks/`) ship, each with its own export/apply
+script in `scripts/`. A new backend is a new adapter file: two commands and a field map, no
+edit to the rubric. A `tracker:` key in `.claude/tracker.local.md` pins the board; told none
+and pinned none, the skill detects one in the order kata, GitHub, Backlog.md, file tracker, and
+falls back to the file tracker. The file tracker's format and parser are shared with the waves skill and arrive
+here as symlinks (`references/file-tracker-format.md`, `scripts/file_tracker.py`), resolved to
+regular files at install.
 
 Every adapter writes only on `--apply`. The default run is a preview you read first, and it
 refuses the same rows the write would, so an unresolvable changeset is caught before it
@@ -23,8 +28,8 @@ filter them out.
 
 `scripts/board_health.py <snapshot.json>` (or on stdin) is the other half: six decay checks
 that answer whether the board has rotted enough to be worth a pass, and afterwards whether the
-pass took. It reads the same §2 snapshot every adapter already emits, so it is backend-agnostic
-for free and talks to no board itself.
+pass took. It reads the same §2 snapshot every adapter already emits, string keys and integer issue
+numbers alike, so it is backend-agnostic for free and talks to no board itself.
 
 One of the six needs an input the board cannot supply: `--vocabulary` takes a declared label
 list, one name per line, and `scripts/core-labels.txt` ships as that declaration. Without it
@@ -113,11 +118,12 @@ claude plugin install board-desk@dotfiles-agents
 Ships in the `board-desk` bundle. Every adapter is self-contained — no second plugin to
 install. What each one needs is the backend's own client: the GitHub Projects adapter wants
 `gh` authenticated with `project` scope (`gh auth refresh -s project`), the Kata adapter
-wants the `kata` binary pointed at the right daemon. Each adapter says so at the
+wants the `kata` binary pointed at the right daemon, the Backlog.md adapter wants the
+`backlog` CLI, and the file tracker adapter needs nothing beyond Python. Each adapter says so at the
 top of its own file, and carries its backend's one-time setup (project/board creation, field
 provisioning, views and workflows) alongside the day-to-day export/apply commands. Where a
 setup step is a board write rather than a read, the adapter says so at that step and names
 the legal values, so a snippet is never copied blind.
 
-Codex uses the same Kata and GitHub board adapters. Resolve bundled scripts from the installed
+Codex uses the same board adapters. Resolve bundled scripts from the installed
 skill path; adapter prerequisites and write authorization remain part of the board workflow.

@@ -88,7 +88,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 |---|---|---|---|
 | [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone with no topical plugin: harness config, research, test quality, chart design, API and TUI craft, repo setup. | 14 skills |
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage and status comms. | 6 skills · 1 agent · 2 hooks · 1 command |
-| [`board-desk`](plugins/board-desk/README.md) | bundle | Task authoring, board health, Kata and GitHub Projects triage, and GitHub mirror reconciliation. | 2 skills |
+| [`board-desk`](plugins/board-desk/README.md) | bundle | Task authoring, board health, Kata, GitHub Projects, Backlog.md and plain-file triage, and GitHub mirror reconciliation. | 2 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
 | [`atelier`](plugins/atelier/README.md) | bundle | Tiered delegation agents plus session-discipline hooks: size a task, dispatch to the right model tier, keep every session clearable. | 9 skills · 5 agents · 14 hooks · 2 commands |
 | [`mise-en-place`](plugins/mise-en-place/README.md) | bundle | A planning desk over a tracker adapter (kata first): layout and memory standards, read-only audit, fill-only scaffold, item-body form. | 6 skills |

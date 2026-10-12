@@ -33,6 +33,22 @@ key, and a file using it fails silently: no error, no warning, isolated writers 
 the default branch while the operator reads the setting as applied. Where the default branch is a
 publish-only surface it reaches you as workers reporting that paths their briefs name do not
 exist — check the nesting first, since nothing else in the run will tell you.
+
+**Confirm the worktree exists before trusting it** `[field]`. An agent once reported an
+isolated path that `git worktree list` never showed, and every edit it made landed in the main
+checkout. Check the path the agent names against `git worktree list`, and while any agent is
+live, stage by explicit path, never `git add -A`, or its in-flight work rides into an unrelated
+commit.
+
+**A worktree with no changes dies with its agent** `[field]`. The harness removes an unchanged
+worktree when the agent ends, so an agent that only runs commands (a repro loop, a test sweep)
+loses every captured artifact with it. Brief such agents to write artifacts to an absolute path
+outside the worktree from the first iteration, and keep long external waits in the
+orchestrating session rather than in an idle isolated agent.
+
+**Integrate a worktree branch with `git cherry-pick`**, a three-way apply against the commit's
+real parent, never `git checkout <branch> -- <file>`, which silently reverts newer work in any
+file the branches share.
 <!-- /harness -->
 
 ## Deliberate turn caps

@@ -15,8 +15,18 @@ a project that lacks one.
 
 The campaign loop is tracker-agnostic. It needs three operations from whatever holds the
 backlog — an inventory, a rewritable triage view that lives off commit history, and a way to
-land a wave and close its items. Bindings ship for GitHub issues and kata under
-`references/`; a tracker without one is usable by naming those three operations up front.
+land a wave and close its items. Bindings ship under `references/` for GitHub issues, kata,
+Backlog.md and the file tracker — one Markdown file per item under `.tasks/`, whose format is
+specified in `references/file-tracker-format.md`. A project pins its tracker with a `tracker:` key in
+`.claude/tracker.local.md`. Untold and unpinned, the skill detects the tracker in that
+order (kata binding, GitHub issues in use, a Backlog.md board, `.tasks/`) and, finding none, falls back
+to the file tracker and says so rather than refusing. `scripts/file_tracker.py` does the
+detecting and parses the item files, reporting a broken one by path instead of skipping it. A
+tracker without a binding is usable by naming those three operations up front.
+
+The file tracker and Backlog.md keep the triage view in an ignored file beside the items, so it
+stays off commit history but exists only in the checkout that wrote it. Neither is a forge, so
+a repo with no remote lands a wave by a local `--no-ff` merge gated by its own checks.
 
 Under the kata binding, note that its GitHub sync is import-only: an imported mirror is an epic to
 decompose, never a card to rewrite. That binding also states the core label vocabulary a wave
