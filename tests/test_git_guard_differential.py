@@ -196,8 +196,20 @@ PROBES = [
      "x=$(echo $(cat <<'EOF'\nit's\nEOF));git push\n: # '"),
     # a `)` with no `$(` open keeps the opener before it
     ("hd_word_then_subshell", "cat <<'EOF'; (true)\nit's\nEOF\ngit push\n: # '"),
-    # bash 3.2 and zsh read no body for a heredoc whose `$(` closes on its own line
+    # bash 3.2 and zsh read no body for a heredoc whose `$(` closes on its own line;
+    # bash 5 does
     ("hd_subst_closed_on_opener_line", "x=$(cat <<EOF; true)\ngit push\nEOF"),
+    ("hd_subst_closed_on_opener_line_body_read", "x=$(cat <<'EOF' )\nit's\nEOF\ngit push"),
+    # a newline inside `$(` starts no body opened outside it
+    ("hd_outer_body_after_subst_newline", "cat <<EOF; x=$(echo hi\n); git push\nbody\nEOF"),
+    ("hd_outer_body_after_dq_subst_newline",
+     "cat <<EOF; echo \"$(echo hi\n)\"; git push\nbody\nEOF"),
+    ("hd_outer_body_redirect_after_subst_newline",
+     "cat <<EOF>/dev/null; x=$(echo hi\n) && git push\nbody\nEOF"),
+    ("hd_outer_body_spaced_after_subst_newline",
+     "cat <<EOF ; x=$(echo hi\n); git push\nbody\nEOF"),
+    ("hd_outer_body_and_after_subst_newline",
+     "cat <<'EOF' && x=$(echo hi\n) && git push\nbody\nEOF"),
     # arithmetic (PR 580)
     ("arith_cmd_shift", "x=1\n((x<<2))\ngit commit -m x"),
     ("arith_expansion", "echo $((1<<2))\ngit commit -m x"),
@@ -256,7 +268,8 @@ EXCUSED[("sep_glued", "live")] = "live README ceiling: word glued to a separator
 for _name in ("hd_subst_terminator_glued_semicolon", "hd_subst_after_subshell_paren",
               "hd_subst_opened_line_before", "hd_subst_terminator_space_paren",
               "hd_subst_after_arith_expansion", "hd_subst_nested_terminator",
-              "hd_subst_nested_terminator_glued_semicolon", "hd_word_then_subshell"):
+              "hd_subst_nested_terminator_glued_semicolon", "hd_word_then_subshell",
+              "hd_outer_body_spaced_after_subst_newline", "hd_outer_body_and_after_subst_newline"):
     EXCUSED[(_name, "scope")] = "scope guard parity, hj2p"
 
 

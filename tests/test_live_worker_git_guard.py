@@ -926,6 +926,25 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertEqual(self._assert_denied(self._run_in(
             "git -C {0} commit -m a && {1}".format(other, push), session, session)), alone)
 
+    def test_a_native_session_write_after_an_other_repo_write_is_denied(self):
+        # the native loop must judge every call, not stop at the first
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        record = os.path.join(session, ".git", "atelier-codex", "workers",
+                              self.session_id, "nw1.json")
+        os.makedirs(os.path.dirname(record))
+        with open(record, "w", encoding="utf-8") as fh:
+            json.dump({"session_id": self.session_id, "agent_id": "nw1",
+                       "agent_type": "builder", "status": "running",
+                       "source": session, "worktree": None}, fh)
+        policy = os.path.join(self.tmp.name, "policy.md")
+        with open(policy, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        payload = self._payload("git -C {0} commit -m a && git -C {1} commit -m b"
+                                .format(other, session))
+        payload["cwd"] = session
+        self._assert_denied(self._run(payload, extra_env={
+            "ATELIER_HARNESS": "codex", "ATELIER_ACTIVATION_FILE": policy}))
+
     def test_a_session_write_before_an_other_repo_write_is_denied(self):
         session, other = self._repo("session-repo"), self._repo("other-repo")
         self._sidecar("q2222222222222222")

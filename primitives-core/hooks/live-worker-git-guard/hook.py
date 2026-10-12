@@ -125,6 +125,7 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only) and
 must stay compatible with Python 3.9.
 """
 
+import functools
 import json
 import os
 import re
@@ -329,7 +330,7 @@ def _emit(obj):
 # Reading the command
 # ---------------------------------------------------------------------------
 
-def _scan_line(line, stack, terminators=()):
+def _scan_line(line, stack, terminators=(), paren=True):
     """(the heredoc terminators pending after this line, each `(word, quoted, dash,
     depth)`, the contexts open at its end, whether it ends in a line continuation),
     given the contexts open at its start and the terminators still pending.
@@ -339,8 +340,8 @@ def _scan_line(line, stack, terminators=()):
     stray one (a subshell, `$((`) leaves the depth at 0. An opener counts only
     outside quotes and outside a comment, and never with an all-digit word or
     inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
-    `(( y = 1 << n ))`). One whose `$(` closes on its own line is dropped: bash 3.2
-    and zsh read no body for it. A backslash escapes the next character outside
+    `(( y = 1 << n ))`). One whose `$(` closes on its own line is dropped from the
+    zsh reading (`paren=False`): bash 3.2 and zsh read no body for it, bash 5 does. A backslash escapes the next character outside
     single quotes, and inside `$'...'` too. A `#` at the start of the line, after
     whitespace or after one of `;&|()` runs to the line end, so an apostrophe in
     a comment opens no quote.
@@ -372,7 +373,8 @@ def _scan_line(line, stack, terminators=()):
             # `$( (true); cat <<W` misses a `W)` end; track plain `(` if one bites
             if stack:
                 stack.pop()
-                terminators = [t for t in terminators if t[3] <= len(stack)]
+                if not paren:
+                    terminators = [t for t in terminators if t[3] <= len(stack)]
         elif char in "'\"":
             stack.append(char)
         elif char == "#" and (i == 0 or line[i - 1].isspace()
@@ -414,7 +416,7 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
             line = line.lstrip("\t")
         if line == word:
             return j, False
-        # ponytail: bash 5 also ends it at `EOFX)` or `EOF #)`; widen on a probe
+        # ponytail: bash also ends it at `EOFX)` or `EOF #)`; widen on a probe
         m = paren and re.match(re.escape(word) + r"((?:[ \t]*\))+)([ \t;&|]+|$)?", line)
         if m:
             # a word glued to the `)` continues it (`$(...)x`): nothing to split
@@ -448,7 +450,8 @@ def _logical_lines(command, paren=True):
 
     A body runs from the opener's line end through its terminator line, as
     bash finds it (`_body_end`); bodies opened on one line follow in order. A
-    newline inside `$(` starts them even within `"`, where the line stays joined.
+    newline inside `$(` starts those opened at its depth or deeper, even within
+    `"`, where the line stays joined.
     They are dropped only when every terminator is found: dropping text is a
     silent fail-open, keeping it is at worst an over-deny.
     """
@@ -457,14 +460,15 @@ def _logical_lines(command, paren=True):
     while i < len(lines):
         line = lines[i]
         i += 1
-        pending, stack, continued = _scan_line(line, stack, pending)
+        pending, stack, continued = _scan_line(line, stack, pending, paren)
         if continued:
             current += line[:-1]
             continue
         current += line
         if stack[-1:] in ((), ("$(",)):
-            i = _skip_bodies(lines, i, pending, paren)  # each body and its terminator line
-            pending = []
+            ready = [t for t in pending if t[3] >= len(stack)]
+            pending = [t for t in pending if t[3] < len(stack)]
+            i = _skip_bodies(lines, i, ready, paren)  # each body and its terminator line
         if any(c != "$(" for c in stack):
             current += "\n"
             continue
@@ -735,6 +739,7 @@ def _override_before(tokens, cmd_start, git_at):
 # Which tree the command targets
 # ---------------------------------------------------------------------------
 
+@functools.lru_cache(maxsize=None)  # one rev-parse per tree per decision, inside the hook timeout
 def _repo_root(directory):
     """Realpath'd working-tree root containing `directory`, or None when that
     does not resolve.
