@@ -37,9 +37,9 @@ import subprocess
 import sys
 
 # --- desk bands <-> the backend's native priority scale (0 = highest .. 4 = lowest) --
-# The desk speaks P0-P3. Native 4 exists but has no band, so it reads back as null
+# The desk speaks P0-P4. A native value outside 0-4 has no band, so it reads back as null
 # rather than being invented into one.
-BAND_TO_PRIORITY = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
+BAND_TO_PRIORITY = {"p0": 0, "p1": 1, "p2": 2, "p3": 3, "p4": 4}
 PRIORITY_TO_BAND = {v: k.upper() for k, v in BAND_TO_PRIORITY.items()}
 
 # The only cells a changeset may address. Anything else is a SKIP, never a guess.
@@ -100,7 +100,7 @@ def normalize(field, value):
             return None, None  # blank clears
         native = BAND_TO_PRIORITY.get(value.lower())
         if native is None:
-            return None, f"priority '{value}' is not a band (P0-P3)"
+            return None, f"priority '{value}' is not a band (P0-P4)"
         return native, None
     if field == "labels":
         return sorted(name.strip() for name in value.split(",") if name.strip()), None

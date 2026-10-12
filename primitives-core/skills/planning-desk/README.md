@@ -53,7 +53,7 @@ loop, the governance scripts — is kept and now runs over a tracker adapter, Ka
 The scripts are stdlib-only Python with no install step. The govern mode additionally needs
 the tracker's own CLI on `PATH` and already authenticated — the adapter shells out to it,
 exports a snapshot, and the three analysis scripts read that snapshot rather than the network.
-Plan mode works with no tracker at all.
+The Kata adapter maps native priorities 0-4 to bands P0-P4. Plan mode works with no tracker at all.
 
 Every analysis script is a read-only view. The single write path is a changeset the adapter
 applies, and it dry-runs by default; a plan folder whose tracking ref parses ambiguously is

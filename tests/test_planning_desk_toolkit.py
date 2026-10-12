@@ -98,7 +98,7 @@ ISSUES = [
         "title": "Already done",
         "body": "## Acceptance criteria\n- shipped\n\n## Gates\n- none\n",
         "status": "closed",
-        "priority": 4,  # off the P0-P3 band vocabulary
+        "priority": 9,  # off the P0-P4 band vocabulary
         "labels": ["chore"],
         "closed_reason": "done",
         # Explicit nulls, which this tracker does not emit but another might.
@@ -108,6 +108,15 @@ ISSUES = [
         "qualified_id": "demo#c0ld",
     },
 ]
+
+
+NATIVE_4 = {
+    "short_id": "n4n4",
+    "title": "Lowest band",
+    "status": "open",
+    "priority": 4,
+    "qualified_id": "demo#n4n4",
+}
 
 
 def snapshot(project="demo", issues=None):
@@ -179,7 +188,10 @@ class Snapshot(unittest.TestCase):
         self.assertEqual("closed", item(snapshot(), "c0ld")["state"])
 
     def test_a_priority_off_the_band_vocabulary_is_null_not_invented(self):
-        self.assertIsNone(item(snapshot(), "c0ld")["priority"], "native 4 has no band")
+        self.assertIsNone(item(snapshot(), "c0ld")["priority"], "native 9 has no band")
+
+    def test_native_four_exports_as_p4(self):
+        self.assertEqual("P4", item(snapshot(issues=[NATIVE_4]), "n4n4")["priority"])
 
     def test_the_tracker_name_falls_back_to_what_the_tracker_reported(self):
         """No --project: the name comes from the items' own qualified ids."""
@@ -196,6 +208,9 @@ class Normalize(unittest.TestCase):
         self.assertEqual((0, None), kata.normalize("priority", "P0"))
         self.assertEqual((3, None), kata.normalize("priority", "p3"))
 
+    def test_p4_resolves_to_native_four(self):
+        self.assertEqual((4, None), kata.normalize("priority", "P4"))
+
     def test_blank_priority_is_a_clear_not_an_error(self):
         self.assertEqual((None, None), kata.normalize("priority", "  "))
 
@@ -203,6 +218,7 @@ class Normalize(unittest.TestCase):
         value, problem = kata.normalize("priority", "P9")
         self.assertIsNone(value)
         self.assertIn("P9", problem)
+        self.assertIn("P0-P4", problem)
 
     def test_labels_split_strip_and_sort(self):
         self.assertEqual((["api", "infra"], None), kata.normalize("labels", " infra , api ,"))
@@ -273,6 +289,14 @@ class Plan(unittest.TestCase):
             [["label", "add", "xmwb", "needs-plan"], ["label", "rm", "xmwb", "chore"]],
             [argv for argv, _ in ops],
         )
+
+    def test_a_p4_row_plans_native_four(self):
+        ops, _ = kata.plan(snapshot(), [("xmwb", "priority", "P4")])
+        self.assertEqual([["edit", "xmwb", "--priority", "4"]], [argv for argv, _ in ops])
+
+    def test_a_blank_priority_clears_a_native_four(self):
+        ops, _ = kata.plan(snapshot(issues=[NATIVE_4]), [("n4n4", "priority", "")])
+        self.assertEqual([["edit", "n4n4", "--priority", "-"]], [argv for argv, _ in ops])
 
     def test_a_blank_priority_clears_the_cell(self):
         ops, _ = kata.plan(snapshot(), [("xmwb", "priority", "")])
