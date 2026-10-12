@@ -408,18 +408,19 @@ def stopped_ids(transcript_path, candidates):
 
     Any of these LATER records re-opens it, until its own SubagentStop settles
     it normally: a `SendMessage` call to its id, until that call's result
-    lands, and for good when the result is a success or names it
-    (`_resumed_keys`), so a failed send leaves it stopped; a notification for
-    it, in any record kind, whose first header does not say `killed` (the
-    "was resumed by the user" notification is inferred from the 2.1.281
+    lands, and for good unless the result is a failure (`success: false` or
+    an error string); a result naming it (`_resumed_keys`); a notification
+    for it, in any record kind, whose first header does not say `killed`
+    (the "was resumed by the user" notification is inferred from the 2.1.281
     binary, not measured). Reading every notification copy only ever fails
     closed.
 
     Read whole, in order: not tail-bounded, because a kill aging out of a
     window would re-block on an agent that is long dead. Lines naming no
-    candidate and answering no recorded send are skipped before parsing. A missing or unreadable transcript
-    yields the empty set, per the module's convention: it only ever removes
-    agents from the pending set, so "cannot tell" leaves the ledger's answer.
+    candidate and answering no recorded send are skipped before parsing. A
+    missing or unreadable transcript yields the empty set, per the module's
+    convention: it only ever removes agents from the pending set, so "cannot
+    tell" leaves the ledger's answer.
     """
     wanted = {k for k in (agent_key(c) for c in candidates or ()) if k}
     stopped = set()
@@ -453,7 +454,9 @@ def stopped_ids(transcript_path, candidates):
                     stopped.difference_update(_resumed_keys(result))
                     for use in [u for u in sends if _answers(obj, {u})]:
                         key = sends.pop(use)
-                        if isinstance(result, dict) and result.get("success") is True:
+                        # Only a proven failure leaves it stopped.
+                        if not (isinstance(result, str) or (isinstance(result, dict)
+                                                            and result.get("success") is False)):
                             stopped.discard(key)
                     message = obj.get("message")
                     text = message.get("content") if isinstance(message, dict) else None

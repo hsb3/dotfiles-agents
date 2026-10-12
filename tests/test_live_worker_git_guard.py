@@ -360,7 +360,8 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
 
     # -- a SubagentStop-settled agent resumed by SendMessage is live again,
     # ordered by the ledger row's `ts` against the transcript line's `timestamp`.
-    # Only the `resumedAgentId` result counts: a failed send writes none.
+    # Only a result naming it counts (`resumedAgentId`, or `pin.id` on a success);
+    # a failed send names none.
 
     BEFORE, AFTER, LATER = ("2026-08-20T15:30:00.000Z", "2026-08-20T15:40:00.000Z",
                             "2026-08-20T15:45:00.000Z")
@@ -491,6 +492,15 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._transcript(*self._taskstop("db999999999999999"),
                          self._send_message("db999999999999999"),
                          self._owned_resume_result("db999999999999999"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_send_answered_with_no_tool_use_result_still_reopens_it(self):
+        # Subagent transcripts carry the success only in the tool_result text.
+        self._sidecar("dd999999999999999")
+        answer = self._owned_resume_result("dd999999999999999")
+        del answer["toolUseResult"]
+        self._transcript(*self._taskstop("dd999999999999999"),
+                         self._send_message("dd999999999999999"), answer)
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
     def test_a_successful_send_naming_no_agent_still_reopens_it(self):
