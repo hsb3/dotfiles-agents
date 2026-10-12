@@ -31,7 +31,9 @@ tool exits 0 with no output.
   the body runs to the end of the command.
 - A `<<` inside arithmetic (`$((1<<2))`) is read as a heredoc opener, so the rest of the command
   is scanned as an unquoted heredoc body, where single quotes do not protect.
-- Parentheses in `$( )` are counted, so a `case` pattern's `)` closes it early.
+- Parentheses in `$( )` are counted, so a `case` pattern's `)` closes it early. In `"$(case $y in
+  a) echo '$T:r';; esac)"` the rest is then read as double-quoted text and the single-quoted `$T:r` is
+  flagged, though zsh prints it literally.
 - Inside an unquoted heredoc body, `$( )` is not tracked: a single-quoted `$T:r` or a separating
   `&` inside one is flagged.
 - Text another shell builds or reads later: `eval "$cmd"`, a script file, or `zsh -c '$T:r'`.
@@ -49,4 +51,5 @@ assignment on the line before, which a newline ends as `;` does. Nothing is logg
 
 ## Targets
 
-`claude-code` only. The shell Codex runs commands in is unverified.
+`claude-code` only. The shell Codex runs commands in is unverified. The hook does not check which
+shell Claude Code uses: under bash a hit is not corrupted, but the braced rewrite reads the same there.

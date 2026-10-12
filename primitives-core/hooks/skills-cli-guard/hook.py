@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """skills-cli-guard: PreToolUse guard that denies running the third-party `skills` CLI.
 
-Reads the command text only (shlex over logical lines, heredoc bodies skipped) and never
-runs a shell. What it blocks, lets through and cannot see is in README.md.
+Reads the command text only (heredoc bodies dropped, then one shlex pass) and never runs a
+shell. What it blocks, lets through and cannot see is in README.md.
 
 Stdlib-only, Python 3.9 compatible. Prints one deny object on a hit, nothing otherwise, and
 always exits 0.
@@ -20,6 +20,8 @@ HELP = {"--help", "-h", "--version", "-V"}
 KEYWORDS = {"!", "{", "if", "then", "else", "elif", "do", "while", "until", "time"}
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
 OPERATORS = "();<>|&`"
+# ponytail: matched on raw lines, so a `<<` inside quotes, a comment or `$((1<<2))` opens one too
+HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)[ \t]*((?:'[^']*'|\"[^\"]*\"|\\.|[^\s|&;()<>'\"\\])+)")
 
 REASON = (
     "skills-cli-guard: the `skills` CLI claims every skill under any .agents/ or .claude/ "
@@ -30,40 +32,56 @@ REASON = (
 )
 
 
+def past_flags(words):
+    while words and words[0].startswith("-"):
+        words = words[1:]
+    return words
+
+
 def runs_skills(words):
     """True when one simple command's words run the `skills` package through a runner."""
     if not words:
         return False
     words = [words[0].rsplit("/", 1)[-1]] + words[1:]
     for runner in RUNNERS:
-        if tuple(words[:len(runner)]) != runner:
-            continue
-        rest = words[len(runner):]
-        while rest and rest[0].startswith("-"):
+        rest = words
+        for part in runner:
+            rest = past_flags(rest)
+            if not rest or rest[0] != part:
+                break
             rest = rest[1:]
-        if rest and (rest[0] == "skills" or rest[0].startswith("skills@")):
-            args = rest[1:]
-            return not (args and all(a in HELP for a in args))
+        else:
+            rest = past_flags(rest)
+            if rest and (rest[0] == "skills" or rest[0].startswith("skills@")):
+                args = rest[1:]
+                return not (args and all(a in HELP for a in args))
     return False
 
 
-def tokens(text):
-    # ponytail: shlex drops quoting, so a quoted `;|&(` reads as an operator, a "$(...)" stays
-    # one word, and a mid-word `#` starts a comment; a quote-aware lexer would fix all three.
-    lex = shlex.shlex(text, posix=True, punctuation_chars=OPERATORS)
-    lex.whitespace_split = True
-    return list(lex)
+def drop_heredoc_bodies(command):
+    """Logical lines with every heredoc body and terminator removed, whatever quoting the
+    opener sits in: a body inside `"$(` must never reach shlex, whose quote state it shifts."""
+    lines, kept, i = command.split("\n"), [], 0
+    while i < len(lines):
+        line, i = lines[i], i + 1
+        while line.endswith("\\") and i < len(lines):
+            line, i = line[:-1] + lines[i], i + 1
+        kept.append(line)
+        for dash, word in HEREDOC.findall(line):
+            word = re.sub(r"[\\'\"]", "", word)
+            while i < len(lines) and (lines[i].lstrip("\t") if dash else lines[i]) != word:
+                i += 1
+            i += 1
+    return "\n".join(kept)
 
 
-def line_runs_skills(toks, heredocs):
-    """True when a simple command among one logical line's tokens runs the CLI without the
-    override. Appends (strip_tabs, delimiter) for each heredoc the line opens."""
-    stack, words, override, target, ticks = [], [], False, None, False
+def scan(toks):
+    """True when a simple command among the tokens runs the CLI without the override."""
+    stack, words, override, target, ticks = [], [], False, False, False
     for tok in toks:
         if tok and all(c in OPERATORS for c in tok):
             if "<" in tok or ">" in tok:
-                # ponytail: an arithmetic `<<` reads as a heredoc opener too
-                target = "<<" if "<<" in tok and "<<<" not in tok else "file"
+                target = True  # the next word is a file or a heredoc delimiter
                 if len(words) > 1 and words[-1].isdigit():
                     words.pop()  # the fd of `2>&1`, which shlex splits off
             for j, c in enumerate(tok):
@@ -72,7 +90,7 @@ def line_runs_skills(toks, heredocs):
                     continue
                 if c == "(" or (c == "`" and not ticks):
                     stack.append((words, override))
-                    words, override, target = [], False, None
+                    words, override, target = [], False, False
                     ticks = ticks or c == "`"
                     continue
                 if not override and runs_skills(words):
@@ -82,14 +100,10 @@ def line_runs_skills(toks, heredocs):
                 else:  # `)` or a closing backtick resumes the enclosing command
                     words, override = stack.pop() if stack else ([], False)
                     ticks = ticks and c != "`"
-        elif target == "file":
-            target = None
+                    if c == ")" and tok[j - 1:j] == "(":  # `name()`: a function body follows
+                        words, override = [], False
         elif target:
-            if target == "<<" and tok.startswith("-"):
-                tok, target = tok[1:], "<<-"
-            if tok:
-                heredocs.append((target == "<<-", tok))
-                target = None
+            target = False
         elif words:
             words.append(tok)
         elif tok == OVERRIDE:
@@ -102,26 +116,19 @@ def line_runs_skills(toks, heredocs):
 def denied(command):
     if "skills" not in command:
         return False
-    lines = command.replace("\\\n", "").split("\n")
-    i = 0
-    while i < len(lines):
-        text, i = lines[i], i + 1
-        while True:
-            try:
-                toks = tokens(text)
-                break
-            except ValueError:
-                if i == len(lines):
-                    return False  # an unterminated quote: the shell refuses to run it too
-                text, i = text + "\n" + lines[i], i + 1
-        heredocs = []
-        if line_runs_skills(toks, heredocs):
-            return True
-        for strip_tabs, word in heredocs:
-            while i < len(lines) and (lines[i].lstrip("\t") if strip_tabs else lines[i]) != word:
-                i += 1
-            i += 1
-    return False
+    # A newline ends a command. The `;` after it does that for shlex, and survives a `#`
+    # comment, which swallows its own newline.
+    text = drop_heredoc_bodies(command).replace("\n", "\n;")
+    # ponytail: shlex drops quoting, so a quoted `;|&(` reads as an operator, a "$(...)" stays
+    # one word, and a mid-word `#` starts a comment; a quote-aware lexer would fix all three.
+    # ponytail: shlex grows a word by string concatenation, so one quoted word near 1 MB
+    # outruns the 10 s timeout; a lexer collecting characters in a list would not.
+    lex = shlex.shlex(text, posix=True, punctuation_chars=OPERATORS)
+    lex.whitespace_split = True
+    try:
+        return scan(lex)
+    except ValueError:
+        return False  # an unterminated quote: the shell refuses to run that text too
 
 
 def main():

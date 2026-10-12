@@ -20,7 +20,7 @@ PARAM = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*|[0-9]+):")
 # f, g and w prefix a modifier rather than being one; an unquoted `&` ends the word instead
 MOD = re.compile(r"[fgw]*[acehlqrstuAPQ]")
 MOD_QUOTED = re.compile(r"[fgw]*[acehlqrstuAPQ&]")
-REST = re.compile(r"[^\s;&|<>()'\"`$\\]*")
+REST = re.compile(r"[^\s;&|<>()'\"`$\\}]*")
 SPECIAL = set("$?#!-*@")
 # ponytail: the delimiter is one unspaced word; `<<'END OF'` or `<<E;F` is misread
 DELIM = re.compile(r"[ \t]*([^\s;&|<>()]+)")
@@ -150,10 +150,11 @@ def deny(hits):
             "hookEventName": "PreToolUse",
             "permissionDecision": "deny",
             "permissionDecisionReason": (
-                "zsh-modifier-lint: {0}. Commands run under zsh, which reads a letter after "
+                "zsh-modifier-lint: {0}. zsh reads a letter after "
                 "an unbraced `$NAME:` as a history modifier (`:r` drops an extension, `:h` "
                 "keeps the directory) and swallows the colon and letter, where bash keeps "
-                "them as text. Brace the name and keep the rest. If the modifier is "
+                "them as text. Brace the name and keep the rest; bash reads the braced form "
+                "the same. If the modifier is "
                 "intended, rerun as `{1}=1 <command>`."
             ).format(listed, OVERRIDE),
         }

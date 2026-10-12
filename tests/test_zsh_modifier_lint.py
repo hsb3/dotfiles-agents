@@ -107,6 +107,9 @@ class Denies(unittest.TestCase):
         self.assertIn("`${T}:r`", reason("cat <<EOF\n$T:r\nEOF"))
         self.assertIn('`"${T}:r"`', reason("echo $T:r"))
 
+    def test_rewrite_stops_at_an_enclosing_brace(self):
+        self.assertIn('`$T:r` -> `"${T}:r"`', reason("echo ${X:-$T:r}"))
+
     def test_every_hit_is_listed_up_to_the_cap(self):
         r = reason("echo $A:r $B:r $C:r $D:r $E:r $F:r $G:r")
         for name in "ABCDE":

@@ -2,26 +2,30 @@
 
 `PreToolUse` on `Bash`. Denies a command that runs the third-party `skills` package through a
 runner: `npx`, `bunx`, `bun x`, `pnpx`, `pnpm dlx`, `yarn dlx`, `npm exec`, with any runner
-flags (`-y`, `--yes`, `--`) and any `skills@<version>`. Run inside a code repo, that CLI claims
-every skill under any `.agents/` or `.claude/` folder, overwrites hand-authored skills and drops
-a `skills-lock.json`. `skills remove -g --all` deletes hand-authored skills from the user skills
-dir. Author, move and delete skill directories by hand instead.
+flags (`-y`, `--yes`, `--`, or between the words, as in `pnpm --silent dlx`) and any
+`skills@<version>`. Run inside a code repo, that CLI claims every skill under any `.agents/`
+or `.claude/` folder, overwrites hand-authored skills and drops a `skills-lock.json`.
+`skills remove -g --all` deletes hand-authored skills from the user skills dir. Author, move
+and delete skill directories by hand instead.
 
-It reads the command text and never runs a shell. The text is split into logical lines, heredoc
-bodies are dropped, and `shlex` tokenizes each line. A runner counts only as the first word of
-a simple command, after any `NAME=value` assignments or a reserved word (`if`, `then`, `do`,
-`{`, `!` and the like). That includes a command after `;`, `&&`, `||`, `|`, `(`, a newline, and
-one inside `$( ... )` or backticks. A bare `npx skills` with no arguments is denied.
+It reads the command text and never runs a shell. Heredoc bodies are dropped first, wherever
+the opener sits, then `shlex` tokenizes the rest in one pass. A runner counts only as the first
+word of a simple command, after any `NAME=value` assignments or a reserved word (`if`, `then`,
+`do`, `{`, `!` and the like). That includes a command after `;`, `&&`, `||`, `|`, `(`, a
+newline, one inside `$( ... )` or backticks, and one in a function body after `name()`. A bare
+`npx skills` with no arguments is denied.
 
 ## What it lets through
 
 - `npx skills --help`, `-h`, `--version` and `-V`, when those are the only arguments (a
   trailing redirect such as `2>&1` is fine).
 - The words as text: arguments to `echo`, `git commit -m`, `rg` and the like, single- or
-  double-quoted spans, heredoc bodies (`<<EOF`, `<<'EOF'`, `<<-EOF`) and `#` comments.
+  double-quoted spans, heredoc bodies (`<<EOF`, `<<'EOF'`, `<<-EOF`) and `#` comments. That
+  includes a body opened inside `"$( ... )"`, as in `git commit -m "$(cat <<'EOF' ... EOF` and
+  `gh pr create --body "$(cat <<'EOF' ...`.
 - Other packages: `npx skillset`, `npx @scope/skills`, `npx prettier skills`.
 - **An unterminated quote fails open.** Everything from the open quote on goes unread, because
-  the shell refuses to run that text too. Complete lines before it are still checked.
+  the shell refuses to run that text too. Commands ended before it are still checked.
 
 ## What it cannot see
 
@@ -37,8 +41,14 @@ Not containment. It catches the plain mistake, not a determined workaround.
   like a command.
 - A `#` inside a word, such as `${#x}`. It starts a comment, and the rest of that line goes
   unread.
-- An arithmetic `<<`, such as `$((1<<2))`. It reads as a heredoc opener, so the following lines
-  go unread until one equals the operand.
+- A `<<` that opens no heredoc: one in quotes or a comment (`-m "a << b"`), or an arithmetic
+  shift (`$((1<<2))`). It reads as an opener, so the following lines go unread until one
+  equals the word after it.
+- A runner flag with a separate value, such as `npm --prefix dir exec skills`.
+- A function body written `function f { ... }`. The `f() { ... }` form is read.
+- One quoted word near a megabyte, such as a huge `-m "..."` message. `shlex` slows down on a
+  single long word and the hook runs past its 10 s timeout. A heredoc body of any size is
+  dropped before `shlex` and stays fast.
 - Spelling games such as `npx sk""ills`. The text must contain `skills` to be scanned at all.
 
 ## Override

@@ -2,5 +2,5 @@
   "event": "PreToolUse",
   "matcher": "Bash",
   "timeout": 10,
-  "statusMessage": "Checking for zsh history modifiers..."
+  "statusMessage": "Checking for zsh modifiers..."
 }

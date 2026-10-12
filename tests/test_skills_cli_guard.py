@@ -95,6 +95,10 @@ class RunnerSpellingTests(GuardCase):
     def test_bare_run_with_no_arguments_is_denied(self):
         self.assertDenied("npx skills")
 
+    def test_flags_between_runner_words(self):
+        self.assertDenied("pnpm --silent dlx skills add x")
+        self.assertDenied("npm --yes exec skills add x")
+
 
 class HelpExemptionTests(GuardCase):
 
@@ -129,6 +133,9 @@ class CommandPositionTests(GuardCase):
 
     def test_inside_a_subshell(self):
         self.assertDenied("(npx skills add some/repo)")
+
+    def test_inside_a_function_body(self):
+        self.assertDenied("f() { npx skills add x; }; f")
 
     def test_after_a_keyword(self):
         self.assertDenied("if true; then npx skills add some/repo; fi")
@@ -177,6 +184,53 @@ class TextIsSilentTests(GuardCase):
 
     def test_unterminated_quote_fails_open(self):
         self.assertSilent("echo \"oops\nnpx skills add x")
+
+
+def quoted_heredoc(command, body):
+    """`command "$(cat <<'EOF' ... EOF\n)"`, the commit and PR body idiom."""
+    return command + " \"$(cat <<'EOF'\n" + body + "EOF\n)\""
+
+
+ODD_QUOTE_BODY = (
+    "## Summary\n"
+    "Fixes the zsh trap where `echo \"$T:r` lost the extension.\n"
+    "\n"
+    "## Repro\n"
+    "```sh\n"
+    "npx skills add some/repo\n"
+    "```\n")
+
+QUOTED_PHRASES = (
+    '"cd /repo && npx skills add some/repo"',
+    '"cd /repo; npx skills add some/repo"',
+    '"cat list | npx skills add some/repo"',
+    '"`npx skills add some/repo`"',
+)
+
+
+class HeredocInQuotedSubstitutionTests(GuardCase):
+    """A heredoc opened inside `"$(` is a body like any other: its lines are text."""
+
+    def bodies(self):
+        for command in ("git commit -m", "gh pr create --title t --body"):
+            yield quoted_heredoc(command, ODD_QUOTE_BODY)
+            for phrase in QUOTED_PHRASES:
+                yield quoted_heredoc(command, "Fix the guard.\n\nRepro: " + phrase
+                                     + " clobbers skills.\n")
+
+    def test_body_is_silent(self):
+        for command in self.bodies():
+            with self.subTest(command=command):
+                self.assertSilent(command)
+
+    def test_override_prefixed_body_is_silent(self):
+        for command in self.bodies():
+            with self.subTest(command=command):
+                self.assertSilent(OVERRIDE + " " + command)
+
+    def test_command_after_the_substitution_is_denied(self):
+        self.assertDenied(quoted_heredoc("git commit -m", 'A 5" screen\n')
+                          + " && npx skills add x")
 
 
 class OverrideTests(GuardCase):
@@ -238,6 +292,17 @@ class CardReproductionTests(unittest.TestCase):
         self.assertEqual(proc.stderr, "")
         decision = json.loads(proc.stdout)["hookSpecificOutput"]
         self.assertEqual(decision["permissionDecision"], "deny")
+
+    def test_long_multi_line_text_finishes_well_inside_the_timeout(self):
+        def text(count):
+            return "".join("line %d: npx skills add some/repo\n" % n for n in range(count))
+        for command in (quoted_heredoc("gh pr create --title t --body", text(5000)),
+                        'git commit -m "' + text(2000) + '"'):
+            with self.subTest(command=command[:40]):
+                proc = subprocess.run(
+                    [sys.executable, HOOK_PATH], input=payload(command),
+                    capture_output=True, text=True, timeout=5)
+                self.assertEqual(proc.stdout, "")
 
 
 if __name__ == "__main__":
