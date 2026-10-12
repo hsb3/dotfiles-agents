@@ -143,18 +143,24 @@ The pending set comes from `hooks/_lib/pending.py`, shared with `subagent-teleme
 cannot disagree about who is live: the `agent-*.meta.json` sidecars in this session's
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
 already settled, unless the caller's transcript holds a `SendMessage` result naming it as resumed
-(`resumedAgentId`; a failed send writes none) stamped after its latest settling row's `ts`.
+(`resumedAgentId`, or `pin.id` on a success: a task owned by a subagent resumes without
+`resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`.
 
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on
 the TaskStop success result only, paired with the TaskStop call it answers (sidechain lines
 included, so a manager's own TaskStop counts): a `<task-notification>` never settles, because a
 queued prompt or an agent's quoted output can carry the same text. A later resume makes it live
-again: a `SendMessage` to it (the tool result carries its id even when it was addressed by name),
-or any later notification for it whose own header is not a kill (the user-resume shape is inferred
-from the 2.1.281 binary, not measured). Known limit: an agent the user kills without TaskStop stays
-live here until a ledger row settles it; it is assumed, not measured, to fire no `SubagentStop`
-either.
+again: a `SendMessage` call to its id keeps it live until the call's result lands, and for good
+unless that result is a failure (`success: false`, or an error string), so a failed send leaves it
+stopped; a result naming it (`resumedAgentId`, or `pin.id` on a success) re-opens it whatever the
+call was addressed to; and so does any later notification for it whose own header is not a kill
+(the user-resume shape is inferred from the 2.1.281 binary, not measured). Known limits: an agent
+the user kills without TaskStop stays live here until a ledger row settles it; it is assumed, not
+measured, to fire no `SubagentStop` either. A send to a live agent still in flight when TaskStop
+kills it (its "queued for delivery" success lands after the stop) re-opens the dead agent until a
+stall row settles it: fail-closed, and the result does not reliably tell a queued delivery from a
+resume.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only
 scouts too — a `checkout` or `pull` changes the tree a scout is reading mid-read.

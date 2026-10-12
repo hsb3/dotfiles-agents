@@ -53,6 +53,7 @@ def _load_hook():
 HOOK = _load_hook()
 
 _SEQ = itertools.count()
+SEND_USE = "toolu_01AQTS2z2WYtZoxcwL3JZFjL"  # a SendMessage call and its result pair on this
 
 
 def _session_id():
@@ -312,7 +313,7 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         return {
             "type": "assistant",
             "message": {"role": "assistant", "content": [{
-                "type": "tool_use", "id": "toolu_resume", "name": "SendMessage",
+                "type": "tool_use", "id": SEND_USE, "name": "SendMessage",
                 "input": {"to": agent_id, "summary": "continue",
                           "message": "keep going"}}]},
         }
@@ -324,7 +325,7 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         return {
             "type": "user",
             "message": {"role": "user", "content": [{
-                "tool_use_id": "toolu_01AQTS2z2WYtZoxcwL3JZFjL",
+                "tool_use_id": SEND_USE,
                 "type": "tool_result", "content": "Resuming agent sleeper"}]},
             "toolUseResult": {
                 "success": True, "message": "Resuming agent sleeper",
@@ -333,9 +334,34 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "version": "2.1.281",
         }
 
+    @staticmethod
+    def _send_result(body, version):
+        return {
+            "type": "user",
+            "message": {"role": "user", "content": [{
+                "tool_use_id": SEND_USE, "type": "tool_result",
+                "content": [{"type": "text", "text": json.dumps(body)}]}]},
+            "toolUseResult": body, "version": version,
+        }
+
+    def _owned_resume_result(self, agent_id):
+        # Trimmed from a real 2.1.263 line: a task owned by a subagent resumes
+        # with no resumedAgentId; only `pin` names it.
+        return self._send_result({
+            "success": True, "message": "Resuming agent " + agent_id[:7],
+            "pin": {"id": agent_id, "name": agent_id, "ref": "843af4"}}, "2.1.263")
+
+    def _failed_send_result(self, agent_id):
+        # Trimmed from a real 2.1.212 line.
+        return self._send_result({
+            "success": False, "message": (
+                'Agent "{0}" could not be resumed: No transcript found for '
+                "agent ID: {0}").format(agent_id)}, "2.1.212")
+
     # -- a SubagentStop-settled agent resumed by SendMessage is live again,
     # ordered by the ledger row's `ts` against the transcript line's `timestamp`.
-    # Only the `resumedAgentId` result counts: a failed send writes none.
+    # Only a result naming it counts (`resumedAgentId`, or `pin.id` on a success);
+    # a failed send names none.
 
     BEFORE, AFTER, LATER = ("2026-08-20T15:30:00.000Z", "2026-08-20T15:40:00.000Z",
                             "2026-08-20T15:45:00.000Z")
@@ -363,6 +389,14 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._settle("f8888888888888888")
         self._transcript(dict(self._send_message("f8888888888888888"), timestamp=self.AFTER))
         self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_subagent_owned_resume_after_the_ledger_settle_makes_it_live_again(self):
+        self._sidecar("f9999999999999999")
+        self._settle("f9999999999999999")
+        self._transcript(dict(self._send_message("f9999999999999999"), timestamp=self.AFTER),
+                         dict(self._owned_resume_result("f9999999999999999"),
+                              timestamp=self.AFTER))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
 
     def test_a_resume_before_the_ledger_settle_does_not_reopen_it(self):
         self._sidecar("f3333333333333333")
@@ -426,15 +460,64 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._sidecar("d3333333333333333")
         self._transcript(*self._taskstop("d3333333333333333"),
                          *self._notification("d3333333333333333"))
-        self._transcript(self._send_message("d3333333333333333"))
+        self._transcript(self._send_message("d3333333333333333"),
+                         self._resume_result("d3333333333333333"))
         reason = self._assert_denied(self._run(self._payload("git commit -m x")))
         self.assertIn("d3333333333333333", reason)
+
+    def test_a_failed_send_after_the_kill_leaves_it_stopped(self):
+        self._sidecar("d9999999999999999")
+        self._transcript(*self._taskstop("d9999999999999999"),
+                         self._send_message("d9999999999999999"))
+        # In flight: live until its result says whether it resumed.
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+        os.remove(self.guard_log)  # the deny logged a row
+        self._transcript(self._failed_send_result("d9999999999999999"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_send_rejected_with_an_error_string_leaves_it_stopped(self):
+        # The string form: an InputValidationError or a permission denial.
+        self._sidecar("da999999999999999")
+        self._transcript(*self._taskstop("da999999999999999"),
+                         self._send_message("da999999999999999"), {
+            "type": "user",
+            "message": {"role": "user", "content": [{
+                "tool_use_id": SEND_USE, "type": "tool_result", "is_error": True,
+                "content": "<tool_use_error>InputValidationError</tool_use_error>"}]},
+            "toolUseResult": "InputValidationError: SendMessage failed"})
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_subagent_owned_resume_after_the_kill_makes_it_live_again(self):
+        self._sidecar("db999999999999999")
+        self._transcript(*self._taskstop("db999999999999999"),
+                         self._send_message("db999999999999999"),
+                         self._owned_resume_result("db999999999999999"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_send_answered_with_no_tool_use_result_still_reopens_it(self):
+        # Subagent transcripts carry the success only in the tool_result text.
+        self._sidecar("dd999999999999999")
+        answer = self._owned_resume_result("dd999999999999999")
+        del answer["toolUseResult"]
+        self._transcript(*self._taskstop("dd999999999999999"),
+                         self._send_message("dd999999999999999"), answer)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_successful_send_naming_no_agent_still_reopens_it(self):
+        # Paired by tool_use id alone; the 2.1.289 message carries a 7-char prefix.
+        self._sidecar("dc999999999999999")
+        result = self._send_result({"success": True, "message": "Resuming agent dc99999"},
+                                   "2.1.289")
+        self._transcript(*self._taskstop("dc999999999999999"),
+                         self._send_message("dc999999999999999"), result)
+        self._assert_denied(self._run(self._payload("git commit -m x")))
 
     def test_a_late_remove_row_does_not_undo_a_resume(self):
         self._sidecar("d4444444444444444")
         queued, _ = self._notification("d4444444444444444")
         self._transcript(*self._taskstop("d4444444444444444"),
                          self._send_message("d4444444444444444"),
+                         self._resume_result("d4444444444444444"),
                          dict(queued, operation="remove", reason="absorbed_mid_turn"))
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
@@ -492,7 +575,10 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._sidecar("e5555555555555555")
         self._transcript(*self._taskstop("e5555555555555555"),
                          self._send_message("e5555555555555555"),
-                         *self._taskstop("e5555555555555555"))
+                         self._resume_result("e5555555555555555"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+        os.remove(self.guard_log)  # the deny logged a row
+        self._transcript(*self._taskstop("e5555555555555555"))
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
     def test_a_deeply_nested_line_does_not_drop_every_worker(self):
