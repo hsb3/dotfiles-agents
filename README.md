@@ -97,7 +97,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 | [`carbon`](plugins/carbon/README.md) | standalone | Build and audit IBM Carbon Design System UIs: IBM's official carbon-builder skill driving the hosted Carbon MCP server it registers. | 1 skill · 1 MCP server |
 | [`bun`](plugins/bun/README.md) | standalone | The bun toolchain as the default JS and TS runtime: command mapping off npm habits, built-ins that replace dependencies, measured traps. | 1 skill |
 | [`plugin-feedback`](plugins/plugin-feedback/README.md) | bundle | Tell every session and worker that plugin defects are reportable, then file one to a fixed template instead of a free-handed gh call. | 2 hooks |
-| [`worktree-root`](plugins/worktree-root/README.md) | bundle | Create Claude Code agent and `EnterWorktree` worktrees under the project checkout-root, with native parity and agent cleanup; flags a `--worktree` session left native. | 1 hook |
+| [`worktree-root`](plugins/worktree-root/README.md) | bundle | Create agent and `EnterWorktree` worktrees under the project checkout-root, native parity and cleanup; flags `--worktree` sessions. | 1 hook |
 
 ## How the plugins are split
 
