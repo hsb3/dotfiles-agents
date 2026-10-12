@@ -201,8 +201,11 @@ tripwire has, and it is worth accepting for the same reason: catching the path a
 actually take, and leaving a refusal in the transcript, is worth much more than the partial
 coverage costs — but it is not a sandbox and must not be sold as one.
 
-Heredoc ceilings, where a call can be missed (all but the last two are excused probes in
-`tests/test_git_guard_differential.py`):
+Heredoc ceilings, where a call can be missed. Each of the first five has a probe in
+`tests/test_git_guard_differential.py` whose opener is glued to a `;`, `|` or `>` (`<<EOF;`);
+this guard flags those only through the line-local reading, kept as one more reading, which runs
+that body as commands, and misses the same command with a blank before the metacharacter. The
+last three have no probe:
 
 - a `<<WORD` opener inside `${...}`, `$[...]`, multi-line arithmetic, or after a quoted `))`;
 - a case-pattern `)`, or a paren inside `${...}` (`${y%)}`, `${y//(/z}`), inside `$(`, which
@@ -212,8 +215,15 @@ Heredoc ceilings, where a call can be missed (all but the last two are excused p
 - zsh reading a `(` glued to a word (`echo a(`) as a glob group spanning lines, so no body
   starts at the newline inside it;
 - bash 5.3's `${ cmd; }`, which ends a body at `EOF}`;
-- two `)#` sites on one line needing different readings (`$(...)#x` is one word, `(true)#x`
-  starts a comment).
+- two `)#` sites in one command needing different readings (`$(...)#x` is one word,
+  `(true)#x` starts a comment);
+- a heredoc inside backticks that close on its opener line (`` x=`cat <<EOF ` `` with
+  `git push` on the next line), which opens no body outside them, yet the next lines up to
+  `EOF` are dropped as one.
+
+The line-local reading also keeps its false positives, to stay fail-closed: a `git` line every
+shell reads as heredoc data after a stray `)` or a `$(` opened inside `"`
+(`cat <<'EOF'; (true)` with `git commit` in the body) is denied.
 
 **Server-side branch protection is the layer above this one.** A local hook cannot stop a
 determined or novel path to the remote; a protected-branch rule on the forge can. This

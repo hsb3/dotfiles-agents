@@ -251,6 +251,12 @@ PROBES = [
     ("hd_backtick_heredoc_quote_body", "x=`cat <<'EOF'\nit's\nEOF\n`; git push # '"),
     ("hd_backtick_heredoc_then_commit", "x=`cat <<EOF\nit's\nEOF\n`\ngit commit -m x\ntrue # '"),
     ("hd_backtick_heredoc_call_inside", "x=`cat <<X\n\"\nX\ngit stash\n`"),
+    # a `<<WORD` that bash reads as quoted text or a comment inside backticks opens nothing
+    ("hd_backtick_dq_opener", 'x=`echo "a <<EOF b"`\ngit push\nEOF'),
+    ("hd_backtick_sq_opener", "x=`echo 'a <<EOF b'`\ngit push\nEOF"),
+    ("hd_backtick_comment_opener", "x=`echo hi # see <<EOF here`\ngit push\nEOF"),
+    ("hd_backtick_grep_sq_opener", "n=`grep -c '<<EOF ' notes.md`\ngit push\nEOF"),
+    ("hd_backtick_closes_in_body", "`<<'EOF'\n`\nEOF\n#<<EOF\ngit push\nEOF"),
     ("hd_ceiling_zsh_glob_group_spans_lines", "cat <<'EOF'; echo a(\n$(\ngit push\nfoo)\nEOF"),
     ("hd_ceiling_backtick_hash_word_after_body",
      "cat <<EOF;\nit's\nEOF\nx=`echo a)#it's`; git push # '"),
@@ -354,31 +360,23 @@ for _name, _context in (("hd_ceiling_param_expansion", "inside `${...}`"),
                          "inside `((` after a quoted `))`"),
                         ("hd_ceiling_case_in_subst",
                          "in a case arm after the pattern `)` inside `$(`")):
-    for _guard in ("scope", "live"):
-        EXCUSED[(_name, _guard)] = "ceiling: `<<` opener " + _context
+    EXCUSED[(_name, "live")] = "ceiling: `<<` opener " + _context
 EXCUSED[("hd_bash32_comment_apostrophe_in_subst", "live")] = (
     "live parity: bash 3.2 reads an apostrophe in a comment inside `$(` as a quote, hardening")
 EXCUSED[("hd_ceiling_subshell_in_subst", "live")] = (
     "ceiling: `<<` opener after a subshell inside `$(`")
-EXCUSED[("hd_ceiling_param_open_paren_in_subst", "scope")] = (
-    "ceiling: a `(` inside `${...}` holds `$(` open")
-EXCUSED[("hd_ceiling_bash32_paren_line_in_subshell_body", "scope")] = (
-    "ceiling: bash 3.2 ends `$(` at a `)` line in a heredoc body")
-for _guard in ("scope", "live"):
-    EXCUSED[("hd_ceiling_backtick_hash_word_after_body", _guard)] = (
-        "README ceiling: backtick substitution")
+EXCUSED[("hd_ceiling_backtick_hash_word_after_body", "live")] = (
+    "README ceiling: backtick substitution")
 for _name in ("hd_mixed_hash_sites_body_opener", "hd_mixed_hash_sites_stash",
               "hd_mixed_hash_sites_in_subst"):
     EXCUSED[(_name, "live")] = "live parity: `#` after a `$(...)` read as a comment, hardening"
-for _guard in ("scope", "live"):
-    EXCUSED[("hd_ceiling_zsh_glob_group_spans_lines", _guard)] = (
-        "ceiling: zsh reads `word(` as a glob group spanning lines")
-for _guard in ("scope", "live"):
-    EXCUSED[("hd_ceiling_param_paren_in_subst", _guard)] = (
-        "ceiling: a `)` inside `${...}` closes `$(` early")
-    EXCUSED[("hd_ceiling_subst_in_unquoted_body", _guard)] = (
-        "ceiling: a `$(...)` in an unquoted heredoc body runs, but the body is dropped")
-    EXCUSED[("hd_ceiling_dq_subst", _guard)] = "README ceiling: `$(...)` inside double quotes"
+EXCUSED[("hd_ceiling_zsh_glob_group_spans_lines", "live")] = (
+    "ceiling: zsh reads `word(` as a glob group spanning lines")
+EXCUSED[("hd_ceiling_param_paren_in_subst", "live")] = (
+    "ceiling: a `)` inside `${...}` closes `$(` early")
+EXCUSED[("hd_ceiling_subst_in_unquoted_body", "live")] = (
+    "ceiling: a `$(...)` in an unquoted heredoc body runs, but the body is dropped")
+EXCUSED[("hd_ceiling_dq_subst", "live")] = "README ceiling: `$(...)` inside double quotes"
 
 
 def _bashes():

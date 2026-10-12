@@ -130,10 +130,10 @@ HEREDOC_START = re.compile(
     r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=[\s;&|<>]|$)""")
 
 
-def _scan_line(line, stack, terminators=(), paren=True, hash_word=False):
-    """(the heredoc terminators pending after this line, each `(word, quoted, dash,
-    depth)`, the contexts open at its end, whether it ends in a line continuation),
-    given the contexts open at its start and the terminators still pending.
+def _scan_line(line, stack, depth, terminators, paren=True, hash_word=False):
+    """(the `$(` count of `stack` at the line's end, whether it ends in a line
+    continuation). `stack` (the contexts open) and `terminators` (the heredoc
+    terminators pending, each `(word, quoted, dash, depth)`) are updated in place.
 
     A context is a quote (`'`, `"`, `$'`, or a backtick, inside which `$(` is not
     parsed), a `$(`, which opens inside `"` too, since quoting resets there, or a
@@ -145,7 +145,7 @@ def _scan_line(line, stack, terminators=(), paren=True, hash_word=False):
     A `#` straight after a `)` starts a comment, or with `hash_word` is part of the
     word (`$(...)#x`, `<(...)#x`); `invocations` flags a call either reading finds.
     """
-    terminators, stack, i = list(terminators), list(stack), 0
+    i = 0
     while i < len(line):
         char = line[i]
         quote = stack[-1] if stack and stack[-1] not in ("$(", "(") else None
@@ -157,7 +157,7 @@ def _scan_line(line, stack, terminators=(), paren=True, hash_word=False):
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
                 # bash keeps a CRLF opener's `\r` in the word
                 terminators.append((word + m.group(3), word != m.group(2),
-                                    bool(m.group(1)), stack.count("$(")))
+                                    bool(m.group(1)), depth))
                 i = m.end()
                 continue
         if quote:
@@ -169,31 +169,35 @@ def _scan_line(line, stack, terminators=(), paren=True, hash_word=False):
                 stack.append(char)
             elif quote == '"' and line.startswith("$(", i):
                 stack.append("$(")
+                depth += 1
                 i += 1
         elif char == "\\":
             if i == len(line) - 1:
-                return terminators, tuple(stack), True
+                return depth, True
             i += 1
         elif line.startswith("$'", i):
             stack.append("$'")
             i += 1
         elif line.startswith("$(", i):
             stack.append("$(")
+            depth += 1
             i += 1
         elif char == "(":
             stack.append(char)
         elif char == ")":
             # ponytail: a case-pattern `)` or a paren inside `${...}` misplaces the end of
             # `$(`, so a body starts or ends in the wrong place; parse `case`/`${` if one bites
-            if stack and stack.pop() == "$(" and not paren:
-                terminators = [t for t in terminators if t[3] <= stack.count("$(")]
+            if stack and stack.pop() == "$(":
+                depth -= 1
+                if not paren:
+                    terminators[:] = [t for t in terminators if t[3] <= depth]
         elif char in "'\"`":
             stack.append(char)
         elif char == "#" and not (hash_word and line[i - 1:i] == ")") and (
                 i == 0 or line[i - 1].isspace() or line[i - 1] in ";&|()"):
             break
         i += 1
-    return terminators, tuple(stack), False
+    return depth, False
 
 
 def _body_end(lines, j, word, quoted, dash, paren=False):
@@ -250,17 +254,98 @@ def strip_heredocs(command, paren=True, hash_word=False):
     bash ends it (`_body_end`).
     """
     lines = command.split("\n")
-    out, stack, pending, i = [], (), [], 0
+    out, stack, depth, pending, i = [], [], 0, [], 0
     while i < len(lines):
         out.append(lines[i])
-        pending, stack, continued = _scan_line(lines[i], stack, pending, paren, hash_word)
+        depth, continued = _scan_line(lines[i], stack, depth, pending, paren, hash_word)
         i += 1
-        depth = stack.count("$(")
-        if continued or stack[-1:] not in ((), ("$(",), ("(",), ("`",)):
+        if continued or (stack and stack[-1] not in ("$(", "(", "`")):
             continue
         ready = [t for t in pending if t[3] >= depth]
         pending = [t for t in pending if t[3] < depth]
         i = _skip_bodies(lines, i, ready, paren)  # each body and its terminator line
+    return "\n".join(out)
+
+
+# the line-local reading, kept verbatim as one more reading so this parser never allows a
+# call the base caught (it reads glued-opener and `"$(` bodies as commands).
+_HEREDOC_START_BASE = re.compile(
+    r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=\s|$)""")
+
+
+def _scan_line_base(line, quote):
+    """Line-local `_scan_line`: (terminators, quote state at the end, continued)."""
+    terminators = []
+    i = depth = 0
+    while i < len(line):
+        char = line[i]
+        if quote:
+            if char == quote[-1]:
+                quote = None
+            elif char == "\\" and quote != "'":
+                i += 1
+        elif char == "\\":
+            if i == len(line) - 1:
+                return terminators, quote, True
+            i += 1
+        elif line.startswith("$'", i):
+            quote = "$'"
+            i += 1
+        elif line.startswith("$(", i):
+            depth += 1
+            i += 1
+        elif char == ")":
+            depth -= 1
+        elif char in "'\"":
+            quote = char
+        elif char == "#" and (i == 0 or line[i - 1].isspace()
+                              or line[i - 1] in ";&|()"):
+            break
+        elif char == "<":
+            m = _HEREDOC_START_BASE.match(line, i)
+            word = m and re.sub(r"[\\'\"]", "", m.group(2))
+            if (m and not (word.isdigit() and word == m.group(2))
+                    and line.count("((", 0, i) <= line.count("))", 0, i)):
+                terminators.append((word + m.group(3), word != m.group(2),
+                                    bool(m.group(1)), depth > 0))
+                i = m.end()
+                continue
+        i += 1
+    return terminators, quote, False
+
+
+def _body_end_base(lines, j, word, quoted, dash, paren=False):
+    """Line-local `_body_end`: the index of the line closing the body, or None."""
+    while j < len(lines):
+        line = lines[j]
+        while (not quoted and j + 1 < len(lines)
+               and (len(line) - len(line.rstrip("\\"))) % 2):
+            j += 1
+            line = line[:-1] + lines[j]
+        if (line.lstrip("\t") if dash else line) in (word, word + ")" * paren):
+            return j
+        j += 1
+    return None
+
+
+def _strip_heredocs_base(command, paren=True):
+    """Line-local `strip_heredocs`, its `_skip_bodies` inlined."""
+    lines = command.split("\n")
+    out, quote, pending, i = [], None, [], 0
+    while i < len(lines):
+        out.append(lines[i])
+        terminators, quote, continued = _scan_line_base(lines[i], quote)
+        i += 1
+        pending += terminators
+        if not pending or quote or continued:
+            continue
+        j = i
+        for word, quoted, dash, in_subst in pending:
+            j = _body_end_base(lines, j, word, quoted, dash, in_subst and paren)
+            if j is None:
+                break
+            j += 1
+        i, pending = i if j is None else j, []
     return "\n".join(out)
 
 
@@ -405,14 +490,21 @@ def invocations(command, cwd):
     the top-level command.
 
     Both readings of a heredoc body opened inside `$(` (bash ends it at a line `WORD)`,
-    zsh reads on) are scanned, each with a `#` after a `)` as a comment and as a word.
+    zsh reads on) are scanned, each with a `#` after a `)` as a comment and as a word,
+    and so is the line-local reading (`_strip_heredocs_base`). Each distinct call yields once.
     """
     hash_words = (False, True) if ")#" in command else (False,)
+    readings = [strip_heredocs(command, paren, hw)
+                for hw in hash_words for paren in (True, False)]
+    readings += [_strip_heredocs_base(command, paren) for paren in (True, False)]
+    seen = set()
     # each stripped text is split both ways too: bash reads `)#` site by site
-    for stripped in dict.fromkeys(strip_heredocs(command, paren, hw)
-                                  for hw in hash_words for paren in (True, False)):
+    for stripped in dict.fromkeys(readings):
         for hash_word in hash_words:
-            yield from _invocations(stripped, cwd, hash_word)
+            for sub, args, where in _invocations(stripped, cwd, hash_word):
+                if (sub, tuple(args), where) not in seen:
+                    seen.add((sub, tuple(args), where))
+                    yield sub, args, where
 
 
 def _invocations(command, cwd, hash_word=False):

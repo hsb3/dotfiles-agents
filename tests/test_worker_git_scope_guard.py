@@ -386,17 +386,17 @@ class CommandParsingTests(unittest.TestCase):
     def test_a_herestring_is_not_a_heredoc(self):
         self.assertTrue(blocked("grep -q x <<< done\ngit stash\ndone"))
 
-    def test_subst_depth_carried_across_lines_keeps_a_data_body_unflagged(self):
-        # every `git commit` here is heredoc data to bash 3.2, bash 5 and zsh: a
-        # stray `)` clamps at 0, a `$(` newline waits, a `$(` opens inside `"`
+    def test_subst_depth_data_bodies_are_denied_by_the_base_reading(self):
+        # every `git commit` here is heredoc data to bash 3.2, bash 5 and zsh, and the
+        # depth scan drops it; the line-local reading runs it, a false positive kept fail-closed
         for command in (
             "cat <<'EOF'; (true)\ngit commit -m x\nEOF",
             "cat <<'EOF' && x=$(echo hi\nEOF\n) && true\ngit commit -m x\nEOF",
             "echo \"$(cat <<'EOF'\nA 12\" screen\ngit commit -m x\nEOF\n)\"",
         ):
             with self.subTest(command=command):
-                self.assertFalse(blocked(command, branch="main"))
-                self.assertTrue(blocked(command + "\ngit commit -m y", branch="main"))
+                self.assertNotIn("git commit", hook.strip_heredocs(command))
+                self.assertTrue(blocked(command, branch="main"))
 
     def test_a_subst_body_ends_at_its_word_on_any_line_holding_a_paren(self):
         # bash 5 runs this `git push`: it ends the body at `EOF` plus any `)` and
