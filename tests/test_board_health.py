@@ -106,6 +106,39 @@ class PrioritySkew(unittest.TestCase):
         self.assertIn(bh.UNSET, found["distribution"])
         self.assertEqual(7, found["distribution"][bh.UNSET])
 
+    def test_exempt_decision_blanks_are_left_out(self):
+        """SKILL.md §6 leaves `decision` items blank on purpose, so they cannot crowd a band."""
+        spread = [item(f"q{n}", priority=f"P{n}") for n in range(4)]
+        decided = [item(f"d{n}", priority=None, labels=["infra", "decision"]) for n in range(6)]
+        self.assertNotIn("priority-skew", findings_by_id(snapshot(spread + decided)))
+        unlabelled = [item(f"d{n}", priority=None) for n in range(6)]
+        self.assertIn("priority-skew", findings_by_id(snapshot(spread + unlabelled)))
+
+    def test_the_share_is_of_the_items_that_are_not_exempt(self):
+        items = [item(f"p{n}", priority="P2") for n in range(5)] + [item("q1", priority="P0")]
+        items += [item(f"d{n}", priority=None, labels=["decision"]) for n in range(4)]
+        findings = findings_by_id(snapshot(items))
+        self.assertIn("priority-skew", findings)
+        found = findings["priority-skew"]
+        self.assertIn("5/6", found["finding"])
+        self.assertIn("4 decision item(s) exempt", found["finding"])
+        self.assertNotIn(bh.UNSET, found["distribution"])
+
+    def test_the_affected_list_omits_exempt_blanks(self):
+        items = [item(f"u{n}", priority=None) for n in range(3)]
+        items += [item("d1", priority=None, labels=["decision"]), item("q", priority="P0")]
+        found = findings_by_id(snapshot(items))["priority-skew"]
+        self.assertNotIn("d1", found["affected"])
+
+    def test_a_ranked_decision_item_still_counts(self):
+        items = [item(f"p{n}", priority="P2", labels=["decision"]) for n in range(7)]
+        items += [item("q1", priority="P0"), item("q2", priority="P1")]
+        self.assertIn("priority-skew", findings_by_id(snapshot(items)))
+
+    def test_an_all_decision_blank_board_has_no_skew(self):
+        items = [item(f"d{n}", priority=None, labels=["decision"]) for n in range(3)]
+        self.assertNotIn("priority-skew", findings_by_id(snapshot(items)))
+
     def test_the_threshold_is_tunable(self):
         items = [item(f"p{n}", priority="P2") for n in range(3)]
         items += [item(f"q{n}", priority="P1") for n in range(3)]

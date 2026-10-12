@@ -111,17 +111,28 @@ def _finding(check: str, severity: str, text: str, affected: list[str], **extra)
     return {"check": check, "severity": severity, "finding": text, "affected": affected, **extra}
 
 
+def is_exempt(item: dict) -> bool:
+    """A blank `decision` item: SKILL.md §6 leaves its priority for the owner."""
+    return priority_of(item) == UNSET and EXEMPT_LABEL in (item.get("labels") or [])
+
+
 def check_priority_skew(items: list[dict], threshold: float) -> dict | None:
     """A band holding most of the board carries no information, so nothing sorts by it."""
+    counted = [i for i in items if not is_exempt(i)]
+    exempt = len(items) - len(counted)
+    items = counted
+    if not items:
+        return None
     distribution = collections.Counter(priority_of(i) for i in items)
     band, count = distribution.most_common(1)[0]
     if count <= threshold * len(items):
         return None
     share = 100 * count / len(items)
+    note = f", {exempt} {EXEMPT_LABEL} item(s) exempt" if exempt else ""
     return _finding(
         "priority-skew",
         "fail",
-        f"{band} holds {count}/{len(items)} open items ({share:.0f}%)"
+        f"{band} holds {count}/{len(items)} open items ({share:.0f}%){note}"
         " — a band this crowded cannot rank anything",
         sorted(i["key"] for i in items if priority_of(i) == band),
         distribution=dict(distribution.most_common()),
@@ -129,10 +140,10 @@ def check_priority_skew(items: list[dict], threshold: float) -> dict | None:
 
 
 def check_priority_missing(items: list[dict]) -> dict | None:
-    """Blank priority fails, except on `decision` items: SKILL.md §6 leaves those blank for the owner."""
+    """Blank priority fails, except on exempt `decision` items."""
     blank = [i for i in items if priority_of(i) == UNSET]
-    exempt = sorted(i["key"] for i in blank if EXEMPT_LABEL in (i.get("labels") or []))
-    keys = sorted(i["key"] for i in blank if i["key"] not in exempt)
+    exempt = sorted(i["key"] for i in blank if is_exempt(i))
+    keys = sorted(i["key"] for i in blank if not is_exempt(i))
     note = f" ({len(exempt)} {EXEMPT_LABEL} item(s) exempt: {' '.join(map(str, exempt))})" if exempt else ""
     if not keys:
         if not exempt:
