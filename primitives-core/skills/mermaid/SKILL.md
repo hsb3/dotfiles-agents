@@ -135,7 +135,7 @@ scripts/render.sh arch.mmd diagrams/01-arch.svg
 scripts/render.sh arch.mmd diagrams/01-arch.png -s 2 -b white
 ```
 
-mermaid-cli ships no headless browser, and without one every render fails with "Could not find chrome-headless-shell", which reads like a syntax error; the script does the one-time download into the puppeteer cache first, so call mermaid-cli directly only after that.
+mermaid-cli ships no headless browser, and without one every render fails with `Error: Could not find chrome-headless-shell (ver. <version>)` (example version, it varies); the script resolves mermaid-cli once through npx (offline-first), runs the one-time browser download into the puppeteer cache from that same install, then renders. Call mermaid-cli directly only after that.
 
 - `-s 2` scale factor keeps PNG crisp for slides; `-b white` avoids transparent-background surprises.
 - Ship SVG + PNG pairs per the output-pipeline conventions in the `diagrams` skill (numbered files in the artifact's `diagrams/` folder).

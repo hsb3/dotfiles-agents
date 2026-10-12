@@ -5,7 +5,7 @@ diagrams, ER diagrams, state diagrams, and class diagrams. Renders natively on G
 the markdown itself, and diffs like code, so it is the default choice for any diagram destined
 for a `.md` file. Enforces the house rule that node labels carry no parentheses or special
 characters, and covers light/dark theming plus local rendering to SVG/PNG through a bundled script that first
-installs the headless browser mermaid-cli needs.
+installs the headless browser mermaid-cli needs, and fails in seconds when offline instead of hanging.
 
 ## When it triggers
 
