@@ -234,7 +234,7 @@ def _repository(path):
     try:
         proc = subprocess.run(
             ["git", "-C", path, "rev-parse", "--git-common-dir"],
-            capture_output=True, timeout=5,
+            env=codex_workers.clean_git_env(), capture_output=True, timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
         return None

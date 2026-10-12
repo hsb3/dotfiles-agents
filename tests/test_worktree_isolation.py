@@ -342,6 +342,42 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.assertIn(project, reason)
         self.assertIn(loose, reason)
 
+    def _run_hook_with_git_dir(self, payload, project, git_dir):
+        """The hook launched from a non-repo cwd with GIT_DIR exported, the
+        way a session started from a git hook or such a shell would run it."""
+        elsewhere = os.path.join(self.tmp.name, "elsewhere")
+        os.makedirs(elsewhere, exist_ok=True)
+        env = {"PATH": os.environ.get("PATH", ""),
+               "HOME": os.path.join(self.tmp.name, "home"),
+               "XDG_DATA_HOME": self.xdg,
+               "CLAUDE_PROJECT_DIR": project, "GIT_DIR": git_dir}
+        return subprocess.run([sys.executable, HOOK_PATH], input=json.dumps(payload),
+                              capture_output=True, text=True, env=env, cwd=elsewhere,
+                              timeout=30)
+
+    def test_relative_inherited_git_dir_does_not_deny_a_project_subdirectory(self):
+        """A relative GIT_DIR resolves against each `-C`, so it finds the
+        project's `.git` from the root and nothing from a subdirectory."""
+        project, _other = self._two_repos()
+        subdir = os.path.join(project, "pkg")
+        os.makedirs(subdir)
+        result = self._run_hook_with_git_dir(self._payload(cwd=subdir), project, ".git")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.strip(), "expected a rewrite, got silence")
+        hso = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertNotIn("permissionDecision", hso)
+        self.assertEqual(hso["updatedInput"]["isolation"], "worktree")
+
+    def test_absolute_inherited_git_dir_cannot_make_another_repo_match(self):
+        """An absolute GIT_DIR names one repository for both lookups, which
+        would make any cwd match the project."""
+        project, other = self._two_repos()
+        result = self._run_hook_with_git_dir(
+            self._payload(cwd=other), project, os.path.join(other, ".git"))
+        reason = self._denied(result)
+        self.assertIn(project, reason)
+        self.assertIn(other, reason)
+
     def test_mismatched_cwd_in_an_unarmed_project_is_inert(self):
         """Off means off: the check sits behind activation, not before it."""
         project, other = self._two_repos(isolate="off")
