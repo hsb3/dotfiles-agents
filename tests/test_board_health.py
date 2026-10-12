@@ -124,6 +124,12 @@ class PrioritySkew(unittest.TestCase):
         self.assertIn("4 decision item(s) exempt", found["finding"])
         self.assertNotIn(bh.UNSET, found["distribution"])
 
+    def test_the_affected_list_omits_exempt_blanks(self):
+        items = [item(f"u{n}", priority=None) for n in range(3)]
+        items += [item("d1", priority=None, labels=["decision"]), item("q", priority="P0")]
+        found = findings_by_id(snapshot(items))["priority-skew"]
+        self.assertNotIn("d1", found["affected"])
+
     def test_a_ranked_decision_item_still_counts(self):
         items = [item(f"p{n}", priority="P2", labels=["decision"]) for n in range(7)]
         items += [item("q1", priority="P0"), item("q2", priority="P1")]
