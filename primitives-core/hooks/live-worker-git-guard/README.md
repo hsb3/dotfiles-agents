@@ -257,14 +257,17 @@ existed. Separators still open command position inside a comment, exactly as the
 A heredoc body is not scanned at all: it is dropped, up to and including its terminator line, before
 tokenizing, so a `&&` or `|` in it opens nothing and a git call after the terminator is read. An
 opener counts only outside quotes (tracked across lines) and outside a comment, and never with an
-all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newline ends a command
+all-digit word or inside an unclosed `((`, where it is a shift. A `$(` is tracked across lines and
+inside `"` too, a `)` with no `$(` open (a subshell, `$((`) changes nothing, and a metacharacter ends
+the word as a blank does (`<<EOF;`). An unquoted newline ends a command
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
 tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word with quotes or
 backslashes in it, `<<\EOF` or `<<E"O"F`, is dequoted to `EOF` and its body is literal; inside an open
-`$(` bash also closes the body at the line `EOF)` and zsh does not, so the command is read both ways and
-flagged if either reading finds a call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
+`$(` bash also closes the body at a line `EOF)`, `EOF )` or `EOF))`, and reads a command glued after it
+(`EOF);git push`); zsh does not, so the command is read both ways and flagged if either reading finds a
+call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
 in order. A `<<` whose terminator never appears drops nothing, so its body
 is read as command lines.
 
