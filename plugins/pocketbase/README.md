@@ -118,7 +118,7 @@ python3 "$PLUGIN_ROOT/hooks/_lib/codex_roles.py" /path/to/project --plugin-root 
 ```
 
 Start a fresh session and trust the package hooks in `/hooks`. The native `worker-context` and `worktree-isolation` hooks inject
-canonical role instructions and enforce each role’s dispatch and patch-tool exclusions. With Atelier's worker isolation active, patch file headers indented with spaces or tabs route into the worker's checkout like any other. A dispatch that sets `isolation: "worktree"` itself from a session working directory in another repository is refused like an armed one.
+canonical role instructions and enforce each role’s dispatch and patch-tool exclusions. With Atelier's worker isolation active, patch file headers indented with spaces or tabs route into the worker's checkout like any other. A dispatch that sets `isolation: "worktree"` itself from a session working directory in another repository is refused like an armed one. The worktree-isolation README explains why Codex workers need the five managed writable roots and what holds when work belongs in another repository.
 These roles run without an Atelier activation file. Install Atelier separately for worktree
 isolation; shell access remains subject to the role’s instructions and the project sandbox. Setup preserves user-edited profiles and uses the shared OpenAI model tiers.
 When Atelier is installed, run its project setup after generating these roles. It reconciles
