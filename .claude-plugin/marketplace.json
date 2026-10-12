@@ -24,7 +24,7 @@
       },
       "description": "Write executable work items, measure board health, rank backlog priorities through Kata, GitHub Projects, Backlog.md or plain-file adapters, and reconcile GitHub mirrors with explicit apply. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
       "name": "board-desk",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "./plugins/board-desk"
     },
     {
