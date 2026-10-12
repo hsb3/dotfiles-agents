@@ -128,12 +128,14 @@ GitHub renders Mermaid with the viewer's theme automatically — **don't hardcod
 
 ## Rendering to SVG/PNG (decks, docs outside GitHub)
 
-GitHub needs no rendering step. For decks and standalone artifacts, render with mermaid-cli (no global install needed):
+GitHub needs no rendering step. For decks and standalone artifacts, render with the bundled script (resolve `scripts/render.sh` beside this file; no global install needed):
 
 ```bash
-npx -y @mermaid-js/mermaid-cli -i arch.mmd -o diagrams/01-arch.svg
-npx -y @mermaid-js/mermaid-cli -i arch.mmd -o diagrams/01-arch.png -s 2 -b white
+scripts/render.sh arch.mmd diagrams/01-arch.svg
+scripts/render.sh arch.mmd diagrams/01-arch.png -s 2 -b white
 ```
+
+mermaid-cli ships no headless browser, and without one every render fails with "Could not find chrome-headless-shell", which reads like a syntax error; the script does the one-time download into the puppeteer cache first, so call mermaid-cli directly only after that.
 
 - `-s 2` scale factor keeps PNG crisp for slides; `-b white` avoids transparent-background surprises.
 - Ship SVG + PNG pairs per the output-pipeline conventions in the `diagrams` skill (numbered files in the artifact's `diagrams/` folder).
