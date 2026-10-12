@@ -12,8 +12,8 @@ render target.
    slide: it names the topic.
 2. **One message per slide.** If a slide has two messages, split it.
 3. **BLUF.** Lead with the conclusion. The cover orients (topic, purpose,
-   scope, audience) and may carry the conclusion as a decision strip; the
-   first content slide states it as an action title, then evidence, then the ask.
+   scope). The cover may carry the conclusion as a decision strip; otherwise
+   the first content slide states it as an action title, then evidence, then the ask.
 4. **Cite sources.** Put a source footer on any slide with data.
 5. **Be scannable.** ≤6 bullets, ≤~10 words each. Prefer numbers and short
    phrases over sentences. Spotlight the one number that matters with
@@ -77,7 +77,8 @@ For a comprehensive or decision briefing:
 - **Callouts, ledes, and takeaway lines are complete sentences**; fragments
   stay inside tables and stat cards where structure explains them.
 - **The cover orients first**: topic, purpose (the decision or action asked
-  for), scope and audience, then the conclusion as a decision strip.
+  for) and scope. The conclusion goes in a cover decision strip, or else on
+  the first content slide, never as the cover title.
 - **Orientation up front pays**: an early slide mapping where the underlying
   artifacts live (and how the material was produced) earns trust for
   everything after it.
