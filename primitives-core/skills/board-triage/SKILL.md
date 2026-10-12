@@ -115,7 +115,9 @@ some other field.**
 ## 3. The rubric
 
 The rubric emits a priority band `P0`–`P3` from Impact × Effort. Whether the board spells that
-`P1`, `high`, or `2` is the adapter's field map, not this table's problem.
+`P1`, `high`, or `2` is the adapter's field map, not this table's problem. A backend's extra native
+band (kata's `P4`) exports and round-trips as a set value, never as blank; a pass leaves it in place
+unless it re-ranks the item.
 
 | | Effort S/M | Effort L/XL |
 |---|---|---|
@@ -142,7 +144,10 @@ backend's own field names and option shapes still live in that backend's adapter
 
 ## 5. Procedure
 
-1. **Snapshot.** Run the adapter's export command; read the JSON it writes.
+1. **Snapshot.** Run the adapter's export command; read the JSON it writes. Keep the snapshot and
+   the changeset in a temporary directory outside the working tree (`T=$(mktemp -d)`, then
+   `"$T/board-snapshot.json"`, `"$T/changeset.tsv"`) and delete it after the post-pass health
+   check runs.
 2. **Find the work.** List items whose priority is null (untriaged), plus anything whose ranking
    looks stale — a top-band item no longer on a dated path, a blocked item whose blocker closed.
    **Drop everything the snapshot marks `state: done` first.** A rank on a closed item changes
@@ -162,7 +167,11 @@ backend's own field names and option shapes still live in that backend's adapter
 - A dated critical path forces the top band regardless of effort.
 - Don't invent Impact/Effort for items you can't see. An honest blank beats a fabricated rank —
   the next pass, or the owner, fills it. An owner-gated item (one whose scope is a decision, not
-  a build) leaves blank too, and gets flagged.
+  a build) leaves blank too, and the flag is the `decision` label: `board_health.py` exempts
+  `decision`-labelled blanks from priority-missing and names them as exempt, so the post-pass check
+  can read clean while a decision is open (priority-skew still counts them in the `(unset)`
+  band). A blank left only for lack of context is still a priority-missing finding, and that
+  finding is its flag.
 - Ranking is not the only output. A pass that reads every untriaged item is the pass most likely
   to notice a duplicate, or a closed item whose defect is demonstrably still live — say so
   instead of quietly assigning it a band.

@@ -20,10 +20,11 @@ board-triage SKILL.md. Run from the repo root, or pass `--root`.
 
 ```bash
 S="<board-triage-skill-dir>/scripts"
-python3 "$S/file_tracker.py" export --out board-snapshot.json
+T=$(mktemp -d)   # scratch for snapshot + changeset; see SKILL.md §5
+python3 "$S/file_tracker.py" export --out "$T/board-snapshot.json"
 ```
 
-Prints `<n> items (<n> untriaged) -> board-snapshot.json`. Only open items are exported;
+Prints `<n> items (<n> untriaged) -> <path>`. Only open items are exported;
 `done` and `dropped` are closed, not triage work. While any item file breaks the grammar,
 export exits 1 and prints a `BROKEN <path>: <why>` line per problem instead of a snapshot: a
 pass over a tracker it cannot fully read would rank a partial board.
@@ -31,8 +32,8 @@ pass over a tracker it cannot fully read would rank a partial board.
 ## Apply
 
 ```bash
-python3 "$S/file_tracker.py" apply --changeset changeset.tsv            # dry-run diff
-python3 "$S/file_tracker.py" apply --changeset changeset.tsv --apply    # write
+python3 "$S/file_tracker.py" apply --changeset "$T/changeset.tsv"            # dry-run diff
+python3 "$S/file_tracker.py" apply --changeset "$T/changeset.tsv" --apply    # write
 ```
 
 Dry-run by default; cells already at the target value are dropped, so re-runs are free. Each

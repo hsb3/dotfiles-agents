@@ -83,13 +83,17 @@ which system is which at Phase 0, and never assume closing a PR closed a backlog
 
 ## Phase 0 — Orient (and confirm authority)
 
-- Read the handoff, then the triage view. If none exists, offer `/waves init` (below).
+- Read the handoff, then the triage view. If no view exists, offer `/waves init` (below). If the
+  project has no handoff, do not create one: the stop report names the view's path or id and
+  points at the `handoff` skill's init, so the next session can find the view.
 - Confirm once, at the start, that the session has authority to **commit, push, open PRs, and
   merge** for this run. If the user's launch prompt already says "resolve/close all issues as
   planned", that is the grant — don't re-ask per wave.
-- Default scope is the items the triage view already ranks as ready this run, never the whole
-  open backlog: a bare "run the waves" plans only that ranked set into crews. Never infer, from
-  a general request, that the whole backlog should go into crews in one run — widen only on
+- Default scope is the items the triage view ranks as ready this run, never the whole open
+  backlog: a bare "run the waves" plans only that ranked set into crews. A view created or first
+  ranked earlier in this same run counts; its ready marks are the scope. If the view ranks
+  nothing ready, say so and stop before planning, never plan an empty wave silently. Never
+  infer, from a general request, that the whole backlog should go into crews in one run — widen only on
   explicit say-so.
 - **Check for a live coordination signal on this branch before planning anything.** Read what
   the session start surfaced about other recent sessions here, and record the trunk tip
@@ -112,7 +116,10 @@ the tracker binding, then:
 - Close what's actually done (epics whose children all shipped); merge green dependency-bump PRs.
 - Route anything known-but-untracked (deferred items from prior runs, findings, a previous
   run's hardening list) through Phase 6's fold order before filing it — a line a previous run
-  deliberately left unfiled is not intake.
+  deliberately left unfiled is not intake. On a first run those sources (proof packages,
+  hardening lists) are empty and are skipped. Intake that repeats an item already captured (a
+  code comment restating a notes line) folds into that item, citing both sources, never a second
+  item.
 - **Split the backlog into two queues:** *buildable* (crews can close it) and **owner-gated**
   (needs a ruling, sign-off, or missing decision). Crews never pick up owner-gated items — a
   crew "resolving" an undecided question is the workflow's worst failure mode. If a cited
@@ -138,10 +145,11 @@ Shaping rules, in priority order:
    queue, not ad hoc.
 
 **Write the plan into the triage view as "Delivery plan vN" before launching** — a table of
-`wave | branch | items resolved | gate`, plus the owner decision queue. It goes in the
-**Delivery history** block at the bottom: expanded while `PLANNED`, collapsed on `EXECUTED` —
-never above the open sections. The plan must survive compaction and be visible to the owner
-without asking the session.
+`Wave | Branch | PR | Resolves | Gate` (the same table the history keeps; PR is filled at
+landing). Owner decisions are not carried here: they live in the view's **Decision gaps**
+section. The plan goes in the **Delivery history** block, immediately above the Maintenance
+protocol: expanded while `PLANNED`, collapsed on `EXECUTED` — never above the open sections.
+The plan must survive compaction and be visible to the owner without asking the session.
 
 ## Phase 3 — Launch (delegation executes)
 
@@ -196,24 +204,25 @@ Send that amendment with `SendMessage` to the running manager.
   Never file a draft for someone else to finish. Tracked is still the bar for "will not be
   forgotten" — a new item is the last rung of it, not the first.
 - **Update the triage view**: mark the delivery plan **EXECUTED** with the actual landing table,
-  refresh the ranking and date — then **move the plan below the open sections** into the
-  delivery-history block and collapse it. Position is the reader's only done/outstanding cue; an
-  executed plan left on top reads as current standing. Collapse prior executed plans to one-line
+  refresh the ranking and date, and collapse it in place in the delivery-history block. Position
+  is the reader's only done/outstanding cue; an executed plan left on top reads as current
+  standing. Collapse prior executed plans to one-line
   pointers.
 - **Reconcile the view against the inventory one last time.** Every item the run closed should
   be closed in the tracker, not just in the view — on a split tracker/forge this is where a
   missed close surfaces.
-- **Present the owner decision queue as one batch**, not a dribble — options + a recommendation
+- **Present the view's Decision gaps as one batch**, not a dribble — options + a recommendation
   per item. For a multi-item queue, use the **owner-signoff** skill if installed (local HTML
-  form); record rulings back onto the items and the handoff, and execute any that unblock
-  same-session work.
-- Run the **`handoff`** skill; prune worktrees and branches (`git worktree prune`).
+  form); record rulings back onto the items and the handoff (no handoff: see Phase 0), and
+  execute any that unblock same-session work.
+- Run the **`handoff`** skill (no handoff: see Phase 0); prune worktrees and branches
+  (`git worktree prune`).
 
 <!-- harness:claude-code -->
 There is no `/handoff` command: in Claude Code a command silently shadows a same-named skill in
 the same plugin, so atelier ships the skill only (`primitives-core/commands/README.md`).
 <!-- /harness -->
-- Close with session totals: waves landed, closed against filed per wave plus the run total, what
+- Close with session totals (the run's stop report): waves landed, closed against filed per wave plus the run total, what
   remains and *why* (owner-gated / parked / next wave). **Filed over closed is the signal** — a
   wave above 1.0 grew the backlog it was run to shrink, so name what drove it.
 
@@ -226,8 +235,11 @@ same everywhere:
 - **A curated, ranked view of the open backlog**, stating in its own header that the inventory
   is the source of truth and this is a view of it.
 - **Sections for the open work** — actionable-and-unblocked, what remains against a milestone
-  or epic, unscheduled backlog, parked-by-owner-ruling, and the owner decision queue.
-- **A delivery-history block at the bottom** holding delivery plans, collapsed once executed.
+  or epic, unscheduled backlog, parked-by-owner-ruling, and **Decision gaps**, the one home of
+  the owner queue: tracker items awaiting a ruling, plus a short separate list of session questions that are not tracker items
+  (authority, scope, a branch merge).
+- **A delivery-history block** holding delivery plans, collapsed once executed, immediately above
+  the maintenance protocol.
 - **A maintenance protocol** in the artifact itself: open work leads and executed plans sit last;
   every item from the inventory appears exactly once with its state explicit; refresh at session
   boundaries or whenever the backlog changes in bulk.
@@ -235,7 +247,7 @@ same everywhere:
 - It lives in the tracker, never as a tracked file — refreshes must not touch commit history.
 
 Record the view's id in the handoff's map section so future sessions find it by pointer, not by
-search.
+search; with no handoff, see Phase 0.
 
 ## The compact launch prompt this replaces
 

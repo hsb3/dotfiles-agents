@@ -135,8 +135,8 @@ board.
 **Curation rhythm** (7hws, 2026-09-07; health + reconcile steps added 2026-09-08). At session
 start, in order:
 
-1. `kata_doctor.py` — wiring (binary, daemon, binding, `KATA_AUTHOR`, shim, duplicate server;
-   every warn is wiring debt to fix).
+1. kata-custody's SessionStart doctor reports wiring (token, daemon, version, author; a
+   failure blocks kata writes until it is fixed).
 2. `audit_issues.py --project dotfiles-agents` — definition and dependency hygiene over open
    issues.
 3. `board_health.py` — does the board still *discriminate*? **This step now runs itself.** The
@@ -159,12 +159,11 @@ start, in order:
 
 Board-desk owns board-triage (health, adapters and reconciliation) and task-authoring.
 Planning-desk stays in mise-en-place; waves stays in atelier.
-Steps 1–2 ship in the separately installed kata plugin from `hsb3/kata-oversight`
-(`~/.claude/plugins/cache/kata-oversight/kata/<version>/skills/kata-audit/scripts/`).
+Steps 1–2 ship in kata-custody (private kata-extras marketplace): step 1 is its SessionStart
+hook, step 2 is its kata-audit skill's `audit_issues.py` at
+`~/.claude/plugins/cache/kata-extras/kata-custody/<version>/skills/kata-audit/scripts/`.
 Findings to fix: `title-long`, `no-acceptance`, `prose-dep` (add the edge, or reword if it is
 not a real prerequisite), `no-priority` (the frozen kaneo children under `my1a` may stay blank).
-Ignore `unlinked-ref` until kata-oversight `z6gb` filters its noise (closed cards named in prose,
-epics naming their own children).
 
 **Steps 2 and 3 are not redundant.** `audit_issues.py` reads one card and asks whether its
 fields are *populated*; `board_health.py` reads the whole board and asks whether those fields

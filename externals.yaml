@@ -36,7 +36,9 @@ externals:
     upstream: https://github.com/hsb3/kata-oversight
     path: plugins/kata
     ref: fced756974bed7c7288276568d43e83759218e6b
-    provides: "Cross-marketplace companion for board-desk: Kata workflow, wiring checks and per-card definition/dependency audits. Reference only; no upstream bytes are copied into this marketplace."
+    # ARCHIVED upstream: its MCP shim was merged into kata itself, and board-desk names no
+    # companion plugin. upstream/ref stay as provenance only.
+    provides: "Archived reference only (kata's MCP shim was merged upstream). Nothing is installed from it and no upstream bytes are copied into this marketplace."
     targets: [claude-code, codex]
   - id: pocketbase-best-practices
     kind: skill
@@ -75,6 +77,8 @@ externals:
 # bytes would carry a copyleft grant into every install of this marketplace, so the entry
 # records the pin and the shape of the curated set and copies nothing. It has no roster entry
 # and no plugin, so nothing renders or drift-checks it.
+  # RETIRED: herdr replaced cmux. Nothing is installed from upstream; the row stays
+  # reference-only (the GPL-3.0 reason above stands).
   - id: cmux
     kind: skill
     upstream: https://github.com/manaflow-ai/cmux

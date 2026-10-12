@@ -3,9 +3,9 @@
 
 Implements the adapter contract in the skill's SKILL.md §2 against a Projects v2 board.
 
-    github_projects_board.py export -o acme -n 8 --out board-snapshot.json
-    github_projects_board.py apply -o acme -n 8 --changeset changeset.tsv           # dry-run
-    github_projects_board.py apply -o acme -n 8 --changeset changeset.tsv --apply   # write
+    github_projects_board.py export -o acme -n 8 --out "$T/board-snapshot.json"
+    github_projects_board.py apply -o acme -n 8 --changeset "$T/changeset.tsv"           # dry-run
+    github_projects_board.py apply -o acme -n 8 --changeset "$T/changeset.tsv" --apply   # write
 
 Config: --owner and --number (--owner-type org for an org-owned board). Auth is `gh`'s own,
 run with GITHUB_TOKEN unset: a repo-scoped GITHUB_TOKEN shadows the project-scoped keyring

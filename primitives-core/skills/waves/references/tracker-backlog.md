@@ -32,7 +32,7 @@ back whole, using the same template as the GitHub triage issue (see `tracker-git
 with refs written as task ids (`TASK-12`). Adapt its GitHub-only lines: drop pinning and the
 dependabot and self-exclusion notes, write the merge commit where the plan table says PR when
 there is no remote, and take the ranking inputs from this binding. It exists only in the checkout that wrote it, so
-write it from the main checkout and record its path in the handoff.
+write it from the main checkout and record its path in the handoff (no handoff: see Phase 0).
 
 ## Landing a wave
 

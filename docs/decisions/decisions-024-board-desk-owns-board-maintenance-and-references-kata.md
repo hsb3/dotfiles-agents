@@ -41,6 +41,14 @@ Mise-en-place alone keeps its working authoring dependency. Enabling both plugin
 list task-authoring twice, as observed historically in decision-020; no fresh runtime
 listing proof is claimed here. Owning and carrying bundles follow decision-017's distinction.
 
+## Amended 2026-10-11 (cn3k) — kata-oversight archived
+
+Owner ruling: kata-oversight is archived, because its MCP shim was merged into kata itself, so
+kata is no longer a dependency from `hsb3/kata-oversight`. Board-desk names no companion
+plugin and needs only the kata CLI. Its `externals.yaml` entry stays as archived provenance.
+This supersedes the cross-marketplace dependency bullet above, and the per-card audit it named
+is no longer a board-desk dependency.
+
 ## Consequences
 
 Code-desk consumers install board-desk to keep board triage. Board-desk works with

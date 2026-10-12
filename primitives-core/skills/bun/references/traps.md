@@ -52,7 +52,7 @@ independently re-tested here; the global file is kept `[install]`-only on that b
 
 ## 3. A floating `"latest"` in `package.json` is a landmine bun will find
 
-**Measured**, during the `functionform-obsidian` migration.
+**Measured**, during a migration of a production app.
 
 `package.json` declared `"@assistant-ui/react": "latest"`. npm's `package-lock.json` had it
 pinned at **0.12.27** and kept serving that. `bun install` re-resolved `latest` to

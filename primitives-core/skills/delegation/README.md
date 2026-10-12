@@ -127,7 +127,7 @@ appended to live, and independent derivations of the same figure have already di
 ## Shared with the opencode port
 
 These references are one text with two copies (`docs/atelier-parity.md`); the peer lives in
-`dotfiles-agents-oc`. A passage that is true of only one harness belongs in a
+the opencode port. A passage that is true of only one harness belongs in a
 `<!-- harness:claude-code -->` block, never in the neutral prose the parity gate compares — that
 includes anything naming `protected-branches:`, `worker-git-scope-guard`, or how this harness
 resolves a worker's relative paths, none of which have an opencode counterpart.

@@ -32,7 +32,7 @@ the same template as the GitHub triage issue (see `tracker-github.md`, Init), wi
 as `t<n>`, and adapt its GitHub-only lines: drop pinning, the dependabot and self-exclusion
 notes and the Milestone section, write the merge commit where the plan table says PR, and
 take the ranking inputs from this binding. Write it from the main checkout, never from a worktree, because it exists only in the
-checkout that wrote it; record its path in the handoff.
+checkout that wrote it; record its path in the handoff (no handoff: see Phase 0).
 
 ## Landing a wave
 

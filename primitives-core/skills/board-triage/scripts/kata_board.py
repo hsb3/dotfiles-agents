@@ -3,9 +3,9 @@
 
 Implements the adapter contract in the skill's SKILL.md §2 against a Kata project.
 
-    kata_board.py export --project keel --out board-snapshot.json
-    kata_board.py apply --project keel --changeset changeset.tsv           # dry-run diff
-    kata_board.py apply --project keel --changeset changeset.tsv --apply   # write
+    kata_board.py export --project keel --out "$T/board-snapshot.json"
+    kata_board.py apply --project keel --changeset "$T/changeset.tsv"           # dry-run diff
+    kata_board.py apply --project keel --changeset "$T/changeset.tsv" --apply   # write
 
 Config: just --project. Kata's own auth (KATA_SERVER / KATA_AUTH_TOKEN) is assumed
 already configured on this machine — see the kata-hosted-daemon reference.
@@ -26,10 +26,9 @@ import subprocess
 import sys
 
 # --- rubric bands -> Kata's native priority scale (0=highest .. 4=lowest) ---
-# The rubric emits P0-P3 (SKILL.md §3); Kata stores an integer. Priority 4 exists
-# on Kata but has no rubric band — it's out of this adapter's vocabulary, same as
-# any other value a changeset didn't put there.
-BAND_TO_PRIORITY = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
+# The rubric emits P0-P3 (SKILL.md §3); Kata stores an integer. Kata's 4 is its own
+# band here, so an item deliberately set to 4 never reads as untriaged.
+BAND_TO_PRIORITY = {"p0": 0, "p1": 1, "p2": 2, "p3": 3, "p4": 4}
 PRIORITY_TO_BAND = {v: k.upper() for k, v in BAND_TO_PRIORITY.items()}
 
 
@@ -83,7 +82,7 @@ def build_snapshot(project, issues, labels):
     return {
         "board": {"name": project, "backend": "kata"},
         "fields": {
-            "priority": {"options": ["P0", "P1", "P2", "P3"]},
+            "priority": {"options": ["P0", "P1", "P2", "P3", "P4"]},
             "labels": {"options": sorted(lbl["label"] for lbl in labels)},
             "due": {"options": ["YYYY-MM-DD"]},
         },
@@ -99,7 +98,7 @@ def normalize(field, value):
             return None, None
         native = BAND_TO_PRIORITY.get(value.lower())
         if native is None:
-            return None, f"priority '{value}' is not a band (P0-P3)"
+            return None, f"priority '{value}' is not a band (P0-P4)"
         return native, None
     if field == "labels":
         return sorted(n.strip() for n in value.split(",") if n.strip()), None
