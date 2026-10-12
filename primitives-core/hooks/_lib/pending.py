@@ -301,15 +301,32 @@ def _settled_at(tail_bytes):
     return settled
 
 
+def _resumed_keys(result):
+    """Agent keys a SendMessage `toolUseResult` shows resumed.
+
+    `resumedAgentId`, or on a success the `pin.id`: a task owned by a subagent
+    resumes with no resumedAgentId (measured on 2.1.263; 2.1.289's binary
+    omits it the same way). A failed send is `success: false` or a string.
+    """
+    if not isinstance(result, dict):
+        return set()
+    keys = {agent_key(result.get("resumedAgentId"))}
+    pin = result.get("pin")
+    if result.get("success") is True and isinstance(pin, dict):
+        keys.add(agent_key(pin.get("id")))
+    keys.discard(None)
+    return keys
+
+
 def _resumed_after(transcript_path, settled_at):
     """Keys of `settled_at` that `transcript_path` resumed after their settle.
 
-    A resume is a `user` line whose `toolUseResult.resumedAgentId` names it
-    and whose `timestamp` is later than the ledger row's `ts` (measured live,
-    2026-10-12). The `SendMessage` call alone never counts, since a failed send
-    writes no resumedAgentId; nor does a notification, since a background
-    agent's own completion notice lands after its stop row. Unreadable or
-    unordered evidence resumes nothing.
+    A resume is a `user` line whose `toolUseResult` names it (`_resumed_keys`)
+    and whose `timestamp` is later than the ledger row's `ts`. The
+    `SendMessage` call alone never counts, since a failed send names no
+    agent; nor does a notification, since a background agent's own completion
+    notice lands after its stop row. Unreadable or unordered evidence resumes
+    nothing.
     """
     resumed = set()
     if not settled_at or not transcript_path:
@@ -317,7 +334,7 @@ def _resumed_after(transcript_path, settled_at):
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
-                if ("resumedAgentId" not in line
+                if (("resumedAgentId" not in line and '"pin"' not in line)
                         or not any(k in line for k in settled_at)):
                     continue
                 try:
@@ -329,10 +346,10 @@ def _resumed_after(transcript_path, settled_at):
                 result = obj.get("toolUseResult")
                 if obj.get("type") != "user" or not isinstance(result, dict):
                     continue
-                key = agent_key(result.get("resumedAgentId"))
                 moment = _moment(obj.get("timestamp"))
-                if moment and key in settled_at and moment > settled_at[key]:
-                    resumed.add(key)
+                for key in _resumed_keys(result):
+                    if moment and key in settled_at and moment > settled_at[key]:
+                        resumed.add(key)
     except OSError:
         return set()
     return resumed
@@ -390,16 +407,17 @@ def stopped_ids(transcript_path, candidates):
     its ledger stop row or a stall row settles it.
 
     Any of these LATER records re-opens it, until its own SubagentStop settles
-    it normally: a `toolUseResult.resumedAgentId` naming it (measured
-    2026-10-12; the `SendMessage` call alone never counts, since a failed send
-    writes no resumedAgentId); a notification for it, in any record kind,
-    whose first header does not say `killed` (the "was resumed by the user"
-    notification is inferred from the 2.1.281 binary, not measured).
-    Reading every notification copy only ever fails closed.
+    it normally: a `SendMessage` call to its id, until that call's result
+    lands, and for good when the result is a success or names it
+    (`_resumed_keys`), so a failed send leaves it stopped; a notification for
+    it, in any record kind, whose first header does not say `killed` (the
+    "was resumed by the user" notification is inferred from the 2.1.281
+    binary, not measured). Reading every notification copy only ever fails
+    closed.
 
     Read whole, in order: not tail-bounded, because a kill aging out of a
     window would re-block on an agent that is long dead. Lines naming no
-    candidate are skipped before parsing. A missing or unreadable transcript
+    candidate and answering no recorded send are skipped before parsing. A missing or unreadable transcript
     yields the empty set, per the module's convention: it only ever removes
     agents from the pending set, so "cannot tell" leaves the ledger's answer.
     """
@@ -408,10 +426,12 @@ def stopped_ids(transcript_path, candidates):
     if not wanted or not transcript_path:
         return stopped
     taskstop_uses = set()  # tool_use ids of TaskStop calls; their input names the id
+    sends = {}  # SendMessage tool_use id -> addressee, live until its result lands
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
-                if not any(k in line for k in wanted):
+                # A result may name the agent by a 7-char prefix, so its use id counts.
+                if not any(k in line for k in wanted) and not any(u in line for u in sends):
                     continue
                 try:
                     obj = json.loads(line)
@@ -430,7 +450,11 @@ def stopped_ids(transcript_path, candidates):
                                 and message.startswith("Successfully stopped task")
                                 and _answers(obj, taskstop_uses)):
                             stopped.add(key)
-                        stopped.discard(agent_key(result.get("resumedAgentId")))
+                    stopped.difference_update(_resumed_keys(result))
+                    for use in [u for u in sends if _answers(obj, {u})]:
+                        key = sends.pop(use)
+                        if isinstance(result, dict) and result.get("success") is True:
+                            stopped.discard(key)
                     message = obj.get("message")
                     text = message.get("content") if isinstance(message, dict) else None
                 elif kind == "queue-operation":
@@ -444,12 +468,19 @@ def stopped_ids(transcript_path, candidates):
                     for block in content if isinstance(content, list) else ():
                         if not (isinstance(block, dict) and block.get("type") == "tool_use"):
                             continue
-                        if block.get("name") == "TaskStop" and isinstance(block.get("id"), str):
+                        if not isinstance(block.get("id"), str):
+                            continue
+                        if block.get("name") == "TaskStop":
                             taskstop_uses.add(block["id"])
+                        elif (block.get("name") == "SendMessage"
+                                and isinstance(block.get("input"), dict)):
+                            key = agent_key(block["input"].get("to"))
+                            if key in wanted:
+                                sends[block["id"]] = key
                 stopped.discard(_reopened_by_notification(text))
     except OSError:
         return set()
-    return stopped
+    return stopped - set(sends.values())
 
 
 def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES,
