@@ -319,6 +319,37 @@ class HookRunTests(_ScrubbedEnv):
         self.assertIn("handoff", text)
         self.assertIn("coordinator", text)
 
+    def test_session_soft_and_hard_name_the_prepare_compact_command(self):
+        for tier, ctx in (("soft", 260_000), ("hard", 410_000)):
+            text = hook._format_message(
+                tier, ctx, 150_000, 250_000, 400_000, layer="session")
+            for needle in (
+                "/atelier:prepare-compact",
+                "atelier:compact-handoff",
+                "if a coordinator owns your cycle, stop after the handoff "
+                "and wait for it rather than compacting",
+            ):
+                self.assertIn(needle, text, tier)
+
+    def test_worker_texts_are_unchanged_and_do_not_name_prepare_compact(self):
+        self.assertEqual(hook.MESSAGES["notice"], (
+            "atelier context-watermark: context is ~{k}k tokens, past the ~{notice}k "
+            "notice watermark. This is advisory: reduce further grounding reads and "
+            "continue the current bounded slice."))
+        self.assertEqual(hook.MESSAGES["soft"], (
+            "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
+            "watermark. This is advisory: checkpoint at the next safe boundary; finish "
+            "small bounded work before arranging continuation."))
+        self.assertEqual(hook.MESSAGES["hard"], (
+            "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
+            "watermark. This is advisory and grants no authority: preserve the branch, "
+            "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
+            "before continuation."))
+        for tier, ctx in (("soft", 260_000), ("hard", 410_000)):
+            text = hook._format_message(
+                tier, ctx, 150_000, 250_000, 400_000, layer="worker")
+            self.assertNotIn("prepare-compact", text)
+
     def test_notice_soft_and_hard_transition_without_repeating(self):
         session = "session-{0}".format(next(_SEQ))
         for tokens, expected in ((160_000, "notice"), (260_000, "soft"),
