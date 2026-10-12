@@ -150,10 +150,11 @@ settles it. The guard settles it from the session transcript instead (`pending.s
 the TaskStop success result only, paired with the TaskStop call it answers (sidechain lines
 included, so a manager's own TaskStop counts): a `<task-notification>` never settles, because a
 queued prompt or an agent's quoted output can carry the same text. A later resume makes it live
-again: a `SendMessage` to it (the tool result carries its id even when it was addressed by name),
-or any later notification for it whose own header is not a kill (the user-resume shape is inferred
-from the 2.1.281 binary, not measured). Known limit: an agent the user kills without TaskStop stays
-live here until a ledger row settles it; it is assumed, not measured, to fire no `SubagentStop`
+again: a `SendMessage` result naming it as resumed (`resumedAgentId`, present even when it was
+addressed by name; a failed send writes none, so the call alone never counts), or any later
+notification for it whose own header is not a kill (the user-resume shape is inferred from the
+2.1.281 binary, not measured). Known limit: an agent the user kills without TaskStop stays live
+here until a ledger row settles it; it is assumed, not measured, to fire no `SubagentStop`
 either.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only

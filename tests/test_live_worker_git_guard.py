@@ -426,15 +426,32 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._sidecar("d3333333333333333")
         self._transcript(*self._taskstop("d3333333333333333"),
                          *self._notification("d3333333333333333"))
-        self._transcript(self._send_message("d3333333333333333"))
+        self._transcript(self._send_message("d3333333333333333"),
+                         self._resume_result("d3333333333333333"))
         reason = self._assert_denied(self._run(self._payload("git commit -m x")))
         self.assertIn("d3333333333333333", reason)
+
+    def test_a_failed_send_after_the_kill_leaves_it_stopped(self):
+        # A send with no `resumedAgentId` result did not resume the agent.
+        self._sidecar("d9999999999999999")
+        self._transcript(*self._taskstop("d9999999999999999"),
+                         self._send_message("d9999999999999999"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+        # Error result shape assumed, not captured: a string toolUseResult.
+        self._transcript({
+            "type": "user",
+            "message": {"role": "user", "content": [{
+                "tool_use_id": "toolu_resume", "type": "tool_result", "is_error": True,
+                "content": "Error: no agent named d9999999999999999"}]},
+            "toolUseResult": "Error: no agent named d9999999999999999"})
+        self._assert_silent(self._run(self._payload("git commit -m done")))
 
     def test_a_late_remove_row_does_not_undo_a_resume(self):
         self._sidecar("d4444444444444444")
         queued, _ = self._notification("d4444444444444444")
         self._transcript(*self._taskstop("d4444444444444444"),
                          self._send_message("d4444444444444444"),
+                         self._resume_result("d4444444444444444"),
                          dict(queued, operation="remove", reason="absorbed_mid_turn"))
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
@@ -492,7 +509,10 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._sidecar("e5555555555555555")
         self._transcript(*self._taskstop("e5555555555555555"),
                          self._send_message("e5555555555555555"),
-                         *self._taskstop("e5555555555555555"))
+                         self._resume_result("e5555555555555555"))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+        os.remove(self.guard_log)  # the deny logged a row
+        self._transcript(*self._taskstop("e5555555555555555"))
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
     def test_a_deeply_nested_line_does_not_drop_every_worker(self):

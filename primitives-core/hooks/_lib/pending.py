@@ -390,9 +390,9 @@ def stopped_ids(transcript_path, candidates):
     its ledger stop row or a stall row settles it.
 
     Any of these LATER records re-opens it, until its own SubagentStop settles
-    it normally: an assistant `SendMessage` whose `input.to` is the id; a
-    `toolUseResult.resumedAgentId` naming it (measured: SendMessage addressed
-    by NAME leaves only this); a notification for it, in any record kind,
+    it normally: a `toolUseResult.resumedAgentId` naming it (measured
+    2026-10-12; the `SendMessage` call alone never counts, since a failed send
+    writes no resumedAgentId); a notification for it, in any record kind,
     whose first header does not say `killed` (the "was resumed by the user"
     notification is inferred from the 2.1.281 binary, not measured).
     Reading every notification copy only ever fails closed.
@@ -446,9 +446,6 @@ def stopped_ids(transcript_path, candidates):
                             continue
                         if block.get("name") == "TaskStop" and isinstance(block.get("id"), str):
                             taskstop_uses.add(block["id"])
-                        elif (block.get("name") == "SendMessage"
-                                and isinstance(block.get("input"), dict)):
-                            stopped.discard(agent_key(block["input"].get("to")))
                 stopped.discard(_reopened_by_notification(text))
     except OSError:
         return set()
