@@ -124,23 +124,157 @@ def _load_protected_branches(project_dir):
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
 # The word may carry quotes or backslashes anywhere (`<<\EOF`, `<<E"O"F`); bash then
-# takes the word with them removed as the delimiter and the body as literal.
+# takes the word with them removed as the delimiter and the body as literal. A
+# metacharacter ends the word as a blank does (`<<EOF;`, `<<EOF|cat`).
 HEREDOC_START = re.compile(
+    r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=[\s;&|<>]|$)""")
+
+
+def _scan_line(line, stack, depth, terminators, paren=True, hash_word=False):
+    """(the `$(` count of `stack` at the line's end, whether it ends in a line
+    continuation). `stack` (the contexts open) and `terminators` (the heredoc
+    terminators pending, each `(word, quoted, dash, depth)`) are updated in place.
+
+    A context is a quote (`'`, `"`, `$'`, or a backtick, inside which `$(` is not
+    parsed), a `$(`, which opens inside `"` too, since quoting resets there, or a
+    plain `(`. A `)` closes the innermost `(` or `$(` (a stray one changes nothing).
+    A terminator's depth counts open `$(` only. An opener never counts with an
+    all-digit word or inside an unclosed `((`, where it is a shift. Closing a `$(`
+    below a pending terminator's depth drops it from the zsh reading (`paren=False`):
+    bash 3.2 and zsh read no body once its `$(` has closed, bash 5 does.
+    A `#` straight after a `)` starts a comment, or with `hash_word` is part of the
+    word (`$(...)#x`, `<(...)#x`); `invocations` flags a call either reading finds.
+    """
+    i = 0
+    while i < len(line):
+        char = line[i]
+        quote = stack[-1] if stack and stack[-1] not in ("$(", "(") else None
+        if char == "<" and quote in (None, "`"):
+            # the shell inside backticks reads a heredoc too
+            m = HEREDOC_START.match(line, i)
+            word = m and re.sub(r"[\\'\"]", "", m.group(2))
+            if (m and not (word.isdigit() and word == m.group(2))
+                    and line.count("((", 0, i) <= line.count("))", 0, i)):
+                # bash keeps a CRLF opener's `\r` in the word
+                terminators.append((word + m.group(3), word != m.group(2),
+                                    bool(m.group(1)), depth))
+                i = m.end()
+                continue
+        if quote:
+            if char == quote[-1]:
+                stack.pop()
+            elif char == "\\" and quote != "'":
+                i += 1
+            elif quote == '"' and char == "`":
+                stack.append(char)
+            elif quote == '"' and line.startswith("$(", i):
+                stack.append("$(")
+                depth += 1
+                i += 1
+        elif char == "\\":
+            if i == len(line) - 1:
+                return depth, True
+            i += 1
+        elif line.startswith("$'", i):
+            stack.append("$'")
+            i += 1
+        elif line.startswith("$(", i):
+            stack.append("$(")
+            depth += 1
+            i += 1
+        elif char == "(":
+            stack.append(char)
+        elif char == ")":
+            # ponytail: a case-pattern `)` or a paren inside `${...}` misplaces the end of
+            # `$(`, so a body starts or ends in the wrong place; parse `case`/`${` if one bites
+            if stack and stack.pop() == "$(":
+                depth -= 1
+                if not paren:
+                    terminators[:] = [t for t in terminators if t[3] <= depth]
+        elif char in "'\"`":
+            stack.append(char)
+        elif char == "#" and not (hash_word and line[i - 1:i] == ")") and (
+                i == 0 or line[i - 1].isspace() or line[i - 1] in ";&|()"):
+            break
+        i += 1
+    return depth, False
+
+
+def _body_end(lines, j, word, quoted, dash, paren=False):
+    """(the index of the line that closes a heredoc body starting at `lines[j]`,
+    whether the shell reads on from that line), or (None, False). As in bash, under
+    an unquoted word a line ending in an odd run of backslashes joins the next
+    first, and the result must equal the word exactly, after only its leading tabs
+    are removed under `<<-`. Inside `$(` (`paren`) bash 5 also ends it at a line
+    starting with the word whose rest holds a `)`, and rereads that rest as commands
+    (`EOF);git push`), so the line is rewritten in place as the rest."""
+    while j < len(lines):
+        line = lines[j]
+        while (not quoted and j + 1 < len(lines)
+               and (len(line) - len(line.rstrip("\\"))) % 2):
+            j += 1
+            line = line[:-1] + lines[j]
+        if dash:
+            line = line.lstrip("\t")
+        if line == word:
+            return j, False
+        if paren and line.startswith(word) and ")" in line[len(word):]:
+            lines[j] = line[len(word):]
+            return j, True
+        j += 1
+    return None, False
+
+
+def _skip_bodies(lines, i, terminators, paren=True):
+    """The index after the last of the heredoc bodies that `terminators`
+    opened on one line, read in order from `lines[i]`; `i` itself when one is
+    never closed, since dropping text is a silent fail-open. A body ended at a
+    `WORD)` line returns that rewritten line, so any later body is kept as commands."""
+    j = i
+    for word, quoted, dash, depth in terminators:
+        j, resumed = _body_end(lines, j, word, quoted, dash, depth > 0 and paren)
+        if j is None:
+            return i
+        if resumed:
+            return j
+        j += 1
+    return j
+
+
+def strip_heredocs(command, paren=True, hash_word=False):
+    """Drop heredoc bodies so a git literal inside one is never read as an invocation.
+
+    Quote and `$(` state is carried across lines, so a `<<WORD` inside a quoted
+    string or a comment opens nothing. A body starts at the first line end outside
+    quotes and continuations after its opener, and at its own `$(` depth or
+    shallower. Only drops when the terminator is actually
+    found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
+    since dropping text here is a silent fail-open and keeping it is at worst an
+    over-deny. Bodies opened on one line follow in order, and each ends where
+    bash ends it (`_body_end`).
+    """
+    lines = command.split("\n")
+    out, stack, depth, pending, i = [], [], 0, [], 0
+    while i < len(lines):
+        out.append(lines[i])
+        depth, continued = _scan_line(lines[i], stack, depth, pending, paren, hash_word)
+        i += 1
+        if continued or (stack and stack[-1] not in ("$(", "(", "`")):
+            continue
+        ready = [t for t in pending if t[3] >= depth]
+        pending = [t for t in pending if t[3] < depth]
+        i = _skip_bodies(lines, i, ready, paren)  # each body and its terminator line
+    return "\n".join(out)
+
+
+# the line-local reading, kept verbatim as one more reading so this parser never allows a
+# call the base caught (it reads glued-opener and `"$(` bodies as commands).
+_HEREDOC_START_BASE = re.compile(
     r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=\s|$)""")
 
 
-def _scan_line(line, quote):
-    """(the heredoc terminators this line opens, each `(word, quoted, dash, in_subst)`,
-    the quote state at its end, whether it ends in a line continuation), given the
-    quote state it starts in.
-
-    An opener counts only outside quotes and outside a comment, and never with an
-    all-digit word or inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
-    `(( y = 1 << n ))`). A backslash escapes the next
-    character outside single quotes, and inside `$'...'` too. A `#` at the start
-    of the line, after whitespace or after one of `;&|()` runs to the line end, so an
-    apostrophe in a comment opens no quote.
-    """
+def _scan_line_base(line, quote):
+    """Line-local `_scan_line`: (terminators, quote state at the end, continued)."""
     terminators = []
     i = depth = 0
     while i < len(line):
@@ -168,27 +302,20 @@ def _scan_line(line, quote):
                               or line[i - 1] in ";&|()"):
             break
         elif char == "<":
-            m = HEREDOC_START.match(line, i)
+            m = _HEREDOC_START_BASE.match(line, i)
             word = m and re.sub(r"[\\'\"]", "", m.group(2))
             if (m and not (word.isdigit() and word == m.group(2))
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                # bash keeps a CRLF opener's `\r` in the word; inside an open
-                # `$(` bash also ends the body at a line `WORD)`, zsh does not
-                # (`invocations` reads both; `depth` counts only unquoted parens)
                 terminators.append((word + m.group(3), word != m.group(2),
-                                    bool(m.group(1)),
-                                    depth > 0))
+                                    bool(m.group(1)), depth > 0))
                 i = m.end()
                 continue
         i += 1
     return terminators, quote, False
 
 
-def _body_end(lines, j, word, quoted, dash, paren=False):
-    """The index of the line that closes a heredoc body starting at `lines[j]`,
-    or None. As in bash, under an unquoted word a line ending in an odd run of
-    backslashes joins the next first, and the result must equal the word
-    exactly, after only its leading tabs are removed under `<<-`."""
+def _body_end_base(lines, j, word, quoted, dash, paren=False):
+    """Line-local `_body_end`: the index of the line closing the body, or None."""
     while j < len(lines):
         line = lines[j]
         while (not quoted and j + 1 < len(lines)
@@ -201,42 +328,24 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
     return None
 
 
-def _skip_bodies(lines, i, terminators, paren=True):
-    """The index after the last of the heredoc bodies that `terminators`
-    opened on one line, read in order from `lines[i]`; `i` itself when one is
-    never closed, since dropping text is a silent fail-open. `paren=False`
-    never ends a body at `WORD)`."""
-    j = i
-    for word, quoted, dash, in_subst in terminators:
-        j = _body_end(lines, j, word, quoted, dash, in_subst and paren)
-        if j is None:
-            return i
-        j += 1
-    return j
-
-
-def strip_heredocs(command, paren=True):
-    """Drop heredoc bodies so a git literal inside one is never read as an invocation.
-
-    Quote state is carried across lines, so a `<<WORD` inside a quoted string or a
-    comment opens nothing. A body starts at the first line end outside quotes and
-    continuations after its opener. Only drops when the terminator is actually
-    found — an unmatched `<<` (a shift operator, a stray word) must keep every line,
-    since dropping text here is a silent fail-open and keeping it is at worst an
-    over-deny. Bodies opened on one line follow in order, and each ends where
-    bash ends it (`_body_end`).
-    """
+def _strip_heredocs_base(command, paren=True):
+    """Line-local `strip_heredocs`, its `_skip_bodies` inlined."""
     lines = command.split("\n")
     out, quote, pending, i = [], None, [], 0
     while i < len(lines):
         out.append(lines[i])
-        terminators, quote, continued = _scan_line(lines[i], quote)
+        terminators, quote, continued = _scan_line_base(lines[i], quote)
         i += 1
         pending += terminators
         if not pending or quote or continued:
             continue
-        i = _skip_bodies(lines, i, pending, paren)  # each body and its terminator line
-        pending = []
+        j = i
+        for word, quoted, dash, in_subst in pending:
+            j = _body_end_base(lines, j, word, quoted, dash, in_subst and paren)
+            if j is None:
+                break
+            j += 1
+        i, pending = i if j is None else j, []
     return "\n".join(out)
 
 
@@ -292,12 +401,14 @@ def _dash_c_string(toks):
     return None
 
 
-def _split_commands(command):
+def _split_commands(command, hash_word=False):
     """Split on `&&`, `||`, `;`, `|`, `&`, `(`, `)` and newline, but only outside a
     quoted string or a comment, so a separator quoted inside a `-c` string
     (`bash -c 'a && b'`) stays in that one token. Quoting, escapes and the comment rule
-    follow `_scan_line`; a separate tracker because that one scans a single physical
-    line for heredoc openers, while this one must see the newlines inside a quote.
+    (with `hash_word`) follow `_scan_line`, except that a backtick opens no context here
+    and a `$(` inside `"` is quoted text; a separate tracker because that one scans a
+    single physical line for heredoc openers, while this one must see the newlines
+    inside a quote.
     """
     parts, buf, quote, i, n = [], [], None, 0, len(command)
     while i < n:
@@ -329,7 +440,8 @@ def _split_commands(command):
             buf.append(char)
             i += 1
             continue
-        if char == "#" and (i == 0 or command[i - 1] in " \t\n;&|()"):
+        if char == "#" and not (hash_word and command[i - 1:i] == ")") and (
+                i == 0 or command[i - 1] in " \t\n;&|()"):
             # a comment runs to the line end (the `_scan_line` rule): an apostrophe or
             # a separator inside it is prose, not shell
             end = command.find("\n", i)
@@ -377,23 +489,39 @@ def invocations(command, cwd):
     found; heredoc-stripping and every later rule apply to it exactly as if it had been
     the top-level command.
 
-    Both readings of a heredoc body opened inside `$(` are scanned: bash ends it at a
-    line `WORD)`, zsh (the Bash tool's shell on macOS) reads on.
+    Both readings of a heredoc body opened inside `$(` (bash ends it at a line `WORD)`,
+    zsh reads on) are scanned, each with a `#` after a `)` as a comment and as a word,
+    and so is the line-local reading (`_strip_heredocs_base`). Each distinct call yields once.
     """
-    stripped = strip_heredocs(command)
-    yield from _invocations(stripped, cwd)
-    unparened = strip_heredocs(command, paren=False)
-    if unparened != stripped:
-        yield from _invocations(unparened, cwd)
+    hash_words = (False, True) if ")#" in command else (False,)
+    def readings():  # lazy: a caller that stops at the first deny skips the rest
+        for hw in hash_words:
+            for paren in (True, False):
+                yield strip_heredocs(command, paren, hw)
+        for paren in (True, False):
+            yield _strip_heredocs_base(command, paren)
+
+    done = set()
+    seen = set()
+    # each stripped text is split both ways too: bash reads `)#` site by site
+    for stripped in readings():
+        if stripped in done:
+            continue
+        done.add(stripped)
+        for hash_word in hash_words:
+            for sub, args, where in _invocations(stripped, cwd, hash_word):
+                if (sub, tuple(args), where) not in seen:
+                    seen.add((sub, tuple(args), where))
+                    yield sub, args, where
 
 
-def _invocations(command, cwd):
+def _invocations(command, cwd, hash_word=False):
     """`invocations` over one heredoc-stripped reading of the command."""
     ctx = cwd
     # ponytail: a hand-rolled quote tracker, not a real shell grammar — `$(...)`/backtick
     # substitution and a `(...)` subshell are not unwrapped; upgrade to a real tokenizer
     # if those start hiding a real invocation.
-    for part in _split_commands(command):
+    for part in _split_commands(command, hash_word):
         try:
             toks = shlex.split(_ansi_c(part))
         except ValueError:
