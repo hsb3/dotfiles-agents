@@ -320,16 +320,17 @@ MESSAGES = {
     ),
     "session_soft": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
-        "watermark. This is advisory: at the next safe boundary run "
-        "/atelier:prepare-compact (the atelier:compact-handoff skill) to update the "
-        "handoff and prepare compaction; if a coordinator owns your cycle, stop after "
-        "the handoff and wait for it rather than compacting."
+        "watermark. This is advisory: at the next safe boundary run the "
+        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact) to "
+        "update the handoff and prepare compaction; if a coordinator owns your cycle, "
+        "stop after the handoff and wait for it rather than compacting."
     ),
     "session_hard": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
-        "watermark. This is advisory: update the handoff now with "
-        "/atelier:prepare-compact (the atelier:compact-handoff skill); if a coordinator "
-        "owns your cycle, stop after the handoff and wait for it rather than compacting."
+        "watermark. This is advisory: update the handoff now with the "
+        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact); if a "
+        "coordinator owns your cycle, stop after the handoff and wait for it rather than "
+        "compacting."
     ),
 }
 

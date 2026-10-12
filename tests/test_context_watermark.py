@@ -331,6 +331,27 @@ class HookRunTests(_ScrubbedEnv):
             ):
                 self.assertIn(needle, text, tier)
 
+    def test_under_codex_the_session_texts_instruct_the_skill_not_the_command(self):
+        """Codex ships the compact-handoff skill but not the prepare-compact command."""
+        rollout = os.path.join(self.tmp, "codex.jsonl")
+        for tier, tokens in (("soft", 40_000), ("hard", 52_000)):
+            _write_jsonl(rollout, [
+                {"type": "turn_context", "payload": {"model": "gpt-5.6-terra"}},
+                {"type": "event_msg", "payload": {"type": "token_count", "info": {
+                    "last_token_usage": {"total_tokens": tokens}, "model_context_window": 64_000}}},
+            ])
+            out = io.StringIO()
+            with mock.patch.dict(os.environ, {"ATELIER_HARNESS": "codex"}), \
+                    mock.patch.object(hook, "STATE_DIR", self.state_dir), \
+                    mock.patch("sys.stdout", out):
+                hook.handle_session({
+                    "session_id": "codex-text-" + tier, "transcript_path": rollout,
+                    "cwd": self.project}, lambda row: None)
+            text = json.loads(out.getvalue())["hookSpecificOutput"]["additionalContext"]
+            self.assertIn(tier + " watermark", text)
+            self.assertRegex(text, r"(run|with) the atelier:compact-handoff skill "
+                                   r"\(on Claude Code: /atelier:prepare-compact\)")
+
     def test_worker_texts_are_unchanged_and_do_not_name_prepare_compact(self):
         self.assertEqual(hook.MESSAGES["notice"], (
             "atelier context-watermark: context is ~{k}k tokens, past the ~{notice}k "
