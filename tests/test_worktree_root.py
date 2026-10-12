@@ -590,10 +590,16 @@ class WorktreeRootTests(unittest.TestCase):
         path = self.created_path(self.create("x"))
         self.assertEqual(self.session_start(path).stdout, "")
 
-    def test_session_start_silent_with_invalid_key_or_outside_repo(self):
+    def test_session_start_warns_on_invalid_key_silent_outside_repo(self):
         self.set_key("../elsewhere")
-        self.assertEqual(self.session_start(self.native_session_worktree()).stdout, "")
+        out = json.loads(self.session_start(self.main).stdout)
+        self.assertIn("checkout-root is invalid", out["systemMessage"])
+        self.assertEqual(out["hookSpecificOutput"], {
+            "hookEventName": "SessionStart", "additionalContext": out["systemMessage"]})
         self.assertEqual(self.session_start(self.home).stdout, "")
+
+    def test_session_start_non_string_cwd_exits_zero(self):
+        self.session_start(123)
 
     def test_hooks_json_registers_session_start(self):
         path = os.path.join(os.path.dirname(HOOK_PATH), "..", "..", "..", "plugins",

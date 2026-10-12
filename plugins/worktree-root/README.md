@@ -59,7 +59,7 @@ flowchart TD
 
 | Hook | Fires | Does |
 |---|---|---|
-| [`worktree-root`](hooks/worktree-root/README.md) | `WorktreeCreate`, `WorktreeRemove`, `SubagentStop`, `SessionStart` | Creates worktrees under `checkout-root` with native branch naming, base ref and `.worktreeinclude` copying; removes them on `ExitWorktree` remove and after a clean subagent; warns when a session starts inside a native `.claude/worktrees` checkout while `checkout-root` is set |
+| [`worktree-root`](hooks/worktree-root/README.md) | `WorktreeCreate`, `WorktreeRemove`, `SubagentStop`, `SessionStart` | Creates worktrees under `checkout-root` with native branch naming, base ref and `.worktreeinclude` copying; removes them on `ExitWorktree` remove and after a clean subagent; warns when a session starts inside a native `.claude/worktrees` checkout while `checkout-root` is set, and in every session while `checkout-root` is invalid |
 
 Once a WorktreeCreate hook owns creation, the harness skips its own `.worktreeinclude`
 copy and keeps every agent worktree, so the hook restores both. Removal, after a
