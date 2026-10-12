@@ -88,6 +88,9 @@ function fitImage(srcW, srcH, box, mode = "contain") {
   if (![srcW, srcH].every(v => Number.isFinite(v) && v >= 1)) {
     throw new Error(`srcW and srcH must be the image's pixel size (>= 1), got ${srcW} x ${srcH}: nothing here can measure the file`);
   }
+  for (const k of ["x", "y", "w", "h"]) {
+    if (!Number.isFinite(box[k])) throw new Error(`Image box needs a finite ${k}, got ${box[k]}`);
+  }
   if (!(box.w > 0 && box.h > 0)) throw new Error(`Image box needs w and h > 0, got ${box.w} x ${box.h}`);
   if (mode !== "contain" && mode !== "cover") throw new Error(`Image mode must be contain or cover, got ${mode}`);
   const scale = (mode === "contain" ? Math.min : Math.max)(box.w / srcW, box.h / srcH);

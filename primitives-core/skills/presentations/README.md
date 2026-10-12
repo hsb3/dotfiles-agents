@@ -73,7 +73,7 @@ npm install --ignore-scripts
 node deck.js
 ```
 
-Authoring needs Node/npm. Rendering needs Poppler plus LibreOffice or Microsoft PowerPoint
+Authoring needs Node 20.15 or later and npm. Rendering needs Poppler plus LibreOffice or Microsoft PowerPoint
 on macOS. Python's stdlib handles package creation, inspection and focused editing;
 repository CI remains zero-install. The official PptxGenJS release stays unchanged;
 generated projects [omit its unused vulnerable image parser](references/migration.md#unused-image-parser-removal).

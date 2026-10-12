@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import posixpath
+import shutil
 from pathlib import Path
 import struct
 import subprocess
@@ -111,6 +112,9 @@ def geometry_findings(path, counts=None):
                 crop = {k: int(src.get(k, 0)) if src is not None else 0 for k in 'ltrb'}
                 seen = (width * (100000 - crop['l'] - crop['r'])) / (height * (100000 - crop['t'] - crop['b']))
                 x0, y0, x1, y1 = rect(pic)
+                if x1 == x0 or y1 == y0:
+                    findings.append(f'G2 {where(pic)}: zero-size frame {x1 - x0} x {y1 - y0}')
+                    continue
                 want = (x1 - x0) / (y1 - y0)
                 if abs(seen / want - 1) > 0.01:
                     findings.append(f'G2 {where(pic)}: visible aspect {seen:.4f} != frame aspect {want:.4f}')
@@ -303,6 +307,7 @@ class PresentationPackages(unittest.TestCase):
             self.assertNotIn(str(ROOT), source)
             self.assertEqual((out / 'deck-kit/theme-tokens.js').read_bytes(), (SCRIPTS.parent / 'assets/theme-tokens.js').read_bytes())
             manifest = json.loads((out / 'package.json').read_text())
+            self.assertEqual(manifest['engines'], {'node': '>=20.15'})
             self.assertEqual(manifest['dependencies'], {'pptxgenjs': '4.0.1', 'image-size': 'file:./deck-kit/unused-image-size'})
             self.assertEqual(manifest['overrides'], {'pptxgenjs@4.0.1': {'image-size': '$image-size'}})
             self.assertTrue((out / 'deck-kit/unused-image-size/index.js').is_file())
@@ -404,6 +409,28 @@ class PictureGeometry(unittest.TestCase):
     def test_non_png_media_cannot_be_measured(self):
         self.assertIn('cannot measure', self.one('G2', pic('a', (0, 0, 1600000, 900000)), box('a', (0, 0, 1600000, 900000)),
                                                  {'image1.jpg': b'\xff\xd8\xff\xe0JFIF'}))
+
+    def test_zero_extent_picture_is_found_not_raised(self):
+        for rect in ((0, 0, 1600000, 0), (0, 0, 0, 900000)):
+            with self.subTest(rect=rect):
+                self.assertIn('zero', self.one('G2', pic('a', rect), box('a', (0, 0, 1600000, 900000))))
+
+    @unittest.skipUnless(shutil.which('node'), 'Node is required to load deck-kit.js')
+    def test_fit_image_rejects_non_finite_or_missing_box_numbers(self):
+        script = '''
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+const load = Module._load;
+Module._load = (id, ...rest) => id === 'pptxgenjs' ? function () {} : load(id, ...rest);
+const {fitImage} = require(process.argv[1]);
+for (const box of [{x: 0, y: 0, w: Infinity, h: 1}, {y: 0, w: 1, h: 1}, {x: 0, w: 1, h: 1}, {x: 0, y: NaN, w: 1, h: 1}]) {
+  assert.throws(() => fitImage(10, 10, box), /box/i, JSON.stringify(box));
+}
+assert.deepEqual(fitImage(10, 10, {x: 1, y: 2, w: 4, h: 2}).x, 2);
+'''
+        asset = SCRIPTS.parent / 'assets/deck-kit.js'
+        result = subprocess.run(['node', '-e', script, str(asset)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_package_ships_media_example(self):
         with tempfile.TemporaryDirectory() as directory:
