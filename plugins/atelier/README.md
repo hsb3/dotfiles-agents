@@ -94,7 +94,7 @@ its commitment, the other cuts comments that cannot.
 | `branch-activity-surfacer` | hook (`SessionStart`) | Warns a starting session that this branch moved since anyone last looked, and names what changed: the old and new tip, the commits between them with their authors, the merged PR carrying the new tip when `gh` finds one, or how many commits a rewind dropped. Separately names the other sessions still alive on the branch — keyed on the owning `claude` process, not `session_id`, because `/clear` mints a new session id in the same process and would otherwise report the operator to themselves. Derived from a local ledger plus git, so a move made on another machine or by a merge on GitHub counts too; nothing is pushed and nothing is fetched. Silent on `compact`, in a subagent, on a detached HEAD, and when nothing changed. The ledger is per-machine, so a session live on another machine is not seen as a peer; the tip-move half still fires there, because it is read out of git rather than out of the ledger. |
 | `subagent-telemetry` | hook (`SubagentStop`, `Stop`) | Appends one row per delegation (agent id, agent type, model, context tokens, start time, duration) to a local ledger, so tier usage and per-agent wall clock can be measured offline. On `Stop` it also records delegations still pending past a threshold. Silent — no stdout, never blocks. |
 | `worker-context` | hook (`SubagentStart`) | Injects the delegation covenant into every subagent, so the rules a worker is judged by arrive with the worker instead of depending on the dispatching session restating them in each brief. Inert until a project activates it. |
-| `worktree-isolation` | hook (`PreToolUse`) | Rewrites a dispatch so a **writing** worker gets its own git worktree instead of sharing the session's checkout. Read-only roles are left alone on purpose — a worktree cannot see uncommitted work. Never denies; inert until a project sets `isolate:`. |
+| `worktree-isolation` | hook (`PreToolUse`) | Rewrites a dispatch so a **writing** worker gets its own git worktree instead of sharing the session's checkout. Read-only roles are left alone on purpose — a worktree cannot see uncommitted work. Denies an armed dispatch when the session's working directory (moved by a Bash `cd`) sits in a different git repository from the project, since the worktree would be created in the wrong repository. Otherwise never denies; inert until a project sets `isolate:`. |
 
 ## Install
 
@@ -130,7 +130,7 @@ The [activation instructions](skills/activation/SKILL.md#codex-setup) give the e
 
 With `isolate: writers`, native worker IDs own separate worktrees and Git indexes beneath
 Git’s common directory. Hooks route shell commands and every patch destination into the
-owned checkout. New workers start from their immediate dispatcher’s committed HEAD; native
+owned checkout, including patch file headers indented or padded with whitespace, read the way Codex’s own parser reads them; config custody checks the same paths. New workers start from their immediate dispatcher’s committed HEAD; native
 messages, follow-ups and completion still use the original worker ID. Uncommitted parent
 changes do not travel. Managers can assemble verified child commits on their own branch;
 final project integration remains with the strategist. Missing or invalid worker state denies writes. Worker setup and context injection share the

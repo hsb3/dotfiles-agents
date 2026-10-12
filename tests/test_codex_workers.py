@@ -1,6 +1,7 @@
 """Real disposable Git trees exercise Codex routing and ownership failures."""
 
 import importlib
+import itertools
 import json
 import os
 from pathlib import Path
@@ -120,6 +121,85 @@ class CodexWorkersTests(unittest.TestCase):
         p['tool_input'] = routed
         self.assertEqual(self.mod.route_tool(p), routed)
 
+    def indented_patch(self, indent, header, body):
+        return '*** Begin Patch\n*** Add File: ok.txt\n+x\n'+indent+header+'escaped.txt\n'+body+'\n*** End Patch'
+
+    def test_patch_indented_headers_route_and_keep_indent(self):
+        p = self.payload(tool='apply_patch')
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        for indent, header, body in [('  ', '*** Add File: ', '+y'), ('\t', '*** Update File: ', '@@\n-x\n+y')]:
+            with self.subTest(indent=indent):
+                p['tool_input'] = {'command': self.indented_patch(indent, header, body)}
+                routed = self.mod.route_tool(p)
+                lines = routed['command'].splitlines()
+                self.assertIn('*** Add File: '+str(tree / 'ok.txt'), lines)
+                self.assertIn(indent+header+str(tree / 'escaped.txt'), lines)
+                p['tool_input'] = routed
+                self.assertEqual(self.mod.route_tool(p), routed)
+
+    def test_patch_paths_include_indented_headers(self):
+        p = self.payload(tool='apply_patch', command=self.indented_patch('  ', '*** Add File: ', '+y'))
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        self.assertEqual(self.mod.patch_paths(p), [str(tree / 'ok.txt'), str(tree / 'escaped.txt')])
+
+    def test_indented_unknown_patch_directive_raises(self):
+        p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: ok.txt\n+x\n  *** Environment ID: x\n*** End Patch')
+        self.mod.register(p, isolate=True)
+        with self.assertRaisesRegex(self.mod.WorkerError, 'Unrecognized patch directive'):
+            self.mod.route_tool(p)
+
+    def test_patch_header_matrix_mirrors_codex_modes(self):
+        """Codex (streaming_parser.rs) matches headers on trim() outside an Update hunk and on
+        trim_end() inside one, so an indented header-looking line there is context."""
+        p = self.payload(tool='apply_patch')
+        record = self.mod.register(p, isolate=True)
+        tree = Path(record['worktree'])
+        # Every call re-validates the registry with git (~25s over the matrix); identity has its own tests.
+        stub = patch.object(self.mod, '_required', return_value=record)
+        stub.start()
+        self.addCleanup(stub.stop)
+        modes = [('after Begin Patch', '', False, []),
+                 ('inside Add File', '*** Add File: a.txt\n+a\n', False, ['a.txt']),
+                 ('inside Delete File', '*** Delete File: d.txt\n', False, ['d.txt']),
+                 ('inside Update File', '*** Update File: u.txt\n@@\n-u\n+v\n', True, ['u.txt']),
+                 ('inside Update File after Move to',
+                  '*** Update File: u.txt\n*** Move to: m.txt\n@@\n-u\n+v\n', True, ['u.txt', 'm.txt']),
+                 # Leaving Update mode matters most: staying in it would pass an indented header through.
+                 ('inside Add File after Update File',
+                  '*** Update File: u.txt\n@@\n-u\n+v\n*** Add File: a.txt\n+a\n', False, ['u.txt', 'a.txt'])]
+        # (directive, body that keeps the patch well-formed when Codex reads the line as a header)
+        probes = [('*** Add File: ', '+x\n'), ('*** Update File: ', '@@\n-x\n+y\n'),
+                  ('*** Delete File: ', ''), ('*** Note: x ***', '')]
+        for (mode, prefix, update, before), indent, tail, (directive, body) in itertools.product(
+                modes, ('', '  ', '\t'), ('', ' ', '\t'), probes):
+            is_file_header = directive.endswith(': ')
+            line = indent + directive + ('p' if is_file_header else '') + tail
+            p['tool_input'] = {'command': '*** Begin Patch\n' + prefix + line + '\n' + body + '*** End Patch'}
+            expected = [str(tree / name) for name in before]
+            with self.subTest(mode=mode, indent=indent, tail=tail, line=line):
+                if update and indent:
+                    self.assertIn(line, self.mod.route_tool(p)['command'].splitlines())
+                    self.assertEqual(self.mod.patch_paths(p), expected)
+                elif is_file_header:
+                    self.assertIn(indent + directive + str(tree / 'p'),
+                                  self.mod.route_tool(p)['command'].splitlines())
+                    self.assertEqual(self.mod.patch_paths(p), expected + [str(tree / 'p')])
+                else:
+                    for call in (self.mod.route_tool, self.mod.patch_paths):
+                        with self.assertRaisesRegex(self.mod.WorkerError, 'Unrecognized patch directive'):
+                            call(p)
+
+    def test_update_hunk_context_that_starts_with_stars_passes_through(self):
+        p = self.payload(tool='apply_patch')
+        target = str(Path(self.mod.register(p, isolate=True)['worktree']) / 'notes.org')
+        for context in (' *** TODO x', ' *** bold italic ***'):
+            with self.subTest(context=context):
+                body = '\n@@\n' + context + '\n-a\n+b\n*** End Patch'
+                p['tool_input'] = {'command': '*** Begin Patch\n*** Update File: notes.org' + body}
+                self.assertEqual(self.mod.route_tool(p)['command'],
+                                 '*** Begin Patch\n*** Update File: ' + target + body)
+                self.assertEqual(self.mod.patch_paths(p), [target])
+
     def test_parent_absolute_maps_owned_absolute_remains(self):
         p = self.payload(tool='apply_patch')
         r = self.mod.register(p, isolate=True)
@@ -221,6 +301,39 @@ class CodexWorkersTests(unittest.TestCase):
         p['tool_input']['command'] = '*** Begin Patch\n*** Add File: okay.py\n+x\n*** End Patch'
         self.activation()
         self.assertEqual(self.hook('config-custody', p), {})
+
+    def test_custody_denies_indented_protected_header(self):
+        self.activation()
+        p = self.payload(tool='apply_patch')
+        self.mod.register(p, isolate=True)
+        for indent in ['  ', '\t']:
+            p['tool_input']['command'] = '*** Begin Patch\n*** Add File: safe-first\n+x\n'+indent+'*** Add File: config.toml\n+y\n*** End Patch'
+            with self.subTest(indent=indent):
+                self.assertEqual(self.decision(self.hook('config-custody', p)), 'deny')
+
+    def test_custody_denies_protected_header_with_trailing_whitespace(self):
+        # Codex trims both ends of a header line, so `config.toml ` writes config.toml.
+        self.activation()
+        p = self.payload(tool='apply_patch')
+        self.mod.register(p, isolate=True)
+        for tail in [' ', '\t']:
+            p['tool_input']['command'] = '*** Begin Patch\n*** Add File: safe-first\n+x\n*** Add File: config.toml'+tail+'\n+y\n*** End Patch'
+            with self.subTest(tail=tail):
+                self.assertEqual(self.decision(self.hook('config-custody', p)), 'deny')
+
+    def test_patch_header_trailing_whitespace_is_dropped(self):
+        p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: x.txt \n+x\n*** End Patch')
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        lines = self.mod.route_tool(p)['command'].splitlines()
+        self.assertIn('*** Add File: '+str(tree / 'x.txt'), lines)
+
+    def test_patch_lines_break_on_newline_only(self):
+        # Codex splits on \n alone; a form feed inside a `+` line must not start an Update hunk.
+        self.activation()
+        p = self.payload(tool='apply_patch', command='*** Begin Patch\n*** Add File: o\n+foo\x0c*** Update File: a\n  *** Add File: config.toml\n+w\n*** End Patch')
+        tree = Path(self.mod.register(p, isolate=True)['worktree'])
+        self.assertEqual(self.mod.patch_paths(p), [str(tree / 'o'), str(tree / 'config.toml')])
+        self.assertEqual(self.decision(self.hook('config-custody', p)), 'deny')
 
     def test_git_guard_uses_owned_branch(self):
         self.activation()
