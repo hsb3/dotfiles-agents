@@ -59,7 +59,7 @@ and bounds it, and it is the only component that has to change when the tracker 
 | `body` | string | the full body — the conformance audit reads its headings |
 | `parent` | string \| null | the parent's `key` |
 | `blocked_by` | string list | prerequisite `key`s, sorted; `[]` when none |
-| `priority` | `"P0"`–`"P3"` \| null | a value outside the band vocabulary normalizes to null |
+| `priority` | `"P0"`–`"P4"` \| null | a value outside the band vocabulary normalizes to null |
 | `owner` | string \| null | the assignee; null when unassigned |
 
 **Every changeset cell has a snapshot cell.** That is what lets `apply` drop no-ops, so a
@@ -72,7 +72,7 @@ Invariants an adapter must hold:
   list is `[]` — never an absent key. The scripts read cells by name, and an absent key is a
   crash mid-audit rather than a finding.
 - **A value outside the contract's vocabulary becomes null, never an invention.** A native
-  priority with no band is null; it is not rounded into the nearest band.
+  priority with no band (e.g. 9) is null; it is not rounded into the nearest band.
 - **`--status open` is the default; `--status all` includes closed items.** `reconcile.py`
   needs `all`, because an archived plan row can only be checked against a closed item.
 
@@ -96,7 +96,7 @@ read as "clear this cell", and on a `labels` row that means removing every label
 | Field | Value | Semantics |
 | ----- | ----- | --------- |
 | `labels` | comma-separated | the **full desired set**; the adapter diffs it against what is attached and emits adds + removes |
-| `priority` | `P0`–`P3`, or blank | blank clears the cell |
+| `priority` | `P0`–`P4`, or blank | blank clears the cell |
 | `owner` | an actor name, or blank | blank unassigns |
 
 Rules every adapter's `apply` must hold:

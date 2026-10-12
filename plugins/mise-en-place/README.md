@@ -2,7 +2,7 @@
 
 Codex and Claude Code use the same audit and scaffold helpers. Pass the installed package path explicitly with `--plugin-root`.
 
-Version 0.5.3 makes `project-memory`'s bundled scripts its only tooling path; no machine-local CLI is assumed anywhere in the bundle. Version 0.5.4 keeps the scaffold's source free of any private test-bed name.
+Version 0.5.3 makes `project-memory`'s bundled scripts its only tooling path; no machine-local CLI is assumed anywhere in the bundle. Version 0.5.4 keeps the scaffold's source free of any private test-bed name. Version 0.5.5 makes planning-desk's kata adapter read native priority 4 as P4, matching board-triage.
 
 An in-repo planning system built on `_meta/`: a documented directory standard, a memory
 taxonomy beside it, a read-only audit against both, an additive-only scaffolder, and a
