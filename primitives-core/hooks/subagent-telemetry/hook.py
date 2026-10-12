@@ -95,6 +95,8 @@ tail of the ledger: agent_ids on delegation rows, plus every agent_id inside the
 `pending` list of a `stall` row (the dedup), plus whatever just stopped — all
 matched by agent_id ALONE, regardless of session, because after a re-home the
 stop row lands under a session id the orphaned sidecar's dir never sees.
+Also settled: any agent the session transcript records as TaskStop'd
+(`_lib/pending.py:stopped_ids`), since a TaskStop fires no SubagentStop.
 Whatever is left and has been pending at least STALL_SECONDS produces ONE
 `stall` row.
 Edge cost of the 256 KB bound (~800 rows), stated rather than hidden: a
@@ -141,6 +143,7 @@ from pending import (  # noqa: E402  (same — `_lib` must be on the path first)
     read_tail as _read_tail,
     sidecar_dir as _sidecar_dir,
     sidecar_path as _sidecar_path,
+    stopped_ids as _stopped_ids,
     subagents_dir as _subagents_dir,
 )
 
@@ -425,7 +428,11 @@ def _stall_scan(payload, just_stopped_id):
         session_id = payload.get("session_id", "unknown")
         now = datetime.now(timezone.utc)
         pending = []
-        for key in _pending_keys(subagents_dir, [just_stopped_id]):
+        keys = _pending_keys(subagents_dir, [just_stopped_id])
+        stopped = _stopped_ids(payload.get("transcript_path"), keys)
+        for key in keys:
+            if key in stopped:
+                continue
             started_at = _started_at(subagents_dir, key)
             pending_ms = _elapsed_ms(started_at, now)
             if pending_ms is None or pending_ms < STALL_SECONDS * 1000:

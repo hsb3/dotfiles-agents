@@ -74,7 +74,9 @@ What counts as started is the set of `agent-*.meta.json` sidecars in the session
 an agent that never got a sidecar can neither produce a row nor be reported pending. What
 counts as settled comes from a bounded 256 KB tail of the ledger: delegation rows, plus
 every agent already named in a `stall` row, which is what keeps a stalled agent named once
-per window rather than at every subsequent settle. Entries are sorted by `agent_id`.
+per window rather than at every subsequent settle. An agent the session transcript records
+as stopped with TaskStop (`_lib/pending.py` `stopped_ids`) is settled too, since TaskStop
+fires no `SubagentStop`. Entries are sorted by `agent_id`.
 
 Settled matches on `agent_id` alone, ignoring which session recorded the row. That is what
 closes the other half of the re-homing defect: the stop row lands under the new session id

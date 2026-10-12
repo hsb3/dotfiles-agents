@@ -551,6 +551,63 @@ class WorktreeRootTests(unittest.TestCase):
         _write(top, ".claude/atelier.local.md", "---\ncheckout-root: .worktrees\n---\n")
         self.assertRefused(self.create("lay", cwd=top), "unsupported git layout")
 
+    # -- SessionStart ------------------------------------------------------
+
+    def session_start(self, cwd):
+        proc = self.run_hook({"hook_event_name": "SessionStart", "cwd": cwd,
+                              "source": "startup"})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return proc
+
+    def native_session_worktree(self):
+        path = os.path.join(self.main, ".claude", "worktrees", "foo")
+        _git(self.main, "worktree", "add", "-q", "-b", "worktree-foo", path)
+        return path
+
+    def test_session_start_warns_in_native_worktree_when_key_set(self):
+        self.set_key(".worktrees")
+        out = json.loads(self.session_start(self.native_session_worktree()).stdout)
+        message = out["systemMessage"]
+        self.assertIn("checkout-root", message)
+        self.assertIn(".worktrees", message)
+        self.assertEqual(out["hookSpecificOutput"],
+                         {"hookEventName": "SessionStart", "additionalContext": message})
+
+    def test_session_start_silent_without_key(self):
+        self.assertEqual(self.session_start(self.native_session_worktree()).stdout, "")
+
+    def test_session_start_silent_at_repo_root(self):
+        self.set_key(".worktrees")
+        self.assertEqual(self.session_start(self.main).stdout, "")
+
+    def test_session_start_silent_in_worktree_under_checkout_root(self):
+        self.set_key(".worktrees")
+        path = self.created_path(self.create("rooted"))
+        self.assertEqual(self.session_start(path).stdout, "")
+
+    def test_session_start_silent_under_checkout_root_nested_in_native(self):
+        self.set_key(".claude/worktrees/rooted")
+        path = self.created_path(self.create("x"))
+        self.assertEqual(self.session_start(path).stdout, "")
+
+    def test_session_start_warns_on_invalid_key_silent_outside_repo(self):
+        self.set_key("../elsewhere")
+        out = json.loads(self.session_start(self.main).stdout)
+        self.assertIn("checkout-root is invalid", out["systemMessage"])
+        self.assertEqual(out["hookSpecificOutput"], {
+            "hookEventName": "SessionStart", "additionalContext": out["systemMessage"]})
+        self.assertEqual(self.session_start(self.home).stdout, "")
+
+    def test_session_start_non_string_cwd_exits_zero(self):
+        self.session_start(123)
+
+    def test_hooks_json_registers_session_start(self):
+        path = os.path.join(os.path.dirname(HOOK_PATH), "..", "..", "..", "plugins",
+                            "worktree-root", "hooks", "hooks.json")
+        with open(path, encoding="utf-8") as fh:
+            hooks = json.load(fh)["hooks"]
+        self.assertIn("hooks/worktree-root/hook.py", hooks["SessionStart"][0]["hooks"][0]["command"])
+
     def test_other_event_is_silent(self):
         proc = self.run_hook({"hook_event_name": "PreToolUse", "cwd": self.main})
         self.assertEqual((proc.returncode, proc.stdout, proc.stderr), (0, "", ""))

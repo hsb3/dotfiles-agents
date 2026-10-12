@@ -41,7 +41,8 @@ a brief is split, and the one answer each unresolved entry gets.
 A report-only worker gets a check too, because its brief's "write nothing here" is wording, not
 enforcement. `scripts/trace_check.py` snapshots the checkout's git status (untracked and ignored
 files included, plus every ref and HEAD's target) before a reviewer or scout is dispatched and names every
-change after it returns; `references/briefs.md` carries the scratch-directory wording and when to
+change after it returns, ignoring Python bytecode under `__pycache__` and remote-tracking refs; its docstring
+lists what it cannot see; `references/briefs.md` carries the scratch-directory wording and when to
 run it.
 
 Preconditions are checked the same way, at dispatch time rather than at authoring time: a gate
