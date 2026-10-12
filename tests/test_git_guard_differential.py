@@ -1,22 +1,24 @@
-"""Differential test: both git-guard parsers against a real bash.
+"""Differential test: both git-guard parsers against real shells.
 
 Each probe command runs under every bash found (`/bin/bash`, and `bash` on PATH
-when it resolves elsewhere; no version assumed) with a fake `git` first on PATH
+when it resolves elsewhere; no version assumed), and under `/bin/zsh` when present
+(the shell the Bash tool runs on macOS), with a fake `git` first on PATH
 that logs its argv as one JSON line and exits 0. Every logged argv whose verb is
 in that guard's fixed write set (`WRITES`, independent of the guard's own
-classifier) must make the guard flag the probe as written. A guard that flags
-while bash ran nothing is conservative and passes; the reverse is not asserted.
+classifier) must make the guard flag the probe as written, so a probe the shells
+disagree on is flagged if any of them runs the write. A guard that flags while
+the shell ran nothing is conservative and passes; the reverse is not asserted.
 
 The guards are read through their pure parser entry points, so no payload,
 sidecar or worktree state is needed:
 
-- live-worker-git-guard: `_first_mutating_verb(_tokens(command))`.
+- live-worker-git-guard: `_mutating_call(command)`.
 - worker-git-scope-guard: `decide()` with the most restrictive resolvers (every
   tree shared, every branch protected), so it flags every call it could ever deny.
 
 Probes never reach the real git: `{GIT}` is replaced with the fake's absolute
 path, PATH is `<fake dir>:/usr/bin:/bin`, GIT_DIR names no repo, and the fake dir
-also shadows `bash` and `zsh` with the bash under test, so `zsh -c` needs no zsh
+also shadows `bash` and `zsh` with the shell under test, so `zsh -c` needs no zsh
 installed. `sh` is not shadowed: it is the system `/bin/sh`, which still finds the
 fake git on PATH.
 Stdlib-only.
@@ -59,7 +61,7 @@ class _Everything:
 
 
 def live_flags(command):
-    return LIVE._first_mutating_verb(LIVE._tokens(command))[0] is not None
+    return LIVE._mutating_call(command)[1] is not None
 
 
 def scope_flags(command, cwd="/tmp"):
@@ -153,11 +155,29 @@ PROBES = [
     ("hd_opener_in_comment", "true # cat <<EOF\ngit commit -m x\nEOF"),
     ("hd_then_separator_git", "cat <<EOF && git push\nbody\nEOF"),
     ("hd_backslash_word_plain", "cat <<\\EOF\nbody\nEOF\ngit commit -m x"),
-    # O1 and O2: known gaps, excused below
+    # O1 and O2: bash quoting-in-word and `EOF)` terminator inside $( )
     ("O1_backslash_word_apostrophe", "cat <<\\EOF\nit's\nEOF\ngit commit -m x"),
     ("O1_partial_quote_apostrophe", 'cat <<E"O"F\nit\'s\nEOF\ngit commit -m x'),
     ("O2_paren_terminator",
      "x=$(cat <<EOF\nbody\nEOF)\ngit commit -m x\nEOF\n)"),
+    # zsh reads past that `EOF)`: body text bash runs as commands must not hide
+    # the call zsh runs after the real terminator
+    ("Z_paren_body_heredoc_commit",
+     "x=$(cat <<'EOF'\nEOF)\n: <<'X'\nEOF\n)\ngit commit -m x\nX"),
+    ("Z_paren_body_apostrophe_commit",
+     "x=$(cat <<'EOF'\nEOF)\nit's\nEOF\n) true\ngit commit -m x"),
+    ("Z_paren_body_heredoc_stash",
+     "x=$(cat <<'EOF'\nEOF)\n: <<'X'\nEOF\n)\ngit stash\nX"),
+    # a `$(` inside quotes opens no substitution, so `EOF)` is body
+    ("R1_quoted_dollar_paren",
+     "echo '$(' ; cat <<EOF\nbody\nEOF)\nit's\nEOF\ngit commit -m x\ntrue # '"),
+    ("R1_quoted_dollar_paren_heredoc",
+     "echo '$(' ; cat <<EOF\nEOF)\n: <<X\nEOF\ngit commit -m x\nX"),
+    ("R1_grep_dollar_paren",
+     "grep -c '$(' <<EOF\nfoo $(\nEOF)\nit's\nEOF\ngit push\n: '"),
+    # a quoted all-digit word is a heredoc, never a shift
+    ("N2_quoted_digit_word", "cat <<'1'\nit's\n1\ngit commit -m x"),
+    ("N2_backslash_digit_word", "cat <<\\1\nit's\n1\ngit commit -m x"),
     # arithmetic (PR 580)
     ("arith_cmd_shift", "x=1\n((x<<2))\ngit commit -m x"),
     ("arith_expansion", "echo $((1<<2))\ngit commit -m x"),
@@ -206,14 +226,7 @@ PROBES = [
 
 # Known bypasses: (probe, guard) -> where the gap is recorded. Each cell must
 # still fail; once a fix makes it pass, delete its entry here.
-_O1 = "O1, live-worker-git-guard README (opener not recognized) and ledger 0428"
-_O2 = "O2, `EOF)` terminator inside $( ), ledger 0428"
-EXCUSED = {
-    ("O1_backslash_word_apostrophe", "live"): _O1,
-    ("O1_partial_quote_apostrophe", "live"): _O1,
-    ("O2_paren_terminator", "live"): _O2,
-    ("O2_paren_terminator", "scope"): _O2,
-}
+EXCUSED = {}
 # live-worker-git-guard README "What it cannot see": `bash -c "..."` and a command
 # word glued to a separator displace the git word.
 for _name in ("sh_bash_c", "sh_sh_c", "sh_zsh_c", "sh_bash_ec", "sh_env_bash_c",
@@ -234,6 +247,7 @@ def _bashes():
 
 
 BASHES = _bashes()
+ZSH = "/bin/zsh"
 
 
 @unittest.skipUnless(BASHES, "no bash on this machine")
@@ -260,42 +274,56 @@ class GitGuardDifferential(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
-    def _run(self, bash, command):
-        """The argv lists the fake git logged while `bash -c command` ran."""
-        for shell in ("bash", "zsh"):
-            link = os.path.join(self.fakedir, shell)
+    def _run(self, shell, command):
+        """The argv lists the fake git logged while `shell -c command` ran."""
+        for name in ("bash", "zsh"):
+            link = os.path.join(self.fakedir, name)
             if os.path.lexists(link):
                 os.remove(link)
-            os.symlink(bash, link)
+            os.symlink(shell, link)
         open(self.log, "w").close()
         env = {"PATH": self.fakedir + ":/usr/bin:/bin", "HOME": self.tmp.name,
                "GIT_CEILING_DIRECTORIES": self.tmp.name,
                "GIT_DIR": os.path.join(self.tmp.name, "no-repo")}
-        subprocess.run([bash, "-c", command], env=env, cwd=self.cwd,
+        subprocess.run([shell, "-c", command], env=env, cwd=self.cwd,
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, timeout=10)
         with open(self.log) as f:
             return [json.loads(line) for line in f if line.strip()]
 
-    def test_every_guarded_call_bash_runs_is_flagged(self):
-        for bash in BASHES:
+    def _assert_flagged(self, shells):
+        for shell in shells:
             for name, probe in PROBES:
                 command = probe.replace("{GIT}", self.git)
-                ran = self._run(bash, command)
+                ran = self._run(shell, command)
                 verdicts = {g: flags(command) for g, flags in GUARDS.items()}
                 for guard in GUARDS:
                     missed = not verdicts[guard] and any(
                         is_write(guard, argv) for argv in ran)
-                    detail = "\nprobe: {0!r}\nbash: {1}\nbash ran: {2}\nverdicts: {3}".format(
-                        command, bash, ran, verdicts)
-                    with self.subTest(bash=bash, probe=name, guard=guard):
+                    detail = "\nprobe: {0!r}\nshell: {1}\nshell ran: {2}\nverdicts: {3}".format(
+                        command, shell, ran, verdicts)
+                    with self.subTest(shell=shell, probe=name, guard=guard):
                         if (name, guard) in EXCUSED:
                             self.assertTrue(missed, "{0} gap now closed ({1}): delete "
                                             "its EXCUSED entry".format(guard, EXCUSED[
                                                 (name, guard)]) + detail)
                         else:
-                            self.assertFalse(missed, "{0} guard allowed a write bash "
-                                             "ran".format(guard) + detail)
+                            self.assertFalse(missed, "{0} guard allowed a write the "
+                                             "shell ran".format(guard) + detail)
+
+    def test_every_guarded_call_bash_runs_is_flagged(self):
+        self._assert_flagged(BASHES)
+
+    @unittest.skipUnless(os.path.exists(ZSH), "no /bin/zsh (Linux CI)")
+    def test_every_guarded_call_zsh_runs_is_flagged(self):
+        self._assert_flagged([ZSH])
+
+    def test_scope_strip_heredocs_keeps_git_after_backslash_word_body(self):
+        # at 630a04ca the apostrophe in the body left the quote open, so the
+        # git line after the real terminator was swallowed
+        self.assertEqual(
+            SCOPE.strip_heredocs("cat <<\\EOF\nit's\nEOF\ngit commit -m x"),
+            "cat <<\\EOF\ngit commit -m x")
 
 
 if __name__ == "__main__":

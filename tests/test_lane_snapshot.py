@@ -31,6 +31,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -369,6 +370,37 @@ class SnapshotPass(unittest.TestCase):
         self.assertTrue(self.ref_sha())
         self.assertTrue(os.path.isfile(theirs), "daemon deleted another process's index")
 
+    def test_inherited_git_repo_variables_cannot_redirect_the_daemon(self):
+        """GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE inherited from the caller
+        must not point the daemon's git calls at another repository."""
+        decoy = Sandbox()
+        self.addCleanup(decoy.destroy)
+        decoy_git = os.path.join(decoy.root, ".git")
+        decoy_before = git(decoy.root, "for-each-ref") + git(decoy.root, "status", "--porcelain")
+        write(os.path.join(self.lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root, env_extra={
+            "GIT_DIR": decoy_git, "GIT_WORK_TREE": decoy.root,
+            "GIT_INDEX_FILE": os.path.join(decoy_git, "index"),
+        })
+        self.assertTrue(self.ref_sha(), "real repo got no snapshot ref")
+        self.assertEqual(self.ref_sha(root=decoy.root), "")
+        self.assertEqual(
+            decoy_before,
+            git(decoy.root, "for-each-ref") + git(decoy.root, "status", "--porcelain"))
+
+    def test_inherited_commit_dates_cannot_backdate_a_snapshot(self):
+        """An inherited GIT_*_DATE would stamp every fresh snapshot with an old
+        date, and --check would read the net as stale."""
+        old = "2020-01-01T00:00:00Z"
+        write(os.path.join(self.lane, "draft.txt"), "wip\n")
+        run_daemon(self.box, "--once", self.box.root,
+                   env_extra={"GIT_COMMITTER_DATE": old, "GIT_AUTHOR_DATE": old})
+        self.assertTrue(self.ref_sha(), "no snapshot ref written")
+        stamps = git(self.box.root, "log", "-1", "--format=%ct %at",
+                     "refs/lane-snapshots/agent-one").split()
+        for stamp in stamps:
+            self.assertLess(abs(time.time() - int(stamp)), 300, stamps)
+
     def test_snapshot_row_is_logged(self):
         write(os.path.join(self.lane, "draft.txt"), "wip\n")
         run_daemon(self.box, "--once", self.box.root)
@@ -510,6 +542,39 @@ class DaemonLifecycle(unittest.TestCase):
         self.assertEqual(wait_exit(proc), 0, "idle daemon ignored its TTL")
         last = self.box.rows()[-1]
         self.assertEqual((last["event"], last["reason"]), ("exit", "ttl"))
+        scans = [r for r in self.box.rows() if r.get("event") == "scan"]
+        self.assertTrue(scans and all(r["wrote"] == [] for r in scans), scans)
+
+    def test_busy_lane_daemon_exits_at_max_age(self):
+        """Writes every pass keep resetting the idle TTL; the absolute max age
+        ends the daemon anyway, and the scan rows name the lane that wrote."""
+        box = Sandbox(lanes=["agent-busy"])
+        self.addCleanup(box.destroy)
+        churn_path = os.path.join(box.lanes["agent-busy"], "churn.txt")
+        stop = threading.Event()
+
+        def churn():
+            n = 0
+            while not stop.wait(0.1):
+                n += 1
+                with open(churn_path, "w", encoding="utf-8") as fh:
+                    fh.write("{0}\n".format(n))
+        writer = threading.Thread(target=churn, daemon=True)
+        writer.start()
+        self.addCleanup(writer.join, 5)
+        self.addCleanup(stop.set)  # LIFO: stops the writer before box.destroy
+        max_age, interval, slack = 5, 1, 6
+        launched = time.monotonic()
+        proc = spawn_daemon(box, self, "--interval", str(interval), box.root,
+                            LANE_SNAPSHOT_TTL="3", LANE_SNAPSHOT_MAX_AGE=str(max_age))
+        self.assertEqual(wait_exit(proc, max_age + interval + slack), 0,
+                         "busy daemon outlived its max age")
+        self.assertGreaterEqual(time.monotonic() - launched, max_age,
+                                "daemon exited before its max age")
+        rows = box.rows()
+        self.assertEqual((rows[-1]["event"], rows[-1].get("reason")), ("exit", "max-age"))
+        wrote = [r.get("wrote") for r in rows if r.get("event") == "scan"]
+        self.assertIn(["agent-busy"], wrote)
 
     def test_second_daemon_for_the_same_repo_exits(self):
         """The lock, not the hook, is what finally resolves two launches."""
@@ -809,6 +874,24 @@ class HookGuard(unittest.TestCase):
         self.assertEqual(self.run_hook().returncode, 0)
         time.sleep(1.5)
         self.assertEqual(len(self.sandbox_daemons()), 1)
+
+    def test_inherited_git_routing_cannot_point_the_hook_at_another_repo(self):
+        """GIT_WORK_TREE/GIT_DIR in the launching shell must not move the root
+        the hook resolves or the daemon it launches."""
+        decoy = os.path.join(self.box.base, "decoy")
+        os.makedirs(decoy)
+        git(decoy, "init", "-q", "-b", "main", ".")
+        self.addCleanup(self.kill_sandbox)
+        proc = self.run_hook(env_extra={"GIT_WORK_TREE": decoy,
+                                        "GIT_DIR": os.path.join(decoy, ".git")})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        deadline = time.time() + 15
+        while time.time() < deadline and not self.sandbox_daemons():
+            time.sleep(0.2)
+        hooks = [r for r in self.box.rows() if r.get("event") == "hook"]
+        self.assertEqual([r["root"] for r in hooks], [self.box.root])
+        self.assertEqual(len(self.daemons()), 1, "no daemon rooted at the real repo")
+        self.assertEqual(self._pgrep("snapshot_lanes\\.py " + re.escape(decoy)), [])
 
     def test_hook_never_blocks_when_the_root_is_not_a_repo(self):
         """Every path exits 0 and launches nothing: a failed resolution must

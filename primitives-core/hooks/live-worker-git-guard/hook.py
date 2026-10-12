@@ -246,7 +246,10 @@ SEPARATOR_CHARS = "&|;(){}<>"
 # A heredoc opener. The lookarounds reject a `<<<` herestring. A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(\r?)(?=\s|$)")
+# The word may carry quotes or backslashes anywhere (`<<\EOF`, `<<E"O"F`); bash then
+# takes the word with them removed as the delimiter and the body as literal.
+HEREDOC_START = re.compile(
+    r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=\s|$)""")
 
 
 class _LineBreak(str):
@@ -326,7 +329,7 @@ def _emit(obj):
 # ---------------------------------------------------------------------------
 
 def _scan_line(line, quote):
-    """(the heredoc terminators this line opens, each `(word, quoted, dash)`,
+    """(the heredoc terminators this line opens, each `(word, quoted, dash, in_subst)`,
     the quote state at its end, whether it ends in a line continuation), given the
     quote state it starts in.
 
@@ -338,7 +341,7 @@ def _scan_line(line, quote):
     the line end, so an apostrophe in a comment opens no quote.
     """
     terminators = []
-    i = 0
+    i = depth = 0
     while i < len(line):
         char = line[i]
         if quote:
@@ -353,6 +356,11 @@ def _scan_line(line, quote):
         elif line.startswith("$'", i):
             quote = "$'"
             i += 1
+        elif line.startswith("$(", i):
+            depth += 1
+            i += 1
+        elif char == ")":
+            depth -= 1
         elif char in "'\"":
             quote = char
         elif char == "#" and (i == 0 or line[i - 1].isspace()
@@ -360,18 +368,22 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(3).isdigit()
+            word = m and re.sub(r"[\\'\"]", "", m.group(2))
+            if (m and not (word.isdigit() and word == m.group(2))
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                # bash keeps a CRLF opener's `\r` in the word
-                terminators.append((m.group(3) + m.group(4), bool(m.group(2)),
-                                    bool(m.group(1))))
+                # bash keeps a CRLF opener's `\r` in the word; inside an open
+                # `$(` bash also ends the body at a line `WORD)`, zsh does not
+                # (`_mutating_call` reads both; `depth` counts only unquoted parens)
+                terminators.append((word + m.group(3), word != m.group(2),
+                                    bool(m.group(1)),
+                                    depth > 0))
                 i = m.end()
                 continue
         i += 1
     return terminators, quote, False
 
 
-def _body_end(lines, j, word, quoted, dash):
+def _body_end(lines, j, word, quoted, dash, paren=False):
     """The index of the line that closes a heredoc body starting at `lines[j]`,
     or None. As in bash, under an unquoted word a line ending in an odd run of
     backslashes joins the next first, and the result must equal the word
@@ -382,26 +394,27 @@ def _body_end(lines, j, word, quoted, dash):
                and (len(line) - len(line.rstrip("\\"))) % 2):
             j += 1
             line = line[:-1] + lines[j]
-        if (line.lstrip("\t") if dash else line) == word:
+        if (line.lstrip("\t") if dash else line) in (word, word + ")" * paren):
             return j
         j += 1
     return None
 
 
-def _skip_bodies(lines, i, terminators):
+def _skip_bodies(lines, i, terminators, paren=True):
     """The index after the last of the heredoc bodies that `terminators`
     opened on one line, read in order from `lines[i]`; `i` itself when one is
-    never closed, since dropping text is a silent fail-open."""
+    never closed, since dropping text is a silent fail-open. `paren=False`
+    never ends a body at `WORD)`."""
     j = i
-    for terminator in terminators:
-        j = _body_end(lines, j, *terminator)
+    for word, quoted, dash, in_subst in terminators:
+        j = _body_end(lines, j, word, quoted, dash, in_subst and paren)
         if j is None:
             return i
         j += 1
     return j
 
 
-def _logical_lines(command):
+def _logical_lines(command, paren=True):
     """The command split at every newline outside quotes, with heredoc bodies
     and backslash-newlines removed.
 
@@ -426,14 +439,14 @@ def _logical_lines(command):
             continue
         out.append(current)
         current = ""
-        i = _skip_bodies(lines, i, pending)  # each body and its terminator line
+        i = _skip_bodies(lines, i, pending, paren)  # each body and its terminator line
         pending = []
     if current:
         out.append(current)
     return out
 
 
-def _tokens(command):
+def _tokens(command, paren=True):
     """Shell tokens for a Bash command string.
 
     shlex first, and its quote handling is the point rather than an accident:
@@ -448,7 +461,7 @@ def _tokens(command):
     LINE_BREAK, which opens command position as a `;` does.
     """
     tokens = []
-    for line in _logical_lines(command):
+    for line in _logical_lines(command, paren):
         try:
             words = shlex.split(line)
         except ValueError:
@@ -549,6 +562,19 @@ def _unwrap(tokens, start):
             continue
         wrapper = None  # a bare token after a wrapper's options: the command
     return None, relocated
+
+
+def _mutating_call(command):
+    """(tokens, verb, git index, command-word index) for the first mutating git
+    call `_first_mutating_verb` finds in either reading of `command`: bash ends a
+    heredoc body opened inside `$(` at a line `WORD)`, zsh (the Bash tool's shell
+    on macOS) reads on."""
+    for paren in (True, False):
+        tokens = _tokens(command, paren)
+        found = _first_mutating_verb(tokens)
+        if found[0] is not None:
+            break
+    return (tokens,) + found
 
 
 def _first_mutating_verb(tokens):
@@ -804,7 +830,7 @@ def _live_workers(transcript_path, caller):
     if caller and _is_isolated(directory, caller):
         return []
     workers = []
-    candidates = pending.pending_keys(directory)
+    candidates = pending.pending_keys(directory, transcript_path=transcript_path)
     # A TaskStop'd or user-killed agent fires no SubagentStop, so the ledger
     # never settles it; the session transcript records the kill instead.
     stopped = pending.stopped_ids(transcript_path, candidates)
@@ -887,8 +913,7 @@ def main():
         if not command or not isinstance(command, str):
             sys.exit(0)
 
-        tokens = _tokens(command)
-        verb, git_at, cmd_start = _first_mutating_verb(tokens)
+        tokens, verb, git_at, cmd_start = _mutating_call(command)
         if verb is None:
             sys.exit(0)
 

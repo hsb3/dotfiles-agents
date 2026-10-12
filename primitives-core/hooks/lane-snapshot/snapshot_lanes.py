@@ -15,8 +15,9 @@ Recover the lot:       git restore --source refs/lane-snapshots/<name> -- .
 
 Three modes:
   (default)   one scan every LANE_SNAPSHOT_INTERVAL seconds, holding the repo's
-              pidfile lock; exits when the root is gone or LANE_SNAPSHOT_TTL
-              seconds pass with no snapshot written
+              pidfile lock; exits when the root is gone, when LANE_SNAPSHOT_TTL
+              seconds pass with no snapshot written, or LANE_SNAPSHOT_MAX_AGE
+              seconds after start, writes or not
   --once      one scan pass, then exit (what the tests drive)
   --check     doctor mode: report ref staleness and orphaned daemons, exit
               nonzero when the net has a hole. A gate that cannot measure
@@ -66,6 +67,7 @@ import atelier_local  # noqa: E402
 
 INTERVAL_DEFAULT = 180
 TTL_DEFAULT = 43200
+MAX_AGE_DEFAULT = 86400
 # Both harnesses' lane layouts: one daemon per repo serves Claude and Codex alike.
 WORKTREES_DEFAULTS = (os.path.join(".claude", "worktrees", "agent-*"),
                       os.path.join(".worktrees", "*", "*"))
@@ -106,10 +108,29 @@ def env_str(name, default, env=None):
 # git
 # ---------------------------------------------------------------------------
 
+# Inherited variables that would point every git call below at the wrong
+# repository, or backdate every snapshot commit (the two *_DATE ones): git's
+# own `rev-parse --local-env-vars` list plus those.
+GIT_ROUTING = frozenset((
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_IMPLICIT_WORK_TREE", "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_GRAFT_FILE", "GIT_NO_REPLACE_OBJECTS", "GIT_REPLACE_REF_BASE",
+    "GIT_PREFIX", "GIT_SHALLOW_FILE", "GIT_NAMESPACE", "GIT_CEILING_DIRECTORIES",
+    "GIT_CONFIG", "GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS",
+    "GIT_AUTHOR_DATE", "GIT_COMMITTER_DATE",
+))
+
+
+def clean_git_env():
+    """os.environ without the inherited GIT_* variables in GIT_ROUTING."""
+    return {k: v for k, v in os.environ.items()
+            if k not in GIT_ROUTING and not k.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"))}
+
+
 def git(args, env=None, timeout=GIT_TIMEOUT):
     """Run one git command; return (returncode, stdout). Never raises — one
     lane's failing call must not take the daemon down for every other lane."""
-    child = dict(os.environ)
+    child = clean_git_env()
     if env:
         child.update(env)
     try:
@@ -337,11 +358,10 @@ def scan(root, log, pattern=None):
     """One pass over every lane. Returns (lanes_seen, snapshots_written)."""
     lanes = lane_paths(root, pattern)
     names = lane_names(lanes)
-    written = 0
-    for lane in lanes:
-        if snapshot_lane(root, lane, log, names[lane]):
-            written += 1
-    row = {"event": "scan", "root": root, "lanes": len(lanes), "snapshots": written}
+    wrote = [names[lane] for lane in lanes if snapshot_lane(root, lane, log, names[lane])]
+    written = len(wrote)
+    row = {"event": "scan", "root": root, "lanes": len(lanes), "snapshots": written,
+           "wrote": wrote}
     pattern = pattern or env_str("LANE_SNAPSHOT_WORKTREES", None)
     defaults, error = ((pattern,), None) if pattern else default_patterns(root)
     warnings = [error] if error else []
@@ -514,6 +534,7 @@ def main(argv=None):
         return 1
 
     ttl = env_int("LANE_SNAPSHOT_TTL", TTL_DEFAULT)
+    max_age = env_int("LANE_SNAPSHOT_MAX_AGE", MAX_AGE_DEFAULT)
     common = common_dir(root)
     if common is None:
         log({"event": "exit", "reason": "not a git worktree", "root": root})
@@ -537,14 +558,15 @@ def main(argv=None):
         "root": root,
         "interval": interval,
         "ttl": ttl,
+        "max_age": max_age,
         "pattern": env_str("LANE_SNAPSHOT_WORKTREES", WORKTREES_DEFAULT),
         "pid": os.getpid(),
         "once": bool(args.once),
     })
 
-    last_write = time.time()
+    started = last_write = time.time()
     while True:
-        reason = _exit_reason(root, common, ttl, last_write)
+        reason = _exit_reason(root, common, ttl, last_write, max_age, started)
         if reason:
             log({"event": "exit", "reason": reason, "root": root, "pid": os.getpid()})
             return 0
@@ -558,7 +580,7 @@ def main(argv=None):
         time.sleep(max(interval, 1))
 
 
-def _exit_reason(root, common, ttl, last_write):
+def _exit_reason(root, common, ttl, last_write, max_age, started):
     """Why this daemon should stop now, or None. Relaunch is free at the next
     SessionStart, so leaving is always the cheap side."""
     if not os.path.isdir(root):
@@ -569,6 +591,9 @@ def _exit_reason(root, common, ttl, last_write):
         return "not a git worktree"
     if ttl > 0 and time.time() - last_write >= ttl:
         return "ttl"
+    # Busy lanes reset the idle TTL forever; this bound holds regardless.
+    if max_age > 0 and time.time() - started >= max_age:
+        return "max-age"
     return None
 
 

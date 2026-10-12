@@ -74,15 +74,8 @@ def _repo_root(cwd):
         return os.path.abspath(override)
     if not cwd or not os.path.isdir(cwd):
         return None
-    try:
-        proc = subprocess.run(
-            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=GIT_TIMEOUT,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    out = (proc.stdout or "").strip()
-    return out if proc.returncode == 0 and out else None
+    code, out = snapshot_lanes.git(["-C", cwd, "rev-parse", "--show-toplevel"], timeout=GIT_TIMEOUT)
+    return out if code == 0 and out else None
 
 
 def _already_running(key):
@@ -103,7 +96,7 @@ def _launch(root):
         proc = subprocess.Popen(
             [sys.executable, DAEMON_PATH, root],
             stdin=subprocess.DEVNULL, stdout=devnull, stderr=devnull,
-            start_new_session=True, close_fds=True,
+            start_new_session=True, close_fds=True, env=snapshot_lanes.clean_git_env(),
         )
     finally:
         devnull.close()
