@@ -58,7 +58,7 @@ class Snapshot(unittest.TestCase):
         self.assertEqual("kata", snap["board"]["backend"])
         self.assertEqual("demo", snap["board"]["name"])
         self.assertEqual(["a1", "b2"], [i["key"] for i in snap["items"]], "items sort by key")
-        self.assertEqual(["P0", "P1", "P2", "P3"], snap["fields"]["priority"]["options"])
+        self.assertEqual(["P0", "P1", "P2", "P3", "P4"], snap["fields"]["priority"]["options"])
         self.assertEqual(["api", "docs", "infra"], snap["fields"]["labels"]["options"])
         json.dumps(snap)  # the snapshot has to survive a round-trip to the analyst
 
@@ -68,6 +68,11 @@ class Snapshot(unittest.TestCase):
         self.assertEqual("2026-09-01", item["fields"]["due"])
         self.assertEqual("someone", item["fields"]["assignee"])
         self.assertEqual(["api", "infra"], item["labels"], "labels are sorted")
+
+    def test_kata_priority_4_exports_as_its_own_band(self):
+        issues = [{"short_id": "d4", "title": "t", "priority": 4}]
+        item = kb.build_snapshot("demo", issues, LABELS)["items"][0]
+        self.assertEqual("P4", item["fields"]["priority"])
 
     def test_untriaged_cells_read_as_null_not_a_band(self):
         item = next(i for i in snapshot()["items"] if i["key"] == "a1")
@@ -112,6 +117,17 @@ class Normalize(unittest.TestCase):
         value, problem = kb.normalize("priority", "P9")
         self.assertIsNone(value)
         self.assertIn("P9", problem)
+        self.assertIn("P0-P4", problem)
+
+    def test_p5_is_still_refused(self):
+        self.assertIsNone(kb.normalize("priority", "P5")[0])
+        self.assertIsNotNone(kb.normalize("priority", "P5")[1])
+
+    def test_p4_resolves_to_kata_4_and_plans_an_edit(self):
+        self.assertEqual((4, None), kb.normalize("priority", "P4"))
+        ops, problems = kb.plan(snapshot(), [("a1", "priority", "P4")])
+        self.assertEqual([["edit", "a1", "--priority", "4"]], [argv for argv, _ in ops])
+        self.assertEqual([], problems)
 
     def test_labels_split_strip_and_sort(self):
         self.assertEqual((["api", "infra"], None), kb.normalize("labels", " infra , api ,"))

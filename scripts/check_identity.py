@@ -6,6 +6,13 @@ skill only through data surfaces (the roster's `requires:`, a repo's own config)
 into a primitive body. This is the vendored, in-repo successor to the archived workbench
 `scripts/promote_check.py` H2/H5 checks — no cross-repo import at runtime.
 
+Private repositories and paths: a published plugin or skill never mentions or relies on a
+private path or repository. Plugins are self-contained, and a user who installs one cannot open
+a private repo, so any pointer to one is a dead end for that user and a leak of the owner's
+private estate. "Install or clone X, then point an env var at it" is acceptable only when X is
+public. The IDENTITY list below carries every private repo slug a shipped body has leaked; a new
+private repo joins it the first time one does.
+
 Scope = the shipped primitive bodies under `primitives-core/{skills,agents,commands,hooks}/`,
 plus the symlink-assembly tree `plugins/` (decision-030): bundle READMEs are regular files there,
 and each standalone wrapper's README travels with its skill
@@ -83,6 +90,11 @@ IDENTITY = [
     (re.compile(r"(?<![\w-])headcase(?![\w-])"), "client token 'headcase'"),
     (re.compile(r"(?<![\w-])dotfiles-agents-workbench(?![\w-])"), "internal repo slug 'dotfiles-agents-workbench'"),
     (re.compile(r"(?<![\w-])fable-optimization(?![\w-])"), "internal repo slug 'fable-optimization'"),
+    # Private repos (docstring): a shipped body never points at one, however it is phrased.
+    (re.compile(r"(?<![\w-])functionform-obsidian(?![\w-])"), "private repo 'functionform-obsidian' (a public plugin never names a private repo)"),
+    (re.compile(r"(?<![\w-])dotfiles-agents-oc(?![\w-])"), "private repo 'dotfiles-agents-oc' (a public plugin never names a private repo)"),
+    (re.compile(r"(?<![\w-])fleet-dashboard(?![\w-])"), "private repo 'fleet-dashboard' (a public plugin never names a private repo)"),
+    (re.compile(r"(?<![\w-])kata-oversight(?![\w-])"), "private repo 'kata-oversight' (a public plugin never names a private repo)"),
 ]
 
 # ── Issue refs: repo-specific personalization, kept separate from IDENTITY above so the

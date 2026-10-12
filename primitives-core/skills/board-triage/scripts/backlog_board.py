@@ -3,9 +3,9 @@
 
 Implements the adapter contract in the skill's SKILL.md §2 against a Backlog.md board.
 
-    backlog_board.py export --root . --out board-snapshot.json
-    backlog_board.py apply --root . --changeset changeset.tsv           # dry-run diff
-    backlog_board.py apply --root . --changeset changeset.tsv --apply   # write
+    backlog_board.py export --root . --out "$T/board-snapshot.json"
+    backlog_board.py apply --root . --changeset "$T/changeset.tsv"           # dry-run diff
+    backlog_board.py apply --root . --changeset "$T/changeset.tsv" --apply   # write
 
 Config: just --root, the directory holding the board (default: cwd). Backlog.md finds its
 board from the working directory, so every call runs with cwd=root.

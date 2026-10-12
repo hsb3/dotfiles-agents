@@ -24,6 +24,7 @@ import sys
 
 UNSET = "(unset)"
 PRINT_CAP = 10
+EXEMPT_LABEL = "decision"
 
 # `prefix: text`, lowercase slug only. The trailing space is what keeps `http://x` out.
 TITLE_PREFIX = re.compile(r"^([a-z0-9][a-z0-9-]*):\s")
@@ -128,14 +129,25 @@ def check_priority_skew(items: list[dict], threshold: float) -> dict | None:
 
 
 def check_priority_missing(items: list[dict]) -> dict | None:
-    blank = sorted(i["key"] for i in items if priority_of(i) == UNSET)
-    if not blank:
-        return None
+    """Blank priority fails, except on `decision` items: SKILL.md §6 leaves those blank for the owner."""
+    blank = [i for i in items if priority_of(i) == UNSET]
+    exempt = [i for i in blank if EXEMPT_LABEL in (i.get("labels") or [])]
+    keys = sorted(i["key"] for i in blank if i not in exempt)
+    note = f" ({len(exempt)} {EXEMPT_LABEL} item(s) exempt)" if exempt else ""
+    if not keys:
+        if not exempt:
+            return None
+        return _finding(
+            "priority-missing",
+            "skip",
+            f"{len(exempt)} {EXEMPT_LABEL} item(s) exempt — owner-gated, priority left blank",
+            sorted(i["key"] for i in exempt),
+        )
     return _finding(
         "priority-missing",
         "fail",
-        f"{len(blank)} open item(s) carry no priority — untriaged, and invisible to any ranking",
-        blank,
+        f"{len(keys)} open item(s) carry no priority — untriaged, and invisible to any ranking{note}",
+        keys,
     )
 
 

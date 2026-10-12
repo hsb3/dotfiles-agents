@@ -35,18 +35,19 @@ are not required.
 
 ```bash
 S="<board-triage-skill-dir>/scripts"
-python3 "$S/kata_board.py" export --project keel --out board-snapshot.json
+T=$(mktemp -d)   # scratch for snapshot + changeset; see SKILL.md §5
+python3 "$S/kata_board.py" export --project keel --out "$T/board-snapshot.json"
 ```
 
-Prints `<n> items (<n> untriaged) -> board-snapshot.json`. Only `--status open` issues are
+Prints `<n> items (<n> untriaged) -> <path>`. Only `--status open` issues are
 fetched — see the field map note on `state` below for why that's the whole board, not a
 filtered view.
 
 ## Apply
 
 ```bash
-python3 "$S/kata_board.py" apply --project keel --changeset changeset.tsv            # dry-run diff
-python3 "$S/kata_board.py" apply --project keel --changeset changeset.tsv --apply    # write
+python3 "$S/kata_board.py" apply --project keel --changeset "$T/changeset.tsv"            # dry-run diff
+python3 "$S/kata_board.py" apply --project keel --changeset "$T/changeset.tsv" --apply    # write
 ```
 
 Dry-run by default. Cells already at the target value are dropped, so re-runs are free.
@@ -58,7 +59,7 @@ the resolvable rows still apply.
 
 | Rubric output | Kata cell | Values |
 |---|---|---|
-| Priority band | `priority` (int, edited via `kata edit --priority`) | `P0`-`P3` map to `0`-`3`; empty clears via `-` |
+| Priority band | `priority` (int, edited via `kata edit --priority`) | `P0`-`P4` map to `0`-`4` (the rubric emits `P0`-`P3`; kata's 4 is its lowest band and exports as `P4`, never blank); empty clears via `-` |
 | Grouping | `labels` (via `kata label add`/`kata label rm`) | comma-separated **full desired set**; the adapter diffs it against what's attached |
 | Time | `metadata.deadline_on` (via `kata deadline`) | `YYYY-MM-DD`; empty clears via `-` |
 | — | owner (via `kata assign`/`kata unassign`) | actor name |
@@ -79,32 +80,26 @@ in and then dropped per SKILL.md §4 step 2 — for this backend that step is a 
 
 ## The maintenance rhythm
 
-Triage is one move in a longer loop, and the tools come from board-desk and the
-separately installed kata plugin from the kata-oversight marketplace. Run at session
+Triage is one move in a longer loop, and the tools all ship in board-desk. Run at session
 start, or whenever `board_health.py` says a pass is due:
 
 | # | Tool | Ships in | Answers |
 |---|---|---|---|
-| 1 | `kata_doctor.py` | kata plugin | Is this checkout even wired to the board? Every warn is wiring debt. |
-| 2 | `audit_issues.py` | kata plugin | Is each card *defined* — a title that fits, acceptance text, real edges instead of prose? |
-| 3 | `board_health.py --vocabulary` | board-desk | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
-| 4 | this skill, §5 | board-desk | The pass itself, when step 3 says one is due. |
-| 5 | `board_health.py --vocabulary` | board-desk | Did the pass take? Exit 0 or it did not. |
-| 6 | `reconcile_github.py` | board-desk | Do imported GitHub mirrors still match the board? Dry-run first. |
+| 1 | `board_health.py --vocabulary` | board-desk | Does the board *discriminate*, or has it decayed into one undifferentiated band? |
+| 2 | this skill, §5 | board-desk | The pass itself, when step 1 says one is due. |
+| 3 | `board_health.py --vocabulary` | board-desk | Did the pass take? Exit 0 or it did not. |
+| 4 | `reconcile_github.py` | board-desk | Do imported GitHub mirrors still match the board? Dry-run first. |
 
-Steps 2 and 3 look redundant and are not, and the difference is the whole reason step 3
-exists. `audit_issues.py` reads one card at a time and asks whether its fields are
-**populated**; `board_health.py` reads the whole board and asks whether those fields still
-**discriminate**. A board can pass every per-card check and still be unusable: measured on a live board
-2026-09-08, the audit reported `no-priority: 0` and `body-thin: 0` while 34 of 55 open items
+A per-card definition check and a whole-board health check are different questions, and the
+difference is the whole reason step 1 exists. A per-card check reads one card at a time and
+asks whether its fields are **populated**; `board_health.py` reads the whole board and asks
+whether those fields still **discriminate**. A board can pass every per-card check and still be unusable: measured on a live board
+2026-09-08, a per-card check reported `no-priority: 0` and `body-thin: 0` while 34 of 55 open items
 sat in one priority band, 16 carried no label at all, and the area grouping existed only
 inside title prefixes where no query could reach it. Per-card checks cannot see a
-distribution, so run both.
+distribution, so the health check cannot be skipped.
 
-Step 1 is a gate, not a suggestion — a FAIL there means every later step is reading or
-writing the wrong board.
-
-### Steps 3 and 5 run with a declared vocabulary
+### Steps 1 and 3 run with a declared vocabulary
 
 ```bash
 python3 "$S/board_health.py" --vocabulary "$S/core-labels.txt" <(python3 "$S/kata_board.py" export --project <name>)

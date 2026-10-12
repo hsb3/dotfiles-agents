@@ -31,6 +31,8 @@ bun built-in and an npm dependency; a `bun install` that resolves a stale versio
 a platform package; a global CLI that PATH or mise shadows; converting a repo's
 `package.json` scripts and lockfile off npm, pnpm, or yarn.
 
+Measured traps and cheatsheet findings are recorded without naming the project they came from.
+
 ## Requires
 
 The `bun` binary on PATH. Nothing else — the references are plain markdown.

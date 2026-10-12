@@ -120,6 +120,25 @@ class PriorityMissing(unittest.TestCase):
         self.assertEqual("fail", found["severity"])
         self.assertEqual(["z1", "z2"], found["affected"])
 
+    def test_p4_is_a_real_band_not_blank(self):
+        self.assertEqual([], actionable(snapshot(CLEAN_ITEMS + [item("z1", priority="P4")])))
+
+    def test_decision_items_are_exempt_and_the_exemption_is_visible(self):
+        items = CLEAN_ITEMS + [item("z1", priority=None, labels=["infra", "decision"])]
+        snap = snapshot(items, label_options=("infra", "docs", "decision"))
+        self.assertEqual([], actionable(snap))
+        found = findings_by_id(snap)["priority-missing"]
+        self.assertEqual("skip", found["severity"])
+        self.assertIn("1 decision item(s) exempt", found["finding"])
+
+    def test_blank_without_decision_label_still_fails_and_counts_exemptions(self):
+        items = CLEAN_ITEMS + [item("z1", priority=None),
+                               item("z2", priority=None, labels=["decision"])]
+        found = findings_by_id(snapshot(items))["priority-missing"]
+        self.assertEqual("fail", found["severity"])
+        self.assertEqual(["z1"], found["affected"])
+        self.assertIn("1 decision item(s) exempt", found["finding"])
+
     def test_a_missing_fields_block_is_missing_priority_not_a_crash(self):
         broken = {"key": "z9", "title": "t", "state": "open", "labels": ["infra"]}
         self.assertIn("priority-missing", findings_by_id(snapshot(CLEAN_ITEMS + [broken])))

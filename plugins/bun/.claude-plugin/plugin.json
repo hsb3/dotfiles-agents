@@ -4,5 +4,5 @@
   },
   "description": "Bun as the default JS/TS runtime, package manager, test runner, and bundler — command mapping from npm/node habits, built-ins that replace dependencies, measured traps (bunfig exclusions, PATH order, mise interop), and a worked npm→bun migration. Release history: https://github.com/hsb3/dotfiles-agents/releases.",
   "name": "bun",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
