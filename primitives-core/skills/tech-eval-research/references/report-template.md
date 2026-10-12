@@ -8,7 +8,7 @@ Which candidates clear both the hard filters and the maturity bar, and, when one
 
 ## 2. Comparison matrix
 
-Candidates as rows, evaluation axes as columns. Required columns: candidate + layer tag, license type (+ OSI or equivalent filter status), hard-filter verdict (Pass / Fail — reason), one column per checklist capability, secondary axes (observability, ecosystem fit, integration effort), maturity verdict, and an overall "required features paywalled?" column.
+Candidates as rows, evaluation axes as columns. Required columns: candidate + layer tag, license type (+ OSI or equivalent filter status), hard-filter verdict (Pass / Fail / Unverified — reason), one column per checklist capability, secondary axes (observability, ecosystem fit, integration effort), maturity verdict, and an overall "required features paywalled?" column.
 
 Legend (state it above the table):
 ✅ Yes, free/OSS · ◐ Partial (see note) · 💰 Paywalled · ❌ No (confirmed) · ❓ Not documented · 🧪 Untested runtime (documented, not run here)

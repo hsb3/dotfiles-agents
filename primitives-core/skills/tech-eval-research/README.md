@@ -1,9 +1,9 @@
 # tech-eval-research
 
-Rigorous, cited, comparative evaluation of technology options — producing a ranked
-shortlist, a capability comparison matrix, and a recommendation backed by primary sources
-instead of marketing pages. When nothing clears every hard filter it says so — no verified
-match, with the decisive gates — rather than promoting a near-miss or a narrower pilot.
+Rigorous, cited, comparative evaluation of technology options — producing a capability
+comparison matrix backed by primary sources instead of marketing pages, plus a ranked shortlist
+and recommendation when a candidate passes every hard filter, otherwise a no-verified-match
+finding with the decisive gates, rather than promoting a near-miss or a narrower pilot.
 
 ## When it triggers
 

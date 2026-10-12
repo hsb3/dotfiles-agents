@@ -29,6 +29,7 @@ Resolve each required capability to exactly one verdict, with a one-line note an
 | **Paywalled** | Exists, but gated to a paid tier or the vendor's cloud |
 | **No** | Confirmed absent — docs state the limitation or the design excludes it |
 | **Not documented** | Could not confirm either way; never assert absence from silence |
+| **Untested runtime** | Documented, not exercised here: use instead of Yes when the decision turns on a runtime behavior the docs claim but nobody ran, such as a headless lifecycle path; an ordinary documented feature stays Yes |
 
 Partial fits get "Partial/◐" with the boundary stated (e.g., "OAuth login free up to 10 users; SAML paid").
 
