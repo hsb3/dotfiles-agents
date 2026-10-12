@@ -153,7 +153,7 @@ PROBES = [
     ("hd_opener_in_comment", "true # cat <<EOF\ngit commit -m x\nEOF"),
     ("hd_then_separator_git", "cat <<EOF && git push\nbody\nEOF"),
     ("hd_backslash_word_plain", "cat <<\\EOF\nbody\nEOF\ngit commit -m x"),
-    # O1 and O2: known gaps, excused below
+    # O1 and O2: bash quoting-in-word and `EOF)` terminator inside $( )
     ("O1_backslash_word_apostrophe", "cat <<\\EOF\nit's\nEOF\ngit commit -m x"),
     ("O1_partial_quote_apostrophe", 'cat <<E"O"F\nit\'s\nEOF\ngit commit -m x'),
     ("O2_paren_terminator",
@@ -206,14 +206,7 @@ PROBES = [
 
 # Known bypasses: (probe, guard) -> where the gap is recorded. Each cell must
 # still fail; once a fix makes it pass, delete its entry here.
-_O1 = "O1, live-worker-git-guard README (opener not recognized) and ledger 0428"
-_O2 = "O2, `EOF)` terminator inside $( ), ledger 0428"
-EXCUSED = {
-    ("O1_backslash_word_apostrophe", "live"): _O1,
-    ("O1_partial_quote_apostrophe", "live"): _O1,
-    ("O2_paren_terminator", "live"): _O2,
-    ("O2_paren_terminator", "scope"): _O2,
-}
+EXCUSED = {}
 # live-worker-git-guard README "What it cannot see": `bash -c "..."` and a command
 # word glued to a separator displace the git word.
 for _name in ("sh_bash_c", "sh_sh_c", "sh_zsh_c", "sh_bash_ec", "sh_env_bash_c",

@@ -103,7 +103,7 @@ def _launch(root):
         proc = subprocess.Popen(
             [sys.executable, DAEMON_PATH, root],
             stdin=subprocess.DEVNULL, stdout=devnull, stderr=devnull,
-            start_new_session=True, close_fds=True,
+            start_new_session=True, close_fds=True, env=snapshot_lanes.clean_git_env(),
         )
     finally:
         devnull.close()

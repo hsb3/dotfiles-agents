@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 HOOKS_ROOT = os.path.join(
     os.path.dirname(__file__), "..", "primitives-core", "hooks")
@@ -107,13 +108,13 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             fh.write(json.dumps(meta))
         return agent_id
 
-    def _settle(self, agent_id):
+    def _settle(self, agent_id, ts="2026-08-20T15:37:08.666Z"):
         """A delegation row in the ledger — the agent stopped."""
         os.makedirs(os.path.dirname(self.delegation_log), exist_ok=True)
         with open(self.delegation_log, "a", encoding="utf-8") as fh:
             fh.write(json.dumps({
                 "v": 1, "plugin": "atelier", "harness": "claude-code",
-                "stream": "delegation", "ts": "2026-08-20T15:37:08.666Z",
+                "stream": "delegation", "ts": ts,
                 "project": self.cwd, "session_id": self.session_id,
                 "agent_id": agent_id, "agent_type": "atelier:builder",
                 "model": "claude-sonnet-5", "ctx_tokens": 1234,
@@ -331,6 +332,72 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
                 "pin": {"id": agent_id, "name": "sleeper", "ref": "8cd76e"}},
             "version": "2.1.281",
         }
+
+    # -- a SubagentStop-settled agent resumed by SendMessage is live again,
+    # ordered by the ledger row's `ts` against the transcript line's `timestamp`.
+    # Only the `resumedAgentId` result counts: a failed send writes none.
+
+    BEFORE, AFTER, LATER = ("2026-08-20T15:30:00.000Z", "2026-08-20T15:40:00.000Z",
+                            "2026-08-20T15:45:00.000Z")
+
+    def _resumed(self, agent_id, at):
+        """The live-captured pair (2026-10-12): SendMessage call, then its result."""
+        self._transcript(dict(self._send_message(agent_id), timestamp=at),
+                         dict(self._resume_result(agent_id), timestamp=at))
+
+    def test_a_send_message_after_the_ledger_settle_makes_it_live_again(self):
+        self._sidecar("f1111111111111111")
+        self._settle("f1111111111111111")
+        self._resumed("f1111111111111111", self.AFTER)
+        reason = self._assert_denied(self._run(self._payload("git commit -m x")))
+        self.assertIn("f1111111111111111", reason)
+
+    def test_a_resume_by_name_after_the_ledger_settle_makes_it_live_again(self):
+        self._sidecar("f2222222222222222")
+        self._settle("f2222222222222222")
+        self._transcript(dict(self._resume_result("f2222222222222222"), timestamp=self.AFTER))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_failed_send_after_the_ledger_settle_does_not_reopen_it(self):
+        self._sidecar("f8888888888888888")
+        self._settle("f8888888888888888")
+        self._transcript(dict(self._send_message("f8888888888888888"), timestamp=self.AFTER))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_resume_before_the_ledger_settle_does_not_reopen_it(self):
+        self._sidecar("f3333333333333333")
+        self._resumed("f3333333333333333", self.BEFORE)
+        self._settle("f3333333333333333")
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_resumed_agent_settles_again_at_its_next_stop(self):
+        self._sidecar("f4444444444444444")
+        self._settle("f4444444444444444")
+        self._resumed("f4444444444444444", self.AFTER)
+        self._settle("f4444444444444444", ts=self.LATER)
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_its_own_completion_notification_does_not_reopen_it(self):
+        # A background agent's notification lands after its SubagentStop row.
+        self._sidecar("f5555555555555555")
+        self._settle("f5555555555555555")
+        queued, delivered = self._notification("f5555555555555555", "completed")
+        self._transcript(dict(queued, timestamp=self.AFTER), dict(delivered, timestamp=self.AFTER))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_a_resume_with_no_timestamp_leaves_the_ledger_answer(self):
+        self._sidecar("f6666666666666666")
+        self._settle("f6666666666666666")
+        self._transcript(self._resume_result("f6666666666666666"))
+        self._assert_silent(self._run(self._payload("git commit -m done")))
+
+    def test_pending_keys_without_a_transcript_ignores_resumes(self):
+        # subagent-telemetry's stall scan calls it this way; its set must not move.
+        self._sidecar("f7777777777777777")
+        self._settle("f7777777777777777")
+        self._resumed("f7777777777777777", self.AFTER)
+        with unittest.mock.patch.dict(os.environ, {"SUBAGENT_TELEMETRY_LOG_PATH": self.delegation_log}):
+            self.assertEqual(pending.pending_keys(self.subagents_dir), [])
 
     def test_taskstop_result_settles_the_killed_child(self):
         self._sidecar("d1111111111111111")

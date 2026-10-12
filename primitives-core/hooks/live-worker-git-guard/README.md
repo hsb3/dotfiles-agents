@@ -142,7 +142,8 @@ cannot be hurt by anything done in this tree, which is also why this guard skips
 The pending set comes from `hooks/_lib/pending.py`, shared with `subagent-telemetry` so the two
 cannot disagree about who is live: the `agent-*.meta.json` sidecars in this session's
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
-already settled.
+already settled, unless the caller's transcript holds a `SendMessage` result naming it as resumed
+(`resumedAgentId`; a failed send writes none) stamped after its latest settling row's `ts`.
 
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on
@@ -200,7 +201,11 @@ section below. Each leaves it deciding exactly as it did before it could compare
 - a `cd`, `pushd` or `popd` in command position before the `git` word, which makes the payload's
   `cwd` stale — bare, or under an exec wrapper (`command cd …`, `builtin cd …`, `eval cd …`);
 - a wrapper option that moves the tree the git call runs in (`env -C DIR`, `sudo -D DIR`,
-  `env -S`), per the section above.
+  `env -S`), per the section above;
+- a `-C` target that does not exist yet or sits outside any repository, such as a review clone
+  about to be created in a temp directory: with no tree to compare, a call into it while a worker
+  is live needs the override below. Kept deliberately: a missing target proves nothing about
+  which tree the call ends up touching.
 
 The same rule a corrupt sidecar gets: a record that exists and cannot be read keeps its agent
 live. `init` and `clone` are not mutating verbs, so making a repo in a fresh directory never
@@ -256,8 +261,9 @@ all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newl
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
-tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word bash
-would dequote, `<<\EOF` or `<<E"O"F`, is not recognized as an opener at all), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
+tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word with quotes or
+backslashes in it, `<<\EOF` or `<<E"O"F`, is dequoted to `EOF` and its body is literal; inside an open
+`$(` the line `EOF)` also closes the body), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
 in order. A `<<` whose terminator never appears drops nothing, so its body
 is read as command lines.
 

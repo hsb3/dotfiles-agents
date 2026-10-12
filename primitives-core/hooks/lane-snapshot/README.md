@@ -40,9 +40,12 @@ allowed to get slower because of this.
 
 The daemon then loops: one pass over every matching worktree, one `sleep`, repeat. It exits on
 its own — one final `exit` row in the ledger — when its root is gone or no longer a git worktree,
-or when `LANE_SNAPSHOT_TTL` seconds pass without it writing a snapshot. Relaunch is free: the next
-`SessionStart` starts a fresh one. The TTL's cost: a session idle past it loses its daemon, and a
-worker dispatched later in that same session runs unprotected until the next `SessionStart`.
+when `LANE_SNAPSHOT_TTL` seconds pass without it writing a snapshot, or when it reaches
+`LANE_SNAPSHOT_MAX_AGE` seconds old whether it is writing or not. The max age exists because one
+busy lane (a log, a build output that is not ignored) writes every pass and resets the idle TTL
+forever. Relaunch is free: the next `SessionStart` starts a fresh one. The cost of either bound: a
+session that outlives it loses its daemon, and a worker dispatched later in that same session runs
+unprotected until the next `SessionStart`.
 
 ### One daemon per repository
 
@@ -66,7 +69,13 @@ replaces all of this with the one glob.
 
 A lane's ref name is its folder name, with anything that is not a valid ref character replaced by
 `-`. Two lanes whose names collide each get a suffix of their path's hash (`dup-1a2b3c4d`), so no
-two lanes ever share a ref.
+two lanes ever share a ref. The suffix goes on BOTH lanes, so a lane's ref is renamed when a
+same-named lane appears or disappears, and its history does not continue under the new name.
+
+The daemon ignores inherited `GIT_*` repository variables (`GIT_DIR`, `GIT_WORK_TREE`,
+`GIT_INDEX_FILE` and the like), so a launching shell cannot point it at another repository, and
+inherited `GIT_AUTHOR_DATE` / `GIT_COMMITTER_DATE`, so it cannot backdate a fresh snapshot into one
+`--check` reads as stale.
 
 The shared daemon writes its ledger under the harness that launched it (it inherits
 `ATELIER_HARNESS`), so the other harness's ledger holds only that harness's `hook` rows.
@@ -93,6 +102,7 @@ No per-project activation file. The hook is armed by being present in an install
 | `LANE_SNAPSHOT_INTERVAL` | `180` | Seconds between passes. Also sets the `--check` staleness threshold, at 2x. |
 | `LANE_SNAPSHOT_WORKTREES` | *(unset)*: every registered linked worktree, plus both `.claude/worktrees/agent-*` and `.worktrees/*/*` | Glob, relative to the root, naming the lanes to snapshot. Unset scans both harnesses' layouts plus every registered linked worktree, deduped; the Codex one is `<checkout-root>/*/*` when the `checkout-root` activation key sets it, and an invalid key keeps the default and says why in the scan warning. |
 | `LANE_SNAPSHOT_TTL` | `43200` | Seconds without a written snapshot (since start or the last one) after which the daemon exits. `0` disables. |
+| `LANE_SNAPSHOT_MAX_AGE` | `86400` | Seconds after start at which the daemon exits however busy it is, because a lane that writes every pass resets the TTL indefinitely. `0` disables. |
 | `LANE_SNAPSHOT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/lane-snapshot` | Where the per-repository pidfiles live. `XDG_STATE_HOME` is honoured only when absolute. |
 | `LANE_SNAPSHOT_LOG_PATH` | `${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/lane-snapshot.jsonl` | Ledger |
 
@@ -191,8 +201,9 @@ answering different questions.
 
 **Did it run?** The ledger. The daemon writes a `start` row, a `snapshot` row per commit it
 writes (so the first successful snapshot of a session is always on record), an `error` row per
-failing lane, and a `scan` row per pass carrying the lane count — with an explicit `warning` when
-that count is zero.
+failing lane, and a `scan` row per pass carrying the lane count, the number of snapshots written
+and `wrote`, the names of the lanes that wrote (`[]` when none), with an explicit `warning` when
+the lane count is zero. `wrote` is how you find the lane keeping a daemon alive.
 
 **Is it still working?** Doctor mode, which measures rather than assumes:
 
@@ -221,7 +232,7 @@ ${XDG_DATA_HOME:-~/.local/share}/agent-logs/<harness>/<plugin>/<stream>.jsonl
 Every row carries the identity envelope — `v`, `plugin`, `harness`, `stream`, `ts` (ISO-8601
 UTC), `project` — plus an `event` naming which of the six shapes it is (`hook`, `start`,
 `snapshot`, `scan`, `error`, `exit`). An `exit` row's `reason` is `root gone`, `not a git
-worktree`, `ttl`, or `already running`:
+worktree`, `ttl`, `max-age`, or `already running`:
 
 ```json
 {"v":1,"plugin":"atelier","harness":"claude-code","stream":"lane-snapshot",
@@ -230,7 +241,7 @@ worktree`, `ttl`, or `already running`:
  "ref":"refs/lane-snapshots/agent-probe1","commit":"cd6b9be..."}
 {"v":1,"plugin":"atelier","harness":"claude-code","stream":"lane-snapshot",
  "ts":"2026-09-08T04:22:55.765Z","project":"/repo/x",
- "event":"scan","root":"/repo/x","lanes":0,
+ "event":"scan","root":"/repo/x","lanes":0,"snapshots":0,"wrote":[],
  "warning":"no worktrees matched .claude/worktrees/agent-* under /repo/x — snapshotting nothing"}
 ```
 

@@ -123,7 +123,10 @@ def _load_protected_branches(project_dir):
 # (?<!<)/(?!<) reject `<<<` herestrings (no terminator to find). A shift still
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
-HEREDOC_START = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)(\w+)['\"]?(\r?)(?=\s|$)")
+# The word may carry quotes or backslashes anywhere (`<<\EOF`, `<<E"O"F`); bash then
+# takes the word with them removed as the delimiter and the body as literal.
+HEREDOC_START = re.compile(
+    r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=\s|$)""")
 
 
 def _scan_line(line, quote):
@@ -161,18 +164,22 @@ def _scan_line(line, quote):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            if (m and not m.group(3).isdigit()
+            word = m and re.sub(r"[\\'\"]", "", m.group(2))
+            if (m and not word.isdigit()
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                # bash keeps a CRLF opener's `\r` in the word
-                terminators.append((m.group(3) + m.group(4), bool(m.group(2)),
-                                    bool(m.group(1))))
+                # bash keeps a CRLF opener's `\r` in the word; inside an open
+                # `$(` a line `WORD)` also ends the body (ponytail: counts
+                # parens ignoring quotes, so a stray one only over-keeps text)
+                terminators.append((word + m.group(3), word != m.group(2),
+                                    bool(m.group(1)),
+                                    line.count("$(", 0, i) > line.count(")", 0, i)))
                 i = m.end()
                 continue
         i += 1
     return terminators, quote, False
 
 
-def _body_end(lines, j, word, quoted, dash):
+def _body_end(lines, j, word, quoted, dash, paren=False):
     """The index of the line that closes a heredoc body starting at `lines[j]`,
     or None. As in bash, under an unquoted word a line ending in an odd run of
     backslashes joins the next first, and the result must equal the word
@@ -183,7 +190,7 @@ def _body_end(lines, j, word, quoted, dash):
                and (len(line) - len(line.rstrip("\\"))) % 2):
             j += 1
             line = line[:-1] + lines[j]
-        if (line.lstrip("\t") if dash else line) == word:
+        if (line.lstrip("\t") if dash else line) in (word, word + ")" * paren):
             return j
         j += 1
     return None
