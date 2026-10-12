@@ -178,6 +178,38 @@ PROBES = [
     # a quoted all-digit word is a heredoc, never a shift
     ("N2_quoted_digit_word", "cat <<'1'\nit's\n1\ngit commit -m x"),
     ("N2_backslash_digit_word", "cat <<\\1\nit's\n1\ngit commit -m x"),
+    # `$(` depth: opened inside `"`, carried across lines, clamped at 0. The `: # '`
+    # tail balances the body's apostrophe so the whitespace-split fallback finds nothing
+    ("hd_dq_subst_odd_quote_body",
+     "echo gh pr create --title t --body \"$(cat <<'EOF'\n"
+     "A 12\" screen; it's fine\nEOF\n)\"\ngit push"),
+    ("hd_subst_terminator_glued_semicolon", "x=$(cat <<'EOF'\nit's\nEOF);git push\n: # '"),
+    ("hd_word_glued_semicolon", "cat <<EOF;\nit's\nEOF\ngit push"),
+    ("hd_subst_after_subshell_paren",
+     "(true); x=$(cat <<'EOF'\nit's\nEOF)\ngit push\n: # '"),
+    ("hd_subst_opened_line_before", "x=$(\ncat <<'EOF'\nit's\nEOF)\ngit push\n: # '"),
+    ("hd_subst_terminator_space_paren", "x=$(cat <<'EOF'\nit's\nEOF )\ngit push\n: # '"),
+    ("hd_subst_after_arith_expansion",
+     "echo $((1+2)); x=$(cat <<'EOF'\nit's\nEOF)\ngit push\n: # '"),
+    ("hd_subst_nested_terminator", "x=$(echo $(cat <<'EOF'\nit's\nEOF))\ngit push\n: # '"),
+    ("hd_subst_nested_terminator_glued_semicolon",
+     "x=$(echo $(cat <<'EOF'\nit's\nEOF));git push\n: # '"),
+    # a `)` with no `$(` open keeps the opener before it
+    ("hd_word_then_subshell", "cat <<'EOF'; (true)\nit's\nEOF\ngit push\n: # '"),
+    # bash 3.2 and zsh read no body for a heredoc whose `$(` closes on its own line;
+    # bash 5 does
+    ("hd_subst_closed_on_opener_line", "x=$(cat <<EOF; true)\ngit push\nEOF"),
+    ("hd_subst_closed_on_opener_line_body_read", "x=$(cat <<'EOF' )\nit's\nEOF\ngit push"),
+    # a newline inside `$(` starts no body opened outside it
+    ("hd_outer_body_after_subst_newline", "cat <<EOF; x=$(echo hi\n); git push\nbody\nEOF"),
+    ("hd_outer_body_after_dq_subst_newline",
+     "cat <<EOF; echo \"$(echo hi\n)\"; git push\nbody\nEOF"),
+    ("hd_outer_body_redirect_after_subst_newline",
+     "cat <<EOF>/dev/null; x=$(echo hi\n) && git push\nbody\nEOF"),
+    ("hd_outer_body_spaced_after_subst_newline",
+     "cat <<EOF ; x=$(echo hi\n); git push\nbody\nEOF"),
+    ("hd_outer_body_and_after_subst_newline",
+     "cat <<'EOF' && x=$(echo hi\n) && git push\nbody\nEOF"),
     # arithmetic (PR 580)
     ("arith_cmd_shift", "x=1\n((x<<2))\ngit commit -m x"),
     ("arith_expansion", "echo $((1<<2))\ngit commit -m x"),
@@ -233,6 +265,12 @@ for _name in ("sh_bash_c", "sh_sh_c", "sh_zsh_c", "sh_bash_ec", "sh_env_bash_c",
               "sh_bash_c_heredoc_then_git"):
     EXCUSED[(_name, "live")] = "live README ceiling: bash -c string"
 EXCUSED[("sep_glued", "live")] = "live README ceiling: word glued to a separator"
+for _name in ("hd_subst_terminator_glued_semicolon", "hd_subst_after_subshell_paren",
+              "hd_subst_opened_line_before", "hd_subst_terminator_space_paren",
+              "hd_subst_after_arith_expansion", "hd_subst_nested_terminator",
+              "hd_subst_nested_terminator_glued_semicolon", "hd_word_then_subshell",
+              "hd_outer_body_spaced_after_subst_newline", "hd_outer_body_and_after_subst_newline"):
+    EXCUSED[(_name, "scope")] = "scope guard parity, hj2p"
 
 
 def _bashes():
@@ -298,12 +336,14 @@ class GitGuardDifferential(unittest.TestCase):
                 ran = self._run(shell, command)
                 verdicts = {g: flags(command) for g, flags in GUARDS.items()}
                 for guard in GUARDS:
-                    missed = not verdicts[guard] and any(
-                        is_write(guard, argv) for argv in ran)
+                    wrote = any(is_write(guard, argv) for argv in ran)
+                    missed = not verdicts[guard] and wrote
                     detail = "\nprobe: {0!r}\nshell: {1}\nshell ran: {2}\nverdicts: {3}".format(
                         command, shell, ran, verdicts)
                     with self.subTest(shell=shell, probe=name, guard=guard):
-                        if (name, guard) in EXCUSED:
+                        # a shell that cannot parse the probe (bash 3.2, zsh on
+                        # several `$(` heredoc shapes) runs nothing: no gap to prove
+                        if (name, guard) in EXCUSED and wrote:
                             self.assertTrue(missed, "{0} gap now closed ({1}): delete "
                                             "its EXCUSED entry".format(guard, EXCUSED[
                                                 (name, guard)]) + detail)

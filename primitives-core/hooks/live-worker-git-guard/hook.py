@@ -125,6 +125,7 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only) and
 must stay compatible with Python 3.9.
 """
 
+import functools
 import json
 import os
 import re
@@ -230,8 +231,8 @@ BARE_ARG_WRAPPERS = frozenset(("timeout",))
 G_PREFIXED_WRAPPERS = frozenset((
     "env", "nice", "time", "timeout", "stdbuf", "nohup", "setsid", "xargs"))
 
-# Per `git rev-parse` call. At most two run, and only once a mutating verb is
-# already in hand, so the worst case sits well inside the hook's 10s budget.
+# Per `git rev-parse` call; each mutating call judged runs up to two. An
+# unresolved tree counts as shared, and the scan stops at its first deny.
 GIT_TIMEOUT = 3
 
 # A token ENDING in one of these is a shell separator, so the next token starts
@@ -247,9 +248,10 @@ SEPARATOR_CHARS = "&|;(){}<>"
 # matches when spaced (`1 << 3` captures `3`); `_scan_line` rejects an all-digit
 # word, and any word inside an unclosed `((` (`$(( 1 << n ))`, `(( y <<= n ))`).
 # The word may carry quotes or backslashes anywhere (`<<\EOF`, `<<E"O"F`); bash then
-# takes the word with them removed as the delimiter and the body as literal.
+# takes the word with them removed as the delimiter and the body as literal. A
+# metacharacter ends the word as a blank does (`<<EOF;`, `<<EOF|cat`).
 HEREDOC_START = re.compile(
-    r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=\s|$)""")
+    r"""(?<!<)<<(?!<)(-?)\s*((?:\\?\w|"\w*"|'\w*')+)(\r?)(?=[\s;&|<>]|$)""")
 
 
 class _LineBreak(str):
@@ -328,41 +330,53 @@ def _emit(obj):
 # Reading the command
 # ---------------------------------------------------------------------------
 
-def _scan_line(line, quote):
-    """(the heredoc terminators this line opens, each `(word, quoted, dash, in_subst)`,
-    the quote state at its end, whether it ends in a line continuation), given the
-    quote state it starts in.
+def _scan_line(line, stack, terminators=(), paren=True):
+    """(the heredoc terminators pending after this line, each `(word, quoted, dash,
+    depth)`, the contexts open at its end, whether it ends in a line continuation),
+    given the contexts open at its start and the terminators still pending.
 
-    An opener counts only outside quotes and outside a comment, and never with
-    an all-digit word or inside an unclosed `((`, where it is a shift
-    (`$(( 1 <<3 ))`, `(( y = 1 << n ))`). A backslash escapes
-    the next character outside single quotes, and inside `$'...'` too. A `#`
-    at the start of the line, after whitespace or after one of `;&|()` runs to
-    the line end, so an apostrophe in a comment opens no quote.
+    A context is a quote (`'`, `"`, `$'`) or a `$(`, innermost last. Quoting resets
+    inside a `$(`, so one opens inside `"` too; a `)` closes only a `$(`, so a
+    stray one (a subshell, `$((`) leaves the depth at 0. An opener counts only
+    outside quotes and outside a comment, and never with an all-digit word or
+    inside an unclosed `((`, where it is a shift (`$(( 1 <<3 ))`,
+    `(( y = 1 << n ))`). One whose `$(` closes on its own line is dropped from the
+    zsh reading (`paren=False`): bash 3.2 and zsh read no body for it, bash 5 does. A backslash escapes the next character outside
+    single quotes, and inside `$'...'` too. A `#` at the start of the line, after
+    whitespace or after one of `;&|()` runs to the line end, so an apostrophe in
+    a comment opens no quote.
     """
-    terminators = []
-    i = depth = 0
+    terminators, stack, i = list(terminators), list(stack), 0
     while i < len(line):
         char = line[i]
+        quote = stack[-1] if stack and stack[-1] != "$(" else None
         if quote:
             if char == quote[-1]:
-                quote = None
+                stack.pop()
             elif char == "\\" and quote != "'":
+                i += 1
+            elif quote == '"' and line.startswith("$(", i):
+                stack.append("$(")
                 i += 1
         elif char == "\\":
             if i == len(line) - 1:
-                return terminators, quote, True
+                return terminators, tuple(stack), True
             i += 1
         elif line.startswith("$'", i):
-            quote = "$'"
+            stack.append("$'")
             i += 1
         elif line.startswith("$(", i):
-            depth += 1
+            stack.append("$(")
             i += 1
         elif char == ")":
-            depth -= 1
+            # ponytail: a subshell or case `)` inside `$(` closes it early, so
+            # `$( (true); cat <<W` misses a `W)` end; track plain `(` if one bites
+            if stack:
+                stack.pop()
+                if not paren:
+                    terminators = [t for t in terminators if t[3] <= len(stack)]
         elif char in "'\"":
-            quote = char
+            stack.append(char)
         elif char == "#" and (i == 0 or line[i - 1].isspace()
                               or line[i - 1] in ";&|()"):
             break
@@ -371,45 +385,61 @@ def _scan_line(line, quote):
             word = m and re.sub(r"[\\'\"]", "", m.group(2))
             if (m and not (word.isdigit() and word == m.group(2))
                     and line.count("((", 0, i) <= line.count("))", 0, i)):
-                # bash keeps a CRLF opener's `\r` in the word; inside an open
-                # `$(` bash also ends the body at a line `WORD)`, zsh does not
-                # (`_mutating_call` reads both; `depth` counts only unquoted parens)
+                # bash keeps a CRLF opener's `\r` in the word
                 terminators.append((word + m.group(3), word != m.group(2),
-                                    bool(m.group(1)),
-                                    depth > 0))
+                                    bool(m.group(1)), len(stack)))
                 i = m.end()
                 continue
         i += 1
-    return terminators, quote, False
+    return terminators, tuple(stack), False
 
 
 def _body_end(lines, j, word, quoted, dash, paren=False):
-    """The index of the line that closes a heredoc body starting at `lines[j]`,
-    or None. As in bash, under an unquoted word a line ending in an odd run of
-    backslashes joins the next first, and the result must equal the word
-    exactly, after only its leading tabs are removed under `<<-`."""
+    """(the index of the line that closes a heredoc body starting at `lines[j]`,
+    whether the shell reads on past the word there), or (None, False). As in
+    bash, under an unquoted word a line ending in an odd run of backslashes joins
+    the next first, and the result must equal the word exactly, after only its
+    leading tabs are removed under `<<-`.
+
+    `paren` (the body is inside `$(`) also ends it, as bash does, at the word
+    followed by blanks and `)`. That line is rewritten in place as its closing
+    parens and the command after them, minus the separator between, which the
+    line break `_tokens` puts there stands in for (shlex would glue `);git`).
+    """
     while j < len(lines):
         line = lines[j]
         while (not quoted and j + 1 < len(lines)
                and (len(line) - len(line.rstrip("\\"))) % 2):
             j += 1
             line = line[:-1] + lines[j]
-        if (line.lstrip("\t") if dash else line) in (word, word + ")" * paren):
-            return j
+        if dash:
+            line = line.lstrip("\t")
+        if line == word:
+            return j, False
+        # ponytail: bash also ends it at `EOFX)` or `EOF #)`; widen on a probe
+        m = paren and re.match(re.escape(word) + r"((?:[ \t]*\))+)([ \t;&|]+|$)?", line)
+        if m:
+            # a word glued to the `)` continues it (`$(...)x`): nothing to split
+            lines[j:j + 1] = ([m.group(1), line[m.end():]] if m.group(2) is not None
+                              else [line[len(word):]])
+            return j, True
         j += 1
-    return None
+    return None, False
 
 
 def _skip_bodies(lines, i, terminators, paren=True):
     """The index after the last of the heredoc bodies that `terminators`
     opened on one line, read in order from `lines[i]`; `i` itself when one is
-    never closed, since dropping text is a silent fail-open. `paren=False`
-    never ends a body at `WORD)`."""
+    never closed, since dropping text is a silent fail-open. A body ended at
+    `WORD)` returns its rewritten line instead, so the parens are scanned and any
+    later body is read as command lines. `paren=False` never ends one at `WORD)`."""
     j = i
-    for word, quoted, dash, in_subst in terminators:
-        j = _body_end(lines, j, word, quoted, dash, in_subst and paren)
+    for word, quoted, dash, depth in terminators:
+        j, resumed = _body_end(lines, j, word, quoted, dash, depth > 0 and paren)
         if j is None:
             return i
+        if resumed:
+            return j
         j += 1
     return j
 
@@ -419,28 +449,31 @@ def _logical_lines(command, paren=True):
     and backslash-newlines removed.
 
     A body runs from the opener's line end through its terminator line, as
-    bash finds it (`_body_end`); bodies opened on one line follow in order. They
-    are dropped only when every terminator is found: dropping text is a silent
-    fail-open, keeping it is at worst an over-deny.
+    bash finds it (`_body_end`); bodies opened on one line follow in order. A
+    newline inside `$(` starts those opened at its depth or deeper, even within
+    `"`, where the line stays joined.
+    They are dropped only when every terminator is found: dropping text is a
+    silent fail-open, keeping it is at worst an over-deny.
     """
     lines = command.split("\n")
-    out, current, quote, pending, i = [], "", None, [], 0
+    out, current, stack, pending, i = [], "", (), [], 0
     while i < len(lines):
         line = lines[i]
         i += 1
-        terminators, quote, continued = _scan_line(line, quote)
-        pending += terminators
+        pending, stack, continued = _scan_line(line, stack, pending, paren)
         if continued:
             current += line[:-1]
             continue
         current += line
-        if quote:
+        if stack[-1:] in ((), ("$(",)):
+            ready = [t for t in pending if t[3] >= len(stack)]
+            pending = [t for t in pending if t[3] < len(stack)]
+            i = _skip_bodies(lines, i, ready, paren)  # each body and its terminator line
+        if any(c != "$(" for c in stack):
             current += "\n"
             continue
         out.append(current)
         current = ""
-        i = _skip_bodies(lines, i, pending, paren)  # each body and its terminator line
-        pending = []
     if current:
         out.append(current)
     return out
@@ -564,22 +597,25 @@ def _unwrap(tokens, start):
     return None, relocated
 
 
+def _mutating_calls(command):
+    """(tokens, verb, git index, command-word index) for every mutating git call
+    in both readings of `command`: bash ends a heredoc body opened inside `$(` at
+    a line `WORD)`, zsh (the Bash tool's shell on macOS) reads on."""
+    bash, zsh = _tokens(command, True), _tokens(command, False)
+    for tokens in (bash,) if zsh == bash else (bash, zsh):
+        for found in _mutating_verbs(tokens):
+            yield (tokens,) + found
+
+
 def _mutating_call(command):
-    """(tokens, verb, git index, command-word index) for the first mutating git
-    call `_first_mutating_verb` finds in either reading of `command`: bash ends a
-    heredoc body opened inside `$(` at a line `WORD)`, zsh (the Bash tool's shell
-    on macOS) reads on."""
-    for paren in (True, False):
-        tokens = _tokens(command, paren)
-        found = _first_mutating_verb(tokens)
-        if found[0] is not None:
-            break
-    return (tokens,) + found
+    """The first of `_mutating_calls`, all None when there is none: the parser
+    entry point tests/test_git_guard_differential.py reads."""
+    return next(_mutating_calls(command), (None,) * 4)
 
 
-def _first_mutating_verb(tokens):
+def _mutating_verbs(tokens):
     """(verb, index of the `git` token, index of the command word that leads to
-    it) for the first mutating git call, else (None, None, None).
+    it) for each mutating git call, in order.
 
     A `git` token only counts in COMMAND position — first, after a shell
     separator, or after an env assignment — so `man git commit` and
@@ -602,10 +638,9 @@ def _first_mutating_verb(tokens):
                 verb, verb_at = _subcommand(tokens, git_at + 1)
                 if verb in MUTATING_VERBS and not _is_read_form(
                         verb, tokens, verb_at + 1):
-                    return verb, git_at, index
+                    yield verb, git_at, index
         inert = _next_inert(inert, token)
         command_position = _opens_command(token, inert)
-    return None, None, None
 
 
 def _head(token):
@@ -704,6 +739,7 @@ def _override_before(tokens, cmd_start, git_at):
 # Which tree the command targets
 # ---------------------------------------------------------------------------
 
+@functools.lru_cache(maxsize=None)  # one rev-parse per tree per decision, inside the hook timeout
 def _repo_root(directory):
     """Realpath'd working-tree root containing `directory`, or None when that
     does not resolve.
@@ -913,29 +949,45 @@ def main():
         if not command or not isinstance(command, str):
             sys.exit(0)
 
-        tokens, verb, git_at, cmd_start = _mutating_call(command)
-        if verb is None:
+        calls = list(_mutating_calls(command))
+        if not calls:
             sys.exit(0)
 
-        overridden = _override_before(tokens, cmd_start, git_at)
         if native:
             try:
-                target = _repo_root(_target_directory(tokens, git_at, payload.get("cwd")))
-                workers = [dict(row, description="native worker")
-                           for row in codex_workers.records(payload)
-                           if row["agent_id"] != payload.get("agent_id")
-                           and row["status"] == "running"
-                           and (target is None or _repo_root(row.get("worktree") or row["source"]) == target)]
+                live = [row for row in codex_workers.records(payload)
+                        if row["agent_id"] != payload.get("agent_id")
+                        and row["status"] == "running"]
             except Exception as exc:
                 _emit(codex_workers.deny(exc))
                 return
         else:
-            workers = _live_workers(
+            live = _live_workers(
                 payload.get("transcript_path"), pending.agent_key(payload.get("agent_id")))
-            if workers and not _shares_session_tree(tokens, git_at, payload.get("cwd")):
-                workers = []
-        if not workers and not overridden:
+        decided = None
+        for tokens, verb, git_at, cmd_start in calls:
+            overridden = _override_before(tokens, cmd_start, git_at)
+            if native:
+                try:
+                    target = _repo_root(_target_directory(tokens, git_at, payload.get("cwd")))
+                    workers = [dict(row, description="native worker") for row in live
+                               if target is None or _repo_root(row.get("worktree") or row["source"]) == target]
+                except Exception as exc:
+                    _emit(codex_workers.deny(exc))
+                    return
+            else:
+                workers = live if live and _shares_session_tree(
+                    tokens, git_at, payload.get("cwd")) else []
+            if workers and not overridden:
+                decided = (verb, workers, False)
+                break
+            # An override that freed workers outranks one that freed nobody: only
+            # it names who is at risk, in the message and in the row's `pending`.
+            if overridden and (decided is None or workers and not decided[1]):
+                decided = (verb, workers, True)
+        if decided is None:
             sys.exit(0)
+        verb, workers, overridden = decided
 
         if workers and overridden:
             _emit({"systemMessage": _override_message(verb, workers)})

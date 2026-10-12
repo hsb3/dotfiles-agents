@@ -257,14 +257,18 @@ existed. Separators still open command position inside a comment, exactly as the
 A heredoc body is not scanned at all: it is dropped, up to and including its terminator line, before
 tokenizing, so a `&&` or `|` in it opens nothing and a git call after the terminator is read. An
 opener counts only outside quotes (tracked across lines) and outside a comment, and never with an
-all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newline ends a command
+all-digit word or inside an unclosed `((`, where it is a shift. A `$(` is tracked across lines and
+inside `"` too, a `)` with no `$(` open (a subshell, `$((`) changes nothing, a newline inside `$(`
+starts only the bodies opened inside it, and `;`, `&`, `|`, `<` or `>` ends the word as a blank does
+(`<<EOF;`). An unquoted newline ends a command
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
 tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word with quotes or
 backslashes in it, `<<\EOF` or `<<E"O"F`, is dequoted to `EOF` and its body is literal; inside an open
-`$(` bash also closes the body at the line `EOF)` and zsh does not, so the command is read both ways and
-flagged if either reading finds a call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
+`$(` bash also closes the body at a line `EOF)`, `EOF )` or `EOF))`, and reads a command glued after it
+(`EOF);git push`); zsh does not, so the command is read both ways and flagged if either reading finds a
+call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
 in order. A `<<` whose terminator never appears drops nothing, so its body
 is read as command lines.
 
@@ -296,6 +300,10 @@ command string the hook is handed, so whatever still displaces them is invisible
 - a quoted heredoc word containing spaces (`<<'E O F'`): only `E` is taken as the word and the
   closing `'` opens a quote, so the rest of the command reads as one line and a call after the
   terminator is missed;
+- a heredoc inside `$(` where the scan loses bash's reading: a `)` from `$((`, a subshell, a `case`
+  pattern or `${y%)}` inside an open `$(` closes it early; bash also ends the body at `EOFX)`; a
+  heredoc inside `<( )` or `<<EOF)`; and bash 3.2's own reading of a body inside `"$(`. A call after
+  such a body can be missed;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

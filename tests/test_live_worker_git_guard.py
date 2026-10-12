@@ -917,6 +917,66 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             "git -C {0} commit -m x".format(session), other, session))
         self.assertIn("g5555555555555555", reason)
 
+    def test_a_session_write_after_an_other_repo_write_is_denied(self):
+        # a write elsewhere must not hide a later write into the workers' tree
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        self._sidecar("q1111111111111111")
+        push = "git -C {0} push origin dev".format(session)
+        alone = self._assert_denied(self._run_in(push, session, session))
+        self.assertEqual(self._assert_denied(self._run_in(
+            "git -C {0} commit -m a && {1}".format(other, push), session, session)), alone)
+
+    def test_a_native_session_write_after_an_other_repo_write_is_denied(self):
+        # the native loop must judge every call, not stop at the first
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        record = os.path.join(session, ".git", "atelier-codex", "workers",
+                              self.session_id, "nw1.json")
+        os.makedirs(os.path.dirname(record))
+        with open(record, "w", encoding="utf-8") as fh:
+            json.dump({"session_id": self.session_id, "agent_id": "nw1",
+                       "agent_type": "builder", "status": "running",
+                       "source": session, "worktree": None}, fh)
+        policy = os.path.join(self.tmp.name, "policy.md")
+        with open(policy, "w", encoding="utf-8") as fh:
+            fh.write("---\nenforce: strict\n---\n")
+        payload = self._payload("git -C {0} commit -m a && git -C {1} commit -m b"
+                                .format(other, session))
+        payload["cwd"] = session
+        self._assert_denied(self._run(payload, extra_env={
+            "ATELIER_HARNESS": "codex", "ATELIER_ACTIVATION_FILE": policy}))
+
+    def test_a_session_write_before_an_other_repo_write_is_denied(self):
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        self._sidecar("q2222222222222222")
+        push = "git -C {0} push origin dev".format(session)
+        alone = self._assert_denied(self._run_in(push, session, session))
+        self.assertEqual(self._assert_denied(self._run_in(
+            "{1} && git -C {0} commit -m a".format(other, push), session, session)), alone)
+
+    def test_two_writes_into_another_repo_are_not_blocked(self):
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        self._sidecar("q3333333333333333")
+        self._assert_silent(self._run_in(
+            "git -C {0} commit -m a && git -C {0} push origin dev".format(other),
+            session, session))
+
+    def test_an_override_exempts_only_its_own_call_and_the_row_names_the_decider(self):
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        self._sidecar("q4444444444444444")
+        commit = "git -C {0} commit -m a".format(other)
+        push = "git -C {0} push origin dev".format(session)
+        override = "ATELIER_GIT_GUARD_OVERRIDE=1 "
+        self.assertIn("git push", self._assert_denied(self._run_in(
+            override + commit + " && " + push, session, session)))
+        for prefix in ("", override):  # the override that freed workers decides
+            result = self._run_in(
+                prefix + commit + " && " + override + push, session, session)
+            self.assertIn("git push", json.loads(result.stdout)["systemMessage"])
+        self.assertEqual(
+            [(r["decision"], r["verb"], r["pending"]) for r in _read_rows(self.guard_log)],
+            [("deny", "push", ["q4444444444444444"])]
+            + [("override", "push", ["q4444444444444444"])] * 2)
+
     def test_a_git_dir_or_work_tree_flag_fails_closed(self):
         # Both flags relocate the working tree by a rule this hook does not
         # reimplement, so the target is unknowable and the guard denies.
@@ -1362,7 +1422,7 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         for command, verb in cases:
             with self.subTest(command=command):
                 self.assertEqual(
-                    HOOK._first_mutating_verb(HOOK._tokens(command))[0], verb)
+                    next(HOOK._mutating_verbs(HOOK._tokens(command)), (None,))[0], verb)
 
     def test_newline_reading_at_the_token_level(self):
         cases = (
@@ -1414,7 +1474,7 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         for command, verb in cases:
             with self.subTest(command=command):
                 self.assertEqual(
-                    HOOK._first_mutating_verb(HOOK._tokens(command))[0], verb)
+                    next(HOOK._mutating_verbs(HOOK._tokens(command)), (None,))[0], verb)
 
     def test_the_tokenizer_ceilings_stay_ceilings(self):
         # Not a wish list: each needs a parser rather than a token scan, and
