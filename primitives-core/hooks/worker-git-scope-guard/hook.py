@@ -494,12 +494,20 @@ def invocations(command, cwd):
     and so is the line-local reading (`_strip_heredocs_base`). Each distinct call yields once.
     """
     hash_words = (False, True) if ")#" in command else (False,)
-    readings = [strip_heredocs(command, paren, hw)
-                for hw in hash_words for paren in (True, False)]
-    readings += [_strip_heredocs_base(command, paren) for paren in (True, False)]
+    def readings():  # lazy: a caller that stops at the first deny skips the rest
+        for hw in hash_words:
+            for paren in (True, False):
+                yield strip_heredocs(command, paren, hw)
+        for paren in (True, False):
+            yield _strip_heredocs_base(command, paren)
+
+    done = set()
     seen = set()
     # each stripped text is split both ways too: bash reads `)#` site by site
-    for stripped in dict.fromkeys(readings):
+    for stripped in readings():
+        if stripped in done:
+            continue
+        done.add(stripped)
         for hash_word in hash_words:
             for sub, args, where in _invocations(stripped, cwd, hash_word):
                 if (sub, tuple(args), where) not in seen:

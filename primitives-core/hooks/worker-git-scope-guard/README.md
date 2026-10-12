@@ -222,8 +222,12 @@ last three have no probe:
   `EOF` are dropped as one.
 
 The line-local reading also keeps its false positives, to stay fail-closed: a `git` line every
-shell reads as heredoc data after a stray `)` or a `$(` opened inside `"`
+shell reads as heredoc data after a stray `)` or a `$(` opened inside `"`, or a `$(` left open at the opener line's end
 (`cat <<'EOF'; (true)` with `git commit` in the body) is denied.
+
+Roughly 9,500 or more lines of unterminated heredoc openers (about 130 KB) can exceed the 10 s hook
+timeout, and a timed-out hook fails open; the line-local (pre-rewrite) reading had the same limit at
+about 11,000 lines.
 
 **Server-side branch protection is the layer above this one.** A local hook cannot stop a
 determined or novel path to the remote; a protected-branch rule on the forge can. This
