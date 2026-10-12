@@ -130,7 +130,7 @@ The [activation instructions](skills/activation/SKILL.md#codex-setup) give the e
 
 With `isolate: writers`, native worker IDs own separate worktrees and Git indexes beneath
 Git’s common directory. Hooks route shell commands and every patch destination into the
-owned checkout, including patch file headers indented with spaces or tabs, which config custody checks too. New workers start from their immediate dispatcher’s committed HEAD; native
+owned checkout, including patch file headers indented or padded with whitespace, read the way Codex’s own parser reads them; config custody checks the same paths. New workers start from their immediate dispatcher’s committed HEAD; native
 messages, follow-ups and completion still use the original worker ID. Uncommitted parent
 changes do not travel. Managers can assemble verified child commits on their own branch;
 final project integration remains with the strategist. Missing or invalid worker state denies writes. Worker setup and context injection share the
