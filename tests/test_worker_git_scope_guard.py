@@ -386,6 +386,27 @@ class CommandParsingTests(unittest.TestCase):
     def test_a_herestring_is_not_a_heredoc(self):
         self.assertTrue(blocked("grep -q x <<< done\ngit stash\ndone"))
 
+    def test_subst_depth_carried_across_lines_keeps_a_data_body_unflagged(self):
+        # every `git commit` here is heredoc data to bash 3.2, bash 5 and zsh: a
+        # stray `)` clamps at 0, a `$(` newline waits, a `$(` opens inside `"`
+        for command in (
+            "cat <<'EOF'; (true)\ngit commit -m x\nEOF",
+            "cat <<'EOF' && x=$(echo hi\nEOF\n) && true\ngit commit -m x\nEOF",
+            "echo \"$(cat <<'EOF'\nA 12\" screen\ngit commit -m x\nEOF\n)\"",
+        ):
+            with self.subTest(command=command):
+                self.assertFalse(blocked(command, branch="main"))
+                self.assertTrue(blocked(command + "\ngit commit -m y", branch="main"))
+
+    def test_a_subst_body_ends_at_its_word_on_any_line_holding_a_paren(self):
+        # bash 5 runs this `git push`: it ends the body at `EOF` plus any `)` and
+        # rereads the rest of that line, so the later `EOF` line must not end it
+        for terminator in ("EOF #)", "EOF foo)"):
+            with self.subTest(terminator=terminator):
+                self.assertTrue(blocked(
+                    "x=$(cat <<'EOF'\nbody\n{0}\ngit push\nEOF\n)".format(terminator),
+                    branch="main"))
+
     def test_an_unresolvable_cd_target_falls_back_to_the_base_cwd(self):
         for target in ("$TARGET", "~", "..", "../.."):
             with self.subTest(target=target):

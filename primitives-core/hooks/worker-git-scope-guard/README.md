@@ -201,6 +201,20 @@ tripwire has, and it is worth accepting for the same reason: catching the path a
 actually take, and leaving a refusal in the transcript, is worth much more than the partial
 coverage costs — but it is not a sandbox and must not be sold as one.
 
+Heredoc ceilings, where a call can be missed (all but the last two are excused probes in
+`tests/test_git_guard_differential.py`):
+
+- a `<<WORD` opener inside `${...}`, `$[...]`, multi-line arithmetic, or after a quoted `))`;
+- a case-pattern `)`, or a paren inside `${...}` (`${y%)}`, `${y//(/z}`), inside `$(`, which
+  misplaces its end, so a body starts or ends in the wrong place;
+- bash 3.2 ending a `$(` at a `)` inside a heredoc body;
+- a `$(...)` inside an unquoted body, which runs, but the body is dropped unread;
+- zsh reading a `(` glued to a word (`echo a(`) as a glob group spanning lines, so no body
+  starts at the newline inside it;
+- bash 5.3's `${ cmd; }`, which ends a body at `EOF}`;
+- two `)#` sites on one line needing different readings (`$(...)#x` is one word, `(true)#x`
+  starts a comment).
+
 **Server-side branch protection is the layer above this one.** A local hook cannot stop a
 determined or novel path to the remote; a protected-branch rule on the forge can. This
 guard's job is to turn an easy accident into a refusal the worker reads and reports,

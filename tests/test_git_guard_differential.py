@@ -210,6 +210,79 @@ PROBES = [
      "cat <<EOF ; x=$(echo hi\n); git push\nbody\nEOF"),
     ("hd_outer_body_and_after_subst_newline",
      "cat <<'EOF' && x=$(echo hi\n) && git push\nbody\nEOF"),
+    # a `$(` the shell never opens must not hold back an outer body: `$(…)#x` is one
+    # word, and `$(` inside backticks is not parsed
+    ("hd_subst_hash_word_then_arith",
+     "cat <<'EOF' ; x=$(echo $(echo a)#x)\nbody\nEOF\necho $((1+2))\ngit push\nEOF"),
+    ("hd_subst_hash_word_then_subshell",
+     "cat <<'EOF' ; x=$(echo $(echo a)#x)\nbody\nEOF\n(true)\ngit push\nEOF"),
+    ("hd_backtick_dollar_paren_then_subshell",
+     "cat <<'EOF' ; x=`echo $(`\nbody\nEOF\n(true)\ngit push\nEOF"),
+    ("hd_subst_hash_word_two_heredocs",
+     "x=$(echo $(echo a)#x)\ncat <<'X' ; (true)\nX )\ncat <<'Y'\nX\ngit push\nY"),
+    # a subshell or case `)` inside `$(` does not close it, so a `#` after one is a comment
+    ("hd_subshell_hash_comment_in_subst",
+     "cat <<'EOF' ; x=$( (true)#it's\n)\nEOF\necho it\\'s\ngit push\nEOF"),
+    ("hd_case_hash_comment_in_subst",
+     "cat <<'EOF' ; x=$(case a in a)#it's\necho;; esac)\nEOF\necho it\\'s\ngit push\nEOF"),
+    # `$(...)#b` is one word to the command splitter too
+    ("hd_subst_hash_word_then_git_heredoc",
+     "echo $(echo a)#b; git commit -F - <<'EOF'\ngit push\nEOF"),
+    ("hd_subst_hash_word_then_subshell_in_subst",
+     "echo $(echo a)#b; x=$( (true); cat <<'EOF' )\ngit push\nEOF"),
+    # a `)` from `$((`, `<(` or `${...}` inside `$(` does not close it
+    ("hd_arith_in_subst_closed_on_opener_line",
+     "x=$(echo $((1)); cat <<'EOF'; true)\ngit push\nEOF"),
+    ("hd_procsub_in_subst_closed_on_opener_line",
+     "x=$(diff <(true) <(true); cat <<'EOF'; true)\ngit push\nEOF"),
+    ("hd_ceiling_param_paren_in_subst", "x=$(echo ${y%)}; cat <<'EOF'; true)\ngit push\nEOF"),
+    ("hd_ceiling_param_open_paren_in_subst",
+     "x=$(echo ${y//(/z}; cat <<'EOF'; true)\ngit push\nEOF"),
+    ("hd_ceiling_bash32_paren_line_in_subshell_body",
+     "x=$( ('('; '('; cat <<'EOF';)\n)\ngit push\ngit push\nEOF"),
+    # bash decides a `)#` site by site, so one command can need both readings
+    ("hd_mixed_hash_sites_body_opener",
+     "cat <<'EOF' ; x=$(echo $(echo a)#x) ; (true)#it's\ncat <<X\nEOF\ngit push\nX\ntrue # '"),
+    ("hd_mixed_hash_sites_stash",
+     "cat <<'EOF'; x=$(echo a)#x ; x=$( (true)#it's\ngit stash\nX)\nEOF"),
+    ("hd_mixed_hash_sites_in_subst",
+     "x=$(cat <<'EOF' ; x=$(echo $(echo a)#x)\nEOF)\n(true)#it's\ngit push\necho it\\'s\nEOF"),
+    # a heredoc inside backticks is read by the inner shell
+    ("hd_backtick_heredoc_quote_body", "x=`cat <<'EOF'\nit's\nEOF\n`; git push # '"),
+    ("hd_backtick_heredoc_then_commit", "x=`cat <<EOF\nit's\nEOF\n`\ngit commit -m x\ntrue # '"),
+    ("hd_backtick_heredoc_call_inside", "x=`cat <<X\n\"\nX\ngit stash\n`"),
+    ("hd_ceiling_zsh_glob_group_spans_lines", "cat <<'EOF'; echo a(\n$(\ngit push\nfoo)\nEOF"),
+    ("hd_ceiling_backtick_hash_word_after_body",
+     "cat <<EOF;\nit's\nEOF\nx=`echo a)#it's`; git push # '"),
+    # a `#` after a case-pattern or backticked `)` is a comment, after any other `)` it
+    # is part of the word (`<(...)#x`, `(a)#x`, `$(...)#x`); bash 3.2 reads a quote in it
+    ("hash_case_comment_apostrophe", "x=$(case a in a)#it's\necho;; esac)\ngit push # '"),
+    ("hash_case_comment_apostrophe_same_line",
+     "x=$(case a in a)#it's\necho;; esac); git push # '"),
+    ("hash_backtick_subst_case_comment", "x=`echo $(`; case a in a)#it's\n;; esac\ngit push # '"),
+    ("hash_backtick_subst_paren_in_backtick", "x=`echo $(`; y=`echo a)#it's`\ngit push # '"),
+    ("hash_backtick_paren_in_subshell", "x=$( (echo `echo )`)#it's\n)\ngit push # '"),
+    ("hd_glued_word_then_procsub_hash_word", "cat <<EOF;\nit's\nEOF\ncat <(true)#x; git push"),
+    ("hd_glued_word_then_regex_group_hash_word",
+     "cat <<EOF;\nit's\nEOF\n[[ a =~ (a)#x ]]; git push"),
+    ("hd_glued_word_then_backtick_paren_hash_word",
+     "cat <<EOF;\nit's\nEOF\nx=$(echo `echo )`)#x; git push"),
+    ("hd_nested_subst_hash_word_then_arith_shift",
+     "x=$(echo $(echo $(echo a)))#x; (( y = 1 << EOF ))\ngit commit -m x\nEOF"),
+    ("hd_bash32_comment_apostrophe_in_subst",
+     "x=$(while (false)#it's\ndo )#it\\'s\ncat <<\\EOF; true)\ngit push\nEOF"),
+    # a `$(...)` in an unquoted heredoc body, or inside `"`, that the scan loses
+    ("hd_ceiling_subst_in_unquoted_body", "cat <<EOF>/dev/null\n$(git push)\nEOF"),
+    ("hd_ceiling_dq_subst",
+     "x=\"$(cat |\nEOF\ngit push\n)\nx=\"$(cat )\nEOF\nx=\"$(cat <<EOF;\ngit push\nEOF"),
+    # a `<<WORD;` opener where the scan has lost the context
+    ("hd_ceiling_param_expansion", "echo ${x:-<<EOF;}\ngit push\nEOF"),
+    ("hd_ceiling_dollar_bracket", "echo $[1<<EOF|2]\ngit push\nEOF"),
+    ("hd_ceiling_arith_spans_lines", "(( x = 1 +\n2<<EOF|3 ))\ngit push\nEOF"),
+    ("hd_ceiling_quoted_parens_before_arith",
+     "echo '))'; (( y = 1<<EOF|2 ))\ngit push\nEOF"),
+    ("hd_ceiling_subshell_in_subst", "x=$( (true); cat <<'EOF'; true)\ngit push\nEOF"),
+    ("hd_ceiling_case_in_subst", "x=$(case a in a) cat <<'EOF';; esac)\ngit push\nEOF"),
     # arithmetic (PR 580)
     ("arith_cmd_shift", "x=1\n((x<<2))\ngit commit -m x"),
     ("arith_expansion", "echo $((1<<2))\ngit commit -m x"),
@@ -265,12 +338,47 @@ for _name in ("sh_bash_c", "sh_sh_c", "sh_zsh_c", "sh_bash_ec", "sh_env_bash_c",
               "sh_bash_c_heredoc_then_git"):
     EXCUSED[(_name, "live")] = "live README ceiling: bash -c string"
 EXCUSED[("sep_glued", "live")] = "live README ceiling: word glued to a separator"
-for _name in ("hd_subst_terminator_glued_semicolon", "hd_subst_after_subshell_paren",
-              "hd_subst_opened_line_before", "hd_subst_terminator_space_paren",
-              "hd_subst_after_arith_expansion", "hd_subst_nested_terminator",
-              "hd_subst_nested_terminator_glued_semicolon", "hd_word_then_subshell",
-              "hd_outer_body_spaced_after_subst_newline", "hd_outer_body_and_after_subst_newline"):
-    EXCUSED[(_name, "scope")] = "scope guard parity, hj2p"
+for _name in ("hd_subst_hash_word_then_arith", "hd_subst_hash_word_then_subshell",
+              "hd_subst_hash_word_two_heredocs"):
+    EXCUSED[(_name, "live")] = "live parity: `#` after a `$(...)` read as a comment, hardening"
+EXCUSED[("hd_backtick_dollar_paren_then_subshell", "live")] = (
+    "live parity: `$(` counted inside backticks, hardening")
+for _name in ("hd_arith_in_subst_closed_on_opener_line",
+              "hd_procsub_in_subst_closed_on_opener_line"):
+    EXCUSED[(_name, "live")] = (
+        "live parity: a `)` from `$((` or `<(` closes `$(` early, hardening")
+for _name, _context in (("hd_ceiling_param_expansion", "inside `${...}`"),
+                        ("hd_ceiling_dollar_bracket", "inside `$[...]`"),
+                        ("hd_ceiling_arith_spans_lines", "inside arithmetic spanning lines"),
+                        ("hd_ceiling_quoted_parens_before_arith",
+                         "inside `((` after a quoted `))`"),
+                        ("hd_ceiling_case_in_subst",
+                         "in a case arm after the pattern `)` inside `$(`")):
+    for _guard in ("scope", "live"):
+        EXCUSED[(_name, _guard)] = "ceiling: `<<` opener " + _context
+EXCUSED[("hd_bash32_comment_apostrophe_in_subst", "live")] = (
+    "live parity: bash 3.2 reads an apostrophe in a comment inside `$(` as a quote, hardening")
+EXCUSED[("hd_ceiling_subshell_in_subst", "live")] = (
+    "ceiling: `<<` opener after a subshell inside `$(`")
+EXCUSED[("hd_ceiling_param_open_paren_in_subst", "scope")] = (
+    "ceiling: a `(` inside `${...}` holds `$(` open")
+EXCUSED[("hd_ceiling_bash32_paren_line_in_subshell_body", "scope")] = (
+    "ceiling: bash 3.2 ends `$(` at a `)` line in a heredoc body")
+for _guard in ("scope", "live"):
+    EXCUSED[("hd_ceiling_backtick_hash_word_after_body", _guard)] = (
+        "README ceiling: backtick substitution")
+for _name in ("hd_mixed_hash_sites_body_opener", "hd_mixed_hash_sites_stash",
+              "hd_mixed_hash_sites_in_subst"):
+    EXCUSED[(_name, "live")] = "live parity: `#` after a `$(...)` read as a comment, hardening"
+for _guard in ("scope", "live"):
+    EXCUSED[("hd_ceiling_zsh_glob_group_spans_lines", _guard)] = (
+        "ceiling: zsh reads `word(` as a glob group spanning lines")
+for _guard in ("scope", "live"):
+    EXCUSED[("hd_ceiling_param_paren_in_subst", _guard)] = (
+        "ceiling: a `)` inside `${...}` closes `$(` early")
+    EXCUSED[("hd_ceiling_subst_in_unquoted_body", _guard)] = (
+        "ceiling: a `$(...)` in an unquoted heredoc body runs, but the body is dropped")
+    EXCUSED[("hd_ceiling_dq_subst", _guard)] = "README ceiling: `$(...)` inside double quotes"
 
 
 def _bashes():
