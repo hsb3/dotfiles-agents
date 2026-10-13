@@ -6,8 +6,6 @@
       "name": "harness",
       "devDependencies": {
         "@types/bun": "1.4.2",
-      },
-      "peerDependencies": {
         "typescript": "7.0.2",
       },
     },
