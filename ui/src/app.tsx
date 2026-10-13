@@ -24,6 +24,8 @@ import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type
 import { ClientProvider, hashHref, ToolboxClient, useClient, type Notice } from "./api.tsx";
 import { CatalogView } from "./catalog-view.tsx";
 import { DocumentationView } from "./documentation-view.tsx";
+import { EvaluationsView } from "./evaluations-view.tsx";
+import { PerformanceView } from "./performance-view.tsx";
 
 // ---------------------------------------------------------------- routes
 
@@ -153,16 +155,6 @@ export function Home() {
   );
 }
 
-/** An area this build does not show yet. */
-export function AreaPlaceholder({ area }: { area: Area }) {
-  return (
-    <div className="toolbox-area">
-      <h1>{AREA_TITLES[area]}</h1>
-      <p role="status">{`${AREA_TITLES[area]} is not available in this build yet.`}</p>
-    </div>
-  );
-}
-
 export function AreaView({ route }: { route: Route }) {
   switch (route.area) {
     case "home":
@@ -171,8 +163,10 @@ export function AreaView({ route }: { route: Route }) {
       return <CatalogView />;
     case "documentation":
       return <DocumentationView params={route.params} />;
-    default:
-      return <AreaPlaceholder area={route.area} />;
+    case "performance":
+      return <PerformanceView params={route.params} />;
+    case "evaluations":
+      return <EvaluationsView params={route.params} />;
   }
 }
 

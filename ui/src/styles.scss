@@ -104,3 +104,66 @@
   margin: 6rem auto;
   padding: 0 1rem;
 }
+
+.toolbox-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.toolbox-table {
+  width: 100%;
+  margin: 0.75rem 0;
+  border-collapse: collapse;
+}
+
+.toolbox-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+
+.toolbox-table th,
+.toolbox-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.toolbox-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.toolbox-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.toolbox-chart {
+  margin: 0;
+}
+
+.toolbox-facts > div {
+  display: flex;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.toolbox-facts dt {
+  flex: 0 0 12rem;
+  font-weight: 600;
+}
+
+.toolbox-facts dd {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toolbox-document > h3 {
+  margin: 1.5rem 0 0.5rem;
+}

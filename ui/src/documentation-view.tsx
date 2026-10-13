@@ -1,7 +1,7 @@
 // The Documentation area: the extender search list and, for the chosen
 // extender, its entry file, source facts, body and reader files.
 import { Link } from "@carbon/react";
-import { ExtenderList, hashHref, PagedList, RecordRegion, safeUrl, SearchForm, useSearch } from "./api.tsx";
+import { ExtenderList, hashHref, orUnavailable, PagedList, RecordRegion, safeUrl, SearchForm, useSearch } from "./api.tsx";
 
 export interface ExtenderDocument {
   id: string;
@@ -30,11 +30,6 @@ const EXTENDER_FIELDS = ["id", "body", "entry_file", "source"];
 const SOURCE_FIELDS = ["id", "name", "url", "publisher_kind", "maintenance"];
 
 export const NO_READER_FILES = "This metadata-only extender has no stored reader files.";
-
-/** A value as text, or "<thing> unavailable" when it is missing. */
-export function orUnavailable(value: unknown, thing: string): string {
-  return typeof value === "string" && value !== "" ? value : `${thing} unavailable`;
-}
 
 export function sourceSummary(source: Pick<SourceFacts, "publisher_kind" | "maintenance">): string {
   return `${orUnavailable(source.publisher_kind, "Publisher kind")} · ${orUnavailable(source.maintenance, "Maintenance")}`;

@@ -25,7 +25,8 @@ import {
 } from "../ui/src/api.tsx";
 import { parseHash, HOME_ROUTE, routeKey } from "../ui/src/app.tsx";
 import { catalogMatches, distributionLabel, parseCatalog, type Catalog } from "../ui/src/catalog-view.tsx";
-import { fileLabel, orUnavailable, sourceSummary } from "../ui/src/documentation-view.tsx";
+import { orUnavailable } from "../ui/src/api.tsx";
+import { fileLabel, sourceSummary } from "../ui/src/documentation-view.tsx";
 import { api, freePort, HAS_POCKETBASE, REPO_ROOT, startPocketBase, type PbServer } from "./pb.ts";
 
 // The live-server block starts PocketBase and waits out its auth rate limit.

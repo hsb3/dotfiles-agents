@@ -116,9 +116,16 @@ describe("sign-in and shell", () => {
     }
   });
 
-  test("performance and evaluations show a placeholder until they are built", () => {
-    const text = textOf(render(<ShellFrame route={parseHash("#evaluations?extender=x")} onLogOut={() => {}} />));
-    expect(text).toContain("Evaluations is not available in this build yet.");
+  test("performance and evaluations render their areas with the route parameters", () => {
+    const evaluations = textOf(render(<ShellFrame route={parseHash("#evaluations?extender=x")} onLogOut={() => {}} />));
+    expect(evaluations).toContain("Showing assessments for extender x.");
+    expect(evaluations).toContain("Loading assessments");
+    expect(evaluations).toContain("Loading job coverage");
+    const performance = textOf(render(<ShellFrame route={parseHash("#performance")} onLogOut={() => {}} />));
+    expect(performance).toContain("Loading runs");
+    expect(performance).toContain("Selected (0/2)");
+    expect(performance).toContain("Loading campaigns");
+    expect(performance).not.toContain("not available in this build");
   });
 });
 

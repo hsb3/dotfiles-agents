@@ -55,5 +55,14 @@
         "coverage/"
       ]
     }
+  ],
+  "acknowledged": [
+    {
+      "rule": "duplicated-logic",
+      "subject": [
+        "src/logs.ts#isObj",
+        "ui/src/performance-view.tsx#isObject"
+      ]
+    }
   ]
 }

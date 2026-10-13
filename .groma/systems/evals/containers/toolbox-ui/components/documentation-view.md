@@ -27,4 +27,4 @@ The Documentation area: the extender search list, and for the chosen extender (o
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [ui/src/documentation-view.tsx](../../../../../../ui/src/documentation-view.tsx) | [ui/src/api.tsx](../../../../../../ui/src/api.tsx) | Calls imported functions: hashHref, safeUrl, useSearch; Renders imported components: ExtenderList, PagedList, RecordRegion, SearchForm | typescript |
+| [ui/src/documentation-view.tsx](../../../../../../ui/src/documentation-view.tsx) | [ui/src/api.tsx](../../../../../../ui/src/api.tsx) | Calls imported functions: hashHref, orUnavailable, safeUrl, useSearch; Renders imported components: ExtenderList, PagedList, RecordRegion, SearchForm | typescript |

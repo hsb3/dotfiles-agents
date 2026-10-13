@@ -194,6 +194,11 @@ export class ToolboxClient {
     return this.pb.send<T>(path, { method: "GET", requestKey: null, signal });
   }
 
+  /** A short-lived token for protected files (`POST /api/files/token`). */
+  fileToken(signal: AbortSignal): Promise<string> {
+    return this.pb.files.getToken({ requestKey: null, signal });
+  }
+
   private expired(): boolean {
     const expiry = tokenExpiry(this.pb.authStore.token);
     return expiry === null || expiry <= this.timers.now();
@@ -511,6 +516,60 @@ export function SearchForm({ label, onSearch }: { label: string; onSearch: (quer
   );
 }
 
+// ---------------------------------------------------------------- record text
+
+/** A value as text, or "<thing> unavailable" when it is missing. */
+export function orUnavailable(value: unknown, thing: string): string {
+  return typeof value === "string" && value !== "" ? value : `${thing} unavailable`;
+}
+
+/** The `name` of an expanded relation, or undefined when the expansion carries none. */
+export function expandedName(record: { expand?: Record<string, unknown> }, relation: string): string | undefined {
+  const target = record.expand?.[relation];
+  if (typeof target !== "object" || target === null) return undefined;
+  const name = (target as { name?: unknown }).name;
+  return typeof name === "string" && name !== "" ? name : undefined;
+}
+
+/** A JSON value as indented text, for disclosures. */
+export function jsonText(value: unknown): string {
+  return value === undefined ? "null" : JSON.stringify(value, null, 2);
+}
+
+// ---------------------------------------------------------------- assessments
+
+export interface AssessmentRecord {
+  id: string;
+  framework: string;
+  element: string;
+  extender: string;
+  eval_run: string;
+  verdict: string;
+  evidence: string;
+  assessor: string;
+  expand?: Record<string, unknown>;
+}
+
+/** The named fields of an assessment, with the names of its expanded extender, framework and element. */
+export const ASSESSMENT_FIELDS = [
+  "id",
+  "framework",
+  "element",
+  "extender",
+  "eval_run",
+  "verdict",
+  "evidence",
+  "assessor",
+  "expand.extender.name",
+  "expand.framework.name",
+  "expand.element.name",
+] as const;
+
+/** Assessments by created (id last), with their relations expanded; Evaluations and campaign detail both list them. */
+export function assessmentsQuery(filter?: string): Omit<ListQuery, "page"> {
+  return { collection: "assessments", fields: ASSESSMENT_FIELDS, sort: ["created"], expand: "extender,framework,element", filter };
+}
+
 // ---------------------------------------------------------------- extenders
 
 export interface ExtenderSummary {
@@ -522,9 +581,17 @@ export interface ExtenderSummary {
 
 export const EXTENDER_LIST_FIELDS = ["id", "slug", "name", "kind", "description", "body", "entry_file", "source"] as const;
 
+/**
+ * A case-insensitive substring search over the named fields (`a ~ q || b ~ q`),
+ * the query reaching PocketBase only as an escaped parameter; none for an empty query.
+ */
+export function searchFilter(client: Pick<ToolboxClient, "filter">, fields: readonly string[], query: string): string | undefined {
+  return query ? client.filter(fields.map((field) => `${field} ~ {:q}`).join(" || "), { q: query }) : undefined;
+}
+
 /** The extender search `slug ~ q || name ~ q || description ~ q`, or none for an empty query. */
-export function extenderSearchFilter(client: ToolboxClient, query: string): string | undefined {
-  return query ? client.filter("slug ~ {:q} || name ~ {:q} || description ~ {:q}", { q: query }) : undefined;
+export function extenderSearchFilter(client: Pick<ToolboxClient, "filter">, query: string): string | undefined {
+  return searchFilter(client, ["slug", "name", "description"], query);
 }
 
 export function extenderLabel(extender: ExtenderSummary): string {
