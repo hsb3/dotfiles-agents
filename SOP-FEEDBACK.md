@@ -6,8 +6,11 @@
 - **Step 3, runtime containers no scanner can see.** The PocketBase service is code (`pb_migrations/*.js`, `pb_hooks/*.pb.js`), but the configured scanners include only `*.ts`/`*.tsx`, so no scan will ever create or match it. The skill and the structure guide describe `groma add container` only for data stores; I used it for the service as well, since a drafted container would never match. Saying so explicitly would remove the doubt.
 - **Step 2's example is Go-first.** The TypeScript skeleton (`export {};`) was already committed by `init`, so step 2 was only "scan"; the block's `mkdir -p cmd/<bin>` lines are noise for this stack. The stack-notes table carries the TypeScript case, but one has to cross-read.
 - **Step 3, planned relations to a ghost container.** `groma add relation toolbox-reader toolbox-ui` (actor to a drafted container) is accepted as a current authored row before the container has code; the skill does not say whether that is intended or whether it should be a draft row.
+- **Step 5, duplicate logic inside one file.** The build-task skill says lint reports "possible duplicate logic between files", but in TASK-5 it flagged two methods of one class in the same file (`src/logs.ts#exciseLongText` and `#exciseBase64`). The fix was the same (one shared `exciseField` helper), but the skill's wording made a single-file module look exempt; "between definitions, in one file or several" would be accurate.
+- **Step 5, a ghost whose only planned relation waits on a later task.** `logs` (TASK-5) is called only by `runs` (TASK-6), so the accept leaves `runs -> logs` draft and no flow can be added yet. The skill covers "a task that builds no planned component" but not this case: a built component with nothing to wire until its caller exists. I left the relation draft and added no flow; saying so in the skill would remove the doubt.
 
 ## Worked well
 
 - `groma edit evals-container --id evals-cli …` renamed and described in one call, printing exactly what moved.
 - Drafting every ghost and planned relation up front, then `groma scan && groma lint`, gave a clean lint with 43 relationships before any code existed.
+- TASK-5: the stem-equals-ghost-ID rule made `src/logs.ts` match the `logs` ghost on the first scan (`matched 1`), and the PostToolUse hook recorded each file-tool edit on the task with no manual `--modified-file` calls.
