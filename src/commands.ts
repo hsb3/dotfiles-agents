@@ -1,4 +1,5 @@
 // Subcommand and flag parsing, usage, and dispatch for the evals binary.
+import { ingest } from "./ingest.ts";
 import { CommandError, ValidationError } from "./store.ts";
 
 type FlagKind = "bool" | "value" | "multi";
@@ -29,6 +30,10 @@ const notYet = async (): Promise<number> => {
 
 const NONE = { name: "", min: 0, max: 0 };
 
+function modeOf(args: ParsedArgs): "parse-only" | "dry-run" | "write" {
+  return args.flags["parse-only"] ? "parse-only" : args.flags["dry-run"] ? "dry-run" : "write";
+}
+
 const COMMANDS: Record<string, CommandSpec> = {
   ingest: {
     usage: "evals ingest --source-root <dir> [--parse-only | --dry-run]",
@@ -36,7 +41,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: { "source-root": { kind: "value", required: true } },
     positionals: NONE,
     loader: true,
-    run: notYet,
+    run: (a) => ingest({ sourceRoot: String(a.flags["source-root"]), mode: modeOf(a) }),
   },
   "load-eval-run": {
     usage: "evals load-eval-run <manifest>... [--parse-only | --dry-run]",

@@ -3,6 +3,10 @@
 import { existsSync, mkdtempSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { setDefaultTimeout } from "bun:test";
+
+// Tests that spawn the CLI against a real server take seconds, not milliseconds.
+setDefaultTimeout(60000);
 
 export const REPO_ROOT = resolve(import.meta.dir, "..");
 export const SUPERUSER_EMAIL = "test-admin@example.test";
