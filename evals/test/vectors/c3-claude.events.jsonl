@@ -1,0 +1,7 @@
+{"event_type": "system/init", "role": "system", "seq": 1, "vendor": "claude"}
+{"cache_read_tokens": 2, "cache_write_tokens": 3, "event_type": "assistant", "input_tokens": 5, "output_tokens": 7, "role": "assistant", "seq": 3, "text": "Reading.", "tool_call_id": "toolu_1", "tool_name": "Read", "vendor": "claude"}
+{"artifacts": ["c4c7a80748655c031bc38b16ba41e13650acfe8f0e5b4b1841d3d2f7a9616450", "c4c7a80748655c031bc38b16ba41e13650acfe8f0e5b4b1841d3d2f7a9616450"], "event_type": "user", "is_error": false, "role": "tool_result", "seq": 4, "tool_call_id": "toolu_1", "ts": 1784660448339, "vendor": "claude"}
+{"event_type": "assistant", "input_tokens": 1, "output_tokens": 2, "role": "assistant", "seq": 5, "tool_call_id": "toolu_2", "tool_name": "Bash", "vendor": "claude"}
+{"event_type": "user", "is_error": false, "role": "tool_result", "seq": 6, "tool_call_id": "toolu_2", "ts": 1784660449000, "vendor": "claude"}
+{"artifacts": ["89206d01a7a5f7f6d904c37e473b8b9c695376f9bada9711cde47b23aff314f9"], "event_type": "assistant", "role": "assistant", "seq": 7, "tool_call_id": "toolu_3", "tool_name": "Write", "vendor": "claude"}
+{"event_type": "result/success", "role": "result", "seq": 8, "text": "done", "vendor": "claude"}
