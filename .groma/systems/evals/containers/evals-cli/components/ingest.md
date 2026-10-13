@@ -7,7 +7,6 @@ groma:
   id: ingest
   parent: evals-cli
   technology: TypeScript
-  draft: v1
   code:
     - scanner: typescript
       file: src/ingest.ts

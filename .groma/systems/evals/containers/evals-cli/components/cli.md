@@ -8,7 +8,6 @@ groma:
   code:
     - scanner: typescript
       file: src/cli.ts
-  draft: v1
 description: Starts the evals binary
 ---
 The `evals` executable named in `package.json` `bin`. It hands the process arguments to the command dispatcher and exits with the code the command returns.

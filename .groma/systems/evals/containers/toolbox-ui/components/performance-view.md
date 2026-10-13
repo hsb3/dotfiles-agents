@@ -7,7 +7,6 @@ groma:
   id: performance-view
   parent: toolbox-ui
   technology: React, Carbon, Carbon Charts
-  draft: v1
   code:
     - scanner: react
       file: ui/src/performance-view.tsx

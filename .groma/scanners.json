@@ -63,6 +63,12 @@
         "src/logs.ts#isObj",
         "ui/src/performance-view.tsx#isObject"
       ]
+    },
+    {
+      "rule": "not-imported",
+      "subject": [
+        "ui/src/main.tsx"
+      ]
     }
   ]
 }

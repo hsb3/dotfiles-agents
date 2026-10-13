@@ -10,7 +10,6 @@ groma:
       file: ui/src/main.tsx
     - scanner: typescript
       file: ui/src/main.tsx
-  draft: v1
 description: Mounts the Toolbox app
 ---
 The module `ui/index.html` loads. It mounts the Toolbox shell into the page root with Carbon styles.

@@ -7,7 +7,6 @@ groma:
   id: api
   parent: toolbox-ui
   technology: TypeScript, PocketBase JS SDK, React
-  draft: v1
   code:
     - scanner: react
       file: ui/src/api.tsx

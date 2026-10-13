@@ -7,7 +7,6 @@ groma:
   id: evaluations-view
   parent: toolbox-ui
   technology: React, Carbon
-  draft: v1
   code:
     - scanner: react
       file: ui/src/evaluations-view.tsx

@@ -7,7 +7,6 @@ groma:
   id: documentation-view
   parent: toolbox-ui
   technology: React, Carbon
-  draft: v1
   code:
     - scanner: react
       file: ui/src/documentation-view.tsx
