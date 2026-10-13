@@ -20,15 +20,11 @@ Parses `site build [--root DIR] [--config FILE] [--output DIR] [--ref REF]` and 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/build.ts](../../../../../../src/build.ts) | Runs the build | function call |
-
-## Draft relationships
-
-| Source | Target | Description | Technology |
-| --- | --- | --- | --- |
-| [commands](commands.md) | [server](server.md) | Starts the preview | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/server.ts](../../../../../../src/server.ts) | Starts the preview | function call |
 
 ## Derived relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/build.ts](../../../../../../src/build.ts) | Calls imported function: build | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/server.ts](../../../../../../src/server.ts) | Calls imported function: startServer | typescript |

@@ -74,3 +74,72 @@ describe("site build", () => {
     });
   });
 });
+
+describe("site serve", () => {
+  /** Starts `site serve`, waits for its two lines, and returns them with the process. */
+  async function serve(args: string[]) {
+    const child = Bun.spawn([process.execPath, CLI, "serve", ...args], { cwd: UNIT, stdout: "pipe", stderr: "pipe" });
+    const reader = child.stdout.getReader();
+    let stdout = "";
+    while (!stdout.includes("Ctrl-C to stop)\n")) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      stdout += new TextDecoder().decode(value);
+    }
+    return { child, stdout };
+  }
+
+  test("builds, prints the build line and the address, and serves under the base", async () => {
+    const root = await checkout(DOTFILES);
+    const output = join(await tempDir(), "out");
+    const { child, stdout } = await serve(["--root", root, "--output", output, "--port", "0"]);
+    try {
+      const [built, serving] = stdout.trimEnd().split("\n");
+      expect(built).toBe(`10 pages built, links verified: ${output}`);
+      const match = /^Serving http:\/\/127\.0\.0\.1:(\d+)\/dotfiles-agents\/ \(Ctrl-C to stop\)$/.exec(serving!);
+      expect(match).not.toBeNull();
+      const home = await fetch(`http://127.0.0.1:${match![1]}/dotfiles-agents/`);
+      expect(home.status).toBe(200);
+      expect(await home.text()).toContain("<title>Documentation · dotfiles-agents</title>");
+      // Never rebuilds: a page removed from the output stays removed.
+      await Bun.file(join(output, "README.html")).delete();
+      expect((await fetch(`http://127.0.0.1:${match![1]}/dotfiles-agents/README.html`)).status).toBe(404);
+    } finally {
+      child.kill();
+      await child.exited;
+    }
+  });
+
+  test("a taken port exits 1", async () => {
+    const holder = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("busy") });
+    try {
+      const child = Bun.spawn(
+        [process.execPath, CLI, "serve", "--root", await checkout(DOTFILES), "--output", join(await tempDir(), "out"), "--port", String(holder.port)],
+        { cwd: UNIT, stdout: "pipe", stderr: "pipe" },
+      );
+      expect(await child.exited).toBe(1);
+      expect(await new Response(child.stderr).text()).toBe(`serve: port ${holder.port} is taken\n`);
+    } finally {
+      holder.stop(true);
+    }
+  });
+
+  test("a failed build exits 1 without serving", () => {
+    const result = site(["serve", "--root", "/nonexistent/checkout", "--port", "0"]);
+    expect(result).toEqual({
+      code: 1,
+      stdout: "",
+      stderr: "/nonexistent/checkout: checkout folder not found\nbuild: 1 problems; nothing written\n",
+    });
+  });
+
+  for (const [args, reason] of [
+    [["--port", "http"], "bad port: http"],
+    [["--port", "70000"], "bad port: 70000"],
+    [["--watch"], "unknown option: --watch"],
+  ] as [string[], string][]) {
+    test(`site serve ${args.join(" ")} prints usage`, () => {
+      expect(site(["serve", ...args])).toEqual({ code: 1, stdout: "", stderr: `site: ${reason}\n${USAGE}\n` });
+    });
+  }
+});

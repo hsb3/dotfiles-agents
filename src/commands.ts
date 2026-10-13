@@ -2,6 +2,7 @@
 // build and prints its outcome.
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { build } from "./build.ts";
+import { PortTakenError, startServer } from "./server.ts";
 
 /** The unit folder: the one holding `site.config.json`, `assets/` and `src/`. */
 export const UNIT = resolve(import.meta.dir, "..");
@@ -18,13 +19,36 @@ export const DEFAULTS = {
 
 const BUILD_OPTIONS = ["root", "config", "output", "ref"];
 
-/** Runs one command line; resolves to the exit code. */
+/** Runs one command line; resolves to the exit code. `serve` resolves once its server is listening. */
 export async function run(args: string[]): Promise<number> {
   const [command, ...rest] = args;
-  if (command !== "build") return usage(command === undefined ? "missing command" : `unknown command: ${command}`);
-  const parsed = parseOptions(rest, BUILD_OPTIONS);
+  if (command !== "build" && command !== "serve") {
+    return usage(command === undefined ? "missing command" : `unknown command: ${command}`);
+  }
+  const parsed = parseOptions(rest, command === "serve" ? [...BUILD_OPTIONS, "port"] : BUILD_OPTIONS);
   if (typeof parsed === "string") return usage(parsed);
+  let port = 8000;
+  if (parsed.port !== undefined) {
+    if (!/^\d{1,5}$/.test(parsed.port) || Number(parsed.port) > 65535) return usage(`bad port: ${parsed.port}`);
+    port = Number(parsed.port);
+  }
 
+  const result = await runBuild(parsed);
+  if (result === undefined) return 1;
+  if (command === "build") return 0;
+  try {
+    const server = startServer({ output: result.output, base: result.site.config.base, port });
+    console.log(`Serving http://127.0.0.1:${server.port}${result.site.config.base}/ (Ctrl-C to stop)`);
+    return 0;
+  } catch (error) {
+    if (!(error instanceof PortTakenError)) throw error;
+    console.error(`serve: ${error.message}`);
+    return 1;
+  }
+}
+
+/** Builds with the parsed options, printing the outcome; undefined when the build failed. */
+async function runBuild(parsed: Record<string, string>) {
   const result = await build({
     root: parsed.root ?? DEFAULTS.root,
     config: parsed.config ?? DEFAULTS.config,
@@ -36,10 +60,10 @@ export async function run(args: string[]): Promise<number> {
   if (!result.ok) {
     for (const problem of result.problems) console.error(problem);
     console.error(`build: ${result.problems.length} problems; nothing written`);
-    return 1;
+    return undefined;
   }
   console.log(`${result.pages} pages built, links verified: ${result.output}`);
-  return 0;
+  return result;
 }
 
 /** `--name value` or `--name=value` for each allowed name; a string is the reason the line is not valid. */

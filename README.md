@@ -30,6 +30,15 @@ Options take their value as the next argument or after `=` (`--ref=dev`).
 
 On success it prints `<N> pages built, links verified: <output>` and exits 0. On failure stderr gets one line per problem, sorted by page and then by position within the page, then `build: <K> problems; nothing written`, and it exits 1.
 
+### `site serve [build options] [--port N]`
+
+Runs `build` with the same options, then previews the output folder at `http://127.0.0.1:<port><base>/`, as GitHub Pages would serve it (`http://127.0.0.1:8000/dotfiles-agents/` by default). `--port 0` picks a free port.
+
+- A request for `<base>/`, or any path ending in `/`, gets that folder's `index.html`; any other path under `<base>/` gets the file.
+- Everything else is 404: paths outside the base (including `<base>` without its trailing `/`), missing files, and paths that escape the output folder through `..`, encoded slashes or symlinks. Only `GET` and `HEAD` are served.
+- It prints the build line, then `Serving http://127.0.0.1:<port><base>/ (Ctrl-C to stop)`, and runs until interrupted. It never rebuilds; run it again after editing.
+- It exits 1 if the build fails (nothing is served) or the port is taken (`serve: port <N> is taken`).
+
 `site` with no command, or with an unknown command or option, prints usage to stderr and exits 1.
 
 ## Config

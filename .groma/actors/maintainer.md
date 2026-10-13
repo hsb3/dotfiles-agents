@@ -15,9 +15,4 @@ Builds the site locally to check links before pushing, and previews it with `sit
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [maintainer](maintainer.md) | [site-cli](../systems/docs/containers/site-cli/container.md) | Runs build and serve | shell |
-
-## Draft relationships
-
-| Source | Target | Description | Technology |
-| --- | --- | --- | --- |
 | [maintainer](maintainer.md) | [server](../systems/docs/containers/site-cli/components/server.md) | Previews the site | HTTP, browser |

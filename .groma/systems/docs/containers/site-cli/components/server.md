@@ -2,17 +2,20 @@
 type: C4 Component
 title: Server
 description: Serves the built site locally under its base path
-status: draft
+status: stable
 groma:
   id: server
   parent: site-cli
   technology: TypeScript, Bun.serve
   draft: v1
+  code:
+    - scanner: typescript
+      file: src/server.ts
 ---
 
-Serves the output folder on `127.0.0.1` (port 8000 by default, `0` for a free one) under the base path: a path ending in `/` gets that folder's `index.html`, any other path under the base gets the file, and everything else, including paths that escape the folder, gets 404. Never rebuilds; fails with exit 1 when the port is taken.
+Serves the output folder for `site serve` on `127.0.0.1` (port 8000 by default, `0` for a free one) under the base path, as GitHub Pages would: `<base>/` and any path ending in `/` get that folder's `index.html`, any other path under the base gets the file. Everything else gets 404: paths outside the base, missing files, and paths that escape the folder through dot segments, encoded slashes or symlinks; only `GET` and `HEAD` are served. It never rebuilds, and reports a taken port so `serve` can exit 1.
 
-## Draft relationships
+## Relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
