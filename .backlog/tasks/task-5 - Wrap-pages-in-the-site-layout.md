@@ -4,6 +4,7 @@ title: Wrap pages in the site layout
 status: To Do
 assignee: []
 created_date: '2026-10-13 03:07'
+updated_date: '2026-10-13 03:16'
 labels: []
 milestone: m-0
 dependencies:
@@ -28,6 +29,7 @@ Every page must be exactly the document the SPEC fixes, because the stylesheet's
 - [ ] #2 The current nav entry has `aria-current="page"`; labels are escaped
 - [ ] #3 The contents block lists H1s and nested H2s, and is left out without an H2
 - [ ] #4 Only pages with a Mermaid diagram get the Mermaid module script, verbatim
+- [ ] #5 Contents entries show the heading's inline content with links unwrapped and code spans kept, taken from the link-rewritten body
 <!-- AC:END -->
 
 ## Definition of Done
