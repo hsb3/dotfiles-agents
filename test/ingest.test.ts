@@ -6,7 +6,7 @@ import { topLevelImports } from "../src/ingest.ts";
 import { splitFrontmatter, roleOf } from "../src/checkout.ts";
 import { runCli } from "./cli.ts";
 import { HAS_POCKETBASE, startPocketBase, api, type PbServer } from "./pb.ts";
-import { ROSTER_YAML, writeSyntheticTree } from "./synthetic-tree.ts";
+import { ROSTER_YAML, writeSyntheticTree } from "../src/synthetic-tree.ts";
 
 // Tests that spawn the CLI or a real PocketBase take seconds.
 setDefaultTimeout(60000);

@@ -49,7 +49,7 @@ async function waitHealthy(url: string, proc: Bun.Subprocess, timeoutMs = 15000)
   while (Date.now() < deadline) {
     if (proc.exitCode !== null) throw new Error(`pocketbase exited with ${proc.exitCode}`);
     try {
-      const res = await fetch(`${url}/api/health`);
+      const res = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(1000) });
       if (res.ok) return;
     } catch {
       // not listening yet
@@ -83,7 +83,8 @@ export async function startPocketBase(options: PbOptions = {}): Promise<PbServer
     url = `http://127.0.0.1:${port}`;
     proc = Bun.spawn(
       [bin, "serve", `--http=127.0.0.1:${port}`, "--dir", dataDir, "--migrationsDir", migrationsDir, "--hooksDir", hooksDir, "--automigrate=false"],
-      { stdout: "ignore", stderr: "pipe" },
+      // stderr is ignored: an unread pipe fills up and blocks the server.
+      { stdout: "ignore", stderr: "ignore" },
     );
     await waitHealthy(url, proc);
     server.url = url;

@@ -24,18 +24,14 @@ Parses the subcommand and its flags for `ingest`, `load-eval-run`, `load-verdict
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Loads a harness campaign | function call |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/reports.ts](../../../../../../src/reports.ts) | Renders the reports | function call |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/packager.ts](../../../../../../src/packager.ts) | Builds a package | function call |
-
-## Draft relationships
-
-| Source | Target | Description | Technology |
-| --- | --- | --- | --- |
-| [commands](commands.md) | [fixture](fixture.md) | Starts the fixture | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/fixture.ts](../../../../../../src/fixture.ts) | Starts the fixture | function call |
 
 ## Derived relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Calls imported functions: compareVerdicts, loadCuration, loadEvalRun, loadVerdicts | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/fixture.ts](../../../../../../src/fixture.ts) | Calls imported function: fixture | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/ingest.ts](../../../../../../src/ingest.ts) | Calls imported function: ingest | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/packager.ts](../../../../../../src/packager.ts) | Calls imported function: packageCommand | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/reports.ts](../../../../../../src/reports.ts) | Calls imported function: report | typescript |

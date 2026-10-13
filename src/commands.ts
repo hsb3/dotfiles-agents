@@ -1,5 +1,6 @@
 // Subcommand and flag parsing, usage, and dispatch for the evals binary.
 import { compareVerdicts, loadCuration, loadEvalRun, loadVerdicts } from "./evaluations.ts";
+import { fixture } from "./fixture.ts";
 import { ingest } from "./ingest.ts";
 import { packageCommand } from "./packager.ts";
 import { report } from "./reports.ts";
@@ -26,11 +27,6 @@ interface CommandSpec {
   loader: boolean; // takes --parse-only and --dry-run
   run: (args: ParsedArgs) => Promise<number>;
 }
-
-const notYet = async (): Promise<number> => {
-  console.error("evals: this command is not implemented yet");
-  return 1;
-};
 
 const NONE = { name: "", min: 0, max: 0 };
 
@@ -127,7 +123,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: { pocketbase: { kind: "value" }, "source-root": { kind: "value" } },
     positionals: NONE,
     loader: false,
-    run: notYet,
+    run: (a) => fixture({ pocketbase: a.flags.pocketbase as string | undefined, sourceRoot: a.flags["source-root"] as string | undefined }),
   },
 };
 

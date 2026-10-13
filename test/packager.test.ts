@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "./cli.ts";
 import { api, freePort, HAS_POCKETBASE, pocketbaseBinary, REPO_ROOT, startPocketBase, type PbServer } from "./pb.ts";
-import { WORKFLOWS_MD, writeSyntheticTree } from "./synthetic-tree.ts";
+import { WORKFLOWS_MD, writeSyntheticTree } from "../src/synthetic-tree.ts";
 
 // Tests that spawn the CLI or a real PocketBase take seconds.
 setDefaultTimeout(60000);
@@ -261,13 +261,13 @@ describe.skipIf(!HAS_POCKETBASE)("the packaged service", () => {
       const proc = Bun.spawn(["/bin/sh", join(pkg, "start.sh")], {
         env: { PATH: process.env.PATH ?? "", PB_DATA_DIR: data, POCKETBASE_BIN: pocketbaseBinary()!, PB_BIND: "127.0.0.1", PORT: String(port), PB_SUPERUSER_EMAIL: "owner@example.test", PB_SUPERUSER_PASSWORD: "OwnerPassword123" },
         stdout: "ignore",
-        stderr: "pipe",
+        stderr: "ignore",
       });
       const url = `http://127.0.0.1:${port}`;
       for (let i = 0; i < 200; i++) {
         if (proc.exitCode !== null) break;
         try {
-          if ((await fetch(`${url}/api/health`)).ok) break;
+          if ((await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(1000) })).ok) break;
         } catch {}
         await Bun.sleep(50);
       }
