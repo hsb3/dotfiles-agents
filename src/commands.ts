@@ -1,6 +1,7 @@
 // The command line: parsing, validation in the spec's order (unknown harness
 // names exit 3 before any bad input exits 2), defaults, and dispatch.
 import { join, resolve } from "node:path";
+import { runCampaign } from "./campaign.ts";
 import { runCandidate } from "./grid.ts";
 import { parseHarnessList, UnknownHarness, type Harness } from "./harnesses.ts";
 import { report } from "./report.ts";
@@ -181,7 +182,11 @@ export async function main(argv: string[], io: Io): Promise<number> {
         throw new BadInput(`${flag} is not valid ${isCampaign ? "for campaign" : "outside campaign"}`);
       }
     }
-    if (isCampaign) throw new BadInput("campaign is not available yet");
+    if (isCampaign) {
+      const root = flags.get("--candidates-root");
+      if (!flags.has("--cases-dir") || root === undefined) throw new BadInput("campaign needs --cases-dir and --candidates-root");
+      return await runCampaign(runOptions(flags, name, true), resolve(root), flags.has("--dry-run"), io);
+    }
     if (flags.has("--smoke") && flags.has("--report")) throw new BadInput("--smoke and --report cannot be combined");
     const opts = runOptions(flags, name, false);
     if (flags.has("--report")) {
