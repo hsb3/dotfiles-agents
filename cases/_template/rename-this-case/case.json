@@ -1,0 +1,9 @@
+{
+  "prompt": "REPLACE: a realistic multi-step task drawn from a real use of this candidate. It should be hard enough that the baseline (no candidate) plausibly fails.",
+  "assertions": [
+    {
+      "id": "a1",
+      "text": "REPLACE: one narrow, binary, evidence-checkable statement about the final workspace or response (LLM-graded — prefer check.py for anything deterministic)."
+    }
+  ]
+}

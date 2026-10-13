@@ -1,0 +1,2 @@
+{"type":"step_start","timestamp":1791855847603,"sessionID":"ses_3c4d","part":{"type":"step-start"}}
+{"type":"error","timestamp":1791855848000,"sessionID":"ses_3c4d","error":{"name":"APIError","data":{"message":"invalid x-api-key","statusCode":401}}}
