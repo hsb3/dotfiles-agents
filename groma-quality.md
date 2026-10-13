@@ -14,13 +14,13 @@ groma: 0.6.6+hsb3.eecf3502
 
 | Check | Command | Result | Date |
 |---|---|---|---|
-| Containers match the deployment manifests | `groma view <system> --plain` beside the workspace packages and manifests | agent-harness-cli is the one executable (package bin agent-harness); scripts/launchd.sh and the five data stores declared by hand; no deployment manifests | 2026-10-12 |
-| Externals from call sites; no unmatched request | `groma scan` (its `unmatched request:` lines) | no unmatched request: lines (no HTTP in code); 10 externals declared for CLIs, APIs, launchd, evals loader and the read-only inputs | 2026-10-12 |
+| Containers match the deployment manifests | `groma view <system> --plain` beside the workspace packages and manifests | unchanged in v1.1: agent-harness-cli is the one executable; scripts/launchd.sh and the five data stores declared by hand; no deployment manifests | 2026-10-12 |
+| Externals from call sites; no unmatched request | `groma scan` (its `unmatched request:` lines) | no unmatched request: lines (no HTTP in code); 10 externals declared | 2026-10-12 |
 | No component owns only build config | `groma view <container> --plain` | none: every component owns one src/*.ts file | 2026-10-12 |
-| Dead-code candidates | `grep -c '^file .* is not imported' <(groma lint --unimported)` | 0 (groma lint --unimported: no files nothing imports) | 2026-10-12 |
+| Dead-code candidates | `grep -c '^file .* is not imported' <(groma lint --unimported)` | 0 | 2026-10-12 |
 | Leaves: components with no relationship | `groma lint` (its `has no relationship` lines; acknowledged leaves named) | none: every component has a relationship; no acknowledgements | 2026-10-12 |
 | Stable rescan | `groma scan` (`created 0`) | created 0, refreshed 17, matched 0 | 2026-10-12 |
-| Rescan after a move | `groma scan` after the `git mv` commit (`moved:` lines, `created 0`) | n/a: no file moved in v1 | 2026-10-12 |
+| Rescan after a move | `groma scan` after the `git mv` commit (`moved:` lines, `created 0`) | n/a: no file moved in v1.1 | 2026-10-12 |
 | Lint | `groma lint --strict` (exit 0) | groma lint --strict exit 0: No findings | 2026-10-12 |
 | Map renders | `groma-quality.sh render` (`groma view --check`) | renders: 16 views draw: the overview and 15 terminal depths, 486 routes. | 2026-10-12 |
-| backlog.md task references | `groma lint` (the clean summary's `N task references across M tasks`) | 46 task references across 14 tasks | 2026-10-12 |
+| backlog.md task references | `groma lint` (the clean summary's `N task references across M tasks`) | 53 task references across 16 tasks | 2026-10-12 |

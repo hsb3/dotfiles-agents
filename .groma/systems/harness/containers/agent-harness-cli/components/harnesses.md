@@ -10,7 +10,6 @@ groma:
   code:
     - scanner: typescript
       file: src/harnesses.ts
-  draft: v1-1
 ---
 
 Validates harness lists (order kept, duplicates dropped; an unknown name fails with the message the dispatcher turns into exit 3), runs preflight (CLI on `PATH`, and the credential variables opencode and codex need), reads `<exe> --version` with a 30 s limit (`unknown` when empty, `unavailable` when missing or slow), lists the auth variables that are set (names only), and builds a child environment: the harness's own minus the adapter's variable prefix and the four `XDG_*` variables, plus the adapter's per-run values, minus the credentials the adapter withholds (codex gets `CODEX_API_KEY` and no provider key). It defines the adapter contract (argv, per-run env, withheld variables, injection, fold, success test), the trial record a fold produces and the JSONL parsing the folds share, and hands out the adapter for each harness.
