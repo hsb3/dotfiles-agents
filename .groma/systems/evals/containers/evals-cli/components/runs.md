@@ -30,4 +30,4 @@ Serves `evals load-runs`: reads the JSON Lines ledger (later rows with the same 
 | --- | --- | --- | --- |
 | [src/runs.ts](../../../../../../src/runs.ts) | [src/canonical.ts](../../../../../../src/canonical.ts) | Calls imported functions: canonicalSha256, parseJson, plain, sha256Hex | typescript |
 | [src/runs.ts](../../../../../../src/runs.ts) | [src/logs.ts](../../../../../../src/logs.ts) | Calls imported function: parseLog | typescript |
-| [src/runs.ts](../../../../../../src/runs.ts) | [src/store.ts](../../../../../../src/store.ts) | Calls imported functions: CommandError, ValidationError, applyPlans, connect, diff, fetchAll, fetchWhereIn, formatPlan, formatWarnings, newId | typescript |
+| [src/runs.ts](../../../../../../src/runs.ts) | [src/store.ts](../../../../../../src/store.ts) | Calls imported functions: CommandError, ValidationError, applyPlans, connect, diff, fetchAll, fetchWhereIn, formatPlan, formatWarnings, newId, textOf | typescript |

@@ -81,7 +81,8 @@ export function coerceBody(collection: string, body: Body): Body {
   return out;
 }
 
-function textOf(v: unknown): string {
+// A value as text: missing and null are "".
+export function textOf(v: unknown): string {
   return v === undefined || v === null ? "" : String(v);
 }
 

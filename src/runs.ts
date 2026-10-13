@@ -5,7 +5,7 @@ import { basename, dirname, join } from "node:path";
 import { canonicalSha256, compareCodePoints, parseJson, plain, sha256Hex } from "./canonical.ts";
 import { parseLog, type EventRow, type Harness, type LogArtifact, type ParsedLog, type ToolCallRow } from "./logs.ts";
 import {
-  applyPlans, CommandError, connect, diff, fetchAll, fetchWhereIn, formatPlan, formatWarnings, newId, ValidationError,
+  applyPlans, CommandError, connect, diff, fetchAll, fetchWhereIn, formatPlan, formatWarnings, newId, textOf, ValidationError,
   type Body, type CollectionPlan, type Connection, type Desired, type Rec,
 } from "./store.ts";
 
@@ -31,8 +31,7 @@ export interface LedgerRow {
 }
 
 export function rowKey(row: Obj): string {
-  const text = (v: unknown) => (v === undefined || v === null ? "" : String(v));
-  return ["campaign", "harness", "model", "candidate", "case", "config", "trial"].map((k) => text(row[k])).join("|");
+  return ["campaign", "harness", "model", "candidate", "case", "config", "trial"].map((k) => textOf(row[k])).join("|");
 }
 
 // Reads the ledger: blank lines ignored, a line that is not a JSON object skipped

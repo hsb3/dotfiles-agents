@@ -1,6 +1,7 @@
 // Subcommand and flag parsing, usage, and dispatch for the evals binary.
 import { compareVerdicts, loadCuration, loadEvalRun, loadVerdicts } from "./evaluations.ts";
 import { ingest } from "./ingest.ts";
+import { report } from "./reports.ts";
 import { loadRuns } from "./runs.ts";
 import { CommandError, ValidationError } from "./store.ts";
 
@@ -105,7 +106,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: { out: { kind: "value", required: true }, fixtures: { kind: "value" } },
     positionals: NONE,
     loader: false,
-    run: notYet,
+    run: (a) => report({ out: String(a.flags.out), fixtures: a.flags.fixtures as string | undefined }),
   },
   package: {
     usage: "evals package --source-root <dir> --out <dir> [--ui-build <dir>]",
