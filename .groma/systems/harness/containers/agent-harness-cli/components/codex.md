@@ -11,6 +11,7 @@ groma:
     - scanner: typescript
       file: src/codex.ts
       symbol: codex
+  draft: v1-1
 ---
 
 Builds `codex exec --json --skip-git-repo-check --ephemeral --sandbox workspace-write -c sandbox_workspace_write.network_access=true --dangerously-bypass-hook-trust -C <workspace> -m <model> <prompt>`, never `--ignore-user-config`. Its per-run env sets `HOME` and `CODEX_HOME` inside the run dir and passes `OPENAI_API_KEY` on as `CODEX_API_KEY`, after the `CODEX_*` and `XDG_*` scrub; no `auth.json` is written. Injects a skill under `codex-home/skills/`, agents as `codex-home/agents/<name>.toml` (name, description, developer instructions), and a plugin by building a local `agent-harness` marketplace in `codex-market/` and running `codex plugin marketplace add` and `codex plugin add` (60 s each, in the workspace, with the trial env); a failing step becomes an injection-failure with that step's error text and exit code. Folds `item.completed`, `turn.completed`, `turn.failed` and top-level `error` events into the trial record; duration is the wall-clock time of the run. Success is exit 0 with a non-empty result.
