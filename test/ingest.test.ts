@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test, setDefaultTimeout } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, lstatSync, writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +7,9 @@ import { splitFrontmatter, roleOf } from "../src/checkout.ts";
 import { runCli } from "./cli.ts";
 import { HAS_POCKETBASE, startPocketBase, api, type PbServer } from "./pb.ts";
 import { ROSTER_YAML, writeSyntheticTree } from "./synthetic-tree.ts";
+
+// Tests that spawn the CLI or a real PocketBase take seconds.
+setDefaultTimeout(60000);
 
 function snapshot(dir: string): string[] {
   const out: string[] = [];

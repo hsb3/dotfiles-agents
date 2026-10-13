@@ -1,8 +1,11 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test, setDefaultTimeout } from "bun:test";
 import {
   applyPlans, CommandError, coerceJson, connect, diff, fetchAll, formatParseOnly, formatPlan, sameValue, type Connection, type Rec,
 } from "../src/store.ts";
 import { HAS_POCKETBASE, startPocketBase, type PbServer } from "./pb.ts";
+
+// Tests that spawn the CLI or a real PocketBase take seconds.
+setDefaultTimeout(60000);
 
 describe("json coercion", () => {
   test("follows the spec examples", () => {

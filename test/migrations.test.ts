@@ -1,9 +1,12 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test, setDefaultTimeout } from "bun:test";
 import { copyFileSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appendixA, legacySchema, restBody, type CollectionSpec } from "./appendix-a.ts";
 import { api, HAS_POCKETBASE, REPO_ROOT, startPocketBase, type PbServer } from "./pb.ts";
+
+// Tests that spawn the CLI or a real PocketBase take seconds.
+setDefaultTimeout(60000);
 
 const DEPENDENCY_ORDER = [
   "frameworks", "sources", "extenders", "framework_elements", "files", "distributions",

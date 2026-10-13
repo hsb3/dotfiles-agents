@@ -20,12 +20,12 @@ Parses the subcommand and its flags for `ingest`, `load-eval-run`, `load-verdict
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/ingest.ts](../../../../../../src/ingest.ts) | Runs the projection | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Loads evaluation files | function call |
 
 ## Draft relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [commands](commands.md) | [evaluations](evaluations.md) | Loads evaluation files | function call |
 | [commands](commands.md) | [runs](runs.md) | Loads a harness campaign | function call |
 | [commands](commands.md) | [reports](reports.md) | Renders the reports | function call |
 | [commands](commands.md) | [packager](packager.md) | Builds a package | function call |
@@ -35,4 +35,5 @@ Parses the subcommand and its flags for `ingest`, `load-eval-run`, `load-verdict
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Calls imported functions: compareVerdicts, loadCuration, loadEvalRun, loadVerdicts | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/ingest.ts](../../../../../../src/ingest.ts) | Calls imported function: ingest | typescript |

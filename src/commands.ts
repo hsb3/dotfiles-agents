@@ -1,4 +1,5 @@
 // Subcommand and flag parsing, usage, and dispatch for the evals binary.
+import { compareVerdicts, loadCuration, loadEvalRun, loadVerdicts } from "./evaluations.ts";
 import { ingest } from "./ingest.ts";
 import { CommandError, ValidationError } from "./store.ts";
 
@@ -49,7 +50,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: {},
     positionals: { name: "manifest", min: 1, max: Infinity },
     loader: true,
-    run: notYet,
+    run: (a) => loadEvalRun(a.positionals, modeOf(a)),
   },
   "load-verdicts": {
     usage: "evals load-verdicts <file>... [--extenders a,b] [--complete] [--parse-only | --dry-run]",
@@ -57,7 +58,8 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: { extenders: { kind: "value" }, complete: { kind: "bool" } },
     positionals: { name: "file", min: 1, max: Infinity },
     loader: true,
-    run: notYet,
+    run: (a) =>
+      loadVerdicts(a.positionals, { extenders: a.flags.extenders === undefined ? undefined : String(a.flags.extenders).split(",").map((x) => x.trim()).filter((x) => x !== ""), complete: a.flags.complete === true }, modeOf(a)),
   },
   "compare-verdicts": {
     usage: "evals compare-verdicts --left <file>... --right <file>...",
@@ -65,7 +67,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: { left: { kind: "multi", required: true }, right: { kind: "multi", required: true } },
     positionals: NONE,
     loader: false,
-    run: notYet,
+    run: async (a) => compareVerdicts(a.flags.left as string[], a.flags.right as string[]),
   },
   "load-curation": {
     usage: "evals load-curation <file> [--parse-only | --dry-run]",
@@ -73,7 +75,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     flags: {},
     positionals: { name: "file", min: 1, max: 1 },
     loader: true,
-    run: notYet,
+    run: (a) => loadCuration(a.positionals[0]!, modeOf(a)),
   },
   "load-runs": {
     usage:

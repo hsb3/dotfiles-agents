@@ -1,5 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, setDefaultTimeout } from "bun:test";
 import { runCli } from "./cli.ts";
+
+// Tests that spawn the CLI or a real PocketBase take seconds.
+setDefaultTimeout(60000);
 
 const COMMANDS = ["ingest", "load-eval-run", "load-verdicts", "compare-verdicts", "load-curation", "load-runs", "report", "package", "fixture"];
 
