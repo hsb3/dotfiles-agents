@@ -14,4 +14,4 @@ The spec describes claude, opencode and codex with the same shape (argv, environ
 
 ## Consequences
 
-Trial and smoke code has no per-harness branches; adding a harness means one module and one `switch` arm. The cycle between the registry and the adapters is safe only while neither module touches the other's exports at load time. The map shows the registry and each adapter linked both ways (helpers one way, adapter lookup the other).
+Trial and smoke code has no per-harness branches; adding a harness means one module and one `switch` arm. The cycle between the registry and the adapters is safe only while neither module touches the other's exports at load time. An adapter property that needs a registry value (codex's withheld provider keys, added in v1.1) is a getter for that reason; a plain property broke every CLI start with a TDZ error. The map shows the registry and each adapter linked both ways (helpers one way, adapter lookup the other).

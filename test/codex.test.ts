@@ -42,16 +42,19 @@ test("argv follows the spec and never ignores the user config", () => {
   const argv = codex.argv("do it", "gpt-6.1-sol", "/run/ws", []);
   expect(argv).toEqual([
     "codex", "exec", "--json", "--skip-git-repo-check", "--ephemeral", "--sandbox", "workspace-write",
-    "-c", "sandbox_workspace_write.network_access=true", "--dangerously-bypass-hook-trust",
+    "-c", "sandbox_workspace_write.network_access=true", "--dangerously-bypass-hook-trust", "--disable", "shell_snapshot",
     "-C", "/run/ws", "-m", "gpt-6.1-sol", "do it",
   ]);
   expect(argv).not.toContain("--ignore-user-config");
 });
 
-test("the environment scrubs CODEX_* and passes OPENAI_API_KEY on as CODEX_API_KEY", () => {
+test("the environment scrubs CODEX_*, passes OPENAI_API_KEY on as CODEX_API_KEY and withholds every provider key", () => {
   const run = join(box.root, "run");
-  const env = childEnv(codex, run, { CODEX_HOME: "/real", CODEX_SANDBOX: "x", OPENAI_API_KEY: "sk", XDG_CONFIG_HOME: "/x", PATH: "/bin" });
-  expect(env).toEqual({ OPENAI_API_KEY: "sk", PATH: "/bin", HOME: join(run, "home"), CODEX_HOME: join(run, "codex-home"), CODEX_API_KEY: "sk" });
+  const keys = {
+    ANTHROPIC_API_KEY: "a", OPENAI_API_KEY: "sk", GEMINI_API_KEY: "g", GOOGLE_GENERATIVE_AI_API_KEY: "gg", OPENROUTER_API_KEY: "o", GROQ_API_KEY: "q",
+  };
+  const env = childEnv(codex, run, { CODEX_HOME: "/real", CODEX_SANDBOX: "x", XDG_CONFIG_HOME: "/x", PATH: "/bin", ...keys });
+  expect(env).toEqual({ PATH: "/bin", HOME: join(run, "home"), CODEX_HOME: join(run, "codex-home"), CODEX_API_KEY: "sk" });
   expect(existsSync(join(run, "codex-home"))).toBe(true);
 });
 
@@ -84,13 +87,14 @@ test("a plugin is installed from a local marketplace with two codex plugin comma
   expect(readFileSync(join(market, "plugins/demo-plugin/skills/s/SKILL.md"), "utf8")).toBe("s");
   const calls = stubCalls(box.bin, "codex");
   expect(calls.map((c) => c.argv)).toEqual([
-    ["plugin", "marketplace", "add", market, "--json"],
-    ["plugin", "add", "demo-plugin@agent-harness", "--json"],
+    ["plugin", "marketplace", "add", market, "--json", "--disable", "shell_snapshot"],
+    ["plugin", "add", "demo-plugin@agent-harness", "--json", "--disable", "shell_snapshot"],
   ]);
   for (const call of calls) {
     expect(call.cwd).toEndWith("/run/ws");
     expect(call.env.CODEX_HOME).toBe(join(x.runDir, "codex-home"));
     expect(call.env.CODEX_API_KEY).toBe("sk-test");
+    expect(call.env.OPENAI_API_KEY).toBeUndefined();
   }
 });
 

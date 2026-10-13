@@ -100,6 +100,7 @@ export const opencode: Adapter = {
   exe: "opencode",
   defaultModel: "claude-sonnet-4-5",
   scrubPrefix: "OPENCODE",
+  withheldEnv: [],
   reportsPlugins: false,
   wallClockDuration: true,
   // opencode silently ignores a skill whose name breaks its pattern, and hosts no Claude plugins.

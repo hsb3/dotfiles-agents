@@ -73,6 +73,8 @@ export interface Adapter {
   defaultModel: string;
   /** Variables whose names start with this are removed from the child env. */
   scrubPrefix: string;
+  /** Variables removed from the child env after the per-run values are built (credentials the CLI does not need). */
+  withheldEnv: readonly string[];
   /** Whether the CLI reports which plugins it loaded (smoke output). */
   reportsPlugins: boolean;
   /** Whether duration_ms is the harness's wall-clock time rather than the CLI's own. */
@@ -138,7 +140,9 @@ export function scrubEnv(base: Env | NodeJS.ProcessEnv, prefix: string | null): 
 /** The environment a CLI of this harness runs with inside `runDir`. */
 export function childEnv(adapter: Adapter, runDir: string, base: Env | NodeJS.ProcessEnv): Env {
   const scrubbed = scrubEnv(base, adapter.scrubPrefix);
-  return { ...scrubbed, ...adapter.runEnv(runDir, scrubbed) };
+  const env = { ...scrubbed, ...adapter.runEnv(runDir, scrubbed) };
+  for (const name of adapter.withheldEnv) delete env[name];
+  return env;
 }
 
 /** Why the cell cannot run, or null when it can. */

@@ -65,6 +65,7 @@ export const claude: Adapter = {
   exe: "claude",
   defaultModel: "claude-sonnet-4-5",
   scrubPrefix: "CLAUDE",
+  withheldEnv: [],
   reportsPlugins: true,
   wallClockDuration: false,
   canHost: () => true,

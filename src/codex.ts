@@ -3,10 +3,13 @@
 import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Candidate } from "./candidate.ts";
-import { emptyRecord, jsonLines, num, type Adapter, type InjectContext, type Injection, type TrialRecord } from "./harnesses.ts";
+import { AUTH_ENV_NAMES, emptyRecord, jsonLines, num, type Adapter, type InjectContext, type Injection, type TrialRecord } from "./harnesses.ts";
 import { runProcess } from "./subprocess.ts";
 
 const MARKETPLACE = "agent-harness";
+// The shell_snapshot feature (on by default) writes the shell environment,
+// credentials included, into codex-home/shell_snapshots/.
+const NO_SNAPSHOT = ["--disable", "shell_snapshot"];
 const INSTALL_TIMEOUT_SEC = 60;
 
 /** Runs one install step; returns its error text and exit code when it fails. */
@@ -32,8 +35,8 @@ async function installPlugin(candidate: Candidate, ctx: InjectContext): Promise<
     }),
   );
   for (const argv of [
-    ["codex", "plugin", "marketplace", "add", market, "--json"],
-    ["codex", "plugin", "add", `${name}@${MARKETPLACE}`, "--json"],
+    ["codex", "plugin", "marketplace", "add", market, "--json", ...NO_SNAPSHOT],
+    ["codex", "plugin", "add", `${name}@${MARKETPLACE}`, "--json", ...NO_SNAPSHOT],
   ]) {
     const failed = await installStep(argv, ctx);
     if (failed) return { failure: `codex plugin install failed: ${failed.error}`, exitCode: failed.exitCode };
@@ -104,6 +107,11 @@ export const codex: Adapter = {
   exe: "codex",
   defaultModel: "gpt-6.1-sol",
   scrubPrefix: "CODEX_",
+  // codex authenticates with CODEX_API_KEY alone; no other provider key reaches it.
+  // A getter: reading the registry's list at load time would trip the import cycle (decision-1).
+  get withheldEnv() {
+    return AUTH_ENV_NAMES;
+  },
   reportsPlugins: false,
   wallClockDuration: true,
   canHost: () => true,
@@ -129,6 +137,7 @@ export const codex: Adapter = {
     "-c",
     "sandbox_workspace_write.network_access=true",
     "--dangerously-bypass-hook-trust",
+    ...NO_SNAPSHOT,
     ...injected,
     "-C",
     ws,

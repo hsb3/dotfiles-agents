@@ -260,7 +260,7 @@ Real example (prompt and text trimmed):
 - The executables `claude`, `opencode`, `codex` and `python3` are found by bare name on `PATH`.
 - A child's environment is the harness's own environment, minus the scrub set listed for each harness and the four vars `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME`, plus the per-run values listed for each harness.
 - Every child the harness spawns (each agent CLI, the grader, `check.py` and the codex plugin-install commands) gets `PWD` set to its cwd. A child otherwise inherits the harness's own `PWD`, and opencode resolves its project directory from `PWD`, not from its cwd: without this rule it writes into the directory the harness was invoked from.
-- Credentials reach a CLI only through environment variables. Nothing the harness writes contains a credential.
+- Credentials reach a CLI only through environment variables. Nothing the harness writes contains a credential, and neither does any file a CLI writes into a run dir the harness keeps.
 - `cli_version` is the trimmed stdout of `<exe> --version`. It is `unknown` when stdout is empty, and `unavailable` when the executable is missing or takes longer than 30 s. Real values: `2.1.296 (Claude Code)`, `opencode v2.0.25`, `codex-cli 0.162.1`.
 - Every fold reads stdout line by line and skips any line that is not a JSON object. The log's first line is a `#` header.
 - The **trial record** a fold produces has these fields: `result` (the agent's final text, which the grader sees), `tool_names`, `skill_used`, `plugins` (smoke only), `plugin_errors`, `cost_usd`, `duration_ms`, `num_turns`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`, and an event error. Every value is null or empty unless stated.
@@ -366,15 +366,16 @@ For the scout example above, the result is `description: "Read-only investigator
 ```
 codex exec --json --skip-git-repo-check --ephemeral --sandbox workspace-write
   -c sandbox_workspace_write.network_access=true --dangerously-bypass-hook-trust
-  -C <workspace> -m <model> <prompt>
+  --disable shell_snapshot -C <workspace> -m <model> <prompt>
 ```
 
-Workspaces are not git repos, which is why `--skip-git-repo-check` is needed. Network access is on to match the other two CLIs. Hook trust is bypassed so a plugin's hooks run, as they do under `claude --plugin-dir`. Never pass `--ignore-user-config`, because the per-run `config.toml` carries the injected plugin.
+Workspaces are not git repos, which is why `--skip-git-repo-check` is needed. Network access is on to match the other two CLIs. Hook trust is bypassed so a plugin's hooks run, as they do under `claude --plugin-dir`. Never pass `--ignore-user-config`, because the per-run `config.toml` carries the injected plugin. `--disable shell_snapshot` is mandatory: the `shell_snapshot` feature (stable, on by default) writes the shell environment, credentials included, to `codex-home/shell_snapshots/*.sh`, which a failed trial's kept run dir would then hold.
 
 **Environment:**
 - Scrub every variable whose name starts with `CODEX_`.
 - Set `HOME=<run>/home` and `CODEX_HOME=<run>/codex-home`, creating both. `HOME` must be isolated too: codex also discovers skills under `~/.agents/skills`.
 - Set `CODEX_API_KEY` to the value of `OPENAI_API_KEY`. `codex exec` authenticates with it, and no `auth.json` is ever written. Codex adds its own system skills under `codex-home/skills/.system/` in both configs.
+- Withhold the provider keys: the codex child environment carries `CODEX_API_KEY` and none of `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `OPENROUTER_API_KEY` or `GROQ_API_KEY`. This applies to `codex exec` and to the plugin-install commands.
 
 **Injection:**
 
@@ -382,7 +383,7 @@ Workspaces are not git repos, which is why `--skip-git-repo-check` is needed. Ne
 |---|---|
 | skill | Copy the candidate to `codex-home/skills/<name>/`. Codex lists it to the model as `<name>: <description>`. |
 | agent | Write one `codex-home/agents/<name>.toml` per agent file with exactly three keys: `name`, `description` and `developer_instructions` (the body). Each value is written as a JSON string literal, which is a valid TOML basic string. The frontmatter's `model` and `tools` are not carried over. |
-| plugin | Build a local marketplace in `<run>/codex-market/`: copy the candidate to `codex-market/plugins/<plugin>/`, and write `codex-market/.claude-plugin/marketplace.json` as `{"name":"agent-harness","owner":{"name":"agent-harness"},"plugins":[{"name":"<plugin>","source":"./plugins/<plugin>","version":"<version>"}]}`. Then run `codex plugin marketplace add <run>/codex-market --json` followed by `codex plugin add <plugin>@agent-harness --json`, each with the trial's environment, cwd = workspace and a 60 s timeout. If either fails (non-zero exit, timeout or missing executable), the trial becomes an injection-failure row whose message is `codex plugin install failed: <that step's error text>`. On success, codex records the plugin in `codex-home/config.toml` and lists its skills as `<plugin>:<skill>`. |
+| plugin | Build a local marketplace in `<run>/codex-market/`: copy the candidate to `codex-market/plugins/<plugin>/`, and write `codex-market/.claude-plugin/marketplace.json` as `{"name":"agent-harness","owner":{"name":"agent-harness"},"plugins":[{"name":"<plugin>","source":"./plugins/<plugin>","version":"<version>"}]}`. Then run `codex plugin marketplace add <run>/codex-market --json --disable shell_snapshot` followed by `codex plugin add <plugin>@agent-harness --json --disable shell_snapshot`, each with the trial's environment, cwd = workspace and a 60 s timeout. If either fails (non-zero exit, timeout or missing executable), the trial becomes an injection-failure row whose message is `codex plugin install failed: <that step's error text>`. On success, codex records the plugin in `codex-home/config.toml` and lists its skills as `<plugin>:<skill>`. |
 
 **Fold.** The stream is JSONL. `item.started` and `item.updated` events are ignored.
 

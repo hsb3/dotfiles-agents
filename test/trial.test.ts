@@ -235,3 +235,37 @@ test("an opencode that writes into $PWD lands its file in the trial workspace, a
   expect(readFileSync(join(row.workspace!, "HELLO.txt"), "utf8")).toBe("harness-ok");
   expect(existsSync(join(elsewhere, "HELLO.txt"))).toBe(false);
 });
+
+test("a failed codex trial keeps its run dir with no credential value in any file", async () => {
+  const keys = {
+    ANTHROPIC_API_KEY: "sk-ant-LEAK1", OPENAI_API_KEY: "sk-oai-LEAK2", GEMINI_API_KEY: "gem-LEAK3", GOOGLE_GENERATIVE_AI_API_KEY: "goog-LEAK4",
+    OPENROUTER_API_KEY: "or-LEAK5", GROQ_API_KEY: "groq-LEAK6",
+  };
+  // Like codex-cli 0.162.1: the shell_snapshot feature dumps the environment unless --disable shell_snapshot is passed.
+  const snapshot = { dumpEnvTo: "$CODEX_HOME/shell_snapshots/snap.sh" };
+  installStub(box.bin, "codex", [
+    { prefix: ["plugin"], lacks: ["shell_snapshot"], stdout: "{}", ...snapshot },
+    { prefix: ["plugin"], stdout: "{}" },
+    { prefix: ["exec"], lacks: ["shell_snapshot"], stream: "A9-codex-failed-turn.jsonl", exit: 1, ...snapshot },
+    { prefix: ["exec"], stream: "A9-codex-failed-turn.jsonl", exit: 1 },
+  ]);
+  const row = await runTrial(spec({ harness: "codex", model: "gpt-6.1-sol", candidate: plugin(), baseEnv: { PATH: box.bin, ...keys } }));
+  expect(row.passed).toBe(false);
+  expect(existsSync(row.workspace!)).toBe(true);
+  const runDir = join(row.workspace!, "..");
+  const files: string[] = [];
+  const walk = (d: string) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) (e.isDirectory() ? walk : (p: string) => files.push(p))(join(d, e.name));
+  };
+  walk(runDir);
+  expect(files.length).toBeGreaterThan(0);
+  for (const f of files) {
+    const text = readFileSync(f, "utf8");
+    for (const value of Object.values(keys)) expect(text).not.toContain(value);
+  }
+  for (const call of stubCalls(box.bin, "codex")) {
+    expect(call.argv.join(" ")).toContain("--disable shell_snapshot");
+    expect(call.env.CODEX_API_KEY).toBe("sk-oai-LEAK2");
+    for (const name of Object.keys(keys)) expect(call.env[name]).toBeUndefined();
+  }
+});
