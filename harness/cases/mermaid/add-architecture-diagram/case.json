@@ -1,0 +1,9 @@
+{
+  "prompt": "This repository has a small platform under `services/`: `api_gateway.py`, `auth_service.py`, `core_api.py`, `worker.py`, `queue.py`, and `datastore.py`. Each file's module docstring describes what that service does and, in prose, how it connects to the others. Read all six files, then add an `## Architecture` section to `README.md` containing a single Mermaid diagram (fenced with ```mermaid) that shows all six components and the direction of the request/data flow between them. Keep node labels short and readable. Do not modify any files under `services/`.",
+  "assertions": [
+    {
+      "id": "a1-diagram-covers-all-services",
+      "text": "The Mermaid diagram added to README.md includes a distinct node for each of the six components described in services/ (API Gateway, Auth Service, Core API, Background Worker, Job Queue, Primary Datastore) — not a generic, partial, or placeholder diagram."
+    }
+  ]
+}

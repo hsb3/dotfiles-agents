@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Local Bookmark Vault</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <h1>Local Bookmark Vault</h1>
+
+  <form id="add-form">
+    <input id="url" type="url" placeholder="https://example.com" required />
+    <input id="title" type="text" placeholder="Title" required />
+    <input id="tag" type="text" placeholder="tag (optional)" />
+    <button type="submit">Add bookmark</button>
+  </form>
+
+  <label>
+    Filter by tag:
+    <select id="tag-filter">
+      <option value="">(all)</option>
+    </select>
+  </label>
+
+  <ul id="bookmarks"></ul>
+
+  <script src="/app.js"></script>
+</body>
+</html>

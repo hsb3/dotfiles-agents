@@ -511,7 +511,7 @@ The row's `preconditions` and the log header are the same object.
 - **Logs:** `--runs-dir`, one file per agent run (trial or smoke). They are never deleted by the harness, and are git-ignored.
 - **Campaign logs:** `<dir of --results>/campaign-logs/<label>.log`, appended to. Git-ignored.
 - **Run dirs** in the OS temp dir. A run dir is deleted after a passing trial (unless `--keep-workspaces` is set), after a skip row and after a smoke run. It is kept after a failing trial, and its `ws/` path is recorded in `workspace`.
-- **Shipped cases:** exactly `cases/_template/rename-this-case/` and `cases/smoke-echo/create-file/` (Appendix B). Real cases live with the primitives they test and arrive through `--cases-dir`.
+- **Shipped cases:** `cases/_template/rename-this-case/` and `cases/smoke-echo/create-file/` (Appendix B), plus the dotfiles-agents candidates' real cases (`mermaid`, `readme-value-and-proof`, `scout`), which live beside them in `cases/` (decision-019, 2026-10-13).
 - The harness writes nowhere else. It never reads or writes the evals unit or its database; ingestion is a separate, deliberate step run by the owner.
 
 ## Non-functional
@@ -683,4 +683,4 @@ Provided at init as `cases/smoke-echo/create-file/case.json`.
 
 Provided at init as `cases/smoke-echo/create-file/check.py`.
 
-Real cases live outside this repo, and are selected by their directory names under `--cases-dir`.
+The real cases live in `cases/` beside these two (decision-019), and are selected by their directory names under `--cases-dir`.
