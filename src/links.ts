@@ -126,5 +126,6 @@ function headingExists(context: LinkContext, page: Page, fragment: string): bool
   } catch {
     // A malformed escape is compared as written.
   }
-  return context.ids.get(page.path)?.has(id) ?? false;
+  // A page that failed to render has no ids; its own problem is reported instead.
+  return context.ids.get(page.path)?.has(id) ?? true;
 }
