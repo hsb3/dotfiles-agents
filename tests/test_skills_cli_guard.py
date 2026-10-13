@@ -99,6 +99,9 @@ class RunnerSpellingTests(GuardCase):
         self.assertDenied("pnpm --silent dlx skills add x")
         self.assertDenied("npm --yes exec skills add x")
 
+    def test_valued_flag_before_the_runner_word(self):
+        self.assertDenied("npm --prefix dir exec skills add x")
+
 
 class HelpExemptionTests(GuardCase):
 
@@ -177,6 +180,11 @@ class TextIsSilentTests(GuardCase):
         self.assertSilent("npx skillset add x")
         self.assertSilent("npx @x/skills add x")
         self.assertSilent("npx prettier skills")
+
+    def test_skills_as_a_runner_flag_value(self):
+        self.assertSilent("npx --prefix skills prettier --check .")
+        self.assertSilent("bunx --cwd skills tsc")
+        self.assertSilent("npm exec --workspace skills -- vitest")
 
     def test_skills_as_an_argument(self):
         self.assertSilent("ls ~/.claude/skills")

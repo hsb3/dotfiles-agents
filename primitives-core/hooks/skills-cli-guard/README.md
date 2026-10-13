@@ -2,7 +2,8 @@
 
 `PreToolUse` on `Bash`. Denies a command that runs the third-party `skills` package through a
 runner: `npx`, `bunx`, `bun x`, `pnpx`, `pnpm dlx`, `yarn dlx`, `npm exec`, with any runner
-flags (`-y`, `--yes`, `--`, or between the words, as in `pnpm --silent dlx`) and any
+flags (`-y`, `--yes`, `--`, or between the words, as in `pnpm --silent dlx`; the value of
+`--prefix`, `--cwd`, `-C`, `-w` or `--workspace` is skipped with it) and any
 `skills@<version>`. Run inside a code repo, that CLI claims every skill under any `.agents/`
 or `.claude/` folder, overwrites hand-authored skills and drops a `skills-lock.json`.
 `skills remove -g --all` deletes hand-authored skills from the user skills dir. Author, move
@@ -44,7 +45,8 @@ Not containment. It catches the plain mistake, not a determined workaround.
 - A `<<` that opens no heredoc: one in quotes or a comment (`-m "a << b"`), or an arithmetic
   shift (`$((1<<2))`). It reads as an opener, so the following lines go unread until one
   equals the word after it.
-- A runner flag with a separate value, such as `npm --prefix dir exec skills`.
+- A valued runner flag outside `--prefix`, `--cwd`, `-C`, `-w` and `--workspace`. Its value reads
+  as the package, so `npx --registry skills prettier` is denied.
 - A function body written `function f { ... }`. The `f() { ... }` form is read.
 - One quoted word near a megabyte, such as a huge `-m "..."` message. `shlex` slows down on a
   single long word and the hook runs past its 10 s timeout. A heredoc body of any size is

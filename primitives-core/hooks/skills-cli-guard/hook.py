@@ -20,6 +20,7 @@ HELP = {"--help", "-h", "--version", "-V"}
 KEYWORDS = {"!", "{", "if", "then", "else", "elif", "do", "while", "until", "time"}
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
 OPERATORS = "();<>|&`"
+VALUED = {"--prefix", "--cwd", "-C", "-w", "--workspace"}  # their next word is a value
 # ponytail: matched on raw lines, so a `<<` inside quotes, a comment or `$((1<<2))` opens one too
 HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)[ \t]*((?:'[^']*'|\"[^\"]*\"|\\.|[^\s|&;()<>'\"\\])+)")
 
@@ -34,7 +35,7 @@ REASON = (
 
 def past_flags(words):
     while words and words[0].startswith("-"):
-        words = words[1:]
+        words = words[2:] if words[0] in VALUED else words[1:]
     return words
 
 
