@@ -1,0 +1,13 @@
+---
+type: C4 Component
+title: Logs
+description: Parses claude, opencode and codex trial logs
+status: draft
+groma:
+  id: logs
+  parent: evals-cli
+  technology: TypeScript
+  draft: v1
+---
+
+Turns one trial log into run meta (session id, era, provenance, model usage), run events, tool calls joined to their results, excised artifacts (large write and edit contents, screenshots) and a token and cost rollup. Lines split as Python `str.splitlines()` does and each physical line keeps its seq.
