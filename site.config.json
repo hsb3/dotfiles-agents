@@ -1,0 +1,16 @@
+{
+  "repo": "hsb3/dotfiles-agents",
+  "ref": "dev",
+  "pages": ["README.md", ".github/CONTRIBUTING.md", "docs/**/*.md", "plugins/*/README.md"],
+  "exclude": ["docs/decisions/0000-template.md"],
+  "rename": { "docs/README.md": "index.html", ".github/CONTRIBUTING.md": "contributing.html" },
+  "nav": [
+    { "label": "Documentation", "page": "docs/README.md" },
+    { "label": "Install & catalog", "page": "README.md" },
+    { "label": "Codex support", "page": "docs/codex-compatibility.md" },
+    { "label": "Atelier setup", "page": "plugins/atelier/README.md" },
+    { "label": "Contribute", "page": ".github/CONTRIBUTING.md" },
+    { "label": "Decision history", "page": "docs/decisions/README.md" }
+  ],
+  "footer": [{ "label": "Licenses", "page": "docs/licenses.md" }]
+}
