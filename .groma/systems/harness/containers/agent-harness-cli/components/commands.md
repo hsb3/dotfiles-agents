@@ -22,12 +22,12 @@ Turns argv into one of the four commands (a candidate run, `--smoke`, `--report`
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/harnesses.ts](../../../../../../src/harnesses.ts) | Validates harness names | function call |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/grid.ts](../../../../../../src/grid.ts) | Runs a candidate's grid | function call |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/report.ts](../../../../../../src/report.ts) | Prints a candidate report | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/smoke.ts](../../../../../../src/smoke.ts) | Runs loadability checks | function call |
 
 ## Draft relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [commands](commands.md) | [smoke](smoke.md) | Runs loadability checks | function call |
 | [commands](commands.md) | [campaign](campaign.md) | Runs the weekly campaign | function call |
 
 ## Derived relationships
@@ -37,3 +37,4 @@ Turns argv into one of the four commands (a candidate run, `--smoke`, `--report`
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/grid.ts](../../../../../../src/grid.ts) | Calls imported function: runCandidate | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/harnesses.ts](../../../../../../src/harnesses.ts) | Calls imported function: parseHarnessList | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/report.ts](../../../../../../src/report.ts) | Calls imported function: report | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/smoke.ts](../../../../../../src/smoke.ts) | Calls imported function: runSmoke | typescript |

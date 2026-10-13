@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { runCandidate } from "./grid.ts";
 import { parseHarnessList, UnknownHarness, type Harness } from "./harnesses.ts";
 import { report } from "./report.ts";
+import { runSmoke } from "./smoke.ts";
 import type { Config } from "./trial.ts";
 
 /** Where command output goes; the campaign also copies it to its log. */
@@ -188,8 +189,7 @@ export async function main(argv: string[], io: Io): Promise<number> {
       return 0;
     }
     if (opts.candidateDir === null) throw new BadInput("--candidate-dir is required");
-    if (flags.has("--smoke")) throw new BadInput("--smoke is not available yet");
-    return await runCandidate(opts, io);
+    return await (flags.has("--smoke") ? runSmoke(opts, io) : runCandidate(opts, io));
   } catch (e) {
     if (e instanceof UnknownHarness) {
       io.err(e.message);

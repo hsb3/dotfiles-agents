@@ -85,7 +85,9 @@ export async function runProcess(argv: string[], opts: RunOptions): Promise<RunR
   // the pipes drain; a process that escaped the group cannot stall the run.
   killGroup(child.pid);
   const code = await child.exited;
-  await Promise.race([reading, Bun.sleep(2000)]);
+  let grace: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([reading, new Promise((resolve) => (grace = setTimeout(resolve, 2000)))]);
+  clearTimeout(grace); // a pending timer would keep the process alive
   return {
     stdout: decode(out),
     stderr: decode(err),
