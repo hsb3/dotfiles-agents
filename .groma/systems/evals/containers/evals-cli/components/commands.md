@@ -23,12 +23,12 @@ Parses the subcommand and its flags for `ingest`, `load-eval-run`, `load-verdict
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Loads evaluation files | function call |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Loads a harness campaign | function call |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/reports.ts](../../../../../../src/reports.ts) | Renders the reports | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/packager.ts](../../../../../../src/packager.ts) | Builds a package | function call |
 
 ## Draft relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [commands](commands.md) | [packager](packager.md) | Builds a package | function call |
 | [commands](commands.md) | [fixture](fixture.md) | Starts the fixture | function call |
 
 ## Derived relationships
@@ -37,5 +37,6 @@ Parses the subcommand and its flags for `ingest`, `load-eval-run`, `load-verdict
 | --- | --- | --- | --- |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Calls imported functions: compareVerdicts, loadCuration, loadEvalRun, loadVerdicts | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/ingest.ts](../../../../../../src/ingest.ts) | Calls imported function: ingest | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/packager.ts](../../../../../../src/packager.ts) | Calls imported function: packageCommand | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/reports.ts](../../../../../../src/reports.ts) | Calls imported function: report | typescript |
 | [src/commands.ts](../../../../../../src/commands.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Calls imported function: loadRuns | typescript |

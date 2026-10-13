@@ -1,6 +1,7 @@
 // Subcommand and flag parsing, usage, and dispatch for the evals binary.
 import { compareVerdicts, loadCuration, loadEvalRun, loadVerdicts } from "./evaluations.ts";
 import { ingest } from "./ingest.ts";
+import { packageCommand } from "./packager.ts";
 import { report } from "./reports.ts";
 import { loadRuns } from "./runs.ts";
 import { CommandError, ValidationError } from "./store.ts";
@@ -118,7 +119,7 @@ const COMMANDS: Record<string, CommandSpec> = {
     },
     positionals: NONE,
     loader: false,
-    run: notYet,
+    run: (a) => packageCommand({ sourceRoot: String(a.flags["source-root"]), out: String(a.flags.out), uiBuild: a.flags["ui-build"] as string | undefined }),
   },
   fixture: {
     usage: "evals fixture [--pocketbase <bin>] [--source-root <dir>]",
