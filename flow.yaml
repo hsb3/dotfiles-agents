@@ -68,7 +68,7 @@ nodes:
     class: authored
     status: current
     paths: [harness]
-    note: "Self-contained uv eval project; runs candidates injected from primitives-core sources; appends tracked results.jsonl; own CI lane, never in make ci. Design docs travel with it (harness/docs/, ex _meta/research)."
+    note: "Agent harness (Bun/TypeScript): A/B trials of a skill, agent or plugin under claude, opencode and codex, graded by check.py and an LLM rubric, appended to the tracked results.jsonl the evals unit loads. Rebuilt and landed 2026-10-13 with its history, .backlog/ and .groma/ (git subtree); the real cases live in harness/cases/ (decision-019). Own test lane (harness-test.yml, make harness-test); never in make ci. The weekly campaign runs from harness/scripts/launchd.sh."
   - id: evals
     layer: workbench
     class: authored
@@ -143,7 +143,7 @@ edges:
     to: harness
     kind: consumes
     mode: automated
-    via: scripts/harness_campaign.sh
+    via: harness/src/campaign.ts
   - from: harness
     to: evals
     kind: ingests

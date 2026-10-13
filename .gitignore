@@ -29,13 +29,11 @@ __pycache__/
 logs/
 *.log
 
-# --- agent harness (harness/ uv project) — runtime artifacts, never tracked
-# (results.jsonl IS tracked: battle-test evidence, DESIGN §8-D3). Temp workspaces
-# default to the system tempdir; harness/workspaces/ is a defensive ignore. ---
+# --- agent harness (harness/, Bun unit) — runtime artifacts, never tracked
+# (results.jsonl IS tracked: the ledger the evals unit loads). Run dirs live in the
+# system tempdir. ---
 harness/runs/
-harness/workspaces/
-harness/.venv/
-# weekly campaign runner logs (defensive; the global *.log already covers the files)
+# weekly campaign logs (defensive; the global *.log already covers the files)
 harness/campaign-logs/
 
 # >>> cc-project-memory (managed) >>>
