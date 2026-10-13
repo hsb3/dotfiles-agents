@@ -7,14 +7,13 @@ groma:
   id: checks
   parent: agent-harness-cli
   technology: TypeScript
-  draft: v1
   code:
     - scanner: typescript
       file: src/checks.ts
       symbol: runChecks
 ---
 
-Runs `python3 <case dir>/check.py` with cwd = the final workspace, the trial's child environment and a 120 s timeout; its exit code is ignored. Its stdout must be a JSON array of `{id, passed, evidence}`; a missing `python3`, a timeout, stdout that is not JSON, not an array or holds malformed entries all become one failed `check.py` entry with `check-error: <reason>`.
+Runs `python3 <case dir>/check.py` with cwd = the final workspace, the harness's own environment minus the four `XDG_*` variables (it belongs to no harness, so it keeps the real `HOME` a version-manager shim needs) and a 120 s timeout; its exit code is ignored. Its stdout must be a JSON array of `{id, passed, evidence}`; a missing `python3`, a timeout, stdout that is not JSON, not an array or holds malformed entries all become one failed `check.py` entry with `check-error: <reason>`.
 
 ## Relationships
 

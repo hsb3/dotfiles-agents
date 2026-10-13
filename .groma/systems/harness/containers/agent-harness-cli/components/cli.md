@@ -8,7 +8,6 @@ groma:
   code:
     - scanner: typescript
       file: src/cli.ts
-  draft: v1
 description: Process entry of the agent-harness binary
 ---
 Hands the process arguments to the command dispatcher and exits with the code it returns.

@@ -7,7 +7,6 @@ groma:
   id: opencode
   parent: agent-harness-cli
   technology: TypeScript
-  draft: v1
   code:
     - scanner: typescript
       file: src/opencode.ts

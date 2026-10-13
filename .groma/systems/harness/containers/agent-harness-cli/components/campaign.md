@@ -7,7 +7,6 @@ groma:
   id: campaign
   parent: agent-harness-cli
   technology: TypeScript
-  draft: v1
   code:
     - scanner: typescript
       file: src/campaign.ts
