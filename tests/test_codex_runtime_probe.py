@@ -1,4 +1,4 @@
-"""Tests for harness/codex_runtime_probe.py's `checkout-root` resolution.
+"""Tests for scripts/codex_runtime_probe.py's `checkout-root` resolution.
 
 Exercises `checkouts_dir()` and `activation_frontmatter()` against a real, uncommitted
 git repo. Never invokes Codex; stdlib-only.
@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from worktree_fixture import require_git  # noqa: E402
 
 spec = importlib.util.spec_from_file_location(
-    "codex_runtime_probe_under_test", ROOT / "harness/codex_runtime_probe.py")
+    "codex_runtime_probe_under_test", ROOT / "scripts/codex_runtime_probe.py")
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 
@@ -159,7 +159,7 @@ class ActivateFixtureTests(unittest.TestCase):
 
     def test_run_forwards_checkout_root(self):
         # run() needs an authenticated Codex; pin its call to activate_fixture structurally.
-        tree = ast.parse((ROOT / "harness/codex_runtime_probe.py").read_text())
+        tree = ast.parse((ROOT / "scripts/codex_runtime_probe.py").read_text())
         run = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run")
         calls = [node for node in ast.walk(run) if isinstance(node, ast.Call)
                  and getattr(node.func, "id", None) == "activate_fixture"]

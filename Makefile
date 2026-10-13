@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci harness-coupling flow symlinks manifests readmes readme-currency parity labels models-drift board-health board-reconcile version-bump
+.PHONY: help check identity provenance hook-layout agent-refs model-tiers floor test ci flow symlinks manifests readmes readme-currency parity labels models-drift board-health board-reconcile version-bump
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -29,8 +29,6 @@ model-tiers: ## Model-tier gate: every tier's pinned id is real in the vendored 
 
 floor: identity test provenance hook-layout ## The Tier-1 entry-gate machine floor (required on PRs into dev)
 
-harness-coupling: ## No-repo-coupling gate for harness/ (stdlib-only; extraction guard, DESIGN §5)
-	@python3 scripts/check_harness_coupling.py
 
 version-bump: ## Version-bump gate against the LOCALLY cached origin/main + origin/dev (no fetch; an uncached ref prints NOT CHECKED; CI runs the fetched check)
 	@python3 scripts/check_version_bump.py --local
@@ -73,13 +71,9 @@ test: ## Unit tests (stdlib-only, zero-install) — also entry-gate floor check 
 # All gates. The Tier-1 entry-gate machine floor (identity · tests · provenance · hook-layout)
 # is required CI on every PR into dev; check (roster drift) + symlinks (assembly lint, decision-030)
 # guard the distribution surface; agent-refs keeps shipped bodies from routing through an
-# agent nobody ships; harness-coupling keeps harness/ extraction-clean
-# (stdlib-only — it must not need uv, so it lives in ci not harness-test).
-ci: check identity provenance hook-layout agent-refs model-tiers symlinks harness-coupling flow version-bump test ## All gates: floor + assembly/flow guards
+# agent nobody ships. The Bun units (site/, evals/, harness/) run in their own lanes, never here.
+ci: check identity provenance hook-layout agent-refs model-tiers symlinks flow version-bump test ## All gates: floor + assembly/flow guards
 
-# --- agent harness (harness/) — its own uv project; deliberately NOT part of ci
-# (evals need live CLIs + API keys; the harness has its own test lane, wired to ci in Wave 4).
-.PHONY: harness-test harness-eval harness-report
 vendored-drift: ## Vendored base/ vs pinned upstream ref (needs network; NOT in ci)
 	@python3 scripts/check_vendored_drift.py
 
@@ -101,8 +95,11 @@ board-health: ## Board decay checks vs the core label vocabulary; PROJECT= overr
 	  | python3 primitives-core/skills/board-triage/scripts/board_health.py \
 	      --vocabulary primitives-core/skills/board-triage/scripts/core-labels.txt
 
-harness-test: ## Run the agent-harness unit tests (uv project; NOT in ci)
-	@uv run --project harness python -m unittest discover -s harness/tests -t harness/tests -q
+# --- agent harness (harness/) — its own Bun unit with its own test lane (harness-test.yml);
+# evals need live CLIs + API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY), so nothing here is in ci.
+.PHONY: harness-test harness-eval harness-report
+harness-test: ## Type-check and test the agent harness (Bun; NOT in ci)
+	@cd harness && bun install --frozen-lockfile --silent && bunx tsc --noEmit && bun test
 
 harness-eval: ## Eval grid: ITEM=<name> [HARNESS=claude] [MODEL=] [CAMPAIGN=] (NOT in ci). Resolves skill/plugin dirs AND flat agents/<name>.md
 	@test -n "$(ITEM)" || { echo "usage: make harness-eval ITEM=<candidate> [HARNESS=claude] [MODEL=<model>] [CAMPAIGN=<label>]"; exit 2; }
@@ -111,23 +108,23 @@ harness-eval: ## Eval grid: ITEM=<name> [HARNESS=claude] [MODEL=] [CAMPAIGN=] (N
 	    dir="primitives-core/agents/$(ITEM).md"; \
 	  fi; \
 	  test -n "$$dir" || { echo "no primitive named '$(ITEM)' under primitives-core/ (need a skill dir or agents/$(ITEM).md)"; exit 2; }; \
-	  uv run --project harness agent-harness "$(ITEM)" --candidate-dir "$$dir" \
+	  bun harness/src/cli.ts "$(ITEM)" --candidate-dir "$$dir" \
 	    --harness "$(or $(HARNESS),claude)" $(if $(MODEL),--model "$(MODEL)") $(if $(CAMPAIGN),--campaign "$(CAMPAIGN)")
 
 harness-report: ## Aggregate the harness ledger for a candidate: ITEM=<name> (NOT in ci)
 	@test -n "$(ITEM)" || { echo "usage: make harness-report ITEM=<candidate>"; exit 2; }
-	@uv run --project harness agent-harness "$(ITEM)" --report
+	@bun harness/src/cli.ts "$(ITEM)" --report
 
-# --- weekly harness campaign (launchd) — full grid over cased candidates; live CLIs + keychain
+# --- weekly harness campaign (launchd) — full grid over the harness/cases candidates; live CLIs + keys
 .PHONY: harness-campaign harness-campaign-install harness-campaign-uninstall harness-campaign-status
-harness-campaign: ## Full-grid eval campaign: cased candidates x claude,opencode x with,baseline x 3 trials (needs live CLIs + keychain; not in ci)
-	@scripts/harness_campaign.sh run
+harness-campaign: ## Weekly campaign: harness/cases candidates x claude,opencode,codex x with,baseline x 3 trials (needs live CLIs + API keys; not in ci)
+	@bun harness/src/cli.ts campaign --cases-dir harness/cases --candidates-root primitives-core
 harness-campaign-install: ## Install the weekly launchd agent (Mon 09:00; kickstart once to approve keychain)
-	@scripts/harness_campaign.sh install
+	@sh harness/scripts/launchd.sh install "$(CURDIR)/harness/cases" "$(CURDIR)/primitives-core"
 harness-campaign-uninstall: ## Remove the weekly launchd agent
-	@scripts/harness_campaign.sh uninstall
+	@sh harness/scripts/launchd.sh uninstall
 harness-campaign-status: ## launchctl state of the weekly agent
-	@scripts/harness_campaign.sh status
+	@sh harness/scripts/launchd.sh status
 
 
 # --- documentation site (site/) — its own Bun unit with its own test lane (site-test.yml);

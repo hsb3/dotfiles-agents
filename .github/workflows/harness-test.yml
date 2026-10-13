@@ -1,11 +1,8 @@
 name: harness-test
 
-# Path-filtered lane for the agent-harness (harness/) — its own uv project, kept
-# out of the marketplace `make ci` lanes (DESIGN §5). Runs only when harness/ (or
-# this workflow) changes, so marketplace-only PRs don't pay for it. Mirrors the
-# ci.yml job style: checkout + setup-python + a single `make` target. uv is
-# pip-installed (no third-party action) so `make harness-test` can drive the uv
-# project. Evals are NOT run here — they need live CLIs + API keys (DESIGN §1).
+# Path-filtered lane for the agent harness (harness/) — its own Bun unit, kept out of the
+# zero-install `make ci`. Runs only when harness/ (or this workflow) changes. Tests replay
+# recorded CLI streams through stub executables; no real agent CLI or API key is used.
 on:
   pull_request:
     paths:
@@ -17,12 +14,11 @@ permissions:
 
 jobs:
   harness-test:
-    name: harness unit tests (uv project)
+    name: harness unit tests (Bun)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          python-version: "3.13"
-      - run: pip install uv
+          bun-version: "1.4.3"
       - run: make harness-test

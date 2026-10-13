@@ -16,7 +16,6 @@ and exits 0/1; `make help` lists the wrapping targets. Run them via make from th
 | `check_symlinks.py` | `symlinks` | plugin assemblies: every `plugins/` symlink resolves in-repo; `marketplace.json` ↔ assemblies 1:1 |
 | `check_flow.py` | `flow` | repo-flow DAG: every top-level path homed in `flow.yaml`, automated edges acyclic, the FLOW.md DAG block in sync (regenerate with `--write-doc`) |
 | `check_readme_currency.py` | `readme-currency` (also in `check`) | README currency (decision-015): the last commit touching a skill or plugin also touched that unit's README. Derived from git history — needs a full clone, and a shallow one is a failure, not a skip |
-| `check_harness_coupling.py` | `harness-coupling` | `harness/` stays extraction-clean: the shipped package never imports or references repo files outside `harness/` |
 
 ## CI-only gates (not in `make ci`)
 
@@ -60,10 +59,9 @@ measured and found the tree clean.
 | `usage_digest.py` | Digests atelier's Codex `codex-usage.jsonl` v2 token-delta stream (`report`, `export`); moved here from the retired legacy `evals/` (2026-10-13). |
 | `agent_gaps.py` | Attributes every 60s+ quiet period in the local subagent transcripts (`~/.claude/projects`) to the tool call preceding it, splits self-commanded sleeps into poll vs unconditional, and states the unexplained remainder. `--json`, `--top N`, `--threshold`. |
 
-## Harness campaign (not in `make ci`)
+## Codex probes (not in `make ci`)
 
-- `harness_campaign.sh` — the full eval grid over cased candidates
-  (`run` / `install` / `uninstall` / `status`), wrapped by the `make harness-campaign*`
-  targets; needs live CLIs plus keychain access.
-- `launchd/` — the plist template `harness_campaign.sh install` renders for the weekly
-  LaunchAgent.
+- `codex_runtime_probe.py`, `codex_lifecycle_probe.py` — live probes of atelier's hooks under
+  the Codex app-server with a disposable `CODEX_HOME` (`docs/codex-compatibility.md`); moved
+  here from the retired legacy `harness/` (2026-10-13). The weekly harness campaign now lives
+  in `harness/` itself (`agent-harness campaign`, `harness/scripts/launchd.sh`).

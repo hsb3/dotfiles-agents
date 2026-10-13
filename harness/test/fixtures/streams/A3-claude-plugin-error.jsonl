@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","cwd":"/tmp/harness-claude-broken-create-file-with-0-Qm2x/ws","session_id":"9b1d7c3e-0a4f-4c2b-8e6d-1f5a3b7c9d20","tools":["Read","Skill"],"model":"claude-sonnet-4-5","plugins":[],"plugin_errors":[{"plugin":"eval-x","message":"boom"}]}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":2100,"num_turns":1,"result":"OK","session_id":"9b1d7c3e-0a4f-4c2b-8e6d-1f5a3b7c9d20","total_cost_usd":0.0042,"usage":{"input_tokens":3,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":2}}

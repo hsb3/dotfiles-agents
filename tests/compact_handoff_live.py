@@ -17,7 +17,7 @@ import time
 import queue
 
 SOURCE = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('lifecycle', SOURCE / 'harness/codex_lifecycle_probe.py')
+spec = importlib.util.spec_from_file_location('lifecycle', SOURCE / 'scripts/codex_lifecycle_probe.py')
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 def until(self, predicate):

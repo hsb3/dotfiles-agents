@@ -198,9 +198,9 @@ verified scratch-owned snapshot daemons. Evidence is sanitized before temporary 
 and homes are removed.
 
 ```sh
-python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-installed-proof --plugin-root plugins/atelier
-python3 harness/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-manager-proof --plugin-root plugins/atelier --production-workflow
-python3 harness/codex_lifecycle_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-handoff-proof --package-root primitives-core
+python3 scripts/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-installed-proof --plugin-root plugins/atelier
+python3 scripts/codex_runtime_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-manager-proof --plugin-root plugins/atelier --production-workflow
+python3 scripts/codex_lifecycle_probe.py --auth-source ~/.codex/auth.json --output /tmp/codex-handoff-proof --package-root primitives-core
 ```
 
 The runtime probe reviews only the package explicitly selected for the disposable run through
