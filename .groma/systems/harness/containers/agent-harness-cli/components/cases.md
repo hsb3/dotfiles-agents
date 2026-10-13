@@ -2,17 +2,20 @@
 type: C4 Component
 title: Cases
 description: Loads and validates a candidate's case dataset
-status: draft
+status: stable
 groma:
   id: cases
   parent: agent-harness-cli
   technology: TypeScript
   draft: v1
+  code:
+    - scanner: typescript
+      file: src/cases.ts
 ---
 
-Reads `<cases-dir>/<candidate>/<case-id>/case.json` (non-empty `prompt`, optional `assertions` of `{id, text}`), notes each case's optional `fixture/` and `check.py`, sorts cases by id and applies `--case`. Every dataset error exits 2 with the spec's message.
+Reads `<cases-dir>/<candidate>/<case-id>/case.json` (a non-empty `prompt`, optional `assertions` of `{id, text}`, other keys ignored), notes each case's optional `fixture/` directory and `check.py`, ignores subdirectories without `case.json`, sorts cases by id and applies `--case`. The default cases dir is the shipped `cases/`; real cases come from an external directory. Every dataset error fails with the spec's message, which the caller turns into exit 2.
 
-## Draft relationships
+## Relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
