@@ -17,7 +17,9 @@ beforeEach(() => {
   process.env.TMPDIR = tmp;
 });
 afterEach(() => {
-  process.env.TMPDIR = savedTmp;
+  // Assigning undefined would store the string "undefined" where TMPDIR was unset (Linux CI).
+  if (savedTmp === undefined) delete process.env.TMPDIR;
+  else process.env.TMPDIR = savedTmp;
   box.cleanup();
 });
 

@@ -47,7 +47,7 @@ test("install writes the plist, reloads the agent and prints the kickstart step"
   expect(xml).toContain("<key>RunAtLoad</key>\n  <false/>");
   expect(xml).toContain(`<string>${home}/Library/Logs/agent-harness-campaign.out.log</string>`);
   expect(xml).toContain(`<string>${home}/Library/Logs/agent-harness-campaign.err.log</string>`);
-  expect(Bun.spawnSync(["plutil", "-lint", plist]).exitCode).toBe(0);
+  if (process.platform === "darwin") expect(Bun.spawnSync(["plutil", "-lint", plist]).exitCode).toBe(0); // plutil is macOS-only
   expect(stubCalls(box.bin, "launchctl").map((c) => c.argv)).toEqual([
     ["bootout", `gui/${UID}/${LABEL}`],
     ["bootstrap", `gui/${UID}`, plist],
