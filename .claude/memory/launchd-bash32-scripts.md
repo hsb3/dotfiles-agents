@@ -7,7 +7,8 @@ metadata:
 
 launchd hands agents a bare PATH, so a `#!/usr/bin/env bash` script must remain compatible with
 macOS `/bin/bash` 3.2. A script can pass an interactive check with Homebrew Bash and still fail
-under its LaunchAgent; `scripts/harness_campaign.sh` retains this constraint.
+under its LaunchAgent. (The script that motivated this, `scripts/harness_campaign.sh`, was retired
+2026-10-13; its replacement, `harness/scripts/launchd.sh`, is POSIX `sh`.)
 
 **Why:** bash 3.2 reads an unparenthesized `case` pattern's `)` inside `$( )` / `<( )` as closing
 the substitution (fixed in bash 4). Also: no `mapfile`, no associative arrays, and empty-array

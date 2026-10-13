@@ -1,1 +1,0 @@
-"""payments-svc source package."""

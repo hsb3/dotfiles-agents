@@ -112,7 +112,6 @@ git show <commit>^:primitives-core/skills/<name>/SKILL.md    # read a deleted bo
 | `make hook-layout` | **Hook layout** — hooks use the ratified `hooks/<name>/hook.py` dir layout, never flat handlers or inline-in-settings. |
 | `make agent-refs` | **Agent references resolve** — no shipped body under `primitives-core/` names an agent that is neither a roster agent nor a harness built-in. Reads two shapes only: a `subagent_type`/`agent_type`/`agent` key with a literal value, and a backticked name immediately *before* the word agent/subagent. Unbackticked prose is never a reference, and neither is the mirror shape (`` agent `x` ``), where ordinary prose matches. `python3 scripts/check_agent_refs.py --report` lists every reference with its verdict, and exits non-zero if any dangles. |
 | `make symlinks` | **Symlink-assembly lint** (decision-030) — every link under `plugins/` resolves in-repo; the root marketplace manifest and the assemblies match 1:1. |
-| `make harness-coupling` | `harness/` imports only itself + stdlib (no repo coupling). |
 | `make flow` | **Repo-flow DAG** — every tracked top-level path is homed in `flow.yaml`; a new top-level path must claim a node there. |
 | `make test` | **Unit tests** — `python3 -m unittest`, **stdlib-only** (zero install is an invariant; fixtures live under `tests/`, never under `primitives-core/`). |
 
