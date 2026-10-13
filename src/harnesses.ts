@@ -2,6 +2,7 @@
 // the scrubbed child environment, and the adapter each one runs through.
 import type { Candidate } from "./candidate.ts";
 import { claude } from "./claude.ts";
+import { opencode } from "./opencode.ts";
 import { findExecutable, runProcess, type Env } from "./subprocess.ts";
 
 export type Harness = "claude" | "opencode" | "codex";
@@ -111,6 +112,8 @@ export function adapterFor(harness: Harness): Adapter {
   switch (harness) {
     case "claude":
       return claude;
+    case "opencode":
+      return opencode;
     default:
       throw new Error(`no adapter for harness ${harness}`);
   }
