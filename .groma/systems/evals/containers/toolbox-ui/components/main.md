@@ -15,8 +15,14 @@ description: Mounts the Toolbox app
 ---
 The module `ui/index.html` loads. It mounts the Toolbox shell into the page root with Carbon styles.
 
-## Draft relationships
+## Relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [main](main.md) | [app](app.md) | Mounts the shell | React render |
+| [ui/src/main.tsx](../../../../../../ui/src/main.tsx) | [ui/src/app.tsx](../../../../../../ui/src/app.tsx) | Mounts the shell | React render |
+
+## Derived relationships
+
+| Source | Target | Description | Technology |
+| --- | --- | --- | --- |
+| [ui/src/main.tsx](../../../../../../ui/src/main.tsx) | [ui/src/app.tsx](../../../../../../ui/src/app.tsx) | Renders imported component: App | typescript |

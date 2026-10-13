@@ -2,7 +2,7 @@
 type: C4 Container
 title: Toolbox UI
 description: Read-only single-page app for authenticated readers
-status: draft
+status: stable
 groma:
   id: toolbox-ui
   parent: evals
