@@ -13,8 +13,14 @@ description: Starts the evals binary
 ---
 The `evals` executable named in `package.json` `bin`. It hands the process arguments to the command dispatcher and exits with the code the command returns.
 
-## Draft relationships
+## Relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [cli](cli.md) | [commands](commands.md) | Passes the arguments | function call |
+| [src/cli.ts](../../../../../../src/cli.ts) | [src/commands.ts](../../../../../../src/commands.ts) | Passes the arguments | function call |
+
+## Derived relationships
+
+| Source | Target | Description | Technology |
+| --- | --- | --- | --- |
+| [src/cli.ts](../../../../../../src/cli.ts) | [src/commands.ts](../../../../../../src/commands.ts) | Calls imported function: main | typescript |
