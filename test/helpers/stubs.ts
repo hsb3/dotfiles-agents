@@ -12,6 +12,10 @@ export interface StubRule {
   prefix?: string[];
   /** The argv contains every one of these. */
   has?: string[];
+  /** The argv contains none of these. */
+  lacks?: string[];
+  /** This path exists (relative to the cwd; a leading $VAR expands from the environment). */
+  ifExists?: string;
   /** Replay this fixture (a file name under test/fixtures/streams) on stdout. */
   stream?: string;
   stdout?: string;
@@ -21,8 +25,10 @@ export interface StubRule {
   sleeperPidFile?: string;
   /** After printing, hang until killed. */
   hang?: boolean;
-  /** Files to write, keyed by path relative to the stub's cwd. */
+  /** Files to write, keyed by path relative to the stub's cwd; a leading $VAR expands from the environment. */
   writeFiles?: Record<string, string>;
+  /** Write the stub's whole environment, one NAME=value line each, to this path (expanded like writeFiles). */
+  dumpEnvTo?: string;
 }
 
 export interface StubCall {
@@ -36,15 +42,19 @@ const fs = require("node:fs");
 const path = require("node:path");
 const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify({ argv: args, cwd: process.cwd(), env: process.env }) + "\\n");
+const expand = (p) => path.resolve(process.cwd(), p.replace(/^\\$([A-Z_]+)/, (_, v) => process.env[v] ?? ""));
 const rules = JSON.parse(fs.readFileSync(${JSON.stringify(rulesPath)}, "utf8"));
 const rule = rules.find((r) =>
   (!r.prefix || r.prefix.every((p, i) => args[i] === p)) &&
-  (!r.has || r.has.every((h) => args.includes(h)))) || {};
-for (const [rel, body] of Object.entries(rule.writeFiles || {})) {
-  const target = path.resolve(process.cwd(), rel);
+  (!r.has || r.has.every((h) => args.includes(h))) &&
+  (!r.lacks || !r.lacks.some((h) => args.includes(h))) &&
+  (!r.ifExists || fs.existsSync(expand(r.ifExists)))) || {};
+const put = (target, body) => {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body);
-}
+};
+for (const [rel, body] of Object.entries(rule.writeFiles || {})) put(expand(rel), body);
+if (rule.dumpEnvTo) put(expand(rule.dumpEnvTo), Object.entries(process.env).map(([k, v]) => k + "=" + v).join("\\n"));
 let out = rule.stdout || "";
 if (rule.stream) out = fs.readFileSync(path.join(${JSON.stringify(streams)}, rule.stream), "utf8");
 if (out) fs.writeSync(1, out);

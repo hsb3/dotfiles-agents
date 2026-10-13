@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 // Every child process the harness starts goes through runProcess: a list-form
 // argv (never a shell), stdin from /dev/null, its own process group, and a
 // timeout that SIGKILLs the whole group while keeping the stdout read so far.
@@ -61,7 +63,9 @@ export async function runProcess(argv: string[], opts: RunOptions): Promise<RunR
   try {
     child = Bun.spawn([exe, ...argv.slice(1)], {
       cwd: opts.cwd,
-      env: opts.env,
+      // PWD follows the cwd: a child would otherwise inherit the harness's own,
+      // and opencode resolves its project directory from PWD.
+      env: { ...opts.env, PWD: resolve(opts.cwd) },
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",

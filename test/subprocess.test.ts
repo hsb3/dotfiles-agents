@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runProcess } from "../src/subprocess.ts";
 import { installStub, sandbox, stubCalls, stubPath } from "./helpers/stubs.ts";
@@ -63,3 +63,12 @@ test("a timeout SIGKILLs the whole process group and keeps the partial stdout", 
   for (let i = 0; i < 50 && alive(sleeper); i++) await Bun.sleep(100);
   expect(alive(sleeper)).toBe(false);
 }, 20000);
+
+test("PWD is the child's cwd, whatever the harness's own PWD is", async () => {
+  installStub(box.bin, "opencode", [{}]);
+  const ws = join(box.root, "ws");
+  mkdirSync(ws);
+  await runProcess(["opencode", "run"], { cwd: ws, env: { ...env(), PWD: "/somewhere/else" }, timeoutSec: 10 });
+  const [call] = stubCalls(box.bin, "opencode");
+  expect(call!.env.PWD).toBe(ws);
+});

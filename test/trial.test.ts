@@ -199,3 +199,39 @@ test("self_installs lists install lines trimmed, cut, deduplicated, sorted and c
   expect(selfInstalls(out)).toEqual([`brew install ${"y".repeat(107)}`, "npm install left-pad", "pip install x"]);
   expect(selfInstalls(Array.from({ length: 30 }, (_, i) => `go install p${String(i).padStart(2, "0")}`).join("\n"))).toHaveLength(20);
 });
+
+test("every child gets PWD set to its cwd: agent CLIs, the grader, check.py and the codex plugin install", async () => {
+  const elsewhere = join(box.root, "invoked-from");
+  mkdirSync(elsewhere);
+  const base = { PATH: box.bin, ANTHROPIC_API_KEY: "sk-a", OPENAI_API_KEY: "sk-o", PWD: elsewhere };
+  installStub(box.bin, "claude", claudeRules({ prefix: ["-p"], stream: "A2-claude-skill-trial.jsonl" }));
+  installStub(box.bin, "opencode", [{ prefix: ["run"], stream: "A4-opencode-captured.jsonl" }]);
+  installStub(box.bin, "codex", [{ prefix: ["plugin"], stdout: "{}" }, { prefix: ["exec"], stream: "A7-codex-captured.jsonl" }]);
+  installStub(box.bin, "python3", [{ stdout: "[]" }]);
+  const graded = kase({ check: "/c.py", assertions: [{ id: "a1-diagram-covers-all-services", text: "t" }] });
+  await runTrial(spec({ baseEnv: base, kase: graded }));
+  await runTrial(spec({ baseEnv: base, harness: "opencode", kase: graded }));
+  await runTrial(spec({ baseEnv: base, harness: "codex", model: "gpt-6.1-sol", candidate: plugin(), kase: graded }));
+  const calls = ["claude", "opencode", "codex", "python3"].flatMap((n) => stubCalls(box.bin, n).map((c) => ({ n, c })));
+  expect(calls.map(({ n, c }) => `${n} ${c.argv.includes("--bare") ? "grader" : c.argv[0]}`).sort()).toEqual([
+    "claude -p", "claude grader", "claude grader", "claude grader", "codex exec", "codex plugin", "codex plugin", "opencode run",
+    "python3 /c.py", "python3 /c.py", "python3 /c.py",
+  ]);
+  for (const { c } of calls) expect(c.env.PWD).toBe(c.cwd);
+});
+
+test("an opencode that writes into $PWD lands its file in the trial workspace, and the trial passes", async () => {
+  const elsewhere = join(box.root, "invoked-from");
+  mkdirSync(elsewhere);
+  installStub(box.bin, "opencode", [{ prefix: ["run"], stream: "A4-opencode-captured.jsonl", writeFiles: { "$PWD/HELLO.txt": "harness-ok" } }]);
+  installStub(box.bin, "python3", [
+    { ifExists: "HELLO.txt", stdout: '[{"id":"hello-file-exists","passed":true,"evidence":"HELLO.txt present"}]' },
+    { stdout: '[{"id":"hello-file-exists","passed":false,"evidence":"HELLO.txt missing in workspace"}]' },
+  ]);
+  const row = await runTrial(
+    spec({ harness: "opencode", keepWorkspaces: true, kase: kase({ check: "/c.py" }), baseEnv: { PATH: box.bin, ANTHROPIC_API_KEY: "k", PWD: elsewhere } }),
+  );
+  expect(row.passed).toBe(true);
+  expect(readFileSync(join(row.workspace!, "HELLO.txt"), "utf8")).toBe("harness-ok");
+  expect(existsSync(join(elsewhere, "HELLO.txt"))).toBe(false);
+});

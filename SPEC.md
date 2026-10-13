@@ -259,6 +259,7 @@ Real example (prompt and text trimmed):
 **Common rules.**
 - The executables `claude`, `opencode`, `codex` and `python3` are found by bare name on `PATH`.
 - A child's environment is the harness's own environment, minus the scrub set listed for each harness and the four vars `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME`, plus the per-run values listed for each harness.
+- Every child the harness spawns (each agent CLI, the grader, `check.py` and the codex plugin-install commands) gets `PWD` set to its cwd. A child otherwise inherits the harness's own `PWD`, and opencode resolves its project directory from `PWD`, not from its cwd: without this rule it writes into the directory the harness was invoked from.
 - Credentials reach a CLI only through environment variables. Nothing the harness writes contains a credential.
 - `cli_version` is the trimmed stdout of `<exe> --version`. It is `unknown` when stdout is empty, and `unavailable` when the executable is missing or takes longer than 30 s. Real values: `2.1.296 (Claude Code)`, `opencode v2.0.25`, `codex-cli 0.162.1`.
 - Every fold reads stdout line by line and skips any line that is not a JSON object. The log's first line is a `#` header.
