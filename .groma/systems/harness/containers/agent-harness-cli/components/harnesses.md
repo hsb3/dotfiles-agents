@@ -22,6 +22,7 @@ Validates harness lists (order kept, duplicates dropped; an unknown name fails w
 | [src/harnesses.ts](../../../../../../src/harnesses.ts) | [src/subprocess.ts](../../../../../../src/subprocess.ts) | Reads the CLI version | function call |
 | [src/harnesses.ts](../../../../../../src/harnesses.ts) | [src/claude.ts](../../../../../../src/claude.ts) | Hands out the claude adapter | module import |
 | [src/harnesses.ts](../../../../../../src/harnesses.ts) | [src/opencode.ts](../../../../../../src/opencode.ts) | Hands out the opencode adapter | module import |
+| [src/harnesses.ts](../../../../../../src/harnesses.ts) | [src/codex.ts](../../../../../../src/codex.ts) | Hands out the codex adapter | module import |
 
 ## Derived relationships
 
