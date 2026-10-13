@@ -1,0 +1,15 @@
+{
+  "name": "harness",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "bun check"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "typescript": "7.0.2"
+  },
+  "bin": {
+    "agent-harness": "src/cli.ts"
+  }
+}

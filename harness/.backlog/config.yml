@@ -1,0 +1,20 @@
+project_name: "harness"
+default_status: "To Do"
+statuses: ["To Do", "In Progress", "Done"]
+labels: []
+date_format: yyyy-mm-dd
+max_column_width: 20
+default_editor: "hx"
+auto_open_browser: true
+default_port: 6420
+remote_operations: false
+auto_commit: false
+filesystem_only: false
+bypass_git_hooks: false
+check_active_branches: true
+active_branch_days: 30
+task_prefix: "task"
+definition_of_done:
+  - 'bunx tsc --noEmit && bun test'
+  - 'Modified files and groma element refs recorded on the task'
+  - 'groma scan run; planned components accepted (a clean scan when the task planned none); groma lint clean'
