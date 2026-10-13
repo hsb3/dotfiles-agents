@@ -1,0 +1,169 @@
+@use '@carbon/react';
+
+.toolbox-main {
+  padding: 4rem 2rem 2rem;
+  outline: none;
+}
+
+@media (min-width: 66rem) {
+  .toolbox-main {
+    margin-left: 16rem;
+  }
+}
+
+.toolbox-caption {
+  align-self: center;
+  padding: 0 1rem;
+  color: #c6c6c6;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 41.98rem) {
+  .toolbox-caption {
+    display: none;
+  }
+}
+
+.toolbox-area > h1 {
+  margin: 1rem 0;
+}
+
+.toolbox-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.toolbox-card p {
+  margin: 0.5rem 0 1rem;
+}
+
+.toolbox-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.toolbox-columns h2 {
+  margin: 1rem 0 0.5rem;
+}
+
+.toolbox-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+  max-width: 48rem;
+}
+
+.toolbox-search .cds--form-item {
+  flex: 1 1 16rem;
+}
+
+.toolbox-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.toolbox-list > li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.toolbox-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbox-region__title {
+  font-weight: 600;
+}
+
+.toolbox-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.875rem;
+  max-height: 32rem;
+  overflow: auto;
+  padding: 0.75rem;
+  background: #f4f4f4;
+}
+
+.toolbox-disclosure summary {
+  cursor: pointer;
+}
+
+.toolbox-signin {
+  max-width: 28rem;
+  margin: 6rem auto;
+  padding: 0 1rem;
+}
+
+.toolbox-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.toolbox-table {
+  width: 100%;
+  margin: 0.75rem 0;
+  border-collapse: collapse;
+}
+
+.toolbox-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+
+.toolbox-table th,
+.toolbox-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.toolbox-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.toolbox-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.toolbox-chart {
+  margin: 0;
+}
+
+.toolbox-facts > div {
+  display: flex;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.toolbox-facts dt {
+  flex: 0 0 12rem;
+  font-weight: 600;
+}
+
+.toolbox-facts dd {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toolbox-document > h3 {
+  margin: 1.5rem 0 0.5rem;
+}

@@ -1,0 +1,31 @@
+name: evals-test
+
+# Path-filtered lane for the evals unit (evals/) — its own Bun unit, kept out of the
+# zero-install `make ci`. Runs only when evals/ (or this workflow) changes. PocketBase is the
+# deployed pin (0.40.3), checksum-verified, so the wire tests run instead of skipping.
+on:
+  pull_request:
+    paths:
+      - "evals/**"
+      - ".github/workflows/evals-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  evals-test:
+    name: evals unit tests (Bun + PocketBase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - name: PocketBase 0.40.3
+        run: |
+          curl -fsSL -o /tmp/pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.40.3/pocketbase_0.40.3_linux_amd64.zip
+          echo "8d81b6b79add0e219373e922ebe1dddbee7f57fcff602e3585e0d2c654b983ce  /tmp/pb.zip" | sha256sum -c -
+          unzip -q /tmp/pb.zip -d /tmp/pb && /tmp/pb/pocketbase --version
+      - run: make evals-test
+        env:
+          PB_BINARY: /tmp/pb/pocketbase

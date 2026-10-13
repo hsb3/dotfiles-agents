@@ -1,0 +1,37 @@
+---
+type: C4 Component
+title: Commands
+description: Parses subcommands and flags and dispatches them
+status: stable
+groma:
+  id: commands
+  parent: evals-cli
+  technology: TypeScript
+  code:
+    - scanner: typescript
+      file: src/commands.ts
+---
+
+Parses the subcommand and its flags for `ingest`, `load-eval-run`, `load-verdicts`, `compare-verdicts`, `load-curation`, `load-runs`, `report`, `package` and `fixture`, prints usage for `--help` (exit 0) and for no or an unknown subcommand, an unknown flag or a missing required flag (stderr, exit 1), refuses `--parse-only` with `--dry-run`, and reports errors as `evals <command>: <what>` with exit 1.
+
+## Relationships
+
+| Source | Target | Description | Technology |
+| --- | --- | --- | --- |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/ingest.ts](../../../../../../src/ingest.ts) | Runs the projection | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Loads evaluation files | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Loads a harness campaign | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/reports.ts](../../../../../../src/reports.ts) | Renders the reports | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/packager.ts](../../../../../../src/packager.ts) | Builds a package | function call |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/fixture.ts](../../../../../../src/fixture.ts) | Starts the fixture | function call |
+
+## Derived relationships
+
+| Source | Target | Description | Technology |
+| --- | --- | --- | --- |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/evaluations.ts](../../../../../../src/evaluations.ts) | Calls imported functions: compareVerdicts, loadCuration, loadEvalRun, loadVerdicts | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/fixture.ts](../../../../../../src/fixture.ts) | Calls imported function: fixture | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/ingest.ts](../../../../../../src/ingest.ts) | Calls imported function: ingest | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/packager.ts](../../../../../../src/packager.ts) | Calls imported function: packageCommand | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/reports.ts](../../../../../../src/reports.ts) | Calls imported function: report | typescript |
+| [src/commands.ts](../../../../../../src/commands.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Calls imported function: loadRuns | typescript |

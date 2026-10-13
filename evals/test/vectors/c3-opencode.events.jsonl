@@ -1,0 +1,6 @@
+{"event_type": "step_start", "role": "system", "seq": 0, "ts": 1000, "vendor": "opencode"}
+{"event_type": "tool_use", "is_error": false, "role": "tool_call", "seq": 1, "status": "completed", "tool_call_id": "c1", "tool_name": "edit", "ts": 1500, "vendor": "opencode", "wallclock_ms": 300}
+{"event_type": "text", "role": "assistant", "seq": 2, "text": "Done.", "ts": 1600, "vendor": "opencode"}
+{"cache_read_tokens": 30, "cache_write_tokens": 40, "cost_usd": 0.002, "event_type": "step_finish", "input_tokens": 10, "output_tokens": 20, "role": "system", "seq": 3, "ts": 1900, "vendor": "opencode"}
+{"event_type": "tool_use", "is_error": true, "role": "tool_call", "seq": 4, "status": "error", "tool_call_id": "c2", "tool_name": "bash", "ts": 2000, "vendor": "opencode", "wallclock_ms": 50}
+{"cache_read_tokens": 3, "cache_write_tokens": 4, "cost_usd": 0.003, "event_type": "step_finish", "input_tokens": 1, "output_tokens": 2, "role": "system", "seq": 5, "ts": 2500, "vendor": "opencode"}

@@ -73,8 +73,8 @@ and the standing law is [AGENTS.md](../AGENTS.md), hot-loaded into every session
 - **`flow.yaml` is load-bearing.** `make flow` fails on any unhomed top-level path; regenerate the
   rendered doc with `scripts/check_flow.py --write-doc`. The hand-maintained table below the
   generated block in `FLOW.md` is separately stale.
-- **`comment-hygiene-gate` has real subjects here** (~41 findings across `evals/`,
-  `externals.yaml`, workflow YAML). It firing on a commit is the gate working, not a regression.
+- **`comment-hygiene-gate` has real subjects here** (findings across `externals.yaml` and
+  workflow YAML; the legacy Python `evals/` that carried most of them was retired 2026-10-13). It firing on a commit is the gate working, not a regression.
 
 ## Method
 

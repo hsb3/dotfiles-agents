@@ -1,0 +1,1 @@
+{"part": {"callID": "c1", "state": {"input": {"filePath": "a.md", "newString": "y"}, "metadata": {"diff": "@@ -1 +1 @@", "filediff": {"patch": {"$deduped": "diff"}}}, "output": "ok", "status": "completed", "time": {"end": 1400, "start": 1100}}, "tool": "edit", "type": "tool"}, "sessionID": "ses-oc", "timestamp": 1500, "type": "tool_use"}

@@ -8,17 +8,16 @@
 # --- secrets ---
 .env*
 !.env*.example
-# any *.env credential file anywhere in the tree (e.g. evals/pb.py's
-# .claude/operations/extender-db.env) — basename-anchored, not just dotfiles at repo root
+# any *.env credential file anywhere in the tree (e.g. an operations
+# extender-db.env) — basename-anchored, not just dotfiles at repo root
 *.env
 !*.env.example
 
 
 # --- PocketBase runtime ---
-# The hosted instance owns live state. Keep local database/files private for
-# backups or disposable fixtures; schema.py remains the schema source.
+# The hosted instance owns live state. Keep local database files private for
+# backups or disposable fixtures; evals/pb_migrations/ (tracked) is the schema source.
 evals/pb_data/
-evals/pb_migrations/
 
 # --- Python ---
 __pycache__/

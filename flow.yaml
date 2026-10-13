@@ -74,7 +74,7 @@ nodes:
     class: authored
     status: current
     paths: [evals]
-    note: "extender-db PocketBase projection for analysis — never a source of truth; ingests roster, sources, and harness results; renders coverage and analysis reports."
+    note: "extender-db PocketBase projection for analysis — never a source of truth; ingests roster, sources, and harness results; renders coverage and analysis reports. Rebuilt as a Bun/TypeScript unit and landed 2026-10-13 with its history, .backlog/ and .groma/ (git subtree): loaders as evals subcommands, schema and access rules as PocketBase migrations, the Toolbox UI (React/Carbon) and the deploy package. Own test lane (evals-test.yml, make evals-test); never in make ci. The hosted instance runs on Railway (dotfiles-agents-toolbox)."
   - id: local-dev-tooling
     layer: workbench
     class: authored
@@ -148,7 +148,7 @@ edges:
     to: evals
     kind: ingests
     mode: automated
-    via: evals/load_harness_runs.py
+    via: evals/src/runs.ts
   - from: publish-main
     to: consumers
     kind: installs

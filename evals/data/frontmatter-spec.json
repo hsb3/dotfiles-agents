@@ -1,0 +1,13 @@
+{"version": 1, "keys": [
+{"applies_to": "skill", "key": "name", "requirement": "required", "description": "Skill identifier; lowercase kebab, <=64 chars.", "spec_framework": "anthropic-agent-skills"},
+{"applies_to": "skill", "key": "description", "requirement": "required", "description": "What the skill does AND when to use it; the only always-in-context trigger surface (<=1024 chars).", "spec_framework": "anthropic-agent-skills"},
+{"applies_to": "skill", "key": "license", "requirement": "optional", "description": "License of the skill content.", "spec_framework": "anthropic-agent-skills"},
+{"applies_to": "skill", "key": "allowed-tools", "requirement": "harness", "description": "Claude Code: restricts tools available while the skill is active.", "spec_framework": "anthropic-agent-skills"},
+{"applies_to": "agent", "key": "name", "requirement": "required", "description": "Subagent identifier used to dispatch it.", "spec_framework": "claude-code-subagents"},
+{"applies_to": "agent", "key": "description", "requirement": "required", "description": "Delegation trigger: tells the main loop when to route work here.", "spec_framework": "claude-code-subagents"},
+{"applies_to": "agent", "key": "tools", "requirement": "harness", "description": "Least-privilege tool allowlist for the persona.", "spec_framework": "claude-code-subagents"},
+{"applies_to": "agent", "key": "model", "requirement": "harness", "description": "Default model tier the persona dispatches on.", "spec_framework": "claude-code-subagents"},
+{"applies_to": "agent", "key": "effort", "requirement": "harness", "description": "Default reasoning effort for the persona.", "spec_framework": "claude-code-subagents"},
+{"applies_to": "agent", "key": "maxTurns", "requirement": "harness", "description": "Turn budget cap for one dispatch.", "spec_framework": "claude-code-subagents"},
+{"applies_to": "agent", "key": "color", "requirement": "harness", "description": "Display color in the harness UI.", "spec_framework": "claude-code-subagents"}
+]}

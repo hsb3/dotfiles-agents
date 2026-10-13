@@ -1,0 +1,74 @@
+{
+  "scanners": [
+    {
+      "id": "react",
+      "source": "@hsb3/scanner-react@0.2.8",
+      "include": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/tsconfig*.json",
+        "**/package.json",
+        "**/*.html",
+        "**/project.json",
+        "**/nx.json"
+      ],
+      "exclude": [
+        "*.config.ts",
+        "*.test.ts",
+        "*.test.tsx",
+        "*.spec.ts",
+        "*.spec.tsx",
+        "test/",
+        "tests/",
+        "__tests__/",
+        "node_modules/",
+        "dist/",
+        "build/",
+        "coverage/"
+      ]
+    },
+    {
+      "id": "typescript",
+      "source": "@hsb3/scanner-typescript@0.2.13",
+      "include": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/tsconfig*.json",
+        "**/package.json",
+        "**/*.html",
+        "**/angular.json",
+        "**/project.json",
+        "**/nx.json"
+      ],
+      "exclude": [
+        "*.config.ts",
+        "*.test.ts",
+        "*.test.tsx",
+        "*.spec.ts",
+        "*.spec.tsx",
+        "test/",
+        "tests/",
+        "__tests__/",
+        "node_modules/",
+        "dist/",
+        "build/",
+        "coverage/"
+      ]
+    }
+  ],
+  "acknowledged": [
+    {
+      "rule": "duplicated-logic",
+      "subject": [
+        "src/logs.ts#isObj",
+        "ui/src/performance-view.tsx#isObject"
+      ]
+    },
+    {
+      "rule": "not-imported",
+      "subject": [
+        "ui/src/main.tsx"
+      ]
+    }
+  ]
+}

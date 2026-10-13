@@ -141,3 +141,9 @@ docs-serve: ## Build, then preview at http://127.0.0.1:8000/dotfiles-agents/ (Ct
 
 site-test: ## Type-check and test the site unit (Bun; NOT in ci)
 	@cd site && bun install --frozen-lockfile --silent && bunx tsc --noEmit && bun test
+
+# --- evals (evals/) — its own Bun unit with its own test lane (evals-test.yml). Tests that
+# need PocketBase use $$PB_BINARY or pocketbase on PATH. Needs bun.
+.PHONY: evals-test
+evals-test: ## Type-check, build the Toolbox UI and test the evals unit (Bun; NOT in ci)
+	@cd evals && bun install --frozen-lockfile --silent && bunx tsc --noEmit && bun run build:ui && bun test
