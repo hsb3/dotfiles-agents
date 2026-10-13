@@ -7,7 +7,6 @@ groma:
   id: layout
   parent: site-cli
   technology: TypeScript
-  draft: v1
   code:
     - scanner: typescript
       file: src/layout.ts

@@ -7,7 +7,6 @@ groma:
   id: config
   parent: site-cli
   technology: TypeScript
-  draft: v1
   code:
     - scanner: typescript
       file: src/config.ts

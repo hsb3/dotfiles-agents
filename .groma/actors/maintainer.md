@@ -5,7 +5,6 @@ description: Maintainer or contributor of dotfiles-agents
 status: stable
 groma:
   id: maintainer
-  draft: v1
 ---
 
 Builds the site locally to check links before pushing, and previews it with `site serve` in a browser at `http://127.0.0.1:8000/dotfiles-agents/`.

@@ -7,7 +7,6 @@ groma:
   id: links
   parent: site-cli
   technology: TypeScript, HTMLRewriter
-  draft: v1
   code:
     - scanner: typescript
       file: src/links.ts

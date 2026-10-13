@@ -7,7 +7,6 @@ groma:
   id: render
   parent: site-cli
   technology: TypeScript, Bun.markdown (md4c), github-slugger
-  draft: v1
   code:
     - scanner: typescript
       file: src/render.ts

@@ -8,7 +8,6 @@ groma:
   code:
     - scanner: typescript
       file: src/cli.ts
-  draft: v1
 description: Hands the process arguments to the command dispatcher
 ---
 The `site` binary (`bun src/cli.ts <command>`). It hands the command-line arguments to Commands and sets the process exit code from the result; `serve` keeps the process running through its server.

@@ -7,7 +7,6 @@ groma:
   id: server
   parent: site-cli
   technology: TypeScript, Bun.serve
-  draft: v1
   code:
     - scanner: typescript
       file: src/server.ts
