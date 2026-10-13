@@ -1,0 +1,32 @@
+{
+  "scanners": [
+    {
+      "id": "typescript",
+      "source": "@hsb3/scanner-typescript@0.2.13",
+      "include": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/tsconfig*.json",
+        "**/package.json",
+        "**/*.html",
+        "**/angular.json",
+        "**/project.json",
+        "**/nx.json"
+      ],
+      "exclude": [
+        "*.config.ts",
+        "*.test.ts",
+        "*.test.tsx",
+        "*.spec.ts",
+        "*.spec.tsx",
+        "test/",
+        "tests/",
+        "__tests__/",
+        "node_modules/",
+        "dist/",
+        "build/",
+        "coverage/"
+      ]
+    }
+  ]
+}
