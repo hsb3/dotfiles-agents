@@ -166,7 +166,7 @@ checkout, uncommitted changes, and verification state before continuation or a s
 The central `codex-usage.jsonl` stream has schema version 2 and records token deltas separately
 from the existing context-occupancy logs. Stable observation IDs support idempotent analysis;
 unknown attribution remains visible. See [telemetry](hooks/subagent-telemetry/README.md) for field
-semantics and the development checkout’s `evals/usage_digest.py` for report/export commands.
+semantics and the development checkout’s `scripts/usage_digest.py` for report/export commands.
 
 ## A worked example
 

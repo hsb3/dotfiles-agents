@@ -57,6 +57,7 @@ measured and found the tree clean.
 
 | Script | What it measures |
 |---|---|
+| `usage_digest.py` | Digests atelier's Codex `codex-usage.jsonl` v2 token-delta stream (`report`, `export`); moved here from the retired legacy `evals/` (2026-10-13). |
 | `agent_gaps.py` | Attributes every 60s+ quiet period in the local subagent transcripts (`~/.claude/projects`) to the tool call preceding it, splits self-commanded sleeps into poll vs unconditional, and states the unexplained remainder. `--json`, `--top N`, `--threshold`. |
 
 ## Harness campaign (not in `make ci`)

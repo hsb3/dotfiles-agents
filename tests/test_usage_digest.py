@@ -7,8 +7,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "evals" / "usage_digest.py"
-sys.path.insert(0, str(ROOT / "evals"))
+CLI = ROOT / "scripts" / "usage_digest.py"
+sys.path.insert(0, str(ROOT / "scripts"))
 import usage_digest
 
 
