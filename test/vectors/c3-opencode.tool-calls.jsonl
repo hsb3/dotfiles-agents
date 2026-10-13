@@ -1,0 +1,2 @@
+{"input": {"filePath": "a.md", "newString": "y"}, "is_error": false, "output": "ok", "run": "<run id>", "started_ts": 1100, "status": "completed", "tool_call_id": "c1", "tool_name": "edit", "wallclock_ms": 300}
+{"input": {"command": "false"}, "is_error": true, "output": [1, 2], "run": "<run id>", "started_ts": 1950, "status": "error", "tool_call_id": "c2", "tool_name": "bash", "wallclock_ms": 50}

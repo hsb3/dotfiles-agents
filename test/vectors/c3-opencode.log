@@ -1,0 +1,6 @@
+{"type": "step_start", "timestamp": 1000, "sessionID": "ses-oc", "part": {"type": "step-start"}}
+{"type": "tool_use", "timestamp": 1500, "sessionID": "ses-oc", "part": {"callID": "c1", "tool": "edit", "type": "tool", "state": {"status": "completed", "input": {"filePath": "a.md", "newString": "y"}, "output": "ok", "time": {"start": 1100, "end": 1400}, "metadata": {"diff": "@@ -1 +1 @@", "filediff": {"patch": "@@ -1 +1 @@"}}}}}
+{"type": "text", "timestamp": 1600, "sessionID": "ses-oc", "part": {"type": "text", "text": "Done."}}
+{"type": "step_finish", "timestamp": 1900, "sessionID": "ses-oc", "part": {"type": "step-finish", "cost": 0.002, "tokens": {"input": 10, "output": 20, "reasoning": 0, "cache": {"read": 30, "write": 40}}}}
+{"type": "tool_use", "timestamp": 2000, "sessionID": "ses-oc", "part": {"callID": "c2", "tool": "bash", "type": "tool", "state": {"status": "error", "input": {"command": "false"}, "output": "[1,2]", "time": {"start": 1950, "end": 2000}}}}
+{"type": "step_finish", "timestamp": 2500, "sessionID": "ses-oc", "part": {"type": "step-finish", "cost": 0.003, "tokens": {"input": 1, "output": 2, "cache": {"read": 3, "write": 4}}}}

@@ -1,0 +1,17 @@
+{
+  "name": "evals",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "bun check"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2"
+  },
+  "peerDependencies": {
+    "typescript": "5.9.2"
+  },
+  "bin": {
+    "evals": "src/cli.ts"
+  }
+}
