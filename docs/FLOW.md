@@ -38,6 +38,7 @@ flowchart TD
   end
   subgraph L_generator[generator]
     N_toolchain[toolchain]
+    N_site[site]
   end
   subgraph L_gate[gate]
     N_gates[gates]
@@ -46,6 +47,7 @@ flowchart TD
     N_plugin_assemblies[plugin assemblies]
   end
   subgraph L_publish[publish]
+    N_pages_site[pages site]
     N_publish_main[publish main]
   end
   subgraph L_consumer[consumer]
@@ -73,6 +75,8 @@ flowchart TD
   N_primitive_bodies -.->|installs| N_consumers
   N_evals -.->|curates| N_roster
   N_evals -.->|curates| N_primitive_bodies
+  N_site -->|gates| N_repo_law
+  N_site -.->|publishes| N_pages_site
   classDef planned stroke-dasharray: 6 4
 ```
 <!-- FLOW-DAG:END -->

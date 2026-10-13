@@ -68,8 +68,9 @@ those three pinned plugin subtrees.
 The site renders canonical repository Markdown with an authored template and CSS.
 It does not bundle the vendored skill bodies, fonts, icon packs or a JavaScript
 package tree. Diagrams load Mermaid 11.12.0 from jsDelivr at runtime; those external
-bytes remain subject to Mermaid's own license and bundled notices. Pandoc is a
-build tool, not a binary shipped by this repository. Likewise, CLI/SDK installation
+bytes remain subject to Mermaid's own license and bundled notices. The renderer in
+`site/` is a build tool; it and its one npm dependency (`github-slugger`, ISC) are not
+shipped in the site output. Likewise, CLI/SDK installation
 commands and MCP connection specifications name dependencies; they do not by
 themselves redistribute their implementations. Review any later bundled output
 separately, including its transitive dependencies and assets.

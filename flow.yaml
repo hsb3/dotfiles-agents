@@ -81,6 +81,18 @@ nodes:
     status: current
     paths: [.agents, .claude, .codex, .vscode, .kata.toml]
     note: "Project-local session tooling: .agents/ owns the tracked cross-harness skills, hooks, and Atelier policy; .claude/ and .codex/ carry native configuration and symlinks to those shared bodies. Claude project memory stays under .claude/memory/. Machine-local settings and Codex permissions, writable roots, and plugin choices stay untracked. Under .vscode/, git.branchProtection guards main. At the root, .kata.toml binds the workspace to its kata project by name (the per-machine .kata.local.toml override is gitignored). The kata MCP server and its schema-flattening shim come from the kata plugin. Not roster primitives; never distributed."
+  - id: site
+    layer: generator
+    class: authored
+    status: current
+    paths: [site]
+    note: "Documentation-site renderer (Bun/TypeScript), landed 2026-10-13 from its build sandbox with its history, .backlog/ and .groma/ (git subtree). Renders README.md, .github/CONTRIBUTING.md, docs/**/*.md and plugins/*/README.md into the Pages site and fails on any broken link or heading fragment; replaced scripts/build_docs.py + Pandoc. Own test lane (site-test.yml, make site-test); make docs-build runs in the drift guards job; never in make ci."
+  - id: pages-site
+    layer: publish
+    class: virtual
+    status: current
+    paths: []
+    note: "GitHub Pages at https://hsb3.github.io/dotfiles-agents/, deployed by publish.yml's pages job from the exact published source SHA, only for a public repository."
   - id: runtime-logs
     layer: runtime
     class: runtime
@@ -159,3 +171,13 @@ edges:
     to: primitive-bodies
     kind: curates
     mode: manual
+  - from: site
+    to: repo-law
+    kind: gates
+    mode: automated
+    via: .github/workflows/ci.yml
+  - from: site
+    to: pages-site
+    kind: publishes
+    mode: manual
+    via: .github/workflows/publish.yml
