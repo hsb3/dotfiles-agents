@@ -251,6 +251,18 @@ primitives:
     origin: authored
     disposition: qualified
     targets: [claude-code, codex]
+  - id: skills-cli-guard
+    type: hook
+    source: primitives-core/hooks/skills-cli-guard
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
+  - id: zsh-modifier-lint
+    type: hook
+    source: primitives-core/hooks/zsh-modifier-lint
+    origin: authored
+    disposition: qualified
+    targets: [claude-code]
   - id: plugin-feedback-session
     type: hook
     source: primitives-core/hooks/plugin-feedback-session
