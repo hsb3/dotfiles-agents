@@ -75,7 +75,7 @@ commands and MCP connection specifications name dependencies; they do not by
 themselves redistribute their implementations. Review any later bundled output
 separately, including its transitive dependencies and assets.
 
-The hosted Toolbox image (`evals/deploy/Dockerfile`) downloads a checksum-pinned
+The hosted Toolbox image (the Dockerfile `evals package` writes) downloads a checksum-pinned
 PocketBase release binary at build time rather than tracking it. PocketBase is MIT;
 its release archive (arm64 checked) includes `LICENSE.md`, which the image extracts
 beside the binary.

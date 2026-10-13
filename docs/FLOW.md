@@ -97,7 +97,8 @@ Every top-level tracked path is claimed by exactly one node (enforced). Class: *
 | `README.md`, `AGENTS.md`, `CLAUDE.md` | repo-docs | docs | H | entry docs at the root (ADRs and this page live under `docs/`) |
 | `docs/` | repo-law | docs | H | standing law in prose: `docs/decisions/` (ADRs), the extender-dev SOP, the vendoring rule, the diagram standard, this page |
 | `harness/` | harness | workbench | H | eval harness; own test lane; see its README |
-| `evals/` | evals | workbench | H | extender-db projection — never a source of truth |
+| `evals/` | evals | workbench | H | extender-db projection — never a source of truth; Bun unit with its own test lane and board; see its README |
+| `site/` | site | generator | H | documentation-site renderer (Bun); own test lane and board; see its README |
 | `.agents/`, `.claude/`, `.codex/`, `.vscode/`, `.kata.toml` | local-dev-tooling | workbench | H | session tooling for developing THIS repo; never distributed |
 | `logs/` | runtime-logs | runtime | **R** | hook telemetry; must stay untracked |
 | _(branch)_ `main` | publish-main | publish | — | advanced only by the publish workflow |
