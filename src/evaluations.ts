@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { canonicalSha256, JsonNumber, JsonSyntaxError, parseJson, plain, sha256Hex } from "./canonical.ts";
 import {
-  applyPlans, CommandError, connect, diff, fetchAll, formatParseOnly, formatPlan, ValidationError,
+  applyPlans, CommandError, connect, diff, fetchAll, fetchWhereIn, formatParseOnly, formatPlan, ValidationError,
   type CollectionPlan, type Connection, type Desired, type Rec,
 } from "./store.ts";
 
@@ -67,27 +67,6 @@ function optionalString(o: Obj, key: string, where: string, problems: Problems, 
     return fallback;
   }
   return v;
-}
-
-function chunks<T>(items: T[], size = 40): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
-}
-
-// Records of a collection whose field equals one of the values.
-async function fetchWhereIn(conn: Connection, collection: string, field: string, values: string[]): Promise<Rec[]> {
-  const out: Rec[] = [];
-  for (const part of chunks([...new Set(values)])) {
-    if (part.length === 0) continue;
-    const params: Record<string, string> = {};
-    const expr = part.map((v, i) => {
-      params[`v${i}`] = v;
-      return `${field} = {:v${i}}`;
-    });
-    out.push(...(await fetchAll(conn, collection, conn.pb.filter(expr.join(" || "), params))));
-  }
-  return out;
 }
 
 // Lookups the loaders share: eval runs by id or slug, extenders and elements by slug or name.

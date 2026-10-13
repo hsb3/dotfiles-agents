@@ -1,6 +1,7 @@
 // Subcommand and flag parsing, usage, and dispatch for the evals binary.
 import { compareVerdicts, loadCuration, loadEvalRun, loadVerdicts } from "./evaluations.ts";
 import { ingest } from "./ingest.ts";
+import { loadRuns } from "./runs.ts";
 import { CommandError, ValidationError } from "./store.ts";
 
 type FlagKind = "bool" | "value" | "multi";
@@ -89,7 +90,14 @@ const COMMANDS: Record<string, CommandSpec> = {
     },
     positionals: NONE,
     loader: true,
-    run: notYet,
+    run: (a) =>
+      loadRuns({
+        ledger: String(a.flags.ledger),
+        runsDir: a.flags["runs-dir"] as string | undefined,
+        campaign: a.flags.campaign as string | undefined,
+        candidate: a.flags.candidate as string | undefined,
+        mode: modeOf(a),
+      }),
   },
   report: {
     usage: "evals report --out <dir> [--fixtures <dir>]",

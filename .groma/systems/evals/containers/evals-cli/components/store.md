@@ -22,3 +22,10 @@ The only PocketBase client of the CLI (the official JS SDK). Reads `PB_URL`, `PB
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [store](store.md) | [pocketbase-service](../../pocketbase-service/container.md) | Reads and writes records as superuser | PocketBase REST, JS SDK |
+| [src/store.ts](../../../../../../src/store.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Asks which fields to compare | callback |
+
+## Derived relationships
+
+| Source | Target | Description | Technology |
+| --- | --- | --- | --- |
+| [src/store.ts](../../../../../../src/store.ts) | [src/runs.ts](../../../../../../src/runs.ts) | Invokes supplied callback: skip | typescript |

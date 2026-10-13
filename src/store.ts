@@ -279,6 +279,22 @@ export async function fetchAll(conn: Connection, collection: string, filter?: st
   }
 }
 
+// Records of a collection whose field equals one of the values, read in chunks
+// so the filter stays short.
+export async function fetchWhereIn(conn: Connection, collection: string, field: string, values: string[]): Promise<Rec[]> {
+  const unique = [...new Set(values)];
+  const out: Rec[] = [];
+  for (let i = 0; i < unique.length; i += 40) {
+    const params: Record<string, string> = {};
+    const expr = unique.slice(i, i + 40).map((v, j) => {
+      params[`v${j}`] = v;
+      return `${field} = {:v${j}}`;
+    });
+    out.push(...(await fetchAll(conn, collection, conn.pb.filter(expr.join(" || "), params))));
+  }
+  return out;
+}
+
 const CONCURRENCY = 8;
 
 async function runBounded<T>(items: T[], work: (item: T) => Promise<void>): Promise<void> {

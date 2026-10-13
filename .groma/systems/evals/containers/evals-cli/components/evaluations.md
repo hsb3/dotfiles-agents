@@ -20,10 +20,11 @@ Serves `load-eval-run` (eval runs and responses with their `measurement` and can
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [src/evaluations.ts](../../../../../../src/evaluations.ts) | [src/store.ts](../../../../../../src/store.ts) | Plans and writes evaluations | function call |
+| [src/evaluations.ts](../../../../../../src/evaluations.ts) | [src/canonical.ts](../../../../../../src/canonical.ts) | Hashes manifests and responses canonically | function call |
 
 ## Derived relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
 | [src/evaluations.ts](../../../../../../src/evaluations.ts) | [src/canonical.ts](../../../../../../src/canonical.ts) | Calls imported functions: canonicalSha256, parseJson, plain, sha256Hex | typescript |
-| [src/evaluations.ts](../../../../../../src/evaluations.ts) | [src/store.ts](../../../../../../src/store.ts) | Calls imported functions: CommandError, ValidationError, applyPlans, connect, diff, fetchAll, formatParseOnly, formatPlan | typescript |
+| [src/evaluations.ts](../../../../../../src/evaluations.ts) | [src/store.ts](../../../../../../src/store.ts) | Calls imported functions: CommandError, ValidationError, applyPlans, connect, diff, fetchAll, fetchWhereIn, formatParseOnly, formatPlan | typescript |
