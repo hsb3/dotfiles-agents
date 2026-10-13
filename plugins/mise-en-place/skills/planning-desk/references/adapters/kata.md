@@ -67,7 +67,7 @@ on already-archived work still lands.
 | `body` | `body` | verbatim, in full |
 | `parent` | `parent.short_id` | null when the issue has no parent |
 | `blocked_by` | `blocked_by[].short_id` | prerequisites only; `blocks` is the mirror edge and is not exported |
-| `priority` | `priority` (int, via `kata edit --priority`) | `0`-`3` map to `P0`-`P3`; blank clears via `-` |
+| `priority` | `priority` (int, via `kata edit --priority`) | `0`-`4` map to `P0`-`P4`; blank clears via `-` |
 | `owner` | `owner` (via `kata assign`/`kata unassign`) | actor name; blank unassigns |
 
 **Unmapped and why.** Deliberately not in the snapshot: `metadata` (including the `work.*`
@@ -76,13 +76,6 @@ timestamps. The desk's three questions — is this body buildable, does this wor
 does the plan table still agree with reality — need none of them, and every field carried is a
 field the contract has to keep true across backends. Add one only when a script actually reads
 it.
-
-**A native priority of `4` cannot be cleared through this adapter.** It has no band, so it
-exports as `null`, and a blank `priority` row then compares equal to what is already there and
-is dropped as a no-op. That is the contract's "a value outside the vocabulary is null" rule
-meeting its "no-op cells are dropped" rule, not a bug in either: the desk's vocabulary is
-P0-P3, and a value it cannot name is one it has no business rewriting. Clear it with
-`kata edit <ref> --priority -` directly if you want it gone.
 
 **A `state`/`status` row is refused, never fabricated into a label.** Kata's close is a hard
 state with a required reason and evidence (`kata close --done|--wontfix|...`), so closing or
@@ -104,8 +97,6 @@ Verified 2026-09-07 against the `dotfiles-agents` project (303 issues, 101 open)
   children alone.
 - **`blocked_by`/`blocks` entries are objects** (`{uid, short_id, project, qualified_id,
   status}`); only `short_id` is exported.
-- **Native priority 4 exists and has no band.** It normalizes to `null` rather than being
-  rounded into `P3` — with the clearing consequence noted in the field map above.
 - **Omitting `--project` resolves the project from the workspace binding.** `export --status
   all` with no project returned all 303 issues and a `tracker.name` of `dotfiles-agents`,
   identical to passing `--project dotfiles-agents`.

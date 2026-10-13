@@ -143,18 +143,24 @@ The pending set comes from `hooks/_lib/pending.py`, shared with `subagent-teleme
 cannot disagree about who is live: the `agent-*.meta.json` sidecars in this session's
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
 already settled, unless the caller's transcript holds a `SendMessage` result naming it as resumed
-(`resumedAgentId`; a failed send writes none) stamped after its latest settling row's `ts`.
+(`resumedAgentId`, or `pin.id` on a success: a task owned by a subagent resumes without
+`resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`.
 
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on
 the TaskStop success result only, paired with the TaskStop call it answers (sidechain lines
 included, so a manager's own TaskStop counts): a `<task-notification>` never settles, because a
 queued prompt or an agent's quoted output can carry the same text. A later resume makes it live
-again: a `SendMessage` to it (the tool result carries its id even when it was addressed by name),
-or any later notification for it whose own header is not a kill (the user-resume shape is inferred
-from the 2.1.281 binary, not measured). Known limit: an agent the user kills without TaskStop stays
-live here until a ledger row settles it; it is assumed, not measured, to fire no `SubagentStop`
-either.
+again: a `SendMessage` call to its id keeps it live until the call's result lands, and for good
+unless that result is a failure (`success: false`, or an error string), so a failed send leaves it
+stopped; a result naming it (`resumedAgentId`, or `pin.id` on a success) re-opens it whatever the
+call was addressed to; and so does any later notification for it whose own header is not a kill
+(the user-resume shape is inferred from the 2.1.281 binary, not measured). Known limits: an agent
+the user kills without TaskStop stays live here until a ledger row settles it; it is assumed, not
+measured, to fire no `SubagentStop` either. A send to a live agent still in flight when TaskStop
+kills it (its "queued for delivery" success lands after the stop) re-opens the dead agent until a
+stall row settles it: fail-closed, and the result does not reliably tell a queued delivery from a
+resume.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only
 scouts too — a `checkout` or `pull` changes the tree a scout is reading mid-read.
@@ -257,14 +263,18 @@ existed. Separators still open command position inside a comment, exactly as the
 A heredoc body is not scanned at all: it is dropped, up to and including its terminator line, before
 tokenizing, so a `&&` or `|` in it opens nothing and a git call after the terminator is read. An
 opener counts only outside quotes (tracked across lines) and outside a comment, and never with an
-all-digit word or inside an unclosed `((`, where it is a shift. An unquoted newline ends a command
+all-digit word or inside an unclosed `((`, where it is a shift. A `$(` is tracked across lines and
+inside `"` too, a `)` with no `$(` open (a subshell, `$((`) changes nothing, a newline inside `$(`
+starts only the bodies opened inside it, and `;`, `&`, `|`, `<` or `>` ends the word as a blank does
+(`<<EOF;`). An unquoted newline ends a command
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
 tabs are removed under `<<-` (a CRLF opener's `\r` belongs to the word, as in bash; a word with quotes or
 backslashes in it, `<<\EOF` or `<<E"O"F`, is dequoted to `EOF` and its body is literal; inside an open
-`$(` bash also closes the body at the line `EOF)` and zsh does not, so the command is read both ways and
-flagged if either reading finds a call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
+`$(` bash also closes the body at a line `EOF)`, `EOF )` or `EOF))`, and reads a command glued after it
+(`EOF);git push`); zsh does not, so the command is read both ways and flagged if either reading finds a
+call), and two heredocs opened on one line (`cat <<A <<B`) drop both bodies
 in order. A `<<` whose terminator never appears drops nothing, so its body
 is read as command lines.
 
@@ -296,6 +306,10 @@ command string the hook is handed, so whatever still displaces them is invisible
 - a quoted heredoc word containing spaces (`<<'E O F'`): only `E` is taken as the word and the
   closing `'` opens a quote, so the rest of the command reads as one line and a call after the
   terminator is missed;
+- a heredoc inside `$(` where the scan loses bash's reading: a `)` from `$((`, a subshell, a `case`
+  pattern or `${y%)}` inside an open `$(` closes it early; bash also ends the body at `EOFX)`; a
+  heredoc inside `<( )` or `<<EOF)`; and bash 3.2's own reading of a body inside `"$(`. A call after
+  such a body can be missed;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

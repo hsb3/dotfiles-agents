@@ -318,16 +318,25 @@ MESSAGES = {
         "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
         "before continuation."
     ),
+    "session_soft": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
+        "watermark. This is advisory: at the next safe boundary run the "
+        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact) to "
+        "update the handoff and prepare compaction; if a coordinator owns your cycle, "
+        "stop after the handoff and wait for it rather than compacting."
+    ),
     "session_hard": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
-        "watermark. This is advisory: update the handoff now; if a coordinator owns "
-        "your cycle, stop after the handoff and wait for it rather than compacting."
+        "watermark. This is advisory: update the handoff now with the "
+        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact); if a "
+        "coordinator owns your cycle, stop after the handoff and wait for it rather than "
+        "compacting."
     ),
 }
 
 
 def _format_message(tier, ctx_tokens, notice, soft, hard, layer="worker"):
-    key = "session_hard" if (tier, layer) == ("hard", "session") else tier
+    key = "session_" + tier if layer == "session" and tier in ("soft", "hard") else tier
     return MESSAGES[key].format(
         k=round(ctx_tokens / 1000),
         notice=round(notice / 1000),

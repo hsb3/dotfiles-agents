@@ -20,9 +20,13 @@ project and Claude Code would build the worktree in the other repository. The ho
 re-anchor where the harness puts it, so on an armed rewrite whose `cwd` resolves (`git rev-parse
 --git-common-dir`, symlinks resolved) to a different repository from the project dir, or to no
 repository at all, it returns `permissionDecision: "deny"` naming both paths and telling the model
-to `cd` back into the project, then dispatch again. An unarmed project or type never reaches the
-check. A subdirectory of the project, its `.git` directory, and any linked worktree of it (a
-nested manager's own `.claude/worktrees/agent-<id>`) are the same repository, so they still rewrite.
+to `cd` back into the project, then dispatch again. The refusal also covers a dispatch that set
+`isolation: "worktree"` itself (armed project and armed type only), since Claude Code builds that
+worktree from the session cwd too; it is otherwise left untouched. `isolation: "remote"` and an
+explicit `cwd` are never checked, because no worktree is built from the session cwd. An unarmed
+project or type never reaches the check. A subdirectory of the project, its `.git` directory, and
+any linked worktree of it (a nested manager's own `.claude/worktrees/agent-<id>`) are the same
+repository, so they still rewrite.
 
 ## Why
 
@@ -176,10 +180,14 @@ one having read the failure. The dispatcher should see each worker's result.
 ## Lifecycle and retirement
 
 Worktrees are temporary execution state. Native Claude Code keeps its task checkouts in
-`.claude/worktrees/`; Codex/Atelier keeps them in `<project>/.worktrees/` unless
-the `checkout-root` activation key sets another location. For a manual
-checkout, use the repository-local `.worktrees/` directory. Never create task checkouts or clones
-as siblings of the repository.
+`.claude/worktrees/`; Codex/Atelier keeps them in `<project>/.worktrees/` unless the
+`checkout-root` activation key sets another location. Claude Code checkouts follow that key only
+when the project also enables the opt-in `worktree-root` plugin (at project scope, with
+`checkout-root` set, for example `.worktrees`): it owns worktree creation for subagent `isolation:
+worktree` and `EnterWorktree`, while a `claude --worktree` session stays at the native location.
+Without that plugin the native placement is the default. For a manual checkout, use the
+repository-local `.worktrees/` directory. Never create task checkouts or clones as siblings of the
+repository.
 
 `git worktree list` is authoritative: run `git -C <project> worktree list --porcelain` for the
 inventory. A live checkout, or one deliberately retained for integration, review, recovery, or
@@ -194,12 +202,35 @@ only after that validation.
 
 Beyond an unarmed activation file, the hook stands down when:
 
-- the dispatch already sets `isolation` (including `remote`, which it must not downgrade);
+- the dispatch already sets `isolation` (including `remote`, which it must not downgrade); an
+  explicit `worktree` is never rewritten, but still meets the refusal above;
 - the dispatch sets `cwd`, documented as mutually exclusive with `isolation: "worktree"`;
 - the agent type is in the never-isolate set above;
 - the project is not a git repository. This one is not cosmetic: Claude Code raises
   `Cannot create agent worktree: not in a git repository`, so forcing isolation there would turn a
   guardrail into a hard failure on every dispatch.
+
+## Other repositories
+
+No setting here makes another repository a worker's checkout; the rewrite is unchanged. What holds
+when the work belongs in another repository, measured on Claude Code 2.1.289 with this hook armed
+and `bypassPermissions`:
+
+- **Keep that repository outside the project and name it by absolute path in the brief.** An armed
+  worker still gets its worktree of this project, and from there it edits with the Edit tool, tests
+  and commits in the other repository.
+- **A clone inside the project does not work, even a git-ignored one.** Its paths are in the
+  shared checkout, and Claude Code refuses an isolated worker's Edit-tool writes there ("Edit the
+  worktree copy of this file instead of the shared-checkout path"); a fresh worktree has no copy of
+  an ignored path unless `.worktreeinclude` copies it. Move the clone out, or start a session in
+  it. Writes through Bash were not probed.
+- **The Agent tool's `cwd` is not a route.** Claude Code does not offer it to the model; only a
+  plugin's `agent.spawn` hook sets it.
+- **`cd` is not a route either.** For a repository outside the session's working directories,
+  Claude Code resets the shell cwd as soon as the `cd` returns, so the dispatch isolates this
+  project. Where the `cd` sticks, the armed dispatch meets the one refusal above.
+
+The Edit-tool refusal and the cwd reset are Claude Code's, not this hook's.
 
 ## Install
 
@@ -244,8 +275,10 @@ Beyond an unarmed activation file, the hook stands down when:
 ## Ledger
 
 One row per armed dispatch, appended to the `worktree-isolation` stream once the activation file
-is on. Nothing is logged while the hook is inert (unarmed, `isolation`/`cwd` already set, or no
-resolvable project dir) — those paths exit before the logger is even opened.
+is on. Nothing is logged while the hook is inert (unarmed, `remote` isolation or `cwd` already
+set, or no resolvable project dir) — those paths exit before the logger is even opened. A dispatch
+that set `isolation: "worktree"` itself is logged only when refused; the "not armed" and "not a
+git repo" rows belong to dispatches that did not set `isolation` themselves.
 
 ```
 ${XDG_DATA_HOME:-~/.local/share}/agent-logs/claude-code/atelier/worktree-isolation.jsonl
@@ -264,11 +297,13 @@ stray-branch audit — how many leftover worker branches a wave should have prod
 subprocess and every non-rewrite row is a path where no worktree was created, so there is nothing
 to audit.
 
-The question is answered by comparing `git rev-parse --git-dir` against `--git-common-dir` (equal
-in a main checkout, `<common>/worktrees/<name>` vs `<common>` in a linked one), with both sides
-resolved through symlinks first. Not by the common dir's literal value: that is `.git` only at a
-main checkout's *root* and a relative `../../.git` from any subdirectory of the same checkout, so a
-string test reports every subdirectory as a worktree.
+The dispatcher's location is the payload `cwd` (any subdirectory of it works), falling back to the
+project dir when the payload carries none. The question is answered by comparing `git rev-parse
+--git-dir` against `--git-common-dir` (equal in a main checkout, `<common>/worktrees/<name>` vs
+`<common>` in a linked one), with both sides resolved through symlinks first. Not by the common
+dir's literal value: that is `.git` only at a main checkout's *root* and a relative `../../.git`
+from any subdirectory of the same checkout, so a string test reports every subdirectory as a
+worktree.
 
 ## Design notes
 
@@ -316,8 +351,10 @@ Worker records live under the repository's common Git directory at
 `.git/atelier-codex/workers/<session>/<agent>.json`. Checkouts live under the main project at
 `.worktrees/<session>/<agent>` (the checkout moves to `<checkout-root>/<session>/<agent>`
 when the `checkout-root` activation key is set). There is no automatic branch or worktree
-deletion. With `workspace-write`, the caller must authorize the checkout directory (the key's value when set),
-`.git/worktrees` and `.git/objects` as writable roots. Registration failure never
+deletion. With `workspace-write`, the caller must authorize the five writable roots setup writes
+into `.codex/config.toml`: the checkout directory (the key's value when set) and, under the common
+Git directory, `worktrees`, `objects`, `refs/heads/atelier` and `logs/refs/heads/atelier`.
+Registration failure never
 silently leaves an armed worker operating in its inherited checkout. Unarmed projects
 are inert, including non-Git projects; existing mappings persist across policy edits
 so an already-isolated worker never falls back to the parent by accident. If a policy
@@ -327,6 +364,24 @@ registered role when checking that policy. Each isolated record also pins the re
 Git common directory, worktree administration directory and index path. Replaced
 repositories, redirected metadata/indexes, and old records lacking that identity are
 denied; stop and redispatch those workers instead of repairing their records in place.
+
+**Why these writable roots.** A linked worktree keeps its Git state in the main `.git`: its index
+and `HEAD` under `worktrees/<name>`, its objects, branch ref and reflog beside everyone else's. A
+worker commit therefore writes outside the worker's checkout, and nothing but these roots lets it
+do so inside the sandbox. For every writable root that is itself a linked worktree, which a session
+started inside one makes its cwd, Codex resolves the `.git` pointer and keeps that Git directory
+read-only even under a listed parent such as `worktrees` (openai/codex
+`codex-rs/protocol/src/permissions.rs`, ref `6c372fbe`). From such a session the roots therefore do
+nothing, and commits succeed only outside the sandbox, for example through user exec-policy allow
+rules for `git add` or `git commit` (`codex-rs/core/src/exec_policy.rs`, same ref). Atelier workers
+cannot lean on those rules: they inherit the session's cwd (the main checkout in the supported
+launch) and their commands are rewritten to `unset …; cd -- <worktree> && ( … )`, which the rules
+do not match, so the roots are the only way a worker commits. The roots are narrow on purpose:
+never all of `.git`, whose hooks and config would let sandboxed code plant execution that later
+runs unsandboxed, and only Atelier's own branch refs. A test run from inside a worktree therefore
+exercises none of this; test from the main checkout. Field probes (not gated here) agree: from the
+main checkout with the roots a worker commits, and with only the checkout root it fails on
+`.git/worktrees/<name>/index.lock`.
 
 This provides worktree collision avoidance. The native thread's cwd metadata and
 sandbox remain inherited. Absolute shell paths, explicit shell cwd changes and scripts

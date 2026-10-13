@@ -168,9 +168,9 @@ backend's own field names and option shapes still live in that backend's adapter
 - Don't invent Impact/Effort for items you can't see. An honest blank beats a fabricated rank —
   the next pass, or the owner, fills it. An owner-gated item (one whose scope is a decision, not
   a build) leaves blank too, and the flag is the `decision` label: `board_health.py` exempts
-  `decision`-labelled blanks from priority-missing and names them as exempt, so the post-pass check
-  can read clean while a decision is open (priority-skew still counts them in the `(unset)`
-  band). A blank left only for lack of context is still a priority-missing finding, and that
+  `decision`-labelled blanks from priority-missing and names them as exempt, and leaves them out
+  of priority-skew's bands and share, so the post-pass check can read clean while a decision is
+  open. A blank left only for lack of context is still a priority-missing finding, and that
   finding is its flag.
 - Ranking is not the only output. A pass that reads every untriaged item is the pass most likely
   to notice a duplicate, or a closed item whose defect is demonstrably still live — say so

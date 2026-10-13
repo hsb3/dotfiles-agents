@@ -61,6 +61,10 @@ boundary and finish small bounded work. At hard, preserve the branch, worktree, 
 changes, and test proof in a manager-facilitated checkpoint before continuation. A verified
 self-handoff may be used where available; it is never assumed.
 
+Session soft and hard texts point at the `atelier:compact-handoff` skill, naming
+`/atelier:prepare-compact` as its Claude Code command (Codex ships only the skill), and add that, if a coordinator owns the cycle, the session
+stops after the handoff and waits rather than compacting.
+
 Workers use the worker band, window-capped the same way as sessions. The hook still names itself
 (`atelier context-watermark:`), so the advisory is attributable rather than an untrusted task
 instruction.
