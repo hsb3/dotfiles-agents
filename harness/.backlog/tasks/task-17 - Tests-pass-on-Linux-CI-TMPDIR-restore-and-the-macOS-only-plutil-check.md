@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-13 17:08'
-updated_date: '2026-10-13 17:09'
+updated_date: '2026-10-13 17:11'
 labels: []
 milestone: m-2
 dependencies: []
@@ -32,7 +32,7 @@ The first harness-test.yml run on ubuntu-latest (PR #635) failed two tests:
 <!-- AC:BEGIN -->
 - [x] #1 TMPDIR is deleted, not set to the string "undefined", when it was unset before the test
 - [x] #2 The plutil lint runs only on macOS; the rest of the plist assertions run everywhere
-- [ ] #3 bun test passes on macOS and in the Linux CI lane
+- [x] #3 bun test passes on macOS and in the Linux CI lane
 <!-- AC:END -->
 
 ## Definition of Done
@@ -54,6 +54,8 @@ The first harness-test.yml run on ubuntu-latest (PR #635) failed two tests:
 
 <!-- SECTION:NOTES:BEGIN -->
 bunx tsc --noEmit && bun test: 114 pass, 0 fail on macOS. env -u TMPDIR bun test test/trial.test.ts: 13 pass, reproducing the Linux condition. groma scan created 0; lint clean. AC3's Linux half is confirmed by PR #635's harness-test lane.
+
+Linux confirmed: PR #635 harness-test lane (ubuntu-latest) passes, run 38436364041.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
