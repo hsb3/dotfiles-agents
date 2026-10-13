@@ -28,6 +28,11 @@
   [`docs/override-convention.md`](docs/override-convention.md); do not invent a third.
 - **Tests are stdlib-only** (`python3 -m unittest`) — zero install is an invariant. Fixtures live
   in `tests/` tempdirs, never under `primitives-core/` (the roster guard flags orphans).
+- **Self-contained units carry their own toolchain and tracking.** `site/` (and `harness/`,
+  `evals/` as they land from the 2026-10 rebuild) is a Bun/TypeScript unit with its own
+  `SPEC.md`, `AGENTS.md`, `.backlog/` board and `.groma/` architecture map. Its tests run in
+  its own CI lane (`site-test.yml`), never in `make ci`, so the zero-install invariant governs
+  the root `tests/`. Start work on a unit in its folder and track it on that unit's board.
 
 ## Governance
 

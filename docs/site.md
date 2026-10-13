@@ -1,33 +1,36 @@
 # Documentation site
 
 The documentation site reuses the root README, `docs/**/*.md`, the contributor guide and
-each `plugins/*/README.md`. Edit those canonical files. Pandoc renders them into HTML;
-no second documentation tree or generated output is committed.
+each `plugins/*/README.md`. Edit those canonical files. The renderer in [`site/`](../site/README.md)
+turns them into HTML; no second documentation tree or generated output is committed. The page
+list, navigation and repository identity live in `site/site.config.json`.
 
 ## Build and preview
 
-Install [Pandoc](https://pandoc.org/installing.html) and Python 3.10 or newer. On macOS,
-`brew install pandoc`; on Ubuntu, `sudo apt-get install pandoc`.
+Install [Bun](https://bun.sh) 1.4 (`brew install oven-sh/bun/bun`, or mise).
 
 ```sh
 make docs-build
 make docs-serve
 ```
 
-Open <http://localhost:8000/dotfiles-agents/>. Build output goes to
+Open <http://127.0.0.1:8000/dotfiles-agents/>. Build output goes to
 `/tmp/dotfiles-agents-site/dotfiles-agents`, outside the checkout. Stop the preview with
-Ctrl-C. `python3 scripts/build_docs.py --output /tmp/another-preview/dotfiles-agents`
-chooses another output directory. Use a fresh directory when checking deleted pages.
+Ctrl-C. `bun src/cli.ts build --output /tmp/another-preview/dotfiles-agents`, run in `site/`,
+chooses another output directory. Use a fresh directory when checking deleted pages: a build
+never deletes stale files, and files left by an earlier build never satisfy a link.
 
-The build validates local Markdown destinations and rendered heading links, navigation
-and stylesheet paths beneath `/dotfiles-agents/`. Links to source files outside the site
+The build validates every local link and image (Markdown and raw HTML), every heading
+fragment, and the navigation and stylesheet paths beneath `/dotfiles-agents/`; it reports
+every problem in one run and writes nothing when any exists. Heading IDs match GitHub's. Links to source files outside the site
 point at the corresponding GitHub source ref; published builds use the exact source SHA.
 The layout has keyboard focus, a skip link, semantic navigation, a mobile layout and
 scrollable wide tables/code. Mermaid diagrams render with pinned Mermaid 11.12.0 from
 jsDelivr; readable diagram source remains when JavaScript or the CDN is unavailable.
 
-`make ci` remains stdlib-only and zero-install. The small routing regression runs there;
-the full Pandoc build runs in the existing required `drift guards` CI job.
+`make ci` remains stdlib-only and zero-install. The renderer's own tests run in its
+`site-test` lane (`make site-test`); the full build of this repository runs in the existing
+required `drift guards` CI job.
 
 ## Release policy
 

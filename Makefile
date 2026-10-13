@@ -130,9 +130,14 @@ harness-campaign-status: ## launchctl state of the weekly agent
 	@scripts/harness_campaign.sh status
 
 
-.PHONY: docs-build docs-serve
-docs-build: ## Build canonical Markdown with Pandoc and verify project-subpath links (needs pandoc)
-	@python3 scripts/build_docs.py
+# --- documentation site (site/) — its own Bun unit with its own test lane (site-test.yml);
+# docs-build is also the repo-wide link check in the drift guards CI job. Needs bun.
+.PHONY: docs-build docs-serve site-test
+docs-build: ## Build the documentation site into /tmp/dotfiles-agents-site and verify every link (needs bun)
+	@cd site && bun install --frozen-lockfile --silent && bun src/cli.ts build
 
-docs-serve: docs-build ## Preview at http://localhost:8000/dotfiles-agents/ (Ctrl-C to stop)
-	@python3 -m http.server 8000 --bind 127.0.0.1 --directory /tmp/dotfiles-agents-site
+docs-serve: ## Build, then preview at http://127.0.0.1:8000/dotfiles-agents/ (Ctrl-C to stop; needs bun)
+	@cd site && bun install --frozen-lockfile --silent && bun src/cli.ts serve
+
+site-test: ## Type-check and test the site unit (Bun; NOT in ci)
+	@cd site && bun install --frozen-lockfile --silent && bunx tsc --noEmit && bun test

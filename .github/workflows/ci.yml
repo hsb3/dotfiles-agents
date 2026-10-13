@@ -66,9 +66,10 @@ jobs:
         with:
           python-version: "3.13"
       - run: make check symlinks flow
-      - name: Install Pandoc
-        run: sudo apt-get update && sudo apt-get install -y pandoc
-      - name: Documentation build and project-subpath links
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - name: Documentation build and repo-wide link check (site/)
         run: make docs-build
       # Version-bump gate (TASK-032): each plugin's assembly, dereferenced, against the
       # same plugin as published on origin/main — changed bytes must ship under a moved
