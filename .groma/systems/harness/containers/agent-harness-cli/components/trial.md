@@ -39,6 +39,6 @@ Runs one trial and appends its row at once, so an interrupted run resumes cleanl
 | --- | --- | --- | --- |
 | [src/trial.ts](../../../../../../src/trial.ts) | [src/checks.ts](../../../../../../src/checks.ts) | Calls imported function: runChecks | typescript |
 | [src/trial.ts](../../../../../../src/trial.ts) | [src/grader.ts](../../../../../../src/grader.ts) | Calls imported function: grade | typescript |
-| [src/trial.ts](../../../../../../src/trial.ts) | [src/harnesses.ts](../../../../../../src/harnesses.ts) | Calls imported functions: adapterFor, authEnvPresent, childEnv | typescript |
+| [src/trial.ts](../../../../../../src/trial.ts) | [src/harnesses.ts](../../../../../../src/harnesses.ts) | Calls imported functions: adapterFor, authEnvPresent, childEnv, scrubEnv | typescript |
 | [src/trial.ts](../../../../../../src/trial.ts) | [src/ledger.ts](../../../../../../src/ledger.ts) | Calls imported functions: appendRow, pythonJson | typescript |
 | [src/trial.ts](../../../../../../src/trial.ts) | [src/subprocess.ts](../../../../../../src/subprocess.ts) | Calls imported function: runProcess | typescript |

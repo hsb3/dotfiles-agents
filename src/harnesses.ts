@@ -125,11 +125,11 @@ export function authEnvPresent(env: Env | NodeJS.ProcessEnv): string[] {
   return AUTH_ENV_NAMES.filter((n) => !!env[n]).sort();
 }
 
-/** The harness's environment minus `prefix*` and the four XDG variables. */
-export function scrubEnv(base: Env | NodeJS.ProcessEnv, prefix: string): Env {
+/** The harness's environment minus `prefix*` (when given) and the four XDG variables. */
+export function scrubEnv(base: Env | NodeJS.ProcessEnv, prefix: string | null): Env {
   const env: Env = {};
   for (const [k, v] of Object.entries(base)) {
-    if (v === undefined || k.startsWith(prefix) || XDG_VARS.includes(k)) continue;
+    if (v === undefined || (prefix !== null && k.startsWith(prefix)) || XDG_VARS.includes(k)) continue;
     env[k] = v;
   }
   return env;

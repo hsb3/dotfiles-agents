@@ -13,8 +13,14 @@ description: Process entry of the agent-harness binary
 ---
 Hands the process arguments to the command dispatcher and exits with the code it returns.
 
-## Draft relationships
+## Relationships
 
 | Source | Target | Description | Technology |
 | --- | --- | --- | --- |
-| [cli](cli.md) | [commands](commands.md) | Dispatches the command line | function call |
+| [src/cli.ts](../../../../../../src/cli.ts) | [src/commands.ts](../../../../../../src/commands.ts) | Dispatches the command line | function call |
+
+## Derived relationships
+
+| Source | Target | Description | Technology |
+| --- | --- | --- | --- |
+| [src/cli.ts](../../../../../../src/cli.ts) | [src/commands.ts](../../../../../../src/commands.ts) | Calls imported function: main | typescript |

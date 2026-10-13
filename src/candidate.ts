@@ -3,7 +3,7 @@
 // input; callers turn them into exit 2.
 import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 export type Kind = "skill" | "plugin" | "agent";
 
@@ -79,7 +79,7 @@ function pluginMeta(dir: string): { name: string; version: string } {
 /** Loads the candidate at `path` (a directory or a flat agent `.md` file). */
 export function loadCandidate(name: string, path: string): Candidate {
   if (!existsSync(path)) throw new Error(`no such candidate path: ${path}`);
-  let dir = path;
+  let dir = resolve(path);
   let cleanup = () => {};
   if (!statSync(path).isDirectory()) {
     if (!path.endsWith(".md")) throw new Error(`${path}: not a directory or a flat agent .md file`);

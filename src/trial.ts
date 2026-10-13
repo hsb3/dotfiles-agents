@@ -9,7 +9,7 @@ import type { Candidate } from "./candidate.ts";
 import type { Case } from "./cases.ts";
 import { runChecks } from "./checks.ts";
 import { grade } from "./grader.ts";
-import { adapterFor, authEnvPresent, childEnv, type Adapter, type Harness, type TrialRecord } from "./harnesses.ts";
+import { adapterFor, authEnvPresent, childEnv, scrubEnv, type Adapter, type Harness, type TrialRecord } from "./harnesses.ts";
 import { appendRow, pythonJson, type Entry, type Preconditions, type Row } from "./ledger.ts";
 import { runProcess, type Env, type RunResult } from "./subprocess.ts";
 
@@ -213,10 +213,11 @@ export async function runTrial(spec: TrialSpec): Promise<Row> {
     return finish(row, true);
   }
 
-  const { run, record, env } = agent;
+  const { run, record } = agent;
   const pre = preconditions(spec, selfInstalls(run.stdout));
   const logPath = writeLog(spec, started, pre, run.stdout);
-  const checks: Entry[] = spec.kase.check ? await runChecks(spec.kase.check, ws, env) : [];
+  // check.py belongs to no harness: it gets the harness's own environment minus the XDG variables.
+  const checks: Entry[] = spec.kase.check ? await runChecks(spec.kase.check, ws, scrubEnv(spec.baseEnv, null)) : [];
   const hasAssertions = spec.kase.assertions.length > 0;
   const grades: Entry[] = hasAssertions
     ? await grade({
