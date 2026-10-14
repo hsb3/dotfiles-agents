@@ -38,6 +38,8 @@ tells the owner. It is suppressed:
 - when the prompt path has already reported hard for this session (its state's `last_tier`);
 - after it has fired once for this session (its own flag, in `<session>-midturn.json` beside
   the prompt path's state, so the prompt path's refire every 5 prompts is unchanged);
+- when that flag cannot be saved (an unwritable state directory), since an unsaved flag would
+  let it fire on every tool call;
 - on Codex, until a live probe shows Codex delivers a main-session `PostToolUse`
   `additionalContext` to the model; on Codex it neither measures nor writes a row;
 - in any subagent, which takes the worker path above.
@@ -152,7 +154,7 @@ Each measured row carries the identity envelope (`v`, `plugin`, `harness`, `stre
 `notice`, `soft`, `hard`, and `sources` naming which precedence tier supplied each value. A
 subagent row also carries `agent_id`. A main-session `PostToolUse` row is a session row plus
 `event: "PostToolUse"`, written on every check, and a hard row the nudge did not fire on also
-carries `suppressed` (`cycle-owner`, `prompt-reported-hard` or `already-fired`).
+carries `suppressed` (`cycle-owner`, `prompt-reported-hard`, `already-fired` or `state-unwritable`).
 
 Two row shapes are narrower than that. A row from a handled error path (no transcript, no usage
 block, no worker transcript) carries `null` `ctx_tokens`, `tier: "none"`, `fired: false` and an

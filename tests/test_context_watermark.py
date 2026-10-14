@@ -694,6 +694,18 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual((self.rows()[-1]["fired"], self.rows()[-1]["suppressed"]),
                          (False, "already-fired"))
 
+    def test_main_session_stays_quiet_when_its_once_only_flag_cannot_be_saved(self):
+        blocker = os.path.join(self.tmp, "not-a-dir")
+        open(blocker, "w").close()
+        session = "main-{0}".format(next(_SEQ))
+        for _ in range(2):
+            proc = self.run_hook(self.main_tool_payload(410_000, session),
+                                 env={"CONTEXT_WATERMARK_STATE_DIR": os.path.join(blocker, "state")})
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(proc.stdout.strip(), "")
+            self.assertEqual((self.rows()[-1]["fired"], self.rows()[-1]["suppressed"]),
+                             (False, "state-unwritable"))
+
     def test_main_session_nudge_does_not_disturb_the_prompt_path(self):
         session = "main-{0}".format(next(_SEQ))
         self.run_hook(self.main_tool_payload(410_000, session))

@@ -489,6 +489,12 @@ def handle_session(payload, log):
              notice, soft, hard))
 
 
+def _mark_fired(key):
+    """Save the once-only flag and report whether it actually persisted."""
+    _save_state(key, {"fired": True})
+    return _load_state(key).get("fired") is True
+
+
 def handle_session_tool(payload, log):
     """PostToolUse in the main session: one hard nudge per session, mid-turn."""
     if codex_lifecycle.enabled():
@@ -514,6 +520,8 @@ def handle_session_tool(payload, log):
             row["suppressed"] = "already-fired"
         elif _load_state(session_id).get("last_tier") == "hard":
             row["suppressed"] = "prompt-reported-hard"
+        elif not _mark_fired(midturn_key):
+            row["suppressed"] = "state-unwritable"  # unsaved, it would fire on every call
         else:
             row["fired"] = True
             print(json.dumps({
@@ -528,7 +536,6 @@ def handle_session_tool(payload, log):
                     "next safe boundary and continue.".format(
                         round(ctx_tokens / 1000), round(hard / 1000))),
             }))
-            _save_state(midturn_key, {"fired": True})
     log(row)
 
 
