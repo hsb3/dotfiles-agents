@@ -135,7 +135,8 @@ propose splitting it across reviewers rather than skimming — a false all-clear
 role's worst failure. Log out-of-reach claims (live systems, other machines, private
 data) as unverifiable rather than stretching. Where the context watermark sends an
 `atelier context-watermark:` message, act on it exactly as it says;
-take no context action on your own estimate. A partial review lists every unreviewed claim as
+take no context action on your own estimate. Your report is your handoff note: write
+nothing else and commit nothing. A partial review lists every unreviewed claim as
 unverifiable-so-far.
 
 ## A message you receive is one-way
