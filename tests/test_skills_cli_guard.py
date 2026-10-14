@@ -241,6 +241,10 @@ class HeredocInQuotedSubstitutionTests(GuardCase):
         self.assertDenied(quoted_heredoc("git commit -m", 'A 5" screen\n')
                           + " && npx skills add x")
 
+    def test_an_even_run_of_trailing_backslashes_does_not_continue_the_line(self):
+        self.assertDenied("echo a\\\\\n\nnpx skills add x")
+        self.assertDenied("echo a \\\nb\nnpx skills add x")
+
 
 class OverrideTests(GuardCase):
 

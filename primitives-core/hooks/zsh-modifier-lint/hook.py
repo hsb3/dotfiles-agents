@@ -26,7 +26,7 @@ SPECIAL = set("$?#!-*@")
 DELIM = re.compile(r"[ \t]*([^\s;&|<>()]+)")
 QUOTE_CHARS = re.compile(r"['\"\\]")
 # A value stops at its command's end, so each command start's check stays inside its command.
-VALUE = r"""(?:'[^']*'|"[^"]*"|\$\([^()]*\)|`[^`]*`|[^\s;&|()`'"])*"""
+VALUE = r"""(?:\\.|'[^']*'|"(?:\\.|[^"\\])*"|\$\([^()]*\)|`[^`]*`|[^\s;&|()`'"\\])*"""
 OVERRIDE_AT_COMMAND = re.compile(
     r"[ \t]*(?:(?:if|then|else|elif|do|while|until|time|!|\{)[ \t]+)*"
     r"(?:[A-Za-z_][A-Za-z0-9_]*=" + VALUE + r"[ \t]+)*" + OVERRIDE + r"=1\s")
