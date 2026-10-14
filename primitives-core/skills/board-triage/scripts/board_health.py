@@ -13,7 +13,7 @@ the label ones: an adapter builds `fields.labels.options` from the board's whole
 label surviving on closed cards is not a live vocabulary and no edit to open work could clear
 it. Judging a live board by its history is how a check ends up permanently red.
 
-Exit 0 clean, 1 on any finding, 2 when an input cannot be read.
+Exit 0 clean, 1 on any finding, 2 when it could not measure (an unreadable input or a crash).
 """
 
 import argparse
@@ -304,7 +304,8 @@ def render(snapshot: dict, findings: list[dict], count: int) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Decay checks over a board-triage snapshot (SKILL.md §2). "
-        "Exit 0 clean, 1 on any finding, 2 on an unreadable input.",
+        "Exit 0 clean, 1 on any finding, 2 when it could not measure "
+        "(an unreadable input or a crash).",
     )
     parser.add_argument("snapshot", nargs="?", help="snapshot JSON path (default: stdin)")
     parser.add_argument("--json", action="store_true", help="emit findings as JSON")
@@ -335,14 +336,21 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    findings = analyze(snapshot, args.skew_threshold, args.prefix_threshold, declared)
-    count = len(open_items(snapshot))
-    if args.json:
-        print(json.dumps({"board": snapshot.get("board"), "open_items": count,
-                          "findings": findings}, indent=2))
-    else:
-        print(render(snapshot, findings, count))
-    return 1 if actionable(findings) else 0
+    # An uncaught exception exits 1, which callers read as "findings", not a broken measurement.
+    try:
+        findings = analyze(snapshot, args.skew_threshold, args.prefix_threshold, declared)
+        count = len(open_items(snapshot))
+        if args.json:
+            report = json.dumps({"board": snapshot.get("board"), "open_items": count,
+                                 "findings": findings}, indent=2)
+        else:
+            report = render(snapshot, findings, count)
+        code = 1 if actionable(findings) else 0
+    except Exception as exc:
+        print(f"could not measure: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+    print(report)
+    return code
 
 
 if __name__ == "__main__":

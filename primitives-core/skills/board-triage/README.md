@@ -48,10 +48,11 @@ check then has nothing to judge, which is not the same answer as a clean board.
 It measures whether a field **discriminates**, not just whether it is filled — a priority band
 holding most of the backlog, items with no band or no label at all, a grouping convention living
 in title prefixes that no filter can reach, and two spellings of one concept splitting it across
-two filters. Exit 0 is clean, 1 is any finding, 2 is an input it could not read. `--json` for
-machine output; `--skew-threshold` and `--prefix-threshold` tune it for a board with different
-norms. Every check that can fail judges open items only, so a board's retired label history can
-never hold it red; `grouping-latent` is the one documented exception, and SKILL.md says why.
+two filters. Exit 0 is clean, 1 is any finding, 2 is a measurement it could not make (an
+unreadable input or a crash). `--json` for machine output; `--skew-threshold` and
+`--prefix-threshold` tune it for a board with different norms. Every check that can fail
+judges open items only, so a board's retired label history can never hold it red;
+`grouping-latent` is the one documented exception, and SKILL.md says why.
 Kata's `P4` band counts as triaged, and items labelled `decision` may stay blank:
 priority-missing lists them as exempt, an exempt-only result passes, and priority-skew
 leaves them out of its count.

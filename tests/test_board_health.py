@@ -16,6 +16,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL = os.path.join(ROOT, "primitives-core", "skills", "board-triage")
@@ -415,6 +416,18 @@ class Cli(unittest.TestCase):
         self.assertEqual(2, code, "measuring nothing must never look like a clean board")
         self.assertIn("not valid JSON", err)
         self.assertEqual("", out)
+
+    def test_a_crashing_check_exits_two_not_one(self):
+        """Python's own exit for an uncaught exception is 1, which reads as 'findings'."""
+        def boom(*_args):
+            raise ZeroDivisionError("division by zero")
+
+        with mock.patch.object(bh, "check_priority_skew", boom):
+            code, out, err = self.run_main(json.dumps(clean()))
+        self.assertEqual(2, code, "a broken measurement must never read as a dirty board")
+        self.assertEqual("", out)
+        self.assertIn("could not measure", err)
+        self.assertIn("ZeroDivisionError", err)
 
     def test_json_mode_emits_the_findings(self):
         items = [item(f"p{n}", priority="P2") for n in range(7)] + [item("q1", priority="P0")]
