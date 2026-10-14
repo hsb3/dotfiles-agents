@@ -66,6 +66,7 @@ contact sheet. Inspect every distinct layout, dense slide, title and closing sli
 Check text completeness, wrapping, clipping, alignment, contrast, font substitution
 and footer collisions. Fix discovered problems and rerender to a fresh directory.
 Structural validation does not prove layout quality or full ISO/ECMA XSD conformance.
+It rejects negative shape extents anywhere and zero-size pictures; rotation and group transforms are not checked.
 Then run the semantic review in [semantic review](references/semantic-review.md): a passing
 render does not mean the deck works.
 Deliver source, PPTX, rendered PDF and the verification/limitations that matter.

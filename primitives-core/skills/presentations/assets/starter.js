@@ -11,6 +11,7 @@ const topics = {
     conclusion: "Delivery is ready for a limited pilot",
     evidence: "The pilot starts with two teams",
     next: "The next review decides whether to expand",
+    stat: { value: "2 teams", label: "Pilot scope", detail: "A small rollout provides feedback before expansion." },
   },
   advisor: {
     topic: "Pilot distribution channel",
@@ -19,6 +20,7 @@ const topics = {
     conclusion: "The pilot needs a distribution partner",
     evidence: "Repeat usage supports a wider trial",
     next: "One introduction would test the channel",
+    stat: { value: "Repeat use", label: "Wider trial scope", detail: "Repeat pilot usage is the basis for a wider trial." },
   },
   client: {
     topic: "Payment-difference review pilot",
@@ -27,6 +29,7 @@ const topics = {
     conclusion: "Your team can review every payment difference",
     evidence: "The pilot provides a traceable review packet",
     next: "Start with one reporting period",
+    stat: { value: "1 period", label: "Pilot scope", detail: "One reporting period tests the review packet before expansion." },
   },
 }[type];
 const deck = createDeck({ author: "Presentation author", title: topics.topic, theme: type === "status" ? "carbon-white" : "actuarial-signal", fontFace: "Arial" });
@@ -51,7 +54,7 @@ const C = deck.colors;
   addKicker(deck, slide, "Evidence");
   addTitle(deck, slide, topics.conclusion);
   slide.addText(`${topics.evidence}.`, { x: deck.MX, y: 1.65, w: deck.CW, h: 0.5, fontFace: deck.fontFace, fontSize: 16, color: C.textSecondary, margin: 0, valign: "top" });
-  addStatCard(deck, slide, { x: deck.MX, y: 2.3, w: 3.6, h: 2.5, value: "2 teams", label: "Pilot scope", detail: "A small rollout provides feedback before expansion." });
+  addStatCard(deck, slide, { x: deck.MX, y: 2.3, w: 3.6, h: 2.5, ...topics.stat });
   slide.addChart(deck.pptx.ChartType.bar, [{ name: "Weekly reviews", labels: ["Week 1", "Week 2", "Week 3"], values: [8, 12, 18] }], {
     x: 4.8, y: 2.25, w: 7.7, h: 3.7, catAxisLabelFontFace: deck.fontFace, valAxisLabelFontFace: deck.fontFace,
     chartColors: [C.dataPrimary], showLegend: false, showTitle: false, showValue: true,

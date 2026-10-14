@@ -44,6 +44,8 @@ Signed/macro packages cannot be edited. Strict-namespace OOXML is unsupported.
 Checks cover ZIP names, duplicate/encrypted/symlink entries, expanded size limits,
 DTD/entity rejection, XML parsing, content-type coverage, relationship IDs/targets,
 XML relationship references, slide order/IDs and required presentation roots.
+Slide shape extents (`a:ext`/`a:chExt`) must not be negative, and a picture's must not be
+zero; lines and connectors may be zero. Rotation and group transforms are not checked.
 Unused content-type declarations are allowed, as emitted by PptxGenJS.
 Inputs are limited to 10,000 entries and 256 MiB expanded; use a native application
 for larger decks. Outputs must be new `.pptx`/`.potx` files in an existing directory.
