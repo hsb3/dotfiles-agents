@@ -25,9 +25,11 @@ SPECIAL = set("$?#!-*@")
 # ponytail: the delimiter is one unspaced word; `<<'END OF'` or `<<E;F` is misread
 DELIM = re.compile(r"[ \t]*([^\s;&|<>()]+)")
 QUOTE_CHARS = re.compile(r"['\"\\]")
+# A value stops at its command's end, so each command start's check stays inside its command.
+VALUE = r"""(?:'[^']*'|"[^"]*"|\$\([^()]*\)|`[^`]*`|[^\s;&|()`'"])*"""
 OVERRIDE_AT_COMMAND = re.compile(
-    r"\s*(?:(?:if|then|else|elif|do|while|until|time|!|\{)\s+)*"
-    r"(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*" + OVERRIDE + r"=1\s")
+    r"[ \t]*(?:(?:if|then|else|elif|do|while|until|time|!|\{)[ \t]+)*"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*=" + VALUE + r"[ \t]+)*" + OVERRIDE + r"=1\s")
 
 
 def _param(cmd, i, quoted, scope, hits):

@@ -319,6 +319,9 @@ class CardReproductionTests(unittest.TestCase):
             # 60,000 continuation lines join into one 3 MB logical line, then one shlex word
             ("echo skills" + ("\\\n" + "x" * 49) * 60000, hook.TOO_BIG),
             ('git commit -m "' + "npx skills add " * 140000 + '"', hook.TOO_BIG),
+            # runner flags are skipped by index, not by copying the word list per flag
+            ("-x " * 42000 + "; npx skills add x", hook.REASON),
+            ("npx " + "-y " * 42000 + "skills add x", hook.REASON),
             # the worst case shlex still reads: one word just under the size limit
             ('npx skills "' + "a b " * (hook.LIMIT // 4 - 8) + '"', hook.REASON),
         )

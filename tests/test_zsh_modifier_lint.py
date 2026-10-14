@@ -196,7 +196,6 @@ class FailOpen(unittest.TestCase):
         self.assertIn("deny", proc.stdout)
 
 
-@unittest.skipUnless(os.path.exists(ZSH), "no /bin/zsh (Linux CI)")
 class Timing(unittest.TestCase):
     """Each shape gets 2 s of the hook's 10 s timeout, which fails open when it runs out."""
 
@@ -205,6 +204,9 @@ class Timing(unittest.TestCase):
             ("$(" * 2000 + "x" * 200000, 0),
             # a hit per command under every frame: the override check must not walk the stack
             ("$(" * 2000 + "$x:r;" * 40000, 1),
+            # an override check per command start must stop at the end of its command
+            ("A=$x:r;" * 40000, 1),
+            ("A=$x:r\n" * 40000, 1),
         )
         for command, denied in shapes:
             with self.subTest(command=command[-20:], size=len(command)):
@@ -220,6 +222,7 @@ class Timing(unittest.TestCase):
                 self.assertEqual(len(proc.stdout.splitlines()), denied)
 
 
+@unittest.skipUnless(os.path.exists(ZSH), "no /bin/zsh (Linux CI)")
 class ZshDifferential(unittest.TestCase):
     """zsh is the oracle: the lint fires iff the unbraced probe expands differently."""
 

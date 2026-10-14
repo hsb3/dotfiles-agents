@@ -41,10 +41,11 @@ TOO_BIG = (
 )
 
 
-def past_flags(words):
-    while words and words[0].startswith("-"):
-        words = words[2:] if words[0] in VALUED else words[1:]
-    return words
+def past_flags(words, i):
+    """The index of the first word from i on that is not a runner flag or its value."""
+    while i < len(words) and words[i].startswith("-"):
+        i += 2 if words[i] in VALUED else 1
+    return i
 
 
 def runs_skills(words):
@@ -53,16 +54,16 @@ def runs_skills(words):
         return False
     words = [words[0].rsplit("/", 1)[-1]] + words[1:]
     for runner in RUNNERS:
-        rest = words
+        i = 0
         for part in runner:
-            rest = past_flags(rest)
-            if not rest or rest[0] != part:
+            i = past_flags(words, i)
+            if i >= len(words) or words[i] != part:
                 break
-            rest = rest[1:]
+            i += 1
         else:
-            rest = past_flags(rest)
-            if rest and (rest[0] == "skills" or rest[0].startswith("skills@")):
-                args = rest[1:]
+            i = past_flags(words, i)
+            if i < len(words) and (words[i] == "skills" or words[i].startswith("skills@")):
+                args = words[i + 1:]
                 return not (args and all(a in HELP for a in args))
     return False
 
@@ -74,7 +75,8 @@ def drop_heredoc_bodies(command):
     while i < len(lines):
         line, i = lines[i], i + 1
         parts = []
-        while line.endswith("\\") and i < len(lines):
+        # an odd run of trailing backslashes continues the line; an even run is escaped ones
+        while (len(line) - len(line.rstrip("\\"))) % 2 and i < len(lines):
             parts.append(line[:-1])
             line, i = lines[i], i + 1
         line = "".join(parts) + line
@@ -131,9 +133,10 @@ def denied(command):
         return None
     # A newline ends a command. The `;` after it does that for shlex, and survives a `#`
     # comment, which swallows its own newline.
-    text = drop_heredoc_bodies(command).replace("\n", "\n;")
+    text = drop_heredoc_bodies(command)
     if len(text) > LIMIT:
         return TOO_BIG
+    text = text.replace("\n", "\n;")
     # ponytail: shlex drops quoting, so a quoted `;|&(` reads as an operator, a "$(...)" stays
     # one word, and a mid-word `#` starts a comment; a quote-aware lexer would fix all three.
     lex = shlex.shlex(text, posix=True, punctuation_chars=OPERATORS)
