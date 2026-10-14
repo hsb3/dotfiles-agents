@@ -551,7 +551,7 @@ exactly as it says:
 | Layer | Stage action (the hook text) | Who continues |
 | --- | --- | --- |
 | worker (scout, builder, reviewer, manager) | Notice: reduce further grounding reads and continue the bounded slice. Soft: finish the slice or dispatch in hand and start no new one. Hard: at the next safe boundary commit or list uncommitted changes, bring the handoff note or plan file current with test proof, and return. | Its dispatcher |
-| session | Notice: reduce further grounding reads. Soft: update the handoff at the next safe boundary and prepare compaction. Hard: update the handoff now. | The session after its handoff, or the coordinator that owns its cycle |
+| session | Notice: reduce further grounding reads. Soft: update the handoff at the next safe boundary and prepare compaction. Hard: update the handoff now. When `CONTEXT_WATERMARK_CYCLE_OWNER` marks a coordinator, both stages instead end with the stamp touched last, then stop and wait; do not compact. | The session after its handoff, or the coordinator that owns its cycle |
 <!-- /harness -->
 
 A warning never kills, terminates, discards, or abandons work, and it grants a worker no authority

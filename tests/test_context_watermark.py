@@ -378,6 +378,9 @@ class HookRunTests(_ScrubbedEnv):
             text = hook._format_message(
                 tier, ctx, 150_000, 250_000, 400_000, layer="worker")
             self.assertNotIn("prepare-compact", text)
+            with mock.patch.dict(os.environ, {"CONTEXT_WATERMARK_CYCLE_OWNER": "coordinator"}):
+                self.assertEqual(hook._format_message(
+                    tier, ctx, 150_000, 250_000, 400_000, layer="worker"), text)
 
     def test_notice_soft_and_hard_transition_without_repeating(self):
         session = "session-{0}".format(next(_SEQ))
