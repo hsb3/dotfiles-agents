@@ -16,6 +16,11 @@ word of a simple command, after any `NAME=value` assignments or a reserved word 
 newline, one inside `$( ... )` or backticks, and one in a function body after `name()`. A bare
 `npx skills` with no arguments is denied.
 
+A command with more than 131,072 characters (128K) outside heredoc bodies that still mentions
+`skills` there is denied unread, such as a huge `-m "..."` message. `shlex` slows down on one
+long word and a timeout lets the command through, so the reason says to move the text into a
+file or a heredoc instead. A heredoc body of any size is dropped first and does not count.
+
 ## What it lets through
 
 - `npx skills --help`, `-h`, `--version` and `-V`, when those are the only arguments (a
@@ -48,10 +53,6 @@ Not containment. It catches the plain mistake, not a determined workaround.
 - A valued runner flag outside `--prefix`, `--cwd`, `-C`, `-w` and `--workspace`. Its value reads
   as the package, so `npx --registry skills prettier` is denied.
 - A function body written `function f { ... }`. The `f() { ... }` form is read.
-- More than 128 KB of text outside heredoc bodies, such as a huge `-m "..."` message. `shlex`
-  slows down on one long word and a timeout lets the command through, so a command that size
-  that mentions `skills` is denied unread, with a reason saying to move the text into a file
-  or a heredoc. A heredoc body of any size is dropped first and does not count.
 - Spelling games such as `npx sk""ills`. The text must contain `skills` to be scanned at all.
 
 ## Override

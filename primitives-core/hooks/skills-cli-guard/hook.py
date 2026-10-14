@@ -35,8 +35,8 @@ REASON = (
 # and a timeout fails open; above this size the hook denies instead of reading.
 LIMIT = 128 * 1024
 TOO_BIG = (
-    "skills-cli-guard: this command mentions `skills` and carries more than %d KB of text "
-    "outside heredoc bodies, too much to read inside the hook's timeout. Move the long text "
+    "skills-cli-guard: this command mentions `skills` and carries more than %dK characters of "
+    "text outside heredoc bodies, too much to read inside the hook's timeout. Move the long text "
     "into a file or a heredoc body and rerun." % (LIMIT // 1024)
 )
 
@@ -134,6 +134,8 @@ def denied(command):
     # A newline ends a command. The `;` after it does that for shlex, and survives a `#`
     # comment, which swallows its own newline.
     text = drop_heredoc_bodies(command)
+    if "skills" not in text:  # a heredoc body is text, so a mention only there is no mention
+        return None
     if len(text) > LIMIT:
         return TOO_BIG
     text = text.replace("\n", "\n;")
