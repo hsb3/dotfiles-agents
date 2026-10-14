@@ -32,8 +32,9 @@ OVERRIDE_AT_COMMAND = re.compile(
     r"(?:[A-Za-z_][A-Za-z0-9_]*=" + VALUE + r"[ \t]+)*" + OVERRIDE + r"=1\s")
 
 
-def _param(cmd, i, quoted, scope, hits):
-    """Record a hit if the `$` at i opens one; return where scanning resumes."""
+def _param(cmd, i, quoted, scope, hits, lead=""):
+    """Record a hit if the `$` at i opens one; return where scanning resumes. `lead` is the
+    backslash before a `$` that backticks unescape, kept in the hit and its rewrite."""
     m = PARAM.match(cmd, i)
     if not m:
         return i + 2 if cmd[i + 1:i + 2] in SPECIAL else i + 1
@@ -41,8 +42,10 @@ def _param(cmd, i, quoted, scope, hits):
     if not mod:
         return m.end()
     end = REST.match(cmd, mod.end()).end()
-    braced = "${%s}%s" % (m.group(1), cmd[m.end() - 1:end])
-    hits.append((cmd[i:end], braced if quoted else '"%s"' % braced, scope))
+    braced, tail = lead + "${%s}" % m.group(1), cmd[m.end() - 1:end]
+    # unquoted, only the name is quoted: a quoted tail would turn off a glob such as `:t*`
+    hits.append((cmd[i - len(lead):end], braced + tail if quoted else '"%s"%s' % (braced, tail),
+                 scope))
     return end
 
 
@@ -95,11 +98,15 @@ def scan(cmd):
     # [kind, command start, paren depth, an enclosing command is overridden];
     # "dq" has no command start. A hit's scope is (that flag, its command start).
     stack = [["top", 0, 0, False]]
-    i, n = 0, len(cmd)
+    i, n, ticks, unescaped = 0, len(cmd), 0, -1
     while i < n:
         kind, c = stack[-1][0], cmd[i]
         if c == "\\":
-            i += 2
+            # inside backticks the shell drops the backslash of `\$` and expands the `$`
+            if ticks and cmd.startswith("$", i + 1):
+                unescaped, i = i + 1, i + 1
+            else:
+                i += 2
         elif c == "$":
             if kind != "dq" and cmd.startswith("$'", i):
                 i = _skip_ansi_c(cmd, i + 2)
@@ -107,12 +114,15 @@ def scan(cmd):
                 push("sub", i + 2, 1)
                 i += 2
             else:
-                i = _param(cmd, i, kind == "dq", (stack[-1][3], stack[-1][1]), hits)
+                i = _param(cmd, i, kind == "dq", (stack[-1][3], stack[-1][1]), hits,
+                           "\\" if unescaped == i else "")
         elif c == "`":
             if kind == "bt":
                 stack.pop()
+                ticks -= 1
             else:
                 push("bt", i + 1, 0)
+                ticks += 1
             i += 1
         elif kind == "dq":
             if c == '"':

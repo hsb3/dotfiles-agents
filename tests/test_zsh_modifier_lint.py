@@ -64,7 +64,7 @@ class Denies(unittest.TestCase):
     def test_card_reproduction_names_the_braced_rewrite(self):
         r = reason("T=main; git push origin $T:refs/heads/x")
         self.assertIn("$T:refs/heads/x", r)
-        self.assertIn('"${T}:refs/heads/x"', r)
+        self.assertIn('"${T}":refs/heads/x', r)
         self.assertIn(OVERRIDE + " <command>", r)
 
     def test_every_modifier_letter_denies(self):
@@ -106,15 +106,22 @@ class Denies(unittest.TestCase):
     def test_rewrite_adds_quotes_only_where_they_are_syntax(self):
         self.assertIn("`${T}:r`", reason('echo "$T:r"'))
         self.assertIn("`${T}:r`", reason("cat <<EOF\n$T:r\nEOF"))
-        self.assertIn('`"${T}:r"`', reason("echo $T:r"))
+        self.assertIn('`"${T}":r`', reason("echo $T:r"))
+        # the tail stays outside the quotes so a glob in it still expands
+        self.assertIn('`$d:t*` -> `"${d}":t*`', reason("ls $d:t*"))
+
+    def test_an_escaped_dollar_inside_backticks_is_flagged(self):
+        self.assertIn('`\\$T:r` -> `"\\${T}":r`', reason("echo `echo \\$T:r`"))
+        self.assertIn('`\\$T:r` -> `\\${T}:r`', reason('echo `echo "\\$T:r"`'))
+        self.assertEqual(reason("echo \\$T:r"), "")
 
     def test_rewrite_stops_at_an_enclosing_brace(self):
-        self.assertIn('`$T:r` -> `"${T}:r"`', reason("echo ${X:-$T:r}"))
+        self.assertIn('`$T:r` -> `"${T}":r`', reason("echo ${X:-$T:r}"))
 
     def test_every_hit_is_listed_up_to_the_cap(self):
         r = reason("echo $A:r $B:r $C:r $D:r $E:r $F:r $G:r")
         for name in "ABCDE":
-            self.assertIn("${%s}:r" % name, r)
+            self.assertIn('"${%s}":r' % name, r)
         self.assertNotIn("${F}", r)
         self.assertIn("2 more", r)
 
@@ -249,6 +256,8 @@ class ZshDifferential(unittest.TestCase):
         "$T:warn", "$T:fix/y", "$T:wip", "$T:gs/a/z/", "$T:ffr", "P=$T:essential",
         "a$T:rx", "$T$T:hx", "$T:r:h", "$(print -r -- $T:rx)", '"$(print -r -- $T:rx)"',
         "$T:-x", "$T:=x", "$T:+x", "$T:?x", "$T:/usr/bin", "$T:$T", "$T\\:rx",
+        "`print -r -- \\$T:rx`", '"`print -r -- \\$T:rx`"', '`print -r -- "\\$T:rx"`',
+        "`print -r -- \\\\$T:rx`", "`print -r -- \\$T:rx \\$(print -r -- $T:hx)`",
         '"$T\\:rx"', '"$T":rx', "$T:\\rx", "$T:Fx", "$T:Wx", "$T:&x", '"$T:&x"',
     ]
 

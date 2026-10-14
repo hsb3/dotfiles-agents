@@ -6,15 +6,17 @@ applies as a history modifier, because the command runs under zsh and zsh rewrit
 bash keeps `main:refs/heads/x`. The letters are `a c e h l q r s t u A P Q`, plus `&` inside
 double quotes or an unquoted heredoc (`:s` is an error, the rest corrupt silently). `f`, `g`
 and `w` prefix a modifier, so `$B:feature/x` (`:fe`) and `$B:gh-pages` (`:gh`) are hits too. The deny names each
-hit and its rewrite (`$T:refs` becomes `"${T}:refs"`: brace the name, keep the rest), up to
-five per deny.
+hit and its rewrite (`$T:refs` becomes `"${T}":refs`: brace and quote the name, keep the rest
+outside the quotes so a glob in it still expands), up to five per deny. Inside backticks an
+escaped `\$T:r` is a hit too, because the shell drops that backslash before the inner command
+runs.
 
 It reads the command text only and never runs a shell. A malformed payload or a non-`Bash`
 tool exits 0 with no output.
 
 ## What it lets through
 
-- The braced form `${T}:r`, an escaped `\$T:r`, an escaped colon `$T\:r`, and `"$T":r`.
+- The braced form `${T}:r`, an escaped `\$T:r` outside backticks, an escaped colon `$T\:r`, and `"$T":r`.
 - A non-letter after the colon: `$PATH:/usr/bin`, `$HOME:$X`, `$T:-x`, `$T:=x`, `$T:+x`, `$T:?x`.
 - Letters zsh leaves alone, such as `$B:main`, `$B:fix/y` and `$B:wip`.
 - An unquoted `$T:&`, where `&` ends the word before zsh can read it as a modifier.
