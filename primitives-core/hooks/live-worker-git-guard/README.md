@@ -315,6 +315,14 @@ command string the hook is handed, so whatever still displaces them is invisible
   above, so only in a command that triggers it); bash also ends the body at `EOFX)`; a
   heredoc inside `<( )` or `<<EOF)`; and bash 3.2's own reading of a body inside `"$(`. A call after
   such a body can be missed;
+- a `<<` opener inside `${...}`, `$[...]`, arithmetic spanning lines or after a quoted `))`, or
+  after a zsh glob group `word(` spanning lines, and a `)#` inside a backtick substitution (read
+  as a word, not a comment). The scan has lost the context there, so a call after the body can
+  be missed;
+- time on adversarial input: deeply nested unclosed `$(`, and nested `(` subshells in a command
+  that also holds a backtick, `$((`, `<(`, `>(` or `)#`, grow slowly in the extra reading, and
+  past the 10 s timeout the hook fails open. A call the first reading finds is decided before
+  that reading runs;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

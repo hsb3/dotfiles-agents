@@ -361,7 +361,7 @@ for _name, _context in (("hd_ceiling_param_expansion", "inside `${...}`"),
 EXCUSED[("hd_ceiling_subshell_in_subst", "live")] = (
     "ceiling: `<<` opener after a subshell inside `$(`")
 EXCUSED[("hd_ceiling_backtick_hash_word_after_body", "live")] = (
-    "README ceiling: backtick substitution")
+    "README ceiling: `)#` inside a backtick substitution")
 EXCUSED[("hd_ceiling_zsh_glob_group_spans_lines", "live")] = (
     "ceiling: zsh reads `word(` as a glob group spanning lines")
 EXCUSED[("hd_ceiling_param_paren_in_subst", "live")] = (
