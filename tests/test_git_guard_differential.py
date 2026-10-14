@@ -205,6 +205,7 @@ PROBES = [
     ("hd_subst_multiline_glued_word_then_git", "x=$(\necho hi\n)x git push"),
     ("hd_subst_heredoc_glued_word_then_git", "x=$(cat <<'EOF'\nbody\nEOF\n)x git push"),
     ("hd_subst_terminator_glued_word_then_git", "x=$(cat <<'EOF'\nbody\nEOF)x git push"),
+    ("subst_glued_word_then_git", "x=$(echo hi)x git push"),
     # a newline inside `$(` starts no body opened outside it
     ("hd_outer_body_after_subst_newline", "cat <<EOF; x=$(echo hi\n); git push\nbody\nEOF"),
     ("hd_outer_body_after_dq_subst_newline",
@@ -349,15 +350,6 @@ for _name in ("sh_bash_c", "sh_sh_c", "sh_zsh_c", "sh_bash_ec", "sh_env_bash_c",
               "sh_bash_c_heredoc_then_git"):
     EXCUSED[(_name, "live")] = "live README ceiling: bash -c string"
 EXCUSED[("sep_glued", "live")] = "live README ceiling: word glued to a separator"
-for _name in ("hd_subst_hash_word_then_arith", "hd_subst_hash_word_then_subshell",
-              "hd_subst_hash_word_two_heredocs"):
-    EXCUSED[(_name, "live")] = "live parity: `#` after a `$(...)` read as a comment, hardening"
-EXCUSED[("hd_backtick_dollar_paren_then_subshell", "live")] = (
-    "live parity: `$(` counted inside backticks, hardening")
-for _name in ("hd_arith_in_subst_closed_on_opener_line",
-              "hd_procsub_in_subst_closed_on_opener_line"):
-    EXCUSED[(_name, "live")] = (
-        "live parity: a `)` from `$((` or `<(` closes `$(` early, hardening")
 for _name, _context in (("hd_ceiling_param_expansion", "inside `${...}`"),
                         ("hd_ceiling_dollar_bracket", "inside `$[...]`"),
                         ("hd_ceiling_arith_spans_lines", "inside arithmetic spanning lines"),
@@ -366,15 +358,10 @@ for _name, _context in (("hd_ceiling_param_expansion", "inside `${...}`"),
                         ("hd_ceiling_case_in_subst",
                          "in a case arm after the pattern `)` inside `$(`")):
     EXCUSED[(_name, "live")] = "ceiling: `<<` opener " + _context
-EXCUSED[("hd_bash32_comment_apostrophe_in_subst", "live")] = (
-    "live parity: bash 3.2 reads an apostrophe in a comment inside `$(` as a quote, hardening")
 EXCUSED[("hd_ceiling_subshell_in_subst", "live")] = (
     "ceiling: `<<` opener after a subshell inside `$(`")
 EXCUSED[("hd_ceiling_backtick_hash_word_after_body", "live")] = (
     "README ceiling: backtick substitution")
-for _name in ("hd_mixed_hash_sites_body_opener", "hd_mixed_hash_sites_stash",
-              "hd_mixed_hash_sites_in_subst"):
-    EXCUSED[(_name, "live")] = "live parity: `#` after a `$(...)` read as a comment, hardening"
 EXCUSED[("hd_ceiling_zsh_glob_group_spans_lines", "live")] = (
     "ceiling: zsh reads `word(` as a glob group spanning lines")
 EXCUSED[("hd_ceiling_param_paren_in_subst", "live")] = (
