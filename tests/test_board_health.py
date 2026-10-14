@@ -429,6 +429,42 @@ class Cli(unittest.TestCase):
         self.assertIn("could not measure", err)
         self.assertIn("ZeroDivisionError", err)
 
+    def run_main_bytes(self, snap_bytes, vocab_bytes=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "snap.json")
+            with open(path, "wb") as handle:
+                handle.write(snap_bytes)
+            argv = [path]
+            if vocab_bytes is not None:
+                argv += ["--vocabulary", os.path.join(tmp, "vocabulary.txt")]
+                with open(argv[-1], "wb") as handle:
+                    handle.write(vocab_bytes)
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = bh.main(argv)
+            return code, out.getvalue(), err.getvalue()
+
+    def test_a_snapshot_that_is_not_utf8_exits_two(self):
+        code, out, err = self.run_main_bytes(b'{"items": [], "board": "\xff"}')
+        self.assertEqual(2, code)
+        self.assertIn("cannot read snapshot", err)
+        self.assertEqual("", out)
+
+    def test_a_vocabulary_that_is_not_utf8_exits_two(self):
+        code, _, err = self.run_main_bytes(json.dumps(clean()).encode(), b"infra\n\xff\n")
+        self.assertEqual(2, code)
+        self.assertIn("cannot read vocabulary", err)
+
+    def test_a_crash_in_json_mode_exits_two_with_empty_stdout(self):
+        def boom(*_args):
+            raise ZeroDivisionError("division by zero")
+
+        with mock.patch.object(bh, "check_priority_skew", boom):
+            code, out, err = self.run_main(json.dumps(clean()), ["--json"])
+        self.assertEqual(2, code)
+        self.assertIn("could not measure: ZeroDivisionError", err)
+        self.assertEqual("", out)
+
     def test_json_mode_emits_the_findings(self):
         items = [item(f"p{n}", priority="P2") for n in range(7)] + [item("q1", priority="P0")]
         code, out, _ = self.run_main(json.dumps(snapshot(items, ["infra"])), ["--json"])

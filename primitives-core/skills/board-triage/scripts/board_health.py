@@ -45,7 +45,7 @@ def load_snapshot(path: str | None) -> dict:
         else:
             with open(path, encoding="utf-8") as handle:
                 raw = handle.read()
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise SnapshotError(f"cannot read snapshot {path!r}: {exc}") from exc
     try:
         snapshot = json.loads(raw)
@@ -64,7 +64,7 @@ def load_vocabulary(path: str) -> list[str]:
     try:
         with open(path, encoding="utf-8") as handle:
             lines = handle.read().splitlines()
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise SnapshotError(f"cannot read vocabulary {path!r}: {exc}") from exc
     names = [ln.strip() for ln in lines if ln.strip() and not ln.lstrip().startswith("#")]
     if not names:
