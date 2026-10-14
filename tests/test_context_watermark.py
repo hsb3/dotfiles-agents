@@ -734,6 +734,20 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(self.midturn(410_000, session), "")
         self.assertEqual(self.rows()[-1]["suppressed"], "prompt-reported-hard")
 
+    def test_wiring_status_messages_match_the_hook_config(self):
+        hook_dir = os.path.dirname(HOOK_PATH)
+        with open(os.path.join(hook_dir, "config.json")) as f:
+            expected = json.load(f)["statusMessage"]
+        for name in ("hooks.json", "codex-hooks.json"):
+            with open(os.path.join(REPO_ROOT, "plugins", "atelier", "hooks", name)) as f:
+                wiring = json.load(f)["hooks"]
+            for event, message in expected.items():
+                found = [h.get("statusMessage") for group in wiring.get(event, [])
+                         for h in group.get("hooks", [])
+                         if "context-watermark/hook.py" in h.get("command", "")]
+                self.assertTrue(found, (name, event))
+                self.assertEqual(set(found), {message}, (name, event))
+
     def test_main_session_nudge_does_not_disturb_the_prompt_path(self):
         session = "main-{0}".format(next(_SEQ))
         self.run_hook(self.main_tool_payload(410_000, session))
