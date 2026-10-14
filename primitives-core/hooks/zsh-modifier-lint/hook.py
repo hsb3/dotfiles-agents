@@ -113,7 +113,8 @@ def scan(cmd):
                 else:
                     i = j + 1
             elif j > i:
-                i = j + (j - i) % 2  # an odd run's last backslash escapes the next character
+                # one level of backticks halves the run, so it escapes the next character when k % 4 is 1 or 2
+                i = j + ((j - i) % 4 in (1, 2) if ticks == 1 else (j - i) % 2)
             else:
                 i += 2
         elif c == "$":

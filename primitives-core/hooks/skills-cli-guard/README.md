@@ -50,7 +50,9 @@ Not containment. It catches the plain mistake, not a determined workaround.
   `echo ${#x}; npx skills add y` is let through.
 - A `<<` that opens no heredoc: one in quotes or a comment (`-m "a << b"`), or an arithmetic
   shift (`$((1<<2))`). It reads as an opener, so the following lines go unread until one
-  equals the word after it.
+  equals the word after it. When that line sits inside a later heredoc body, the body lines
+  after it are read as commands, so `# … cat <<EOF` before a `<<'SH'` script whose body holds
+  `EOF` then `npx skills add x` is denied.
 - A valued runner flag outside `--prefix`, `--cwd`, `-C`, `-w` and `--workspace`. Its value reads
   as the package, so `npx --registry skills prettier` is denied.
 - A function body written `function f { ... }`. The `f() { ... }` form is read.
