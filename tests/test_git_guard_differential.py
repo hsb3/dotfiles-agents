@@ -370,6 +370,16 @@ EXCUSED[("hd_ceiling_subst_in_unquoted_body", "live")] = (
     "ceiling: a `$(...)` in an unquoted heredoc body runs, but the body is dropped")
 EXCUSED[("hd_ceiling_dq_subst", "live")] = "README ceiling: `$(...)` inside double quotes"
 
+FLAGGED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "git_guard_flagged.json")
+
+
+def current_flagged():
+    """Per guard, the sorted PROBES names it denies (a verdict no shell changes)."""
+    return {g: sorted(n for n, p in PROBES
+                      if flags(p.replace("{GIT}", "/fake/bin/git")))
+            for g, flags in GUARDS.items()}
+
 
 def _bashes():
     found, seen = [], set()
@@ -456,6 +466,20 @@ class GitGuardDifferential(unittest.TestCase):
     def test_every_guarded_call_zsh_runs_is_flagged(self):
         self._assert_flagged([ZSH])
 
+    def test_no_listed_probe_stops_being_flagged(self):
+        # Ratchet independent of EXCUSED: re-excusing a probe cannot hide a guard
+        # that stopped catching it. Regenerate the list with
+        #   python3 tests/test_git_guard_differential.py --regen
+        # Adding names is fine; removing one needs a stated reason in the PR.
+        with open(FLAGGED_FILE) as f:
+            listed = json.load(f)
+        now = current_flagged()
+        for guard in GUARDS:
+            with self.subTest(guard=guard):
+                dropped = sorted(set(listed[guard]) - set(now[guard]))
+                self.assertEqual([], dropped, "{0} guard no longer flags: {1}".format(
+                    guard, ", ".join(dropped)))
+
     def test_scope_strip_heredocs_keeps_git_after_backslash_word_body(self):
         # at 630a04ca the apostrophe in the body left the quote open, so the
         # git line after the real terminator was swallowed
@@ -465,4 +489,9 @@ class GitGuardDifferential(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    if sys.argv[1:] == ["--regen"]:
+        with open(FLAGGED_FILE, "w") as f:
+            json.dump(current_flagged(), f, indent=1, sort_keys=True)
+            f.write("\n")
+    else:
+        unittest.main()
