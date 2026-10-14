@@ -3,7 +3,7 @@
 
 zsh reads a letter after an unbraced parameter's colon as a history modifier, so
 `$T:refs/heads/x` loses `$T`'s extension and the `r`, where bash keeps the colon. The braced
-`"${T}:refs/heads/x"` reads the same in both. See README.md for what passes and the ceilings.
+`"${T}":refs/heads/x` reads the same in both. See README.md for what passes and the ceilings.
 
 Reads the command text only and never runs a shell. Stdlib-only, Python 3.9 compatible; any
 malformed payload exits 0 with no output.
@@ -32,8 +32,9 @@ OVERRIDE_AT_COMMAND = re.compile(
     r"(?:[A-Za-z_][A-Za-z0-9_]*=" + VALUE + r"[ \t]+)*" + OVERRIDE + r"=1\s")
 
 
-def _param(cmd, i, quoted, scope, hits):
-    """Record a hit if the `$` at i opens one; return where scanning resumes."""
+def _param(cmd, i, quoted, scope, hits, lead=""):
+    """Record a hit if the `$` at i opens one; return where scanning resumes. `lead` is the
+    backslash before a `$` that backticks unescape, kept in the hit and its rewrite."""
     m = PARAM.match(cmd, i)
     if not m:
         return i + 2 if cmd[i + 1:i + 2] in SPECIAL else i + 1
@@ -41,8 +42,10 @@ def _param(cmd, i, quoted, scope, hits):
     if not mod:
         return m.end()
     end = REST.match(cmd, mod.end()).end()
-    braced = "${%s}%s" % (m.group(1), cmd[m.end() - 1:end])
-    hits.append((cmd[i:end], braced if quoted else '"%s"' % braced, scope))
+    braced, tail = lead + "${%s}" % m.group(1), cmd[m.end() - 1:end]
+    # unquoted, only the name is quoted: a quoted tail would turn off a glob such as `:t*`
+    hits.append((cmd[i - len(lead):end], braced + tail if quoted else '"%s"%s' % (braced, tail),
+                 scope))
     return end
 
 
@@ -95,11 +98,25 @@ def scan(cmd):
     # [kind, command start, paren depth, an enclosing command is overridden];
     # "dq" has no command start. A hit's scope is (that flag, its command start).
     stack = [["top", 0, 0, False]]
-    i, n = 0, len(cmd)
+    i, n, ticks, unescaped, lead_at = 0, len(cmd), 0, -1, -1
     while i < n:
         kind, c = stack[-1][0], cmd[i]
         if c == "\\":
-            i += 2
+            j = i
+            while ticks and cmd.startswith("\\", j):
+                j += 1
+            # backticks halve a backslash run and unescape `\$`, so a `$` after k backslashes
+            # still expands when k % 4 is 0 or 1
+            if j > i and cmd.startswith("$", j):
+                if (j - i) % 4 < 2:
+                    unescaped, lead_at, i = j, i, j
+                else:
+                    i = j + 1
+            elif j > i:
+                # one level of backticks halves the run, so it escapes the next character when k % 4 is 1 or 2
+                i = j + ((j - i) % 4 in (1, 2) if ticks == 1 else (j - i) % 2)
+            else:
+                i += 2
         elif c == "$":
             if kind != "dq" and cmd.startswith("$'", i):
                 i = _skip_ansi_c(cmd, i + 2)
@@ -107,12 +124,15 @@ def scan(cmd):
                 push("sub", i + 2, 1)
                 i += 2
             else:
-                i = _param(cmd, i, kind == "dq", (stack[-1][3], stack[-1][1]), hits)
+                i = _param(cmd, i, kind == "dq", (stack[-1][3], stack[-1][1]), hits,
+                           cmd[lead_at:i] if unescaped == i else "")
         elif c == "`":
             if kind == "bt":
                 stack.pop()
+                ticks -= 1
             else:
                 push("bt", i + 1, 0)
+                ticks += 1
             i += 1
         elif kind == "dq":
             if c == '"':

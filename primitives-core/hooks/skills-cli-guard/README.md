@@ -45,11 +45,14 @@ Not containment. It catches the plain mistake, not a determined workaround.
   the quoted span as one word.
 - A quoted or escaped `;`, `|`, `&` or `(`. It reads as an operator, so a later word can look
   like a command.
-- A `#` inside a word, such as `${#x}`. It starts a comment, and the rest of that line goes
-  unread.
+- A `#` inside a word, such as `${#x}` or `a#b`. The shell keeps it as part of the word, but
+  `shlex` starts a comment there, so the rest of that line goes unread and
+  `echo ${#x}; npx skills add y` is let through.
 - A `<<` that opens no heredoc: one in quotes or a comment (`-m "a << b"`), or an arithmetic
   shift (`$((1<<2))`). It reads as an opener, so the following lines go unread until one
-  equals the word after it.
+  equals the word after it. When that line sits inside a later heredoc body, the body lines
+  after it are read as commands, so `# … cat <<EOF` before a `<<'SH'` script whose body holds
+  `EOF` then `npx skills add x` is denied.
 - A valued runner flag outside `--prefix`, `--cwd`, `-C`, `-w` and `--workspace`. Its value reads
   as the package, so `npx --registry skills prettier` is denied.
 - A function body written `function f { ... }`. The `f() { ... }` form is read.
