@@ -532,6 +532,10 @@ def _logical_lines(command, paren=True):
     while i < len(lines):
         line = lines[i]
         i += 1
+        if stack and not current:
+            # a word glued to the `)` closing `$(` may make it an assignment (`x=$(\n)x git
+            # push`): read it as the bare `)`, which opens command position; at worst an over-deny
+            line = re.sub(r"^([ \t]*\)+)[^\s;&|()<>'\"\\`$#]+", r"\1", line)
         pending, stack, continued = _scan_line(line, stack, pending, paren)
         if continued:
             current += line[:-1]

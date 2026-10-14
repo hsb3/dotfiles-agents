@@ -200,6 +200,11 @@ PROBES = [
     # bash 5 does
     ("hd_subst_closed_on_opener_line", "x=$(cat <<EOF; true)\ngit push\nEOF"),
     ("hd_subst_closed_on_opener_line_body_read", "x=$(cat <<'EOF' )\nit's\nEOF\ngit push"),
+    # a word glued to the `)` closing a multi-line `$(` continues that word, so the
+    # command after it is still in command position (zsh runs none of the third)
+    ("hd_subst_multiline_glued_word_then_git", "x=$(\necho hi\n)x git push"),
+    ("hd_subst_heredoc_glued_word_then_git", "x=$(cat <<'EOF'\nbody\nEOF\n)x git push"),
+    ("hd_subst_terminator_glued_word_then_git", "x=$(cat <<'EOF'\nbody\nEOF)x git push"),
     # a newline inside `$(` starts no body opened outside it
     ("hd_outer_body_after_subst_newline", "cat <<EOF; x=$(echo hi\n); git push\nbody\nEOF"),
     ("hd_outer_body_after_dq_subst_newline",
