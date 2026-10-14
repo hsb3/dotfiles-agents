@@ -321,21 +321,26 @@ def _resumed_keys(result):
 def _resumed_after(transcript_path, settled_at):
     """Keys of `settled_at` that `transcript_path` resumed after their settle.
 
-    A resume is a `user` line whose `toolUseResult` names it (`_resumed_keys`)
-    and whose `timestamp` is later than the ledger row's `ts`. The
-    `SendMessage` call alone never counts, since a failed send names no
-    agent; nor does a notification, since a background agent's own completion
+    A resume is a `user` line whose `toolUseResult` names it (`_resumed_keys`),
+    or an assistant `SendMessage` call addressed to its id, either with a
+    `timestamp` later than the ledger row's `ts`. The call holds it live until
+    its result lands, and for good unless that result is a failure
+    (`success: false` or an error string), as `stopped_ids` reads it. A
+    notification never counts, since a background agent's own completion
     notice lands after its stop row. Unreadable or unordered evidence resumes
     nothing.
     """
     resumed = set()
     if not settled_at or not transcript_path:
         return resumed
+    sends = {}  # SendMessage tool_use id -> addressee, live until its result lands
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
-                if (("resumedAgentId" not in line and '"pin"' not in line)
-                        or not any(k in line for k in settled_at)):
+                if not ((("resumedAgentId" in line or '"pin"' in line
+                          or "SendMessage" in line)
+                         and any(k in line for k in settled_at))
+                        or any(u in line for u in sends)):
                     continue
                 try:
                     obj = json.loads(line)
@@ -343,16 +348,36 @@ def _resumed_after(transcript_path, settled_at):
                     continue
                 if not isinstance(obj, dict):
                     continue
-                result = obj.get("toolUseResult")
-                if obj.get("type") != "user" or not isinstance(result, dict):
-                    continue
                 moment = _moment(obj.get("timestamp"))
+                if obj.get("type") == "assistant":
+                    message = obj.get("message")
+                    content = message.get("content") if isinstance(message, dict) else None
+                    for block in content if isinstance(content, list) else ():
+                        if (isinstance(block, dict) and block.get("type") == "tool_use"
+                                and block.get("name") == "SendMessage"
+                                and isinstance(block.get("id"), str)
+                                and isinstance(block.get("input"), dict)):
+                            key = agent_key(block["input"].get("to"))
+                            if moment and key in settled_at and moment > settled_at[key]:
+                                sends[block["id"]] = key
+                    continue
+                if obj.get("type") != "user":
+                    continue
+                result = obj.get("toolUseResult")
+                for use in [u for u in sends if _answers(obj, {u})]:
+                    key = sends.pop(use)
+                    # Only a proven failure leaves it settled.
+                    if not (isinstance(result, str) or (isinstance(result, dict)
+                                                        and result.get("success") is False)):
+                        resumed.add(key)
+                if not isinstance(result, dict):
+                    continue
                 for key in _resumed_keys(result):
                     if moment and key in settled_at and moment > settled_at[key]:
                         resumed.add(key)
     except OSError:
         return set()
-    return resumed
+    return resumed | set(sends.values())
 
 
 NOTIFICATION_OPEN = "<task-notification>"

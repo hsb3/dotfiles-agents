@@ -53,6 +53,7 @@ def _load_hook():
 HOOK = _load_hook()
 
 _SEQ = itertools.count()
+DROP = object()  # a record field to leave out
 SEND_USE = "toolu_01AQTS2z2WYtZoxcwL3JZFjL"  # a SendMessage call and its result pair on this
 
 
@@ -165,11 +166,18 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         return result
 
     def _assert_denied(self, result):
+        self.assertTrue(result.stdout.strip(),
+                        "expected deny, but the guard was silent: " + result.stderr)
         payload = json.loads(result.stdout)
         hso = payload["hookSpecificOutput"]
         self.assertEqual(hso["hookEventName"], "PreToolUse")
         self.assertEqual(hso["permissionDecision"], "deny")
         return hso["permissionDecisionReason"]
+
+    def test_assert_denied_names_a_silent_guard(self):
+        silent = subprocess.CompletedProcess([], 0, stdout="", stderr="")
+        with self.assertRaisesRegex(AssertionError, "expected deny"):
+            self._assert_denied(silent)
 
     # -- the guard fires on mutating git while a worker is live -----------
 
@@ -384,10 +392,19 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._transcript(dict(self._resume_result("f2222222222222222"), timestamp=self.AFTER))
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
-    def test_a_failed_send_after_the_ledger_settle_does_not_reopen_it(self):
+    def test_a_send_call_after_the_ledger_settle_holds_it_live_until_its_result(self):
+        # in flight, as on the transcript path (kd4q item 4)
         self._sidecar("f8888888888888888")
         self._settle("f8888888888888888")
         self._transcript(dict(self._send_message("f8888888888888888"), timestamp=self.AFTER))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_failed_send_after_the_ledger_settle_does_not_reopen_it(self):
+        self._sidecar("f7777777777777777")
+        self._settle("f7777777777777777")
+        self._transcript(dict(self._send_message("f7777777777777777"), timestamp=self.AFTER),
+                         dict(self._failed_send_result("f7777777777777777"),
+                              timestamp=self.AFTER))
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
     def test_a_subagent_owned_resume_after_the_ledger_settle_makes_it_live_again(self):
@@ -1012,24 +1029,38 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertEqual(self._assert_denied(self._run_in(
             "git -C {0} commit -m a && {1}".format(other, push), session, session)), alone)
 
-    def test_a_native_session_write_after_an_other_repo_write_is_denied(self):
-        # the native loop must judge every call, not stop at the first
-        session, other = self._repo("session-repo"), self._repo("other-repo")
-        record = os.path.join(session, ".git", "atelier-codex", "workers",
-                              self.session_id, "nw1.json")
-        os.makedirs(os.path.dirname(record))
-        with open(record, "w", encoding="utf-8") as fh:
-            json.dump({"session_id": self.session_id, "agent_id": "nw1",
-                       "agent_type": "builder", "status": "running",
-                       "source": session, "worktree": None}, fh)
+    def _run_native(self, session, command, **record):
+        """Run `command` from `session` as a native (codex) caller, with one
+        running worker record built from `record`."""
+        row = {"session_id": self.session_id, "agent_id": "nw1",
+               "agent_type": "builder", "status": "running",
+               "source": session, "worktree": None}
+        row.update(record)
+        path = os.path.join(session, ".git", "atelier-codex", "workers",
+                            self.session_id, row["agent_id"] + ".json")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump({k: v for k, v in row.items() if v is not DROP}, fh)
         policy = os.path.join(self.tmp.name, "policy.md")
         with open(policy, "w", encoding="utf-8") as fh:
             fh.write("---\nenforce: strict\n---\n")
-        payload = self._payload("git -C {0} commit -m a && git -C {1} commit -m b"
-                                .format(other, session))
+        payload = self._payload(command)
         payload["cwd"] = session
-        self._assert_denied(self._run(payload, extra_env={
-            "ATELIER_HARNESS": "codex", "ATELIER_ACTIVATION_FILE": policy}))
+        return self._run(payload, extra_env={
+            "ATELIER_HARNESS": "codex", "ATELIER_ACTIVATION_FILE": policy})
+
+    def test_a_native_session_write_after_an_other_repo_write_is_denied(self):
+        # the native loop must judge every call, not stop at the first
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        self._assert_denied(self._run_native(
+            session, "git -C {0} commit -m a && git -C {1} commit -m b".format(other, session)))
+
+    def test_a_native_record_without_agent_type_still_denies(self):
+        # a corrupt record must not raise in the deny text and fail open (kd4q item 1)
+        session = self._repo("session-repo")
+        reason = self._assert_denied(self._run_native(
+            session, "git commit -m x", agent_type=DROP))
+        self.assertIn("agent nw1 (native worker)", reason)
 
     def test_a_session_write_before_an_other_repo_write_is_denied(self):
         session, other = self._repo("session-repo"), self._repo("other-repo")

@@ -144,7 +144,9 @@ cannot disagree about who is live: the `agent-*.meta.json` sidecars in this sess
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
 already settled, unless the caller's transcript holds a `SendMessage` result naming it as resumed
 (`resumedAgentId`, or `pin.id` on a success: a task owned by a subagent resumes without
-`resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`.
+`resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`, or
+a `SendMessage` call to its id stamped after that `ts`: the call keeps it live until its result
+lands, and for good unless that result is a failure, the same rule as for a TaskStop'd agent below.
 
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on

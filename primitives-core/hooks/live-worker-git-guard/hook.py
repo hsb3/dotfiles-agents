@@ -1004,7 +1004,9 @@ def _live_workers(transcript_path, caller):
 
 def _describe(workers):
     lines = [
-        "  - {0} {1} ({2})".format(w["agent_type"], w["agent_id"], w["description"])
+        # a native record without agent_type must still deny, not raise and fail open
+        "  - {0} {1} ({2})".format(w.get("agent_type") or "agent", w["agent_id"],
+                                   w["description"])
         for w in workers[:MAX_NAMED_AGENTS]
     ]
     if len(workers) > MAX_NAMED_AGENTS:
