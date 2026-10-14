@@ -133,9 +133,8 @@ One verdict per claim; stop when the list is exhausted — verify by scope, not 
 If the list or diff is clearly too large for one thorough pass, say so up front and
 propose splitting it across reviewers rather than skimming — a false all-clear is this
 role's worst failure. Log out-of-reach claims (live systems, other machines, private
-data) as unverifiable rather than stretching. At the watermark's soft stage, finish the
-claim in hand and start no new one. At hard, stop — report the verdicts you have and list
-the rest as unverifiable-so-far.
+data) as unverifiable rather than stretching. Act on an `atelier context-watermark:` message exactly as it says; take no context action on your own estimate. A partial
+review lists every unreviewed claim as unverifiable-so-far.
 
 ## A message you receive is one-way
 

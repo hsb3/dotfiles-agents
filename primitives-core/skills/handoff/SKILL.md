@@ -17,8 +17,9 @@ check the SAME candidate paths in the SAME order this skill writes to - keeping 
 sync is load-bearing, not cosmetic.
 
 <!-- harness:claude-code -->
-`context-watermark` nudges "run /handoff, then /clear or /compact" once context crosses the
-soft/hard watermark.
+Once context crosses the soft or hard watermark, `context-watermark` nudges the session to update
+the handoff with the `atelier:compact-handoff` skill (`/atelier:prepare-compact`) and prepare
+compaction.
 <!-- /harness -->
 
 ## File location

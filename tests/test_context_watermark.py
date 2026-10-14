@@ -352,20 +352,20 @@ class HookRunTests(_ScrubbedEnv):
             self.assertRegex(text, r"(run|with) the atelier:compact-handoff skill "
                                    r"\(on Claude Code: /atelier:prepare-compact\)")
 
-    def test_worker_texts_are_unchanged_and_do_not_name_prepare_compact(self):
+    def test_worker_texts_name_the_action_and_do_not_name_prepare_compact(self):
         self.assertEqual(hook.MESSAGES["notice"], (
             "atelier context-watermark: context is ~{k}k tokens, past the ~{notice}k "
             "notice watermark. This is advisory: reduce further grounding reads and "
             "continue the current bounded slice."))
         self.assertEqual(hook.MESSAGES["soft"], (
             "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
-            "watermark. This is advisory: checkpoint at the next safe boundary; finish "
-            "small bounded work before arranging continuation."))
+            "watermark. This is advisory: finish the slice or dispatch in hand and start "
+            "no new one."))
         self.assertEqual(hook.MESSAGES["hard"], (
             "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
-            "watermark. This is advisory and grants no authority: preserve the branch, "
-            "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
-            "before continuation."))
+            "watermark. This is advisory and grants no authority: at the next safe boundary "
+            "commit or list uncommitted changes, bring your handoff note or plan file current "
+            "with test proof, and return; your dispatcher decides continuation."))
         for tier, ctx in (("soft", 260_000), ("hard", 410_000)):
             text = hook._format_message(
                 tier, ctx, 150_000, 250_000, 400_000, layer="worker")
