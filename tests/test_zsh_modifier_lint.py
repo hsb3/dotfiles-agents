@@ -229,6 +229,8 @@ class Timing(unittest.TestCase):
             # an override check per command start must stop at the end of its command
             ("A=$x:r;" * 40000, 1),
             ("A=$x:r\n" * 40000, 1),
+            # a backslash run inside backticks is walked once, whatever follows it
+            ("echo `" + "\\" * 40000 + "x $T:r`", 1),
         )
         for command, denied in shapes:
             with self.subTest(command=command[-20:], size=len(command)):

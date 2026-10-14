@@ -112,6 +112,8 @@ def scan(cmd):
                     unescaped, lead_at, i = j, i, j
                 else:
                     i = j + 1
+            elif j > i:
+                i = j + (j - i) % 2  # an odd run's last backslash escapes the next character
             else:
                 i += 2
         elif c == "$":

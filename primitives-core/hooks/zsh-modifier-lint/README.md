@@ -38,8 +38,9 @@ tool exits 0 with no output.
   flagged, though zsh prints it literally.
 - Inside an unquoted heredoc body, `$( )` and backticks are not tracked: a single-quoted `$T:r`
   or a separating `&` inside one is flagged, and an escaped `\$T:r` in backticks is missed.
-- Backslashes before a `$` in backticks are counted for one level of backticks only, and a `#`
-  comment inside backticks runs past the closing backtick to the end of the line.
+- Backslashes before a `$` in backticks are counted for one level of backticks only, and a heredoc
+  opened inside backticks is not read. A `#` comment inside backticks runs past the closing
+  backtick to the end of the line, so an escaped `\$T:r` later on that line is flagged.
 - Text another shell builds or reads later: `eval "$cmd"`, a script file, or `zsh -c '$T:r'`.
 
 ## Override
