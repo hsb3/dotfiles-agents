@@ -150,8 +150,10 @@ lands, and for good unless that result is a failure, the same rule as for a Task
 
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on
-the TaskStop success result only, paired with the TaskStop call it answers (sidechain lines
-included, so a manager's own TaskStop counts): a `<task-notification>` never settles, because a
+the TaskStop success result only, paired with the TaskStop call it answers. A subagent's payload
+carries the main session transcript, which holds none of its own lines, so when the caller is a
+subagent its own `subagents/agent-<caller>.jsonl` is read too and the two stopped sets are
+unioned: a manager's own TaskStop settles its builder. A `<task-notification>` never settles, because a
 queued prompt or an agent's quoted output can carry the same text. A later resume makes it live
 again: a `SendMessage` call to its id keeps it live until the call's result lands, and for good
 unless that result is a failure (`success: false`, or an error string), so a failed send leaves it
@@ -163,6 +165,20 @@ measured, to fire no `SubagentStop` either. A send to a live agent still in flig
 kills it (its "queued for delivery" success lands after the stop) re-opens the dead agent until a
 stall row settles it: fail-closed, and the result does not reliably tell a queued delivery from a
 resume.
+
+Three more ceilings, each with its fail direction:
+
+- **By-name resume during a pin rebind (fail-open, rare).** Claude Code 2.1.289's binary writes
+  neither `resumedAgentId` nor `pin` when a subagent-owned task is resumed by name and the session
+  already pinned that name to a different id. Not reproduced: no successful resume result carrying
+  neither field appears in local transcripts after 2.1.197. The agent reads as stopped while it runs.
+- **Resume in another file (fail-open).** Each transcript is read on its own and the stopped sets
+  are unioned, so the main session resuming a builder its manager stopped does not re-open it for
+  the manager's calls: it reads as stopped there while it runs.
+- **Write ordering is inferred (fail-closed).** That a subagent's TaskStop result is on disk before
+  its next `PreToolUse` fires is read from captured sidechain files (the result line directly
+  follows its call, and the next call is stamped seconds later), not observed at hook time. If it
+  were not, the builder would stay live for that one call.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only
 scouts too — a `checkout` or `pull` changes the tree a scout is reading mid-read.

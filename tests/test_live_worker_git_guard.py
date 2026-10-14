@@ -57,6 +57,21 @@ DROP = object()  # a record field to leave out
 SEND_USE = "toolu_01AQTS2z2WYtZoxcwL3JZFjL"  # a SendMessage call and its result pair on this
 
 
+FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "fixtures", "live_worker_git_guard")
+
+
+def _captured(name, **subs):
+    """Captured Claude Code lines (redacted; provenance in the file), each
+    `@KEY@` placeholder filled from `subs`. Timestamps were stripped: tests
+    stamp their own order."""
+    with open(os.path.join(FIXTURES, "captured_lines.json"), encoding="utf-8") as fh:
+        text = json.dumps(json.load(fh)[name])
+    for key, value in subs.items():
+        text = text.replace("@{0}@".format(key), value)
+    return json.loads(text)
+
+
 def _session_id():
     return "git-guard-session-{0}".format(next(_SEQ))
 
@@ -276,28 +291,15 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
                 fh.write(json.dumps(obj) + "\n")
 
     @staticmethod
-    def _taskstop(agent_id, tool="TaskStop", sidechain=False, use=True):
-        """A TaskStop call and its success result, trimmed from real 2.1.281
-        lines. `tool` renames the call the result answers; `use=False` drops it."""
-        use_id = "toolu_stop_{0}".format(agent_id)
-        message = "Successfully stopped task: {0} (Run sleep 300)".format(agent_id)
-        call = {
-            "type": "assistant", "isSidechain": sidechain,
-            "message": {"role": "assistant", "content": [{
-                "type": "tool_use", "id": use_id, "name": tool,
-                "input": {"task_id": agent_id}}]},
-        }
-        result = {
-            "type": "user", "isSidechain": sidechain,
-            "message": {"role": "user", "content": [{
-                "tool_use_id": use_id, "type": "tool_result",
-                "content": json.dumps({"message": message, "task_id": agent_id,
-                                       "task_type": "local_agent"})}]},
-            "toolUseResult": {
-                "message": message, "task_id": agent_id,
-                "task_type": "local_agent", "command": "Run sleep 300"},
-            "version": "2.1.281",
-        }
+    def _taskstop(agent_id, tool="TaskStop", sidechain=False, use=True, caller=""):
+        """A TaskStop call and its success result, captured from 2.1.296: the
+        session transcript, or with `sidechain` the caller's own
+        `subagents/agent-<caller>.jsonl`. `tool` renames the call the result
+        answers; `use=False` drops it."""
+        call, result = _captured("taskstop_sidechain" if sidechain else "taskstop",
+                                 AGENT=agent_id, USE="toolu_stop_" + agent_id,
+                                 CALLER=caller)
+        call["message"]["content"][0]["name"] = tool
         return [call, result] if use else [result]
 
     @staticmethod
@@ -318,29 +320,14 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
 
     @staticmethod
     def _send_message(agent_id):
-        return {
-            "type": "assistant",
-            "message": {"role": "assistant", "content": [{
-                "type": "tool_use", "id": SEND_USE, "name": "SendMessage",
-                "input": {"to": agent_id, "summary": "continue",
-                          "message": "keep going"}}]},
-        }
+        # Captured from 2.1.289, addressed by id.
+        return _captured("send_message", AGENT=agent_id, USE=SEND_USE)[0]
 
     @staticmethod
     def _resume_result(agent_id):
-        # Trimmed from a real 2.1.281 line: SendMessage addressed by NAME, so
-        # only this tool_result carries the id.
-        return {
-            "type": "user",
-            "message": {"role": "user", "content": [{
-                "tool_use_id": SEND_USE,
-                "type": "tool_result", "content": "Resuming agent sleeper"}]},
-            "toolUseResult": {
-                "success": True, "message": "Resuming agent sleeper",
-                "resumedAgentId": agent_id,
-                "pin": {"id": agent_id, "name": "sleeper", "ref": "8cd76e"}},
-            "version": "2.1.281",
-        }
+        # Captured from 2.1.289: resumedAgentId and pin both name it.
+        return _captured("resume_result", AGENT=agent_id, AGENT7=agent_id[:7],
+                         USE=SEND_USE)[0]
 
     @staticmethod
     def _send_result(body, version):
@@ -616,15 +603,26 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
     def test_a_managers_sidechain_taskstop_settles_its_builder(self):
-        # A nested caller's transcript is all sidechain lines.
+        # A subagent's PreToolUse carries the MAIN transcript_path, which holds no
+        # sidechain lines (measured); its own TaskStop lands only in its
+        # sidechain file beside its sidecar.
         manager = self._sidecar("e9333333333333333", agent_type="atelier:manager")
         self._sidecar("e9444444444444444")
         own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
         with open(own, "w", encoding="utf-8") as fh:
-            for obj in self._taskstop("e9444444444444444", sidechain=True):
+            for obj in self._taskstop("e9444444444444444", sidechain=True, caller=manager):
                 fh.write(json.dumps(obj) + "\n")
-        self._assert_silent(self._run(self._payload(
-            "git commit -m wave", transcript_path=own, agent_id=manager)))
+        self._assert_silent(self._run(self._payload("git commit -m wave", agent_id=manager)))
+
+    def test_another_agents_sidechain_taskstop_does_not_settle_for_the_main_session(self):
+        manager = self._sidecar("e9a33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9a44444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in self._taskstop("e9a44444444444444", sidechain=True, caller=manager):
+                fh.write(json.dumps(obj) + "\n")
+        self.assertIn("e9a44444444444444",
+                      self._assert_denied(self._run(self._payload("git commit -m x"))))
 
     def test_a_statusless_resume_quoting_a_kill_still_reopens(self):
         self._sidecar("e9555555555555555")

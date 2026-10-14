@@ -987,6 +987,11 @@ def _live_workers(transcript_path, caller):
     # A TaskStop'd or user-killed agent fires no SubagentStop, so the ledger
     # never settles it; the session transcript records the kill instead.
     stopped = pending.stopped_ids(transcript_path, candidates)
+    if caller:
+        # A subagent's payload carries the MAIN transcript, which holds none of its
+        # own lines; its TaskStop lands only in its sidechain file beside its sidecar.
+        stopped |= pending.stopped_ids(
+            os.path.join(directory, "agent-{0}.jsonl".format(caller)), candidates)
     for key in candidates:
         if key == caller or key in stopped:
             continue
