@@ -257,6 +257,9 @@ class PresentationPackages(unittest.TestCase):
         parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'<a:chExt cx="0"', b'<a:chExt cx="-1"')
         with self.assertRaisesRegex(ValueError, 'negative cx=-1'):
             pptx.validate(parts)
+        parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'<a:chExt cx="-1"', b'<a:chExt cx="1.5"')
+        with self.assertRaisesRegex(ValueError, "slide1.xml '.*': non-integer cx=1.5"):
+            pptx.validate(parts)
 
     def test_xml_default_content_type_cannot_bypass_entity_guard(self):
         parts = fixture()

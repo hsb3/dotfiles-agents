@@ -134,7 +134,7 @@ def shape_name(el, parent):
 
 
 def extent_findings(name, tree):
-    """Broken a:ext/a:chExt extents on slide part name: negative anywhere, zero inside a picture.
+    """Broken a:ext/a:chExt extents on slide part name: non-integer or negative, or zero inside a picture.
 
     Lines and connectors legitimately have cx or cy = 0. Rotation and group transforms are not checked.
     """
@@ -146,8 +146,15 @@ def extent_findings(name, tree):
             continue
         for k in ('cx', 'cy'):
             value = el.get(k)
-            if value is not None and (int(value) < 0 or int(value) == 0 and el in pictures):
-                kind = 'negative' if int(value) < 0 else 'zero picture'
+            if value is None:
+                continue
+            try:
+                n = int(value)
+            except ValueError:
+                findings.append(f'{name} {shape_name(el, parent)!r}: non-integer {k}={value}')
+                continue
+            if n < 0 or n == 0 and el in pictures:
+                kind = 'negative' if n < 0 else 'zero picture'
                 findings.append(f'{name} {shape_name(el, parent)!r}: {kind} {k}={value}')
     return findings
 

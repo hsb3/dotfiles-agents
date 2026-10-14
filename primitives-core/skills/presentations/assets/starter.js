@@ -20,7 +20,7 @@ const topics = {
     conclusion: "The pilot needs a distribution partner",
     evidence: "Repeat usage supports a wider trial",
     next: "One introduction would test the channel",
-    stat: { value: "Repeat use", label: "Wider trial scope", detail: "Repeat pilot usage is the basis for a wider trial." },
+    stat: { value: "3 of 4", label: "Pilot users returned", detail: "Repeat pilot usage is the basis for a wider trial." },
   },
   client: {
     topic: "Payment-difference review pilot",

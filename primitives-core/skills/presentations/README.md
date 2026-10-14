@@ -34,8 +34,8 @@ content and review every layout. Paragraph edits adopt the first run's formattin
 arbitrary object/chart edits use the source or a native application. Merge and template
 preservation have [explicit boundaries](references/editing.md). Structural validation
 is **not full ISO/ECMA schema conformance**, and rendering needs installed fonts and tools.
-It rejects negative shape extents and zero-size pictures; rotation and group transforms are
-not checked.
+It rejects non-integer or negative slide shape extents and zero-size pictures, in every
+command that reads a deck; layouts, masters, rotation and group transforms are not checked.
 Edits refuse conflicting XML namespace prefixes; merge compares numeric slide dimensions,
 allowing equal-size decks with different optional size labels.
 
