@@ -512,16 +512,18 @@ def stopped_ids(transcript_path, candidates):
 
 
 def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES,
-                 transcript_path=None):
+                 transcript_path=None, sidechain_path=None):
     """Sorted agent_ids started in `directory` that the ledger has not settled.
 
-    With `transcript_path`, an agent it resumed after its latest settle is
-    unsettled again until its next one (the git guard; telemetry passes none).
+    With `transcript_path` (and a nested caller's `sidechain_path`), an agent
+    either resumed after its latest settle is unsettled again until its next
+    one (the git guard; telemetry passes neither).
     """
     started = started_keys(directory)
     settled_at = _settled_at(tail_bytes)
-    settled = set(settled_at) - _resumed_after(
-        transcript_path, {k: settled_at[k] for k in started if k in settled_at})
+    window = {k: settled_at[k] for k in started if k in settled_at}
+    settled = set(settled_at) - (_resumed_after(transcript_path, window)
+                                 | _resumed_after(sidechain_path, window))
     if extra_settled:
         settled.update(k for k in extra_settled if k)
     return sorted(key for key in started if key not in settled)

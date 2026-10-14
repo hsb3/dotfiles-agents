@@ -142,7 +142,8 @@ cannot be hurt by anything done in this tree, which is also why this guard skips
 The pending set comes from `hooks/_lib/pending.py`, shared with `subagent-telemetry` so the two
 cannot disagree about who is live: the `agent-*.meta.json` sidecars in this session's
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
-already settled, unless the caller's transcript holds a `SendMessage` result naming it as resumed
+already settled, unless the session transcript, or a nested caller's own `subagents/agent-<caller>.jsonl`, holds a
+`SendMessage` result naming it as resumed
 (`resumedAgentId`, or `pin.id` on a success: a task owned by a subagent resumes without
 `resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`, or
 a `SendMessage` call to its id stamped after that `ts`: the call keeps it live until its result
@@ -173,8 +174,8 @@ Three more ceilings, each with its fail direction:
   already pinned that name to a different id. Not reproduced: no successful resume result carrying
   neither field appears in local transcripts after 2.1.197. The agent reads as stopped while it runs.
 - **Resume in another file (fail-open).** Each transcript is read on its own and the stopped sets
-  are unioned, so the main session resuming a builder its manager stopped does not re-open it for
-  the manager's calls: it reads as stopped there while it runs.
+  are unioned, so a builder stopped in one file and resumed in the other (the main session
+  resuming a builder its manager stopped, or the reverse) reads as stopped while it runs.
 - **Write ordering is inferred (fail-closed).** That a subagent's TaskStop result is on disk before
   its next `PreToolUse` fires is read from captured sidechain files (the result line directly
   follows its call, and the next call is stamped seconds later), not observed at hook time. If it

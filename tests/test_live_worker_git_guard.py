@@ -624,6 +624,22 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertIn("e9a44444444444444",
                       self._assert_denied(self._run(self._payload("git commit -m x"))))
 
+    def test_a_managers_sidechain_resume_after_the_ledger_settle_makes_it_live_again(self):
+        manager = self._sidecar("e9b33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9b44444444444444")
+        self._settle("e9b44444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in (self._send_message("e9b44444444444444"),
+                        self._resume_result("e9b44444444444444")):
+                fh.write(json.dumps(dict(obj, timestamp=self.AFTER)) + "\n")
+        self.assertIn("e9b44444444444444", self._assert_denied(
+            self._run(self._payload("git commit -m x", agent_id=manager))))
+
+    def test_a_caller_id_holding_a_nul_still_denies(self):
+        self._sidecar("e9c44444444444444")
+        self._assert_denied(self._run(self._payload("git commit -m x", agent_id="m\u0000x")))
+
     def test_a_statusless_resume_quoting_a_kill_still_reopens(self):
         self._sidecar("e9555555555555555")
         queued, _ = self._notification("e9555555555555555")
