@@ -706,6 +706,34 @@ class HookRunTests(_ScrubbedEnv):
             self.assertEqual((self.rows()[-1]["fired"], self.rows()[-1]["suppressed"]),
                              (False, "state-unwritable"))
 
+    def midturn(self, ctx_tokens, session):
+        proc = self.run_hook(self.main_tool_payload(ctx_tokens, session))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return proc.stdout.strip()
+
+    def test_a_reading_below_hard_rearms_the_midturn_nudge(self):
+        session = "main-{0}".format(next(_SEQ))
+        self.assertIn("additionalContext", self.midturn(410_000, session))
+        self.assertEqual(self.midturn(420_000, session), "")
+        self.assertEqual(self.midturn(200_000, session), "")  # compacted
+        self.assertIn("additionalContext", self.midturn(410_000, session))
+        self.assertEqual(self.midturn(420_000, session), "")
+
+    def test_a_reading_below_hard_lifts_the_prompt_paths_hard_report(self):
+        session = "main-{0}".format(next(_SEQ))
+        self.run_hook(self.session_payload(410_000, session=session))
+        self.assertEqual(self.midturn(410_000, session), "")
+        self.assertEqual(self.rows()[-1]["suppressed"], "prompt-reported-hard")
+        self.assertEqual(self.midturn(200_000, session), "")  # compacted
+        self.assertIn("additionalContext", self.midturn(410_000, session))
+
+    def test_a_hard_prompt_after_the_low_reading_still_suppresses(self):
+        session = "main-{0}".format(next(_SEQ))
+        self.assertEqual(self.midturn(200_000, session), "")
+        self.run_hook(self.session_payload(410_000, session=session))
+        self.assertEqual(self.midturn(410_000, session), "")
+        self.assertEqual(self.rows()[-1]["suppressed"], "prompt-reported-hard")
+
     def test_main_session_nudge_does_not_disturb_the_prompt_path(self):
         session = "main-{0}".format(next(_SEQ))
         self.run_hook(self.main_tool_payload(410_000, session))

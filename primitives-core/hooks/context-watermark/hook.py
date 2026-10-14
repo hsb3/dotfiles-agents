@@ -495,6 +495,17 @@ def _mark_fired(key):
     return _load_state(key).get("fired") is True
 
 
+def _rearm(key, prompt_reported_hard):
+    """A reading below hard (a compaction) re-arms the nudge.
+
+    It also lifts a hard report the prompt path made before this reading, but
+    not one it makes after, which is why the flag is captured here.
+    """
+    state = {"fired": False, "prompt_hard_lifted": prompt_reported_hard}
+    if _load_state(key) != state:
+        _save_state(key, state)
+
+
 def handle_session_tool(payload, log):
     """PostToolUse in the main session: one hard nudge per session, mid-turn."""
     if codex_lifecycle.enabled():
@@ -512,13 +523,17 @@ def handle_session_tool(payload, log):
     tier = _tier_for(ctx_tokens, notice, soft, hard)
     row = dict(_row("session", session_id, ctx_tokens, tier, False, model, info,
                     notice, soft, hard), event="PostToolUse")
-    if tier == "hard":
-        midturn_key = session_id + "-midturn"  # its own file: the prompt path rewrites its state whole
+    midturn_key = session_id + "-midturn"  # its own file: the prompt path rewrites its state whole
+    prompt_reported_hard = _load_state(session_id).get("last_tier") == "hard"
+    if tier != "hard":
+        _rearm(midturn_key, prompt_reported_hard)
+    else:
+        midturn = _load_state(midturn_key)
         if os.environ.get(CYCLE_OWNER_ENV, "").strip():
             row["suppressed"] = "cycle-owner"
-        elif _load_state(midturn_key).get("fired"):
+        elif midturn.get("fired"):
             row["suppressed"] = "already-fired"
-        elif _load_state(session_id).get("last_tier") == "hard":
+        elif prompt_reported_hard and not midturn.get("prompt_hard_lifted"):
             row["suppressed"] = "prompt-reported-hard"
         elif not _mark_fired(midturn_key):
             row["suppressed"] = "state-unwritable"  # unsaved, it would fire on every call

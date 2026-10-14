@@ -16,7 +16,7 @@
         "hooks": [
           {
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-watermark/hook.py\"",
-            "statusMessage": "Checking worker context watermark...",
+            "statusMessage": "Checking context watermark...",
             "timeout": 10,
             "type": "command"
           }

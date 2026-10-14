@@ -36,8 +36,15 @@ tells the owner. It is suppressed:
 - when `CONTEXT_WATERMARK_CYCLE_OWNER` is non-blank, since the coordinator already reads the
   session mid-turn;
 - when the prompt path has already reported hard for this session (its state's `last_tier`);
-- after it has fired once for this session (its own flag, in `<session>-midturn.json` beside
-  the prompt path's state, so the prompt path's refire every 5 prompts is unchanged);
+- after it has fired, while the session stays at or above hard (its own flag, in
+  `<session>-midturn.json` beside the prompt path's state, so the prompt path's refire every 5
+  prompts is unchanged).
+
+A mid-turn reading below hard (the session compacted) re-arms it: the fired flag clears, and so
+does a hard report the prompt path made before that reading, so a session that climbs back to
+hard is nudged again, because an auto-compaction on a stale handoff can recur. A hard report the
+prompt path makes after the low reading still suppresses it. It is also suppressed:
+
 - when that flag cannot be saved (an unwritable state directory), since an unsaved flag would
   let it fire on every tool call;
 - on Codex, until a live probe shows Codex delivers a main-session `PostToolUse`
