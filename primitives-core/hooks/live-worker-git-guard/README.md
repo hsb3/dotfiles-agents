@@ -270,7 +270,8 @@ starts only the bodies opened inside it, and `;`, `&`, `|`, `<` or `>` ends the 
 backtick tracked (no `$(` opens inside backticks) and a `#` right after the `)` closing a `$(` read as
 part of the word (`$(echo a)#x`), and once more as bash 3.2 reads a `#` inside `$(` (a comment only
 after a blank); a call any reading finds is flagged. A word glued after any `)` (`x=$(echo hi)x git
-push`) may end an assignment, so the next word is read in command position. An unquoted newline ends a command
+push`) may end an assignment, so the next word is read in command position; a quoted `)` opens it
+too (`echo "x)y" git push` is flagged: an over-deny, never a miss). An unquoted newline ends a command
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
@@ -316,13 +317,15 @@ command string the hook is handed, so whatever still displaces them is invisible
   heredoc inside `<( )` or `<<EOF)`; and bash 3.2's own reading of a body inside `"$(`. A call after
   such a body can be missed;
 - a `<<` opener inside `${...}`, `$[...]`, arithmetic spanning lines or after a quoted `))`, or
-  after a zsh glob group `word(` spanning lines, and a `)#` inside a backtick substitution (read
-  as a word, not a comment). The scan has lost the context there, so a call after the body can
+  after a zsh glob group `word(` spanning lines, and a `)#` inside a backtick substitution (the
+  scan reads it as a word, bash as a comment). The scan has lost the context there, so a call after the body can
   be missed;
 - time on adversarial input: deeply nested unclosed `$(`, and nested `(` subshells in a command
   that also holds a backtick, `$((`, `<(`, `>(` or `)#`, grow slowly in the extra reading, and
-  past the 10 s timeout the hook fails open. A call the first reading finds is decided before
-  that reading runs;
+  past the 10 s timeout the hook fails open. A call it would deny is decided on the first
+  reading that finds it, and with no live worker it exits before parsing further, but a command
+  naming `ATELIER_GIT_GUARD_OVERRIDE` still runs every reading, so an oversized one can time out
+  and lose the override's message and ledger row;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

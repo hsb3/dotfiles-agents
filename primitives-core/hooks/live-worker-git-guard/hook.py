@@ -1085,6 +1085,9 @@ def main():
         else:
             live = _live_workers(
                 payload.get("transcript_path"), pending.agent_key(payload.get("agent_id")))
+        # nothing to deny and no override row to write: skip the slower nest readings
+        if not live and OVERRIDE_VAR not in command:
+            sys.exit(0)
         decided = None
         for tokens, verb, git_at, cmd_start in calls:
             overridden = _override_before(tokens, cmd_start, git_at)

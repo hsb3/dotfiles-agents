@@ -72,6 +72,19 @@ class LiveHookDecisionTiming(unittest.TestCase):
         self.assertIn("push", case._assert_denied(result))
         self.assertLess(elapsed, BUDGET, f"full hook elapsed={elapsed:.2f}s (budget {BUDGET}s)")
 
+    def test_plain_push_before_nested_subshells_with_no_worker_is_allowed_in_budget(self):
+        case = live_hook.LiveWorkerGitGuardTests("run")
+        case.setUp()
+        self.addCleanup(case.doCleanups)
+        command = "git push origin HEAD;\necho `a`\n" + "\n".join(
+            f"( cat <<W{k}" for k in range(12000))
+        before = resource.getrusage(resource.RUSAGE_CHILDREN)
+        result = case._run(case._payload(command))
+        after = resource.getrusage(resource.RUSAGE_CHILDREN)
+        elapsed = (after.ru_utime - before.ru_utime) + (after.ru_stime - before.ru_stime)
+        case._assert_silent(result)
+        self.assertLess(elapsed, BUDGET, f"full hook elapsed={elapsed:.2f}s (budget {BUDGET}s)")
+
 
 for _g, _run in GUARDS.items():
     for _s, (_n, _b) in SHAPES.items():
