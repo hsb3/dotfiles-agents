@@ -3,7 +3,7 @@
 
 zsh reads a letter after an unbraced parameter's colon as a history modifier, so
 `$T:refs/heads/x` loses `$T`'s extension and the `r`, where bash keeps the colon. The braced
-`"${T}:refs/heads/x"` reads the same in both. See README.md for what passes and the ceilings.
+`"${T}":refs/heads/x` reads the same in both. See README.md for what passes and the ceilings.
 
 Reads the command text only and never runs a shell. Stdlib-only, Python 3.9 compatible; any
 malformed payload exits 0 with no output.
@@ -98,13 +98,20 @@ def scan(cmd):
     # [kind, command start, paren depth, an enclosing command is overridden];
     # "dq" has no command start. A hit's scope is (that flag, its command start).
     stack = [["top", 0, 0, False]]
-    i, n, ticks, unescaped = 0, len(cmd), 0, -1
+    i, n, ticks, unescaped, lead_at = 0, len(cmd), 0, -1, -1
     while i < n:
         kind, c = stack[-1][0], cmd[i]
         if c == "\\":
-            # inside backticks the shell drops the backslash of `\$` and expands the `$`
-            if ticks and cmd.startswith("$", i + 1):
-                unescaped, i = i + 1, i + 1
+            j = i
+            while ticks and cmd.startswith("\\", j):
+                j += 1
+            # backticks halve a backslash run and unescape `\$`, so a `$` after k backslashes
+            # still expands when k % 4 is 0 or 1
+            if j > i and cmd.startswith("$", j):
+                if (j - i) % 4 < 2:
+                    unescaped, lead_at, i = j, i, j
+                else:
+                    i = j + 1
             else:
                 i += 2
         elif c == "$":
@@ -115,7 +122,7 @@ def scan(cmd):
                 i += 2
             else:
                 i = _param(cmd, i, kind == "dq", (stack[-1][3], stack[-1][1]), hits,
-                           "\\" if unescaped == i else "")
+                           cmd[lead_at:i] if unescaped == i else "")
         elif c == "`":
             if kind == "bt":
                 stack.pop()

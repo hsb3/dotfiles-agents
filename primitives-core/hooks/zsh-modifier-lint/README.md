@@ -36,8 +36,10 @@ tool exits 0 with no output.
 - Parentheses in `$( )` are counted, so a `case` pattern's `)` closes it early. In `"$(case $y in
   a) echo '$T:r';; esac)"` the rest is then read as double-quoted text and the single-quoted `$T:r` is
   flagged, though zsh prints it literally.
-- Inside an unquoted heredoc body, `$( )` is not tracked: a single-quoted `$T:r` or a separating
-  `&` inside one is flagged.
+- Inside an unquoted heredoc body, `$( )` and backticks are not tracked: a single-quoted `$T:r`
+  or a separating `&` inside one is flagged, and an escaped `\$T:r` in backticks is missed.
+- Backslashes before a `$` in backticks are counted for one level of backticks only, and a `#`
+  comment inside backticks runs past the closing backtick to the end of the line.
 - Text another shell builds or reads later: `eval "$cmd"`, a script file, or `zsh -c '$T:r'`.
 
 ## Override

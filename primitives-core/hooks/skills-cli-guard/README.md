@@ -48,9 +48,6 @@ Not containment. It catches the plain mistake, not a determined workaround.
 - A `#` inside a word, such as `${#x}` or `a#b`. The shell keeps it as part of the word, but
   `shlex` starts a comment there, so the rest of that line goes unread and
   `echo ${#x}; npx skills add y` is let through.
-- A heredoc body that holds a nested heredoc with the same delimiter. The body ends at the
-  first line equal to that delimiter, so the lines after it read as commands, and one that
-  runs the CLI is denied.
 - A `<<` that opens no heredoc: one in quotes or a comment (`-m "a << b"`), or an arithmetic
   shift (`$((1<<2))`). It reads as an opener, so the following lines go unread until one
   equals the word after it.

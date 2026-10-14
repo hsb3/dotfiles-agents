@@ -114,6 +114,12 @@ class Denies(unittest.TestCase):
         self.assertIn('`\\$T:r` -> `"\\${T}":r`', reason("echo `echo \\$T:r`"))
         self.assertIn('`\\$T:r` -> `\\${T}:r`', reason('echo `echo "\\$T:r"`'))
         self.assertEqual(reason("echo \\$T:r"), "")
+        # backticks halve a backslash run: after k of them the `$` expands iff k % 4 is 0 or 1
+        for k, fires in ((2, False), (3, False), (4, True), (5, True), (6, False)):
+            with self.subTest(k=k):
+                r = reason("echo `printf %s " + "\\" * k + "$T:r`")
+                self.assertEqual(bool(r), fires, r)
+        self.assertIn('`\\\\\\\\$T:r` -> `"\\\\\\\\${T}":r`', reason("echo `echo \\\\\\\\$T:r`"))
 
     def test_rewrite_stops_at_an_enclosing_brace(self):
         self.assertIn('`$T:r` -> `"${T}":r`', reason("echo ${X:-$T:r}"))
@@ -257,7 +263,7 @@ class ZshDifferential(unittest.TestCase):
         "a$T:rx", "$T$T:hx", "$T:r:h", "$(print -r -- $T:rx)", '"$(print -r -- $T:rx)"',
         "$T:-x", "$T:=x", "$T:+x", "$T:?x", "$T:/usr/bin", "$T:$T", "$T\\:rx",
         "`print -r -- \\$T:rx`", '"`print -r -- \\$T:rx`"', '`print -r -- "\\$T:rx"`',
-        "`print -r -- \\\\$T:rx`", "`print -r -- \\$T:rx \\$(print -r -- $T:hx)`",
+        "`print -r -- \\$T:rx \\$(print -r -- $T:hx)`",
         '"$T\\:rx"', '"$T":rx', "$T:\\rx", "$T:Fx", "$T:Wx", "$T:&x", '"$T:&x"',
     ]
 
