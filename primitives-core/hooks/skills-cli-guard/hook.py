@@ -31,6 +31,14 @@ REASON = (
     "Author, move or delete skill directories by hand instead. If this run is deliberate, "
     "prefix the command itself: `" + OVERRIDE + " npx skills ...`."
 )
+# shlex grows a word by string concatenation, so its time is quadratic in one word's length
+# and a timeout fails open; above this size the hook denies instead of reading.
+LIMIT = 128 * 1024
+TOO_BIG = (
+    "skills-cli-guard: this command mentions `skills` and carries more than %d KB of text "
+    "outside heredoc bodies, too much to read inside the hook's timeout. Move the long text "
+    "into a file or a heredoc body and rerun." % (LIMIT // 1024)
+)
 
 
 def past_flags(words):
@@ -65,8 +73,11 @@ def drop_heredoc_bodies(command):
     lines, kept, i = command.split("\n"), [], 0
     while i < len(lines):
         line, i = lines[i], i + 1
+        parts = []
         while line.endswith("\\") and i < len(lines):
-            line, i = line[:-1] + lines[i], i + 1
+            parts.append(line[:-1])
+            line, i = lines[i], i + 1
+        line = "".join(parts) + line
         kept.append(line)
         for dash, word in HEREDOC.findall(line):
             word = re.sub(r"[\\'\"]", "", word)
@@ -115,21 +126,22 @@ def scan(toks):
 
 
 def denied(command):
+    """The deny reason for the command, or None when it may run."""
     if "skills" not in command:
-        return False
+        return None
     # A newline ends a command. The `;` after it does that for shlex, and survives a `#`
     # comment, which swallows its own newline.
     text = drop_heredoc_bodies(command).replace("\n", "\n;")
+    if len(text) > LIMIT:
+        return TOO_BIG
     # ponytail: shlex drops quoting, so a quoted `;|&(` reads as an operator, a "$(...)" stays
     # one word, and a mid-word `#` starts a comment; a quote-aware lexer would fix all three.
-    # ponytail: shlex grows a word by string concatenation, so one quoted word near 1 MB
-    # outruns the 10 s timeout; a lexer collecting characters in a list would not.
     lex = shlex.shlex(text, posix=True, punctuation_chars=OPERATORS)
     lex.whitespace_split = True
     try:
-        return scan(lex)
+        return REASON if scan(lex) else None
     except ValueError:
-        return False  # an unterminated quote: the shell refuses to run that text too
+        return None  # an unterminated quote: the shell refuses to run that text too
 
 
 def main():
@@ -139,11 +151,12 @@ def main():
             return
         tool_input = data.get("tool_input")
         command = tool_input.get("command") if isinstance(tool_input, dict) else None
-        if isinstance(command, str) and denied(command):
+        reason = denied(command) if isinstance(command, str) else None
+        if reason:
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "deny",
-                "permissionDecisionReason": REASON,
+                "permissionDecisionReason": reason,
             }}))
     except Exception:  # noqa: BLE001 — a guard fails open, never with a traceback
         return

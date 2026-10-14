@@ -13,6 +13,7 @@ import string
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -196,6 +197,29 @@ class FailOpen(unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.exists(ZSH), "no /bin/zsh (Linux CI)")
+class Timing(unittest.TestCase):
+    """Each shape gets 2 s of the hook's 10 s timeout, which fails open when it runs out."""
+
+    def test_deep_nesting_finishes_inside_the_budget(self):
+        shapes = (
+            ("$(" * 2000 + "x" * 200000, 0),
+            # a hit per command under every frame: the override check must not walk the stack
+            ("$(" * 2000 + "$x:r;" * 40000, 1),
+        )
+        for command, denied in shapes:
+            with self.subTest(command=command[-20:], size=len(command)):
+                started = time.monotonic()
+                try:
+                    proc = subprocess.run(
+                        [sys.executable, HOOK_PATH],
+                        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
+                        capture_output=True, text=True, timeout=10)
+                except subprocess.TimeoutExpired:
+                    self.fail("ran past the hook's 10 s timeout")
+                self.assertLess(time.monotonic() - started, 2.0)
+                self.assertEqual(len(proc.stdout.splitlines()), denied)
+
+
 class ZshDifferential(unittest.TestCase):
     """zsh is the oracle: the lint fires iff the unbraced probe expands differently."""
 

@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -311,6 +312,28 @@ class CardReproductionTests(unittest.TestCase):
                     [sys.executable, HOOK_PATH], input=payload(command),
                     capture_output=True, text=True, timeout=5)
                 self.assertEqual(proc.stdout, "")
+
+    def test_adversarial_size_finishes_inside_the_budget(self):
+        """Each shape gets 2 s of the hook's 10 s timeout, which fails open when it runs out."""
+        shapes = (
+            # 60,000 continuation lines join into one 3 MB logical line, then one shlex word
+            ("echo skills" + ("\\\n" + "x" * 49) * 60000, hook.TOO_BIG),
+            ('git commit -m "' + "npx skills add " * 140000 + '"', hook.TOO_BIG),
+            # the worst case shlex still reads: one word just under the size limit
+            ('npx skills "' + "a b " * (hook.LIMIT // 4 - 8) + '"', hook.REASON),
+        )
+        for command, expected in shapes:
+            with self.subTest(command=command[:40], size=len(command)):
+                started = time.monotonic()
+                try:
+                    proc = subprocess.run(
+                        [sys.executable, HOOK_PATH], input=payload(command),
+                        capture_output=True, text=True, timeout=10)
+                except subprocess.TimeoutExpired:
+                    self.fail("ran past the hook's 10 s timeout")
+                self.assertLess(time.monotonic() - started, 2.0)
+                decision = json.loads(proc.stdout)["hookSpecificOutput"]
+                self.assertEqual(decision["permissionDecisionReason"], expected)
 
 
 if __name__ == "__main__":

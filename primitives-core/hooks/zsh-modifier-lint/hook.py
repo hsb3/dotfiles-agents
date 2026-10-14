@@ -30,7 +30,7 @@ OVERRIDE_AT_COMMAND = re.compile(
     r"(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*" + OVERRIDE + r"=1\s")
 
 
-def _param(cmd, i, quoted, starts, hits):
+def _param(cmd, i, quoted, scope, hits):
     """Record a hit if the `$` at i opens one; return where scanning resumes."""
     m = PARAM.match(cmd, i)
     if not m:
@@ -40,7 +40,7 @@ def _param(cmd, i, quoted, starts, hits):
         return m.end()
     end = REST.match(cmd, mod.end()).end()
     braced = "${%s}%s" % (m.group(1), cmd[m.end() - 1:end])
-    hits.append((cmd[i:end], braced if quoted else '"%s"' % braced, starts))
+    hits.append((cmd[i:end], braced if quoted else '"%s"' % braced, scope))
     return end
 
 
@@ -57,7 +57,7 @@ def _skip_ansi_c(cmd, j):
 
 def _bodies(cmd, pos, pending, hits):
     """Consume the pending heredoc bodies starting at pos; return the index after them."""
-    for delim, strip, expands, starts in pending:
+    for delim, strip, expands, scope in pending:
         while pos < len(cmd):
             end = cmd.find("\n", pos)
             end = len(cmd) if end < 0 else end
@@ -69,7 +69,7 @@ def _bodies(cmd, pos, pending, hits):
                 if cmd[j] == "\\":
                     j += 2
                 elif cmd[j] == "$":
-                    j = _param(cmd, j, True, starts, hits)
+                    j = _param(cmd, j, True, scope, hits)
                 else:
                     j += 1
     del pending[:]
@@ -78,27 +78,39 @@ def _bodies(cmd, pos, pending, hits):
 
 def scan(cmd):
     """(offending text, braced rewrite) for each modifier zsh would apply, minus overrides."""
-    hits, pending = [], []
-    stack = [["top", 0, 0]]  # [kind, command start, paren depth]; "dq" has no command start
+    hits, pending, memo = [], [], {}
+
+    def overridden(start):
+        if start not in memo:
+            memo[start] = start is not None and bool(OVERRIDE_AT_COMMAND.match(cmd, start))
+        return memo[start]
+
+    def push(kind, start, depth):
+        # an enclosing frame's start cannot move while this one is open, so its verdict holds
+        outer = stack[-1][3] or overridden(stack[-1][1])
+        stack.append([kind, start, depth, outer])
+
+    # [kind, command start, paren depth, an enclosing command is overridden];
+    # "dq" has no command start. A hit's scope is (that flag, its command start).
+    stack = [["top", 0, 0, False]]
     i, n = 0, len(cmd)
     while i < n:
         kind, c = stack[-1][0], cmd[i]
-        starts = [f[1] for f in stack if f[1] is not None]
         if c == "\\":
             i += 2
         elif c == "$":
             if kind != "dq" and cmd.startswith("$'", i):
                 i = _skip_ansi_c(cmd, i + 2)
             elif cmd.startswith("$(", i):
-                stack.append(["sub", i + 2, 1])
+                push("sub", i + 2, 1)
                 i += 2
             else:
-                i = _param(cmd, i, kind == "dq", starts, hits)
+                i = _param(cmd, i, kind == "dq", (stack[-1][3], stack[-1][1]), hits)
         elif c == "`":
             if kind == "bt":
                 stack.pop()
             else:
-                stack.append(["bt", i + 1, 0])
+                push("bt", i + 1, 0)
             i += 1
         elif kind == "dq":
             if c == '"':
@@ -108,7 +120,7 @@ def scan(cmd):
             end = cmd.find("'", i + 1)
             i = n if end < 0 else end + 1
         elif c == '"':
-            stack.append(["dq", None, 0])
+            push("dq", None, 0)
             i += 1
         elif c == "#" and (i == 0 or cmd[i - 1] in " \t\n;&|("):
             end = cmd.find("\n", i)
@@ -121,7 +133,7 @@ def scan(cmd):
             if m:
                 word = m.group(1)
                 pending.append((QUOTE_CHARS.sub("", word), j > i + 2,
-                                not QUOTE_CHARS.search(word), starts))
+                                not QUOTE_CHARS.search(word), (stack[-1][3], stack[-1][1])))
             i = m.end() if m else j
         elif kind == "sub" and c == ")" and stack[-1][2] == 1:
             stack.pop()
@@ -137,8 +149,8 @@ def scan(cmd):
                 stack[-1][1] = i
             else:
                 i += 1
-    return [(text, rewrite) for text, rewrite, starts in hits
-            if not any(OVERRIDE_AT_COMMAND.match(cmd, s) for s in starts)]
+    return [(text, rewrite) for text, rewrite, (outer, start) in hits
+            if not (outer or overridden(start))]
 
 
 def deny(hits):

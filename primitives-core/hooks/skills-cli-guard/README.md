@@ -48,9 +48,10 @@ Not containment. It catches the plain mistake, not a determined workaround.
 - A valued runner flag outside `--prefix`, `--cwd`, `-C`, `-w` and `--workspace`. Its value reads
   as the package, so `npx --registry skills prettier` is denied.
 - A function body written `function f { ... }`. The `f() { ... }` form is read.
-- One quoted word near a megabyte, such as a huge `-m "..."` message. `shlex` slows down on a
-  single long word and the hook runs past its 10 s timeout. A heredoc body of any size is
-  dropped before `shlex` and stays fast.
+- More than 128 KB of text outside heredoc bodies, such as a huge `-m "..."` message. `shlex`
+  slows down on one long word and a timeout lets the command through, so a command that size
+  that mentions `skills` is denied unread, with a reason saying to move the text into a file
+  or a heredoc. A heredoc body of any size is dropped first and does not count.
 - Spelling games such as `npx sk""ills`. The text must contain `skills` to be scanned at all.
 
 ## Override
