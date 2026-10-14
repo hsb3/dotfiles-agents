@@ -125,6 +125,7 @@ This file must have ZERO third-party dependencies (Python 3 stdlib only) and
 must stay compatible with Python 3.9.
 """
 
+import bisect
 import functools
 import json
 import os
@@ -394,7 +395,68 @@ def _scan_line(line, stack, terminators=(), paren=True):
     return terminators, tuple(stack), False
 
 
-def _body_end(lines, j, word, quoted, dash, paren=False):
+class _LineIndex:
+    """The terminator lookup for one `command.split("\n")`: per key, the ranks of the
+    lines that could close a body, so finding the next one is a bisect, not a scan.
+
+    Lines are backslash-joined under an unquoted word, raw under a quoted one. A body end
+    is replaced by one or two lines and the caller resumes on the first, so later lookups
+    start at or past `dirty`, the last written, and positions map from the end."""
+
+    def __init__(self, lines):
+        self.lines, self.dirty, self.reps, self.keys = list(lines), -1, {}, {}
+
+    def _rep(self, quoted):
+        """(end positions, texts, each line's offset into its text) of the lines."""
+        if quoted not in self.reps:
+            if quoted:
+                ends, texts, offsets = range(len(self.lines)), self.lines, None
+            else:
+                ends, texts, offsets, parts, offset = [], [], [], [], 0
+                for k, line in enumerate(self.lines):
+                    offsets.append(offset)
+                    if k + 1 < len(self.lines) and (len(line) - len(line.rstrip("\\"))) % 2:
+                        parts.append(line[:-1])
+                        offset += len(line) - 1
+                        continue
+                    ends.append(k)
+                    texts.append("".join(parts) + line)
+                    parts, offset = [], 0
+            self.reps[quoted] = ends, texts, offsets
+        return self.reps[quoted]
+
+    def _ranks(self, quoted, dash, paren):
+        """key -> ascending ranks; the whole text, or under `paren` what precedes the
+        first `)` less trailing blanks (the word then blanks then `)`)."""
+        if (quoted, dash, paren) not in self.keys:
+            table = self.keys[quoted, dash, paren] = {}
+            for rank, text in enumerate(self._rep(quoted)[1]):
+                text = text.lstrip("\t") if dash else text
+                if not paren:
+                    table.setdefault(text, []).append(rank)
+                elif ")" in text:
+                    table.setdefault(text.partition(")")[0].rstrip(" \t"), []).append(rank)
+        return self.keys[quoted, dash, paren]
+
+    def find(self, lines, j, word, quoted, dash, paren):
+        """(the end of the first logical line from `lines[j]` that could close `word`, and
+        its text) or (len(lines), None); None when `j` is a line written since."""
+        if j <= self.dirty:
+            return None
+        shift = len(lines) - len(self.lines)
+        ends, texts, offsets = self._rep(quoted)
+        rank = bisect.bisect_left(ends, j - shift)
+        if offsets and offsets[j - shift]:  # mid-line: the scan reads the rest of it first
+            return ends[rank] + shift, texts[rank][offsets[j - shift]:]
+        best = len(texts)
+        for key_paren in {False, paren}:
+            ranks = self._ranks(quoted, dash, key_paren).get(word, ())
+            k = bisect.bisect_left(ranks, rank)
+            best = min(best, ranks[k]) if k < len(ranks) else best
+        return (len(lines), None) if best == len(texts) else (ends[best] + shift, texts[best])
+
+
+def _body_end(lines, j, word, quoted, dash, paren=False, index=None):
     """(the index of the line that closes a heredoc body starting at `lines[j]`,
     whether the shell reads on past the word there), or (None, False). As in
     bash, under an unquoted word a line ending in an odd run of backslashes joins
@@ -407,11 +469,17 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
     line break `_tokens` puts there stands in for (shlex would glue `);git`).
     """
     while j < len(lines):
-        line = lines[j]
-        while (not quoted and j + 1 < len(lines)
-               and (len(line) - len(line.rstrip("\\"))) % 2):
-            j += 1
-            line = line[:-1] + lines[j]
+        hit = index and index.find(lines, j, word, quoted, dash, paren)
+        if hit:
+            j, line = hit
+            if line is None:
+                break
+        else:
+            line = lines[j]
+            while (not quoted and j + 1 < len(lines)
+                   and (len(line) - len(line.rstrip("\\"))) % 2):
+                j += 1
+                line = line[:-1] + lines[j]
         if dash:
             line = line.lstrip("\t")
         if line == word:
@@ -420,14 +488,17 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
         m = paren and re.match(re.escape(word) + r"((?:[ \t]*\))+)([ \t;&|]+|$)?", line)
         if m:
             # a word glued to the `)` continues it (`$(...)x`): nothing to split
-            lines[j:j + 1] = ([m.group(1), line[m.end():]] if m.group(2) is not None
-                              else [line[len(word):]])
+            rest = ([m.group(1), line[m.end():]] if m.group(2) is not None
+                    else [line[len(word):]])
+            lines[j:j + 1] = rest
+            if index:
+                index.dirty = j + len(rest) - 1
             return j, True
         j += 1
     return None, False
 
 
-def _skip_bodies(lines, i, terminators, paren=True):
+def _skip_bodies(lines, i, terminators, paren=True, index=None):
     """The index after the last of the heredoc bodies that `terminators`
     opened on one line, read in order from `lines[i]`; `i` itself when one is
     never closed, since dropping text is a silent fail-open. A body ended at
@@ -435,7 +506,7 @@ def _skip_bodies(lines, i, terminators, paren=True):
     later body is read as command lines. `paren=False` never ends one at `WORD)`."""
     j = i
     for word, quoted, dash, depth in terminators:
-        j, resumed = _body_end(lines, j, word, quoted, dash, depth > 0 and paren)
+        j, resumed = _body_end(lines, j, word, quoted, dash, depth > 0 and paren, index)
         if j is None:
             return i
         if resumed:
@@ -456,6 +527,7 @@ def _logical_lines(command, paren=True):
     silent fail-open, keeping it is at worst an over-deny.
     """
     lines = command.split("\n")
+    index = _LineIndex(lines)
     out, current, stack, pending, i = [], "", (), [], 0
     while i < len(lines):
         line = lines[i]
@@ -468,7 +540,7 @@ def _logical_lines(command, paren=True):
         if stack[-1:] in ((), ("$(",)):
             ready = [t for t in pending if t[3] >= len(stack)]
             pending = [t for t in pending if t[3] < len(stack)]
-            i = _skip_bodies(lines, i, ready, paren)  # each body and its terminator line
+            i = _skip_bodies(lines, i, ready, paren, index)  # each body and its terminator line
         if any(c != "$(" for c in stack):
             current += "\n"
             continue

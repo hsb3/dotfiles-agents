@@ -433,7 +433,10 @@ both. It is also the complement of `live-worker-git-guard`, never a replacement:
 protects an orchestrator from clobbering its own live children, this one protects peer
 workers from each other and protects named branches. Each is blind exactly where the other
 looks, so running only one leaves a real loss unguarded. Both fail open on every error
-path.
+path. A hook past its 10 s timeout fails open too, so both find a heredoc's closing line
+by lookup rather than by rescanning the command. A command of thousands of unclosed heredocs
+settles in under 2 s, except deeply nested unclosed `$(` in
+`live-worker-git-guard` (hgjs).
 
 `config-custody` is the one hook that can genuinely block a call by matching paths, and its
 limits are worth knowing. It only denies when a project opts in with `enforce: strict` (`advisory` logs would-be
