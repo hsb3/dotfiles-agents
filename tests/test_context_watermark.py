@@ -648,13 +648,109 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(proc.stdout.strip(), "")
         self.assertIn("error", self.rows()[-1])
 
-    def test_post_tool_use_outside_a_worker_produces_nothing(self):
+    def test_post_tool_use_outside_a_worker_measures_the_parent_quietly(self):
+        """Without agent_id it is the main session's own call: the PARENT's 5k
+        transcript is measured, below hard, so a row and no output (mzja)."""
         payload = self.subagent_payload(70_000)
         payload.pop("agent_id")
         proc = self.run_hook(payload)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(proc.stdout.strip(), "")
-        self.assertEqual(self.rows(), [])
+        row = self.rows()[-1]
+        self.assertEqual((row["scope"], row["event"], row["ctx_tokens"], row["fired"]),
+                         ("session", "PostToolUse", 5_000, False))
+        self.assertNotIn("agent_id", row)
+
+    # -- main-session PostToolUse: the mid-turn hard nudge (mzja) ---------
+
+    def main_tool_payload(self, ctx_tokens, session):
+        payload = self.session_payload(ctx_tokens, session=session)
+        payload.pop("prompt")
+        return dict(payload, hook_event_name="PostToolUse", tool_name="Bash")
+
+    def test_main_session_over_hard_nudges_once_toward_the_handoff_step(self):
+        session = "main-{0}".format(next(_SEQ))
+        proc = self.run_hook(self.main_tool_payload(410_000, session))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        out = json.loads(proc.stdout)
+        specific = out["hookSpecificOutput"]
+        self.assertEqual(specific["hookEventName"], "PostToolUse")
+        text = specific["additionalContext"]
+        self.assertTrue(text.startswith("atelier context-watermark:"), text)
+        self.assertIn("hard watermark", text)
+        self.assertIn("/atelier:prepare-compact", text)
+        self.assertIn("atelier:compact-handoff", text)
+        self.assertIn("continue the task", text)
+        self.assertNotIn("stop", text.lower())
+        self.assertNotIn("compact now", text.lower())
+        self.assertTrue(out["systemMessage"].startswith("atelier context-watermark:"))
+        row = self.rows()[-1]
+        self.assertEqual((row["scope"], row["layer"], row["event"], row["tier"], row["fired"]),
+                         ("session", "session", "PostToolUse", "hard", True))
+
+        again = self.run_hook(self.main_tool_payload(410_000, session))
+        self.assertEqual(again.returncode, 0, again.stderr)
+        self.assertEqual(again.stdout.strip(), "")
+        self.assertEqual((self.rows()[-1]["fired"], self.rows()[-1]["suppressed"]),
+                         (False, "already-fired"))
+
+    def test_main_session_nudge_does_not_disturb_the_prompt_path(self):
+        session = "main-{0}".format(next(_SEQ))
+        self.run_hook(self.main_tool_payload(410_000, session))
+        proc = self.run_hook(self.session_payload(410_000, session=session))
+        self.assertIn("additionalContext", json.loads(proc.stdout))
+        self.assertNotIn("event", self.rows()[-1])
+
+    def test_main_session_with_the_cycle_owner_marker_stays_quiet(self):
+        proc = self.run_hook(
+            self.main_tool_payload(410_000, "main-{0}".format(next(_SEQ))),
+            env={"CONTEXT_WATERMARK_CYCLE_OWNER": "coordinator"})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "")
+        row = self.rows()[-1]
+        self.assertEqual((row["tier"], row["fired"], row["suppressed"]),
+                         ("hard", False, "cycle-owner"))
+
+    def test_main_session_after_the_prompt_path_reported_hard_stays_quiet(self):
+        session = "main-{0}".format(next(_SEQ))
+        prompt = self.run_hook(self.session_payload(410_000, session=session))
+        self.assertIn("hard watermark", prompt.stdout)
+        proc = self.run_hook(self.main_tool_payload(420_000, session))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "")
+        row = self.rows()[-1]
+        self.assertEqual((row["event"], row["fired"], row["suppressed"]),
+                         ("PostToolUse", False, "prompt-reported-hard"))
+
+    def test_main_session_below_hard_is_quiet_but_writes_a_row(self):
+        for tokens, tier in ((10_000, "none"), (260_000, "soft"), (390_000, "soft")):
+            proc = self.run_hook(
+                self.main_tool_payload(tokens, "main-{0}".format(next(_SEQ))))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(proc.stdout.strip(), "", tokens)
+            row = self.rows()[-1]
+            self.assertEqual(
+                (row["scope"], row["event"], row["ctx_tokens"], row["tier"], row["fired"]),
+                ("session", "PostToolUse", tokens, tier, False))
+            self.assertEqual(row["hard"], 400_000)
+            self.assertNotIn("suppressed", row)
+
+    def test_main_session_on_codex_stays_quiet_until_the_probe_passes(self):
+        rollout = os.path.join(self.tmp, "codex-main.jsonl")
+        _write_jsonl(rollout, [
+            {"type": "turn_context", "payload": {"model": "gpt-5.6-terra"}},
+            {"type": "event_msg", "payload": {"type": "token_count", "info": {
+                "last_token_usage": {"total_tokens": 60_000}, "model_context_window": 64_000}}},
+        ])
+        out, rows = io.StringIO(), []
+        with mock.patch.dict(os.environ, {"ATELIER_HARNESS": "codex"}), \
+                mock.patch.object(hook, "STATE_DIR", self.state_dir), \
+                mock.patch("sys.stdout", out):
+            hook.handle_session_tool({
+                "hook_event_name": "PostToolUse", "session_id": "codex-main",
+                "transcript_path": rollout, "cwd": self.project}, rows.append)
+        self.assertEqual(out.getvalue(), "")
+        self.assertEqual(rows, [])
 
 
 class WatermarkConfigLoaderTests(_ScrubbedEnv):

@@ -13,13 +13,37 @@ watermark crosses. Both the session and its delegated workers are watched.
 - **`UserPromptSubmit`** — the session's own context, against notice, soft, and hard stages.
 - **`PostToolUse`** — a delegated worker's context, against those same stages. This event
   fires in the parent too, and only a worker's payload carries `agent_id`; that presence is
-  the whole test, and a payload without it produces no output and no ledger row. The wiring
-  uses the same matcher `delegation-watermark` uses
+  the whole test. A payload without it is the main session's own tool call (next bullet). The
+  wiring uses the same matcher `delegation-watermark` uses
   (`Edit|Write|MultiEdit|NotebookEdit|Bash`) rather than `*`, so the cost is bounded to the
   tool calls that actually accumulate context.
+- **`PostToolUse` in the main session** — the mid-turn nudge (below).
 
 Either way: immediately on a fresh crossing, then at most every 5 events while still above it
-(anti-nag state kept per session, and separately per worker).
+(anti-nag state kept per session, and separately per worker). The mid-turn nudge is the
+exception: it fires at most once per session.
+
+### The mid-turn nudge
+
+A long autonomous turn would otherwise cross hard without a word until the next prompt, and an
+auto-compaction near the window is never blocked by the handoff guard. So a main-session
+`PostToolUse` measures the session with the same session stages as the prompt path and, at the
+first call where the tier reaches **hard**, tells the model to update the handoff at the next
+safe boundary with the handoff step of `/atelier:prepare-compact` (the `atelier:compact-handoff`
+skill), then continue the task. It never asks the model to stop or compact. A `systemMessage`
+tells the owner. It is suppressed:
+
+- when `CONTEXT_WATERMARK_CYCLE_OWNER` is non-blank, since the coordinator already reads the
+  session mid-turn;
+- when the prompt path has already reported hard for this session (its state's `last_tier`);
+- after it has fired once for this session (its own flag, in `<session>-midturn.json` beside
+  the prompt path's state, so the prompt path's refire every 5 prompts is unchanged);
+- on Codex, until a live probe shows Codex delivers a main-session `PostToolUse`
+  `additionalContext` to the model; on Codex it neither measures nor writes a row;
+- in any subagent, which takes the worker path above.
+
+A turn of only read-only tools (`Read`, `Grep`, `Agent` and the like) is not seen, because the
+matcher is `Edit|Write|MultiEdit|NotebookEdit|Bash`.
 
 ## The stages
 
@@ -126,7 +150,9 @@ Each measured row carries the identity envelope (`v`, `plugin`, `harness`, `stre
 `project`) plus `scope` (`session` or `subagent`), `session_id`, `ctx_tokens`, `tier` (`none`,
 `notice`, `soft`, or `hard`), `fired`, `model`, `window`, `window_fallback`, `complexity`,
 `notice`, `soft`, `hard`, and `sources` naming which precedence tier supplied each value. A
-subagent row also carries `agent_id`.
+subagent row also carries `agent_id`. A main-session `PostToolUse` row is a session row plus
+`event: "PostToolUse"`, written on every check, and a hard row the nudge did not fire on also
+carries `suppressed` (`cycle-owner`, `prompt-reported-hard` or `already-fired`).
 
 Two row shapes are narrower than that. A row from a handled error path (no transcript, no usage
 block, no worker transcript) carries `null` `ctx_tokens`, `tier: "none"`, `fired: false` and an
