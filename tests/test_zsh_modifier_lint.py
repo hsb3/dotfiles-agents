@@ -13,6 +13,7 @@ import string
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -156,12 +157,21 @@ class Override(unittest.TestCase):
         self.assertEqual(reason("true; " + OVERRIDE + " echo $T:r"), "")
         self.assertEqual(reason(OVERRIDE + " cat <<EOF\n$T:r\nEOF"), "")
         self.assertEqual(reason(OVERRIDE + " echo $(echo $T:r)"), "")
+        # an assignment value may hold quoted spaces, escapes and a separator inside quotes
+        for value in ('"a b"', "'x;y'", "x\\;y", '"a\\" b"', "$(pwd)"):
+            with self.subTest(value=value):
+                self.assertEqual(reason("A=%s %s echo $T:r" % (value, OVERRIDE)), "")
 
     def test_prefix_elsewhere_still_denies(self):
         for command in (OVERRIDE + "\ngit push origin $T:refs/heads/x",
                         OVERRIDE + "; echo $T:r",
                         "echo " + OVERRIDE + " $T:r",
-                        "ATELIER_ZSH_MODIFIER_OVERRIDE=0 echo $T:r"):
+                        "ATELIER_ZSH_MODIFIER_OVERRIDE=0 echo $T:r",
+                        # an escaped quote opens no quote, so the override is only an argument
+                        "A=\\'x echo \\'$T:r " + OVERRIDE + " x",
+                        # a value ends at its command's end, so a later command's prefix is not ours
+                        "A=$T:r;x " + OVERRIDE + " y",
+                        "A=$T:r\n" + OVERRIDE + " y"):
             with self.subTest(command=command):
                 self.assertTrue(reason(command))
 
@@ -193,6 +203,39 @@ class FailOpen(unittest.TestCase):
                               capture_output=True, text=True, timeout=10)
         self.assertEqual(proc.returncode, 0)
         self.assertIn("deny", proc.stdout)
+
+
+class Timing(unittest.TestCase):
+    """Each shape gets 2 s of the hook's 10 s timeout, which fails open when it runs out."""
+
+    def test_deep_nesting_finishes_inside_the_budget(self):
+        shapes = (
+            ("$(" * 2000 + "x" * 200000, 0),
+            # a hit per command under every frame: the override check must not walk the stack
+            ("$(" * 2000 + "$x:r;" * 40000, 1),
+            # an override check per command start must stop at the end of its command
+            ("A=$x:r;" * 40000, 1),
+            ("A=$x:r\n" * 40000, 1),
+        )
+        for command, denied in shapes:
+            with self.subTest(command=command[-20:], size=len(command)):
+                best = None
+                for _ in range(3):  # the best of three, so host load alone cannot fail it
+                    started = time.monotonic()
+                    try:
+                        proc = subprocess.run(
+                            [sys.executable, HOOK_PATH],
+                            input=json.dumps({"tool_name": "Bash",
+                                              "tool_input": {"command": command}}),
+                            capture_output=True, text=True, timeout=10)
+                    except subprocess.TimeoutExpired:
+                        self.fail("ran past the hook's 10 s timeout")
+                    elapsed = time.monotonic() - started
+                    best = elapsed if best is None else min(best, elapsed)
+                    if best < 2.0:
+                        break
+                self.assertLess(best, 2.0)
+                self.assertEqual(len(proc.stdout.splitlines()), denied)
 
 
 @unittest.skipUnless(os.path.exists(ZSH), "no /bin/zsh (Linux CI)")
