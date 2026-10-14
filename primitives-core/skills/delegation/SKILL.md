@@ -541,14 +541,18 @@ termination:
 
 ## Context hygiene
 
-The three-stage advisory policy for managing context is never a stop command. Every layer acts on an
-`atelier context-watermark:` message exactly as it says and takes no context action on its own
-estimate:
+The advisory policy for managing context is never a stop command, and no layer takes a context
+action on its own estimate.
+
+<!-- harness:claude-code -->
+Here the policy has three stages, and every layer acts on an `atelier context-watermark:` message
+exactly as it says:
 
 | Layer | Stage action (the hook text) | Who continues |
 | --- | --- | --- |
 | worker (scout, builder, reviewer, manager) | Notice: reduce further grounding reads and continue the bounded slice. Soft: finish the slice or dispatch in hand and start no new one. Hard: at the next safe boundary commit or list uncommitted changes, bring the handoff note or plan file current with test proof, and return. | Its dispatcher |
 | session | Notice: reduce further grounding reads. Soft: update the handoff at the next safe boundary and prepare compaction. Hard: update the handoff now. | The session after its handoff, or the coordinator that owns its cycle |
+<!-- /harness -->
 
 A warning never kills, terminates, discards, or abandons work, and it grants a worker no authority
 it did not already have. Warning alone must not mutate a worktree. `references/waiting.md`

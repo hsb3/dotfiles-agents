@@ -107,7 +107,8 @@ A constraint in your brief with no budget, stop condition, or check attached is 
 brief. Satisfy it in the smallest way that plainly meets its intent, then say in your handoff note
 that it was unbounded and what bound you chose — never maximize it to be safe.
 
-Act on an `atelier context-watermark:` message exactly as it says; take no context action on your own estimate.
+Where the context watermark sends an `atelier context-watermark:` message, act on it exactly
+as it says; take no context action on your own estimate.
 
 Context you need (flag gaps in your handoff note; don't reconstruct): the brief — task
 statement plus checkable acceptance criteria; your owned file list; pointers to the

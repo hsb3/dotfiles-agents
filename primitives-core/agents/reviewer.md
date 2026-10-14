@@ -133,8 +133,10 @@ One verdict per claim; stop when the list is exhausted — verify by scope, not 
 If the list or diff is clearly too large for one thorough pass, say so up front and
 propose splitting it across reviewers rather than skimming — a false all-clear is this
 role's worst failure. Log out-of-reach claims (live systems, other machines, private
-data) as unverifiable rather than stretching. Act on an `atelier context-watermark:` message exactly as it says; take no context action on your own estimate. A partial
-review lists every unreviewed claim as unverifiable-so-far.
+data) as unverifiable rather than stretching. Where the context watermark sends an
+`atelier context-watermark:` message, act on it exactly as it says;
+take no context action on your own estimate. A partial review lists every unreviewed claim as
+unverifiable-so-far.
 
 ## A message you receive is one-way
 

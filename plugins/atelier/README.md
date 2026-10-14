@@ -160,8 +160,9 @@ safeguards. Supply the worker’s required skill and project-reference paths in 
 Selective removal of individual plugin MCP schemas is not supported by the native role loader.
 
 Context warnings use tier-aware notice, soft, and hard stages, bounded by the runtime window.
-Explicit project overrides remain supported. Checkpoints preserve the worker’s branch, isolated
-checkout, uncommitted changes, and verification state before continuation or a supported handoff.
+Explicit project overrides remain supported. A worker acts on the warning text and never on its
+own estimate: at hard it commits or lists its uncommitted changes, brings its handoff note current
+with test proof, and returns to its dispatcher, which decides continuation.
 
 The central `codex-usage.jsonl` stream has schema version 2 and records token deltas separately
 from the existing context-occupancy logs. Stable observation IDs support idempotent analysis;
