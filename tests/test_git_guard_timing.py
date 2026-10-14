@@ -1,7 +1,7 @@
 """Timing guard for card z0h1: heredoc terminator search must stay near-linear.
 
 Each adversarial shape is a large unterminated (or abandoned) heredoc command run
-through both git guards' pure entry points; every call must finish within BUDGET,
+through both git guards' pure entry points; every call must finish within BUDGET of CPU time,
 well under the 10 s hook timeout. n per shape is the smallest that put the
 quadratic implementation at >= 2x BUDGET. Stdlib-only.
 """
@@ -42,9 +42,9 @@ class GitGuardTiming(unittest.TestCase):
 def _make(guard, run, shape, lines, build):
     def test(self):
         command = build(lines)
-        start = time.perf_counter()
+        start = time.process_time()  # CPU time: host load cannot flake it, a quadratic still costs
         run(command)
-        elapsed = time.perf_counter() - start
+        elapsed = time.process_time() - start
         self.assertLess(
             elapsed, BUDGET,
             f"guard={guard} shape={shape} lines={lines} elapsed={elapsed:.2f}s "

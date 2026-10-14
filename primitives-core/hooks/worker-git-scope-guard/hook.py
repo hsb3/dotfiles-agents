@@ -246,7 +246,7 @@ class _LineIndex:
     def find(self, lines, j, quoted, dash, keys):
         """(the end of the first logical line from `lines[j]` on any of `keys`, each
         `(size, key)`, and its text) or (len(lines), None); None when `j` was rewritten."""
-        if j <= self.dirty:
+        if j <= self.dirty:  # defensive: an in-place rewrite leaves every later search past it
             return None
         shift = len(lines) - len(self.lines)
         ends, texts, offsets = self._rep(quoted)
