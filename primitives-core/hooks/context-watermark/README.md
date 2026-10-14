@@ -44,7 +44,8 @@ values uncapped. Complexity is 1.0 unless the activation file sets it. Under `wa
 `worker:` or `session:` sub-mapping overrides the flat keys for that layer, in either nested or
 flow form (`session: {soft: 200000}`). An external coordinator such as wave-lanes sets the
 session numbers through `CONTEXT_WATERMARK_NOTICE/_SOFT/_HARD` in the session's environment,
-which outrank the activation file.
+which outrank the activation file, and marks the session as coordinated through
+`CONTEXT_WATERMARK_CYCLE_OWNER` (below).
 
 The ledger row for a model with no known window carries `window: null`
 and `window_fallback: true`, because a check that could not measure must not look identical
@@ -62,9 +63,16 @@ bring the handoff note or plan file current with test proof, and return; the dis
 continuation. A worker acts on the message as written and takes no context action on its own
 estimate.
 
-Session soft and hard texts point at the `atelier:compact-handoff` skill, naming
-`/atelier:prepare-compact` as its Claude Code command (Codex ships only the skill), and add that, if a coordinator owns the cycle, the session
-stops after the handoff and waits rather than compacting.
+The session soft and hard texts come in two variants, and the hook picks one; the model is
+never asked whether a coordinator exists. `CONTEXT_WATERMARK_CYCLE_OWNER` in the session's
+environment selects it:
+
+| `CONTEXT_WATERMARK_CYCLE_OWNER` | Session text |
+| --- | --- |
+| absent or blank (the default) | Run the `atelier:compact-handoff` skill, naming `/atelier:prepare-compact` as its Claude Code command (Codex ships only the skill): at soft at the next safe boundary, to update the handoff and prepare compaction; at hard now. |
+| any non-blank value (wave-lanes writes `coordinator`) | Update the handoff, touch its freshness stamp last, then stop and wait for the coordinator; do not compact. At soft at the next safe boundary, at hard now. |
+
+The worker texts do not read the marker.
 
 Workers use the worker band, window-capped the same way as sessions. The hook still names itself
 (`atelier context-watermark:`), so the advisory is attributable rather than an untrusted task

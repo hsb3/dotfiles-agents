@@ -30,6 +30,7 @@ SCRUBBED_ENV = (
     "CONTEXT_WATERMARK_SOFT",
     "CONTEXT_WATERMARK_HARD",
     "CONTEXT_WATERMARK_NOTICE",
+    "CONTEXT_WATERMARK_CYCLE_OWNER",
 )
 
 _SEQ = itertools.count()
@@ -313,23 +314,30 @@ class HookRunTests(_ScrubbedEnv):
         self.assertEqual(row["window"], 1_000_000)
         self.assertEqual(row["layer"], "session")
 
-    def test_the_session_hard_text_hands_off_to_a_coordinator(self):
-        text = json.loads(self.run_hook(
-            self.session_payload(410_000)).stdout)["additionalContext"].lower()
-        self.assertIn("handoff", text)
-        self.assertIn("coordinator", text)
+    def session_text(self, ctx_tokens, env=None):
+        proc = self.run_hook(self.session_payload(ctx_tokens), env=env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads(proc.stdout)["additionalContext"]
 
-    def test_session_soft_and_hard_name_the_prepare_compact_command(self):
+    def test_the_cycle_owner_marker_picks_the_coordinated_session_text(self):
         for tier, ctx in (("soft", 260_000), ("hard", 410_000)):
-            text = hook._format_message(
-                tier, ctx, 150_000, 250_000, 400_000, layer="session")
-            for needle in (
-                "/atelier:prepare-compact",
-                "atelier:compact-handoff",
-                "if a coordinator owns your cycle, stop after the handoff "
-                "and wait for it rather than compacting",
-            ):
+            text = self.session_text(ctx, env={"CONTEXT_WATERMARK_CYCLE_OWNER": "coordinator"})
+            self.assertIn(tier + " watermark", text)
+            for needle in ("update the handoff", "touch its freshness stamp last",
+                           "stop and wait for the coordinator", "do not compact"):
                 self.assertIn(needle, text, tier)
+            self.assertNotIn("prepare-compact", text, tier)
+            self.assertNotIn("if a coordinator", text, tier)
+
+    def test_without_the_marker_the_session_text_prepares_compaction(self):
+        for marker in (None, "", "   "):
+            env = None if marker is None else {"CONTEXT_WATERMARK_CYCLE_OWNER": marker}
+            for tier, ctx in (("soft", 260_000), ("hard", 410_000)):
+                text = self.session_text(ctx, env=env)
+                self.assertIn(tier + " watermark", text)
+                self.assertIn("atelier:compact-handoff skill (on Claude Code: "
+                              "/atelier:prepare-compact)", text, (marker, tier))
+                self.assertNotIn("coordinator", text, (marker, tier))
 
     def test_under_codex_the_session_texts_instruct_the_skill_not_the_command(self):
         """Codex ships the compact-handoff skill but not the prepare-compact command."""
