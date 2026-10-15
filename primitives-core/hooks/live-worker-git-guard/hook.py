@@ -992,7 +992,10 @@ def _live_workers(transcript_path, caller):
     # never settles it; the session transcript records the kill instead.
     stopped = pending.stopped_ids(transcript_path, candidates)
     if sidechain:
-        stopped |= pending.stopped_ids(sidechain, candidates)
+        # A send in the other file cancels a stop: the two files share no order.
+        stopped = ((stopped - pending.sent_ids(sidechain, candidates))
+                   | (pending.stopped_ids(sidechain, candidates)
+                      - pending.sent_ids(transcript_path, candidates)))
     for key in candidates:
         if key == caller or key in stopped:
             continue

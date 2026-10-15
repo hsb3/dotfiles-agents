@@ -355,8 +355,8 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
 
     # -- a SubagentStop-settled agent resumed by SendMessage is live again,
     # ordered by the ledger row's `ts` against the transcript line's `timestamp`.
-    # Only a result naming it counts (`resumedAgentId`, or `pin.id` on a success);
-    # a failed send names none.
+    # A result naming it counts (`resumedAgentId`, or `pin.id` on a success), and so
+    # does a SendMessage call to its id until a failed result lands.
 
     BEFORE, AFTER, LATER = ("2026-08-20T15:30:00.000Z", "2026-08-20T15:40:00.000Z",
                             "2026-08-20T15:45:00.000Z")
@@ -613,6 +613,31 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
             for obj in self._taskstop("e9444444444444444", sidechain=True, caller=manager):
                 fh.write(json.dumps(obj) + "\n")
         self._assert_silent(self._run(self._payload("git commit -m wave", agent_id=manager)))
+
+    def test_a_main_session_resume_of_a_builder_its_manager_stopped_holds_it_live(self):
+        # Two files carry no common order, so a send in the other file outranks a stop.
+        manager = self._sidecar("e9d33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9d44444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in self._taskstop("e9d44444444444444", sidechain=True, caller=manager):
+                fh.write(json.dumps(obj) + "\n")
+        self._transcript(self._send_message("e9d44444444444444"),
+                         self._resume_result("e9d44444444444444"))
+        self.assertIn("e9d44444444444444", self._assert_denied(
+            self._run(self._payload("git commit -m wave", agent_id=manager))))
+
+    def test_a_managers_resume_of_a_builder_the_main_session_stopped_holds_it_live(self):
+        manager = self._sidecar("e9e33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9e44444444444444")
+        self._transcript(*self._taskstop("e9e44444444444444"))
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in (self._send_message("e9e44444444444444"),
+                        self._resume_result("e9e44444444444444")):
+                fh.write(json.dumps(obj) + "\n")
+        self.assertIn("e9e44444444444444", self._assert_denied(
+            self._run(self._payload("git commit -m wave", agent_id=manager))))
 
     def test_another_agents_sidechain_taskstop_does_not_settle_for_the_main_session(self):
         manager = self._sidecar("e9a33333333333333", agent_type="atelier:manager")

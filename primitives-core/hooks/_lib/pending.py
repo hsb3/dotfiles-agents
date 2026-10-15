@@ -500,15 +500,52 @@ def stopped_ids(transcript_path, candidates):
                             continue
                         if block.get("name") == "TaskStop":
                             taskstop_uses.add(block["id"])
-                        elif (block.get("name") == "SendMessage"
-                                and isinstance(block.get("input"), dict)):
-                            key = agent_key(block["input"].get("to"))
-                            if key in wanted:
-                                sends[block["id"]] = key
+                        elif _send_target(block, wanted):
+                            sends[block["id"]] = _send_target(block, wanted)
                 stopped.discard(_reopened_by_notification(text))
     except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
         return set()
     return stopped - set(sends.values())
+
+
+def _send_target(block, wanted):
+    """The candidate a SendMessage `tool_use` block addresses, else None."""
+    if block.get("name") == "SendMessage" and isinstance(block.get("input"), dict):
+        key = agent_key(block["input"].get("to"))
+        if key in wanted:
+            return key
+    return None
+
+
+def sent_ids(transcript_path, candidates):
+    """The subset of `candidates` any SendMessage call in this transcript addresses.
+
+    Whatever its result or position: the hook uses it to let a send in one file
+    cancel a stop in another, and two files share no order, so it fails closed.
+    A missing or unreadable transcript yields the empty set.
+    """
+    wanted = {k for k in (agent_key(c) for c in candidates or ()) if k}
+    sent = set()
+    if not wanted or not transcript_path:
+        return sent
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if "SendMessage" not in line or not any(k in line for k in wanted):
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (ValueError, RecursionError):
+                    continue
+                message = obj.get("message") if isinstance(obj, dict) else None
+                content = message.get("content") if isinstance(message, dict) else None
+                for block in content if isinstance(content, list) else ():
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        sent.add(_send_target(block, wanted))
+    except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
+        return set()
+    sent.discard(None)
+    return sent
 
 
 def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES,

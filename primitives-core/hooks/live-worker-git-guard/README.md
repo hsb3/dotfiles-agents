@@ -153,8 +153,10 @@ A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on
 the TaskStop success result only, paired with the TaskStop call it answers. A subagent's payload
 carries the main session transcript, which holds none of its own lines, so when the caller is a
-subagent its own `subagents/agent-<caller>.jsonl` is read too and the two stopped sets are
-unioned: a manager's own TaskStop settles its builder. A `<task-notification>` never settles, because a
+subagent its own `subagents/agent-<caller>.jsonl` is read too: a stop in either file settles the
+builder unless the other file holds a `SendMessage` call to it, so a manager's own TaskStop settles
+its builder. A missing or unreadable sidechain holds no stop evidence (the builder stays live and
+the call is denied) and no resume evidence (a settled builder stays settled). A `<task-notification>` never settles, because a
 queued prompt or an agent's quoted output can carry the same text. A later resume makes it live
 again: a `SendMessage` call to its id keeps it live until the call's result lands, and for good
 unless that result is a failure (`success: false`, or an error string), so a failed send leaves it
@@ -173,12 +175,13 @@ Three more ceilings, each with its fail direction:
   neither `resumedAgentId` nor `pin` when a subagent-owned task is resumed by name and the session
   already pinned that name to a different id. Not reproduced: no successful resume result carrying
   neither field appears in local transcripts after 2.1.197. The agent reads as stopped while it runs.
-- **Resume in another file (fail-open).** Each transcript is read on its own and the stopped sets
-  are unioned, so a builder stopped in one file and resumed in the other (the main session
-  resuming a builder its manager stopped, or the reverse) reads as stopped while it runs. The
-  same holds for a builder settled by its ledger row and resumed from a sidechain the caller does
-  not read: manager A resumes it, then the main session or manager B commits, and only the main
-  transcript and the caller's own sidechain are read.
+- **Resume in a file the caller does not read (fail-open).** Only the main transcript and the
+  caller's own sidechain are read. A builder the main session stopped, or one its ledger row
+  settled, that manager A then resumes reads as stopped while it runs when the main session or
+  manager B commits.
+- **Cross-file order is unknown (fail-closed).** Between the caller's two files, any
+  `SendMessage` call to the builder in one cancels a stop in the other, even a send that came
+  before the stop, so the builder reads as live until a ledger row settles it.
 - **Write ordering is inferred (fail-closed).** That a subagent's TaskStop result is on disk before
   its next `PreToolUse` fires is read from captured sidechain files (the result line directly
   follows its call, and the next call is stamped seconds later), not observed at hook time. If it
