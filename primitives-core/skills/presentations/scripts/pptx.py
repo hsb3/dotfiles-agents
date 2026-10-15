@@ -123,6 +123,42 @@ def slides(parts):
     return result
 
 
+def shape_name(el, parent):
+    """Name of the nearest enclosing shape of el; parent maps child -> parent element."""
+    while el is not None:
+        c = el.find(f'.//{{{P}}}cNvPr')
+        if el.tag in {f'{{{P}}}{t}' for t in ('sp', 'pic', 'cxnSp', 'grpSp', 'graphicFrame')} and c is not None:
+            return c.get('name')
+        el = parent.get(el)
+    return '?'
+
+
+def extent_findings(name, tree):
+    """Broken a:ext/a:chExt extents on slide part name: non-integer or negative, or zero inside a picture.
+
+    Lines and connectors legitimately have cx or cy = 0. Rotation and group transforms are not checked.
+    """
+    parent = {c: p for p in tree.iter() for c in p}
+    pictures = {e for pic in tree.iter(f'{{{P}}}pic') for e in pic.iter()}
+    findings = []
+    for el in tree.iter():
+        if el.tag not in (f'{{{A}}}ext', f'{{{A}}}chExt'):
+            continue
+        for k in ('cx', 'cy'):
+            value = el.get(k)
+            if value is None:
+                continue
+            try:
+                n = int(value)
+            except ValueError:
+                findings.append(f'{name} {shape_name(el, parent)!r}: non-integer {k}={value}')
+                continue
+            if n < 0 or n == 0 and el in pictures:
+                kind = 'negative' if n < 0 else 'zero picture'
+                findings.append(f'{name} {shape_name(el, parent)!r}: {kind} {k}={value}')
+    return findings
+
+
 def validate(parts):
     for required in ('[Content_Types].xml', '_rels/.rels', PRES):
         if required not in parts:
@@ -180,8 +216,12 @@ def validate(parts):
     if not any(r.get('Type') == R + '/officeDocument' and target('', r.get('Target', '')) == PRES for r in roots):
         raise ValueError('Missing officeDocument relationship')
     for name in slides(parts):
-        if xml(parts[name]).tag != f'{{{P}}}sld':
+        root = xml(parts[name])
+        if root.tag != f'{{{P}}}sld':
             raise ValueError(f'Invalid slide root: {name}')
+        findings = extent_findings(name, root)
+        if findings:
+            raise ValueError('Invalid shape extent: ' + '; '.join(findings))
 
 
 def save(parts, output):

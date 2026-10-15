@@ -71,24 +71,12 @@ def geometry_findings(path, counts=None):
     for name in slide_names:
         tree = pptx.xml(parts[name])
         parent = {c: p for p in tree.iter() for c in p}
-        def shape_name(el):
-            while el is not None:
-                c = el.find(f'.//{{{P}}}cNvPr')
-                if el.tag in {f'{{{P}}}{t}' for t in ('sp', 'pic', 'cxnSp', 'grpSp', 'graphicFrame')} and c is not None:
-                    return c.get('name')
-                el = parent.get(el)
-            return '?'
-
-        where = lambda el: f'{name} {shape_name(el)!r}'
+        where = lambda el: f'{name} {pptx.shape_name(el, parent)!r}'
         # PptxGenJS draws lines as p:sp with a "line" preset, other tools as p:cxnSp connectors.
         counts['lines'] += len(list(tree.iter(f'{{{P}}}cxnSp'))) + sum(
             g.get('prst') == 'line' for g in tree.iter(f'{{{A}}}prstGeom'))
-        for el in tree.iter():
-            if 'cx' in el.attrib or 'cy' in el.attrib:
-                counts['extents'] += 1
-                for k in ('cx', 'cy'):
-                    if int(el.get(k, 0)) < 0:  # G1
-                        findings.append(f'G1 {where(el)}: negative {k}={el.get(k)}')
+        counts['extents'] += sum('cx' in el.attrib or 'cy' in el.attrib for el in tree.iter())
+        findings += ['G1 ' + f for f in pptx.extent_findings(name, tree)]  # the check validate() raises on
         rels_path = posixpath.join('ppt/slides/_rels', posixpath.basename(name) + '.rels')
         targets = {r.get('Id'): posixpath.normpath(posixpath.join('ppt/slides', r.get('Target')))
                    for r in pptx.xml(parts[rels_path])} if rels_path in parts else {}
@@ -112,8 +100,7 @@ def geometry_findings(path, counts=None):
                 crop = {k: int(src.get(k, 0)) if src is not None else 0 for k in 'ltrb'}
                 seen = (width * (100000 - crop['l'] - crop['r'])) / (height * (100000 - crop['t'] - crop['b']))
                 x0, y0, x1, y1 = rect(pic)
-                if x1 == x0 or y1 == y0:
-                    findings.append(f'G2 {where(pic)}: zero-size frame {x1 - x0} x {y1 - y0}')
+                if x1 == x0 or y1 == y0:  # reported by G1
                     continue
                 want = (x1 - x0) / (y1 - y0)
                 if abs(seen / want - 1) > 0.01:
@@ -247,9 +234,11 @@ class PresentationPackages(unittest.TestCase):
         for edit in [None, [], [{'slide': 0, 'old': 'Old title', 'new': 'x'}], [{'slide': 1, 'old': 'missing', 'new': 'x'}], [{'slide': True, 'old': 'Old title', 'new': 'x'}]]:
             with self.subTest(edit=edit), self.assertRaises(ValueError):
                 pptx.replace_text(fixture(), edit)
-        for mutation in ['missing', 'relationship', 'entity', 'duplicate', 'traversal', 'dimensions']:
+        for mutation in ['missing', 'relationship', 'entity', 'duplicate', 'traversal', 'dimensions', 'negative-ext', 'zero-picture']:
             parts = fixture()
             if mutation == 'dimensions': parts['ppt/presentation.xml'] = parts['ppt/presentation.xml'].replace(b'cx="12192000"', b'cx="0"')
+            if mutation == 'negative-ext': parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'<p:sp>', f'<p:sp><p:spPr>{xfrm(0, 0, -12700, 0)}</p:spPr>'.encode())
+            if mutation == 'zero-picture': parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'</p:spTree>', f'<p:pic><p:spPr>{xfrm(0, 0, 0, 900000)}</p:spPr></p:pic></p:spTree>'.encode())
             if mutation == 'missing': del parts['ppt/charts/chart1.xml']
             if mutation == 'relationship': parts['ppt/_rels/presentation.xml.rels'] = parts['ppt/_rels/presentation.xml.rels'].replace(b'Id="s2"', b'Id="s1"')
             if mutation == 'entity': parts['ppt/charts/chart1.xml'] = '<!DOCTYPE x [<!ENTITY y "bad">]><x>&y;</x>'.encode('utf-16')
@@ -257,6 +246,20 @@ class PresentationPackages(unittest.TestCase):
             if mutation == 'traversal': parts['../outside.xml'] = b'<x/>'
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 pptx.validate(parts)
+
+    def test_zero_extent_line_and_connector_validate(self):
+        parts = fixture()
+        shapes = (f'<p:sp><p:spPr>{xfrm(0, 0, 1600000, 0)}<a:prstGeom prst="line"/></p:spPr></p:sp>'
+                  f'<p:cxnSp><p:spPr>{xfrm(0, 0, 0, 900000)}</p:spPr></p:cxnSp>'
+                  f'<p:grpSp><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:grpSp>')
+        parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'</p:spTree>', shapes.encode() + b'</p:spTree>')
+        pptx.validate(parts)
+        parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'<a:chExt cx="0"', b'<a:chExt cx="-1"')
+        with self.assertRaisesRegex(ValueError, 'negative cx=-1'):
+            pptx.validate(parts)
+        parts['ppt/slides/slide1.xml'] = parts['ppt/slides/slide1.xml'].replace(b'<a:chExt cx="-1"', b'<a:chExt cx="1.5"')
+        with self.assertRaisesRegex(ValueError, "slide1.xml '.*': non-integer cx=1.5"):
+            pptx.validate(parts)
 
     def test_xml_default_content_type_cannot_bypass_entity_guard(self):
         parts = fixture()
@@ -413,7 +416,7 @@ class PictureGeometry(unittest.TestCase):
     def test_zero_extent_picture_is_found_not_raised(self):
         for rect in ((0, 0, 1600000, 0), (0, 0, 0, 900000)):
             with self.subTest(rect=rect):
-                self.assertIn('zero', self.one('G2', pic('a', rect), box('a', (0, 0, 1600000, 900000))))
+                self.assertIn('zero picture', self.one('G1', pic('a', rect), box('a', (0, 0, 1600000, 900000))))
 
     @unittest.skipUnless(shutil.which('node'), 'Node is required to load deck-kit.js')
     def test_fit_image_rejects_non_finite_or_missing_box_numbers(self):
