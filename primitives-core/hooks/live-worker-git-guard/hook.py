@@ -984,10 +984,8 @@ def _live_workers(transcript_path, caller):
         return []
     workers = []
     # A subagent's payload carries the MAIN transcript, which holds none of its own
-    # lines; its TaskStop and SendMessage land only in its sidechain file. A NUL in the
-    # id would make open() raise ValueError and fail open, so that id reads no sidechain.
-    sidechain = (os.path.join(directory, "agent-{0}.jsonl".format(caller))
-                 if caller and "\0" not in caller else None)
+    # lines; its TaskStop and SendMessage land only in its sidechain file.
+    sidechain = os.path.join(directory, "agent-{0}.jsonl".format(caller)) if caller else None
     candidates = pending.pending_keys(
         directory, transcript_path=transcript_path, sidechain_path=sidechain)
     # A TaskStop'd or user-killed agent fires no SubagentStop, so the ledger

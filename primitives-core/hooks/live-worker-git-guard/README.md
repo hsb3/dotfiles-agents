@@ -175,7 +175,10 @@ Three more ceilings, each with its fail direction:
   neither field appears in local transcripts after 2.1.197. The agent reads as stopped while it runs.
 - **Resume in another file (fail-open).** Each transcript is read on its own and the stopped sets
   are unioned, so a builder stopped in one file and resumed in the other (the main session
-  resuming a builder its manager stopped, or the reverse) reads as stopped while it runs.
+  resuming a builder its manager stopped, or the reverse) reads as stopped while it runs. The
+  same holds for a builder settled by its ledger row and resumed from a sidechain the caller does
+  not read: manager A resumes it, then the main session or manager B commits, and only the main
+  transcript and the caller's own sidechain are read.
 - **Write ordering is inferred (fail-closed).** That a subagent's TaskStop result is on disk before
   its next `PreToolUse` fires is read from captured sidechain files (the result line directly
   follows its call, and the next call is stamped seconds later), not observed at hook time. If it
@@ -344,8 +347,9 @@ command string the hook is handed, so whatever still displaces them is invisible
   past the 10 s timeout the hook fails open. The extra reading runs only when a worker is live or
   the command names `ATELIER_GIT_GUARD_OVERRIDE`, and a call the base reading finds is decided
   before it runs. So an oversized command times out (and is allowed) only when a worker is live
-  and either the call is one only the extra reading sees or the command holds no git call at all
-  (every reading runs, then it allows), or the override is named, which then loses
+  and either the call is one only the extra reading sees or the command holds no call the guard
+  would deny (no git, read-only git, or a write into a tree no worker shares: every reading runs,
+  then it allows), or the override is named, which then loses
   its message and ledger row;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.

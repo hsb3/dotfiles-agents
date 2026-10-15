@@ -640,6 +640,10 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._sidecar("e9c44444444444444")
         self._assert_denied(self._run(self._payload("git commit -m x", agent_id="m\u0000x")))
 
+    def test_a_caller_id_holding_a_lone_surrogate_still_denies(self):
+        self._sidecar("e9c44444444444445")
+        self._assert_denied(self._run(self._payload("git commit -m x", agent_id="m\ud800x")))
+
     def test_a_statusless_resume_quoting_a_kill_still_reopens(self):
         self._sidecar("e9555555555555555")
         queued, _ = self._notification("e9555555555555555")

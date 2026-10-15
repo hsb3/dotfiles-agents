@@ -375,7 +375,7 @@ def _resumed_after(transcript_path, settled_at):
                 for key in _resumed_keys(result):
                     if moment and key in settled_at and moment > settled_at[key]:
                         resumed.add(key)
-    except OSError:
+    except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
         return set()
     return resumed | set(sends.values())
 
@@ -506,7 +506,7 @@ def stopped_ids(transcript_path, candidates):
                             if key in wanted:
                                 sends[block["id"]] = key
                 stopped.discard(_reopened_by_notification(text))
-    except OSError:
+    except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
         return set()
     return stopped - set(sends.values())
 
