@@ -62,6 +62,7 @@ REFIRE_EVERY_DEFAULT = 5  # prompts (or worker tool calls), while still above a 
 STATE_DIR_DEFAULT = "/tmp/context-watermark"
 LOG_STREAM = "context-watermark"
 LOG_PATH_ENV = "CONTEXT_WATERMARK_LOG_PATH"
+CYCLE_OWNER_ENV = "CONTEXT_WATERMARK_CYCLE_OWNER"  # any non-blank value: a coordinator runs the cycle
 ACTIVATION_KEY = "watermark"
 
 
@@ -322,21 +323,35 @@ MESSAGES = {
         "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
         "watermark. This is advisory: at the next safe boundary run the "
         "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact) to "
-        "update the handoff and prepare compaction; if a coordinator owns your cycle, "
-        "stop after the handoff and wait for it rather than compacting."
+        "update the handoff and prepare compaction."
     ),
     "session_hard": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
         "watermark. This is advisory: update the handoff now with the "
-        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact); if a "
-        "coordinator owns your cycle, stop after the handoff and wait for it rather than "
-        "compacting."
+        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact)."
+    ),
+    # Chosen when CYCLE_OWNER_ENV is set: a coordinator restarts this session.
+    "session_soft_coordinated": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
+        "watermark. This is advisory, and a coordinator runs this session's cycle: at "
+        "the next safe boundary update the handoff, touch its freshness stamp last, "
+        "then stop and wait for the coordinator; do not compact."
+    ),
+    "session_hard_coordinated": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
+        "watermark. This is advisory, and a coordinator runs this session's cycle: "
+        "update the handoff now, touch its freshness stamp last, then stop and wait "
+        "for the coordinator; do not compact."
     ),
 }
 
 
 def _format_message(tier, ctx_tokens, notice, soft, hard, layer="worker"):
-    key = "session_" + tier if layer == "session" and tier in ("soft", "hard") else tier
+    key = tier
+    if layer == "session" and tier in ("soft", "hard"):
+        key = "session_" + tier
+        if os.environ.get(CYCLE_OWNER_ENV, "").strip():
+            key += "_coordinated"
     return MESSAGES[key].format(
         k=round(ctx_tokens / 1000),
         notice=round(notice / 1000),
