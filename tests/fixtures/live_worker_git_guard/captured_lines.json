@@ -1,0 +1,273 @@
+{
+ "_provenance": {
+  "resume_result": "<session_id>.jsonl, Claude Code 2.1.289, SendMessage addressed by id",
+  "send_message": "<session_id>.jsonl, Claude Code 2.1.289, SendMessage addressed by id",
+  "taskstop": "<session_id>.jsonl, Claude Code 2.1.296, task_type local_agent",
+  "taskstop_sidechain": "subagents/agent-<id>.jsonl, Claude Code 2.1.296; task_type local_agent per the main-transcript agent stop of the same version (this file stopped a shell)"
+ },
+ "resume_result": [
+  {
+   "cwd": "/repo",
+   "entrypoint": "cli",
+   "gitBranch": "main",
+   "isSidechain": false,
+   "message": {
+    "content": [
+     {
+      "content": [
+       {
+        "text": "{\"success\":true,\"message\":\"Resuming agent @AGENT7@\",\"resumedAgentId\":\"@AGENT@\",\"pin\":{\"id\":\"@AGENT@\",\"name\":\"@AGENT@\",\"ref\":\"000000\"}}",
+        "type": "text"
+       }
+      ],
+      "tool_use_id": "@USE@",
+      "type": "tool_result"
+     }
+    ],
+    "role": "user"
+   },
+   "parentUuid": "00000000-0000-4000-8000-000000000001",
+   "promptId": "00000000-0000-4000-8000-000000000003",
+   "serverClassifierContext": {
+    "context": {},
+    "request": "00000000-0000-4000-8000-000000000004"
+   },
+   "sessionId": "00000000-0000-4000-8000-000000000009",
+   "session_id": "00000000-0000-4000-8000-000000000009",
+   "sourceToolAssistantUUID": "00000000-0000-4000-8000-000000000001",
+   "toolUseResult": {
+    "message": "Resuming agent @AGENT7@",
+    "pin": {
+     "id": "@AGENT@",
+     "name": "@AGENT@",
+     "ref": "000000"
+    },
+    "resumedAgentId": "@AGENT@",
+    "success": true
+   },
+   "type": "user",
+   "userType": "external",
+   "uuid": "00000000-0000-4000-8000-000000000002",
+   "version": "2.1.289"
+  }
+ ],
+ "send_message": [
+  {
+   "apiBlockIndex": 0,
+   "cwd": "/repo",
+   "effort": "xhigh",
+   "entrypoint": "cli",
+   "gitBranch": "main",
+   "isSidechain": false,
+   "message": {
+    "container": null,
+    "content": [
+     {
+      "caller": {
+       "type": "direct"
+      },
+      "id": "@USE@",
+      "input": {
+       "content": "keep going",
+       "message": "keep going",
+       "recipient": "@AGENT@",
+       "summary": "continue",
+       "to": "@AGENT@",
+       "type": "message"
+      },
+      "name": "SendMessage",
+      "type": "tool_use"
+     }
+    ],
+    "context_management": null,
+    "diagnostics": null,
+    "id": "msg_0",
+    "input_transformations": [],
+    "model": "claude-opus-5-5",
+    "role": "assistant",
+    "stop_details": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {}
+   },
+   "parentUuid": "00000000-0000-4000-8000-000000000001",
+   "perTurnEffort": "xhigh",
+   "requestId": "req_0",
+   "serverClassifierRequest": "00000000-0000-4000-8000-000000000004",
+   "sessionId": "00000000-0000-4000-8000-000000000009",
+   "session_id": "00000000-0000-4000-8000-000000000009",
+   "type": "assistant",
+   "userType": "external",
+   "uuid": "00000000-0000-4000-8000-000000000002",
+   "version": "2.1.289"
+  }
+ ],
+ "taskstop": [
+  {
+   "apiBlockIndex": 0,
+   "cwd": "/repo",
+   "effort": "medium",
+   "entrypoint": "cli",
+   "gitBranch": "main",
+   "isSidechain": false,
+   "message": {
+    "container": null,
+    "content": [
+     {
+      "caller": {
+       "type": "direct"
+      },
+      "id": "@USE@",
+      "input": {
+       "task_id": "@AGENT@"
+      },
+      "name": "TaskStop",
+      "type": "tool_use"
+     }
+    ],
+    "context_management": null,
+    "diagnostics": null,
+    "id": "msg_0",
+    "input_transformations": [],
+    "model": "claude-opus-5-5",
+    "role": "assistant",
+    "stop_details": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {}
+   },
+   "parentUuid": "00000000-0000-4000-8000-000000000001",
+   "perTurnEffort": "medium",
+   "requestId": "req_0",
+   "requestedModel": "claude-opus-5-5",
+   "serverClassifierRequest": "00000000-0000-4000-8000-000000000004",
+   "sessionId": "00000000-0000-4000-8000-000000000009",
+   "session_id": "00000000-0000-4000-8000-000000000009",
+   "type": "assistant",
+   "userType": "external",
+   "uuid": "00000000-0000-4000-8000-000000000002",
+   "version": "2.1.296"
+  },
+  {
+   "cwd": "/repo",
+   "entrypoint": "cli",
+   "gitBranch": "main",
+   "isSidechain": false,
+   "message": {
+    "content": [
+     {
+      "content": "{\"message\": \"Successfully stopped task: @AGENT@ (Run sleep 300)\", \"task_id\": \"@AGENT@\", \"task_type\": \"local_agent\", \"command\": \"Run sleep 300\"}",
+      "tool_use_id": "@USE@",
+      "type": "tool_result"
+     }
+    ],
+    "role": "user"
+   },
+   "parentUuid": "00000000-0000-4000-8000-000000000001",
+   "permissionDecision": {
+    "decision": "accept",
+    "source": "config"
+   },
+   "promptId": "00000000-0000-4000-8000-000000000003",
+   "sessionId": "00000000-0000-4000-8000-000000000009",
+   "session_id": "00000000-0000-4000-8000-000000000009",
+   "sourceToolAssistantUUID": "00000000-0000-4000-8000-000000000001",
+   "toolUseResult": {
+    "command": "Run sleep 300",
+    "message": "Successfully stopped task: @AGENT@ (Run sleep 300)",
+    "task_id": "@AGENT@",
+    "task_type": "local_agent"
+   },
+   "type": "user",
+   "userType": "external",
+   "uuid": "00000000-0000-4000-8000-000000000002",
+   "version": "2.1.296"
+  }
+ ],
+ "taskstop_sidechain": [
+  {
+   "agentId": "@CALLER@",
+   "apiBlockIndex": 1,
+   "attributionAgent": "general-purpose",
+   "cwd": "/repo",
+   "effort": "medium",
+   "entrypoint": "cli",
+   "gitBranch": "main",
+   "isSidechain": true,
+   "message": {
+    "container": null,
+    "content": [
+     {
+      "caller": {
+       "type": "direct"
+      },
+      "id": "@USE@",
+      "input": {
+       "task_id": "@AGENT@"
+      },
+      "name": "TaskStop",
+      "type": "tool_use"
+     }
+    ],
+    "context_management": null,
+    "diagnostics": null,
+    "id": "msg_0",
+    "input_transformations": [],
+    "model": "claude-sonnet-5-5",
+    "role": "assistant",
+    "stop_details": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "type": "message",
+    "usage": {}
+   },
+   "parentUuid": "00000000-0000-4000-8000-000000000001",
+   "perTurnEffort": "medium",
+   "requestId": "req_0",
+   "requestedModel": "claude-sonnet-5-5",
+   "serverClassifierRequest": "00000000-0000-4000-8000-000000000004",
+   "sessionId": "00000000-0000-4000-8000-000000000009",
+   "type": "assistant",
+   "userType": "external",
+   "uuid": "00000000-0000-4000-8000-000000000002",
+   "version": "2.1.296"
+  },
+  {
+   "agentId": "@CALLER@",
+   "cwd": "/repo",
+   "entrypoint": "cli",
+   "gitBranch": "main",
+   "isSidechain": true,
+   "message": {
+    "content": [
+     {
+      "content": "{\"message\": \"Successfully stopped task: @AGENT@ (Run sleep 300)\", \"task_id\": \"@AGENT@\", \"task_type\": \"local_agent\", \"command\": \"Run sleep 300\"}",
+      "tool_use_id": "@USE@",
+      "type": "tool_result"
+     }
+    ],
+    "role": "user"
+   },
+   "parentUuid": "00000000-0000-4000-8000-000000000001",
+   "permissionDecision": {
+    "decision": "accept",
+    "source": "config"
+   },
+   "promptId": "00000000-0000-4000-8000-000000000003",
+   "sessionId": "00000000-0000-4000-8000-000000000009",
+   "sourceToolAssistantUUID": "00000000-0000-4000-8000-000000000001",
+   "toolUseResult": {
+    "command": "Run sleep 300",
+    "message": "Successfully stopped task: @AGENT@ (Run sleep 300)",
+    "task_id": "@AGENT@",
+    "task_type": "local_agent"
+   },
+   "type": "user",
+   "userType": "external",
+   "uuid": "00000000-0000-4000-8000-000000000002",
+   "version": "2.1.296"
+  }
+ ]
+}

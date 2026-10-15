@@ -983,10 +983,19 @@ def _live_workers(transcript_path, caller):
     if caller and _is_isolated(directory, caller):
         return []
     workers = []
-    candidates = pending.pending_keys(directory, transcript_path=transcript_path)
+    # A subagent's payload carries the MAIN transcript, which holds none of its own
+    # lines; its TaskStop and SendMessage land only in its sidechain file.
+    sidechain = os.path.join(directory, "agent-{0}.jsonl".format(caller)) if caller else None
+    candidates = pending.pending_keys(
+        directory, transcript_path=transcript_path, sidechain_path=sidechain)
     # A TaskStop'd or user-killed agent fires no SubagentStop, so the ledger
     # never settles it; the session transcript records the kill instead.
     stopped = pending.stopped_ids(transcript_path, candidates)
+    if sidechain:
+        # A send in the other file cancels a stop: the two files share no order.
+        stopped = ((stopped - pending.sent_ids(sidechain, candidates))
+                   | (pending.stopped_ids(sidechain, candidates)
+                      - pending.sent_ids(transcript_path, candidates)))
     for key in candidates:
         if key == caller or key in stopped:
             continue
@@ -1004,7 +1013,9 @@ def _live_workers(transcript_path, caller):
 
 def _describe(workers):
     lines = [
-        "  - {0} {1} ({2})".format(w["agent_type"], w["agent_id"], w["description"])
+        # a native record without agent_type must still deny, not raise and fail open
+        "  - {0} {1} ({2})".format(w.get("agent_type") or "agent", w["agent_id"],
+                                   w["description"])
         for w in workers[:MAX_NAMED_AGENTS]
     ]
     if len(workers) > MAX_NAMED_AGENTS:

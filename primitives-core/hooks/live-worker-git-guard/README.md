@@ -142,14 +142,21 @@ cannot be hurt by anything done in this tree, which is also why this guard skips
 The pending set comes from `hooks/_lib/pending.py`, shared with `subagent-telemetry` so the two
 cannot disagree about who is live: the `agent-*.meta.json` sidecars in this session's
 `subagents/` directory, minus every `agent_id` a bounded tail of the delegation ledger has
-already settled, unless the caller's transcript holds a `SendMessage` result naming it as resumed
+already settled, unless the session transcript, or a nested caller's own `subagents/agent-<caller>.jsonl`, holds a
+`SendMessage` result naming it as resumed
 (`resumedAgentId`, or `pin.id` on a success: a task owned by a subagent resumes without
-`resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`.
+`resumedAgentId`; a failed send names no agent) stamped after its latest settling row's `ts`, or
+a `SendMessage` call to its id stamped after that `ts`: the call keeps it live until its result
+lands, and for good unless that result is a failure, the same rule as for a TaskStop'd agent below.
 
 A TaskStop'd agent fires no `SubagentStop` (measured on Claude Code 2.1.281), so the ledger never
 settles it. The guard settles it from the session transcript instead (`pending.stopped_ids`), on
-the TaskStop success result only, paired with the TaskStop call it answers (sidechain lines
-included, so a manager's own TaskStop counts): a `<task-notification>` never settles, because a
+the TaskStop success result only, paired with the TaskStop call it answers. A subagent's payload
+carries the main session transcript, which holds none of its own lines, so when the caller is a
+subagent its own `subagents/agent-<caller>.jsonl` is read too: a stop in either file settles the
+builder unless the other file holds a `SendMessage` call to it, so a manager's own TaskStop settles
+its builder. A missing or unreadable sidechain holds no stop evidence (the builder stays live and
+the call is denied) and no resume evidence (a settled builder stays settled). A `<task-notification>` never settles, because a
 queued prompt or an agent's quoted output can carry the same text. A later resume makes it live
 again: a `SendMessage` call to its id keeps it live until the call's result lands, and for good
 unless that result is a failure (`success: false`, or an error string), so a failed send leaves it
@@ -161,6 +168,24 @@ measured, to fire no `SubagentStop` either. A send to a live agent still in flig
 kills it (its "queued for delivery" success lands after the stop) re-opens the dead agent until a
 stall row settles it: fail-closed, and the result does not reliably tell a queued delivery from a
 resume.
+
+Three more ceilings, each with its fail direction:
+
+- **By-name resume during a pin rebind (fail-open, rare).** Claude Code 2.1.289's binary writes
+  neither `resumedAgentId` nor `pin` when a subagent-owned task is resumed by name and the session
+  already pinned that name to a different id. Not reproduced: no successful resume result carrying
+  neither field appears in local transcripts after 2.1.197. The agent reads as stopped while it runs.
+- **Resume in a file the caller does not read (fail-open).** Only the main transcript and the
+  caller's own sidechain are read. A builder the main session stopped, or one its ledger row
+  settled, that manager A then resumes reads as stopped while it runs when the main session or
+  manager B commits.
+- **Cross-file order is unknown (fail-closed).** Between the caller's two files, any
+  `SendMessage` call to the builder in one cancels a stop in the other, even a send that came
+  before the stop, so the builder reads as live until a ledger row settles it.
+- **Write ordering is inferred (fail-closed).** That a subagent's TaskStop result is on disk before
+  its next `PreToolUse` fires is read from captured sidechain files (the result line directly
+  follows its call, and the next call is stamped seconds later), not observed at hook time. If it
+  were not, the builder would stay live for that one call.
 
 Excluded: an agent whose sidecar carries `worktreePath`. Included: everything else, read-only
 scouts too — a `checkout` or `pull` changes the tree a scout is reading mid-read.
@@ -325,7 +350,9 @@ command string the hook is handed, so whatever still displaces them is invisible
   past the 10 s timeout the hook fails open. The extra reading runs only when a worker is live or
   the command names `ATELIER_GIT_GUARD_OVERRIDE`, and a call the base reading finds is decided
   before it runs. So an oversized command times out (and is allowed) only when a worker is live
-  and the call is one only the extra reading sees, or the override is named, which then loses
+  and either the call is one only the extra reading sees or the command holds no call the guard
+  would deny (no git, read-only git, or a write into a tree no worker shares: every reading runs,
+  then it allows), or the override is named, which then loses
   its message and ledger row;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.

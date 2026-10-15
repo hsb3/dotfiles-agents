@@ -53,7 +53,23 @@ def _load_hook():
 HOOK = _load_hook()
 
 _SEQ = itertools.count()
+DROP = object()  # a record field to leave out
 SEND_USE = "toolu_01AQTS2z2WYtZoxcwL3JZFjL"  # a SendMessage call and its result pair on this
+
+
+FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "fixtures", "live_worker_git_guard")
+
+
+def _captured(name, **subs):
+    """Captured Claude Code lines (redacted; provenance in the file), each
+    `@KEY@` placeholder filled from `subs`. Timestamps were stripped: tests
+    stamp their own order."""
+    with open(os.path.join(FIXTURES, "captured_lines.json"), encoding="utf-8") as fh:
+        text = json.dumps(json.load(fh)[name])
+    for key, value in subs.items():
+        text = text.replace("@{0}@".format(key), value)
+    return json.loads(text)
 
 
 def _session_id():
@@ -165,11 +181,18 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         return result
 
     def _assert_denied(self, result):
+        self.assertTrue(result.stdout.strip(),
+                        "expected deny, but the guard was silent: " + result.stderr)
         payload = json.loads(result.stdout)
         hso = payload["hookSpecificOutput"]
         self.assertEqual(hso["hookEventName"], "PreToolUse")
         self.assertEqual(hso["permissionDecision"], "deny")
         return hso["permissionDecisionReason"]
+
+    def test_assert_denied_names_a_silent_guard(self):
+        silent = subprocess.CompletedProcess([], 0, stdout="", stderr="")
+        with self.assertRaisesRegex(AssertionError, "expected deny"):
+            self._assert_denied(silent)
 
     # -- the guard fires on mutating git while a worker is live -----------
 
@@ -268,28 +291,15 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
                 fh.write(json.dumps(obj) + "\n")
 
     @staticmethod
-    def _taskstop(agent_id, tool="TaskStop", sidechain=False, use=True):
-        """A TaskStop call and its success result, trimmed from real 2.1.281
-        lines. `tool` renames the call the result answers; `use=False` drops it."""
-        use_id = "toolu_stop_{0}".format(agent_id)
-        message = "Successfully stopped task: {0} (Run sleep 300)".format(agent_id)
-        call = {
-            "type": "assistant", "isSidechain": sidechain,
-            "message": {"role": "assistant", "content": [{
-                "type": "tool_use", "id": use_id, "name": tool,
-                "input": {"task_id": agent_id}}]},
-        }
-        result = {
-            "type": "user", "isSidechain": sidechain,
-            "message": {"role": "user", "content": [{
-                "tool_use_id": use_id, "type": "tool_result",
-                "content": json.dumps({"message": message, "task_id": agent_id,
-                                       "task_type": "local_agent"})}]},
-            "toolUseResult": {
-                "message": message, "task_id": agent_id,
-                "task_type": "local_agent", "command": "Run sleep 300"},
-            "version": "2.1.281",
-        }
+    def _taskstop(agent_id, tool="TaskStop", sidechain=False, use=True, caller=""):
+        """A TaskStop call and its success result, captured from 2.1.296: the
+        session transcript, or with `sidechain` the caller's own
+        `subagents/agent-<caller>.jsonl`. `tool` renames the call the result
+        answers; `use=False` drops it."""
+        call, result = _captured("taskstop_sidechain" if sidechain else "taskstop",
+                                 AGENT=agent_id, USE="toolu_stop_" + agent_id,
+                                 CALLER=caller)
+        call["message"]["content"][0]["name"] = tool
         return [call, result] if use else [result]
 
     @staticmethod
@@ -310,29 +320,14 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
 
     @staticmethod
     def _send_message(agent_id):
-        return {
-            "type": "assistant",
-            "message": {"role": "assistant", "content": [{
-                "type": "tool_use", "id": SEND_USE, "name": "SendMessage",
-                "input": {"to": agent_id, "summary": "continue",
-                          "message": "keep going"}}]},
-        }
+        # Captured from 2.1.289, addressed by id.
+        return _captured("send_message", AGENT=agent_id, USE=SEND_USE)[0]
 
     @staticmethod
     def _resume_result(agent_id):
-        # Trimmed from a real 2.1.281 line: SendMessage addressed by NAME, so
-        # only this tool_result carries the id.
-        return {
-            "type": "user",
-            "message": {"role": "user", "content": [{
-                "tool_use_id": SEND_USE,
-                "type": "tool_result", "content": "Resuming agent sleeper"}]},
-            "toolUseResult": {
-                "success": True, "message": "Resuming agent sleeper",
-                "resumedAgentId": agent_id,
-                "pin": {"id": agent_id, "name": "sleeper", "ref": "8cd76e"}},
-            "version": "2.1.281",
-        }
+        # Captured from 2.1.289: resumedAgentId and pin both name it.
+        return _captured("resume_result", AGENT=agent_id, AGENT7=agent_id[:7],
+                         USE=SEND_USE)[0]
 
     @staticmethod
     def _send_result(body, version):
@@ -360,8 +355,8 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
 
     # -- a SubagentStop-settled agent resumed by SendMessage is live again,
     # ordered by the ledger row's `ts` against the transcript line's `timestamp`.
-    # Only a result naming it counts (`resumedAgentId`, or `pin.id` on a success);
-    # a failed send names none.
+    # A result naming it counts (`resumedAgentId`, or `pin.id` on a success), and so
+    # does a SendMessage call to its id until a failed result lands.
 
     BEFORE, AFTER, LATER = ("2026-08-20T15:30:00.000Z", "2026-08-20T15:40:00.000Z",
                             "2026-08-20T15:45:00.000Z")
@@ -384,10 +379,19 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._transcript(dict(self._resume_result("f2222222222222222"), timestamp=self.AFTER))
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
-    def test_a_failed_send_after_the_ledger_settle_does_not_reopen_it(self):
+    def test_a_send_call_after_the_ledger_settle_holds_it_live_until_its_result(self):
+        # in flight, as on the transcript path (kd4q item 4)
         self._sidecar("f8888888888888888")
         self._settle("f8888888888888888")
         self._transcript(dict(self._send_message("f8888888888888888"), timestamp=self.AFTER))
+        self._assert_denied(self._run(self._payload("git commit -m x")))
+
+    def test_a_failed_send_after_the_ledger_settle_does_not_reopen_it(self):
+        self._sidecar("f7777777777777777")
+        self._settle("f7777777777777777")
+        self._transcript(dict(self._send_message("f7777777777777777"), timestamp=self.AFTER),
+                         dict(self._failed_send_result("f7777777777777777"),
+                              timestamp=self.AFTER))
         self._assert_silent(self._run(self._payload("git commit -m done")))
 
     def test_a_subagent_owned_resume_after_the_ledger_settle_makes_it_live_again(self):
@@ -599,15 +603,71 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self._assert_denied(self._run(self._payload("git commit -m x")))
 
     def test_a_managers_sidechain_taskstop_settles_its_builder(self):
-        # A nested caller's transcript is all sidechain lines.
+        # A subagent's PreToolUse carries the MAIN transcript_path, which holds no
+        # sidechain lines (measured); its own TaskStop lands only in its
+        # sidechain file beside its sidecar.
         manager = self._sidecar("e9333333333333333", agent_type="atelier:manager")
         self._sidecar("e9444444444444444")
         own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
         with open(own, "w", encoding="utf-8") as fh:
-            for obj in self._taskstop("e9444444444444444", sidechain=True):
+            for obj in self._taskstop("e9444444444444444", sidechain=True, caller=manager):
                 fh.write(json.dumps(obj) + "\n")
-        self._assert_silent(self._run(self._payload(
-            "git commit -m wave", transcript_path=own, agent_id=manager)))
+        self._assert_silent(self._run(self._payload("git commit -m wave", agent_id=manager)))
+
+    def test_a_main_session_resume_of_a_builder_its_manager_stopped_holds_it_live(self):
+        # Two files carry no common order, so a send in the other file outranks a stop.
+        manager = self._sidecar("e9d33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9d44444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in self._taskstop("e9d44444444444444", sidechain=True, caller=manager):
+                fh.write(json.dumps(obj) + "\n")
+        self._transcript(self._send_message("e9d44444444444444"),
+                         self._resume_result("e9d44444444444444"))
+        self.assertIn("e9d44444444444444", self._assert_denied(
+            self._run(self._payload("git commit -m wave", agent_id=manager))))
+
+    def test_a_managers_resume_of_a_builder_the_main_session_stopped_holds_it_live(self):
+        manager = self._sidecar("e9e33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9e44444444444444")
+        self._transcript(*self._taskstop("e9e44444444444444"))
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in (self._send_message("e9e44444444444444"),
+                        self._resume_result("e9e44444444444444")):
+                fh.write(json.dumps(obj) + "\n")
+        self.assertIn("e9e44444444444444", self._assert_denied(
+            self._run(self._payload("git commit -m wave", agent_id=manager))))
+
+    def test_another_agents_sidechain_taskstop_does_not_settle_for_the_main_session(self):
+        manager = self._sidecar("e9a33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9a44444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in self._taskstop("e9a44444444444444", sidechain=True, caller=manager):
+                fh.write(json.dumps(obj) + "\n")
+        self.assertIn("e9a44444444444444",
+                      self._assert_denied(self._run(self._payload("git commit -m x"))))
+
+    def test_a_managers_sidechain_resume_after_the_ledger_settle_makes_it_live_again(self):
+        manager = self._sidecar("e9b33333333333333", agent_type="atelier:manager")
+        self._sidecar("e9b44444444444444")
+        self._settle("e9b44444444444444")
+        own = os.path.join(self.subagents_dir, "agent-{0}.jsonl".format(manager))
+        with open(own, "w", encoding="utf-8") as fh:
+            for obj in (self._send_message("e9b44444444444444"),
+                        self._resume_result("e9b44444444444444")):
+                fh.write(json.dumps(dict(obj, timestamp=self.AFTER)) + "\n")
+        self.assertIn("e9b44444444444444", self._assert_denied(
+            self._run(self._payload("git commit -m x", agent_id=manager))))
+
+    def test_a_caller_id_holding_a_nul_still_denies(self):
+        self._sidecar("e9c44444444444444")
+        self._assert_denied(self._run(self._payload("git commit -m x", agent_id="m\u0000x")))
+
+    def test_a_caller_id_holding_a_lone_surrogate_still_denies(self):
+        self._sidecar("e9c44444444444445")
+        self._assert_denied(self._run(self._payload("git commit -m x", agent_id="m\ud800x")))
 
     def test_a_statusless_resume_quoting_a_kill_still_reopens(self):
         self._sidecar("e9555555555555555")
@@ -1012,24 +1072,38 @@ class LiveWorkerGitGuardTests(unittest.TestCase):
         self.assertEqual(self._assert_denied(self._run_in(
             "git -C {0} commit -m a && {1}".format(other, push), session, session)), alone)
 
-    def test_a_native_session_write_after_an_other_repo_write_is_denied(self):
-        # the native loop must judge every call, not stop at the first
-        session, other = self._repo("session-repo"), self._repo("other-repo")
-        record = os.path.join(session, ".git", "atelier-codex", "workers",
-                              self.session_id, "nw1.json")
-        os.makedirs(os.path.dirname(record))
-        with open(record, "w", encoding="utf-8") as fh:
-            json.dump({"session_id": self.session_id, "agent_id": "nw1",
-                       "agent_type": "builder", "status": "running",
-                       "source": session, "worktree": None}, fh)
+    def _run_native(self, session, command, **record):
+        """Run `command` from `session` as a native (codex) caller, with one
+        running worker record built from `record`."""
+        row = {"session_id": self.session_id, "agent_id": "nw1",
+               "agent_type": "builder", "status": "running",
+               "source": session, "worktree": None}
+        row.update(record)
+        path = os.path.join(session, ".git", "atelier-codex", "workers",
+                            self.session_id, row["agent_id"] + ".json")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump({k: v for k, v in row.items() if v is not DROP}, fh)
         policy = os.path.join(self.tmp.name, "policy.md")
         with open(policy, "w", encoding="utf-8") as fh:
             fh.write("---\nenforce: strict\n---\n")
-        payload = self._payload("git -C {0} commit -m a && git -C {1} commit -m b"
-                                .format(other, session))
+        payload = self._payload(command)
         payload["cwd"] = session
-        self._assert_denied(self._run(payload, extra_env={
-            "ATELIER_HARNESS": "codex", "ATELIER_ACTIVATION_FILE": policy}))
+        return self._run(payload, extra_env={
+            "ATELIER_HARNESS": "codex", "ATELIER_ACTIVATION_FILE": policy})
+
+    def test_a_native_session_write_after_an_other_repo_write_is_denied(self):
+        # the native loop must judge every call, not stop at the first
+        session, other = self._repo("session-repo"), self._repo("other-repo")
+        self._assert_denied(self._run_native(
+            session, "git -C {0} commit -m a && git -C {1} commit -m b".format(other, session)))
+
+    def test_a_native_record_without_agent_type_still_denies(self):
+        # a corrupt record must not raise in the deny text and fail open (kd4q item 1)
+        session = self._repo("session-repo")
+        reason = self._assert_denied(self._run_native(
+            session, "git commit -m x", agent_type=DROP))
+        self.assertIn("agent nw1 (native worker)", reason)
 
     def test_a_session_write_before_an_other_repo_write_is_denied(self):
         session, other = self._repo("session-repo"), self._repo("other-repo")
