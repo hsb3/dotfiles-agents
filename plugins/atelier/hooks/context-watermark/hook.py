@@ -19,7 +19,8 @@ Contract:
   - PostToolUse — fires in both the parent and a worker; only a worker's
     payload carries `agent_id`, and that presence is the whole test. stdout:
     {"hookSpecificOutput": {"hookEventName": "PostToolUse",
-    "additionalContext": ...}} — the shape a subagent actually acts on.
+    "additionalContext": ...}} — the shape a subagent actually acts on. In the
+    parent it is the once-per-session mid-turn hard nudge (README.md).
   - exit 0 always, even on internal error, so neither a prompt nor a tool call
     is ever broken by this hook.
 
@@ -62,6 +63,7 @@ REFIRE_EVERY_DEFAULT = 5  # prompts (or worker tool calls), while still above a 
 STATE_DIR_DEFAULT = "/tmp/context-watermark"
 LOG_STREAM = "context-watermark"
 LOG_PATH_ENV = "CONTEXT_WATERMARK_LOG_PATH"
+CYCLE_OWNER_ENV = "CONTEXT_WATERMARK_CYCLE_OWNER"  # any non-blank value: a coordinator runs the cycle
 ACTIVATION_KEY = "watermark"
 
 
@@ -309,34 +311,55 @@ MESSAGES = {
     ),
     "soft": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
-        "watermark. This is advisory: checkpoint at the next safe boundary; finish "
-        "small bounded work before arranging continuation."
+        "watermark. This is advisory: finish the slice or dispatch in hand and start "
+        "no new one."
     ),
     "hard": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
-        "watermark. This is advisory and grants no authority: preserve the branch, "
-        "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
-        "before continuation."
+        "watermark. This is advisory and grants no authority: at the next safe boundary "
+        "commit or list uncommitted changes, bring your handoff note or plan file current "
+        "with test proof, and return; your dispatcher decides continuation."
     ),
     "session_soft": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
         "watermark. This is advisory: at the next safe boundary run the "
         "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact) to "
-        "update the handoff and prepare compaction; if a coordinator owns your cycle, "
-        "stop after the handoff and wait for it rather than compacting."
+        "update the handoff and prepare compaction."
     ),
     "session_hard": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
         "watermark. This is advisory: update the handoff now with the "
-        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact); if a "
-        "coordinator owns your cycle, stop after the handoff and wait for it rather than "
-        "compacting."
+        "atelier:compact-handoff skill (on Claude Code: /atelier:prepare-compact)."
+    ),
+    # The main session's mid-turn nudge: no stop, no compaction (mzja).
+    "session_hard_midturn": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
+        "watermark during a turn. This is advisory: at the next safe boundary update "
+        "the handoff with the handoff step of /atelier:prepare-compact (the "
+        "atelier:compact-handoff skill), then continue the task."
+    ),
+    # Chosen when CYCLE_OWNER_ENV is set: a coordinator restarts this session.
+    "session_soft_coordinated": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
+        "watermark. This is advisory, and a coordinator runs this session's cycle: at "
+        "the next safe boundary update the handoff, touch its freshness stamp last, "
+        "then stop and wait for the coordinator; do not compact."
+    ),
+    "session_hard_coordinated": (
+        "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
+        "watermark. This is advisory, and a coordinator runs this session's cycle: "
+        "update the handoff now, touch its freshness stamp last, then stop and wait "
+        "for the coordinator; do not compact."
     ),
 }
 
 
 def _format_message(tier, ctx_tokens, notice, soft, hard, layer="worker"):
-    key = "session_" + tier if layer == "session" and tier in ("soft", "hard") else tier
+    key = tier
+    if layer == "session" and tier in ("soft", "hard"):
+        key = "session_" + tier
+        if os.environ.get(CYCLE_OWNER_ENV, "").strip():
+            key += "_coordinated"
     return MESSAGES[key].format(
         k=round(ctx_tokens / 1000),
         notice=round(notice / 1000),
@@ -466,6 +489,71 @@ def handle_session(payload, log):
              notice, soft, hard))
 
 
+def _mark_fired(key):
+    """Save the once-only flag and report whether it actually persisted."""
+    _save_state(key, {"fired": True})
+    return _load_state(key).get("fired") is True
+
+
+def _rearm(key, prompt_reported_hard):
+    """A reading below hard (a compaction) re-arms the nudge.
+
+    It also lifts a hard report the prompt path made before this reading, but
+    not one it makes after, which is why the flag is captured here.
+    """
+    state = {"fired": False, "prompt_hard_lifted": prompt_reported_hard}
+    if _load_state(key) != state:
+        _save_state(key, state)
+
+
+def handle_session_tool(payload, log):
+    """PostToolUse in the main session: one hard nudge per session, mid-turn."""
+    if codex_lifecycle.enabled():
+        return  # until the Codex probe shows PostToolUse context reaches the model (mzja)
+    session_id = payload.get("session_id", "unknown")
+    ctx_tokens, model, tiers, error, info = _measure(
+        payload.get("transcript_path"), os.environ.get("CLAUDE_PROJECT_DIR")
+        or payload.get("cwd") or os.getcwd(), "session")
+    if error:
+        log(dict(_row("session", session_id, None, "none", False, error=error),
+                 event="PostToolUse"))
+        return
+
+    notice, soft, hard = tiers
+    tier = _tier_for(ctx_tokens, notice, soft, hard)
+    row = dict(_row("session", session_id, ctx_tokens, tier, False, model, info,
+                    notice, soft, hard), event="PostToolUse")
+    midturn_key = session_id + "-midturn"  # its own file: the prompt path rewrites its state whole
+    prompt_reported_hard = _load_state(session_id).get("last_tier") == "hard"
+    if tier != "hard":
+        _rearm(midturn_key, prompt_reported_hard)
+    else:
+        midturn = _load_state(midturn_key)
+        if os.environ.get(CYCLE_OWNER_ENV, "").strip():
+            row["suppressed"] = "cycle-owner"
+        elif midturn.get("fired"):
+            row["suppressed"] = "already-fired"
+        elif prompt_reported_hard and not midturn.get("prompt_hard_lifted"):
+            row["suppressed"] = "prompt-reported-hard"
+        elif not _mark_fired(midturn_key):
+            row["suppressed"] = "state-unwritable"  # unsaved, it would fire on every call
+        else:
+            row["fired"] = True
+            print(json.dumps({
+                "hookSpecificOutput": {
+                    "hookEventName": "PostToolUse",
+                    "additionalContext": MESSAGES["session_hard_midturn"].format(
+                        k=round(ctx_tokens / 1000), hard=round(hard / 1000)),
+                },
+                "systemMessage": (
+                    "atelier context-watermark: context ~{0}k tokens crossed the {1}k hard "
+                    "watermark mid-turn; the model was asked to update the handoff at the "
+                    "next safe boundary and continue.".format(
+                        round(ctx_tokens / 1000), round(hard / 1000))),
+            }))
+    log(row)
+
+
 def handle_subagent(payload, log):
     """PostToolUse inside a worker: the same advisory stages as its session."""
     session_id = payload.get("session_id", "unknown")
@@ -543,11 +631,10 @@ def main():
 
         if payload.get("agent_id"):
             handle_subagent(payload, log)
-        elif payload.get("hook_event_name") != "PostToolUse":
+        elif payload.get("hook_event_name") == "PostToolUse":
+            handle_session_tool(payload, log)
+        else:
             handle_session(payload, log)
-        # PostToolUse without an agent_id is the PARENT's own tool call: the
-        # session is already watched on every prompt, so there is nothing to
-        # say and no row to write.
         sys.exit(0)
 
     except Exception as e:

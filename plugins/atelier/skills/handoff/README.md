@@ -22,7 +22,9 @@ file in a project that lacks one. It updates `_meta/HANDOFF.md` (or `HANDOFF.md`
 `.claude/HANDOFF.md`, whichever the project already uses, or a project-relative path the
 project's `handoff:` key names). A project whose handoff lives outside the repo entirely
 (a tracker or board) sets that key to external mode instead — the skill updates the handoff
-there and touches a freshness stamp, no HANDOFF.md involved.
+there and touches a freshness stamp, no HANDOFF.md involved. On Claude Code, atelier's
+`context-watermark` hook also nudges a session toward it once context crosses the soft or hard
+watermark.
 
 ## Install
 

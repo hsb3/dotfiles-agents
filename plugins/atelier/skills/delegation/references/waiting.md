@@ -61,14 +61,9 @@ your report is the only thing you can send, and it is sent by finishing.
 ## Continuity after a context warning
 
 A context warning is advisory; it changes neither the worker's authority nor the ownership and
-isolation rules. At notice, reduce further reading. At soft, checkpoint at the next safe boundary,
-but finish a genuinely small bounded slice when that preserves a cleaner result. At hard, preserve
-the branch, worktree, uncommitted changes, and test proof before a replacement continues.
-
-The default is a manager-facilitated final checkpoint followed by a fresh continuation. A worker
-may use a self-handoff only where the harness has proved that exact route; a warning is never proof
-that compaction, resume, or self-continuation works. Do not kill, terminate, discard, or abandon
-work merely because a threshold fired, and do not mutate a worktree merely to acknowledge it.
+isolation rules. Do what the warning says; continuation is your dispatcher's call. Do not kill,
+terminate, discard, or abandon work merely because a threshold fired, and do not mutate a worktree
+merely to acknowledge it.
 
 ## Where a worker's completion actually goes
 

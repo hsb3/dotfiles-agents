@@ -27,7 +27,7 @@ flowchart TD
 | Skill | What it does |
 |---|---|
 | `task-authoring` | Writes task bodies with testable acceptance criteria, explicit gates and scoped ownership. Tracker-agnostic. |
-| `board-triage` | Measures board-wide discrimination, ranks priorities through Kata, GitHub Projects, Backlog.md or plain-file adapters, and supplies the declared label vocabulary, relabel helper and GitHub mirror reconciler. Owner-gated `decision` items may keep a blank priority without failing either priority check. Writes require explicit apply. |
+| `board-triage` | Measures board-wide discrimination, ranks priorities through Kata, GitHub Projects, Backlog.md or plain-file adapters, and supplies the declared label vocabulary, relabel helper and GitHub mirror reconciler. Owner-gated `decision` items may keep a blank priority without failing either priority check. A crashed measurement exits 2 (could not measure), never 1 (findings). Writes require explicit apply. |
 
 ## Install and use
 

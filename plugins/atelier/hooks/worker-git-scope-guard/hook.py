@@ -31,6 +31,7 @@ on a deny and nothing otherwise, and always exits 0 — a guard that crashes mus
 the Bash tool.
 """
 
+import bisect
 import codecs
 import json
 import os
@@ -200,7 +201,67 @@ def _scan_line(line, stack, depth, terminators, paren=True, hash_word=False):
     return depth, False
 
 
-def _body_end(lines, j, word, quoted, dash, paren=False):
+class _LineIndex:
+    """The terminator lookup for one `command.split("\n")`: per key, the ranks of the
+    lines that could close a body, so finding the next one is a bisect, not a scan.
+
+    Lines are backslash-joined under an unquoted word, raw under a quoted one. A body end
+    is rewritten in place and the caller resumes on it, so later lookups start past `dirty`."""
+
+    def __init__(self, lines):
+        self.lines, self.dirty, self.reps, self.keys = list(lines), -1, {}, {}
+
+    def _rep(self, quoted):
+        """(end positions, texts, each line's offset into its text) of the lines."""
+        if quoted not in self.reps:
+            if quoted:
+                ends, texts, offsets = range(len(self.lines)), self.lines, None
+            else:
+                ends, texts, offsets, parts, offset = [], [], [], [], 0
+                for k, line in enumerate(self.lines):
+                    offsets.append(offset)
+                    if k + 1 < len(self.lines) and (len(line) - len(line.rstrip("\\"))) % 2:
+                        parts.append(line[:-1])
+                        offset += len(line) - 1
+                        continue
+                    ends.append(k)
+                    texts.append("".join(parts) + line)
+                    parts, offset = [], 0
+            self.reps[quoted] = ends, texts, offsets
+        return self.reps[quoted]
+
+    def _ranks(self, quoted, dash, size):
+        """key -> ascending ranks; `size` None keys the whole text, a length keys the
+        text's first `size` characters when its first `)` lies past them."""
+        if (quoted, dash, size) not in self.keys:
+            table = self.keys[quoted, dash, size] = {}
+            for rank, text in enumerate(self._rep(quoted)[1]):
+                text = text.lstrip("\t") if dash else text
+                if size is None:
+                    table.setdefault(text, []).append(rank)
+                elif text.find(")") >= size:
+                    table.setdefault(text[:size], []).append(rank)
+        return self.keys[quoted, dash, size]
+
+    def find(self, lines, j, quoted, dash, keys):
+        """(the end of the first logical line from `lines[j]` on any of `keys`, each
+        `(size, key)`, and its text) or (len(lines), None); None when `j` was rewritten."""
+        if j <= self.dirty:  # defensive: an in-place rewrite leaves every later search past it
+            return None
+        shift = len(lines) - len(self.lines)
+        ends, texts, offsets = self._rep(quoted)
+        rank = bisect.bisect_left(ends, j - shift)
+        if offsets and offsets[j - shift]:  # mid-line: the scan reads the rest of it first
+            return ends[rank] + shift, texts[rank][offsets[j - shift]:]
+        best = len(texts)
+        for size, key in keys:
+            ranks = self._ranks(quoted, dash, size).get(key, ())
+            k = bisect.bisect_left(ranks, rank)
+            best = min(best, ranks[k]) if k < len(ranks) else best
+        return (len(lines), None) if best == len(texts) else (ends[best] + shift, texts[best])
+
+
+def _body_end(lines, j, word, quoted, dash, paren=False, index=None):
     """(the index of the line that closes a heredoc body starting at `lines[j]`,
     whether the shell reads on from that line), or (None, False). As in bash, under
     an unquoted word a line ending in an odd run of backslashes joins the next
@@ -208,31 +269,40 @@ def _body_end(lines, j, word, quoted, dash, paren=False):
     are removed under `<<-`. Inside `$(` (`paren`) bash 5 also ends it at a line
     starting with the word whose rest holds a `)`, and rereads that rest as commands
     (`EOF);git push`), so the line is rewritten in place as the rest."""
+    keys = [(None, word)] + [(len(word), word)] * paren
     while j < len(lines):
-        line = lines[j]
-        while (not quoted and j + 1 < len(lines)
-               and (len(line) - len(line.rstrip("\\"))) % 2):
-            j += 1
-            line = line[:-1] + lines[j]
+        hit = index and index.find(lines, j, quoted, dash, keys)
+        if hit:
+            j, line = hit
+            if line is None:
+                break
+        else:
+            line = lines[j]
+            while (not quoted and j + 1 < len(lines)
+                   and (len(line) - len(line.rstrip("\\"))) % 2):
+                j += 1
+                line = line[:-1] + lines[j]
         if dash:
             line = line.lstrip("\t")
         if line == word:
             return j, False
         if paren and line.startswith(word) and ")" in line[len(word):]:
             lines[j] = line[len(word):]
+            if index:
+                index.dirty = j
             return j, True
         j += 1
     return None, False
 
 
-def _skip_bodies(lines, i, terminators, paren=True):
+def _skip_bodies(lines, i, terminators, paren=True, index=None):
     """The index after the last of the heredoc bodies that `terminators`
     opened on one line, read in order from `lines[i]`; `i` itself when one is
     never closed, since dropping text is a silent fail-open. A body ended at a
     `WORD)` line returns that rewritten line, so any later body is kept as commands."""
     j = i
     for word, quoted, dash, depth in terminators:
-        j, resumed = _body_end(lines, j, word, quoted, dash, depth > 0 and paren)
+        j, resumed = _body_end(lines, j, word, quoted, dash, depth > 0 and paren, index)
         if j is None:
             return i
         if resumed:
@@ -254,6 +324,7 @@ def strip_heredocs(command, paren=True, hash_word=False):
     bash ends it (`_body_end`).
     """
     lines = command.split("\n")
+    index = _LineIndex(lines)
     out, stack, depth, pending, i = [], [], 0, [], 0
     while i < len(lines):
         out.append(lines[i])
@@ -263,7 +334,7 @@ def strip_heredocs(command, paren=True, hash_word=False):
             continue
         ready = [t for t in pending if t[3] >= depth]
         pending = [t for t in pending if t[3] < depth]
-        i = _skip_bodies(lines, i, ready, paren)  # each body and its terminator line
+        i = _skip_bodies(lines, i, ready, paren, index)  # each body and its terminator line
     return "\n".join(out)
 
 
@@ -314,14 +385,21 @@ def _scan_line_base(line, quote):
     return terminators, quote, False
 
 
-def _body_end_base(lines, j, word, quoted, dash, paren=False):
+def _body_end_base(lines, j, word, quoted, dash, paren=False, index=None):
     """Line-local `_body_end`: the index of the line closing the body, or None."""
+    keys = [(None, word), (None, word + ")" * paren)]
     while j < len(lines):
-        line = lines[j]
-        while (not quoted and j + 1 < len(lines)
-               and (len(line) - len(line.rstrip("\\"))) % 2):
-            j += 1
-            line = line[:-1] + lines[j]
+        hit = index and index.find(lines, j, quoted, dash, keys)
+        if hit:
+            j, line = hit
+            if line is None:
+                break
+        else:
+            line = lines[j]
+            while (not quoted and j + 1 < len(lines)
+                   and (len(line) - len(line.rstrip("\\"))) % 2):
+                j += 1
+                line = line[:-1] + lines[j]
         if (line.lstrip("\t") if dash else line) in (word, word + ")" * paren):
             return j
         j += 1
@@ -331,6 +409,7 @@ def _body_end_base(lines, j, word, quoted, dash, paren=False):
 def _strip_heredocs_base(command, paren=True):
     """Line-local `strip_heredocs`, its `_skip_bodies` inlined."""
     lines = command.split("\n")
+    index = _LineIndex(lines)
     out, quote, pending, i = [], None, [], 0
     while i < len(lines):
         out.append(lines[i])
@@ -341,7 +420,7 @@ def _strip_heredocs_base(command, paren=True):
             continue
         j = i
         for word, quoted, dash, in_subst in pending:
-            j = _body_end_base(lines, j, word, quoted, dash, in_subst and paren)
+            j = _body_end_base(lines, j, word, quoted, dash, in_subst and paren, index)
             if j is None:
                 break
             j += 1

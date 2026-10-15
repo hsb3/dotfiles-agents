@@ -26,8 +26,9 @@ later turn, while a manager absorbs the same traffic into a context that gets th
   only the minimum relevant project facts, references, and tools. The brief is decomposed to a
   simple leaf and uses the least costly capable tier; frontier belongs only to the root strategist
   at either planning effort. Measure inherited startup context rather than inferring it from a
-  short prompt. Context warnings, where a harness emits them, remain advisory checkpoints with no
-  automatic worktree mutation.
+  short prompt. Context warnings, where a harness emits them, stay advisory: no layer acts on its
+  own estimate of context, a worker takes the action its harness's warning implies, and its
+  dispatcher decides continuation; a coordinated session hands off and waits instead of compacting.
 
 ## Sizing a brief
 

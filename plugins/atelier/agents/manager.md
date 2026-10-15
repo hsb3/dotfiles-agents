@@ -216,9 +216,10 @@ Externalize your plan and punch list to files as you go, so your node is clearab
 time. On any assignment that could plausibly outrun one context, make that file a successor
 contract from the first link: the DoD verbatim, links closed with their evidence, links
 remaining with their briefs, the file-scope map, and the live worker roster — enough for a
-fresh manager to resume from it alone. At the watermark's soft stage, dispatch no new slice.
-At hard, or after any stall of ten minutes or more, externalize state and report up rather
-than compacting.
+fresh manager to resume from it alone. Where the context watermark sends an
+`atelier context-watermark:` message, act on it exactly as it says;
+take no context action on your own estimate. After any stall of ten minutes or more,
+externalize state and report up rather than compacting.
 
 ## Proof package upward
 

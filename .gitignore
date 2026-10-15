@@ -8,17 +8,16 @@
 # --- secrets ---
 .env*
 !.env*.example
-# any *.env credential file anywhere in the tree (e.g. evals/pb.py's
-# .claude/operations/extender-db.env) — basename-anchored, not just dotfiles at repo root
+# any *.env credential file anywhere in the tree (e.g. an operations
+# extender-db.env) — basename-anchored, not just dotfiles at repo root
 *.env
 !*.env.example
 
 
 # --- PocketBase runtime ---
-# The hosted instance owns live state. Keep local database/files private for
-# backups or disposable fixtures; schema.py remains the schema source.
+# The hosted instance owns live state. Keep local database files private for
+# backups or disposable fixtures; evals/pb_migrations/ (tracked) is the schema source.
 evals/pb_data/
-evals/pb_migrations/
 
 # --- Python ---
 __pycache__/
@@ -30,13 +29,11 @@ __pycache__/
 logs/
 *.log
 
-# --- agent harness (harness/ uv project) — runtime artifacts, never tracked
-# (results.jsonl IS tracked: battle-test evidence, DESIGN §8-D3). Temp workspaces
-# default to the system tempdir; harness/workspaces/ is a defensive ignore. ---
+# --- agent harness (harness/, Bun unit) — runtime artifacts, never tracked
+# (results.jsonl IS tracked: the ledger the evals unit loads). Run dirs live in the
+# system tempdir. ---
 harness/runs/
-harness/workspaces/
-harness/.venv/
-# weekly campaign runner logs (defensive; the global *.log already covers the files)
+# weekly campaign logs (defensive; the global *.log already covers the files)
 harness/campaign-logs/
 
 # >>> cc-project-memory (managed) >>>

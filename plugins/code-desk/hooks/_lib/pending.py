@@ -321,21 +321,26 @@ def _resumed_keys(result):
 def _resumed_after(transcript_path, settled_at):
     """Keys of `settled_at` that `transcript_path` resumed after their settle.
 
-    A resume is a `user` line whose `toolUseResult` names it (`_resumed_keys`)
-    and whose `timestamp` is later than the ledger row's `ts`. The
-    `SendMessage` call alone never counts, since a failed send names no
-    agent; nor does a notification, since a background agent's own completion
+    A resume is a `user` line whose `toolUseResult` names it (`_resumed_keys`),
+    or an assistant `SendMessage` call addressed to its id, either with a
+    `timestamp` later than the ledger row's `ts`. The call holds it live until
+    its result lands, and for good unless that result is a failure
+    (`success: false` or an error string), as `stopped_ids` reads it. A
+    notification never counts, since a background agent's own completion
     notice lands after its stop row. Unreadable or unordered evidence resumes
     nothing.
     """
     resumed = set()
     if not settled_at or not transcript_path:
         return resumed
+    sends = {}  # SendMessage tool_use id -> addressee, live until its result lands
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
-                if (("resumedAgentId" not in line and '"pin"' not in line)
-                        or not any(k in line for k in settled_at)):
+                if not ((("resumedAgentId" in line or '"pin"' in line
+                          or "SendMessage" in line)
+                         and any(k in line for k in settled_at))
+                        or any(u in line for u in sends)):
                     continue
                 try:
                     obj = json.loads(line)
@@ -343,16 +348,36 @@ def _resumed_after(transcript_path, settled_at):
                     continue
                 if not isinstance(obj, dict):
                     continue
-                result = obj.get("toolUseResult")
-                if obj.get("type") != "user" or not isinstance(result, dict):
-                    continue
                 moment = _moment(obj.get("timestamp"))
+                if obj.get("type") == "assistant":
+                    message = obj.get("message")
+                    content = message.get("content") if isinstance(message, dict) else None
+                    for block in content if isinstance(content, list) else ():
+                        if (isinstance(block, dict) and block.get("type") == "tool_use"
+                                and block.get("name") == "SendMessage"
+                                and isinstance(block.get("id"), str)
+                                and isinstance(block.get("input"), dict)):
+                            key = agent_key(block["input"].get("to"))
+                            if moment and key in settled_at and moment > settled_at[key]:
+                                sends[block["id"]] = key
+                    continue
+                if obj.get("type") != "user":
+                    continue
+                result = obj.get("toolUseResult")
+                for use in [u for u in sends if _answers(obj, {u})]:
+                    key = sends.pop(use)
+                    # Only a proven failure leaves it settled.
+                    if not (isinstance(result, str) or (isinstance(result, dict)
+                                                        and result.get("success") is False)):
+                        resumed.add(key)
+                if not isinstance(result, dict):
+                    continue
                 for key in _resumed_keys(result):
                     if moment and key in settled_at and moment > settled_at[key]:
                         resumed.add(key)
-    except OSError:
+    except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
         return set()
-    return resumed
+    return resumed | set(sends.values())
 
 
 NOTIFICATION_OPEN = "<task-notification>"
@@ -398,8 +423,8 @@ def stopped_ids(transcript_path, candidates):
     here: the TaskStop success result, a `user` line whose
     `toolUseResult.task_id` is the agent, whose message starts
     "Successfully stopped task", and whose `tool_result.tool_use_id` answers
-    an earlier assistant `tool_use` named TaskStop. Sidechain lines count: a
-    nested caller's transcript is nothing else. A `<task-notification>` never settles, since
+    an earlier assistant `tool_use` named TaskStop. Sidechain lines count: the
+    hook also passes a nested caller's own `agent-<id>.jsonl`, which is nothing else. A `<task-notification>` never settles, since
     a queued prompt or an agent's quoted output can carry the same text.
 
     Known limit: an agent killed by the user rather than by TaskStop stays
@@ -475,28 +500,67 @@ def stopped_ids(transcript_path, candidates):
                             continue
                         if block.get("name") == "TaskStop":
                             taskstop_uses.add(block["id"])
-                        elif (block.get("name") == "SendMessage"
-                                and isinstance(block.get("input"), dict)):
-                            key = agent_key(block["input"].get("to"))
-                            if key in wanted:
-                                sends[block["id"]] = key
+                        elif _send_target(block, wanted):
+                            sends[block["id"]] = _send_target(block, wanted)
                 stopped.discard(_reopened_by_notification(text))
-    except OSError:
+    except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
         return set()
     return stopped - set(sends.values())
 
 
+def _send_target(block, wanted):
+    """The candidate a SendMessage `tool_use` block addresses, else None."""
+    if block.get("name") == "SendMessage" and isinstance(block.get("input"), dict):
+        key = agent_key(block["input"].get("to"))
+        if key in wanted:
+            return key
+    return None
+
+
+def sent_ids(transcript_path, candidates):
+    """The subset of `candidates` any SendMessage call in this transcript addresses.
+
+    Whatever its result or position: the hook uses it to let a send in one file
+    cancel a stop in another, and two files share no order, so it fails closed.
+    A missing or unreadable transcript yields the empty set.
+    """
+    wanted = {k for k in (agent_key(c) for c in candidates or ()) if k}
+    sent = set()
+    if not wanted or not transcript_path:
+        return sent
+    try:
+        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if "SendMessage" not in line or not any(k in line for k in wanted):
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (ValueError, RecursionError):
+                    continue
+                message = obj.get("message") if isinstance(obj, dict) else None
+                content = message.get("content") if isinstance(message, dict) else None
+                for block in content if isinstance(content, list) else ():
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        sent.add(_send_target(block, wanted))
+    except (OSError, ValueError):  # ValueError: an id open() rejects (NUL, lone surrogate)
+        return set()
+    sent.discard(None)
+    return sent
+
+
 def pending_keys(directory, extra_settled=None, tail_bytes=TAIL_BYTES,
-                 transcript_path=None):
+                 transcript_path=None, sidechain_path=None):
     """Sorted agent_ids started in `directory` that the ledger has not settled.
 
-    With `transcript_path`, an agent it resumed after its latest settle is
-    unsettled again until its next one (the git guard; telemetry passes none).
+    With `transcript_path` (and a nested caller's `sidechain_path`), an agent
+    either resumed after its latest settle is unsettled again until its next
+    one (the git guard; telemetry passes neither).
     """
     started = started_keys(directory)
     settled_at = _settled_at(tail_bytes)
-    settled = set(settled_at) - _resumed_after(
-        transcript_path, {k: settled_at[k] for k in started if k in settled_at})
+    window = {k: settled_at[k] for k in started if k in settled_at}
+    settled = set(settled_at) - (_resumed_after(transcript_path, window)
+                                 | _resumed_after(sidechain_path, window))
     if extra_settled:
         settled.update(k for k in extra_settled if k)
     return sorted(key for key in started if key not in settled)

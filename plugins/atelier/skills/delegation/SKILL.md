@@ -541,23 +541,25 @@ termination:
 
 ## Context hygiene
 
-The three-stage advisory policy for managing context is never a stop command:
+The advisory policy for managing context is never a stop command, and no layer takes a context
+action on its own estimate.
 
-- **Notice:** reduce further reads and avoid taking on new broad work.
-- **Soft:** checkpoint at the next safe boundary; a genuinely small, bounded current slice may
-  finish first.
-- **Hard:** coordinate a checkpoint and continuation that preserves the branch, worktree,
-  uncommitted changes, and test proof before replacement.
+<!-- harness:claude-code -->
+Here the policy has three stages, and every layer acts on an `atelier context-watermark:` message
+exactly as it says:
+
+| Layer | Stage action (the hook text) | Who continues |
+| --- | --- | --- |
+| worker (scout, builder, reviewer, manager) | Notice: reduce further grounding reads and continue the bounded slice. Soft: finish the slice or dispatch in hand and start no new one. Hard: at the next safe boundary commit or list uncommitted changes, bring the handoff note or plan file current with test proof, and return. | Its dispatcher |
+| session | Notice: reduce further grounding reads. Soft: update the handoff at the next safe boundary and prepare compaction. Hard: update the handoff now. When `CONTEXT_WATERMARK_CYCLE_OWNER` marks a coordinator, both stages instead end with the stamp touched last, then stop and wait; do not compact. | The session after its handoff, or the coordinator that owns its cycle |
+<!-- /harness -->
 
 A warning never kills, terminates, discards, or abandons work, and it grants a worker no authority
-it did not already have. Warning alone must not mutate a worktree. A manager-facilitated final
-checkpoint plus a fresh continuation is the default. Use self-handoff only when that harness has
-proved the exact continuation route; do not pretend that compaction or a resume message works
-where it has not been verified. `references/waiting.md` carries the continuity rule.
+it did not already have. Warning alone must not mutate a worktree. `references/waiting.md`
+carries the continuity rule.
 
-Prefer a handoff plus a fresh session over an unverified compaction route. Treat a ≥10-minute idle
-or messy debugging as a useful checkpoint opportunity, and downtier only demonstrably simple work
-with a strict DoD; see `references/tier-cutoff.md`.
+Prefer a handoff plus a fresh session over an unverified compaction route. Downtier only
+demonstrably simple work with a strict DoD; see `references/tier-cutoff.md`.
 
 <!-- harness:claude-code -->
 Here, `context-watermark` emits the three advisory stages from tunable, unmeasured policy
@@ -578,9 +580,9 @@ handoff skill has no slash command because a command would shadow the skill of t
 <!-- /harness -->
 
 These watermarks budget the current context; they do not make a manager disposable in the middle of
-an uncheckpointed chain. If a chain outgrows one manager context, preserve its proof and hand it to
-a successor through the verified route, or escalate the slicing defect (Step 2, "Width is not
-lifetime").
+an uncheckpointed chain. A manager's hard-stage return carries its plan file; the strategist
+re-briefs a successor from it. A chain that keeps outgrowing one manager context is a slicing
+defect to escalate (Step 2, "Width is not lifetime").
 
 ## Additional resources
 
