@@ -331,7 +331,12 @@ def _emit(obj):
 # Reading the command
 # ---------------------------------------------------------------------------
 
-def _scan_line(line, stack, terminators=(), paren=True):
+def _depth(stack, nest):
+    """A terminator's depth: the contexts open, less the `nest` reading's `(` and backticks."""
+    return len(stack) - (stack.count("(") + stack.count("`") if nest else 0)
+
+
+def _scan_line(line, stack, terminators=(), paren=True, nest=None):
     """(the heredoc terminators pending after this line, each `(word, quoted, dash,
     depth)`, the contexts open at its end, whether it ends in a line continuation),
     given the contexts open at its start and the terminators still pending.
@@ -346,19 +351,32 @@ def _scan_line(line, stack, terminators=(), paren=True):
     single quotes, and inside `$'...'` too. A `#` at the start of the line, after
     whitespace or after one of `;&|()` runs to the line end, so an apostrophe in
     a comment opens no quote.
+
+    `nest` is an extra reading: a plain `(` and a backtick (inside which `$(` is
+    not parsed) are contexts too, and a `#` right after the `)` closing a `$(` is
+    part of the word (`$(...)#x`); under `"32"` a `#` inside `$(` also needs a
+    blank before it, as bash 3.2 reads one.
     """
-    terminators, stack, i = list(terminators), list(stack), 0
+    terminators, stack, i, closed_at = list(terminators), list(stack), 0, None
     while i < len(line):
         char = line[i]
-        quote = stack[-1] if stack and stack[-1] != "$(" else None
+        quote = stack[-1] if stack and stack[-1] not in ("$(", "(") else None
         if quote:
             if char == quote[-1]:
                 stack.pop()
             elif char == "\\" and quote != "'":
                 i += 1
+            elif nest and quote == '"' and char == "`":
+                stack.append(char)
             elif quote == '"' and line.startswith("$(", i):
                 stack.append("$(")
                 i += 1
+            elif quote == "`" and char == "<":
+                m = HEREDOC_START.match(line, i)  # the shell inside backticks reads one too
+                if m and _opener(m, line, i):
+                    terminators.append(_opener(m, line, i) + (_depth(stack, nest),))
+                    i = m.end()
+                    continue
         elif char == "\\":
             if i == len(line) - 1:
                 return terminators, tuple(stack), True
@@ -369,30 +387,40 @@ def _scan_line(line, stack, terminators=(), paren=True):
         elif line.startswith("$(", i):
             stack.append("$(")
             i += 1
+        elif nest and char == "(":
+            stack.append(char)
         elif char == ")":
             # ponytail: a subshell or case `)` inside `$(` closes it early, so
-            # `$( (true); cat <<W` misses a `W)` end; track plain `(` if one bites
+            # `$( (true); cat <<W` misses a `W)` end; the `nest` reading tracks `(`
             if stack:
-                stack.pop()
+                if stack.pop() == "$(":
+                    closed_at = i
                 if not paren:
-                    terminators = [t for t in terminators if t[3] <= len(stack)]
-        elif char in "'\"":
+                    terminators = [t for t in terminators if t[3] <= _depth(stack, nest)]
+        elif char in "'\"" or nest and char == "`":
             stack.append(char)
         elif char == "#" and (i == 0 or line[i - 1].isspace()
-                              or line[i - 1] in ";&|()"):
+                              or line[i - 1] in ";&|()" and not (
+                                  nest and (closed_at == i - 1
+                                            or nest == "32" and "$(" in stack))):
             break
         elif char == "<":
             m = HEREDOC_START.match(line, i)
-            word = m and re.sub(r"[\\'\"]", "", m.group(2))
-            if (m and not (word.isdigit() and word == m.group(2))
-                    and line.count("((", 0, i) <= line.count("))", 0, i)):
-                # bash keeps a CRLF opener's `\r` in the word
-                terminators.append((word + m.group(3), word != m.group(2),
-                                    bool(m.group(1)), len(stack)))
+            if m and _opener(m, line, i):
+                terminators.append(_opener(m, line, i) + (_depth(stack, nest),))
                 i = m.end()
                 continue
         i += 1
     return terminators, tuple(stack), False
+
+
+def _opener(m, line, i):
+    """(word, quoted, dash) for a HEREDOC_START match at `line[i]`, or None for a shift."""
+    word = re.sub(r"[\\'\"]", "", m.group(2))
+    if word.isdigit() and word == m.group(2) or line.count("((", 0, i) > line.count("))", 0, i):
+        return None
+    # bash keeps a CRLF opener's `\r` in the word
+    return word + m.group(3), word != m.group(2), bool(m.group(1))
 
 
 class _LineIndex:
@@ -515,7 +543,7 @@ def _skip_bodies(lines, i, terminators, paren=True, index=None):
     return j
 
 
-def _logical_lines(command, paren=True):
+def _logical_lines(command, paren=True, nest=None):
     """The command split at every newline outside quotes, with heredoc bodies
     and backslash-newlines removed.
 
@@ -532,16 +560,16 @@ def _logical_lines(command, paren=True):
     while i < len(lines):
         line = lines[i]
         i += 1
-        pending, stack, continued = _scan_line(line, stack, pending, paren)
+        pending, stack, continued = _scan_line(line, stack, pending, paren, nest)
         if continued:
             current += line[:-1]
             continue
         current += line
-        if stack[-1:] in ((), ("$(",)):
-            ready = [t for t in pending if t[3] >= len(stack)]
-            pending = [t for t in pending if t[3] < len(stack)]
+        if stack[-1:] in ((), ("$(",), ("(",), ("`",)):
+            ready = [t for t in pending if t[3] >= _depth(stack, nest)]
+            pending = [t for t in pending if t[3] < _depth(stack, nest)]
             i = _skip_bodies(lines, i, ready, paren, index)  # each body and its terminator line
-        if any(c != "$(" for c in stack):
+        if any(c not in ("$(", "(", "`") for c in stack):
             current += "\n"
             continue
         out.append(current)
@@ -551,7 +579,7 @@ def _logical_lines(command, paren=True):
     return out
 
 
-def _tokens(command, paren=True):
+def _tokens(command, paren=True, nest=None):
     """Shell tokens for a Bash command string.
 
     shlex first, and its quote handling is the point rather than an accident:
@@ -566,7 +594,7 @@ def _tokens(command, paren=True):
     LINE_BREAK, which opens command position as a `;` does.
     """
     tokens = []
-    for line in _logical_lines(command, paren):
+    for line in _logical_lines(command, paren, nest):
         try:
             words = shlex.split(line)
         except ValueError:
@@ -598,6 +626,9 @@ def _opens_command(token, inert):
     keyword nor a separator in one opens command position.
     """
     if token.endswith(SEPARATOR_TAILS) or _is_assignment(token):
+        return True
+    # a word glued after a `)` may end an assignment (`x=$(echo hi)x git push`): over-deny at worst
+    if ")" in token:
         return True
     return not inert and token in SHELL_KEYWORDS
 
@@ -669,14 +700,28 @@ def _unwrap(tokens, start):
     return None, relocated
 
 
-def _mutating_calls(command):
+# A `(` or backtick context the base reading cannot place: run the `nest` readings.
+NEST_HINT = re.compile(r"\)#|`|\$\(\(|[<>]\(")
+
+
+def _mutating_calls(command, nested=True):
     """(tokens, verb, git index, command-word index) for every mutating git call
     in both readings of `command`: bash ends a heredoc body opened inside `$(` at
-    a line `WORD)`, zsh (the Bash tool's shell on macOS) reads on."""
-    bash, zsh = _tokens(command, True), _tokens(command, False)
-    for tokens in (bash,) if zsh == bash else (bash, zsh):
-        for found in _mutating_verbs(tokens):
-            yield (tokens,) + found
+    a line `WORD)`, zsh (the Bash tool's shell on macOS) reads on. When NEST_HINT
+    matches, each is also read with `(` and backticks tracked, as bash 5 and as
+    bash 3.2 read a `#` inside `$(` (`_scan_line`); bash picks per `)#` site."""
+    nests = (None, "5") if nested and NEST_HINT.search(command) else (None,)
+    if nests[1:] and re.search(r"[;&|()]#", command):  # the only `#` 3.2 reads apart
+        nests += ("32",)
+    seen = []
+    for nest in nests:
+        for paren in (True, False):
+            tokens = _tokens(command, paren, nest)
+            if tokens in seen:
+                continue
+            seen.append(tokens)
+            for found in _mutating_verbs(tokens):
+                yield (tokens,) + found
 
 
 def _mutating_call(command):
@@ -1021,8 +1066,9 @@ def main():
         if not command or not isinstance(command, str):
             sys.exit(0)
 
-        calls = list(_mutating_calls(command))
-        if not calls:
+        # the slower nest readings run only once a worker is live (or an override is named),
+        # and the loop below is lazy, so a call the base readings find is decided before them
+        if next(_mutating_calls(command, nested=False), None) is None and not NEST_HINT.search(command):
             sys.exit(0)
 
         if native:
@@ -1036,8 +1082,11 @@ def main():
         else:
             live = _live_workers(
                 payload.get("transcript_path"), pending.agent_key(payload.get("agent_id")))
+        # nothing to deny and no override row to write: skip the slower nest readings
+        if not live and OVERRIDE_VAR not in command:
+            sys.exit(0)
         decided = None
-        for tokens, verb, git_at, cmd_start in calls:
+        for tokens, verb, git_at, cmd_start in _mutating_calls(command):
             overridden = _override_before(tokens, cmd_start, git_at)
             if native:
                 try:

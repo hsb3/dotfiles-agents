@@ -435,8 +435,12 @@ workers from each other and protects named branches. Each is blind exactly where
 looks, so running only one leaves a real loss unguarded. Both fail open on every error
 path. A hook past its 10 s timeout fails open too, so both find a heredoc's closing line
 by lookup rather than by rescanning the command. A command of thousands of unclosed heredocs
-settles in under 2 s, except deeply nested unclosed `$(` in
-`live-worker-git-guard` (hgjs).
+settles in under 2 s, except in `live-worker-git-guard`: deeply nested unclosed `$(` (hgjs), and
+nested `(` subshells in a command that also holds a backtick, `$((`, `<(`, `>(` or `)#`, which
+grow slowly in its extra reading. That reading runs only while a worker is live or the command
+names the override variable, and a call the base reading finds is decided before it, so only a call
+only it sees, or a named override (which then loses its message and ledger row), can still time out. The scope guard flags more shapes than the live one; the source repo keeps
+a per-guard list of flagged probes, and a probe that stops being flagged fails its tests.
 
 `config-custody` is the one hook that can genuinely block a call by matching paths, and its
 limits are worth knowing. It only denies when a project opts in with `enforce: strict` (`advisory` logs would-be

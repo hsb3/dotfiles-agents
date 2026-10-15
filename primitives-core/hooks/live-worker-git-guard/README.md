@@ -266,7 +266,12 @@ opener counts only outside quotes (tracked across lines) and outside a comment, 
 all-digit word or inside an unclosed `((`, where it is a shift. A `$(` is tracked across lines and
 inside `"` too, a `)` with no `$(` open (a subshell, `$((`) changes nothing, a newline inside `$(`
 starts only the bodies opened inside it, and `;`, `&`, `|`, `<` or `>` ends the word as a blank does
-(`<<EOF;`). An unquoted newline ends a command
+(`<<EOF;`). A command holding a backtick, `$((`, `<(`, `>(` or `)#` is also read with a plain `(` and a
+backtick tracked (no `$(` opens inside backticks) and a `#` right after the `)` closing a `$(` read as
+part of the word (`$(echo a)#x`), and once more as bash 3.2 reads a `#` inside `$(` (a comment only
+after a blank); a call any reading finds is flagged. A word glued after any `)` (`x=$(echo hi)x git
+push`) may end an assignment, so the next word is read in command position; a quoted `)` opens it
+too (`echo "x)y" git push` is flagged: an over-deny, never a miss). An unquoted newline ends a command
 as `;` does, and a backslash-newline joins two lines into one. Inside an unquoted body it does too,
 before the terminator is looked for, as bash does (`EO\` then `F` closes `<<EOF`); a quoted word
 (`<<'EOF'`) takes its body literally. The terminator must equal the word exactly, after only leading
@@ -306,10 +311,22 @@ command string the hook is handed, so whatever still displaces them is invisible
 - a quoted heredoc word containing spaces (`<<'E O F'`): only `E` is taken as the word and the
   closing `'` opens a quote, so the rest of the command reads as one line and a call after the
   terminator is missed;
-- a heredoc inside `$(` where the scan loses bash's reading: a `)` from `$((`, a subshell, a `case`
-  pattern or `${y%)}` inside an open `$(` closes it early; bash also ends the body at `EOFX)`; a
+- a heredoc inside `$(` where the scan loses bash's reading: a `)` from a subshell, a `case` pattern or
+  `${y%)}` inside an open `$(` closes it early (a subshell's `(` is tracked only in the extra reading
+  above, so only in a command that triggers it); bash also ends the body at `EOFX)`; a
   heredoc inside `<( )` or `<<EOF)`; and bash 3.2's own reading of a body inside `"$(`. A call after
   such a body can be missed;
+- a `<<` opener inside `${...}`, `$[...]`, arithmetic spanning lines or after a quoted `))`, or
+  after a zsh glob group `word(` spanning lines, and a `)#` inside a backtick substitution (the
+  scan reads it as a word, bash as a comment). The scan has lost the context there, so a call after the body can
+  be missed;
+- time on adversarial input: deeply nested unclosed `$(`, and nested `(` subshells in a command
+  that also holds a backtick, `$((`, `<(`, `>(` or `)#`, grow slowly in the extra reading, and
+  past the 10 s timeout the hook fails open. The extra reading runs only when a worker is live or
+  the command names `ATELIER_GIT_GUARD_OVERRIDE`, and a call the base reading finds is decided
+  before it runs. So an oversized command times out (and is allowed) only when a worker is live
+  and the call is one only the extra reading sees, or the override is named, which then loses
+  its message and ledger row;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 
