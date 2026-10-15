@@ -56,10 +56,11 @@ every stage before the window cap applies.
 ## Advisory actions
 
 Warnings are advisory; they never terminate or discard work, and they grant a worker no new
-authority. At notice, reduce further grounding reads. At soft, checkpoint at the next safe
-boundary and finish small bounded work. At hard, preserve the branch, worktree, uncommitted
-changes, and test proof in a manager-facilitated checkpoint before continuation. A verified
-self-handoff may be used where available; it is never assumed.
+authority. At notice, reduce further grounding reads. At soft, finish the slice or dispatch in
+hand and start no new one. At hard, at the next safe boundary commit or list uncommitted changes,
+bring the handoff note or plan file current with test proof, and return; the dispatcher decides
+continuation. A worker acts on the message as written and takes no context action on its own
+estimate.
 
 Session soft and hard texts point at the `atelier:compact-handoff` skill, naming
 `/atelier:prepare-compact` as its Claude Code command (Codex ships only the skill), and add that, if a coordinator owns the cycle, the session

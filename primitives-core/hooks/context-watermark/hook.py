@@ -309,14 +309,14 @@ MESSAGES = {
     ),
     "soft": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "
-        "watermark. This is advisory: checkpoint at the next safe boundary; finish "
-        "small bounded work before arranging continuation."
+        "watermark. This is advisory: finish the slice or dispatch in hand and start "
+        "no new one."
     ),
     "hard": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{hard}k hard "
-        "watermark. This is advisory and grants no authority: preserve the branch, "
-        "worktree, uncommitted changes, and test proof in a manager-facilitated checkpoint "
-        "before continuation."
+        "watermark. This is advisory and grants no authority: at the next safe boundary "
+        "commit or list uncommitted changes, bring your handoff note or plan file current "
+        "with test proof, and return; your dispatcher decides continuation."
     ),
     "session_soft": (
         "atelier context-watermark: context is ~{k}k tokens, past the ~{soft}k soft "

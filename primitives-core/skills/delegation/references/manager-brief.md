@@ -89,7 +89,7 @@ On any assignment that could plausibly outrun one context, keep a successor cont
 from the first link and refresh it as each one closes: the DoD verbatim, links done with their
 evidence, links remaining with their briefs, the file-scope map, and the live worker roster —
 enough for a fresh manager to resume from that file alone. Write it as standing practice, not
-when you notice you are running out; at that point you hand off with it rather than compacting.
+when the watermark's hard message arrives; at that message you return with it.
 
 ## Evidence format (your final message)
 Your turn does not end until you have this package or have hit a stop condition below. A

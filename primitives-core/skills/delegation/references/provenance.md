@@ -48,8 +48,8 @@ overturning something.
 |---|---|
 | Handoff in the 60–80k band; absolute-token watermarks | **The 60–80k manager band is superseded (2026-09-23) by the context-watermark layer bands; a manager now winds down at the soft stage.** Economics optimum ~40–60k, buffered to 60–80k for boundary quality. Percent-of-window thresholds are inert against the ~967k auto-compact default |
 | Handoff + a fresh session over `/compact` | Fresh session restarts at ~10–20k; compaction summaries are similar in size, less curated, and carry a model-side re-read tax |
-| ≥10-minute idle is a handoff point | Session-break (TTL) tax |
-| Clear after messy debugging | Visible prior errors raise subsequent error rates independent of context length |
+| ≥10-minute idle is a handoff point | **Superseded (2026-10-14, card 8stz: agents act on the watermark text, not their own reading of context); idle time is no longer a handoff point, and only the manager's ten-minute stall clause remains, which reports up.** Session-break (TTL) tax |
+| Clear after messy debugging | **Superseded (2026-10-14, card 8stz: agents act on the watermark text, not their own reading of context); no layer clears on its own reading of its context.** Visible prior errors raise subsequent error rates independent of context length |
 | **The `manager` absorbs management chatter** — the mechanical case for the management layer | Every brief and report in the main session lands in the re-read prefix and is paid for at cache rates on every subsequent turn. At `standard` effort the manager is the same model tier as the session, so the layer buys context absorption, not tier arbitrage |
 | Fable-driven grounding costs ~80–100k before work starts | The `deep` effort calibration |
 
