@@ -322,10 +322,11 @@ command string the hook is handed, so whatever still displaces them is invisible
   be missed;
 - time on adversarial input: deeply nested unclosed `$(`, and nested `(` subshells in a command
   that also holds a backtick, `$((`, `<(`, `>(` or `)#`, grow slowly in the extra reading, and
-  past the 10 s timeout the hook fails open. A call it would deny is decided on the first
-  reading that finds it, and with no live worker it exits before parsing further, but a command
-  naming `ATELIER_GIT_GUARD_OVERRIDE` still runs every reading, so an oversized one can time out
-  and lose the override's message and ledger row;
+  past the 10 s timeout the hook fails open. The extra reading runs only when a worker is live or
+  the command names `ATELIER_GIT_GUARD_OVERRIDE`, and a call the base reading finds is decided
+  before it runs. So an oversized command times out (and is allowed) only when a worker is live
+  and the call is one only the extra reading sees, or the override is named, which then loses
+  its message and ledger row;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.
 

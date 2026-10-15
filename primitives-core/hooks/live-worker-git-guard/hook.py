@@ -127,7 +127,6 @@ must stay compatible with Python 3.9.
 
 import bisect
 import functools
-import itertools
 import json
 import os
 import re
@@ -705,13 +704,13 @@ def _unwrap(tokens, start):
 NEST_HINT = re.compile(r"\)#|`|\$\(\(|[<>]\(")
 
 
-def _mutating_calls(command):
+def _mutating_calls(command, nested=True):
     """(tokens, verb, git index, command-word index) for every mutating git call
     in both readings of `command`: bash ends a heredoc body opened inside `$(` at
     a line `WORD)`, zsh (the Bash tool's shell on macOS) reads on. When NEST_HINT
     matches, each is also read with `(` and backticks tracked, as bash 5 and as
     bash 3.2 read a `#` inside `$(` (`_scan_line`); bash picks per `)#` site."""
-    nests = (None, "5") if NEST_HINT.search(command) else (None,)
+    nests = (None, "5") if nested and NEST_HINT.search(command) else (None,)
     if nests[1:] and re.search(r"[;&|()]#", command):  # the only `#` 3.2 reads apart
         nests += ("32",)
     seen = []
@@ -1067,12 +1066,10 @@ def main():
         if not command or not isinstance(command, str):
             sys.exit(0)
 
-        # lazily: a deny on an early reading must not wait on the slower nest readings
-        calls = _mutating_calls(command)
-        first = next(calls, None)
-        if first is None:
+        # the slower nest readings run only once a worker is live (or an override is named),
+        # and the loop below is lazy, so a call the base readings find is decided before them
+        if next(_mutating_calls(command, nested=False), None) is None and not NEST_HINT.search(command):
             sys.exit(0)
-        calls = itertools.chain((first,), calls)
 
         if native:
             try:
@@ -1089,7 +1086,7 @@ def main():
         if not live and OVERRIDE_VAR not in command:
             sys.exit(0)
         decided = None
-        for tokens, verb, git_at, cmd_start in calls:
+        for tokens, verb, git_at, cmd_start in _mutating_calls(command):
             overridden = _override_before(tokens, cmd_start, git_at)
             if native:
                 try:
