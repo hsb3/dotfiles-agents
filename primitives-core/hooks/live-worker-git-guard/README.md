@@ -344,7 +344,8 @@ command string the hook is handed, so whatever still displaces them is invisible
   past the 10 s timeout the hook fails open. The extra reading runs only when a worker is live or
   the command names `ATELIER_GIT_GUARD_OVERRIDE`, and a call the base reading finds is decided
   before it runs. So an oversized command times out (and is allowed) only when a worker is live
-  and the call is one only the extra reading sees, or the override is named, which then loses
+  and either the call is one only the extra reading sees or the command holds no git call at all
+  (every reading runs, then it allows), or the override is named, which then loses
   its message and ledger row;
 - a `GIT_*` variable **exported by an earlier Bash call** — the same ceiling in another place, since
   it is not among this command's tokens at all.

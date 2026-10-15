@@ -423,8 +423,8 @@ def stopped_ids(transcript_path, candidates):
     here: the TaskStop success result, a `user` line whose
     `toolUseResult.task_id` is the agent, whose message starts
     "Successfully stopped task", and whose `tool_result.tool_use_id` answers
-    an earlier assistant `tool_use` named TaskStop. Sidechain lines count: a
-    nested caller's transcript is nothing else. A `<task-notification>` never settles, since
+    an earlier assistant `tool_use` named TaskStop. Sidechain lines count: the
+    hook also passes a nested caller's own `agent-<id>.jsonl`, which is nothing else. A `<task-notification>` never settles, since
     a queued prompt or an agent's quoted output can carry the same text.
 
     Known limit: an agent killed by the user rather than by TaskStop stays
