@@ -1,0 +1,51 @@
+# Placeholder: adjust weights and wording. Schema: schemas/eval-rubric.schema.yaml
+requirements_ref: data/requirements.yaml
+
+capability_verdicts:
+  - {verdict: "yes", meaning: "Works as the bar states; confirmed from docs or code.", score: 1, satisfies_hard: true}
+  - {verdict: partial, meaning: "Works with a stated boundary; the note states it.", score: 0.5, satisfies_hard: true}
+  - {verdict: paywalled, meaning: "Exists only in a paid tier or the vendor cloud.", score: 0, satisfies_hard: false}
+  - {verdict: "no", meaning: "Confirmed absent; docs state the limit or the code lacks it.", score: 0, satisfies_hard: false}
+  - {verdict: not-documented, meaning: "Could not confirm either way; never asserted as absent.", score: 0, satisfies_hard: false}
+
+filter_verdicts:
+  - {verdict: pass, meaning: "Criterion holds, with evidence.", eliminates: false}
+  - {verdict: fail, meaning: "Criterion does not hold, with evidence.", eliminates: true}
+  - {verdict: wrong-layer, meaning: "Operates at another layer; rejected, never scored.", eliminates: true}
+  - {verdict: unverified, meaning: "Not resolved from primary sources; treated as fail.", eliminates: true}
+
+maturity:
+  signals:
+    - {id: recency, measure: Date of last commit to the default branch., pass_when: within last_commit_max_days, on_fail: eliminate}
+  verdicts:
+    - {verdict: strong, rule: All signals pass.}
+    - {verdict: adequate, rule: All eliminate-class signals pass.}
+    - {verdict: early, rule: TODO}
+    - {verdict: at-risk, rule: Any eliminate-class signal fails.}
+
+ranking:
+  order:
+    - Apply hard_filters; an eliminating verdict rejects the candidate with the reason.
+    - Apply required=hard capabilities; a verdict with satisfies_hard=false rejects.
+    - Apply maturity eliminate-class signals.
+    - Score survivors as the sum of weight times score over bias capabilities, plus biases met, plus desired proofs passed.
+    - Baselines skip the first three steps; a baseline winning is a valid result.
+  capability_weights:
+    todo-bias-capability: 1
+  bias_weights:
+    todo-bias: 1
+  proof_weights:
+    todo-proof: 1
+  tie_breakers:
+    - Higher maturity verdict.
+    - Fewer not-documented verdicts.
+  stated_bias: TODO which axes are weighted above the others, so a reader can discount.
+
+verification:
+  min_decision_critical_claims: 5
+  outcomes: [verified, refuted, uncertain]
+  never_counts_as_evidence:
+    - Vendor benchmark scores; record as claims only.
+  must_verify:
+    - Every license identification for a shortlisted candidate.
+    - Every claim that eliminates or down-ranks a candidate.

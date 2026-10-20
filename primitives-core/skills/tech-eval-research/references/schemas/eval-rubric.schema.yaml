@@ -1,0 +1,107 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: schemas/eval-rubric.schema.yaml
+title: Evaluation rubric
+description: >
+  How findings are turned into verdicts and a ranking. Vocabulary for verdicts,
+  weights per capability, maturity rules, and the verification requirement.
+  Capability weight keys must match capability ids in data/requirements.yaml
+  (scripts/validate.py checks this).
+type: object
+additionalProperties: false
+required: [requirements_ref, capability_verdicts, filter_verdicts, maturity, ranking, verification]
+properties:
+  requirements_ref: {type: string, description: Path to the requirements file this rubric scores against.}
+  capability_verdicts:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [verdict, meaning, score, satisfies_hard]
+      properties:
+        verdict: {type: string, pattern: '^[a-z-]+$'}
+        meaning: {type: string}
+        score: {type: number, minimum: 0, maximum: 1}
+        satisfies_hard:
+          type: boolean
+          description: Whether this verdict on a required=hard capability keeps the candidate alive.
+  filter_verdicts:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [verdict, meaning, eliminates]
+      properties:
+        verdict: {type: string, pattern: '^[a-z-]+$'}
+        meaning: {type: string}
+        eliminates: {type: boolean}
+  maturity:
+    type: object
+    additionalProperties: false
+    required: [signals, verdicts]
+    properties:
+      signals:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [id, measure, pass_when, on_fail]
+          properties:
+            id: {type: string, pattern: '^[a-z0-9-]+$'}
+            measure: {type: string, description: The number or fact to record, so the verdict is reproducible.}
+            pass_when: {type: string, description: Rule in terms of requirements.maturity_bar values.}
+            on_fail: {type: string, enum: [eliminate, down-rank, note]}
+      verdicts:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [verdict, rule]
+          properties:
+            verdict: {type: string, enum: [strong, adequate, early, at-risk]}
+            rule: {type: string}
+  ranking:
+    type: object
+    additionalProperties: false
+    required: [order, capability_weights, bias_weights, proof_weights, tie_breakers]
+    properties:
+      order:
+        type: array
+        minItems: 1
+        items: {type: string}
+        description: Ordered steps applied to produce the ranking.
+      capability_weights:
+        type: object
+        additionalProperties: {type: number, minimum: 0}
+        description: Weight per required=bias capability id. Hard capabilities are gates, not weights.
+      bias_weights:
+        type: object
+        additionalProperties: {type: number, minimum: 0}
+        description: Weight per bias criterion id.
+      proof_weights:
+        type: object
+        additionalProperties: {type: number, minimum: 0}
+        description: Weight per weight_class=desired proof id. must-class proofs are gates.
+      tie_breakers: {type: array, items: {type: string}}
+      stated_bias:
+        type: string
+        description: Plain statement of which axes were weighted, so a reader can discount.
+  verification:
+    type: object
+    additionalProperties: false
+    required: [min_decision_critical_claims, outcomes, must_verify]
+    properties:
+      min_decision_critical_claims: {type: integer, minimum: 1}
+      outcomes:
+        type: array
+        items: {type: string, enum: [verified, refuted, uncertain]}
+      never_counts_as_evidence:
+        type: array
+        items: {type: string}
+      must_verify:
+        type: array
+        items: {type: string}
+        description: Classes of claim that always get an adversarial second pass.

@@ -1,0 +1,135 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: schemas/requirements.schema.yaml
+title: Technology evaluation requirements
+description: >
+  Phase 0 brief. Everything a researcher needs to resolve each candidate to
+  pass/fail on hard filters, a verdict per capability, and a maturity verdict.
+type: object
+additionalProperties: false
+required: [decision_question, dated, layer, hard_filters, capabilities, biases, proofs, maturity_bar, candidates, deliverable]
+properties:
+  decision_question:
+    type: string
+    description: One sentence, "Which ___ should we adopt for ___?"
+  dated:
+    type: string
+    format: date
+    description: Date the brief was written. All findings are point-in-time.
+  layer:
+    type: object
+    additionalProperties: false
+    required: [must_do, wrong_layer]
+    properties:
+      must_do:
+        type: array
+        minItems: 1
+        items: {type: string}
+        description: What the thing being evaluated must do. Candidates that do not do this are wrong-layer.
+      wrong_layer:
+        type: array
+        items: {type: string}
+        description: Named categories that look adjacent but are rejected as wrong-layer, with the reason.
+  hard_filters:
+    type: array
+    minItems: 1
+    items: {$ref: '#/$defs/criterion'}
+    description: Eliminating criteria. A fail removes the candidate; it is listed under Rejected with the reason.
+  capabilities:
+    type: array
+    minItems: 1
+    items: {$ref: '#/$defs/capability'}
+    description: Per-feature checklist. Each resolves to exactly one verdict from the rubric vocabulary.
+  biases:
+    type: array
+    items: {$ref: '#/$defs/criterion'}
+    description: Preferences that down-rank survivors but never disqualify.
+  proofs:
+    type: array
+    items: {$ref: '#/$defs/proof'}
+    description: >
+      Empirical claims measured on a running deployment, not read from docs.
+      Each names a method, a metric, and the baseline it is compared against.
+  maturity_bar:
+    type: object
+    additionalProperties: false
+    required: [window_months, recurring_contributor_floor, recurring_contributor_preference, last_commit_max_days, last_release_max_days, dying_drop_pct]
+    properties:
+      window_months: {type: integer, minimum: 1}
+      recurring_contributor_floor:
+        type: integer
+        description: Hard floor. Below this (without institutional backing) the candidate fails on maturity.
+      recurring_contributor_preference:
+        type: integer
+        description: Preference. Below this the candidate is down-ranked, not eliminated.
+      institutional_backing_substitutes: {type: boolean, default: true}
+      last_commit_max_days: {type: integer}
+      last_release_max_days: {type: integer}
+      dying_drop_pct:
+        type: integer
+        description: Percent drop in last-2-months volume vs prior months that flags "is it dying".
+  candidates:
+    type: array
+    minItems: 1
+    items: {$ref: '#/$defs/candidate'}
+    description: Seed set. Every entry gets an explicit verdict; researchers may add discovered candidates.
+  deliverable:
+    type: string
+    enum: [report, report+deck]
+$defs:
+  criterion:
+    type: object
+    additionalProperties: false
+    required: [id, statement, rationale, verify_by]
+    properties:
+      id: {type: string, pattern: '^[a-z0-9-]+$'}
+      statement: {type: string}
+      rationale: {type: string, description: Why this matters to the decision.}
+      verify_by: {type: string, description: What a researcher checks to prove or refute it.}
+  capability:
+    type: object
+    additionalProperties: false
+    required: [id, name, required, what_counts, verify_by]
+    properties:
+      id: {type: string, pattern: '^[a-z0-9-]+$'}
+      name: {type: string}
+      required:
+        type: string
+        enum: [hard, bias]
+        description: hard = a verdict other than yes/partial eliminates; bias = weighted in ranking only.
+      what_counts:
+        type: string
+        description: The bar for a "yes" verdict. Name-matching a feature on a marketing page does not count.
+      verify_by: {type: string}
+  proof:
+    type: object
+    additionalProperties: false
+    required: [id, claim, method, metric, baseline, pass_when, weight_class]
+    properties:
+      id: {type: string, pattern: '^[a-z0-9-]+$'}
+      claim: {type: string, description: What is being proven, stated so it can fail.}
+      method: {type: string, description: Reproducible procedure. Same fixture for every candidate and baseline.}
+      metric: {type: string, description: The number recorded, with unit.}
+      baseline: {type: string, description: Candidate id of the baseline compared against, or "none".}
+      pass_when: {type: string}
+      weight_class:
+        type: string
+        enum: [must, desired]
+        description: must = a fail eliminates; desired = points in ranking.
+  candidate:
+    type: object
+    additionalProperties: false
+    required: [id, name, seed_reason, kind]
+    properties:
+      id: {type: string, pattern: '^[a-z0-9-]+$'}
+      name: {type: string}
+      kind:
+        type: string
+        enum: [candidate, baseline]
+        description: baseline = a hand-built comparison point; exempt from license and maturity checks, still measured on every proof.
+      repo: {type: [string, 'null'], format: uri, description: Null when not yet resolved; Phase 1 must fill it.}
+      homepage: {type: string, format: uri}
+      seed_reason: {type: string, description: Why it is in the set, including "expected wrong-layer, included so it is rejected explicitly".}
+      expected_layer_fit:
+        type: string
+        enum: [in-layer, wrong-layer, unknown]
+        default: unknown
