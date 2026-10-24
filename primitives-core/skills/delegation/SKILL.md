@@ -467,6 +467,8 @@ oversized scope.
 The strategist is the frontier session; frontier is not a worker override. Use mid for bounded
 coding and heavy for a manager or judgment-heavy review. A reviewer or manager needing the premium
 remains heavy; a coding slice that seems to need frontier is oversized and must be decomposed.
+A delegated plan draft is heavy too, like the gating reviewer: a default-tier draft or review reads as
+authoritative with a wrong mechanism and misses cross-process bugs (measured 2026-06).
 
 Per-invocation knobs (worktree isolation, deliberate turn caps, continuing a running agent), agent
 shell capabilities, and the git policy are in **`references/dispatch-knobs.md`**.

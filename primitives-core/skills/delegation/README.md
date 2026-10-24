@@ -4,6 +4,9 @@ Delegation doctrine for a session that takes on a substantial task. Work runs on
 layers — strategy, management, execution — and this skill defines what each one owns, what
 context it must carry, what context it must never be handed, and what it must never do.
 
+Delegated plan drafts use the heavy tier. A subagent still inherits the parent's instructions;
+a context-free review requires a peer session rooted in a temporary directory.
+
 Three layers is the default for anything non-trivial. Collapsing one is an exception with
 stated conditions, not a tiebreak, because each layer's job and context differ enough that
 three focused prompts beat two larger ones. The measured half of that argument is context:

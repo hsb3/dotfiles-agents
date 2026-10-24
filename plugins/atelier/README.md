@@ -8,6 +8,8 @@ the same handoff target and the same session-discipline loop — including the r
 lab.
 
 Delegation separates the required model tier from how each harness configures it.
+Plan drafts use the heavy tier; a context-free review needs a separate peer session because
+subagents inherit the parent's instructions.
 
 Atelier's opt-in external `handoff.scope: session` uses a native card and consumable certificate per
 launch/native identity. Codex requires trusted before-tool and compaction hooks; the current

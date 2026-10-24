@@ -12,7 +12,9 @@ the closer its producer sits to the work.
    that should agree observably, and their outputs are identical. This catches what no
    single-producer gate can.
 3. **An independently re-derived check.** The `reviewer` agent re-read the source or re-ran the
-   command, without the producer's rationale.
+   command, without the producer's rationale. A subagent is not a naive or cold reviewer: it inherits
+   the parent's instruction stack (global memory, project `AGENTS.md`, auto-memory); for a genuinely
+   context-free read use a peer session rooted in a temp dir.
 4. **A manager's proof package.** Evidence assembled by an agent on the same model tier that also
    drove the work. It catches worker errors; it cannot catch its own blind spots.
 5. **A worker's self-report.** A hypothesis. Honest workers still report confidently about things
