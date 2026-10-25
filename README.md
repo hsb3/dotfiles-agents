@@ -86,7 +86,7 @@ skills rostered Claude-Code-only stay behind. The installer copies the generated
 
 | Plugin | Kind | What it does | Contents |
 |---|---|---|---|
-| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone with no topical plugin: harness config, research, test quality, chart design, API and TUI craft, repo setup. | 14 skills |
+| [`solo-skills`](plugins/solo-skills/README.md) | bundle | Every skill that stands alone with no topical plugin: harness config, research, test quality, chart design, TUI craft, repo setup. | 13 skills |
 | [`code-desk`](plugins/code-desk/README.md) | bundle | Set a repo's quality contract and its proven gate, then keep the release loop honest: review triage and status comms. | 6 skills · 1 agent · 2 hooks · 1 command |
 | [`board-desk`](plugins/board-desk/README.md) | bundle | Task authoring, board health, Kata, GitHub Projects, Backlog.md and plain-file triage, and GitHub mirror reconciliation. | 2 skills |
 | [`diagrams`](plugins/diagrams/README.md) | bundle | Structural diagrams with consistent SVG and PNG output: Mermaid, cloud architecture, draw.io, Excalidraw, Graphviz. | 4 skills |
