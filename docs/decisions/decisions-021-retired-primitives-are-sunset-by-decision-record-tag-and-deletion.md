@@ -9,6 +9,11 @@ in mise-en-place and PR #515 removed its remaining solo-skills membership. The s
 below that solo-skills is its only home describes the retirement baseline. Decision-024
 separately establishes board-desk as its new topical home; it is not the #509/#515 move.
 
+**Amended 2026-10-25:** The `kaneo` plugin now ships from its own marketplace,
+`hsb3/kaneo-extras` (`kaneo@kaneo-extras`, 0.14.0), rebuilt from `retired/kaneo@0.13.3`
+without the `task-authoring` dual home. Nothing returns to this repo; the record below still
+describes the sunset here.
+
 **Implementation note 2026-09-10:** Decision-024 makes board-desk the topical home
 while retaining mise-en-place's task-authoring membership for its planning-desk dependency.
 The shared source is unchanged; enabling both plugins can list the skill twice.
