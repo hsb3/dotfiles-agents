@@ -15,6 +15,9 @@ falls back to the file tracker. The file tracker's format and parser are shared 
 here as symlinks (`references/file-tracker-format.md`, `scripts/file_tracker.py`), resolved to
 regular files at install.
 
+The GitHub Projects adapter documents iteration-id regeneration and the integer issue database
+ids required by dependency and sub-issue endpoints.
+
 Every adapter writes only on `--apply`. The default run is a preview you read first, and it
 refuses the same rows the write would, so an unresolvable changeset is caught before it
 touches the board. A refused row is a failure on every adapter alike: it prints as a `SKIP` on

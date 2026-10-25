@@ -215,6 +215,12 @@ markdown, and inlining it into the query string breaks on the first quote.
   touches neither. Re-verify by listing the mutations GitHub actually publishes:
   `gh api graphql -f query='{__type(name:"Mutation"){fields{name}}}'` with
   `--jq '.data.__type.fields[].name | select(test("ProjectV2"))'`.
+- **Iteration rename regenerates every iteration id.** `ProjectV2Iteration` input takes no `id`, so
+  the single-select "re-pass ids" rule does not apply: renaming buckets via `iterationConfiguration`
+  orphans all assignments; re-apply each item's iteration afterwards (2026-06-18).
+- **Dependency and sub-issue endpoints take the issue's database id** (`gh api repos/<o>/<r>/issues/<n> --jq .id`),
+  not the number or node id, and must use `-F` (integer); `-f` sends a string and 422s. They are plain
+  Issues REST, so the `GITHUB_TOKEN` shadowing above does not apply to them.
 - **Status ladder semantics**, which the Ready-lane row rests on: `Backlog` = captured, not ready ·
   `Up Next` = triaged and ready · `In Progress` = actively worked · `In Review` = PR open, awaiting
   review · `Blocked` = a real `blocked_by` edge or external gate, **not** "haven't started" ·

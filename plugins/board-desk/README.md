@@ -4,6 +4,9 @@ Turn captured work into executable tasks, keep priorities useful, and reconcile 
 mirrors after work closes on the board. The same Python stdlib scripts run from the
 installed skill directory in Claude Code or Codex.
 
+GitHub Projects guidance covers regenerated iteration ids and integer issue database ids
+for dependency and sub-issue endpoints.
+
 ## How it fits together
 
 Write the task before ranking it. Measure the board before changing priorities, then
