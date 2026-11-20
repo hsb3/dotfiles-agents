@@ -21,6 +21,23 @@ Phase 4  Deliver                (report always; deck on request)
 
 Track phases in the task list. Phases 1 and 2 are subagent work; keep synthesis and ranking judgment in the main session. If subagents aren't available in the current environment, run the same phases sequentially inline — the source discipline and verification pass matter more than the parallelism. Scale effort to the question: a 4-candidate comparison may need 2 research passes and 4 verified claims, not 5 agents and 10.
 
+## Artifact layout
+
+Each phase writes a file with a schema, so a later session can re-check the evaluation. Start a project by copying `references/starter/` into it and `references/schemas/` to its `schemas/`, then replace every `TODO`.
+
+| Path | Phase | What |
+| --- | --- | --- |
+| `data/requirements.yaml` | 0 | decision question, layer, hard filters, capabilities, biases, proofs, maturity bar, candidates |
+| `data/eval-rubric.yaml` | 0 | verdict scores, weights, ranking order, stated bias |
+| `data/landscape.yaml` | 0 (optional) | what practitioners report; suggests candidates, never decides |
+| `data/findings/<candidate>.yaml` | 1, 2 | one per candidate and baseline; a `verification:` block records the Phase 2 outcome |
+| `runs/<proof>/runs.jsonl` | proofs | one run per line, for claims measured on running software |
+| `docs/report.md` | 4 | written last; names every candidate |
+| `schemas/` | 0 | copied from `references/schemas/` at scope time, frozen once research starts |
+| `eval.toml` | optional | relative overrides: `spec_dir`, `schemas_dir`, `findings_dir`, `proofs_glob`, `artifact_moves` |
+
+Validate with `<skill-dir>/scripts/validate.py --root <project>` (`--root` defaults to the current directory). Its `uv` shebang supplies Python >= 3.11 with jsonschema and pyyaml. A project without `schemas/` (and no `schemas_dir` in `eval.toml`) is checked against the bundled `references/schemas/`. It prints one `path:location: message` per problem and exits 0 when everything is valid, 1 for schema or reference (id cross-check) findings, and 2 for a usage, config, missing-file or parse error. It must exit 0 before Phase 4.
+
 ## Phase 0 — Scope the brief
 
 Establish these before any research. If the user's request already specifies them, extract and confirm; if not, propose defaults and ask only about the genuinely open decisions (deliverable format, scope boundaries, which criteria are hard filters vs. preferences).

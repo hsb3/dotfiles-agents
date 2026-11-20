@@ -1,0 +1,148 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: schemas/findings.schema.yaml
+title: Candidate findings
+description: >
+  Phase 1 output, one file per candidate in data/findings/<candidate-id>.yaml.
+  Every verdict carries a source URL and the date checked. Phase 2 appends
+  the verification block.
+type: object
+additionalProperties: false
+required: [candidate, checked_on, kind, layer_fit, capabilities, sources]
+if: {properties: {kind: {const: candidate}}}
+then: {required: [license, phone_home, filters, maturity]}
+properties:
+  candidate: {type: string, pattern: '^[a-z0-9-]+$', description: Must match a candidate id in data/requirements.yaml.}
+  checked_on: {type: string, format: date}
+  kind: {type: string, enum: [candidate, baseline]}
+  repo: {type: string, format: uri, description: Required here even if null in requirements.}
+  layer_fit:
+    type: object
+    additionalProperties: false
+    required: [verdict, note]
+    properties:
+      verdict: {type: string, enum: [in-layer, wrong-layer]}
+      note: {type: string, description: For wrong-layer, the layer it actually operates at.}
+  license:
+    type: object
+    additionalProperties: false
+    required: [components]
+    properties:
+      components:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, license, source]
+          properties:
+            name: {type: string, description: Component name, e.g. server, sdk, dashboard.}
+            license: {type: string, description: SPDX id, or the source-available license name.}
+            source: {type: string, format: uri, description: URL of the LICENSE file read.}
+  phone_home:
+    type: object
+    additionalProperties: false
+    required: [telemetry, license_key, evidence]
+    properties:
+      telemetry: {type: string, enum: [none, opt-out, mandatory]}
+      opt_out_toggle: {type: string, description: Env var or setting, when telemetry is opt-out.}
+      license_key: {type: boolean}
+      evidence: {type: string}
+  filters:
+    type: array
+    items: {$ref: '#/$defs/filter_result'}
+  capabilities:
+    type: array
+    items: {$ref: '#/$defs/capability_result'}
+  biases:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, met, note]
+      properties:
+        id: {type: string}
+        met: {type: boolean}
+        note: {type: string}
+  maturity:
+    type: object
+    additionalProperties: false
+    required: [stars, recurring_contributors, single_merger, commits_by_month, last_commit, last_release, open_issues, open_prs, regime_change, adopters, signals, verdict]
+    properties:
+      stars: {type: integer}
+      recurring_contributors: {type: integer}
+      single_merger: {type: boolean, description: True if one account authors or merges nearly everything.}
+      institutional_backing: {type: string, description: Company or foundation, if any.}
+      commits_by_month:
+        type: object
+        additionalProperties: {type: integer}
+        description: "YYYY-MM: count over the window."
+      last_commit: {type: string, format: date}
+      last_release: {type: [string, 'null'], format: date}
+      open_issues: {type: integer}
+      open_prs: {type: integer}
+      backlog_trend: {type: string, enum: [shrinking, stable, growing, unknown]}
+      regime_change: {type: [string, 'null'], description: Acquisition, rewrite, deprecation, move; null if none.}
+      adopters: {type: array, items: {type: string}}
+      downloads: {type: string, description: Package download figure with registry and period.}
+      signals:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [id, passed, evidence]
+          properties:
+            id: {type: string}
+            passed: {type: boolean}
+            evidence: {type: string}
+      verdict: {type: string, enum: [strong, adequate, early, at-risk]}
+  proofs:
+    type: array
+    description: Phase 2b. One entry per proof in requirements; measured on a live deployment.
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, run_on, measured, baseline_measured, passed, notes]
+      properties:
+        id: {type: string}
+        run_on: {type: string, format: date}
+        measured: {type: string, description: The numbers, in the metric's units.}
+        baseline_measured: {type: string, description: Same numbers for the named baseline, same fixture, same day.}
+        passed: {type: boolean}
+        notes: {type: string, description: Deviations from method, surprises, anything a reader needs to trust the number.}
+        transcript: {type: string, description: Path to the saved run artifacts.}
+  sources:
+    type: array
+    minItems: 1
+    items: {type: string, format: uri}
+  verification:
+    type: array
+    description: Phase 2. Each decision-critical claim re-checked adversarially.
+    items:
+      type: object
+      additionalProperties: false
+      required: [claim, outcome, checked_on, evidence]
+      properties:
+        claim: {type: string}
+        outcome: {type: string, enum: [verified, refuted, uncertain]}
+        correction: {type: string, description: Required when refuted.}
+        checked_on: {type: string, format: date}
+        evidence: {type: string}
+$defs:
+  filter_result:
+    type: object
+    additionalProperties: false
+    required: [id, verdict, evidence, source]
+    properties:
+      id: {type: string}
+      verdict: {type: string, enum: [pass, fail, source-available, wrong-layer, unverified]}
+      evidence: {type: string}
+      source: {type: string, format: uri}
+  capability_result:
+    type: object
+    additionalProperties: false
+    required: [id, verdict, note, source]
+    properties:
+      id: {type: string}
+      verdict: {type: string, enum: ["yes", partial, paywalled, "no", not-documented]}
+      note: {type: string, description: For partial, the boundary. For any verdict, the env var / endpoint / flag that proves it.}
+      source: {type: string, format: uri}

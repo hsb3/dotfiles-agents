@@ -58,7 +58,7 @@ joins it.
 | Skill | What it does |
 |---|---|
 | `deep-research` | Multi-source investigation ending in a cited report, where every load-bearing claim has to survive an attempted refutation before it is asserted. |
-| `tech-eval-research` | Comparative technology evaluation: ranked shortlist, capability matrix, and a recommendation built from primary sources, including license and free-tier boundaries, and an explicit no-verified-match result when nothing clears the hard filters. |
+| `tech-eval-research` | Comparative technology evaluation: ranked shortlist, capability matrix, and a recommendation built from primary sources, including license and free-tier boundaries, and an explicit no-verified-match result when nothing clears the hard filters. Ships artifact schemas, a starter project and a validator that must pass before the report. |
 | `owner-signoff` | Put a batch of decisions in a local browser form instead of a wall of chat questions; the answers flow back into the session automatically. |
 
 **Charts and visuals**
@@ -71,7 +71,6 @@ joins it.
 
 | Skill | What it does |
 |---|---|
-| `api-craft` | HTTP/REST API servers by layer — route, schema, service, repository, model — with the rejection cascade that maps every failure to a status code and outside-in build order. |
 | `tui-craft` | Full-screen terminal apps — layering, state ownership, repaint and streaming discipline, key routing, and the fixes for flicker, resize corruption, and a terminal left broken after exit. |
 
 **Repos and projects**

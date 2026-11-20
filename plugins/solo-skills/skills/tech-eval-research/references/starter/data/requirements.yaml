@@ -1,0 +1,54 @@
+# Placeholder: replace every TODO. Schema: schemas/requirements.schema.yaml
+decision_question: TODO Which ___ should we adopt for ___?
+dated: "2000-01-01"
+layer:
+  must_do:
+    - TODO what the thing must do
+  wrong_layer:
+    - TODO adjacent category rejected as wrong-layer, with the reason
+hard_filters:
+  - id: todo-filter
+    statement: TODO
+    rationale: TODO
+    verify_by: TODO
+capabilities:
+  - id: todo-hard-capability
+    name: TODO
+    required: hard
+    what_counts: TODO
+    verify_by: TODO
+  - id: todo-bias-capability
+    name: TODO
+    required: bias
+    what_counts: TODO
+    verify_by: TODO
+biases:
+  - id: todo-bias
+    statement: TODO
+    rationale: TODO
+    verify_by: TODO
+proofs:
+  - id: todo-proof
+    claim: TODO
+    method: TODO
+    metric: TODO
+    baseline: todo-baseline
+    pass_when: TODO
+    weight_class: desired
+maturity_bar:
+  window_months: 12
+  recurring_contributor_floor: 2
+  recurring_contributor_preference: 3
+  last_commit_max_days: 90
+  last_release_max_days: 180
+  dying_drop_pct: 50
+candidates:
+  - id: todo-candidate
+    name: TODO
+    kind: candidate
+    seed_reason: TODO
+  - id: todo-baseline
+    name: TODO simplest hand-built option
+    kind: baseline
+    seed_reason: Shows what the hard filters buy.
+deliverable: report

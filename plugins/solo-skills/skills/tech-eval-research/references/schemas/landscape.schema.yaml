@@ -1,0 +1,54 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: schemas/landscape.schema.yaml
+title: Practitioner landscape scan
+description: >
+  Phase 0.5. What people with skin in the game report working or not working.
+  Feeds candidate discovery and the proof methods; never supports a capability
+  verdict (those come from primary sources only).
+type: object
+additionalProperties: false
+required: [scanned_on, entries, themes]
+properties:
+  scanned_on: {type: string, format: date}
+  entries:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [source, author, trust_basis, evidence_type, published, claim, verdict, implication]
+      properties:
+        source: {type: string, format: uri}
+        author: {type: string, description: Person or org.}
+        trust_basis:
+          type: string
+          description: >
+            Why this voice counts: maintainer of a named project, published measured
+            benchmark, runs it in production, known practitioner with a track record.
+            "Popular blog" is not a trust basis.
+        evidence_type:
+          type: string
+          enum: [measured, production-report, anecdote, opinion]
+        published: {type: string, format: date}
+        claim: {type: string, description: What they say, in one or two sentences, close to their words.}
+        verdict:
+          type: string
+          enum: [works, does-not-work, works-with-caveat, unclear]
+        candidates:
+          type: array
+          items: {type: string}
+          description: Candidate ids this bears on, if any.
+        implication:
+          type: string
+          description: What this changes for us; a new candidate, a proof method, a caveat to verify, or nothing.
+  themes:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [theme, support, action]
+      properties:
+        theme: {type: string, description: A pattern across entries, e.g. "setup cost dominates small deployments".}
+        support: {type: array, items: {type: string, format: uri}, minItems: 1}
+        action: {type: string, description: Added candidate X / added proof Y / verify claim Z in Phase 2 / none.}
