@@ -18,7 +18,8 @@ out; a clear-eyed pitch earns more trust than a glossy one.
 
 **Proof must be real.** Every screenshot shows the feature working, captured from a running
 stack — never a mockup, never a staged shot. Capture is driven with Playwright from the skill's
-own snippet; it needs no machine-local helper. If a dependency is down or a feature errors
+own snippet; it needs no machine-local helper. When only the page's errors are wanted, with no
+screenshot, the skill points at `playwright-cli` in a container instead. If a dependency is down or a feature errors
 during capture, the skill's rule is to investigate, fix or document it, and recapture. A
 capture run that surfaces a real bug is a feature of the process, not a detour.
 
